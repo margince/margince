@@ -392,7 +392,14 @@ func (in Input) ThreadSubject() (string, bool) {
 }
 
 // threadMail is the thread a draft answers: draftcore.ThreadMail on Recent.
-func (in Input) threadMail() (ActIn, bool) { return draftcore.ThreadMail(in.Recent) }
+// A draft that follows up a named activity is about that activity, not about
+// whichever email is newest, so it continues no thread.
+func (in Input) threadMail() (ActIn, bool) {
+	if in.About != nil {
+		return ActIn{}, false
+	}
+	return draftcore.ThreadMail(in.Recent)
+}
 
 // Booked is whether this contact has a meeting on file. foldMeeting only
 // carries one this contact actually attends, so a non-nil Meeting is a real

@@ -207,7 +207,14 @@ function steering(intent: string, rewriteOf: string) {
 // other body is the rep's work. It goes out as a first draft, and the fill
 // keeps the rep's words.
 function rewriteOfAsk(ask: DraftAsk): string {
-  return ask.body !== "" && ask.body === ask.servedBody ? ask.body : "";
+  const untouched = ask.body !== "" && ask.body === ask.servedBody;
+  return untouched && !hasRepFormatting(ask.html) ? ask.body : "";
+}
+
+// The model's draft is paragraphs and line breaks only, so any other tag is
+// formatting or a link the rep added, which a plain-text rewrite would drop.
+function hasRepFormatting(html: string): boolean {
+  return /<(?!\/?(?:p|br)\b)[a-z]/i.test(html);
 }
 
 // A follow-up after a meeting: everyone else it was with, and the meeting

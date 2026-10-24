@@ -5,6 +5,7 @@ package draftcore
 
 import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 )
 
@@ -40,6 +41,8 @@ func ContinueThread(subject string, in Input) string {
 	if !ok {
 		return subject
 	}
-	envelope := in.WrittenInto()
-	return draftfloor.Subject(envelope.Lang(), envelope.Band(), thread, true)
+	// Fresh stands for "a thread exists": a band of none would drop the reply
+	// prefix for an email whose direction is unknown, and the prefix is the
+	// same in every other band.
+	return draftfloor.Subject(in.WrittenInto().Lang(), convstate.BandFresh, thread, true)
 }
