@@ -2536,8 +2536,7 @@ export const en = {
     "This record changed after you opened it. Reload it to see the change, then make yours again.",
   "common.duplicate.email":
     "Another contact or lead already has this email address, so it was not saved here.",
-  "common.heldByColleague":
-    "A colleague already has this contact.",
+  "common.heldByColleague": "A colleague already has this contact.",
   "common.heldByColleague.asked":
     "A colleague already has this contact. We asked them to share it with you.",
   "common.duplicate.domain":

@@ -6,7 +6,7 @@ import {
   problemCode,
   problemFieldErrors,
 } from "./problembody";
-import { PROBLEM_CODE_COPY, heldByColleagueCopy } from "./problemcodecopy";
+import { heldByColleagueCopy, PROBLEM_CODE_COPY } from "./problemcodecopy";
 
 export type { FieldProblem } from "./problembody";
 export {
