@@ -12,7 +12,7 @@ import {
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EditAction } from "../../components/edit";
-import { LogActivityAction } from "../../components/logactivity";
+import { LogActivityAction } from "../../components/logactivity.action";
 import { RecordTeam } from "../../components/recordteam";
 import {
   snoozedDueAt,

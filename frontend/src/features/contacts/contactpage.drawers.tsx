@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
-import { useRef } from "react";
-import { LogActivityAction } from "../../components/logactivity";
+import { useCallback, useRef } from "react";
+import { LogActivityAction } from "../../components/logactivity.action";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  type CallStart,
+  CallStartProvider,
+  useCallStart,
+} from "../../lib/callstart";
 import { intentAbout } from "../../lib/compose.intent";
 import { COMPOSE_PARAM, THREAD_PARAM } from "../../lib/contactpage.address";
 import {
@@ -150,6 +155,39 @@ export function ContactWriteTo({
   );
 }
 
+// A call to this contact opens the page's own Log activity drawer, so the page
+// never shows two log forms. A call to anyone else goes on to the shell.
+export function ContactCallStart({
+  contactId,
+  canLog,
+  onCall,
+  children,
+}: Readonly<{
+  contactId: string;
+  // The page's own activity gate, so the number refuses what its Log verb does.
+  canLog: boolean;
+  onCall: () => void;
+  children: ReactNode;
+}>) {
+  const shell = useCallStart();
+  // Stable, so the provider does not re-render every number on the page.
+  const start = useCallback<CallStart>(
+    (record) => {
+      if (record.entityId === contactId) {
+        onCall();
+        return;
+      }
+      shell?.(record);
+    },
+    [contactId, onCall, shell],
+  );
+  return (
+    <CallStartProvider start={canLog ? start : null}>
+      {children}
+    </CallStartProvider>
+  );
+}
+
 // Which drawer is open. Null is the ordinary state: the page is what the
 // reader is looking at, and a drawer is a detour from it.
 //
@@ -161,6 +199,7 @@ export type Drawer =
   | "research"
   | "activity_log"
   | "activity_task"
+  | "activity_call"
   | null;
 
 /**
@@ -283,6 +322,12 @@ export function ContactMailDrawer({
   );
 }
 
+const ASKED_KIND = {
+  activity_log: undefined,
+  activity_task: "task",
+  activity_call: "call",
+} as const;
+
 // The Log activity / Add task drawer: one form, one drawer state, started on
 // a different kind depending on which verb opened it. companyheader.tsx's two
 // LogActivityAction triggers show the same shape side by side. Split out the way ContactMailDrawer is above, so this drawer's own
@@ -292,15 +337,18 @@ export function ContactActivityDrawer({
   drawer,
   onClose,
 }: Readonly<{ contactId: string; drawer: Drawer; onClose: () => void }>) {
-  if (drawer !== "activity_log" && drawer !== "activity_task") {
+  if (
+    drawer !== "activity_log" &&
+    drawer !== "activity_task" &&
+    drawer !== "activity_call"
+  ) {
     return null;
   }
-  const asTask = drawer === "activity_task";
   return (
     <LogActivityAction
       entityType="contact"
       entityId={contactId}
-      askedKind={asTask ? "task" : undefined}
+      askedKind={ASKED_KIND[drawer]}
       openOnMount
       onClose={onClose}
     />

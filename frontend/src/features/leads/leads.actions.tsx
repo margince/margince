@@ -8,7 +8,7 @@ import {
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { EntityRef } from "../../components/entityref";
-import { LogActivityAction } from "../../components/logactivity";
+import { LogActivityAction } from "../../components/logactivity.action";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { IconAction, VerbWord } from "../../design-system/iconaction";
 import { leadIdentityName } from "../../format/leadname";

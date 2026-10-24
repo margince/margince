@@ -3,16 +3,27 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
+import { CallLogHost } from "../../components/calllog.host";
+import { useTaskUpdate } from "../../components/taskactions";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { taskWriteKeys } from "../../lib/activitykeys";
+import { useMe } from "../../lib/session";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
 import { TaskDetailModal } from "./taskdetailmodal";
@@ -381,6 +392,7 @@ type NextStepsCase = Readonly<{
   links?: { entity_type: string; entity_id: string }[];
   isDone?: boolean;
   contactRefused?: () => boolean;
+  routes?: RouteMap;
 }>;
 
 function stubNextSteps({
@@ -389,6 +401,7 @@ function stubNextSteps({
   links = [{ entity_type: "contact", entity_id: "c-1" }],
   isDone = false,
   contactRefused = () => false,
+  routes = {},
 }: NextStepsCase = {}) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }),
@@ -416,6 +429,7 @@ function stubNextSteps({
         : jsonResponse(contact),
     "GET /contacts/c-2": () =>
       jsonResponse({ ...ALICE, id: "c-2", full_name: "Bob Brandt" }),
+    ...routes,
   });
 }
 
@@ -723,3 +737,78 @@ test.each([
     expect(document.activeElement).toBe(box);
   },
 );
+
+// The real task write, so a call that completed the task would be seen.
+function TaskDialogWithItsWrites() {
+  const update = useTaskUpdate(taskWriteKeys("contact", "c-1"));
+  return (
+    <TaskDetailModal
+      activityId="task-1"
+      readOnly={false}
+      onClose={() => {}}
+      update={update}
+    />
+  );
+}
+
+function SessionAnswered() {
+  return useMe().data ? <p>session answered</p> : null;
+}
+
+test("Call logs the call inside the dialog, on the task's contact, and leaves the task open", async () => {
+  const user = userEvent.setup();
+  const posted: unknown[] = [];
+  const patched: unknown[] = [];
+  stubNextSteps({
+    routes: {
+      "GET /me": meRoute({ activity: ["read", "create"] }, { seat: "full" }),
+      "POST /activities": (body) => {
+        posted.push(body);
+        return jsonResponse({ id: "a-9", kind: "call" }, 201);
+      },
+      "PATCH /activities/task-1": (body) => {
+        patched.push(body);
+        return jsonResponse({}, 200);
+      },
+    },
+  });
+  render(
+    <StoryProviders>
+      <CallLogHost>
+        <SessionAnswered />
+        <TaskDialogWithItsWrites />
+      </CallLogHost>
+    </StoryProviders>,
+  );
+  await screen.findByText("session answered");
+
+  const dial = await screen.findByRole("link", {
+    name: en["record.verb.call"],
+  });
+  dial.focus();
+  await user.keyboard("{Enter}");
+  const log = await screen.findByRole("region", { name: en["log.title"] });
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  expect(screen.getByRole("dialog").contains(log)).toBe(true);
+  expect(log.contains(document.activeElement)).toBe(true);
+  expect(
+    within(log).getByRole("combobox", { name: "Type" }).textContent,
+  ).toContain("Call");
+  await user.type(
+    within(log).getByRole("textbox", { name: "Subject" }),
+    "Left a voicemail",
+  );
+  await user.click(within(log).getByRole("button", { name: "Log" }));
+
+  await waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]).toMatchObject({
+    kind: "call",
+    links: [{ entity_type: "contact", entity_id: "c-1" }],
+  });
+  await waitFor(() =>
+    expect(screen.queryByRole("region", { name: en["log.title"] })).toBeNull(),
+  );
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  expect(document.activeElement).toBe(dial);
+  expect(patched).toHaveLength(0);
+});

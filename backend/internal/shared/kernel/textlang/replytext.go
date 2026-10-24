@@ -191,11 +191,23 @@ const minReplyWords = 12
 // leading whitespace is skipped: "  > quoted" is a quote however the client
 // indented it.
 func quoteStart(runes []rune) int {
+	return quoteBoundary(runes, false)
+}
+
+// unmarkedQuoteStart is quoteStart that reads on past a quote marked line by
+// line. A bottom-posted reply puts the sender's words and signature under the
+// ">" lines it answers, so only an unmarked boundary ends the sender's text.
+func unmarkedQuoteStart(runes []rune) int {
+	return quoteBoundary(runes, true)
+}
+
+func quoteBoundary(runes []rune, passMarked bool) int {
 	ownHeaders := true
 	for offset, atLineStart := 0, true; offset < len(runes); offset++ {
 		if atLineStart && !unicode.IsSpace(runes[offset]) {
 			line := lineAt(runes, offset)
-			if startsQuote(line) && (!ownHeaders || !isOwnHeader(line, offset)) {
+			if startsQuote(line) && (!ownHeaders || !isOwnHeader(line, offset)) &&
+				(!passMarked || !opensMarkedQuote(runes, offset, line)) {
 				return offset
 			}
 			ownHeaders = ownHeaders && IsMailHeader(string(line))
@@ -205,6 +217,16 @@ func quoteStart(runes []rune) int {
 		atLineStart = atLineStart || runes[offset] == '\n' || runes[offset] == '\r'
 	}
 	return -1
+}
+
+// opensMarkedQuote reports whether the line is a ">" line, or the attribution
+// line directly above one: both belong to a quote that marks every line.
+func opensMarkedQuote(runes []rune, offset int, line []rune) bool {
+	if strings.HasPrefix(string(line), ">") {
+		return true
+	}
+	next := strings.TrimLeftFunc(string(runes[offset+len(line):]), unicode.IsSpace)
+	return strings.HasPrefix(next, ">")
 }
 
 // isOwnHeader reports whether an address header at this offset belongs to the
@@ -327,4 +349,25 @@ func CurrentMessage(text string) string {
 		runes = runes[:offset]
 	}
 	return strings.TrimSpace(string(runes))
+}
+
+// SenderLines are the lines the sender of this message typed, signature
+// included. The stored envelope, every ">" line with its attribution, and all
+// text from an unmarked quote or forward down are dropped. Every reader that
+// takes a fact about the sender from a mail body reads these lines.
+//
+// CurrentMessage stops at the first ">" line instead, because stored quote
+// proofs hash its text. Both cut at the same boundaries quoteBoundary finds.
+func SenderLines(body string) []string {
+	runes := []rune(body)
+	if offset := unmarkedQuoteStart(runes); offset >= 0 {
+		runes = runes[:offset]
+	}
+	return WrittenLines(string(runes))
+}
+
+// SenderText is SenderLines as one text, for a reader that shows a model the
+// sender's words and checks its quotes against the same text.
+func SenderText(body string) string {
+	return strings.Join(SenderLines(body), "\n")
 }

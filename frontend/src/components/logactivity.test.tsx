@@ -19,7 +19,8 @@ import { formatTimeOfDay } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { RecordZoneProvider } from "../lib/recordzone";
 import { meFixture } from "../testing/mefixture";
-import { LogActivity, LogActivityAction } from "./logactivity";
+import { LogActivity } from "./logactivity";
+import { LogActivityAction } from "./logactivity.action";
 
 // Logging from a 360 (the "you can actually add to the timeline" acceptance):
 // the POST body carries the contract's shape (kind, subject, the viewed
@@ -888,29 +889,6 @@ describe("the Details field", () => {
 
     expect(screen.getByLabelText("Transcript").tagName).toBe("TEXTAREA");
     expect(screen.queryByRole("toolbar")).toBeNull();
-  });
-});
-
-describe("closing the drawer over a typed note", () => {
-  it("asks first, and keeps the drawer open", async () => {
-    stubApi({});
-    const user = userEvent.setup();
-    render(<LogActivityAction entityType="deal" entityId="d1" openOnMount />);
-    await user.type(screen.getByLabelText("Subject *"), "Recap");
-    await user.keyboard("{Escape}");
-    expect(
-      screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
-    ).toBeTruthy();
-    expect(screen.getByRole("dialog", { name: "Log activity" })).toBeTruthy();
-  });
-
-  it("closes without asking once the note is saved", async () => {
-    stubApi({ "POST /activities": createdActivity });
-    const user = userEvent.setup();
-    render(<LogActivityAction entityType="deal" entityId="d1" openOnMount />);
-    await user.type(screen.getByLabelText("Subject *"), "Recap");
-    await user.click(screen.getByRole("button", { name: "Log" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });
 

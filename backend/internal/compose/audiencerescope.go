@@ -70,8 +70,18 @@ func (g *AudienceRescopeGen) HandleEvent(ctx context.Context, env events.Envelop
 	if err != nil {
 		return err
 	}
-	return g.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := g.db.Tx(ctx, func(tx pgx.Tx) error {
 		return g.rescope(ctx, tx, env.Entity.ID)
+	}); err != nil {
+		return err
+	}
+	// A title or a number lifted from the message's signature is its content
+	// restated on a record everybody reads. Taken back in a transaction of its
+	// own: the signature writer locks the contact before the activity, and the
+	// rescope above holds the activity. The retraction asks again, under those
+	// locks, whether the message is still limited.
+	return g.db.Tx(ctx, func(tx pgx.Tx) error {
+		return contacts.RetractSignatureFieldsTx(ctx, tx, env.Entity.ID)
 	})
 }
 
@@ -141,10 +151,7 @@ func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID 
 		if _, err := signals.NarrowDerivedForActivity(ctx, tx, activityID, owner); err != nil {
 			return err
 		}
-		// contacts owns contact_profile_field, so the edge is injected here rather
-		// than reached for inside activities.
-		if err := activities.RetractDerivedForActivityTx(
-			ctx, tx, activityID, contacts.RetractSignatureFieldsTx); err != nil {
+		if err := activities.RetractDerivedForActivityTx(ctx, tx, activityID); err != nil {
 			return err
 		}
 	}

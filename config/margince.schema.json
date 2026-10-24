@@ -1192,6 +1192,30 @@
           ],
           "default": "en"
         },
+        "call_telegram": {
+          "description": "Show a Telegram chat link next to a contact's phone number that starts with a country code.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
+        "call_whatsapp": {
+          "description": "Show a WhatsApp chat link next to a contact's phone number that starts with a country code.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
+        "call_zalo": {
+          "description": "Show a Zalo chat link next to a contact's phone number that starts with a country code.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
         "close_date_sweep_interval_seconds": {
           "description": "Seconds between the close-date sweeps.",
           "type": [

@@ -117,7 +117,7 @@ list of next steps.
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
 ### What can I do from a task?
-A task linked to one contact offers **Email** and **Open contact**. It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Email** is refused with a reason when the contact has no email address or is archived. An archived contact gets no **Call**, and **Open contact** stays. The **First** card on **Home** offers **Call** and **Email** the same way, with no **Open contact**.
+A task linked to one contact offers **Email** and **Open contact**. It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The **First** card on **Home** offers **Call** and **Email** the same way, with no **Open contact**.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under

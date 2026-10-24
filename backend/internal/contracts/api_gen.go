@@ -41085,6 +41085,18 @@ type InstallationSettings struct {
 	// for one reader keeps that reader's language.
 	BaseLanguage InstallationSettingsBaseLanguage `json:"base_language"`
 
+	// CallTelegram Show a Telegram link next to a contact's phone number that starts with a country
+	// code. On by default. The link opens the chat in Telegram and sends the number to its website.
+	CallTelegram bool `json:"call_telegram"`
+
+	// CallWhatsapp Show a WhatsApp link next to a contact's phone number that starts with a country
+	// code. On by default. The link opens the chat in WhatsApp and sends the number to its website.
+	CallWhatsapp bool `json:"call_whatsapp"`
+
+	// CallZalo Show a Zalo link next to a contact's phone number that starts with a country
+	// code. On by default. The link opens the chat in Zalo and sends the number to its website.
+	CallZalo bool `json:"call_zalo"`
+
 	// DateFormat Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.
 	DateFormat *InstallationSettingsDateFormat `json:"date_format,omitempty"`
 
@@ -52160,6 +52172,15 @@ type UpdateInstallationSettingsRequest struct {
 	// BaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
 	// nothing already written, so artifacts stay in the language they were written in.
 	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
+
+	// CallTelegram Show the Telegram link next to a contact's phone number. Omit to leave it unchanged.
+	CallTelegram *bool `json:"call_telegram,omitempty"`
+
+	// CallWhatsapp Show the WhatsApp link next to a contact's phone number. Omit to leave it unchanged.
+	CallWhatsapp *bool `json:"call_whatsapp,omitempty"`
+
+	// CallZalo Show the Zalo link next to a contact's phone number. Omit to leave it unchanged.
+	CallZalo *bool `json:"call_zalo,omitempty"`
 
 	// CloseDateSweepIntervalSeconds Set the value `OperationSettings.close_date_sweep_interval_seconds` describes.
 	CloseDateSweepIntervalSeconds *int `json:"close_date_sweep_interval_seconds,omitempty"`

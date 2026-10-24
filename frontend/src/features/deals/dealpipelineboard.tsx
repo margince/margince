@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ComponentProps, useId, useState } from "react";
-import { LogActivityAction } from "../../components/logactivity";
+import { LogActivityAction } from "../../components/logactivity.action";
 import { Modal } from "../../design-system/atoms";
 import type { DealCardActions } from "../../design-system/dealcard";
 import { Heading } from "../../design-system/heading";

@@ -573,5 +573,9 @@ const (
 	// 137: projects.LinkPhaseHistoryTx pages over phase-history rows under the
 	// system principal and matches each to its audit row. It returns the
 	// history row ids only to advance the cursor; none leaves the server.
-	modulesTierUnscopedCeiling = 137
+	//
+	// 138: contacts.SignatureFieldSourcesTx pages the signature fields for the
+	// repair data task, as the system actor over the whole workspace. The ids
+	// go only to RetractSignatureFieldsByIDTx, ratified in writesWithoutARowProbe.
+	modulesTierUnscopedCeiling = 138
 )

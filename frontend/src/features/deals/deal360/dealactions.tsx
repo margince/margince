@@ -20,7 +20,7 @@ import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
 import { ArchiveAction } from "../../../components/archive";
 import { ExtensionEntries } from "../../../components/extensionentries";
-import { LogActivityAction } from "../../../components/logactivity";
+import { LogActivityAction } from "../../../components/logactivity.action";
 import { searchCompanyContacts } from "../../../components/meetingattendees";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";

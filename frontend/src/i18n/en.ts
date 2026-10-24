@@ -12345,6 +12345,12 @@ export const en = {
   "installationSettings.readOnly":
     "Only an administrator or operations user can change these settings.",
   "installationSettings.edit": "Edit",
+  "installationSettings.callingTitle": "Calling",
+  "installationSettings.callWhatsApp": "WhatsApp chat",
+  "installationSettings.callTelegram": "Telegram chat",
+  "installationSettings.callZalo": "Zalo chat",
+  "installationSettings.callingHint":
+    "While a switch is on, a link beside each phone number with a country code opens the chat in that app. The app receives the number.",
   "installationSettings.editField": "Edit {field}",
   "installationSettings.save": "Save",
   "signInMethods.title": "Sign-in methods",
@@ -14463,6 +14469,7 @@ export const en = {
   // way to reach them, and consent that says not to.
   "contact.action.noTransport": "No address and no thread to reply to.",
   "contact.action.call": "Call",
+  "callAction.openChat": "Open chat in {app}",
   "contact.action.noPhone": "No phone number on this contact.",
   "contact.action.meetings": "Meetings",
   "contact.action.workAsLead": "Work as a lead",

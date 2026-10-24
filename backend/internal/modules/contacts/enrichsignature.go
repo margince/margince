@@ -393,6 +393,10 @@ func applySignatureNumbers(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	if len(fields) == 0 {
 		return 0, nil
 	}
+	fields, err := withoutMemberNumbers(ctx, tx, contactID, fields)
+	if err != nil {
+		return 0, err
+	}
 	numbers := make([]observedNumber, 0, len(fields))
 	for _, f := range fields {
 		confidence := f.Confidence

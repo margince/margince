@@ -65,8 +65,16 @@ function mount(page: Contact360, refusedReasonId?: string) {
         <p id={refusedReasonId}>{en["contact.rail.archivedReadOnly"]}</p>
       )}
       <div data-testid="fact">
-        <ContactLink kind="phone" value={MOBILE} />
-        <ContactLink kind="phone" value={OFFICE} />
+        <ContactLink
+          kind="phone"
+          value={MOBILE}
+          record={{ entityType: "contact", entityId: page.contact.id }}
+        />
+        <ContactLink
+          kind="phone"
+          value={OFFICE}
+          record={{ entityType: "contact", entityId: page.contact.id }}
+        />
       </div>
     </StoryProviders>,
   );

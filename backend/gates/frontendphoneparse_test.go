@@ -1,0 +1,184 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//gate:kind parity H3
+
+package gates
+
+// The browser reads a phone number with ParsePhone's separators, dial prefix and E.164 pattern.
+//
+// contacturi.ts offers a messenger chat only for a number it reads as E.164. If its rules
+// drift from the server's, it links numbers the server refuses, or hides the link for stored ones.
+
+import (
+	"os"
+	"regexp"
+	"regexp/syntax"
+	"slices"
+	"strconv"
+	"strings"
+	"testing"
+	"unicode"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
+
+const frontendContactURI = "../frontend/src/format/contacturi.ts"
+
+// tsDialPrefixRule is the 00 rule as contacturi.ts spells it: startsWith("00"), then "+" and slice(2).
+var tsDialPrefixRule = regexp.MustCompile("\\.startsWith\\(\"(\\d+)\"\\)\\s*\\?\\s*`\\+\\$\\{\\w+\\.slice\\((\\d+)\\)\\}`")
+
+func TestTheFrontendPhoneParseMatchesParsePhone(t *testing.T) {
+	t.Parallel()
+	raw, err := os.ReadFile(frontendContactURI)
+	if err != nil {
+		t.Fatalf("reading the frontend phone mirror: %v", err)
+	}
+	source := string(raw)
+	body := tsFunctionBody(t, source, "e164Digits")
+	for _, use := range []string{`\.trim\(\)`, `\.replace\(\s*PHONE_SEPARATORS\s*,`, `\bE164\.(?:exec|test)\(`} {
+		if !regexp.MustCompile(use).MatchString(body) {
+			t.Errorf("%s: e164Digits no longer calls /%s/, so the declarations this gate compares are not the ones it runs", frontendContactURI, use)
+		}
+	}
+	if !regexp.MustCompile(`\be164Digits\(`).MatchString(tsFunctionBody(t, source, "messengerUris")) {
+		t.Errorf("%s: messengerUris no longer reads the number through e164Digits, so its links follow rules this gate does not compare", frontendContactURI)
+	}
+
+	goPattern := withoutCaptures(t, "values.E164Pattern", values.E164Pattern)
+	e164Body, e164Flags := tsRegexLiteral(t, source, "E164")
+	if strings.ContainsAny(e164Flags, "gy") {
+		t.Errorf("%s: E164 carries flags %q; with g or y, exec keeps lastIndex and the next number is read from the middle. Drop them", frontendContactURI, e164Flags)
+	}
+	tsPattern := withoutCaptures(t, frontendContactURI+" E164", e164Body)
+	if goPattern != tsPattern {
+		t.Errorf("E.164 drifted: values.E164Pattern reads %s, %s E164 reads %s. Change the side that moved", goPattern, frontendContactURI, tsPattern)
+	}
+
+	separators, separatorFlags := tsRegexLiteral(t, source, "PHONE_SEPARATORS")
+	if !strings.Contains(separatorFlags, "g") {
+		t.Errorf("%s: PHONE_SEPARATORS lacks the g flag, so replace strips only the first separator and ParsePhone strips all. Add g", frontendContactURI)
+	}
+	compareSeparators(t, separators)
+	compareDialPrefix(t, body)
+}
+
+func compareSeparators(t *testing.T, tsClass string) {
+	t.Helper()
+	parsed, err := syntax.Parse(tsClass, syntax.Perl)
+	if err != nil || parsed.Op != syntax.OpCharClass {
+		t.Fatalf("%s: PHONE_SEPARATORS %q is no longer one character class (%v); the gate cannot read it", frontendContactURI, tsClass, err)
+	}
+	var inTS []rune
+	for i := 0; i < len(parsed.Rune); i += 2 {
+		for r := parsed.Rune[i]; r <= parsed.Rune[i+1]; r++ {
+			inTS = append(inTS, r)
+		}
+	}
+	var inGo []rune
+	for _, separator := range values.PhoneSeparators() {
+		runes := []rune(separator)
+		if len(runes) != 1 {
+			t.Fatalf("values.PhoneSeparators holds %q; a character class can only mirror single characters", separator)
+		}
+		inGo = append(inGo, runes[0])
+		if got, parseErr := values.ParsePhone("+49" + separator + "30123456"); parseErr != nil || got.String() != "+4930123456" {
+			t.Errorf("ParsePhone does not strip %q, which values.PhoneSeparators lists; build its replacer from that list", separator)
+		}
+	}
+	refusesUnlistedCharacters(t, inGo)
+	for _, r := range inGo {
+		if !slices.Contains(inTS, r) {
+			t.Errorf("separator %q: ParsePhone strips it and %s PHONE_SEPARATORS does not. Add it there or drop it from values.PhoneSeparators", r, frontendContactURI)
+		}
+	}
+	for _, r := range inTS {
+		if !slices.Contains(inGo, r) {
+			t.Errorf("separator %q: %s PHONE_SEPARATORS strips it and ParsePhone does not. Drop it there or add it to values.PhoneSeparators", r, frontendContactURI)
+		}
+	}
+}
+
+// refusesUnlistedCharacters proves PhoneSeparators is the whole stripping rule: a second path
+// would strip a character the browser mirror keeps.
+func refusesUnlistedCharacters(t *testing.T, listed []rune) {
+	t.Helper()
+	for r := '\t'; r <= '~'; r++ {
+		if unicode.IsDigit(r) || slices.Contains(listed, r) {
+			continue
+		}
+		if _, err := values.ParsePhone("+49" + string(r) + "30123456"); err == nil {
+			t.Errorf("ParsePhone strips %q, which values.PhoneSeparators does not list. Add it there, and to PHONE_SEPARATORS in %s", r, frontendContactURI)
+		}
+	}
+}
+
+func compareDialPrefix(t *testing.T, e164DigitsBody string) {
+	t.Helper()
+	prefix := values.InternationalDialPrefix
+	if got, err := values.ParsePhone(prefix + "4930123456"); err != nil || got.String() != "+4930123456" {
+		t.Errorf("ParsePhone no longer reads a leading %q as \"+\", and %s still does. Restore it in phone.go or drop it in e164Digits", prefix, frontendContactURI)
+	}
+	rule := tsDialPrefixRule.FindStringSubmatch(e164DigitsBody)
+	if rule == nil {
+		t.Errorf("%s: e164Digits no longer reads a leading %q as \"+\", and ParsePhone does. Restore `startsWith(%q) ? `+${x.slice(%d)}``", frontendContactURI, prefix, prefix, len(prefix))
+		return
+	}
+	if sliced, err := strconv.Atoi(rule[2]); rule[1] != prefix || err != nil || sliced != len(prefix) {
+		t.Errorf("%s: e164Digits swaps %q (slicing %s) for \"+\"; values.InternationalDialPrefix is %q", frontendContactURI, rule[1], rule[2], prefix)
+	}
+}
+
+// tsRegexLiteral is the body and flags of the one `const name = /body/flags;` statement in source.
+func tsRegexLiteral(t *testing.T, source, name string) (body, flags string) {
+	t.Helper()
+	statement := regexp.MustCompile(`(?m)^(?:export\s+)?const\s+` + regexp.QuoteMeta(name) + `\s*=\s*/(.+)/([a-z]*);\s*$`)
+	found := statement.FindAllStringSubmatch(source, -1)
+	if len(found) != 1 {
+		t.Fatalf("%s: found %d `const %s = /…/;` statements, want 1. A rename makes this gate read nothing; rename it here too", frontendContactURI, len(found), name)
+	}
+	return found[0][1], found[0][2]
+}
+
+func tsFunctionBody(t *testing.T, source, name string) string {
+	t.Helper()
+	start := indexAfter(source, "\nfunction "+name+"(")
+	if start < 0 {
+		start = indexAfter(source, "\nexport function "+name+"(")
+	}
+	if start < 0 {
+		t.Fatalf("%s no longer declares function %s; the gate cannot see how the mirror is applied", frontendContactURI, name)
+	}
+	end := indexAfter(source[start:], "\n}\n")
+	if end < 0 {
+		t.Fatalf("%s: function %s is unterminated", frontendContactURI, name)
+	}
+	return source[start : start+end]
+}
+
+// withoutCaptures parses pattern so `\d` and `[0-9]` compare equal, and drops the capture TS needs.
+func withoutCaptures(t *testing.T, origin, pattern string) string {
+	t.Helper()
+	parsed, err := syntax.Parse(pattern, syntax.Perl)
+	if err != nil {
+		t.Fatalf("%s: %q does not parse as a regular expression: %v", origin, pattern, err)
+	}
+	return flattenCaptures(parsed).String()
+}
+
+func flattenCaptures(node *syntax.Regexp) *syntax.Regexp {
+	var subs []*syntax.Regexp
+	for _, sub := range node.Sub {
+		sub = flattenCaptures(sub)
+		if node.Op == syntax.OpConcat && sub.Op == syntax.OpConcat {
+			subs = append(subs, sub.Sub...)
+			continue
+		}
+		subs = append(subs, sub)
+	}
+	node.Sub = subs
+	if node.Op == syntax.OpCapture {
+		return node.Sub[0]
+	}
+	return node
+}

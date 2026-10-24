@@ -2,13 +2,36 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
+import { CallStartProvider } from "../lib/callstart";
+import {
+  callMessengersRoute,
+  installFetchStub,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CallAction } from "./callaction";
+import { Fact, RecordFacts } from "./recordfacts";
 
 // Each appearance with a number that dials, one `telUri` refuses, and none.
+// The shell's call log host is stood in for by a start that opens nothing.
 const meta: Meta<typeof CallAction> = {
   title: "Components/Navigation/Call action",
   component: CallAction,
   parameters: { layout: "padded" },
+  decorators: [
+    (Story) => {
+      installFetchStub({
+        "GET /installation/settings": callMessengersRoute(),
+      });
+      return (
+        <StoryProviders>
+          <CallStartProvider start={() => {}}>
+            <Story />
+          </CallStartProvider>
+        </StoryProviders>
+      );
+    },
+  ],
 };
 export default meta;
 
@@ -16,16 +39,85 @@ type Story = StoryObj<typeof CallAction>;
 
 const DIALS = "+49 30 1234 5678";
 const REFUSED = "ask reception";
+const dana = { entityType: "contact", entityId: "p-1" } as const;
 
 const row = { display: "flex", gap: "var(--space-4)", alignItems: "center" };
 
+// A number with its country code offers its chats; a national one only dials.
 export const Value: Story = {
   render: () => (
     <div style={row}>
-      <CallAction appearance="value" number={DIALS} />
-      <CallAction appearance="value" number={REFUSED} />
+      <CallAction appearance="value" record={dana} number={DIALS} />
+      <CallAction appearance="value" record={dana} number="030 1234 5678" />
+      <CallAction appearance="value" record={dana} number={REFUSED} />
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("link", { name: "Open chat in WhatsApp" });
+    await expect(
+      canvas.getAllByRole("link", { name: /^Open chat in / }),
+    ).toHaveLength(3);
+  },
+};
+
+export const ValueWithTelegramOff: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /installation/settings": callMessengersRoute({
+        call_telegram: false,
+      }),
+    });
+    return <CallAction appearance="value" record={dana} number={DIALS} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("link", { name: "Open chat in Zalo" });
+    await expect(
+      canvas.queryByRole("link", { name: "Open chat in Telegram" }),
+    ).toBeNull();
+  },
+};
+
+const LONG = "+849123456789012";
+
+/**
+ * The header's facts strip at 390px: the chats go under a long number rather
+ * than past the edge. `uat-phone` makes the capture gate render it at 390px.
+ */
+export const ValueAtPhoneWidth: Story = {
+  render: () => (
+    <div style={{ padding: "var(--padCard)" }}>
+      <RecordFacts>
+        <Fact label="Email">
+          dana.brandt-oberhausen@brandt-automotive.example
+        </Fact>
+        <Fact label="Phone">
+          <CallAction appearance="value" record={dana} number={LONG} />
+        </Fact>
+      </RecordFacts>
+    </div>
+  ),
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const zalo = await canvas.findByRole("link", { name: "Open chat in Zalo" });
+    const number = canvas.getByRole("link", { name: LONG });
+    const page = canvasElement.getBoundingClientRect();
+    for (const link of canvas.getAllByRole("link")) {
+      await expect(link.getBoundingClientRect().right).toBeLessThanOrEqual(
+        page.right + 0.5,
+      );
+    }
+    await expect(canvasElement.scrollWidth).toBeLessThanOrEqual(
+      canvasElement.clientWidth,
+    );
+    await expect(zalo.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+      number.getBoundingClientRect().left - 0.5,
+    );
+  },
 };
 
 // A refused number and no number draw nothing, so only the first shows.
@@ -33,9 +125,24 @@ export const ButtonForm: Story = {
   name: "Button",
   render: () => (
     <div style={row}>
-      <CallAction appearance="button" number={DIALS} label="Call" />
-      <CallAction appearance="button" number={REFUSED} label="Call" />
-      <CallAction appearance="button" number={undefined} label="Call" />
+      <CallAction
+        appearance="button"
+        record={dana}
+        number={DIALS}
+        label="Call"
+      />
+      <CallAction
+        appearance="button"
+        record={dana}
+        number={REFUSED}
+        label="Call"
+      />
+      <CallAction
+        appearance="button"
+        record={dana}
+        number={undefined}
+        label="Call"
+      />
     </div>
   ),
 };
@@ -45,18 +152,21 @@ export const Icon: Story = {
     <div style={row}>
       <CallAction
         appearance="icon"
+        record={dana}
         number={DIALS}
         label="Call"
         reason="No phone number on this contact."
       />
       <CallAction
         appearance="icon"
+        record={dana}
         number={REFUSED}
         label="Call"
         reason="No phone number on this contact."
       />
       <CallAction
         appearance="icon"
+        record={dana}
         number={undefined}
         label="Call"
         reason="No phone number on this contact."
@@ -71,6 +181,7 @@ export const IconRefusedByPage: Story = {
     <div>
       <CallAction
         appearance="icon"
+        record={dana}
         number={DIALS}
         label="Call"
         reason="No phone number on this contact."

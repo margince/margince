@@ -98,9 +98,7 @@ Pick a company that is already there, or enter its **Confirmed company website**
 
 Also called: unresolved employer, imported job history.
 
-Emails have the types **work, personal or other**; phones **work, mobile, home or other**. One number may show two times under two types, such as a main number that is both work and mobile. Editing the list keeps the two entries apart.
-
-The contact header says **who can see this contact**: only its owner, or everyone in the company; a company header says the same. See [Seats, roles and who can see what](seats-roles-and-access.md).
+Emails have the types **work, personal or other**; phones **work, mobile, home or other**. One number may show two times under two types, such as a main number that is both work and mobile. Editing the list keeps the two entries apart. The contact header says **who can see this contact**: only its owner, or everyone in the company; a company header says the same. See [Seats, roles and who can see what](seats-roles-and-access.md).
 
 A contact's job title shows in two places. The title on the contact record is a copy, there to save you time. The one that counts is on the job link with the company. A contact can have one current main employer, or none. Margince reads a contact's job title from the signature in their newest mail, and from up to two older mails when that one states none. An older mail only fills an empty title, and mail Margince could not read in full or newsletter mail is never used.
 
@@ -117,8 +115,9 @@ Anyone the merged-away contact was shared with can open the contact you kept. Of
 Also called: combine, deduplicate, remove a duplicate.
 
 ### How do I call a contact?
-To call a contact from Margince, press **Call** in its header; it dials the main number, or else the first, in your phone app. Click any number in **Details** to dial that one; Margince does not make or record calls.
-**Call** is refused with no phone number, or on an archived contact; the first says "No phone number on this contact." under the buttons. **More actions** → **Full history** opens **History**, where **Log activity** → **Call** logs the call. A logged call in **What was said** or on **History** offers **Call**; so does the top bar of **Overview** when a call made its task.
+To call a contact from Margince, press **Call** in its header; it dials the main number, or else the first, in your phone app. Click any number in **Details** to dial that one. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the **First** card on **Home** do the same. A seat that may not log activity only dials. A call logged this way is not linked to the task and does not complete it.
+
+**Call** is refused on an archived contact, which shows no numbers; with no number at all, "No phone number on this contact." shows. Only a number that starts with + shows **WhatsApp**, **Telegram** and **Zalo** links, in the header **Phone** field and in **Details**. Each sends the number to the app's website and opens a chat, where you start the call; it does not open **Log activity**. Telegram finds the contact only if the contact allows it. An administrator can turn each link off in [Settings](settings.md).
 Also called: phone a contact, click to call, dial.
 
 ### Can I add a photo to a contact, or change a company's logo?
@@ -142,7 +141,6 @@ Also called: new account, new business, add a client or customer.
 To edit a company in Margince, open it and click the value to change in its **Details** panel. Each field changes in place, with no Edit button.
 1. If the panel is hidden, choose **Show details**.
 2. Click a value, change it, and press Enter or pick from the list. `Esc` stops.
-
 
 The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
 Also called: rename a company, update an account.

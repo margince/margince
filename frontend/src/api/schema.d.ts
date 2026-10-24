@@ -21915,6 +21915,21 @@ export interface components {
              */
             time_format?: "locale" | "24h" | "12h";
             /**
+             * @description Show a WhatsApp link next to a contact's phone number that starts with a country
+             *     code. On by default. The link opens the chat in WhatsApp and sends the number to its website.
+             */
+            call_whatsapp: boolean;
+            /**
+             * @description Show a Telegram link next to a contact's phone number that starts with a country
+             *     code. On by default. The link opens the chat in Telegram and sends the number to its website.
+             */
+            call_telegram: boolean;
+            /**
+             * @description Show a Zalo link next to a contact's phone number that starts with a country
+             *     code. On by default. The link opens the chat in Zalo and sends the number to its website.
+             */
+            call_zalo: boolean;
+            /**
              * @description The month the installation's business year begins, 1..12. January (1) is the
              *     default, which is the calendar year every installation reported by before this
              *     setting existed.
@@ -22047,6 +22062,12 @@ export interface components {
              * @enum {string}
              */
             time_format?: "locale" | "24h" | "12h";
+            /** @description Show the WhatsApp link next to a contact's phone number. Omit to leave it unchanged. */
+            call_whatsapp?: boolean;
+            /** @description Show the Telegram link next to a contact's phone number. Omit to leave it unchanged. */
+            call_telegram?: boolean;
+            /** @description Show the Zalo link next to a contact's phone number. Omit to leave it unchanged. */
+            call_zalo?: boolean;
             /**
              * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
              *     reports on read and stores nothing, so moving it re-labels every period report at

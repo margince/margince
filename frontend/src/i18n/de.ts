@@ -12334,6 +12334,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.readOnly":
     "Nur Admins und Operations können diese Einstellungen ändern.",
   "installationSettings.edit": "Bearbeiten",
+  "installationSettings.callingTitle": "Anrufe",
+  "installationSettings.callWhatsApp": "WhatsApp-Chat",
+  "installationSettings.callTelegram": "Telegram-Chat",
+  "installationSettings.callZalo": "Zalo-Chat",
+  "installationSettings.callingHint":
+    "Solange ein Schalter aktiv ist, öffnet ein Link neben jeder Telefonnummer mit Ländervorwahl den Chat in dieser App. Die App erhält die Nummer.",
   "installationSettings.editField": "{field} bearbeiten",
   "installationSettings.save": "Speichern",
   "signInMethods.title": "Anmeldemethoden",
@@ -14511,6 +14517,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.action.noTransport":
     "Keine Adresse und kein Thread, auf den geantwortet werden kann.",
   "contact.action.call": "Anrufen",
+  "callAction.openChat": "Chat in {app} öffnen",
   "contact.action.noPhone": "Dieser Kontakt hat keine Telefonnummer.",
   "contact.action.meetings": "Termine",
   "contact.action.workAsLead": "Als Lead bearbeiten",
