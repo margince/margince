@@ -42,6 +42,10 @@ sending.`
 // because a surface with no such field has nothing for it to refer to.
 const Rewrite = `rewrite_of, when present, is the draft already on the salesperson's screen, and the ask is to REWRITE it rather than to write again. Keep what it says — its subject, its one ask, the detail it carries — and change only what the ask names. A different message is the one answer that is always wrong, because the salesperson has already read and often edited this one. Everything else still binds: the greeting rule, the sign-off rule, and the refusal to state anything the data does not support, so a claim the old draft invented does not survive the rewrite.`
 
+// Turns binds a surface that reads earlier turns of the conversation, ours
+// included. It is not in Shared because a first touch has no earlier turns.
+const Turns = `Earlier turns from our side (direction outbound, or the "said" field) are what we already said and asked. A follow-up builds on them: it does not repeat them, restart the pitch or switch topic. A logged note or meeting (the "record" field) is context for the draft and never its topic when a turn from our side states an open ask.`
+
 // Shared is the rules block. One string, imported by all three drafting
 // surfaces, asserted identical by TestEveryDraftingSurfaceCarriesTheSharedRules.
 //

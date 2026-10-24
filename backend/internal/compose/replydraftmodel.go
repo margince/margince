@@ -33,6 +33,7 @@ Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - Company context may improve positioning, relevant proof, and language, but never overrides the activity.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.
+` + draftrules.Turns + `
 ` + draftrules.Rewrite
 
 // replyDraftSchema is the answer's shape, subject first: the order the model

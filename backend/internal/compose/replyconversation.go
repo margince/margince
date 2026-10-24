@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -28,29 +29,26 @@ func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts
 	if err != nil {
 		return "", err
 	}
-	return replyConversationText(anchor, rows), nil
+	turns := draftcore.Conversation(rows, &anchor, d.envelope.Now(), replyContextTurns)
+	return replyConversationText(turns), nil
 }
 
-func replyConversationText(anchor crmcontracts.Activity, rows []crmcontracts.Activity) string {
-	var turns []string
-	for _, row := range rows {
-		if row.Id == anchor.Id || row.Kind != crmcontracts.ActivityKindEmail ||
-			row.ContentState != nil && *row.ContentState == crmcontracts.ActivityContentStateWithheld {
-			continue
-		}
-		direction := "unknown"
-		if row.Direction != nil {
-			direction = string(*row.Direction)
+// replyConversationText renders the turns the way the reply prompt describes
+// them: where each stands against the selected message, its date, direction
+// and subject, then its text.
+func replyConversationText(turns []draftcore.Turn) string {
+	rendered := make([]string, 0, len(turns))
+	for _, turn := range turns {
+		direction := turn.Direction
+		if direction == "" {
+			direction = "unknown"
 		}
 		relation := "at or before the selected message"
-		if row.OccurredAt.After(anchor.OccurredAt) {
+		if turn.AfterAnchor {
 			relation = "later than the selected message"
 		}
-		turns = append(turns, fmt.Sprintf("%s | %s | %s | %s\n%s", relation, row.OccurredAt.Format("2006-01-02T15:04:05Z07:00"),
-			direction, textcut.Runes(stringValue(row.Subject), 200), textcut.Runes(stringValue(row.Body), 1200)))
-		if len(turns) == replyContextTurns {
-			break
-		}
+		rendered = append(rendered, fmt.Sprintf("%s | %s | %s | %s\n%s", relation,
+			turn.At.Format("2006-01-02T15:04:05Z07:00"), direction, textcut.Runes(turn.Subject, 200), turn.Text))
 	}
-	return textcut.Runes(strings.Join(turns, "\n\n"), replyActivityMaxRunes)
+	return textcut.Runes(strings.Join(rendered, "\n\n"), replyActivityMaxRunes)
 }

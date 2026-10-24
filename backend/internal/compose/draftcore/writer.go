@@ -97,8 +97,13 @@ type Input interface {
 	CoRecipientNames() []string
 	// Addresses is where the draft is sent, empty when the record holds none.
 	Addresses() []string
-	// Threaded says whether this draft continues an existing subject line.
+	// Threaded says whether this draft answers a message THEY sent, which is
+	// what lets a subject carry "Re:" past the phrasing checks.
 	Threaded() bool
+	// ThreadSubject is the subject of the email thread this draft continues,
+	// whoever wrote last, and false when there is none. The served subject is
+	// set from it in code (see ContinueThread).
+	ThreadSubject() (string, bool)
 	// Booked says whether the record carries a meeting with this recipient.
 	//
 	// False is the common answer and the one that binds: with nothing booked, a
@@ -227,6 +232,7 @@ func writeChecked(
 		return Draft{}, err
 	}
 	served.Body = draftcheck.EnsureGreeting(served.Body, envelope, groundsOf(in))
+	served.Subject = ContinueThread(served.Subject, in)
 	return served, nil
 }
 
