@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
@@ -39,9 +40,10 @@ func uploadCeilings(limits UploadLimits) map[string]int64 {
 		// A .vcf is a text file of a few hundred bytes per card, so it rides
 		// the CSV import's ceiling rather than earning an operator dial of its
 		// own — the two are the same kind of upload, a delimited address book.
-		"/v1/contacts/vcard-import":            limits.CSVImport,         // importVCards
-		"/v1/contacts/card-photos":             limits.Attachment,        // importCardPhoto
-		"/v1/knowledge/corpora/{id}/documents": limits.KnowledgeDocument, // uploadCorpusDocument
+		"/v1/contacts/vcard-import": limits.CSVImport, // importVCards
+		// One photo a model reads, so the reading's image bound decides it.
+		"/v1/contacts/card-photos":             contacts.CardPhotoUploadBytes, // importCardPhoto
+		"/v1/knowledge/corpora/{id}/documents": limits.KnowledgeDocument,      // uploadCorpusDocument
 		// A company mark, and the only ceiling here an operator cannot move.
 		// The others bound what a workspace ACCUMULATES — attachments, imports,
 		// corpora — where an installation's appetite is its own business. This

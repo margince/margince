@@ -11,8 +11,10 @@ import (
 	"image/jpeg"
 	"image/png"
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -118,9 +120,35 @@ func TestReadImageSeparatesARefusedReplyFromALaneFault(t *testing.T) {
 
 func TestReadImageRefusesAnImageOverTheBound(t *testing.T) {
 	lane := &imageLane{carries: []string{mimePNG}}
-	_, err := ReadImage(context.Background(), lane, reading(model.Attachment{MIME: mimePNG, Bytes: make([]byte, MaxImageBytes+1)}))
-	if !errors.Is(err, ErrReadRefused) || lane.calls != 0 {
+	_, err := ReadImage(context.Background(), lane, reading(model.Attachment{MIME: mimePNG, Bytes: make([]byte, imagenorm.MaxReadImageBytes+1)}))
+	if !errors.Is(err, ErrImageTooLarge) || !errors.Is(err, ErrReadRefused) || lane.calls != 0 {
 		t.Fatalf("err = %v, calls = %d", err, lane.calls)
+	}
+}
+
+func TestReadImageRefusesAConversionOverTheBound(t *testing.T) {
+	convert := heicToJPEG
+	t.Cleanup(func() { heicToJPEG = convert })
+	heicToJPEG = func(context.Context, []byte) ([]byte, error) {
+		return make([]byte, imagenorm.MaxReadImageBytes+1), nil
+	}
+	lane := &imageLane{carries: []string{mimeJPEG}, reply: `{}`}
+
+	_, err := ReadImage(context.Background(), lane, reading(model.Attachment{MIME: mimeHEIC, Bytes: heicFixture(t)}))
+	if !errors.Is(err, ErrImageTooLarge) || lane.calls != 0 {
+		t.Fatalf("err = %v, calls = %d, want ErrImageTooLarge before any call", err, lane.calls)
+	}
+}
+
+func TestImageRequestTellsTheModelThePrintHasNoAuthority(t *testing.T) {
+	img := model.Attachment{MIME: mimePNG, Bytes: pngBytes(t)}
+	req := ImageRequest(reading(img), img)
+
+	if !strings.Contains(req.System, imageTextRule) {
+		t.Errorf("system prompt %q lacks the rule for text printed in the image", req.System)
+	}
+	if strings.Contains(req.System+req.Messages[0].Content, "untrusted-") {
+		t.Errorf("the request declares a fence, and no fence can bound an attached image")
 	}
 }
 

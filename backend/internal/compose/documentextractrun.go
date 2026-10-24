@@ -276,6 +276,9 @@ func (d *DocumentExtractor) sourceFor(
 			maxDocumentBytes>>20,
 		), nil
 	}
+	if ai.CarriesImage(mime) {
+		return d.imageSource(ctx, meta, mime, bytes)
+	}
 	src, detail := d.laneFor(ctx, meta, mime, bytes)
 	return src, detail, nil
 }

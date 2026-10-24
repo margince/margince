@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -48,8 +49,8 @@ func (cardPhotoCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 	if err := json.Unmarshal(fixture, &f); err != nil {
 		return nil, fmt.Errorf("document_extract/cards: the fixture is not the shape this site takes: %w", err)
 	}
-	if len(f.Bytes) == 0 || len(f.Bytes) > ai.MaxImageBytes {
-		return nil, fmt.Errorf("document_extract/cards: the fixture must be a photo of 1 to %d bytes", ai.MaxImageBytes)
+	if len(f.Bytes) == 0 || len(f.Bytes) > imagenorm.MaxReadImageBytes {
+		return nil, fmt.Errorf("document_extract/cards: the fixture must be a photo of 1 to %d bytes", imagenorm.MaxReadImageBytes)
 	}
 	if !ai.CarriesImage(f.MIME) {
 		return nil, fmt.Errorf("document_extract/cards: %q is not a photo type a reading accepts", f.MIME)

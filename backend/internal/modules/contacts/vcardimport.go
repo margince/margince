@@ -264,6 +264,12 @@ func vcardCandidate(entry VCardEntry) ContactCandidate {
 	return candidate
 }
 
+// VCardContactName is the name a card's contact is created with. An approval
+// that shows a card shows this, so the decider sees the name that is written.
+func VCardContactName(entry VCardEntry) string {
+	return strings.TrimSpace(entry.FullName)
+}
+
 // ValidateVCardContacts answers whether a reviewed card's addresses and
 // numbers are ones the create will accept, without writing anything.
 //
@@ -282,7 +288,7 @@ func ValidateVCardContacts(entry VCardEntry) error {
 
 func contactFromVCard(entry VCardEntry) CreateContactInput {
 	contact := CreateContactInput{
-		FullName:      strings.TrimSpace(entry.FullName),
+		FullName:      VCardContactName(entry),
 		Source:        vcardSource,
 		auditEvidence: map[string]any{auditKeySource: vcardSource},
 	}

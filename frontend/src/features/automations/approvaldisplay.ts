@@ -206,7 +206,9 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     // near-match. Every field the approval would write is captioned: the
     // decider must see the whole create, not its headline.
     vcard_create: [
-      { field: "full_name", label: "approval.field.name", as: "text" },
+      // `name` is what the accepted create writes; `full_name` is the folded
+      // identity and would show a name the contact never gets.
+      { field: "name", label: "approval.field.name", as: "text" },
       { field: "emails", label: "approval.field.email", as: "text" },
       { field: "company", label: "approval.field.company", as: "text" },
       { field: "title", label: "approval.field.title", as: "text" },

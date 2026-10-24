@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -88,5 +89,68 @@ func TestPhotoCardsBecomeApprovalsAndCreateNothingUntilApproved(t *testing.T) {
 	created := countContactsWithEmail(ctx, t, e, "hanna@blende.example") + countContactsWithEmail(ctx, t, e, "paul@blende.example")
 	if created != 1 {
 		t.Errorf("contacts created after approving one of two cards = %d, want 1", created)
+	}
+}
+
+// stagePhotoCard proposes one model-read card and returns its pending approval.
+func stagePhotoCard(ctx context.Context, t *testing.T, e *integration.Env, entry contacts.VCardEntry) crmcontracts.Approval {
+	t.Helper()
+	results, err := e.Contacts.ProposeCardsFromPhoto(ctx, []contacts.VCardEntry{entry})
+	if err != nil || len(results) != 1 || !results[0].Outcome.AwaitsApproval() {
+		t.Fatalf("proposing the card: results %+v, err %v", results, err)
+	}
+	if err := vcardCreateStager(e.Pool)(ctx, entry, results[0].ContactID); err != nil {
+		t.Fatal(err)
+	}
+	status, kind := "pending", vcardCreateKind
+	rows, _, err := approvalsServiceWithEffects(e.Pool).ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("pending approvals = %d (err %v), want the one card", len(rows), err)
+	}
+	return rows[0]
+}
+
+func TestPhotoCardsShowTheNameTheApprovalWrites(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	row := stagePhotoCard(ctx, t, e, contacts.VCardEntry{FullName: "  Hanna FOTOGRAF ", Company: "Blende GmbH", ModelRead: true,
+		Emails: []contacts.VCardChannel{{Value: "hanna@blende.example", Kind: "work"}}})
+
+	shown, _ := (*row.ProposedChange)["name"].(string)
+	if shown != "Hanna FOTOGRAF" {
+		t.Fatalf("the approval shows %q, want the name as the create writes it", shown)
+	}
+	if _, err := approvalsServiceWithEffects(e.Pool).Decide(ctx, ids.From[ids.ApprovalKind](ids.UUID(row.Id)), true, nil); err != nil {
+		t.Fatalf("approving: %v", err)
+	}
+	var written string
+	if err := e.Pool.QueryRow(ctx, `SELECT c.full_name FROM contact c JOIN contact_email m ON m.contact_id = c.id
+		WHERE m.email = 'hanna@blende.example'`).Scan(&written); err != nil {
+		t.Fatal(err)
+	}
+	if written != shown {
+		t.Errorf("the contact was written as %q after the approval showed %q", written, shown)
+	}
+}
+
+// A card is proposed while its address is free. A colleague then files that
+// address, and the approval must not create a second contact on top of it.
+func TestPhotoCardsApprovedAfterTheAddressWasTakenCreateNothing(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	row := stagePhotoCard(ctx, t, e, photoCards()[0])
+
+	colleague := e.As(e.Rep1, nil, integration.AdminPerms)
+	if _, err := e.Contacts.CreateContact(colleague, contacts.CreateContactInput{FullName: "Hanna Fotograf", Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: "hanna@blende.example", EmailType: "work", IsPrimary: true}}}); err != nil {
+		t.Fatalf("the colleague's contact: %v", err)
+	}
+
+	_, err := approvalsServiceWithEffects(e.Pool).Decide(ctx, ids.From[ids.ApprovalKind](ids.UUID(row.Id)), true, nil)
+	if err == nil {
+		t.Error("approving a card whose address a contact now holds reported success")
+	}
+	if n := countContactsWithEmail(ctx, t, e, "hanna@blende.example"); n != 1 {
+		t.Errorf("contacts holding the address = %d, want only the colleague's", n)
 	}
 }
