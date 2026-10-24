@@ -76,6 +76,39 @@ The core keeps the last value each unit offered for a company's `legal_name`, `i
 | Removed | When the company row is deleted outright. Archiving keeps them for a restore and stops serving them. |
 | Audit | Each write adds an `update` entry on the company that names the source and the fields, never the values. No event is sent. |
 
+## Load a large source in batches
+
+A job that loads a large source can hand records over a page at a time and let the core remember where it stopped. A restarted job asks for that position and carries on from it. Use it only when one run cannot finish the load; a small feed needs a plain `Ingest` per record.
+
+| Call | What it does |
+|---|---|
+| `rt.IngestBatch(ctx, on, system, recs, position)` | Lands the records in order, as `Ingest` does for each, then saves `position` for that source. Returns one result per record. |
+| `rt.IngestPosition(ctx, system)` | Returns the saved position, or an empty string when none was saved. |
+
+| Rule | Value |
+|---|---|
+| Records per batch | At most `extension.MaxBatchRecords`, which is 200. All must carry the batch's `system`. |
+| Position | 1 to `extension.MaxPositionBytes` (512) bytes of text. It is your own cursor: a page token, a last-seen id. The core never reads it. |
+| Who may call `IngestBatch` | An unattended run, such as a job tick, for a source the unit declared. Any other call gets `ErrAttendedIngest` or `ErrIngressNotDeclared`. |
+| Who may call `IngestPosition` | Any invocation of the unit, for a source the unit declared, else `ErrIngressNotDeclared`. It checks nothing else, because it reads one saved text and writes nothing. |
+| When it is saved | After every record is answered. |
+| What ends a batch | An error from a record: a kind the source did not declare, a member who has no credential with the unit or lost the right to land the record, a call from inside a transaction, or a store failure. You get the results so far and the error, and the saved position does not move. A skipped record and an unrepresentable record are results, not errors, so they do not end the batch. |
+| A record that always fails | It ends every batch that holds it, so the saved position never passes it. Fix the cause, or leave the record out of the batch. |
+| Stored in | `extension_ingest_position`, one row per unit and source. |
+
+```mermaid
+flowchart LR
+    A[Job starts] --> B[IngestPosition]
+    B --> C[Read next page from the provider]
+    C --> D[IngestBatch with the page and its end position]
+    D -->|all answered| E[Position saved]
+    E --> C
+    D -->|a record fails| F[Stop, position unchanged]
+    F --> A
+```
+
+After a stop, the next run reads the old position and offers the half-done page again. Records that already landed are matched by their outside id, so the second offer changes nothing. The integration tests are in `backend/internal/compose/extingressbatch_integration_test.go`.
+
 ## Run it twice
 
 Landing the same record again finds the same row. Two calls that carry one outside id at the same moment leave one row and one create entry in the audit log. The loser of the race finds the winner and updates it.

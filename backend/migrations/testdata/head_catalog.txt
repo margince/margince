@@ -4062,6 +4062,14 @@ public.event_outbox.seq bigint NOT NULL gen=- def=-
 public.event_outbox.stream text NOT NULL gen=- def=-
 public.event_outbox_pkey CREATE UNIQUE INDEX event_outbox_pkey ON public.event_outbox USING btree (id)
 public.event_outbox_seq_seq acl=- rls=false force=false
+public.extension_ingest_position acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.extension_ingest_position.extension_ingest_position_pkey PRIMARY KEY (unit, source_system)
+public.extension_ingest_position.extension_ingest_position_size CHECK ((("position" <> ''::text) AND (octet_length("position") <= 512)))
+public.extension_ingest_position.position text NOT NULL gen=- def=-
+public.extension_ingest_position.saved_at timestamp with time zone NOT NULL gen=- def=now()
+public.extension_ingest_position.source_system text NOT NULL gen=- def=-
+public.extension_ingest_position.unit text NOT NULL gen=- def=-
+public.extension_ingest_position_pkey CREATE UNIQUE INDEX extension_ingest_position_pkey ON public.extension_ingest_position USING btree (unit, source_system)
 public.extension_ingest_refusal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.extension_ingest_refusal.day date NOT NULL gen=- def=-
 public.extension_ingest_refusal.extension_ingest_refusal_class CHECK ((refusal = ANY (ARRAY['key'::text, 'activity'::text, 'addresses'::text, 'counterparty'::text, 'participants'::text, 'size'::text])))

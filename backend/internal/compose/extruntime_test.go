@@ -184,6 +184,10 @@ var nameableOnThisSurface = gatekit.Waive(map[string]string{
 		"Runtime was minted for. It cannot re-scope anything: a name belonging to another unit reads as a " +
 		"name belonging to nobody, and the workspace the run lands in is the invocation's rather than this " +
 		"parameter's",
+	"extension.SourceName": "an ingress source the calling unit declared, resolved against the declarations of " +
+		"the unit the Runtime was minted for; another unit's source reads as undeclared",
+	"extension.BatchPosition": "the unit's own cursor text, stored under the invoking unit and never read by the core; " +
+		"it names nothing, so it cannot re-scope anything",
 	"extension.OAuthProvider": "the OAuth app whose grant a unit reads, resolved against the declarations of " +
 		"the unit the Runtime was minted for; another unit's app reads as none, and the grant is the " +
 		"invocation's workspace's",
