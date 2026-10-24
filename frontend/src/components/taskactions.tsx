@@ -3,7 +3,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -16,6 +16,7 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { focusableWithin } from "../design-system/dialogfocus";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Markdown } from "../design-system/markdown";
@@ -319,14 +320,29 @@ export function TaskDetailDialog({
   const titleId = useId();
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
+  const body = useRef<HTMLDivElement>(null);
+  // Not the next steps: Enter on a first-focused Call would start a call.
+  const firstFocus = () =>
+    (body.current &&
+      focusableWithin(body.current).find(
+        (stop) => !stop.closest(".task-detail-next"),
+      )) ??
+    body.current?.closest<HTMLElement>('[role="dialog"]') ??
+    null;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={titleId}
+      intent="drawer"
+      initialFocusTo={firstFocus}
+    >
       <DrawerHead className="task-detail-head">
         <Heading size="large" id={titleId} className="t-h2">
           {task?.subject ?? t("tasks.detail")}
         </Heading>
       </DrawerHead>
-      <DrawerBody>
+      <DrawerBody ref={body}>
         {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
         <ErrorLine error={query.error} />
         {task && (
@@ -378,7 +394,7 @@ export function TaskDetailDialog({
             </div>
             <TaskNextSteps
               task={task}
-              className="form-actions task-detail-actions"
+              className="form-actions task-detail-actions task-detail-next"
             />
             {!task.is_done && !readOnly && (
               <div className="form-actions task-detail-actions">

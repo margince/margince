@@ -365,6 +365,38 @@ describe("Call on the next task", () => {
     expect(screen.getByText(OPEN_TASK.subject)).toBeTruthy();
     expect(dial()).toBeNull();
   });
+
+  // On this page the task is about this contact whatever else it links. The
+  // task dialog, which has no page contact, gives a two-contact task no verbs.
+  it("offers Call for this contact on a task that also links another", async () => {
+    const view = onTask("call-1");
+    const [task] = view.next_steps?.data ?? [];
+    show(
+      {
+        ...view,
+        next_steps: {
+          data: task
+            ? [
+                {
+                  ...task,
+                  links: [
+                    { entity_type: "contact", entity_id: "p-1" },
+                    { entity_type: "contact", entity_id: "p-2" },
+                  ],
+                },
+              ]
+            : [],
+          page: { has_more: false },
+        },
+      },
+      QUIET,
+    );
+
+    const call = await screen.findByRole("link", {
+      name: en["record.verb.call"],
+    });
+    expect(call.getAttribute("href")).toBe("tel:+49301234567");
+  });
 });
 
 describe("Call on the move a call left owed", () => {
@@ -459,4 +491,47 @@ describe("Call on the move a call left owed", () => {
       expect(dial()).toBeNull();
     },
   );
+
+  // The promise, dated 12 days late and read out of a call; the evidence names
+  // a hand-typed task 2 days late. Both the badge and Call follow the promise.
+  const promised = (evidence: ContactMoment["evidence"]): ContactMoment => ({
+    ...OWED,
+    evidence,
+    may_be_done: {
+      promise_type: "task",
+      promise_id: "a-7",
+      email_activity_id: "e-1",
+      wrote_at: "2026-08-12T10:00:00Z",
+    },
+  });
+  const datedView = (): Contact360 => ({
+    ...viewWith({}),
+    next_steps: {
+      data: [
+        { ...CALLED, due_at: "2026-08-01T09:00:00Z" },
+        { ...TYPED, due_at: "2026-08-11T09:00:00Z" },
+      ],
+      page: { has_more: false },
+    },
+  });
+  const lateBy = (days: number) =>
+    en["contact.standing.late_other"].replace("{count}", String(days));
+
+  it("dates the promise and offers its Call when the evidence names another task", async () => {
+    show(datedView(), promised([{ type: "task", id: "a-6", label: "Typed" }]));
+
+    expect(
+      await screen.findByRole("link", { name: en["record.verb.call"] }),
+    ).toBeTruthy();
+    expect(screen.getByText(lateBy(12))).toBeTruthy();
+    expect(screen.queryByText(lateBy(2))).toBeNull();
+  });
+
+  it("offers Call on a move that rests on the promise alone", async () => {
+    show(datedView(), promised([]));
+
+    expect(
+      await screen.findByRole("link", { name: en["record.verb.call"] }),
+    ).toBeTruthy();
+  });
 });

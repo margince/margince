@@ -274,21 +274,30 @@ function AnswerBar({
   return <NextBar />;
 }
 
-// The listed task the move is about: its first evidence task, else the promise
-// it may have settled.
+// What the move says is owed, in the order both readers below take it: the
+// promise it may already have settled, then its evidence.
+function owedRecords(moment: ContactMoment): { id: string; task: boolean }[] {
+  const promise = moment.may_be_done;
+  return [
+    ...(promise
+      ? [{ id: promise.promise_id, task: promise.promise_type === "task" }]
+      : []),
+    ...moment.evidence.flatMap((item) =>
+      item.id ? [{ id: item.id, task: item.type === "task" }] : [],
+    ),
+  ];
+}
+
+// The first listed task the move is about.
 function momentTask(
   moment: ContactMoment,
   view: Contact360,
 ): Activity | undefined {
-  const ids = [
-    ...moment.evidence
-      .filter((item) => item.type === "task")
-      .map((item) => item.id),
-    moment.may_be_done?.promise_id,
-  ];
   const tasks = view.next_steps?.data ?? [];
-  for (const id of ids) {
-    const task = tasks.find((row) => row.id === id);
+  for (const record of owedRecords(moment)) {
+    const task = record.task
+      ? tasks.find((row) => row.id === record.id)
+      : undefined;
     if (task) {
       return task;
     }
@@ -296,14 +305,9 @@ function momentTask(
   return undefined;
 }
 
-// The due date of what the move says is owed. It is the promise the move may already have
-// settled, else the first task or claim its evidence names.
+// The due date of what the move says is owed: a claim's or a listed task's.
 function owedDue(moment: ContactMoment, view: Contact360): string | undefined {
-  const ids = [
-    moment.may_be_done?.promise_id,
-    ...moment.evidence.map((item) => item.id),
-  ].filter((id): id is string => Boolean(id));
-  for (const id of ids) {
+  for (const { id } of owedRecords(moment)) {
     const due =
       view.claims?.find((claim) => claim.id === id)?.due_at ??
       view.next_steps?.data.find((task) => task.id === id)?.due_at;

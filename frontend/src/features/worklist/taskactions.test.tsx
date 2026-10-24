@@ -643,3 +643,52 @@ test.each([
   expect(openContact()).not.toBeNull();
   expect(screen.queryByRole("button", { name: en["tasks.snooze"] })).toBeNull();
 });
+
+test("a dialog opened on warm reads puts first focus on the task, not on Call", async () => {
+  stubNextSteps();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(["activity", "task-1"], {
+    id: "task-1",
+    kind: "task",
+    subject: "Call back Alice about the renewal",
+    occurred_at: "2026-09-08T09:00:00Z",
+    is_done: false,
+    source_activity_id: "src-1",
+    links: [{ entity_type: "contact", entity_id: "c-1" }],
+  });
+  client.setQueryData(["activity", "src-1"], {
+    id: "src-1",
+    kind: "call",
+    content_state: "available",
+    occurred_at: "2026-09-08T08:00:00Z",
+  });
+  client.setQueryData(["contact", "c-1"], ALICE);
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <TaskDetailModal
+          activityId="task-1"
+          readOnly={false}
+          onClose={() => {}}
+          update={
+            {
+              mutate: () => {},
+              isPending: false,
+            } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
+          }
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+
+  const done = screen.getByRole("button", { name: en["tasks.complete"] });
+  expect(
+    screen.getByRole("link", { name: en["record.verb.call"] }),
+  ).toBeTruthy();
+  expect(document.activeElement).toBe(done);
+  // Reads answering after the open move nothing.
+  await waitFor(() => expect(client.isFetching()).toBe(0));
+  expect(document.activeElement).toBe(done);
+});

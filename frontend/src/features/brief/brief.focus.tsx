@@ -86,7 +86,7 @@ export function Triage({
             {t("brief.focus.context")}
           </Button>
         )}
-        {/* No Open contact: the card's about line links the contact already. */}
+        {/* No Open contact on the card: the owner kept it to Call and Email. */}
         {task && <TaskNextSteps task={task} offerOpen={false} />}
       </>
     ) : undefined;

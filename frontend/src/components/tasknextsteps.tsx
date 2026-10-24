@@ -5,7 +5,7 @@ import { Mail } from "lucide-react";
 import { useId } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
-import { CallAction } from "../design-system/callaction";
+import { CallAction, linkVerb } from "../design-system/callaction";
 import { ContactLink } from "../design-system/contactlink";
 import { mailbox, primaryPhone } from "../format/contacturi";
 import { type Translator, useT } from "../i18n";
@@ -52,14 +52,12 @@ export function TaskNextSteps({
         contact={contact}
         reasonId={refusal === undefined ? undefined : reasonId}
       />
-      {offerOpen && (
-        <a
-          className="btn btn-ghost"
-          href={routeHash(ENTITY.contact.route(contact.id))}
-        >
-          {t("task.next.openContact")}
-        </a>
-      )}
+      {offerOpen &&
+        linkVerb(
+          routeHash(ENTITY.contact.route(contact.id)),
+          null,
+          t("task.next.openContact"),
+        )}
       {/* Under every verb rather than inside Email's column, so the verbs keep
           one line. */}
       {refusal !== undefined && (

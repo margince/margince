@@ -48,7 +48,7 @@ export function useTaskContact(
   if (contactId === undefined) {
     return { contact: undefined, fromCall: false };
   }
-  // The current read's answer and never the cache's, for `useActivity`'s reason.
+  // A failed current read hides the cached answer, for useActivity's reason.
   const contact = pageContact ?? (read.isError ? undefined : read.data);
   return { contact, fromCall };
 }
