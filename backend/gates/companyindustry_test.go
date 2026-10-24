@@ -55,7 +55,11 @@ func TestTheIndustryListIsOneSetInTheContractTheOwnerAndTheClient(t *testing.T) 
 	client := regexp.MustCompile(`(?m)^  "(\w+)",$`)
 	module := readFrontendFile(t, "format", "industry.ts")
 	listed := map[string]bool{}
-	for _, match := range client.FindAllStringSubmatch(module[strings.Index(module, "INDUSTRY_CODES"):], -1) {
+	start := strings.Index(module, "INDUSTRY_CODES")
+	if start < 0 {
+		t.Fatal("format/industry.ts does not declare INDUSTRY_CODES")
+	}
+	for _, match := range client.FindAllStringSubmatch(module[start:], -1) {
 		listed[match[1]] = true
 	}
 	for code := range contract {

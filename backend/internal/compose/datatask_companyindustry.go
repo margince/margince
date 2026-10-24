@@ -14,6 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// companyIndustryRequiredMigration is the migration the industry column mapping reads from.
+const companyIndustryRequiredMigration = "core/1792799323"
+
 // companyIndustryDataTask gives every company that holds industry text the code
 // the text names. Text that names no code leaves the industry empty and is kept
 // in the description. The mapping is a fixed table and nothing is deleted, so
@@ -21,7 +24,7 @@ import (
 func companyIndustryDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792811260_company_industry_codes", Version: 1,
-		Title: "Mapping company industries onto the fixed list", Requires: []string{"core/1792799323"},
+		Title: "Mapping company industries onto the fixed list", Requires: []string{companyIndustryRequiredMigration},
 		Steps: []datatask.Step{{
 			Name: "company_industry", Limit: 200, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
