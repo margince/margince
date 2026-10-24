@@ -20,7 +20,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -37,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // companyNameField is the profile field a captured employer name lands in.
@@ -65,10 +63,20 @@ const (
 // that stated it outright — and offering both let the model pick differently run to run.
 // The contract keeps role for the research-claim surface and the rows already carrying
 // it; TestSignatureEnrichOffersNoSecondWordForAJobTitle holds this.
-var enrichFieldNames = map[string]bool{
-	fieldTitle: true, "phone": true, "linkedin": true, companyNameField: true,
-	"address": true, "website": true,
-	contacts.FieldFirstName: true, contacts.FieldLastName: true,
+var enrichFieldNames = nameSet(signatureFieldNames)
+
+// signatureFieldNames lists the vocabulary once, in the order the user prompt
+// offers it. The name is not a field: the reading reports its parts under
+// "name", and contacts.MapSignatureName decides which becomes first_name and
+// last_name.
+var signatureFieldNames = []string{fieldTitle, "phone", "linkedin", companyNameField, "address", "website"}
+
+func nameSet(names []string) map[string]bool {
+	set := make(map[string]bool, len(names))
+	for _, name := range names {
+		set[name] = true
+	}
+	return set
 }
 
 // signatureRepeatedFields hold a list. A signature listing a German, a
@@ -77,7 +85,7 @@ var enrichFieldNames = map[string]bool{
 var signatureRepeatedFields = map[string]bool{"phone": true}
 
 const signatureEnrichSystem = `You extract contact fields from ONE email signature. Allowed fields ONLY: title, phone,
-linkedin, company_name, address, website, first_name, last_name. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet
+linkedin, company_name, address, website. A job title is always title. Emit a field ONLY if the signature lines state it verbatim; the snippet
 must appear character-for-character in the supplied text. Ignore quoted replies, legal
 disclaimers, and marketing taglines. Phone numbers verbatim, never normalized. A signature
 often lists several numbers (desk, mobile, one per country): emit one phone entry for EVERY
@@ -87,12 +95,19 @@ company's own site; a social profile is never a website, and linkedin carries th
 The signature must be THE NAMED CONTACT'S OWN. A block naming somebody else — a colleague,
 a forwarded sender, a correspondent quoted underneath — states nothing about them, so emit
 no fields at all rather than the ones it happens to contain.
-Emit first_name and last_name only from how this contact names THEMSELF: the name printed in
-their own signature block, or the one they sign off with above it. A company, a brand, a team
-or a department is never a name, so a block headed "Greven Ebusiness" or "Seven Mills
-Consulting" states no first_name and no last_name. Emit a name only when the lines show
-somebody naming themself. Emit the two halves together or not at all: a given name without
-the family name it belongs to would graft onto whichever surname the record already holds.`
+Report the contact's name in the separate "name" object, never as a field, and only from how
+this contact names THEMSELF: the name printed in their own signature block, or the one they
+sign off with above it. Its keys are family_name, given_names, middle (empty when there is
+none), order, evidence_snippet and confidence. Copy each part as printed and report the order
+you SAW: given_first when the given names are printed before the family name, family_first
+when the family name is printed first, unclear when the page does not show which word is the
+family name. Never decide the order from where a word stands, and never reorder the words.
+"Lê Thị Mai" is family_name "Lê", middle "Thị", given_names "Mai", order family_first.
+"Anna Weber" is given_names "Anna", family_name "Weber", order given_first. When the order
+is unclear, leave family_name and given_names empty. evidence_snippet is the printed line
+that holds the name. A company, a brand, a team or a department is never a name, so a block
+headed "Greven Ebusiness" or "Seven Mills Consulting" states no name. Omit "name" when the
+lines show nobody naming themself.`
 
 // signatureEnrichSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func signatureEnrichSystemFor(fence promptfence.Fence) string {
@@ -323,7 +338,15 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 		e.log.DebugContext(ctx, "signature enrich: fields dropped by the evidence gate",
 			"contact", mail.ContactID.String(), "dropped", len(dropped))
 	}
-	fields := make([]contacts.SignatureField, 0, len(gated))
+	fields := make([]contacts.SignatureField, 0, len(gated)+2)
+	if !options.TitleOnly {
+		nameFields, nameDropped := gateSignatureName(resp.Text, lines)
+		if len(nameDropped) > 0 {
+			e.log.DebugContext(ctx, "signature enrich: the name was not written",
+				"contact", mail.ContactID.String(), "reason", nameDropped[0].Reason)
+		}
+		fields = append(fields, nameFields...)
+	}
 	for _, f := range gated {
 		if float64(f.Confidence) < enrichConfidenceFloor || (options.TitleOnly && f.Field != fieldTitle) {
 			continue
@@ -349,48 +372,6 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 		_, err = e.store.ApplySignatureFields(ctx, mail.ContactID, mail.ActivityID, fields, options.DefaultEnrich)
 	}
 	return titled, err
-}
-
-// signatureShapeValid is the §5.2 retry validator: parseable fields with
-// the closed vocabulary — evidence checking stays code-side in
-// gateEvidence (the model must not be trusted to self-certify).
-func signatureShapeValid(text string) error {
-	var parsed struct {
-		Fields []extractedField `json:"fields"`
-	}
-	if err := json.Unmarshal([]byte(ai.Unfence(text)), &parsed); err != nil {
-		return fmt.Errorf("output is not the required JSON shape: %w", err)
-	}
-	for _, f := range parsed.Fields {
-		// The field name is MODEL output, so it is bounded before it reaches an
-		// error that is logged and, on a retry, fed back into the prompt.
-		if !enrichFieldNames[f.Field] {
-			return fmt.Errorf("field %q is not in the allowed set", clampToken(f.Field))
-		}
-	}
-	return nil
-}
-
-// signatureEnrichSchema is the generation-time shape guardrail (§2.9). The
-// field enum says in its description that phone repeats, because a structured
-// reply follows the schema at least as closely as the prose.
-func signatureEnrichSchema() json.RawMessage {
-	return schema.Must(schema.Object(
-		map[string]schema.Node{
-			laneFields: schema.Array(schema.Object(
-				map[string]schema.Node{
-					extractionFieldKey: schema.Enum(fieldTitle, "phone", "linkedin", companyNameField, "address", "website",
-						contacts.FieldFirstName, contacts.FieldLastName).
-						Describe("phone once per number the signature lists; every other field at most once"),
-					"value":            schema.String(),
-					"evidence_snippet": schema.String(),
-					"confidence":       schema.Number(),
-				},
-				"field", "value", "evidence_snippet", "confidence",
-			)),
-		},
-		"fields",
-	))
 }
 
 // enrichPassLock names the lock the pass holds, as text rather than as a

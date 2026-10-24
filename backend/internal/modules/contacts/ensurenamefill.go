@@ -159,3 +159,35 @@ func completeContactName(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 	}
 	return true, nil
 }
+
+// rewriteFullNameTx moves a contact's display name from previous to learned,
+// with the audit row and event, and answers whether it moved. It writes only
+// while the row still shows previous. A name somebody else set is kept, and no
+// audit row describes a change that did not happen. The caller holds the row
+// lock and has decided that the display may be replaced.
+func rewriteFullNameTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, previous, learned string) (bool, error) {
+	tag, err := tx.Exec(ctx, `
+		UPDATE contact SET full_name = $2 WHERE id = $1 AND full_name = $3`,
+		contactID, learned, previous)
+	if err != nil {
+		return false, fmt.Errorf("contacts: showing the learned name of contact %s: %w", contactID, err)
+	}
+	if tag.RowsAffected() != 1 {
+		return false, nil
+	}
+	before, after := storekit.ChangedColumns(
+		map[string]any{fieldFullName: previous},
+		map[string]any{fieldFullName: learned},
+	)
+	auditID, err := storekit.Audit(ctx, tx, "update", entityContact, contactID.UUID, before, after)
+	if err != nil {
+		return false, err
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, contactID.UUID,
+		crmcontracts.PublicEventContactUpdated{
+			ChangedFields: map[string]any{fieldFullName: learned},
+		}); err != nil {
+		return false, err
+	}
+	return true, nil
+}

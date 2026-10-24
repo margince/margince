@@ -141,7 +141,7 @@ func signatureExpectation(expected json.RawMessage) (map[string][]string, error)
 // Sorted so a fixture with two offences names the same one every time.
 func refuseUnenrichableExpectation(want map[string][]string) error {
 	for _, name := range slices.Sorted(maps.Keys(want)) {
-		if !enrichFieldNames[name] {
+		if !enrichFieldNames[name] && !signatureNameColumns[name] {
 			return fmt.Errorf(
 				"enrich/signature: the scenario expects %q, which this prompt never offers the model", name)
 		}
@@ -237,7 +237,14 @@ func (c *signatureEnrichCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if len(gated) == 0 && len(dropped) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: strings.Join(detail, "; ")}
 	}
-	proposed := make(map[string][]string, len(gated))
+	// The name goes through the pass's own mapper, so what is compared is the
+	// pair the pass would write.
+	nameFields, nameDropped := gateSignatureName(trace.Output, c.lines)
+	detail = append(detail, gateRefusals(nameDropped)...)
+	proposed := make(map[string][]string, len(gated)+len(nameFields))
+	for _, f := range nameFields {
+		proposed[f.Name] = append(proposed[f.Name], f.Value)
+	}
 	for _, f := range gated {
 		if float64(f.Confidence) < enrichConfidenceFloor {
 			detail = append(detail, fmt.Sprintf("%s is hedged at %.2f, below the %.2f the pass applies at",
@@ -247,7 +254,7 @@ func (c *signatureEnrichCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		proposed[f.Field] = append(proposed[f.Field], f.Value)
 	}
 	disagreements := signatureDisagreements(c.expected, proposed)
-	if len(gated) == 0 {
+	if len(gated) == 0 && len(nameFields) == 0 {
 		// A scenario that DID expect a field still reads its own disagreements
 		// here: the reply is an abstention either way, and what it declined to
 		// quote is the diagnosis.

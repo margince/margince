@@ -6,6 +6,7 @@ import {
   ContactDealCard,
   ContactUnderstandingCard,
 } from "./contactcards";
+import { contactFirstName } from "./contactfirstname";
 import { ContactHowItStands } from "./contacthowitstands";
 import { ContactMemory } from "./contactmemory";
 import { ContactToday } from "./contacttoday";
@@ -32,7 +33,7 @@ export function ContactOverview({
     next.set("queue", "1");
     setParams(next);
   };
-  const firstName = view.contact.full_name.split(" ")[0] ?? "";
+  const firstName = contactFirstName(view.contact);
   return (
     <>
       <ContactToday

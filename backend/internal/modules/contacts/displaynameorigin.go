@@ -37,12 +37,21 @@ const DisplayNameRepairActor = "system:participant_backfill"
 // selector reads it, and RefreshDisplayNameTx asks the same statement about one
 // contact. So a row the selector offers is one the writer accepts.
 func StaleDisplayNamesTx(ctx context.Context, tx pgx.Tx, limit int) ([]ids.ContactID, error) {
-	return captureGuessedDisplayNamesTx(ctx, tx, nil, nil, true, limit)
+	return captureGuessedDisplayNamesTx(ctx, tx, nil, nil, repairRule, limit)
 }
 
 // displayNameIsStaleTx is StaleDisplayNamesTx asked about one contact.
 func displayNameIsStaleTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (bool, error) {
-	found, err := captureGuessedDisplayNamesTx(ctx, tx, &contactID, nil, true, 1)
+	found, err := captureGuessedDisplayNamesTx(ctx, tx, &contactID, nil, repairRule, 1)
+	return len(found) == 1, err
+}
+
+// displayNameFollowsSignatureTx answers whether a name read from a signature may
+// replace this contact's display name. A display that holds both halves is still
+// replaced, because "Mai Lê" holds both in the opposite order from the
+// signature's "Lê Thị Mai".
+func displayNameFollowsSignatureTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (bool, error) {
+	found, err := captureGuessedDisplayNamesTx(ctx, tx, &contactID, nil, signatureRule, 1)
 	return len(found) == 1, err
 }
 
@@ -50,9 +59,20 @@ func displayNameIsStaleTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 // contact's display name with the pair it is about to write. The split columns
 // are still empty then, so the statement compares the display with that pair.
 func displayNameIsCapturesGuessTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, pair ParsedName) (bool, error) {
-	found, err := captureGuessedDisplayNamesTx(ctx, tx, &contactID, &pair, false, 1)
+	found, err := captureGuessedDisplayNamesTx(ctx, tx, &contactID, &pair, fillRule, 1)
 	return len(found) == 1, err
 }
+
+// displayRule says which question captureGuessedDisplayNamesTx answers.
+// needPair is the repair's rule that it never writes one half.
+// keepWhenPairShown keeps a display that already holds both halves.
+type displayRule struct{ needPair, keepWhenPairShown bool }
+
+var (
+	repairRule    = displayRule{needPair: true, keepWhenPairShown: true}
+	fillRule      = displayRule{keepWhenPairShown: true}
+	signatureRule = displayRule{needPair: true}
+)
 
 // captureGuessedDisplayNamesTx is the one statement that says whether a
 // contact's display name may be replaced, for one contact (only) or for a page.
@@ -64,9 +84,11 @@ func displayNameIsCapturesGuessTx(ctx context.Context, tx pgx.Tx, contactID ids.
 //
 // The pair is the split columns, or the one the fill is about to write. A
 // display containing both nonblank halves says at least as much as the pair,
-// whoever wrote it. needPair is the repair's rule: it never writes one half.
+// whoever wrote it, unless the rule says a signature outranks it. The enrich
+// pass counts as a writer of full_name beside capture, as it does for the split
+// columns. A later signature that disagrees is a better reading.
 func captureGuessedDisplayNamesTx(
-	ctx context.Context, tx pgx.Tx, only *ids.ContactID, pair *ParsedName, needPair bool, limit int,
+	ctx context.Context, tx pgx.Tx, only *ids.ContactID, pair *ParsedName, rule displayRule, limit int,
 ) ([]ids.ContactID, error) {
 	var first, last *string
 	if pair != nil {
@@ -81,7 +103,7 @@ func captureGuessedDisplayNamesTx(
 		 WHERE ($1::uuid IS NULL OR p.id = $1)
 		   AND `+captureorigin.ContactSQL("$2", "$3", "$4")+`
 		   AND (NOT $5 OR (n.first <> '' AND n.last <> ''))
-		   AND NOT (n.first <> '' AND n.last <> ''
+		   AND NOT ($10 AND n.first <> '' AND n.last <> ''
 		            AND strpos(lower(p.full_name), lower(n.first)) > 0
 		            AND strpos(lower(p.full_name), lower(n.last)) > 0)
 		   AND NOT EXISTS (
@@ -89,11 +111,11 @@ func captureGuessedDisplayNamesTx(
 		        WHERE a.entity_type = 'contact' AND a.entity_id = p.id
 		          AND a.action <> 'create'
 		          AND (a.after ? 'full_name' OR a.before ? 'full_name')
-		          AND NOT `+captureWriterSQL("a.actor_id", "$2", "$3", "$9")+`)
+		          AND NOT (`+captureWriterSQL("a.actor_id", "$2", "$3", "$9")+` OR a.actor_id = $11))
 		 ORDER BY p.id
 		 LIMIT $6`,
-		only, CaptureVerdictActor, CaptureAcceptActor, vcardSource, needPair, limit,
-		first, last, DisplayNameRepairActor)
+		only, CaptureVerdictActor, CaptureAcceptActor, vcardSource, rule.needPair, limit,
+		first, last, DisplayNameRepairActor, rule.keepWhenPairShown, enrichCapturedBy)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading whose display name a contact carries: %w", err)
 	}

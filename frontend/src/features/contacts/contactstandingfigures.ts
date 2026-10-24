@@ -12,6 +12,7 @@ import { type Locale, type Translator, translatePlural } from "../../i18n";
 import type { ContactTab } from "../../lib/contacttab";
 import { dealRoleLabel } from "../../lib/recordlabels";
 import { omitted } from "./contact360";
+import { contactFirstName } from "./contactfirstname";
 import { awaitsOurReply } from "./contactstanding";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -246,7 +247,7 @@ function lastWrote(view: Contact360, words: StandingWords): TimelineEvent[] {
       key: "last-inbound",
       at,
       title: t("standing.wrote", {
-        name: view.contact.full_name.split(" ")[0] ?? view.contact.full_name,
+        name: contactFirstName(view.contact),
       }),
       sub: formatDayMonth(at, locale, zone),
       kind: "last",
