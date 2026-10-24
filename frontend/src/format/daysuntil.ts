@@ -14,9 +14,9 @@ import { calendarDaysBetween, displayDay } from "./format";
  * Whole calendar days from `now` until a date a record carries, counted in the
  * zone that same date is DRAWN in.
  *
- * A count in UTC is wrong beside a rendered date. A reader thirteen hours
- * ahead of UTC, opening a project on the morning of the 18th, read a target
- * end of the 20th as three mornings off. The right answer is two. UTC had not
+ * A count in UTC is wrong beside a rendered date. Take a reader thirteen hours
+ * ahead of UTC who opens a project on the morning of the 18th. The target end
+ * of the 20th read as three mornings off. The right answer is two. UTC had not
  * turned the page yet. The count started from a day the reader was no longer in.
  * Both halves name their day the same way here, so they cannot disagree.
  *
