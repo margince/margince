@@ -73,9 +73,13 @@ var createRecordCopy = toolCopy{
 		"the same as one a human types in." + pastDayNeedsATime,
 	Instead: "Search first when the record might already exist — a second copy of a contact or " +
 		"company is a problem that then needs resolve_duplicates to undo. A record that shares only " +
-		"a name, with a different email, phone or employer, is not proof of a duplicate: create " +
-		"it — the create files the pair for review, and you report the pair as filed, unresolved " +
-		"until the reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
+		"a name, with a different email, phone or employer, is not proof of a duplicate. When the " +
+		"search finds a contact with the same name at the same employer, link the meeting to " +
+		"that contact or ask the human; create a new contact only when the employer or name " +
+		"differs. Giving a contact its employer by creating an employment relationship files " +
+		"any same-name contact at that employer for review: the result carries it as " +
+		"duplicate_candidates, and you report the pair as filed, unresolved until the " +
+		"reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
 		"a CSV — go through preview_import, which checks " +
 		"every row and writes nothing; creating them one by one skips that check.",
 	Retain: "The new record's id comes back in the result; keep it for anything that links to it. " +

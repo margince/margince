@@ -110,7 +110,10 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err != nil {
 		return fmt.Errorf("contacts: insert employment edge: %w", err)
 	}
-	return auditCapturedEmployment(ctx, tx, edgeID, contactID, companyID, relationshipOriginCapture)
+	if err := auditCapturedEmployment(ctx, tx, edgeID, contactID, companyID, relationshipOriginCapture); err != nil {
+		return err
+	}
+	return fileEmployerTwins(ctx, tx, contactID, in.CapturedBy)
 }
 
 // adoptDispositionForCompany settles a domain onto the company that already

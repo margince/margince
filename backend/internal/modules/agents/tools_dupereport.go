@@ -34,6 +34,7 @@ package agents
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -138,6 +139,27 @@ type createdRecord struct {
 	// TagOffer is present only when the caller proposed a word with offer_tag
 	// and it can be offered. It records an offer; nothing was applied.
 	TagOffer *TagOffer `json:"tag_offer,omitempty"`
+}
+
+// reportCreateDuplicates is reportDuplicates for any create. An employment edge
+// is reported against its contact: the edge is what gives the contact an
+// employer, and the pair it filed names the contact, not the edge.
+func (t createRecord) reportCreateDuplicates(ctx context.Context, recordType string, fields json.RawMessage, id ids.UUID) []DuplicateCandidate {
+	if recordType != "relationship" {
+		return t.reportDuplicates(ctx, recordType, id)
+	}
+	var edge struct {
+		Kind      string `json:"kind"`
+		ContactID string `json:"contact_id"`
+	}
+	if err := json.Unmarshal(fields, &edge); err != nil || edge.Kind != "employment" {
+		return nil
+	}
+	contact, err := ids.Parse(edge.ContactID)
+	if err != nil {
+		return nil
+	}
+	return t.reportDuplicates(ctx, "contact", contact)
 }
 
 // reportDuplicates tells the caller what this create filed for review.

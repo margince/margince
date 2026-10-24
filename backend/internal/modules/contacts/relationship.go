@@ -324,8 +324,15 @@ func (s *Store) updateRelationshipInTx(
 			return out, err
 		}
 	}
-	return out, emitRelationshipChangeWithEvidence(ctx, tx, "update",
-		relationshipFieldImage(current), out, in.Evidence)
+	if err := emitRelationshipChangeWithEvidence(ctx, tx, "update",
+		relationshipFieldImage(current), out, in.Evidence); err != nil {
+		return out, err
+	}
+	if out.Kind == employmentKind && out.ContactID != nil &&
+		(in.IsCurrentPrimary != nil || in.EndedAt != nil || in.EmploymentStatus != nil) {
+		return out, fileEmployerTwins(ctx, tx, *out.ContactID, capturedBy)
+	}
+	return out, nil
 }
 
 // RefuseArchiveRelationship answers every authority refusal

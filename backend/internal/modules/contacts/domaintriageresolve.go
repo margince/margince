@@ -376,6 +376,9 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 		if err := auditCapturedEmployment(ctx, tx, one.edge, one.contact, companyID, relationshipOriginCapture); err != nil {
 			return 0, err
 		}
+		if err := fileEmployerTwins(ctx, tx, one.contact, by); err != nil {
+			return 0, err
+		}
 	}
 	return len(made), nil
 }
