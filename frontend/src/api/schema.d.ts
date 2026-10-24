@@ -1546,6 +1546,9 @@ export interface paths {
          *     the introducer sees an empty list rather than a refusal: whether a colleague was asked
          *     about this contact is exactly the fact the row protects.
          *
+         *     An introduction recorded after the fact (`origin: recorded`) is the exception: both
+         *     colleagues vouched for it, so every reader of the contact sees it.
+         *
          *     Newest first. Settled asks stay in the list — what was asked and answered is the
          *     history the next ask is decided against.
          */
@@ -1566,6 +1569,39 @@ export interface paths {
          *     the first is unanswered is a duplicate, not a reminder, and it answers `409`.
          */
         post: operations["createIntroRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/introductions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record an introduction to this contact that already happened.
+         * @description A colleague introduced another colleague to this contact outside Margince, with no ask
+         *     behind it. The row is an `IntroRequest` with `origin: recorded`, born `introduced`, so
+         *     nothing mistakes it for an ask that went through accept and mark.
+         *
+         *     Only the colleague who introduced (`introducer_user_id`) or the colleague who was
+         *     introduced (`introduced_user_id`) may record it, and the caller must be one of the two.
+         *     Anyone who can read the contact can read the recorded row. Both seats must be live
+         *     members of the workspace and must differ.
+         *
+         *     Recording the same pair for the same contact twice answers `409`. Recording is a
+         *     human's claim about two colleagues, so no agent tool does it.
+         */
+        post: operations["recordIntroduction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -30018,7 +30054,12 @@ export interface components {
             id: string;
             /** Format: uuid */
             contact_id: string;
-            /** Format: uuid */
+            origin: components["schemas"]["IntroOrigin"];
+            recorded_channel?: components["schemas"]["IntroRecordedChannel"];
+            /**
+             * Format: uuid
+             * @description The colleague who asked, or for a recorded introduction the colleague who was introduced.
+             */
             requester_user_id: string;
             requester_display_name?: string;
             /** Format: uuid */
@@ -30031,8 +30072,8 @@ export interface components {
              */
             through_contact_id?: string;
             through_display_name?: string;
-            /** @description Why the requester is asking. Read by the colleague, never by the contact. */
-            internal_reason: string;
+            /** @description Why the requester is asking. Read by the colleague, never by the contact. Null for a recorded introduction, which has no ask behind it. */
+            internal_reason?: string | null;
             /** @description What is in it for the contact, in the requester's words. */
             value_for_target?: string;
             /** @description The prospect-facing copy the colleague can paste. The only one of the three a contact outside the company ever reads. */
@@ -30061,9 +30102,9 @@ export interface components {
             requested_at: string;
             /**
              * Format: date-time
-             * @description When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on.
+             * @description When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on. Null for a recorded introduction, which nobody answers.
              */
-            due_at: string;
+            due_at?: string | null;
             /** Format: date-time */
             decided_at?: string | null;
             /** Format: date-time */
@@ -30109,6 +30150,35 @@ export interface components {
          * @enum {string}
          */
         IntroFallbackPolicy: "name_drop" | "next_route" | "none";
+        /**
+         * @description How the row came to be. `asked` went through the ask lifecycle. `recorded` is an introduction that already happened outside Margince, born `introduced`.
+         * @enum {string}
+         */
+        IntroOrigin: "asked" | "recorded";
+        /**
+         * @description How a recorded introduction was made.
+         * @enum {string}
+         */
+        IntroRecordedChannel: "in_person" | "email" | "call" | "other";
+        /** @description An introduction that already happened. The caller must be the introducer or the introduced colleague; the two must differ. */
+        RecordIntroductionInput: {
+            /**
+             * Format: uuid
+             * @description The colleague who made the introduction.
+             */
+            introducer_user_id: string;
+            /**
+             * Format: uuid
+             * @description The colleague who was introduced to the contact.
+             */
+            introduced_user_id: string;
+            /**
+             * Format: date
+             * @description The day it happened. Not in the future.
+             */
+            introduced_on: string;
+            channel: components["schemas"]["IntroRecordedChannel"];
+        };
         IntroRequestListResponse: {
             data: components["schemas"]["IntroRequest"][];
         };
@@ -51900,6 +51970,38 @@ export interface operations {
         };
         responses: {
             /** @description The ask is recorded and the colleague can see it. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroRequest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordIntroduction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordIntroductionInput"];
+            };
+        };
+        responses: {
+            /** @description The introduction is recorded. */
             201: {
                 headers: {
                     [name: string]: unknown;

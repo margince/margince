@@ -111,6 +111,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`intro_request.completed`](#intro_requestcompleted) | contact | 1 |
 | [`intro_request.created`](#intro_requestcreated) | contact | 1 |
 | [`intro_request.decided`](#intro_requestdecided) | contact | 1 |
+| [`intro_request.recorded`](#intro_requestrecorded) | contact | 1 |
 | [`intro_request.replied`](#intro_requestreplied) | contact | 1 |
 | [`lead.created`](#leadcreated) | lead | 1 |
 | [`lead.demoted`](#leaddemoted) | lead | 1 |
@@ -1018,6 +1019,19 @@ Payload for intro_request.decided. The colleague gave one of the four bounded an
 | `data.contact_id` | string (uuid) | yes |  |
 | `data.decision` | string: `accepted`, `name_drop_approved`, `suggest_other`, `declined` | yes |  |
 | `data.intro_request_id` | string (uuid) | yes |  |
+| `data.introducer_user_id` | string (uuid) | yes |  |
+
+### `intro_request.recorded`
+
+Record: `contact` · version 1
+
+Payload for intro_request.recorded, a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed, which means an ask was marked done: a consumer of that event must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.contact_id` | string (uuid) | yes |  |
+| `data.intro_request_id` | string (uuid) | yes |  |
+| `data.introduced_user_id` | string (uuid) | yes |  |
 | `data.introducer_user_id` | string (uuid) | yes |  |
 
 ### `intro_request.replied`

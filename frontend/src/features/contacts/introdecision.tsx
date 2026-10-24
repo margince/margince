@@ -111,7 +111,7 @@ export function IntroDecisionDrawer({
             />
           </p>
         ) : null}
-        <p>{request.internal_reason}</p>
+        {request.internal_reason ? <p>{request.internal_reason}</p> : null}
         {request.value_for_target ? (
           <p>
             <strong>{t("contact.intro.valueLabel")}: </strong>

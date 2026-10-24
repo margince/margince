@@ -34,6 +34,7 @@ function ask(over: Partial<IntroRequest> = {}): IntroRequest {
   return {
     id: "018f3a1b-0000-7000-8000-0000000000a1",
     contact_id: CONTACT,
+    origin: "asked",
     requester_user_id: REQUESTER,
     requester_display_name: "Demo Admin",
     introducer_user_id: INTRODUCER,

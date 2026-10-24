@@ -14286,6 +14286,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.whenDays": "letzter Kontakt vor {days} Tagen",
   "contact.intro.whenNever": "kein Kontakt in letzter Zeit",
   "contact.intro.askTitle": "Vorstellung bei {name} anfragen",
+  "contact.intro.recordAction": "Eine Vorstellung erfassen",
+  "contact.intro.recordTitle": "Vorstellung bei {name} erfassen",
+  "contact.intro.recordHint":
+    "Nutze das für eine Vorstellung, die bereits außerhalb von Margince stattgefunden hat. Nur das Teammitglied, das vorgestellt hat, oder das vorgestellte Teammitglied kann sie erfassen.",
+  "contact.intro.recordIntroducer": "Vorgestellt von",
+  "contact.intro.recordIntroduced": "Vorgestelltes Teammitglied",
+  "contact.intro.recordDate": "Datum",
+  "contact.intro.recordChannel": "Wie es geschah",
+  "contact.intro.channelInPerson": "Persönlich",
+  "contact.intro.channelEmail": "Per E-Mail",
+  "contact.intro.channelCall": "Per Anruf",
+  "contact.intro.channelOther": "Auf anderem Weg",
+  "contact.intro.recordSubmit": "Vorstellung erfassen",
+  "contact.intro.recordFailed":
+    "Die Vorstellung wurde nicht erfasst. Du musst eines der beiden Teammitglieder sein. Bitte versuche es erneut.",
+  "contact.intro.recordedBadge": "Nachträglich erfasst",
+  "contact.intro.recordedIntroduced": "hat vorgestellt",
   "contact.intro.cancel": "Abbrechen",
   "contact.intro.askAction": "Vorstellung anfragen",
   "contact.intro.askFailed":

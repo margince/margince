@@ -9,10 +9,13 @@
 // would eventually disagree with this one about what the ask's state means.
 
 import { useState } from "react";
+import { EntityRef } from "../../components/entityref";
 import { Badge, Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { formatDate } from "../../format/format";
 import { INTRO_STATUS_LABELS as STATUS_LABEL } from "../../format/introstatus";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
 import { IntroDecisionDrawer } from "./introdecision";
 import {
@@ -141,7 +144,7 @@ function AskRow({
   // press on each before the first answer returns cannot fire both at once.
   return (
     <li>
-      <Badge>{t(STATUS_LABEL[ask.status])}</Badge> {ask.internal_reason}
+      <Badge>{t(STATUS_LABEL[ask.status])}</Badge> <AskSummary ask={ask} />
       {mine && ask.status === "requested" ? (
         <Button onClick={onAnswer}>{t("contact.intro.answerAction")}</Button>
       ) : null}
@@ -177,6 +180,42 @@ function AskRow({
     </li>
   );
 }
+
+function AskSummary({ ask }: Readonly<{ ask: IntroRequest }>) {
+  return ask.origin === "recorded" ? (
+    <RecordedLine ask={ask} />
+  ) : (
+    ask.internal_reason
+  );
+}
+
+// An introduction recorded after the fact has no reason to show: it says who
+// introduced whom, when, and how, and marks that nobody asked for it here.
+function RecordedLine({ ask }: Readonly<{ ask: IntroRequest }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const channel = ask.recorded_channel;
+  return (
+    <>
+      <EntityRef kind="user" id={ask.introducer_user_id} />{" "}
+      {t("contact.intro.recordedIntroduced")}{" "}
+      <EntityRef kind="user" id={ask.requester_user_id} />
+      {ask.introduced_at
+        ? `, ${formatDate(ask.introduced_at, locale, zone)}`
+        : ""}
+      {channel ? ` · ${t(CHANNEL_LABEL[channel])}` : ""}{" "}
+      <Badge>{t("contact.intro.recordedBadge")}</Badge>
+    </>
+  );
+}
+
+const CHANNEL_LABEL = {
+  in_person: "contact.intro.channelInPerson",
+  email: "contact.intro.channelEmail",
+  call: "contact.intro.channelCall",
+  other: "contact.intro.channelOther",
+} as const;
 
 // Which outcome the row offers, if any — the handshake, which either party
 // may report because either may be the one who sees it happen, or the

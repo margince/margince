@@ -24,6 +24,7 @@ const NOTE =
 const request: IntroRequest = {
   id: "3f7c1a90-0000-4000-8000-00000000a001",
   contact_id: "3f7c1a90-0000-4000-8000-00000000c001",
+  origin: "asked",
   requester_user_id: "3f7c1a90-0000-4000-8000-00000000u001",
   requester_display_name: "Jonas Weber",
   introducer_user_id: "3f7c1a90-0000-4000-8000-00000000u002",

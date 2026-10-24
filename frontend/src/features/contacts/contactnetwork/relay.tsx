@@ -72,7 +72,7 @@ export function RelayPanel({
           <p className="pn-relay-owner">
             <Avatar name={owner} identity={ownerIdOf(ask) ?? owner} size="sm" />
             <span>{t("contact.intro.handoffOwner", { name: owner })}</span>
-            {ask.status === "requested" ? (
+            {ask.status === "requested" && ask.due_at ? (
               <span className="pn-relay-due t-caption">
                 {t("contact.intro.relayDue", {
                   date: formatDate(ask.due_at, locale, recordZone),
