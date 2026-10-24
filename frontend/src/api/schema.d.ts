@@ -32695,8 +32695,9 @@ export interface components {
             unattributed_nearby: number;
         };
         /**
-         * @description The header figures. Money is in the installation's base currency at each deal's frozen
-         *     rate, summed over the caller's deal row scope; the counts are over the caller's
+         * @description The header figures. Open deals use the latest base-currency rate on or before today;
+         *     won deals keep their frozen amount. An unpriced sum is null, with its missing-price
+         *     count alongside it. Money follows the caller's deal row scope; work counts follow their
          *     activity row scope. Present only when the caller holds both the deal and the activity
          *     grant, since a header that showed one half would read as a project with no deals or
          *     no work.
@@ -32704,6 +32705,10 @@ export interface components {
         Project360Rollups: {
             open_deal_value: components["schemas"]["Money"];
             won_deal_value: components["schemas"]["Money"];
+            /** @description Open deal amounts with no available base-currency price. */
+            open_deals_unpriced?: number;
+            /** @description Won deal amounts with no available base-currency price. */
+            won_deals_unpriced?: number;
             /** @description Open tasks filed under the project, whole lifecycle. */
             open_commitments: number;
             /**

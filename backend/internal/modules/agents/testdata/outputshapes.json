@@ -10358,16 +10358,20 @@
               "open_deal_value_minor": {
                 "type": "integer"
               },
+              "open_deals_unpriced": {
+                "type": "integer"
+              },
               "won_deal_value_minor": {
+                "type": "integer"
+              },
+              "won_deals_unpriced": {
                 "type": "integer"
               }
             },
             "required": [
               "activity_count",
               "currency",
-              "open_commitments",
-              "open_deal_value_minor",
-              "won_deal_value_minor"
+              "open_commitments"
             ]
           },
           "sections_omitted": {

@@ -217,8 +217,8 @@ func TestCompanyRollupReconcilesTreeToSelves(t *testing.T) {
 	if tree.WeightedPipelineMinor != 70_000 {
 		t.Errorf("tree weighted = %d, want 70000", tree.WeightedPipelineMinor)
 	}
-	if tree.ClosedWonMinor != 30_000 {
-		t.Errorf("tree closed-won = %d, want 30000", tree.ClosedWonMinor)
+	if tree.ClosedWonMinor == nil || *tree.ClosedWonMinor != 30_000 {
+		t.Errorf("tree closed-won = %v, want 30000", tree.ClosedWonMinor)
 	}
 	if tree.ActivityCount30d != 2 {
 		t.Errorf("tree activity count = %d, want 2 (the 40-day-old touch and the future-dated one are both out of window)", tree.ActivityCount30d)
@@ -247,17 +247,19 @@ func TestCompanyRollupReconcilesTreeToSelves(t *testing.T) {
 		if self.AggregatedAccountCount != 1 {
 			t.Errorf("self count of %v = %d, want 1", node, self.AggregatedAccountCount)
 		}
-		if node == childB && (self.WeightedPipelineMinor != 0 || self.ClosedWonMinor != 0 || self.ActivityCount30d != 0) {
+		if node == childB && (self.WeightedPipelineMinor != 0 || self.ClosedWonMinor == nil || *self.ClosedWonMinor != 0 || self.ActivityCount30d != 0) {
 			t.Errorf("empty sibling self = %+v, want real zeros", self)
 		}
 		sumWeighted += self.WeightedPipelineMinor
-		sumWon += self.ClosedWonMinor
+		if self.ClosedWonMinor != nil {
+			sumWon += *self.ClosedWonMinor
+		}
 		sumActivity += self.ActivityCount30d
 		sumNodes += self.AggregatedAccountCount
 	}
-	if sumWeighted != tree.WeightedPipelineMinor || sumWon != tree.ClosedWonMinor ||
+	if sumWeighted != tree.WeightedPipelineMinor || tree.ClosedWonMinor == nil || sumWon != *tree.ClosedWonMinor ||
 		sumActivity != tree.ActivityCount30d || sumNodes != tree.AggregatedAccountCount {
-		t.Errorf("Σ(self) = {%d %d %d %d}, want the tree totals {%d %d %d %d}",
+		t.Errorf("Σ(self) = {%d %d %d %d}, want the tree totals {%d %v %d %d}",
 			sumWeighted, sumWon, sumActivity, sumNodes,
 			tree.WeightedPipelineMinor, tree.ClosedWonMinor, tree.ActivityCount30d, tree.AggregatedAccountCount)
 	}
@@ -383,8 +385,8 @@ func TestCompanyRollupClosedWonQuarterWindow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("rollup: %v", err)
 	}
-	if res.ClosedWonMinor != 5_000 {
-		t.Errorf("closed-won = %d, want 5000 (in-quarter deal at its frozen 0.5 rate only)", res.ClosedWonMinor)
+	if res.ClosedWonMinor == nil || *res.ClosedWonMinor != 5_000 {
+		t.Errorf("closed-won = %v, want 5000 (in-quarter deal at its frozen 0.5 rate only)", res.ClosedWonMinor)
 	}
 	if res.WeightedPipelineMinor != 0 {
 		t.Errorf("weighted = %d, want 0 (won deals never re-enter the pipeline sum)", res.WeightedPipelineMinor)

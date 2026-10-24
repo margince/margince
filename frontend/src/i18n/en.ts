@@ -2212,7 +2212,7 @@ export const en = {
   "board.count_one": "{count} deal",
   "board.count_other": "{count} deals",
   "board.weighted": "weighted {value}",
-  "board.mixedCurrencies": "several currencies, no single total",
+  "board.convertedAt": "Converted · rates as of {date}",
   "dealfiles.hidden": "Hidden from this deal",
   "dealfiles.unhidden": "Shown on this deal again",
   "deal.stalledBadge": "Stalled",
@@ -4833,6 +4833,10 @@ export const en = {
     "Loaded deals only. No total while a tag filter is on.",
   "deals.totalsNoSearch":
     "Loaded deals only. The stage totals cannot apply a search, so none is shown.",
+  "deals.totalsNoArchived":
+    "Loaded deals only. Totals are unavailable while archived deals are included.",
+  "deals.totalsNoStageFilter":
+    "Loaded deals only. Totals are unavailable with a stage filter.",
   "deals.totalsNoTeamFilter":
     "Loaded deals only. The stage totals cannot narrow by team or to unassigned deals, so none is shown.",
   "deals.filterPartner": "Partner",
@@ -6288,6 +6292,7 @@ export const en = {
   "analytics.field.meeting_status": "Meeting status",
   "analytics.field.open_commitments": "Open commitments",
   "analytics.field.open_deal_value_minor": "Open deal value",
+  "analytics.field.open_deal_unpriced": "Open deals not priced",
   "analytics.field.overdue_commitments": "Overdue commitments",
   "analytics.field.close_month": "Close month",
   "analytics.field.owner_id": "Owner",
@@ -6310,6 +6315,7 @@ export const en = {
   "analytics.field.weighted_base_minor": "Converted weighted amount",
   "analytics.field.win_probability": "Win probability",
   "analytics.field.won_deal_value_minor": "Won deal value",
+  "analytics.field.won_deal_unpriced": "Won deals not priced",
   "analytics.fn.count": "Count",
   "analytics.fn.count_distinct": "Distinct values",
   "analytics.fn.sum": "Sum",
@@ -15392,6 +15398,8 @@ export const en = {
   "project.aside.closeNote": "Closing a project asks for a reason.",
   "project.standing.event.lastUpdate": "{date} · last update",
   "project.more.contacts": "Companies and contacts",
+  "project.openDealValue": "Open deal value",
+  "project.wonDealValue": "Won deal value",
   "project.deals.openAt": "Open · {stage}",
   "project.deals.wonOn": "Won {date}",
   "project.deals.lostOn": "Lost {date}",

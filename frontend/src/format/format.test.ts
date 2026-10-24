@@ -163,6 +163,29 @@ describe("a money figure abbreviated for a KPI slot", () => {
   });
 });
 
+describe("localized compact currency units", () => {
+  it.each([
+    [3_000_000, "30K\u00a0€"],
+    [120_000_000, "1,2 triệu\u00a0€"],
+    [120_000_000_000, "1,2 tỷ\u00a0€"],
+    [-120_000_000, "-1,2 triệu\u00a0€"],
+    [99_999_999, "999,9K\u00a0€"],
+  ])("renders Vietnamese business units for %s", (minor, expected) => {
+    expect(formatMoneyCompact(minor, "EUR", "vi")).toBe(expected);
+  });
+  it("keeps the English and German locale conventions", () => {
+    expect(formatMoneyCompact(120_000_000, "EUR", "en").toLowerCase()).toBe(
+      "€1.2m",
+    );
+    expect(formatMoneyCompact(120_000_000, "EUR", "de")).toMatch(
+      /^1,2\sMio\.\s€$/,
+    );
+    expect(formatMoneyCompact(1_200_000_000, "VND", "vi")).toBe(
+      "1,2 tỷ\u00a0₫",
+    );
+  });
+});
+
 // Both halves of a money value are required, and neither absence has a safe
 // default: an invented currency is indistinguishable from a real one, and an
 // invented zero is a figure the server never sent.

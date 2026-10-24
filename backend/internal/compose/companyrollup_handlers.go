@@ -92,7 +92,7 @@ func companyRollupToWire(result CompanyRollupResult) crmcontracts.CompanyHierarc
 		RootId:                 openapi_types.UUID(result.RootID),
 		Scope:                  crmcontracts.CompanyHierarchyRollupScope(result.Scope),
 		WeightedPipeline:       companyRollupMoney(result.WeightedPipelineMinor, result.BaseCurrency),
-		ClosedWon:              companyRollupMoney(result.ClosedWonMinor, result.BaseCurrency),
+		ClosedWon:              crmcontracts.Money{AmountMinor: result.ClosedWonMinor, Currency: &result.BaseCurrency},
 		ActivityCount30d:       result.ActivityCount30d,
 		AggregatedAccountCount: result.AggregatedAccountCount,
 		RestrictedExcluded:     restricted,

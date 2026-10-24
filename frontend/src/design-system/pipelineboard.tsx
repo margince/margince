@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { Fragment, useEffect, useRef } from "react";
-import { formatMoneyOrAbsent, formatNumber } from "../format/format";
+import {
+  formatDate,
+  formatMoneyOrAbsent,
+  formatNumber,
+} from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { OptionCount } from "./atoms";
 import "./composed.css";
@@ -115,24 +119,9 @@ export type BoardColumn<Record extends BoardRecord = BoardDeal> = {
    * whose card list is the whole stage.
    */
   count?: number;
-  /**
-   * The stage holds deals in more than one currency, so it has no total to
-   * state: native minor units are never summed across currencies. The column
-   * then reports how many deals it holds and no figure at all, rather than a
-   * zero that reads as an empty stage.
-   */
+  /** Totals withheld because the aggregate cannot measure the card filters. */
   sumHidden?: boolean;
-  /**
-   * Why the sum is hidden, as the words to print in its place.
-   *
-   * The default says the stage mixes currencies. That was the only reason a
-   * total could go missing when this column was written, and it is not now. A
-   * board whose card list and totals query measure different populations has
-   * no true figure to print either. The mixed-currency sentence there would
-   * state a reason that is not true.
-   *
-   * A caller that hides a sum for its own reason passes its own words.
-   */
+  /** The caller's explanation of the withheld total. */
   sumHiddenReason?: string;
   /**
    * Draw the column narrow: its head and its count, and none of its cards.
@@ -169,6 +158,9 @@ export type BoardMoneyColumn = BoardColumn<BoardDeal> & {
   rawMinor: number | null;
   weightedMinor: number | null;
   currency: string | null;
+  asOf?: string | null;
+  timezone?: string | null;
+  unpricedCount?: number | null;
 };
 
 type BoardHandlers<Record extends BoardRecord> = {
@@ -226,6 +218,7 @@ type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
   columns: BoardColumn<Record>[];
   renderCard: (record: Record, column: BoardColumn<Record>) => ReactNode;
   moneyFor: (column: BoardColumn<Record>) => BoardMoneyColumn | undefined;
+  zone?: string;
 };
 
 // firstFilledColumn is the stage of the first column holding a card, or
@@ -234,6 +227,40 @@ export function firstFilledColumn<Record extends BoardRecord>(
   columns: readonly BoardColumn<Record>[],
 ): string | undefined {
   return columns.find((column) => column.deals.length > 0)?.stage;
+}
+
+function MoneyNotes({
+  money,
+  hidden,
+  zone,
+}: Readonly<{
+  money: BoardMoneyColumn | undefined;
+  hidden?: boolean;
+  zone?: string;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (!money || hidden) return null;
+  const unpriced = money.unpricedCount ?? 0;
+  const reportZone = money.timezone ?? zone;
+  return (
+    <>
+      {money.asOf && reportZone && (
+        <span className="board-col-refusal">
+          {t("board.convertedAt", {
+            date: formatDate(money.asOf, locale, reportZone),
+          })}
+        </span>
+      )}
+      {unpriced > 0 && (
+        <span className="board-col-refusal">
+          {translatePlural(locale, "brief.readings.unpricedCount", unpriced, {
+            count: formatNumber(unpriced, locale),
+          })}
+        </span>
+      )}
+    </>
+  );
 }
 
 function BoardLayout<Record extends BoardRecord>({
@@ -245,6 +272,7 @@ function BoardLayout<Record extends BoardRecord>({
   columnDropHandlers,
   onToggleColumn,
   moneyFor,
+  zone,
 }: Readonly<BoardLayoutProps<Record>>) {
   const t = useT();
   const { locale } = useLocale();
@@ -360,6 +388,7 @@ function BoardLayout<Record extends BoardRecord>({
               <span className="board-col-total">
                 {money && !column.sumHidden && (
                   <span className="board-col-money">
+                    {money.rawMinor != null && money.currency ? "≈ " : ""}
                     {formatMoneyOrAbsent(
                       money.rawMinor,
                       money.currency,
@@ -389,24 +418,10 @@ function BoardLayout<Record extends BoardRecord>({
                   })}
                 </span>
               )}
-              {/* A refused sum says it was refused. Omitting the figure and
-                  leaving the count alone is a blank where a total belongs. A
-                  blank cannot distinguish "these are in two currencies, so no
-                  one total means anything" from "nobody has priced these". A
-                  column that has a real reason and no words for it reads as a
-                  column that failed to load. On a board whose stages hold
-                  euros, dollars and dong, five of six columns are this state.
-
-                  It is a sentence, and it takes the wrapping class rather than
-                  the weighted figure's. Sharing that class cut the sentence
-                  off after a few words in a 240px stage.
-
-                  An empty column says nothing: with no deals counted there is
-                  no sum to refuse, and ten columns repeating the sentence over
-                  a blank board read as ten errors. */}
+              <MoneyNotes money={money} hidden={column.sumHidden} zone={zone} />
               {money && column.sumHidden && dealCount > 0 && (
                 <span className="board-col-refusal">
-                  {column.sumHiddenReason ?? t("board.mixedCurrencies")}
+                  {column.sumHiddenReason}
                 </span>
               )}
             </div>

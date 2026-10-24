@@ -288,7 +288,7 @@ var lifecycleMaskedAmountReads = gatekit.Waive(map[string]string{
 // spelling, and what applies it sits elsewhere — bound into the statement after
 // this file hands it over, or run across the rows once they are read.
 var calleeGatedMaskedAmountReads = gatekit.Waive(map[string]string{
-	"internal/compose/reportprojects.go":            "the project report's won-deal money total. It sums d.amount_minor_base under a FILTER on reportDealMaskToken, which reportsql.go binds from auth.MaskExcludedClause beside the row-scope token next to it — so the statement here is a template and the mask is resolved at bind time. The engine's own mask pass cannot cover this one: it asks the masks on the SPEC's entity, and the spec is projects while the sum is over deals",
+	"internal/compose/reportprojects.go":            "the project report's shared deal valuation and unpriced folds. Both use a FILTER on reportDealMaskToken, which reportsql.go binds from auth.MaskExcludedClause beside the row-scope token next to it — so the statement here is a template and the mask is resolved at bind time. The engine's own mask pass cannot cover this one: it asks the masks on the SPEC's entity, and the spec is projects while the sum is over deals",
 	"internal/modules/deals/dealfigures.go:Figures": "the Worklist's batched card read. It selects d.amount_minor bare and maskFigures, the declaration above it in the same file, withholds the figure afterwards in Go — auth.MaskedFields over auth.WritableSubset — because a card carries no masked_fields list for a rendered NULL to explain itself in. The mask is a whole-row decision here rather than a rendering, which is the one shape this census reads as ungated",
 })
 
@@ -390,7 +390,7 @@ func readsADealAmount(filePath string, file *ast.File, columns *regexp.Regexp, b
 // It is part of the subject because its text is not: a statement built from one
 // names no amount column of its own, so a literal-only subject cannot see the
 // money it sums. The project report's open-value total was exactly that —
-// `sum(deals.OpenDealBaseValueSQL(...))` over every open deal, with no mask and
+// `sum(deals.BaseValueSQL(...))` over every open deal, with no mask and
 // nothing here to say so.
 //
 // DERIVED from the tree rather than listed, and the list is why. A hand-kept
@@ -413,6 +413,7 @@ var sqlFragmentMarker = regexp.MustCompile(`(?i)\b(SELECT|CASE|WHEN|COALESCE|SUM
 func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]bool {
 	t.Helper()
 	names := map[string]bool{}
+	var functions []*ast.FuncDecl
 	err := filepath.Walk("internal", func(filePath string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(filePath, ".go") ||
 			strings.HasSuffix(filePath, "_test.go") || strings.HasSuffix(filePath, "_gen.go") {
@@ -423,6 +424,9 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 			return parseErr
 		}
 		for _, decl := range file.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && returnsSQLString(fn) {
+				functions = append(functions, fn)
+			}
 			if name, isBuilder := builderName(decl, columns); isBuilder {
 				names[name] = true
 			}
@@ -431,6 +435,14 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 	})
 	if err != nil {
 		t.Fatalf("deriving the deal-amount builders: %v", err)
+	}
+	for changed := true; changed; {
+		changed = false
+		for _, fn := range functions {
+			if !names[fn.Name.Name] && len(builtAmountsIn(fn, names)) > 0 {
+				names[fn.Name.Name], changed = true, true
+			}
+		}
 	}
 	if len(names) == 0 {
 		t.Fatal("no deal-amount builder found in the tree — this derivation has stopped recognising " +
@@ -444,11 +456,7 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 // reader changing what counts as a builder changes it in one place.
 func builderName(decl ast.Decl, columns *regexp.Regexp) (string, bool) {
 	fn, isFunc := decl.(*ast.FuncDecl)
-	if !isFunc || fn.Type.Results == nil || len(fn.Type.Results.List) != 1 {
-		return "", false
-	}
-	result, isIdent := fn.Type.Results.List[0].Type.(*ast.Ident)
-	if !isIdent || result.Name != "string" {
+	if !isFunc || !returnsSQLString(fn) {
 		return "", false
 	}
 	// Statements rather than literals, because a fragment assembled with `+` is
@@ -465,6 +473,14 @@ func builderName(decl ast.Decl, columns *regexp.Regexp) (string, bool) {
 }
 
 // dealAmountReadsIn is the site extraction the subject predicate above states.
+func returnsSQLString(fn *ast.FuncDecl) bool {
+	if fn.Type.Results == nil || len(fn.Type.Results.List) != 1 {
+		return false
+	}
+	result, ok := fn.Type.Results.List[0].Type.(*ast.Ident)
+	return ok && result.Name == "string"
+}
+
 func dealAmountReadsIn(decl ast.Decl, columns *regexp.Regexp, builders map[string]bool) []gatekit.TableRead {
 	amounts := gatekit.DeclReads(decl, columns)
 	if len(amounts) == 0 {

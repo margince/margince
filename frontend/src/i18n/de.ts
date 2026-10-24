@@ -2260,7 +2260,7 @@ export const de = {
   "board.count_one": "Deal: {count}",
   "board.count_other": "Deals: {count}",
   "board.weighted": "gewichtet {value}",
-  "board.mixedCurrencies": "mehrere Währungen, keine Gesamtsumme",
+  "board.convertedAt": "Umgerechnet · Wechselkurse vom {date}",
   "dealfiles.hidden": "An diesem Deal ausgeblendet",
   "dealfiles.unhidden": "Wieder an diesem Deal sichtbar",
   "deal.stalledBadge": "Stockt",
@@ -4815,6 +4815,10 @@ export const de = {
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.totalsNoSearch":
     "Nur geladene Deals. Es wird keine Summe angezeigt, da die Phasensummen keine Suche berücksichtigen können.",
+  "deals.totalsNoArchived":
+    "Nur geladene Deals. Keine Summen, solange archivierte Deals einbezogen werden.",
+  "deals.totalsNoStageFilter":
+    "Nur geladene Deals. Keine Summen, solange ein Phasenfilter aktiv ist.",
   "deals.totalsNoTeamFilter":
     "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Team oder auf nicht zugewiesene Deals eingrenzen lassen.",
   "deals.filterPartner": "Partner",
@@ -6233,6 +6237,7 @@ export const de = {
   "analytics.field.meeting_status": "Terminstatus",
   "analytics.field.open_commitments": "Offene Zusagen",
   "analytics.field.open_deal_value_minor": "Offener Deal-Wert",
+  "analytics.field.open_deal_unpriced": "Nicht bewertete offene Deals",
   "analytics.field.overdue_commitments": "Überfällige Zusagen",
   "analytics.field.close_month": "Abschlussmonat",
   "analytics.field.owner_id": "Verantwortlich",
@@ -6255,6 +6260,7 @@ export const de = {
   "analytics.field.weighted_base_minor": "Gewichteter umgerechneter Betrag",
   "analytics.field.win_probability": "Gewinnwahrscheinlichkeit",
   "analytics.field.won_deal_value_minor": "Gewonnener Deal-Wert",
+  "analytics.field.won_deal_unpriced": "Nicht bewertete gewonnene Deals",
   "analytics.fn.count": "Anzahl",
   "analytics.fn.count_distinct": "Verschiedene Werte",
   "analytics.fn.sum": "Summe",
@@ -15450,6 +15456,8 @@ export const de = {
   "project.standing.event.due": "fällig am {date}",
   "project.standing.event.lastUpdate": "{date} · letzte Aktualisierung",
   "project.more.contacts": "Unternehmen und Kontakte",
+  "project.openDealValue": "Wert offener Deals",
+  "project.wonDealValue": "Wert gewonnener Deals",
   "project.deals.openAt": "Offen · {stage}",
   "project.deals.wonOn": "Gewonnen am {date}",
   "project.deals.lostOn": "Verloren am {date}",

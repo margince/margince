@@ -45316,8 +45316,9 @@ type Project360 struct {
 	// Project A project — the body of work a client relationship is made of. Mirrors the `project` table.
 	Project Project `json:"project"`
 
-	// Rollups The header figures. Money is in the installation's base currency at each deal's frozen
-	// rate, summed over the caller's deal row scope; the counts are over the caller's
+	// Rollups The header figures. Open deals use the latest base-currency rate on or before today;
+	// won deals keep their frozen amount. An unpriced sum is null, with its missing-price
+	// count alongside it. Money follows the caller's deal row scope; work counts follow their
 	// activity row scope. Present only when the caller holds both the deal and the activity
 	// grant, since a header that showed one half would read as a project with no deals or
 	// no work.
@@ -45403,8 +45404,9 @@ type Project360PhaseTransition struct {
 	ToPhase   string             `json:"to_phase"`
 }
 
-// Project360Rollups The header figures. Money is in the installation's base currency at each deal's frozen
-// rate, summed over the caller's deal row scope; the counts are over the caller's
+// Project360Rollups The header figures. Open deals use the latest base-currency rate on or before today;
+// won deals keep their frozen amount. An unpriced sum is null, with its missing-price
+// count alongside it. Money follows the caller's deal row scope; work counts follow their
 // activity row scope. Present only when the caller holds both the deal and the activity
 // grant, since a header that showed one half would read as a project with no deals or
 // no work.
@@ -45421,8 +45423,14 @@ type Project360Rollups struct {
 	// OpenDealValue Money as integer minor-units + ISO-4217 currency. Never a float.
 	OpenDealValue Money `json:"open_deal_value"`
 
+	// OpenDealsUnpriced Open deal amounts with no available base-currency price.
+	OpenDealsUnpriced *int `json:"open_deals_unpriced,omitempty"`
+
 	// WonDealValue Money as integer minor-units + ISO-4217 currency. Never a float.
 	WonDealValue Money `json:"won_deal_value"`
+
+	// WonDealsUnpriced Won deal amounts with no available base-currency price.
+	WonDealsUnpriced *int `json:"won_deals_unpriced,omitempty"`
 }
 
 // Project360Section One section of the project page, as `sections_omitted` names it.

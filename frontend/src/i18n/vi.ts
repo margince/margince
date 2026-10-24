@@ -2191,7 +2191,7 @@ export const vi = {
   "board.count_one": "{count} deal",
   "board.count_other": "{count} deal",
   "board.weighted": "có trọng số {value}",
-  "board.mixedCurrencies": "nhiều loại tiền, không có tổng chung",
+  "board.convertedAt": "Đã quy đổi · tỷ giá ngày {date}",
   "dealfiles.hidden": "Đã ẩn khỏi deal này",
   "dealfiles.unhidden": "Đã hiển thị lại trên deal này",
   "deal.stalledBadge": "Đình trệ",
@@ -4692,6 +4692,10 @@ export const vi = {
     "Chỉ hiển thị deal đã tải. Không hiển thị tổng khi đang dùng bộ lọc thẻ.",
   "deals.totalsNoSearch":
     "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể áp dụng tìm kiếm nên không hiển thị.",
+  "deals.totalsNoArchived":
+    "Chỉ hiển thị deal đã tải. Không có tổng khi bao gồm deal đã lưu trữ.",
+  "deals.totalsNoStageFilter":
+    "Chỉ hiển thị deal đã tải. Không có tổng khi lọc theo giai đoạn.",
   "deals.totalsNoTeamFilter":
     "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo nhóm hay theo deal chưa giao nên không hiển thị.",
   "deals.filterPartner": "Đối tác",
@@ -6075,6 +6079,7 @@ export const vi = {
   "analytics.field.meeting_status": "Trạng thái cuộc họp",
   "analytics.field.open_commitments": "Cam kết đang mở",
   "analytics.field.open_deal_value_minor": "Giá trị deal đang mở",
+  "analytics.field.open_deal_unpriced": "Deal đang mở chưa định giá",
   "analytics.field.overdue_commitments": "Cam kết quá hạn",
   "analytics.field.close_month": "Tháng chốt",
   "analytics.field.owner_id": "Người chịu trách nhiệm",
@@ -6097,6 +6102,7 @@ export const vi = {
   "analytics.field.weighted_base_minor": "Số tiền có trọng số đã quy đổi",
   "analytics.field.win_probability": "Xác suất thắng",
   "analytics.field.won_deal_value_minor": "Giá trị deal đã chốt",
+  "analytics.field.won_deal_unpriced": "Deal đã chốt chưa định giá",
   "analytics.fn.count": "Số lượng",
   "analytics.fn.count_distinct": "Số giá trị khác nhau",
   "analytics.fn.sum": "Tổng",
@@ -15060,6 +15066,8 @@ export const vi = {
   "project.standing.event.due": "hạn {date}",
   "project.standing.event.lastUpdate": "{date} · cập nhật gần nhất",
   "project.more.contacts": "Công ty và liên hệ",
+  "project.openDealValue": "Giá trị deal đang mở",
+  "project.wonDealValue": "Giá trị deal đã thắng",
   "project.deals.openAt": "Đang mở · {stage}",
   "project.deals.wonOn": "Thắng ngày {date}",
   "project.deals.lostOn": "Thua ngày {date}",
