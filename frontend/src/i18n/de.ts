@@ -1,10 +1,12 @@
 import type { MessageKey } from "./en";
 
-// German catalog, the A24 default locale. `satisfies` forces exact key
+// German catalog, the A24 default locale. The type annotation forces exact key
 // parity with en at compile time; i18n.test.ts re-checks it at runtime so a
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
-export const de = {
+// Annotated, not inferred: the inferred literal type of a catalog this size is
+// past what tsc will serialize (TS7056).
+export const de: Readonly<Record<MessageKey, string>> = {
   "homeRepair.taskPermission":
     "Zum Archivieren geprüfter Aufgaben brauchst du die Berechtigung, Aktivitäten zu archivieren.",
   "homeRepair.classificationPermission":
@@ -17392,4 +17394,4 @@ export const de = {
   "project.standing.peek.started": "Arbeit begonnen",
   "project.standing.peek.today": "Heute",
   "project.standing.peek.documents": "Dateien dieses Projekts, neueste zuerst",
-} as const satisfies Record<MessageKey, string>;
+};
