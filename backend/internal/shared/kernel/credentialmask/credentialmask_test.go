@@ -83,3 +83,12 @@ func TestTheJSONLaneSkipsTheTextOnlyRules(t *testing.T) {
 		})
 	}
 }
+
+// A Kelvin sign is no ASCII word character, so a key label spelled with one
+// starts a match after "api" that matched again on its own has no \b. The
+// groups are read where the match sits.
+func TestAKelvinSignLabelInsideAWordIsMasked(t *testing.T) {
+	if got := MaskText("apiKey: Quokka7-x9!"); got != "apiKey: [masked]" {
+		t.Errorf("MaskText = %q, want the value masked", got)
+	}
+}

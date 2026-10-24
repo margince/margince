@@ -46,34 +46,73 @@ func MaskText(s string) string {
 // label before the value and the structure after it stay. A value that already
 // is its mark is left alone and not counted, so a second pass finds nothing.
 func Replace(text []byte, lane Lane, mark func(kind string) string) ([]byte, []string) {
+	return replaceCued(text, lane, mark, true)
+}
+
+// replaceCued is Replace with the cue check switchable, so a test can hold the
+// checked and the unchecked scan equal.
+func replaceCued(text []byte, lane Lane, mark func(kind string) string, cued bool) ([]byte, []string) {
 	var found []string
+	scan := newCueScan(text)
 	for _, r := range rules {
-		if !r.runsIn(lane) {
+		if !r.runsIn(lane) || (cued && !scan.mayMatch(r.cues)) {
 			continue
 		}
-		text = r.re.ReplaceAllFunc(text, func(match []byte) []byte {
-			groups := r.re.FindSubmatch(match)
-			value := groups[0]
-			if r.keepPrefix {
-				value = groups[2]
-			}
-			marker := []byte(mark(r.kind))
-			if bytes.Equal(value, marker) || (r.accept != nil && !r.accept(value)) {
-				return match
-			}
-			found = append(found, r.kind)
-			var out []byte
-			if r.keepPrefix {
-				out = append(out, groups[1]...)
-			}
-			out = append(out, marker...)
-			if r.keepSuffix {
-				out = append(out, groups[len(groups)-1]...)
-			}
-			return out
-		})
+		replaced := len(found)
+		text = r.replaceAll(text, mark, &found)
+		// A mark may itself spell a later rule's cue.
+		if len(found) > replaced {
+			scan = newCueScan(text)
+		}
 	}
 	return text, found
+}
+
+// replaceAll reads each match's groups where the match sits in text. Matched
+// again on its own, a match can lose the \b its first character had in place,
+// and then no group is left to read.
+func (r rule) replaceAll(text []byte, mark func(kind string) string, found *[]string) []byte {
+	matches := r.re.FindAllSubmatchIndex(text, -1)
+	if matches == nil {
+		return text
+	}
+	out := make([]byte, 0, len(text))
+	last := 0
+	for _, at := range matches {
+		out = append(out, text[last:at[0]]...)
+		out = append(out, r.replacement(text, at, mark, found)...)
+		last = at[1]
+	}
+	return append(out, text[last:]...)
+}
+
+// replacement is what one match becomes: its mark, with the label in front and
+// the anchor after it kept where the rule keeps them.
+func (r rule) replacement(text []byte, at []int, mark func(kind string) string, found *[]string) []byte {
+	group := func(i int) []byte {
+		if at[2*i] < 0 {
+			return nil
+		}
+		return text[at[2*i]:at[2*i+1]]
+	}
+	match, value := group(0), group(0)
+	if r.keepPrefix {
+		value = group(2)
+	}
+	marker := []byte(mark(r.kind))
+	if bytes.Equal(value, marker) || (r.accept != nil && !r.accept(value)) {
+		return match
+	}
+	*found = append(*found, r.kind)
+	var out []byte
+	if r.keepPrefix {
+		out = append(out, group(1)...)
+	}
+	out = append(out, marker...)
+	if r.keepSuffix {
+		out = append(out, group(len(at)/2-1)...)
+	}
+	return out
 }
 
 // laneScope is the lane a rule runs in.
@@ -96,6 +135,8 @@ type rule struct {
 	lane       laneScope
 	// accept, when set, must hold for the value or the match stays.
 	accept func(value []byte) bool
+	// cues are read off re at start-up (cues.go).
+	cues [][]byte
 }
 
 func (r rule) runsIn(lane Lane) bool {
@@ -143,7 +184,7 @@ func nextLine(labels string) *regexp.Regexp {
 	return regexp.MustCompile(`(?im)^([ \t]*(?:` + labels + `)[ \t]*:?[ \t]*\r?\n[ \t]*)([^\s]{4,})([ \t]*\r?)$`)
 }
 
-var rules = []rule{
+var rules = withCues([]rule{
 	// (?s) spans lines; in JSON the line breaks are \n escapes, which .*? crosses too.
 	{kind: "private_key", re: regexp.MustCompile(`(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----`)},
 	{kind: kindAPIKey, re: regexp.MustCompile(`\bsk-[A-Za-z0-9_-]{16,}`)},
@@ -195,4 +236,11 @@ var rules = []rule{
 		kind: "login_name", keepPrefix: true, keepSuffix: true, lane: textOnly,
 		re: regexp.MustCompile(`(?im)^([ \t]*(?:` + loginLabels + `)[ \t]*[:=][ \t]*)([^\s]{2,})([ \t]*\r?\n[ \t]*(?:` + passwordLabels + `)\b)`),
 	},
+})
+
+func withCues(rules []rule) []rule {
+	for i := range rules {
+		rules[i].cues = cuesOf(rules[i].re.String())
+	}
+	return rules
 }
