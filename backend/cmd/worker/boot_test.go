@@ -87,7 +87,7 @@ func TestResetFlushWithoutARouterStillReturnsACallableFlush(t *testing.T) {
 // message saying only "geocoding disabled" leaves the reader exactly as stuck.
 func TestTheWorkerSaysWhenItWillGeocodeNothing(t *testing.T) {
 	var out strings.Builder
-	announceGeocoding("", &out)
+	announceGeocoding("off", &out)
 	said := out.String()
 	if !strings.Contains(said, "MARGINCE_GEOCODE_BASE_URL") {
 		t.Errorf("boot said %q, want it to name the variable — without it the reader has "+
@@ -109,9 +109,28 @@ func TestTheWorkerSaysWhoseGeocoderItUses(t *testing.T) {
 		t.Errorf("boot said %q for `public`, want the host it will actually call", public.String())
 	}
 
+	var unset strings.Builder
+	announceGeocoding("", &unset)
+	if !strings.Contains(unset.String(), "openstreetmap.org") {
+		t.Errorf("boot said %q for an unset setting, want the public service it will call", unset.String())
+	}
+
 	var own strings.Builder
 	announceGeocoding("https://nominatim.internal", &own)
 	if !strings.Contains(own.String(), "https://nominatim.internal") {
 		t.Errorf("boot said %q, want the self-hosted URL it was given", own.String())
+	}
+}
+
+// The api queues exactly when the worker builds a client: both read the setting
+// through geocode.Resolve, so no value can leave one role queueing lookups the
+// other never answers.
+func TestGeocoderForBuildsAClientExactlyWhenTheSettingIsNotOff(t *testing.T) {
+	for setting, want := range map[string]bool{
+		"": true, "  ": true, "public": true, "https://nominatim.internal": true, "off": false, " off ": false,
+	} {
+		if got := geocoderFor(setting) != nil; got != want {
+			t.Errorf("geocoderFor(%q) built a client = %v, want %v", setting, got, want)
+		}
 	}
 }

@@ -269,8 +269,8 @@ func jobEnqueueOptions(
 	if !vatcheck.Configured(gates.vatCheck) {
 		logger.Warn("api: MARGINCE_VAT_CHECK_BASE_URL is unset — this role queues no VAT consultation, whatever the worker carries")
 	}
-	if !geocode.Configured(gates.geocode) {
-		logger.Warn("api: MARGINCE_GEOCODE_BASE_URL is unset — this role queues no coordinate lookup, whatever the worker carries")
+	if _, on := geocode.Resolve(gates.geocode); !on {
+		logger.Warn("api: MARGINCE_GEOCODE_BASE_URL=off — this role queues no coordinate lookup; the worker must carry the same value")
 	}
 	opts = append(opts, vatCheckEnqueueOptions(inserter, gates.vatCheck)...)
 	return append(opts, geocodeEnqueueOptions(inserter, gates.geocode)...), nil
@@ -290,13 +290,13 @@ type queueGates struct {
 }
 
 // geocodeEnqueueOptions wires the coordinate-lookup enqueue only when
-// geocode.Configured says this installation geocodes — the same predicate
+// geocode.Resolve says this installation geocodes — the same predicate
 // cmd/worker's geocoderFor gates its own client on.
 //
 // The api role only ENQUEUES: the provider lives on the worker
 // (JobRunnerConfig.Geocoder), and that split is what keeps the
 // single-requester rule enforceable — several api replicas may queue, exactly
-// one worker asks. Which is also why an unset variable HERE has to stop the
+// one worker asks. Which is also why an off variable HERE has to stop the
 // queueing rather than being left to the worker: the worker's nil-provider
 // path does answer honestly, but what it writes is contacts.GeocodeFailed, and
 // an operator asking why geocoding does not work then reads a lookup failure
@@ -304,7 +304,7 @@ type queueGates struct {
 // the role that queued it. A wrong answer delivered confidently is worse for
 // diagnosis than an empty queue.
 func geocodeEnqueueOptions(inserter *jobs.Runner, baseURL string) []compose.Option {
-	if !geocode.Configured(baseURL) {
+	if _, on := geocode.Resolve(baseURL); !on {
 		return nil
 	}
 	return []compose.Option{compose.WithGeocoding(inserter)}

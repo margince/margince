@@ -294,22 +294,24 @@ func TestJobEnqueueOptionsGatesVatCheckOnConfiguredBaseURL(t *testing.T) {
 // contacts.GeocodeFailed — a confident wrong answer about why geocoding does not
 // work.
 func TestGeocodeEnqueueOptionsRespectsConfiguredBaseURL(t *testing.T) {
-	if got := geocodeEnqueueOptions(nil, ""); got != nil {
-		t.Fatalf("geocodeEnqueueOptions(unconfigured) = %d options, want 0", len(got))
+	if got := geocodeEnqueueOptions(nil, "off"); got != nil {
+		t.Fatalf("geocodeEnqueueOptions(off) = %d options, want 0", len(got))
 	}
-	if got := geocodeEnqueueOptions(nil, "public"); len(got) != 1 {
-		t.Fatalf("geocodeEnqueueOptions(configured) = %d options, want 1 (geocode enqueue)", len(got))
+	for _, setting := range []string{"", "  ", "public", "https://nominatim.internal"} {
+		if got := geocodeEnqueueOptions(nil, setting); len(got) != 1 {
+			t.Fatalf("geocodeEnqueueOptions(%q) = %d options, want 1 (geocode enqueue)", setting, len(got))
+		}
 	}
 }
 
 // The call site, for the reason the VAT one above gives: a regression that
 // stops passing the base URL through would leave that helper's own test green.
 func TestJobEnqueueOptionsGatesGeocodingOnConfiguredBaseURL(t *testing.T) {
-	unconfigured, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{})
+	unconfigured, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{geocode: "off"})
 	if err != nil {
 		t.Fatalf("jobEnqueueOptions(unconfigured): %v", err)
 	}
-	configured, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{geocode: "public"})
+	configured, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{})
 	if err != nil {
 		t.Fatalf("jobEnqueueOptions(configured): %v", err)
 	}
@@ -334,13 +336,13 @@ func TestAnUnconfiguredGateAnnouncesItselfAtBoot(t *testing.T) {
 		quiet []string
 	}{
 		{
-			name:  "neither register configured",
-			gates: queueGates{},
+			name:  "VAT unset, geocoding off",
+			gates: queueGates{geocode: "off"},
 			wants: []string{"MARGINCE_VAT_CHECK_BASE_URL", "MARGINCE_GEOCODE_BASE_URL"},
 		},
 		{
-			name:  "geocoding configured, VAT not",
-			gates: queueGates{geocode: "public"},
+			name:  "geocoding unset (on), VAT not",
+			gates: queueGates{},
 			wants: []string{"MARGINCE_VAT_CHECK_BASE_URL"},
 			quiet: []string{"MARGINCE_GEOCODE_BASE_URL"},
 		},
@@ -374,7 +376,7 @@ func TestAnUnconfiguredGateAnnouncesItselfAtBoot(t *testing.T) {
 // switch wearing two names: an installation that consults a VAT register and
 // geocodes nothing must get the consultation enqueue and not the lookup one.
 func TestTheTwoQueueGatesAnswerSeparately(t *testing.T) {
-	neither, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{})
+	neither, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{geocode: "off"})
 	if err != nil {
 		t.Fatalf("jobEnqueueOptions(neither): %v", err)
 	}
