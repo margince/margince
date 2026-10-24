@@ -13,7 +13,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `assignee_id` | `uuid` |  | Task only. |
 | `audience` | `text`, default `'workspace'::text` | yes | Who may read this activity's CONTENT once the row is discoverable at all. |
-| `audience_reason` | `text` |  | Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). |
+| `audience_reason` | `text` |  | Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). |
 | `body` | `text` |  |  |
 | `body_completeness` | `text`, default `'complete'::text` | yes | How much of a mail's text Margince could decode. |
 | `booking_interval_exact` | `boolean`, default `false` | yes |  |

@@ -6,6 +6,7 @@ package capture
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -117,6 +118,9 @@ const (
 	audienceReasonCounterparty = "counterparty"
 	// The sender said so in the subject line.
 	audienceReasonConfidentialMarker = "explicitly_confidential"
+	// Every party to the mail is a member of the workspace. No verdict clears
+	// it; the mailbox owner sharing the thread does.
+	audienceReasonMembersOnly = "members_only"
 	// The thread already carried a holding verdict — a classifier's, or the
 	// owner's own. Never the audience's DECIDING reason, because a holding
 	// verdict already narrows through verdict_status; recorded so a widening
@@ -125,3 +129,13 @@ const (
 )
 
 const audienceWorkspace = "workspace"
+
+// verdictProofReasons are the holds a thread verdict never lifts: each is a
+// fact about the workspace, the correspondent or the message, not a question a
+// classifier answers. activities' rowCarriedHold keeps the same four.
+var verdictProofReasons = []string{
+	audienceReasonWorkspaceFloor, audienceReasonCounterparty,
+	audienceReasonConfidentialMarker, audienceReasonMembersOnly,
+}
+
+func verdictProofHold(reason string) bool { return slices.Contains(verdictProofReasons, reason) }

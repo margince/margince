@@ -127,16 +127,20 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 		// reasons this leaves alone — a sender's own subject marking, a
 		// counterparty hold, the workspace floor — are not a recipient's to
 		// lift. ClearConfidentialityVerdictHoldTx enumerates them.
+		//
+		// A members-only hold is lifted by any share: it holds colleagues' mail
+		// back from automatic promotion, and an owner pressing Share is the
+		// person's own decision it waits for.
 		if share {
+			activityIDs := asActivityIDs(messages)
+			if err := activities.ClearMembersOnlyHoldTx(ctx, tx, activityIDs); err != nil {
+				return err
+			}
 			judged, err := capture.ThreadJudgedByClassifierTx(ctx, tx, threadKey, actor.UserID)
 			if err != nil {
 				return err
 			}
 			if judged {
-				activityIDs := make([]ids.ActivityID, 0, len(messages))
-				for _, id := range messages {
-					activityIDs = append(activityIDs, ids.From[ids.ActivityKind](id))
-				}
 				if err := activities.ClearConfidentialityVerdictHoldTx(ctx, tx, activityIDs); err != nil {
 					return err
 				}

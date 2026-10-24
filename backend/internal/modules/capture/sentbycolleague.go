@@ -152,3 +152,27 @@ func senderIsMachine(rec connector.NormalizedRecord, fields ActivityFields) bool
 
 // gmailAuthServer is the authserv-id Gmail names in its Authentication-Results.
 const gmailAuthServer = "mx.google.com"
+
+// attestedRecipientSeatTx is the colleague a mail the owner's provider
+// attested as sent was addressed to, matched on their exact login the way
+// StampFurtherParticipants binds a Cc on such a mail. The owner typed that
+// address, so the colleague may read their copy even when a members_only
+// hold keeps the workspace out. Nil for anything else.
+func attestedRecipientSeatTx(
+	ctx context.Context, tx pgx.Tx, kind string, counterparty connector.Counterparty, address string, owner ids.UUID,
+) (*ids.UUID, error) {
+	if kind != kindEmail || !counterparty.SentByOwner() || address == "" {
+		return nil, nil
+	}
+	var seat ids.UUID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM app_user WHERE lower(email) = $1 AND id <> $2 AND archived_at IS NULL`,
+		address, owner).Scan(&seat)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading whether a recipient is a colleague: %w", err)
+	}
+	return &seat, nil
+}

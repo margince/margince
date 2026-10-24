@@ -111,7 +111,11 @@ func stampCaptureParticipants(
 		channelUserID = strings.TrimSpace(counterparty.ChannelIdentity.ChannelUserID)
 	}
 	if address != "" || channelUserID != "" {
-		if err := insertParticipant(ctx, tx, activityID, theirRole, nil, nil, address, channelUserID); err != nil {
+		colleague, err := attestedRecipientSeatTx(ctx, tx, kind, counterparty, address, ownerUserID)
+		if err == nil {
+			err = insertParticipant(ctx, tx, activityID, theirRole, colleague, nil, address, channelUserID)
+		}
+		if err != nil {
 			return fmt.Errorf("capture: stamping the counterparty as a participant: %w", err)
 		}
 	}

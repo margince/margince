@@ -76,7 +76,9 @@ func (d birthDecision) hold(reason string) birthDecision {
 //  1. the workspace mail-sharing floor — off holds everything, whatever any
 //     mailbox asks;
 //  2. a counterparty hold this seat placed — their lawyer's domain, held
-//     whatever the thread turns out to be about;
+//     whatever the thread turns out to be about — and, for mail, every party
+//     being a member: colleagues writing to each other, whichever addresses
+//     they used;
 //  3. an explicit marker on this very message — a subject saying
 //     [Vertraulich] is the sender telling us, and no classifier is needed to
 //     read it;
@@ -87,7 +89,7 @@ func (d birthDecision) hold(reason string) birthDecision {
 // Steps 1 to 4 can only hold. Step 5 is the only one that can open a message,
 // and it runs last, so nothing above it can be overturned by it.
 //
-// ALL FIVE steps are evaluated even after one of them matches, because the row
+// EVERY step is evaluated even after one of them matches, because the row
 // records every reason it was held while the audience follows only the first. A
 // message held for two reasons and a message held for one look identical from a
 // single reason, and telling them apart is what makes a hold liftable.
@@ -177,6 +179,16 @@ func decideBirthTx(
 	}
 	if held {
 		decision = decision.hold(audienceReasonCounterparty)
+	}
+
+	if fields.Kind == kindEmail {
+		members, err := MemberAddressesTx(ctx, tx)
+		if err != nil {
+			return birthDecision{}, err
+		}
+		if members.CoverEveryParty(rec.Addresses) {
+			decision = decision.hold(audienceReasonMembersOnly)
+		}
 	}
 
 	if explicitlyConfidential(fields.Subject) {
@@ -399,6 +411,12 @@ func (d birthDecision) bornAudience() (audience, reason string) {
 		// that holds a message here must hold it there, or an audience depends on
 		// which of the two last looked at the row.
 		if holdsItsMessages(d.verdictStatus) {
+			// A verdict-proof hold names the row instead: the recompute keeps only
+			// those, so a row reading pending_verdict would open once the verdict
+			// cleared, whatever else held it.
+			if verdictProofHold(d.reason) {
+				return audienceParticipants, d.reason
+			}
 			return audienceParticipants, audienceReasonPendingVerdict
 		}
 	}

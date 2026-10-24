@@ -1,0 +1,150 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package capture
+
+// Mail between colleagues, through the production sink: whichever addresses
+// they used, the workspace does not read it unless a person shares it.
+
+import (
+	"context"
+	"fmt"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// colleagueLogin is Rep3's login address in the search harness. It is on no
+// own domain, so capture keeps mail to it: a second work domain, as a member
+// at a sister company has.
+const colleagueLogin = "rep1@search.test"
+
+// colleaguePrivate is an address Rep3 declares as their own.
+const colleaguePrivate = "b.private@home.example"
+
+// readsContent asks the content gate itself whether one seat reads the mail.
+func readsContent(t *testing.T, e *integration.SearchEnv, user, activityID ids.UUID) bool {
+	t.Helper()
+	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	var reads bool
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		args := []any{activityID}
+		clause, err := auth.ActivityContentClause(ctx, "a", func(v any) int { args = append(args, v); return len(args) })
+		if err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, fmt.Sprintf(
+			`SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $1 AND %s)`, clause), args...).Scan(&reads)
+	}); err != nil {
+		t.Fatalf("asking the content gate: %v", err)
+	}
+	return reads
+}
+
+// sentToColleague is the owner's own mail to Rep3, attested as sent.
+func sentToColleague(env captureEnv, t *testing.T, to, cc, msgID string) ids.UUID {
+	t.Helper()
+	raw := email(captureOwner, "Owner", to, msgID, "")
+	if cc != "" {
+		raw = emailCC(captureOwner, "Owner", to, cc, msgID)
+	}
+	env.syncSent(t, map[string]bool{msgID: true}, raw)
+	return activityIDOf(t, env.e, msgID)
+}
+
+func TestMailBetweenColleaguesIsHeldFromTheWorkspace(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	colleagueMail := sentToColleague(env, t, colleagueLogin, "", "members-1@myco.example")
+
+	if got, reason := audienceOf(t, e, colleagueMail); got != "participants" || reason != activities.ReasonMembersOnly {
+		t.Fatalf("mail between two members is %q / %q, want participants / members_only", got, reason)
+	}
+	if !readsContent(t, e, e.Rep1, colleagueMail) {
+		t.Error("the mailbox owner cannot read their own mail")
+	}
+	if !readsContent(t, e, e.Rep3, colleagueMail) {
+		t.Error("the colleague it was sent to cannot read it")
+	}
+	if readsContent(t, e, ids.NewV7(), colleagueMail) {
+		t.Error("a third seat reads mail between two colleagues")
+	}
+
+	recordThreadVerdict(t, e, e.Rep1, colleagueMail, capturemod.VerdictCleared, "")
+	if got, reason := audienceOf(t, e, colleagueMail); got != "participants" || reason != activities.ReasonMembersOnly {
+		t.Fatalf("a cleared verdict moved mail between colleagues to %q / %q", got, reason)
+	}
+
+	shareThreadAsOwner(t, e, e.Rep1, colleagueMail)
+	if got, _ := audienceOf(t, e, colleagueMail); got != "workspace" {
+		t.Fatalf("the owner shared mail between colleagues and it stayed %q", got)
+	}
+}
+
+func TestADeclaredAddressCountsAsAMember(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	declareIdentity(t, e, e.Rep3, capturemod.IdentityKindAddress, colleaguePrivate)
+	private := sentToColleague(env, t, colleaguePrivate, "", "members-private@myco.example")
+
+	if got, reason := audienceOf(t, e, private); got != "participants" || reason != activities.ReasonMembersOnly {
+		t.Fatalf("mail to a colleague's declared address is %q / %q, want participants / members_only", got, reason)
+	}
+	// A declaration proves nothing about delivery, so it grants no read.
+	if readsContent(t, e, e.Rep3, private) {
+		t.Error("a declared address alone let the colleague read a copy their own mailbox never received")
+	}
+}
+
+func TestOneOutsidePartyKeepsTheMailAsBefore(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	withOutsider := sentToColleague(env, t, colleagueLogin, "ext@example.org", "members-ext@myco.example")
+
+	if _, reason := audienceOf(t, e, withOutsider); reason == activities.ReasonMembersOnly {
+		t.Fatal("mail copied to an outside party was held as mail between colleagues")
+	}
+	recordThreadVerdict(t, e, e.Rep1, withOutsider, capturemod.VerdictCleared, "")
+	if got, _ := audienceOf(t, e, withOutsider); got != "workspace" {
+		t.Fatalf("a cleared verdict left mail with an outside party %q, want workspace", got)
+	}
+}
+
+// A reply joining a thread whose question is still open inherits `pending`, and
+// the row must name the verdict-proof hold rather than the wait: the recompute
+// keeps only the former once the verdict clears.
+func TestAColleaguesReplyOnAnOpenQuestionStaysHeldOnceItClears(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	env.sync(t, customerMail("members-open@acme.example"))
+	if status := threadVerdictStatus(t, e, e.Rep1, "members-open@acme.example"); status != capturemod.VerdictPending {
+		t.Fatalf("the fixture needs an open question on the thread, got %q", status)
+	}
+	env.syncSent(t, map[string]bool{"members-reply@myco.example": true},
+		email(captureOwner, "Owner", colleagueLogin, "members-reply@myco.example", "members-open@acme.example"))
+	reply := activityIDOf(t, e, "members-reply@myco.example")
+	if got, reason := audienceOf(t, e, reply); got != "participants" || reason != activities.ReasonMembersOnly {
+		t.Fatalf("a colleague's reply on an open question is %q / %q, want participants / members_only", got, reason)
+	}
+
+	recordThreadVerdict(t, e, e.Rep1, reply, capturemod.VerdictCleared, "")
+	if got, reason := audienceOf(t, e, reply); got != "participants" || reason != activities.ReasonMembersOnly {
+		t.Fatalf("the cleared verdict opened a colleague's reply: %q / %q", got, reason)
+	}
+}
