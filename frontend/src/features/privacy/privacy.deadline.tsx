@@ -118,10 +118,7 @@ export function DsrDeadlineFields({
   const t = useT();
   const { locale } = useLocale();
   const computed = query.data;
-  // Text the field cannot read reports "", and the field's own refusal says so instead.
-  const tooLate =
-    (refused && draft.earlierDue !== "") ||
-    earlierDueTooLate(draft, computed, zone);
+  const tooLate = refused || earlierDueTooLate(draft, computed, zone);
   return (
     <>
       <Field label={t("privacy.receivedAt")} hint={t("privacy.receivedAtHint")}>

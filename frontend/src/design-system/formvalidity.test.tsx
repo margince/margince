@@ -115,3 +115,18 @@ it("shows the field's own refusal, and no browser bubble, for a save before the 
   expect(document.activeElement).toBe(signed);
   expect(bubble).not.toHaveBeenCalled();
 });
+
+it("throws when no form, dialog or marked box holds the save", () => {
+  render(
+    <LocaleProvider initial="en">
+      <div>
+        <DateInput aria-label="Due" />
+        <button type="button">Save</button>
+      </div>
+    </LocaleProvider>,
+  );
+
+  expect(() =>
+    refuseUnreadableField(screen.getByRole("button", { name: "Save" })),
+  ).toThrow(/data-date-scope/);
+});

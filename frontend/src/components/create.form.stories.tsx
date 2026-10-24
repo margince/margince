@@ -3,13 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import type { CreateField, FormRows } from "./create.fields";
 import { RecordFormBody } from "./create.form";
 
-const meta: Meta = {
+type Args = Readonly<{ onSubmit: (values: Record<string, string>) => void }>;
+
+const meta = {
   title: "Patterns/Create record/Form with a date",
+  args: { onSubmit: fn() },
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -18,17 +21,17 @@ const meta: Meta = {
       </LocaleProvider>
     ),
   ],
-};
+} satisfies Meta<Args>;
 export default meta;
 
-type Story = StoryObj;
+type Story = StoryObj<Args>;
 
 const dealFields: CreateField[] = [
   { key: "name", label: "create.dealName", required: true },
   { key: "expected_close_date", label: "create.expectedClose", type: "date" },
 ];
 
-function DealForm() {
+function DealForm({ onSubmit }: Args) {
   const [values, setValues] = useState<Record<string, string>>({
     name: "Acme renewal",
   });
@@ -42,7 +45,7 @@ function DealForm() {
       setRows={setRows}
       pending={false}
       error={null}
-      onSubmit={() => {}}
+      onSubmit={onSubmit}
       onClose={() => {}}
       intent="create"
     />
@@ -50,8 +53,8 @@ function DealForm() {
 }
 
 export const UnreadableDay: Story = {
-  render: () => <DealForm />,
-  play: async ({ canvasElement }) => {
+  render: (args) => <DealForm onSubmit={args.onSubmit} />,
+  play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
     const close = await canvas.findByRole("textbox", {
       name: /Expected close/,
@@ -62,6 +65,8 @@ export const UnreadableDay: Story = {
       await canvas.findByText("Enter a date as DD/MM/YYYY."),
     ).toBeVisible();
     await expect(close).toHaveAttribute("aria-invalid", "true");
+    await expect(close).toHaveFocus();
+    await expect(args.onSubmit).not.toHaveBeenCalled();
   },
 };
 

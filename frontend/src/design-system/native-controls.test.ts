@@ -62,11 +62,17 @@
 // parser drops for free, and that is where select.tsx and its neighbours cite
 // the thing they exist to remove.
 
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import ts from "typescript";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import {
   deriveDateHosts,
   literalsOf,
@@ -852,6 +858,9 @@ describe("the native-control detector sees what it claims to", () => {
     ).toEqual(clearedSpreads);
   });
 
+  const probes = mkdtempSync(join(tmpdir(), "date-host-"));
+  afterAll(() => rmSync(probes, { recursive: true, force: true }));
+
   it.each([
     [
       "a rest spread before its type",
@@ -889,7 +898,7 @@ describe("the native-control detector sees what it claims to", () => {
       false,
     ],
   ])("finds a host through %s", (_shape, component, host) => {
-    const file = join(mkdtempSync(join(tmpdir(), "date-host-")), "probe.tsx");
+    const file = join(mkdtempSync(join(probes, "case-")), "probe.tsx");
     writeFileSync(file, `export const Probe = ${component};\n`);
     expect(deriveDateHosts([file], new Set()).names.has("Probe")).toBe(host);
   });

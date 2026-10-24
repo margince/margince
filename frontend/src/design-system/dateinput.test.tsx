@@ -329,6 +329,72 @@ describe("a form around a day it cannot read", () => {
   });
 });
 
+// The day between two other fields, so Enter in one of them submits the form.
+function DayAmongFields(
+  props: Readonly<{ titleRequired?: boolean; onPost: () => void }>,
+) {
+  const [day, setDay] = useState<ISODate | "">("2026-05-06");
+  return (
+    <LocaleProvider initial="en">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          props.onPost();
+        }}
+      >
+        <label>
+          Title
+          <input required={props.titleRequired} />
+        </label>
+        <Field label="Due">
+          {(control) => (
+            <DateInput
+              {...control}
+              today={TODAY}
+              value={day}
+              onChange={(event) => setDay(event.target.value)}
+            />
+          )}
+        </Field>
+        <label>
+          Note
+          <input />
+        </label>
+        <Button type="submit">Save</Button>
+      </form>
+    </LocaleProvider>
+  );
+}
+
+describe("a submit the browser refuses over a day it cannot read", () => {
+  it("takes focus to that day, as the browser does for its own refusals", async () => {
+    const user = userEvent.setup();
+    const post = vi.fn();
+    render(<DayAmongFields onPost={post} />);
+
+    await user.tripleClick(box());
+    await user.keyboard("31/02/2026");
+    await user.type(screen.getByRole("textbox", { name: "Note" }), "x{Enter}");
+
+    expect(post).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(box());
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+  });
+
+  it("leaves an earlier field the browser refuses to the browser", async () => {
+    const user = userEvent.setup();
+    const post = vi.fn();
+    render(<DayAmongFields titleRequired onPost={post} />);
+
+    await user.tripleClick(box());
+    await user.keyboard("31/02/2026");
+    await user.type(screen.getByRole("textbox", { name: "Note" }), "x{Enter}");
+
+    expect(post).not.toHaveBeenCalled();
+    expect(document.activeElement).not.toBe(box());
+  });
+});
+
 // A form that saves on submit and logs each report, so the order is visible.
 function SavesTheDay(
   props: Readonly<{

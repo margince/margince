@@ -23,7 +23,6 @@ import {
 } from "../format/datepattern";
 import { useDateTimePreferences } from "../format/preferences";
 import { type Locale, useLocale, useT } from "../i18n";
-import { useUnsavedGuard } from "../lib/unsavedclaims";
 import { useAnchoredToTrigger } from "./anchored";
 import { useDismissOnOutsidePress } from "./anchoredpopup";
 import { Button } from "./button";
@@ -116,8 +115,6 @@ export function DateInput({
   useLayoutEffect(() => {
     input.current?.setCustomValidity(problem ?? "");
   }, [problem]);
-  // A typed day the caller has not heard yet is still a draft a close would lose.
-  useUnsavedGuard(draft !== null && draft.text !== shown(current, pattern));
 
   const report = (next: ISODate | "") => {
     if (value === undefined) {
@@ -192,6 +189,7 @@ export function DateInput({
             if (problem !== undefined) {
               // Its ErrorLine says it, so the browser draws no bubble on top.
               event.preventDefault();
+              pointAtFirstRefusal(event.currentTarget);
               setDraft((held) =>
                 held && held.refused === undefined
                   ? { ...held, refused: problem }
@@ -330,6 +328,27 @@ function DatePopup({
       </div>
     </div>,
     document.body,
+  );
+}
+
+// A cancelled invalid event loses the browser's own focus and scroll, so the
+// box takes them when it is the first control its form refuses.
+function pointAtFirstRefusal(box: HTMLInputElement) {
+  const first = box.form && firstRefusedControl(box.form);
+  if (first === box) {
+    box.focus();
+    box.scrollIntoView({ block: "nearest" });
+  }
+}
+
+function firstRefusedControl(form: HTMLFormElement): Element | undefined {
+  return Array.from(form.elements).find(
+    (control) =>
+      (control instanceof HTMLInputElement ||
+        control instanceof HTMLSelectElement ||
+        control instanceof HTMLTextAreaElement) &&
+      control.willValidate &&
+      !control.validity.valid,
   );
 }
 

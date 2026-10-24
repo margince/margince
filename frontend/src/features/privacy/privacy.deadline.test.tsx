@@ -9,19 +9,12 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RequestsPanel } from "../settings/settings.privacy";
-import {
-  type DeadlineDraft,
-  DsrDeadlineFields,
-  dueAtOf,
-  earlierDueTooLate,
-  useRequestDeadline,
-} from "./privacy.deadline";
+import { dueAtOf, earlierDueTooLate } from "./privacy.deadline";
 
 // The deadline of a manual subject request. The server computes it and the form
 // shows it. The form sends a date only when the officer chose an earlier one.
@@ -173,51 +166,6 @@ describe("the deadline field", () => {
         received_at: "2026-07-01T04:00:00.000Z",
       }),
     );
-  });
-});
-
-// The server refused the day sent, and the form keeps saying so until it is edited.
-function RefusedDeadline() {
-  const [draft, setDraft] = useState<DeadlineDraft>({
-    receivedOn: "",
-    earlierDue: "2026-08-20",
-  });
-  const query = useRequestDeadline("access", draft, ZONE);
-  return (
-    <DsrDeadlineFields
-      draft={draft}
-      query={query}
-      refused
-      zone={ZONE}
-      onChange={(next) => setDraft((was) => ({ ...was, ...next }))}
-    />
-  );
-}
-
-describe("a refused earlier deadline", () => {
-  it("gives way to the field's own refusal once the box holds text it cannot read", async () => {
-    stub();
-    const user = userEvent.setup();
-    rtlRender(
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
-        <LocaleProvider initial="en">
-          <RefusedDeadline />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
-    expect(await screen.findByText(/choose a date before/i)).toBeVisible();
-    const due = screen.getByRole("textbox", { name: /earlier deadline/i });
-
-    await user.clear(due);
-    await user.type(due, "31/02/2026");
-    await user.tab();
-
-    expect(screen.getByText("Enter a date as DD/MM/YYYY.")).toBeVisible();
-    expect(screen.queryByText(/choose a date before/i)).toBeNull();
   });
 });
 

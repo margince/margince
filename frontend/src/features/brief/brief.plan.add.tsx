@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DateInput, type ISODate } from "../../design-system/dateinput";
@@ -30,86 +30,87 @@ export function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
   const type = record ? kindOf(record.id) : null;
   const [label, setLabel] = useState("");
   const [dueOn, setDueOn] = useState<ISODate | "">("");
-  const fields = useRef<HTMLDivElement>(null);
 
   return (
-    <PanelBody ref={fields}>
-      <RecordPicker
-        label={t("brief.plan.select")}
-        searchTargets={search}
-        selected={record}
-        onPick={(next) => {
-          setRecord(next);
-          if (label === "" && next) setLabel(next.name);
-        }}
-      />
-      <Field label={t("plan.new.label")} required>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={label}
-            maxLength={500}
-            onChange={(event) => setLabel(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field label={t("plan.new.due")}>
-        {(control) => (
-          <DateInput
-            {...control}
-            value={dueOn}
-            onChange={(event) => setDueOn(event.target.value)}
-          />
-        )}
-      </Field>
-      {/* The submit row, not two buttons loose in the body: `.panel-body` is
+    <PanelBody>
+      <div data-date-scope>
+        <RecordPicker
+          label={t("brief.plan.select")}
+          searchTargets={search}
+          selected={record}
+          onPick={(next) => {
+            setRecord(next);
+            if (label === "" && next) setLabel(next.name);
+          }}
+        />
+        <Field label={t("plan.new.label")} required>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={label}
+              maxLength={500}
+              onChange={(event) => setLabel(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field label={t("plan.new.due")}>
+          {(control) => (
+            <DateInput
+              {...control}
+              value={dueOn}
+              onChange={(event) => setDueOn(event.target.value)}
+            />
+          )}
+        </Field>
+        {/* The submit row, not two buttons loose in the body: `.panel-body` is
           padding and nothing else, so bare siblings sat against each other on
           the line under the last field with no gap and no alignment of their
           own. */}
-      {add.isError && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={problemMessageOf(add.error, t)}
-        />
-      )}
-      <div className="form-actions">
-        <Button variant="ghost" onClick={onDone}>
-          {t("plan.new.cancel")}
-        </Button>
-        <Button
-          onClick={(event) => {
-            if (refuseUnreadableField(fields.current ?? event.currentTarget)) {
-              return;
-            }
-            add.mutate(
-              // An empty date is no date, not an empty string: the contract
-              // types due_on as nullable, and "" is neither a date nor an
-              // absence.
-              {
-                label,
-                due_on: dueOn === "" ? null : dueOn,
-                ...(record && type
-                  ? { linked_record: { type, id: record.id } }
-                  : {}),
-              },
-              {
-                onSuccess: () => {
-                  setLabel("");
-                  setDueOn("");
-                  onDone();
+        {add.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={problemMessageOf(add.error, t)}
+          />
+        )}
+        <div className="form-actions">
+          <Button variant="ghost" onClick={onDone}>
+            {t("plan.new.cancel")}
+          </Button>
+          <Button
+            onClick={(event) => {
+              if (refuseUnreadableField(event.currentTarget)) {
+                return;
+              }
+              add.mutate(
+                // An empty date is no date, not an empty string: the contract
+                // types due_on as nullable, and "" is neither a date nor an
+                // absence.
+                {
+                  label,
+                  due_on: dueOn === "" ? null : dueOn,
+                  ...(record && type
+                    ? { linked_record: { type, id: record.id } }
+                    : {}),
                 },
-              },
-            );
-          }}
-          // An empty label is a precondition the reader can meet; a write in
-          // flight is a wait of seconds. Spelling the second as `disabled`
-          // takes focus off the control they just pressed.
-          disabled={label.trim() === ""}
-          pending={add.isPending}
-        >
-          {t("plan.new.save")}
-        </Button>
+                {
+                  onSuccess: () => {
+                    setLabel("");
+                    setDueOn("");
+                    onDone();
+                  },
+                },
+              );
+            }}
+            // An empty label is a precondition the reader can meet; a write in
+            // flight is a wait of seconds. Spelling the second as `disabled`
+            // takes focus off the control they just pressed.
+            disabled={label.trim() === ""}
+            pending={add.isPending}
+          >
+            {t("plan.new.save")}
+          </Button>
+        </div>
       </div>
     </PanelBody>
   );
