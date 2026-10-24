@@ -104,9 +104,44 @@ export function DomainReview({ onClose }: Readonly<{ onClose: () => void }>) {
 type DomainQuestion = components["schemas"]["DomainQuestion"];
 type Answer = {
   domain: string;
-  verb: "keep" | "discard" | "reopen";
+  verb: "keep" | "keep_vendor" | "discard" | "reopen";
   companyId?: string;
 };
+
+async function postAnswer({ domain, verb, companyId }: Answer) {
+  if (verb === "reopen")
+    return unwrap(
+      await api.POST("/capture/blocked-domains/{domain}/reopen", {
+        params: { path: { domain } },
+      }),
+    );
+  if (verb === "keep_vendor")
+    return unwrap(
+      await api.POST("/capture/domain-questions/{domain}/keep-vendor", {
+        params: { path: { domain } },
+      }),
+    );
+  if (verb === "discard")
+    return unwrap(
+      await api.POST("/capture/domain-questions/{domain}/discard", {
+        params: { path: { domain } },
+      }),
+    );
+  return unwrap(
+    await api.POST("/capture/domain-questions/{domain}/keep", {
+      params: { path: { domain } },
+      body: { company_id: companyId },
+    }),
+  );
+}
+
+function effectsOf(reasonCode: string) {
+  if (reasonCode === "forwarded_identity")
+    return "worklist.domainReview.forwardedEffects";
+  if (reasonCode === "vendor_verdict")
+    return "worklist.domainReview.vendorEffects";
+  return "worklist.domainReview.effects";
+}
 
 function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
   const t = useT();
@@ -117,26 +152,7 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
   const deferred = row.deferred;
   const [company, setCompany] = useState<RecordPickerCandidate | null>(null);
   const answer = useMutation({
-    mutationFn: async ({ domain, verb, companyId }: Answer) => {
-      if (verb === "reopen")
-        return unwrap(
-          await api.POST("/capture/blocked-domains/{domain}/reopen", {
-            params: { path: { domain } },
-          }),
-        );
-      if (verb === "discard")
-        return unwrap(
-          await api.POST("/capture/domain-questions/{domain}/discard", {
-            params: { path: { domain } },
-          }),
-        );
-      return unwrap(
-        await api.POST("/capture/domain-questions/{domain}/keep", {
-          params: { path: { domain } },
-          body: { company_id: companyId },
-        }),
-      );
-    },
+    mutationFn: postAnswer,
     onSuccess: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: domainReviewKey }),
@@ -145,10 +161,12 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
     },
   });
   const reason = domainReasonLabels[row.reason_code];
+  const vendor = row.reason_code === "vendor_verdict";
   return (
     <Panel title={row.domain}>
       <PanelBody>
         {reason && <p>{t(reason)}</p>}
+        {row.note && <p className="t-caption">{row.note}</p>}
         {row.effective_url && (
           <p>
             {t("worklist.domainReview.forwarded", { url: row.effective_url })}
@@ -217,14 +235,25 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
               {t("worklist.domainReview.create")}
             </Button>
           )}
-          <Button
-            disabled={!canEdit || answer.isPending}
-            onClick={() =>
-              answer.mutate({ domain: row.domain, verb: "reopen" })
-            }
-          >
-            {t("worklist.domainReview.retry")}
-          </Button>
+          {vendor ? (
+            <Button
+              disabled={!canEdit || answer.isPending}
+              onClick={() =>
+                answer.mutate({ domain: row.domain, verb: "keep_vendor" })
+              }
+            >
+              {t("worklist.domainReview.keepVendor")}
+            </Button>
+          ) : (
+            <Button
+              disabled={!canEdit || answer.isPending}
+              onClick={() =>
+                answer.mutate({ domain: row.domain, verb: "reopen" })
+              }
+            >
+              {t("worklist.domainReview.retry")}
+            </Button>
+          )}
           <Button
             disabled={answer.isPending}
             onClick={() =>
@@ -234,13 +263,7 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
             {t("worklist.domainReview.exclude")}
           </Button>
         </ActionRow>
-        <p className="t-caption">
-          {t(
-            row.reason_code === "forwarded_identity"
-              ? "worklist.domainReview.forwardedEffects"
-              : "worklist.domainReview.effects",
-          )}
-        </p>
+        <p className="t-caption">{t(effectsOf(row.reason_code))}</p>
         <p className="t-caption">{t("worklist.domainReview.deferEffect")}</p>
       </PanelBody>
     </Panel>

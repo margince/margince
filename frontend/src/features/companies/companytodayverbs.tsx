@@ -10,9 +10,11 @@
 import { CheckSquare, FileText, Send } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { useClaimSettle } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { stable } from "../../format/collate";
-import type { useT } from "../../i18n";
+import { useT } from "../../i18n";
 import {
   basisAddsARecord,
   citationOpensRecord,
@@ -201,4 +203,42 @@ export function momentDefer(
   return moment.rule === "nothing_needed"
     ? undefined
     : deferOf(moment.evidence_fingerprint);
+}
+
+// Done on a "Done?" card settles the promise the card names. The server only
+// asks this over a claim on the account page; it never settles one itself.
+export function MayBeDoneVerb({
+  moment,
+  companyId,
+}: Readonly<{
+  moment: NonNullable<Company360["moment"]>;
+  companyId: string;
+}>) {
+  const t = useT();
+  const settle = useClaimSettle([["company360", companyId]]);
+  const question = moment.may_be_done;
+  const done = moment.recommended_action;
+  if (question?.promise_type !== "claim") {
+    return null;
+  }
+  return (
+    <span className="today-verb">
+      <Button
+        variant="primary"
+        disabled={settle.isPending}
+        reason={
+          done.state === "blocked"
+            ? (done.blocked_reason ?? t("contact.rail.blocked"))
+            : undefined
+        }
+        onClick={() =>
+          settle.mutate({ id: question.promise_id, outcome: "done" })
+        }
+      >
+        <CheckSquare aria-hidden="true" />
+        {done.label}
+      </Button>
+      {settle.error && <ErrorLine error={settle.error} inline />}
+    </span>
+  );
 }

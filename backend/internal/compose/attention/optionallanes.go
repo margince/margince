@@ -207,7 +207,10 @@ func (s *Service) optionalLanes(
 		{
 			name: "relationship_decay", bound: s.decay != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				lapsed, err := s.decay.Lapsed(ctx)
+				lapsed, more, err := s.decay.Lapsed(ctx, s.taskScope, s.taskOwner)
+				if err == nil {
+					out.RelationshipDecayMoreAvailable = &more
+				}
 				return renderEach(lapsed, lapsedItem), err
 			},
 			into: &out.RelationshipDecay, count: &out.Counts.RelationshipDecay,

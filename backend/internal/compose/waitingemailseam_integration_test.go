@@ -54,6 +54,13 @@ func seedWaitingOfKind(
 			VALUES ($1, 'from', 'dana@acme.example')`, id); err != nil {
 			return err
 		}
+		// Addressed to one seat, so somebody answers for it: mail nobody
+		// answers for is not waiting work.
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, role, address)
+			SELECT $1, 'to', lower(email) FROM app_user WHERE id = $2`, id, e.AdminUser); err != nil {
+			return err
+		}
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_link (activity_id, entity_type, contact_id)
 			VALUES ($1, 'contact', $2)`, id, contact)

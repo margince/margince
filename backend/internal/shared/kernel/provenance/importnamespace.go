@@ -49,6 +49,16 @@ const (
 // written anew.
 const CommitmentTaskSource = "commitment"
 
+// The other native writers that create a task with no human behind it. Each
+// stamps one of these, and storekit.TaskSourceFamilies says how its task stays
+// current.
+const (
+	LeadSLATaskSource        = "lead_sla"
+	LeadQualifyTaskSource    = "lead_qualify"
+	AssuranceTaskSource      = "assurance"
+	OvernightReconcileSource = "overnight-reconcile"
+)
+
 // WhichDealSource names the one "Which deal is this about?" task capture raises
 // for a mail several open deals fit. Its source_id is the mail's thread, so a
 // thread is asked about once.

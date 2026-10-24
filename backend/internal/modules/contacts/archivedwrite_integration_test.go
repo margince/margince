@@ -122,7 +122,7 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 				// round after an erasure — erasure deletes contact_phone, so
 				// "no live phone row" is exactly what an erased subject
 				// answers.
-				_, err := e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t), []SignatureField{
+				_, err := e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t, contactID), []SignatureField{
 					{
 						Name: "title", Value: "Head of Procurement",
 						Evidence: "Mira Halvorsen | Head of Procurement", Confidence: 0.9,
@@ -131,7 +131,7 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 						Name: "phone", Value: "+49 30 1234567",
 						Evidence: "T +49 30 1234567", Confidence: 0.9,
 					},
-				})
+				}, true)
 				return err
 			},
 		},

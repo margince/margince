@@ -291,14 +291,15 @@ func (w *notificationDigestWorker) deliver(
 		// failure: the claim is spent, and there is nobody left to tell.
 		return
 	}
-	lines, err := w.readDigestLines(seatCtx, seat, window)
+	// The claim committed in digestFor, so the reservation is the hold alone.
+	lines, ready, err := reserveSend(seatCtx, w.pool, w.digestReading(seatCtx, seat, window), reserveInOwnTx[digestLines](seatCtx, w.pool))
 	if err != nil {
-		w.log.WarnContext(sysCtx, "the morning digest was not sent: its content could not be read",
+		w.log.WarnContext(sysCtx, "the morning digest was not sent: its content could not be read or changed before the send",
 			"user", seat, "cause", err)
 		w.recordFailure(sysCtx, seat, window.Day, err.Error())
 		return
 	}
-	if lines.total == 0 {
+	if !ready {
 		// Everything the sweep found has been answered on screen since. A SKIP
 		// and not a failure: the claim is spent, and there is nothing left to
 		// tell this colleague.
@@ -337,19 +338,21 @@ func (w *notificationDigestWorker) combinedDigestFor(seatCtx context.Context, se
 	if (settings.Weekly == nil || *settings.Weekly != identity.DeliveryNone) && worker.sendReadyWeekly(seatCtx, now) {
 		return nil
 	}
-	lines, err := w.readDigestLines(seatCtx, seat, window)
-	if err != nil || lines.total == 0 {
-		return err
-	}
 	run, err := routineBriefEngine(w.pool).SnapshotRun(seatCtx, personal.Open)
 	if err != nil {
 		return err
 	}
-	part := morningDigest{lines: lines, window: window}
-	claim, won, err := claimRoutine(seatCtx, w.pool, run.ID, ids.Nil, part, now)
+	var claim routineClaim
+	lines, won, err := reserveSend(seatCtx, w.pool, w.digestReading(seatCtx, seat, window), func(lines digestLines, hold func(pgx.Tx) error) (bool, error) {
+		var won bool
+		var err error
+		claim, won, err = claimRoutine(seatCtx, w.pool, run.ID, ids.Nil, morningDigest{lines: lines, window: window}, now, hold)
+		return won, err
+	})
 	if err != nil || !won || !claim.digest {
 		return err
 	}
+	part := morningDigest{lines: lines, window: window}
 	if unchanged, err := routineChoicesUnchanged(seatCtx, w.users, settings); err != nil || !unchanged {
 		recordRoutineFailure(seatCtx, w.pool, claim, part, "delivery choices changed or could not be rechecked", w.log)
 		return nil
@@ -361,4 +364,22 @@ func (w *notificationDigestWorker) combinedDigestFor(seatCtx context.Context, se
 		recordRoutineFailure(seatCtx, w.pool, claim, part, "relay submission failed", w.log)
 	}
 	return nil
+}
+
+// digestReading is how a digest reads its lines for a send: as the seat, with
+// the decisions it quotes as its basis.
+func (w *notificationDigestWorker) digestReading(seatCtx context.Context, seat ids.UserID, window notices.Window) sendReading[digestLines] {
+	return sendReading[digestLines]{
+		seat:  seat.UUID,
+		clock: func() time.Time { return mailNow(w.now) },
+		render: func(excluded map[ids.UUID]bool) (digestLines, sendRefs, bool, error) {
+			lines, err := w.readDigestLines(seatCtx, seat, window)
+			if err != nil {
+				return digestLines{}, sendRefs{}, false, err
+			}
+			lines = lines.without(excluded)
+			return lines, digestRefs(lines), lines.total > 0, nil
+		},
+		same: sameDigest,
+	}
 }

@@ -111,6 +111,9 @@ Records, deals and mail in Margince, by page:
   voice. The purpose picker and the consent check. What a send refuses and what
   it only warns about, and scheduling one for later. What the recipient
   controls from their own preference page.
+- [When a mail cannot be read](when-a-mail-cannot-be-read.md): what the email
+  says when its text could not be read in full, and what Margince then leaves
+  alone.
 - [Who can see an email](who-can-see-an-email.md): record visibility against a
   message's own audience. The nine reasons one is held, and which a verdict can
   clear. The three mailbox postures, the company floor, and how to share a

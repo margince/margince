@@ -249,9 +249,8 @@ describe("ProjectScreen", () => {
     render(<ProjectScreen id="pr-1" />);
     await screen.findByRole("heading", { name: "CRM rollout" });
     const withheld = screen.getAllByText("Hidden for your role");
-    // The contracts card, and the company in the head and under About: no
-    // empty state stands in for any of them.
-    expect(withheld).toHaveLength(3);
+    // The contracts, company references and both financial readings stay hidden.
+    expect(withheld).toHaveLength(5);
     expect(
       screen.queryByText(/No contract is filed under this project/),
     ).toBeNull();

@@ -2673,10 +2673,15 @@ components:
           type: string
           format: date-time
           description: >-
-            When the contact comes back to the lane. Present on `dismissed` and
-            absent on `restored`, which carries no moment because a restore
-            takes effect now. It is never absent on a dismissal: a dismissal
-            with no end is the shape this feature refuses to have.
+            When the contact comes back to the lane. Present on a dated
+            `dismissed` and absent on `restored`, which carries no moment
+            because a restore takes effect now. Absent on a permanent stop,
+            which `permanent` says.
+        permanent:
+          type: boolean
+          description: >-
+            True when the reader stopped following the contact with no end
+            date. Only on `dismissed`; the reader resumes it with `restored`.
       additionalProperties: false
 
     PublicEventIntroRequestCreated:

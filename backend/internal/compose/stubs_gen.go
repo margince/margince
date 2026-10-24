@@ -823,6 +823,10 @@ func (stubs) KeepDomainQuestion(w nethttp.ResponseWriter, r *nethttp.Request, do
 	httperr.NotImplemented(w, r, "KeepDomainQuestion")
 }
 
+func (stubs) KeepDomainAsVendor(w nethttp.ResponseWriter, r *nethttp.Request, domain string) {
+	httperr.NotImplemented(w, r, "KeepDomainAsVendor")
+}
+
 func (stubs) ListWorkspaceEmailDomains(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListWorkspaceEmailDomains")
 }
@@ -1315,6 +1319,10 @@ func (stubs) CreateContact(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "CreateContact")
 }
 
+func (stubs) DismissRelationshipNudges(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DismissRelationshipNudges")
+}
+
 func (stubs) QuickCaptureContact(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.QuickCaptureContactParams) {
 	httperr.NotImplemented(w, r, "QuickCaptureContact")
 }
@@ -1453,6 +1461,10 @@ func (stubs) GetContactNetwork(w nethttp.ResponseWriter, r *nethttp.Request, id 
 
 func (stubs) RestoreRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RestoreRelationshipNudge")
+}
+
+func (stubs) GetRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetRelationshipNudge")
 }
 
 func (stubs) DismissRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

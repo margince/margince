@@ -85,6 +85,20 @@ func describe(e entry) (description, bool) {
 		}, true
 	}
 	evidence := objectOf(e.Evidence)
+	// A lookup counts what it moved. Zero is a refresh that observed what the
+	// record already held: an observation, not work done for anybody. A row
+	// without the count predates it and keeps the older reading below.
+	if technical, ok := evidence["technical"].(map[string]any); ok {
+		if count, counted := technical["changes"].(float64); counted {
+			if count <= 0 {
+				return description{}, false
+			}
+			return description{
+				summary: crmcontracts.MagicSentence{Key: "magic.action.company_profile_read"},
+				reason:  &crmcontracts.MagicSentence{Key: "magic.why.public_records"},
+			}, true
+		}
+	}
 	if facts, ok := evidence["facts"].([]any); ok && len(facts) > 0 && len(changedFields(objectOf(e.Before), after)) == 0 {
 		return description{
 			summary: crmcontracts.MagicSentence{Key: "magic.action.company_profile_read"},

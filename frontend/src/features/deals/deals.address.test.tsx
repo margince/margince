@@ -104,6 +104,8 @@ function stubBackend(seen: Seen) {
       seen.reportBodies.push(request ? await request.json() : init?.body);
       return jsonResponse({
         report: "deals-by-stage",
+        base_currency: "EUR",
+        as_of: "2026-10-01",
         plan: {},
         columns: [],
         rows: [],

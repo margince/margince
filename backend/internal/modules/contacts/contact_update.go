@@ -112,11 +112,14 @@ func (s *Store) updateContactInTx(
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return out, err
 	}
+	if err := lockEditedContactLanes(ctx, tx, id, current, in); err != nil {
+		return out, err
+	}
 	setsChanged, err := applyContactReplaceSets(ctx, tx, id, current, in, active)
 	if err != nil {
 		return out, err
 	}
-	if setsChanged {
+	if setsChanged.any {
 		// A replace-set changes no column on the row, so this bump carries the
 		// version guard and the audit row.
 		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
@@ -150,7 +153,7 @@ func (s *Store) updateContactInTx(
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
 		return out, fmt.Errorf("emit contact.updated: %w", err)
 	}
-	if err := recheckIfRenamed(ctx, tx, id, current.FullName, in); err != nil {
+	if err := recheckIfEdited(ctx, tx, id, current.FullName, in, setsChanged.emails); err != nil {
 		return out, err
 	}
 	if out, err = readContact(ctx, tx, id, storekit.LiveOnly, active); err != nil {

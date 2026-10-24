@@ -16,8 +16,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
+// replaceSetsChange is what a save's replace-sets changed: anything at all,
+// which bumps the version, and the addresses, which re-run the duplicate check.
+type replaceSetsChange struct {
+	any, emails bool
+}
+
 // applyContactReplaceSets lands the social, email and phone replace-sets in a
-// savepoint and reports whether they changed what the contact holds.
+// savepoint and reports what they changed in what the contact holds.
 //
 // The forms send every set on every save, so a save of an untouched contact
 // carries them all. A set equal to the stored rows is rolled back and leaves
@@ -26,29 +32,37 @@ import (
 func applyContactReplaceSets(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, current crmcontracts.Contact, in UpdateContactInput,
 	active []fieldcatalog.Column,
-) (bool, error) {
+) (replaceSetsChange, error) {
+	var change replaceSetsChange
 	if in.Social == nil && in.Emails == nil && in.Phones == nil {
-		return false, nil
+		return change, nil
 	}
-	return storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
-		return replaceContactSetsAndCompare(ctx, nested, id, current, in, active)
+	kept, err := storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
+		var err error
+		change, err = replaceContactSetsAndCompare(ctx, nested, id, current, in, active)
+		return change.any, err
 	})
+	if err != nil || !kept {
+		return replaceSetsChange{}, err
+	}
+	return change, nil
 }
 
 // replaceContactSetsAndCompare runs the replaces and reads the contact back.
 func replaceContactSetsAndCompare(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, current crmcontracts.Contact, in UpdateContactInput,
 	active []fieldcatalog.Column,
-) (bool, error) {
+) (replaceSetsChange, error) {
 	if err := replaceContactSets(ctx, tx, id, in); err != nil {
-		return false, err
+		return replaceSetsChange{}, err
 	}
 	after, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
-		return false, fmt.Errorf("read the contact after its replace-sets: %w", err)
+		return replaceSetsChange{}, fmt.Errorf("read the contact after its replace-sets: %w", err)
 	}
 	_, differs := storekit.ChangedColumns(contactSetsImage(current), contactSetsImage(after))
-	return len(differs) > 0, nil
+	_, emails := differs["emails"]
+	return replaceSetsChange{any: len(differs) > 0, emails: emails}, nil
 }
 
 // replaceContactSets writes each set the update carries. It takes the write

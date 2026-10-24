@@ -49,20 +49,19 @@ const (
 	//
 	// A fresh installation has no history at all, and a thin one produces a
 	// wild number from a handful of conversations that happen to be slow. Below
-	// this the compiled ninety stands — stated here rather than left to emerge
-	// from a percentile over three rows.
+	// this the compiled default stands, rather than a percentile over three
+	// rows.
 	waitingHorizonMinSample = 30
 
 	// waitingHorizonFloorDays and waitingHorizonCeilingDays bound what the
 	// measurement may produce.
 	//
-	// The ceiling is the queue's other failure mode: a derivation with none can
-	// answer "keep everything forever", which is not a queue. The floor is the
-	// mirror — an installation that answers everything within a day would
-	// otherwise derive a horizon that drops a customer who waited a week, and a
-	// week's silence is not history in any business.
+	// The ceiling is the product's maximum automatic waiting horizon. A wait
+	// older than it is record information, never current work, however slowly
+	// the installation answers. The floor stops an installation that answers
+	// within a day from dropping a customer who waited a week.
 	waitingHorizonFloorDays   = 14
-	waitingHorizonCeilingDays = 365
+	waitingHorizonCeilingDays = storekit.DefaultWaitingHorizonDays
 
 	// waitingHorizonSlack is how much longer than its slow answers an
 	// installation keeps waiting.
@@ -205,5 +204,5 @@ func horizonOrDefault(days int) int {
 	if days <= 0 {
 		return waitingHorizonDays
 	}
-	return days
+	return min(days, waitingHorizonCeilingDays)
 }

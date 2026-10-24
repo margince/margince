@@ -3,7 +3,10 @@
 
 package compose
 
-import "github.com/margince/margince/backend/internal/modules/activities"
+import (
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+)
 
 // THE RULE the signal extractor reads conversations by, spelled once.
 //
@@ -121,7 +124,15 @@ var conversationHead = `
 			       NOT EXISTS (SELECT 1 FROM activity t
 			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
 			                      AND t.archived_at IS NULL
-			                      AND t.audience <> 'workspace') AS every_message_open
+			                      AND t.audience <> 'workspace') AS every_message_open,
+			       -- Every message read in full. A message not read in full may be
+			       -- the withdrawal of an older one, so a window without it is not
+			       -- the current conversation. Tested before the cap, so blocked
+			       -- threads take no slot; a later assessment lifts the block.
+			       NOT EXISTS (SELECT 1 FROM activity t
+			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
+			                      AND t.archived_at IS NULL
+			                      AND NOT ` + provenance.MailBodyCompleteSQL("t") + `) AS every_message_read
 			  FROM activity a
 			  LEFT JOIN (` + activities.CompanyReachSet() + `) ro ON ro.activity_id = a.id
 			  -- Safe to widen the row set: every aggregate above is DISTINCT,
@@ -170,6 +181,10 @@ const (
 	// summarised while one of its messages is withheld from that summary's
 	// audience is a partial account presented as a whole one.
 	threadIsFullyOpen = `c.every_message_open`
+
+	// Every message on the thread read in full, so the window is the whole
+	// current conversation and not an older subset of it.
+	threadIsFullyRead = `c.every_message_read`
 
 	// A conversation nobody else may read, whose reader cannot be named, is not
 	// offered at all. Reading it would produce a finding with no owner to answer
@@ -231,6 +246,7 @@ var dueThreadsQuery = conversationCTE("") + `		SELECT c.thread_key, c.one_compan
 		 WHERE ` + threadReachesOneAccount + `
 		   AND ` + threadIsOneBodyOfWork + `
 		   AND ` + threadIsFullyOpen + `
+		   AND ` + threadIsFullyRead + `
 		   AND ` + threadHasANamedReader + `
 		   AND ` + threadHasSettled + `
 		   AND NOT ` + threadIsParked + `
@@ -253,6 +269,7 @@ var threadOfferQuery = conversationCTE(" AND a.thread_key = $5") + `
 		SELECT ` + threadReachesOneAccount + `,
 		       ` + threadIsOneBodyOfWork + `,
 		       ` + threadIsFullyOpen + `,
+		       ` + threadIsFullyRead + `,
 		       ` + threadHasANamedReader + `,
 		       ` + threadHasSettled + `,
 		       ` + threadIsParked + `,

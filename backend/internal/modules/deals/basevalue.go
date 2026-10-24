@@ -54,3 +54,24 @@ func BaseValueSQL(asOfSQL, baseSQL, alias string) string {
 		      ORDER BY fr.rate_date DESC LIMIT 1)
 	END`, asOfSQL, baseSQL, alias)
 }
+
+// BaseValueSumSQL sums priced deals without making an absent price zero.
+func BaseValueSumSQL(asOfSQL, baseSQL, alias, filterSQL string) string {
+	return "sum(" + BaseValueSQL(asOfSQL, baseSQL, alias) + ") FILTER (WHERE " + filterSQL + ")::bigint"
+}
+
+// UnpricedCountSQL counts amounts whose currency cannot be valued. An amountless
+// deal has no money to price and contributes to neither sum nor coverage gap.
+func UnpricedCountSQL(asOfSQL, baseSQL, alias, filterSQL string) string {
+	return UnpricedValueCountSQL(BaseValueSQL(asOfSQL, baseSQL, alias), alias+".amount_minor", filterSQL)
+}
+
+// FinalizeBaseTotalSQL distinguishes no money from money that cannot be priced.
+func FinalizeBaseTotalSQL(sumSQL, unpricedSQL string) string {
+	return "CASE WHEN (" + sumSQL + ") IS NULL AND coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE coalesce((" + sumSQL + "), 0) END"
+}
+
+// UnpricedValueCountSQL keeps coverage under the same visibility as its amount.
+func UnpricedValueCountSQL(valueSQL, amountSQL, filterSQL string) string {
+	return "count(*) FILTER (WHERE " + filterSQL + " AND (" + amountSQL + ") IS NOT NULL AND (" + valueSQL + ") IS NULL)::integer"
+}

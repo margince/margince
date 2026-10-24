@@ -8,15 +8,11 @@
 // changes and undoing it there — for every one of 150 records. The same restore
 // route, with the same If-Match rule, is now one press on the line itself.
 
-import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
-import { isEntityKind } from "../../lib/entity";
-import { problemMessageOf } from "../../lib/problem";
-import { useRecordRestore } from "../../lib/recordrestore";
-import { invalidateHandledChange } from "../../lib/workkeys";
+import { useReceiptUndo } from "../../lib/receiptundo";
+import { isRestoreKind } from "../../lib/recordrestore";
 import { magicUndoReasonKey } from "./magic.keys";
 
 type MagicUndo = components["schemas"]["MagicUndo"];
@@ -35,7 +31,7 @@ export function undoPress(
     !undo?.undoable ||
     !undo.audit_id ||
     undo.version === undefined ||
-    !isEntityKind(entityType)
+    !isRestoreKind(entityType)
   ) {
     return null;
   }
@@ -57,21 +53,11 @@ export function MagicUndoButton({
   entityId: string;
 }>) {
   const t = useT();
-  const client = useQueryClient();
-  const [undone, setUndone] = useState(false);
-  const [refused, setRefused] = useState<string | null>(null);
-  const restore = useRecordRestore({
-    onSuccess: () => {
-      setRefused(null);
-      setUndone(true);
-      void invalidateHandledChange(client);
-    },
-    onError: (error) => setRefused(problemMessageOf(error, t)),
-  });
+  const receiptUndo = useReceiptUndo();
   if (!undo) {
     return null;
   }
-  if (undone) {
+  if (receiptUndo.undone) {
     return <span role="status">{t("magic.undo.done")}</span>;
   }
   const press = undoPress(undo, entityType, entityId);
@@ -79,12 +65,14 @@ export function MagicUndoButton({
     return (
       <>
         <Button
-          disabled={restore.isPending}
-          onClick={() => restore.mutate(press)}
+          disabled={receiptUndo.pending}
+          onClick={() => receiptUndo.press(press)}
         >
           {t("magic.undo.action")}
         </Button>
-        {refused && <p className="t-caption">{refused}</p>}
+        {receiptUndo.refused && (
+          <p className="t-caption">{receiptUndo.refused}</p>
+        )}
       </>
     );
   }

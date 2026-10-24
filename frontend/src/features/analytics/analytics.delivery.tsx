@@ -8,7 +8,7 @@ import {
   formatMoneyOrAbsent,
   formatNumber,
 } from "../../format/format";
-import { type Locale, useT } from "../../i18n";
+import { type Locale, usePlural, useT } from "../../i18n";
 import { ENTITY } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
 import { isProjectPhase, PHASE_LABEL } from "../projects/projects.form";
@@ -29,6 +29,8 @@ type PhaseRow = {
   projects: number;
   openMinor: number | null;
   wonMinor: number | null;
+  openUnpriced: number;
+  wonUnpriced: number;
   derivationUrl: string | null;
 };
 
@@ -44,6 +46,19 @@ export function ProjectsByPhaseTable({
   baseCurrency: string | null;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const money = (amount: number | null, unpriced: number) => (
+    <>
+      {formatMoneyOrAbsent(amount, baseCurrency, locale)}
+      {unpriced > 0 && (
+        <div className="t-caption">
+          {plural("brief.readings.unpricedCount", unpriced, {
+            count: formatNumber(unpriced, locale),
+          })}
+        </div>
+      )}
+    </>
+  );
   const phased: PhaseRow[] = rows
     .filter((row) => typeof row.phase === "string")
     .map((row) => ({
@@ -51,6 +66,8 @@ export function ProjectsByPhaseTable({
       projects: rowCount(row, "projects"),
       openMinor: rowMoney(row, "open_deal_value_minor"),
       wonMinor: rowMoney(row, "won_deal_value_minor"),
+      openUnpriced: rowCount(row, "open_deal_unpriced"),
+      wonUnpriced: rowCount(row, "won_deal_unpriced"),
       derivationUrl: rowDerivationUrl(row),
     }));
   if (phased.length === 0) {
@@ -94,15 +111,13 @@ export function ProjectsByPhaseTable({
             currency: baseCurrency ?? "",
           }),
           align: "end",
-          render: (row: PhaseRow) =>
-            formatMoneyOrAbsent(row.openMinor, baseCurrency, locale),
+          render: (row: PhaseRow) => money(row.openMinor, row.openUnpriced),
         },
         {
           key: "won",
           header: t("analytics.wonDealValue", { currency: baseCurrency ?? "" }),
           align: "end",
-          render: (row: PhaseRow) =>
-            formatMoneyOrAbsent(row.wonMinor, baseCurrency, locale),
+          render: (row: PhaseRow) => money(row.wonMinor, row.wonUnpriced),
         },
       ]}
       rows={phased}

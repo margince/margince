@@ -217,17 +217,19 @@ by who made it.
 
 When Margince reads old mail, it checks newer messages before it creates work. Work already done and offers to help create no new task. Neither does work that depends on something which has not happened yet.
 A request alone does not mean someone agreed to do it. **Commitment review** on the source shows why no task was made.
+Words such as "next week" set no due day; "this week" sets the last day the promiser works that week.
 
 A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task.
 
 Check the quoted words and any later replies before adding a follow-up from the linked record.
 A reply alone does not show that a promise was kept. Tasks you edited, reopened or pinned remain yours.
+When you later write to that contact on the promise's thread, the card asks **You may have done this** with **Done** and **Not yet**.
 
 Also called: action items, follow-ups from a meeting, commitments in an email.
 
 ### What happens to a request in an email?
-When a customer email asks you for something and nobody answered, Margince files a task for you with
-**No due date**.
+When a customer email asks you for something and nobody answered, Margince files a task for you.
+It is due on a day the email names, such as "Deadline: 27 October", and has **No due date** if it names none.
 - It needs a clear request. A note that only tells you something, or one Margince cannot judge,
   stays in review and does not claim to be urgent.
 - The task takes the place of the email in your Worklist, and its source opens the email. If you can
@@ -325,8 +327,6 @@ already judged.
 Each says what it did ("Back on your list tomorrow.", "Back on your list when they reply.") and each
 offers **Undo**. The undo reaches as far as the choice did. Clearing your own snooze never lets back
 in a thread a colleague ruled out for the whole company.
-
-A reply that came in *before* you snoozed does not end the snooze.
 
 ### "List changed"
 

@@ -38,7 +38,7 @@ A skipped message is not tried again.
 **3. Filing it.** Margince checks that the address was not erased and that the
 message is not only internal. It then stores the message and adds it to the
 timelines of the contacts on it, with its links and attachments. The audit log
-records that this happened, never the subject or the body.
+records that this happened, never the subject or the body. Mail whose text Margince could not read in full is explained in [When a mail cannot be read](when-a-mail-cannot-be-read.md).
 
 **4. Deciding about the sender.** See the ladder below.
 
@@ -92,11 +92,11 @@ You can add a contact without an email, for example from a business card. When
 mail from them is captured, capture does not put the address on that contact.
 It creates a new contact for the sender, as it does for any sender.
 
-Margince then lists the two contacts as a possible duplicate, so a colleague can
-merge them. The pair is listed when the two names match, or are close and the
-employer's domain matches the mail domain. Colleagues see the pair only once
-the sender has been judged a business contact. A sender kept private, for
-example because the message is held, is not shown to them.
+Margince then lists the two contacts as a possible duplicate, so a colleague can merge them. The pair is listed when the names match, also with "oe" for "ö" ("Bjoern" and "Björn").
+It is also listed when the names are close and the mail domain is the employer's or under it (`cloud.example.com`). Two addresses that differ only by a `+tag` are listed too.
+
+Nothing is merged by itself. The same check runs when an edit or a data provider adds an address.
+Colleagues see the pair only once the sender has been judged a business contact. A sender kept private, for example because the message is held, is not shown to them.
 
 ## When nothing matches
 
@@ -340,43 +340,41 @@ Also called: mark as not spam, whitelist a sender.
 
 ## Things you control yourself
 
-**Own email domains** (Settings → Capture rules): the domains that belong to
-your company. A sales seat can add one; changing or removing an entry is for
-Admin and Ops. This is what makes internal mail internal. Adding one cannot be
-taken back for mail already skipped: "Mail skipped while registered is never offered
-again by any mailbox."
+**Own email domains** (Settings → Capture rules): the domains that belong to your company. A sales
+seat can add one; changing or removing an entry is for Admin and Ops. This is what makes internal
+mail internal. Adding one cannot be taken back for mail already skipped: "Mail skipped while
+registered is never offered again by any mailbox."
 
-**Your other addresses** (Settings → Connections): an address you send as, a
-private domain you read, an address you forward from. Mail between them is not
-captured and never creates a contact. Private to you. Removing one takes effect
-at once, and **Undo** on the notice puts it back. Removing an
-address Margince found also stops Margince finding it again.
+**Your other addresses** (Settings → Connections): an address you send as, a private domain you
+read, an address you forward from. Mail between them is not captured and never creates a contact.
+Private to you. Removing one takes effect at once, and **Undo** on the notice puts it back. Removing
+an address Margince found also stops Margince finding it again.
 
-**Capture exclusions** (Settings → Capture activity): addresses and domains
-whose messages never enter the CRM. Your own rules cover only the mailboxes you
-connected. The company's rules cover everyone, and only an administrator may
-change one of those. A rule a member added names that member. "Applies from the
-next message. Messages already captured stay."
+**Capture exclusions** (Settings → Capture activity): addresses and domains whose messages never
+enter the CRM. Your own rules cover only the mailboxes you connected. The company's rules cover
+everyone, and only an administrator may change one of those. A rule a member added names that
+member. "Applies from the next message. Messages already captured stay."
 
-**Consumer mail domains** (Settings → Capture rules): which domains count as
-personal mailboxes. "Mail from a consumer mailbox creates the contact but never
-a company."
+**Consumer mail domains** (Settings → Capture rules): which domains count as personal mailboxes.
+"Mail from a consumer mailbox creates the contact but never a company."
 
-**Refused domains** (Settings → Capture rules): the domains this installation
-will not create a company for. Each shows what decided it: an AI model, a fixed
-rule, or a human. Letting a domain back in asks the company question again.
+**Refused domains** (Settings → Capture rules): the domains this installation will not create a
+company for. Each shows what decided it: an AI model, a fixed rule, or a human. Letting a domain
+back in asks the company question again.
 
-**Domain review** (Worklist → Review): domains waiting for a company match
-appear together. Open **Domain review** to see each question, the
-answering website, and the age of the evidence. **Set aside** hides your question
-until newer evidence arrives; it stays in Domain review, where **Return to Review**
-puts it back in your queue. A colleague's question stays as it was.
+**Domain review** (Worklist → Review): domains waiting for a company match appear together. Open
+**Domain review** to see each question, the answering website, and the age of the evidence.
+**Set aside** hides your question until newer evidence arrives; it stays in Domain review, where
+**Return to Review** puts it back in your queue. A colleague's question stays as it was.
 
-**Match company** links the domain to the company you choose. **Create company**
-adds one where the evidence allows it. If another domain answered the website
-read, you must choose an existing company yourself. **Retry site read** leaves
-the company question open and asks again. **Exclude domain** stops capture for your
-mailboxes. You can use **Set aside** without making these decisions.
+**Match company** links the domain to the company you choose. **Create company** adds one where the
+evidence allows it. If another domain answered the website read, you must choose an existing company
+yourself. **Retry site read** leaves the company question open and asks again. **Exclude domain**
+stops capture for your mailboxes. You can use **Set aside** without making these decisions.
+
+If the website reads like a mail or hosting vendor, Margince creates no company. It asks the
+colleague whose mail came from the domain, and shows the reason. **Create company** adds it and links
+the contacts who write from it. **Keep as vendor** creates nothing, and later mail does not ask again.
 
 **Senders** (Settings → Capture activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an

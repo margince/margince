@@ -555,5 +555,14 @@ const (
 	// deal rule. A seat that sees only part of them would file on a guess. So
 	// they are read whole; the ids stay in the rule, and its link passes
 	// EnsureLinkTarget.
-	modulesTierUnscopedCeiling = 133
+	//
+	// 134: contacts.subdomainClaimants is the sibling of nameDomainClaimant for
+	// a company on a subdomain of a held domain, unscoped for the same reason.
+	// The ladder scores every company, and the id becomes a review row.
+	//
+	// 135: contacts.addressVariantContact finds the contact holding the same
+	// address under another plus tag. The ladder searches the whole workspace
+	// by design. The id becomes a review row, or a possible-duplicate answer
+	// that asks the caller's visibility before it names the contact.
+	modulesTierUnscopedCeiling = 135
 )

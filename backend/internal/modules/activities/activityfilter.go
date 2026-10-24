@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -107,6 +108,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
 	}
+	if in.WrittenByHuman {
+		where = append(where, relstrength.WrittenByHumanSQL("a"))
+	}
 	if where, err = appendWaitingReplyClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
 	}
@@ -164,10 +168,10 @@ func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
 		where = append(where, clause)
 	}
 	if in.MeetingHost != nil {
-		where = append(where, sprintf("a.kind = 'meeting' AND a.host_user_id = $%d", arg(*in.MeetingHost)))
+		where = append(where, "a.kind = 'meeting' AND "+storekit.MeetingResponsibilitySQL("a", sprintf("$%d", arg(*in.MeetingHost))))
 	}
 	if in.UnhostedMeetings {
-		where = append(where, "a.kind = 'meeting' AND a.host_user_id IS NULL")
+		where = append(where, "a.kind = 'meeting' AND "+storekit.UnclaimedMeetingSQL("a"))
 	}
 	if clause := openTaskAssigneeClause(in.AssigneeID, in.TaskAsOf, in.mailIdentities, arg); clause != "" {
 		where = append(where, clause)

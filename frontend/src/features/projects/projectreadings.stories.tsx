@@ -68,3 +68,19 @@ export const DeliveringDark: Story = {
   globals: { theme: "dark" },
   render: strip(deliveringProject360()),
 };
+
+export const UnpricedDeals: Story = {
+  render: strip(
+    project360({
+      rollups: {
+        open_deal_value: { amount_minor: null, currency: "EUR" },
+        won_deal_value: { amount_minor: 450_000, currency: "EUR" },
+        open_deals_unpriced: 2,
+        won_deals_unpriced: 0,
+        open_commitments: 0,
+        last_activity_at: null,
+        activity_count: 0,
+      },
+    }),
+  ),
+};

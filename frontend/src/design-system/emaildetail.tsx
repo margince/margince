@@ -9,6 +9,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { Badge, Modal } from "./atoms";
 import { DrawerBody, DrawerFoot, DrawerHead } from "./drawerbands";
+import { moveLabel } from "./emailentry";
 import { emailDetailKey, readEmailPresentation } from "./emailmessage";
 import { EmailThread, threadOrder } from "./emailthread";
 import { Heading } from "./heading";
@@ -227,6 +228,7 @@ function ThreadFacts({
   }
   const shown = threadOrder(presentation).length;
   const count = formatNumber(shown, locale);
+  const move = moveLabel(presentation.summary, false);
   // A thread with more pages than the read carried is counted as what is shown.
   const counted = plural(
     presentation.thread?.next_cursor
@@ -237,8 +239,14 @@ function ThreadFacts({
   );
   return (
     <p className="emaildetail__facts t-caption">
-      {presentation.summary.move === "needs_reply" && (
-        <Badge tone="warning">{t("email.move.needsReply")}</Badge>
+      {move && (
+        <Badge
+          tone={
+            presentation.summary.move === "needs_reply" ? "warning" : undefined
+          }
+        >
+          {t(move)}
+        </Badge>
       )}
       <span>{counted}</span>
       {renderRecords && presentation.links.length > 0 && (

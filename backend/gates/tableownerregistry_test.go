@@ -99,6 +99,7 @@ var tableOwners = map[string]string{
 	// every night.
 	"contact_signature_enrich_state": "internal/modules/contacts",
 	"company_fact":                   "internal/modules/contacts",
+	"company_fact_revision":          "internal/modules/contacts",
 	"company_geocode_state":          "internal/modules/contacts",
 	"geocode_cache":                  "internal/modules/contacts",
 	// What a technical lookup last read for one company, per public source,

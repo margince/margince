@@ -151,16 +151,30 @@ func TestAStrangersBccRequestIsRoutineWhileAKnownSendersStaysOnTop(t *testing.T)
 		t.Fatal("a replay overwrote the facts the first capture judged")
 	}
 
-	row := o.worklistRow(o.reader(), t, stranger)
-	if row.Level != worklistRoutineBand || !says(row, "bcc_from_stranger") {
-		t.Errorf("the stranger's Bcc request is at level %d with reasons %v, want routine with bcc_from_stranger",
-			row.Level, row.Because)
+	// Copied by Bcc with no seat in To, neither request is anybody's duty, so
+	// neither becomes shared work. A Bcc seat beside a seat named in To is
+	// TestBccIsJudgedForEachSeatWhicheverCapturesFirst.
+	for name, message := range map[string]ids.UUID{"the stranger's": stranger, "the known sender's": known} {
+		if o.onWorklist(o.reader(), t, message) {
+			t.Errorf("%s Bcc request with no seat in To is on the team Worklist", name)
+		}
 	}
-	row = o.worklistRow(o.reader(), t, known)
-	if row.Level != worklistTopBand || says(row, "bcc_from_stranger") {
-		t.Errorf("the known sender's Bcc request is at level %d with reasons %v, want the top band",
-			row.Level, row.Because)
+}
+
+// onWorklist reports whether the message is a row of the team Worklist.
+func (o *owedEnv) onWorklist(reader context.Context, t *testing.T, message ids.UUID) bool {
+	t.Helper()
+	feed := newAttentionService(o.e.Pool, approvals.NewService(o.e.DB()), func() time.Time { return o.now })
+	page, err := feed.Worklist(reader, "all", "all", ids.Nil, 100, "")
+	if err != nil {
+		t.Fatalf("reading the Worklist: %v", err)
 	}
+	for _, row := range page.Queue {
+		if row.Id == message.String() {
+			return true
+		}
+	}
+	return false
 }
 
 // Bcc is a fact per seat. One seat named in To and one copied by Bcc each see
@@ -317,7 +331,9 @@ func TestAReplayKeepsTheFirstBccJudgement(t *testing.T) {
 // evidence: such mail ranks as it did.
 func TestMailWithNoCapturedFactsRanksAsBefore(t *testing.T) {
 	o := setupOwed(t)
-	stranger := o.requestFrom(t, o.strangerMail("sender@example.com", "View the document", o.now.Add(-2*24*time.Hour)))
+	addressed := o.strangerMail("sender@example.com", "View the document", o.now.Add(-2*24*time.Hour))
+	addressed.to = o.seat
+	stranger := o.requestFrom(t, addressed)
 	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(),
 			`UPDATE activity SET foreign_link = NULL, sender_was_stranger = NULL WHERE id = $1`, stranger); err != nil {

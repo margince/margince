@@ -246,7 +246,10 @@ func (s *Store) SetClaimTaskTx(ctx context.Context, tx pgx.Tx, claimID, taskID i
 	if err != nil {
 		return fmt.Errorf("read recipient task status: %w", err)
 	}
-	if done && status == claimStatusOpen {
+	// Open work and an open promise move together. Accepting a proposal must
+	// not reopen a promise settled or dismissed since. An open promise is not
+	// filed under finished work either.
+	if done == (status == claimStatusOpen) {
 		return apperrors.ErrConflict
 	}
 	if _, err := tx.Exec(ctx, `UPDATE conversation_claim SET task_activity_id = $2 WHERE id = $1`, claimID, taskID); err != nil {

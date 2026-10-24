@@ -68,6 +68,17 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 			"expected a domain name like example.com; a full email address or a URL is not one"))
 		return
 	}
+	// Only a colleague who was asked may answer, so a seat cannot settle a
+	// colleague's question by guessing the domain.
+	asked, err := h.contacts.OwnsDomainQuestion(r.Context(), base)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if !asked {
+		httperr.Write(w, r, fmt.Errorf("compose: no open question about %s for this reader: %w", base, apperrors.ErrNotFound))
+		return
+	}
 	var input crmcontracts.KeepDomainQuestionJSONRequestBody
 	if err := httperr.DecodeOrRefusal(w, r, &input); err != nil && !errors.Is(err, io.EOF) {
 		httperr.Write(w, r, err)
@@ -117,6 +128,31 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, contacts.ToContractBlockedDomain(stored))
+}
+
+// KeepDomainAsVendor answers a vendor question by agreeing with the triage:
+// the domain stays a vendor and no company is created.
+func (h domainQuestionHandlers) KeepDomainAsVendor(w http.ResponseWriter, r *http.Request, domain string) {
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// Taken before the question is read, as KeepDomainQuestion does.
+	if err := auth.Require(r.Context(), "company", principal.ActionUpdate); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	base, ok := freemail.Hostname(domain)
+	if !ok {
+		httperr.Write(w, r, httperr.Validation("domain", "invalid",
+			"expected a domain name like example.com; a full email address or a URL is not one"))
+		return
+	}
+	if err := h.contacts.KeepDomainAsVendor(r.Context(), base); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // DiscardDomainQuestion stops capturing a domain for the caller's own mailboxes.

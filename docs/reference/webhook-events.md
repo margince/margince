@@ -1452,7 +1452,8 @@ Payload for relationship_nudge.decided. A rep set a lapsed contact aside so thei
 |---|---|---|---|
 | `data.action` | string: `dismissed`, `restored` | yes | What was decided. The undo, `restored`, is carried rather than inferred from a row going quiet. A decision withdrawn is itself a decision. A consumer counting how often reps put relationships down has to see it happen. |
 | `data.contact_id` | string (uuid) | yes |  |
-| `data.dismissed_until` | string (date-time) | no | When the contact comes back to the lane. Present on `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. It is never absent on a dismissal: a dismissal with no end is the shape this feature refuses to have. |
+| `data.dismissed_until` | string (date-time) | no | When the contact comes back to the lane. Present on a dated `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. Absent on a permanent stop, which `permanent` says. |
+| `data.permanent` | boolean | no | True when the reader stopped following the contact with no end date. Only on `dismissed`; the reader resumes it with `restored`. |
 
 ### `retention.applied`
 

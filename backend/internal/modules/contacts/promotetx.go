@@ -5,11 +5,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -33,7 +35,12 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 	}
 	// The lead lock comes before the promotability read. Two promotes of one
 	// lead serialize here, and the loser reads status=promoted and answers 409.
-	if err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id); err != nil {
+	var lanes ContactCandidate
+	if err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id, func() error {
+		var err error
+		lanes, err = s.lockLeadLanes(ctx, tx, id)
+		return err
+	}); err != nil {
 		return PromoteOutcome{}, err
 	}
 	lead, err := promotableLead(ctx, tx, id, in)
@@ -49,7 +56,7 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		return PromoteOutcome{}, err
 	}
 
-	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, by, candidate, &out.Merged)
+	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, by, candidate, lanes, &out.Merged)
 	if err != nil {
 		return PromoteOutcome{}, err
 	}
@@ -81,4 +88,24 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 	}
 	out.Contact, err = finalizeLeadPromotion(ctx, tx, id, in, lead, contactID, out.Merged, mergeFields, active, out.DealID, carried)
 	return out, err
+}
+
+// lockLeadLanes takes the duplicate-lane locks a promotion's new contact will be
+// created under, between the contact lock and the lead lock (lockorder.go). The
+// lead is read before its lock, so promoteTarget compares the lanes with the
+// locked lead and starts over when they moved. A lead that is gone takes no
+// lane lock, and the lead lock that follows answers it.
+func (s *Store) lockLeadLanes(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) (ContactCandidate, error) {
+	lead, err := readLead(ctx, tx, leadID, storekit.IncludeArchived, nil)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return ContactCandidate{}, nil
+	}
+	if err != nil {
+		return ContactCandidate{}, err
+	}
+	lanes, err := s.leadContactCandidate(ctx, tx, lead)
+	if err != nil {
+		return ContactCandidate{}, err
+	}
+	return lanes, lockContactLanes(ctx, tx, lanes.Emails, lanes.FullName)
 }

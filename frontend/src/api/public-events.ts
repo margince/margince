@@ -1183,9 +1183,11 @@ export interface components {
             action: "dismissed" | "restored";
             /**
              * Format: date-time
-             * @description When the contact comes back to the lane. Present on `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. It is never absent on a dismissal: a dismissal with no end is the shape this feature refuses to have.
+             * @description When the contact comes back to the lane. Present on a dated `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. Absent on a permanent stop, which `permanent` says.
              */
             dismissed_until?: string;
+            /** @description True when the reader stopped following the contact with no end date. Only on `dismissed`; the reader resumes it with `restored`. */
+            permanent?: boolean;
         };
         /** @description Payload for intro_request.created — a rep asked a colleague to open a door to this contact (introductions/store.go's Create). The entity is the CONTACT, because that is what the ask is about and what a consumer ranking a contact's open work reads it against. The prose stays on the row: the internal reason and the forwardable note have different audiences, and neither belongs on a bus. */
         PublicEventIntroRequestCreated: {

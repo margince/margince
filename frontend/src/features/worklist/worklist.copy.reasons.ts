@@ -9,7 +9,7 @@ import {
 import type { Locale } from "../../i18n";
 import { translatePlural } from "../../i18n";
 import type { T } from "./worklist.copy";
-import { heldText } from "./worklist.held";
+import { scheduledText } from "./worklist.held";
 import type {
   WorklistItem,
   WorklistReason,
@@ -225,7 +225,7 @@ export function whenText(
 ): string | null {
   if (item.source === "notice" && item.notice_origin)
     return formatDateTime(item.notice_origin.occurred_at, locale, viewer);
-  const held = heldText(item, t, locale, record);
+  const held = scheduledText(item, t, locale, record);
   if (held) return held;
   if (!item.due_at) {
     return item.source === "task" ? t("brief.task.undated") : null;

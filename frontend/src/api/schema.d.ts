@@ -966,6 +966,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/nudge-dismissals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set several lapsed contacts aside at once — the Worklist's "Dismiss all".
+         * @description The same per-reader decision as `PUT /contacts/{id}/nudge-dismissal`, applied to
+         *     every listed contact in one transaction: all of them are set aside, or none is.
+         *     A contact the caller cannot read answers 404 for the whole request, the same as
+         *     one that does not exist. Each contact is resumed on its own through the DELETE
+         *     verb.
+         */
+        put: operations["dismissRelationshipNudges"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/nudge-dismissal": {
         parameters: {
             query?: never;
@@ -976,7 +1000,13 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Whether THIS reader has set a quiet contact aside or stopped following it.
+         * @description The calling reader's own choice only, never a colleague's. The contact page reads it
+         *     to offer Resume after the Worklist's Undo is gone. An id the caller cannot read
+         *     answers 404.
+         */
+        get: operations["getRelationshipNudge"];
         /**
          * Set a lapsed contact aside, so the Worklist stops raising them for a while.
          * @description The decay lane names contacts who have gone quiet. Nobody is waiting on the reader
@@ -990,11 +1020,10 @@ export interface paths {
          *     call. Contrast `not_sales` on a message, which is a fact about the thread and
          *     holds for everybody.
          *
-         *     NEVER PERMANENT. `days` is capped, and there is no value meaning forever: a
-         *     permanent dismissal would silently delete a contact from a rep's attention and
-         *     leave nothing to notice it — the same failure the hidden-backlog guardrail exists
-         *     to catch, reached by a door that guardrail cannot see. A relationship worth
-         *     raising once is worth raising again.
+         *     TEMPORARY OR PERMANENT. `days` sets the contact aside for up to 90 days.
+         *     `permanent: true` stops following the contact with no end date: the reader has
+         *     decided the relationship is over. Both are reversible through the DELETE verb, and
+         *     neither changes the contact's own page, which still shows the silence.
          *
          *     Reading the contact is the licence to set them aside: an id the caller cannot read
          *     answers 404, the same as one that does not exist.
@@ -1003,8 +1032,9 @@ export interface paths {
         post?: never;
         /**
          * Put a set-aside contact back on the lane — the undo behind the dismiss verb.
-         * @description Clears what THIS reader set aside. Idempotent: restoring a contact nobody dismissed
-         *     is the same success, because the reader's goal state already holds.
+         * @description Clears what THIS reader set aside, temporary or permanent: the resume verb for a
+         *     stopped contact. Idempotent: restoring a contact nobody dismissed is the same
+         *     success, because the reader's goal state already holds.
          */
         delete: operations["restoreRelationshipNudge"];
         options?: never;
@@ -12854,6 +12884,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/domain-questions/{domain}/keep-vendor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer an open vendor question by keeping the vendor verdict.
+         * @description The site triage read this domain as a mail or hosting vendor and left the question to a
+         *     colleague. This answer agrees: the domain is settled as `provider` by a human, no company is
+         *     created, and later mail from the domain raises no new question.
+         *
+         *     Only a colleague who was asked may answer. A caller with no open question about the
+         *     domain gets `404`, and a domain whose open question is not a vendor question gets `409`.
+         *
+         *     Demands `company:update`, the gate every domain decision takes.
+         */
+        post: operations["keepDomainAsVendor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/consumer-mail-baseline": {
         parameters: {
             query?: never;
@@ -23103,6 +23160,8 @@ export interface components {
             evidence_at?: string;
             effective_url?: string;
             redirect_chain?: string[];
+            /** @description The site triage's own sentence on a `vendor_verdict` question, in the workspace language. */
+            note?: string;
         };
         /**
          * @description One domain and where its company question stands. `suppressed` refuses it a company —
@@ -23146,13 +23205,13 @@ export interface components {
              *       as a company.
              *     - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
              *       company this business works with. `sender_kind` says which, when it is known.
-             *     - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
-             *       question, as `source` describes each one.
+             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+             *       domain's open question, as `source` describes each one.
              *     - `unknown`: the row records a reason this server has no word for. `reason` still
              *       carries its stored sentence.
              * @enum {string}
              */
-            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "reserved_domain" | "unknown";
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "unknown";
             /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
             note?: string;
             /**
@@ -23171,10 +23230,11 @@ export interface components {
              *     found named a company; `stale_evidence` means the newest mail from the domain is too
              *     old to mint one from today's site; `near_duplicate` means more than one company
              *     here already carries the name it resolved to, and which of them this domain belongs
-             *     to is a human's call rather than the machine's.
+             *     to is a human's call rather than the machine's; `vendor_verdict` means the site reads
+             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "reserved_domain";
+            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -23858,6 +23918,18 @@ export interface components {
             next_cursor?: string | null;
         };
         /**
+         * @description How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
+         *     part was not read in full (it broke while decoding, or it ran past the size limit), so
+         *     the body may lack text. `unreadable`: none of it, so the body holds only the From and To
+         *     lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
+         *     text of the original it forwarded, not the sender's own words. `unassessed`: a mail
+         *     stored before this was recorded and not yet checked against its stored original, or one
+         *     with no original to check. Automatic work (promises, requests and their settlement, and
+         *     the events read from a conversation) is read only from a `complete` mail body.
+         * @enum {string}
+         */
+        BodyCompleteness: "complete" | "partial" | "unreadable" | "forwarded" | "unassessed";
+        /**
          * @description One email, composed for reading. The message and its parties come from the activity's
          *     own store; the access block is assembled from the same authority that performs the
          *     write, so what this says a caller may do is what the caller may do.
@@ -23883,6 +23955,8 @@ export interface components {
              *     never handed to a browser to parse.
              */
             body?: string | null;
+            /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
+            readonly body_completeness?: components["schemas"]["BodyCompleteness"];
             thread_key?: string | null;
             from: components["schemas"]["EmailParty"][];
             to: components["schemas"]["EmailParty"][];
@@ -32621,8 +32695,9 @@ export interface components {
             unattributed_nearby: number;
         };
         /**
-         * @description The header figures. Money is in the installation's base currency at each deal's frozen
-         *     rate, summed over the caller's deal row scope; the counts are over the caller's
+         * @description The header figures. Open deals use the latest base-currency rate on or before today;
+         *     won deals keep their frozen amount. An unpriced sum is null, with its missing-price
+         *     count alongside it. Money follows the caller's deal row scope; work counts follow their
          *     activity row scope. Present only when the caller holds both the deal and the activity
          *     grant, since a header that showed one half would read as a project with no deals or
          *     no work.
@@ -32630,6 +32705,10 @@ export interface components {
         Project360Rollups: {
             open_deal_value: components["schemas"]["Money"];
             won_deal_value: components["schemas"]["Money"];
+            /** @description Open deal amounts with no available base-currency price. */
+            open_deals_unpriced?: number;
+            /** @description Won deal amounts with no available base-currency price. */
+            won_deals_unpriced?: number;
             /** @description Open tasks filed under the project, whole lifecycle. */
             open_commitments: number;
             /**
@@ -33915,6 +33994,13 @@ export interface components {
             readonly capture_label?: null | "commitment" | "meeting" | "noise";
             /** @description This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply. */
             readonly bulk_mail_attested?: boolean;
+            /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
+            readonly body_completeness?: components["schemas"]["BodyCompleteness"];
+            /**
+             * @description What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+             * @enum {string|null}
+             */
+            readonly automatic_kind?: "product" | "calendar" | "sending_system" | null;
             /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains. */
             readonly audience?: components["schemas"]["ActivityAudience"];
             /** @description Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`. */
@@ -34239,19 +34325,40 @@ export interface components {
             /** @description The rows, each named by its lane and its id, as a pin names one. */
             rows: components["schemas"]["WorklistPinRequest"][];
         };
+        RelationshipNudgeState: {
+            /**
+             * @description `set_aside` until `dismissed_until`; `stopped` has no end; `following` is neither.
+             * @enum {string}
+             */
+            state: "following" | "set_aside" | "stopped";
+            /**
+             * Format: date-time
+             * @description When a `set_aside` contact comes back. Absent for the other states.
+             */
+            dismissed_until?: string;
+        };
+        DismissRelationshipNudgesRequest: {
+            /** @description The contacts to set aside, as the Worklist listed them. */
+            contact_ids: string[];
+            /** @description How long they stay off the lane, counted from now. Send `days` or `permanent: true`, not both. */
+            days?: number;
+            /** @description Stop following them for good, for this reader only, until resumed one by one. */
+            permanent?: boolean;
+        };
         DismissRelationshipNudgeRequest: {
             /**
              * @description How long the contact stays off the lane, counted from now. A COUNT rather than
              *     a moment, because the server owns "now" — a client computing an instant from a
              *     clock that is minutes out writes a dismissal that expires early or late for a
-             *     reason nobody can see.
-             *
-             *     Capped at 90 days, and there is no value meaning forever. A quarter is the
-             *     longest a rep can honestly say "not this one" about a relationship without
-             *     that being a decision to drop the contact, which is a different act with its
-             *     own record.
+             *     reason nobody can see. Send `days` or `permanent: true`, not both.
              */
-            days: number;
+            days?: number;
+            /**
+             * @description Stop following this contact for good, for this reader only. It has no end
+             *     date; the reader resumes it with the DELETE verb. A colleague, or a later
+             *     owner, keeps their own choice.
+             */
+            permanent?: boolean;
         };
         SetActivityDispositionRequest: {
             /**
@@ -39609,7 +39716,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            source?: "task" | "approval" | "suggestion" | "verdict";
+            source?: "task" | "approval" | "suggestion" | "verdict" | "settlement";
             /** @enum {string} */
             before_verdict?: "asks_us" | "informs_us";
             /** @enum {string} */
@@ -39618,7 +39725,7 @@ export interface components {
             /** Format: int64 */
             version: number;
             /** @enum {string} */
-            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current";
+            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current" | "revalidate_settlement";
             reason: string;
         };
         HomeRepairCounts: {
@@ -39628,6 +39735,8 @@ export interface components {
             supersede: number;
             review: number;
             keep: number;
+            /** @description Older settled request verdicts the email-request settlement pass judges again. */
+            revalidate?: number;
         };
         DataTaskControl: {
             task_id: string;
@@ -40111,10 +40220,10 @@ export interface components {
         Undoability: {
             undoable: boolean;
             /**
-             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind.
+             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced.
              * @enum {string|null}
              */
-            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | "edge_relink_unsupported" | null;
+            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | "edge_relink_unsupported" | "later_company_change" | "no_restore_snapshot" | null;
             /** @description The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says. */
             detail?: string | null;
         };
@@ -46165,6 +46274,8 @@ export interface components {
             notices?: components["schemas"]["AttentionItem"][];
             /** @description The deal risk scan was cut before its final scope and state checks. True means the returned rows are a lower bound, even when fewer than the scan limit remain. Absent when this source could not be read. */
             at_risk_more_available?: boolean;
+            /** @description The quiet-relationship scan used its whole candidate budget and may have stopped before more eligible contacts. True means the returned rows are a lower bound, even when none came back. Absent when this source could not be read. */
+            relationship_decay_more_available?: boolean;
             /**
              * @description The unread notice scan reached its limit before equivalent decision
              *     announcements were folded. When true, an empty notices array does
@@ -46307,6 +46418,8 @@ export interface components {
             readonly requested_decider_id?: string;
             /** @description The domain question's reason code, rendered in the reader's language. */
             domain_reason_code?: string;
+            /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
+            domain_note?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -46484,7 +46597,8 @@ export interface components {
              *
              *     Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
              *     company or matches the supplied `company_id`; forwarded identity requires an
-             *     explicit match. Discarding stops the caller's own mailboxes capturing that
+             *     explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
+             *     settles the domain as a vendor and creates nothing. Discarding stops the caller's own mailboxes capturing that
              *     domain. Reopening retries identification without settling identity. These verbs route
              *     to `/capture/domain-questions/{domain}/…`.
              *
@@ -46495,7 +46609,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard" | "reopen")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -46631,6 +46745,14 @@ export interface components {
              *     with none, which is the answer every row-scoped read gives.
              */
             has_open_deal?: boolean;
+            /**
+             * Format: uuid
+             * @description The contact's live owner, who this suggestion is for. Absent when the contact
+             *     has no owner or its owner has left: then the row is nobody's personal work and
+             *     appears only where unassigned work is listed. Being copied on, or writing, a
+             *     colleague's mail to the contact never makes a reader its owner.
+             */
+            owner_id?: string;
         };
         /** @description One field the detector compared across the two records. */
         AttentionPairEvidence: {
@@ -46771,7 +46893,7 @@ export interface components {
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
              */
-            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system" | "except_decisions" | "changed_since_brief";
+            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief";
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
@@ -47009,6 +47131,11 @@ export interface components {
              * @description The instant these were read at.
              */
             as_of: string;
+            /**
+             * Format: date-time
+             * @description Where the window starts: the same instant the Done for you lane on `/magic` starts at, so both surfaces read one window. Absent on older responses.
+             */
+            since?: string;
             /** @description What was done, newest first. Empty is the honest common case. */
             receipts: components["schemas"]["Receipt"][];
             /** @description True when more was done than was read. The list is a floor, not a total. */
@@ -47215,7 +47342,7 @@ export interface components {
              * @description Which kind of work these numbers are about. The same vocabulary the filter uses.
              * @enum {string}
              */
-            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system";
             /** @description How many items of this kind were read and ranked, before any narrowing. */
             considered: number;
             /** @description How many of them the page carries, counting a folded group as its members. */
@@ -47800,6 +47927,8 @@ export interface components {
             source_record?: components["schemas"]["AttentionSubject"];
             /** @description The domain question's reason code, rendered in the reader's language. */
             domain_reason_code?: string;
+            /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
+            domain_note?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -47816,7 +47945,7 @@ export interface components {
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
              */
-            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system";
             /** @description Whether this work contributes to the urgent summary, independent of a personal pin. */
             urgent?: boolean;
             owner?: components["schemas"]["WorklistOwner"];
@@ -47977,7 +48106,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard" | "reopen")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -48120,6 +48249,8 @@ export interface components {
              *     absence for any other seat is not a zero.
              */
             not_shown: components["schemas"]["MagicNotShown"][];
+            /** @description The done lane's second source, the system's decisions, was read to its bound and still had more, so the lane's total is a floor. Absent on older responses. */
+            done_is_floor?: boolean;
             /** @description True when the reader cannot inspect workspace-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt. */
             not_shown_count_withheld?: boolean;
             /** @description Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers. */
@@ -48230,6 +48361,11 @@ export interface components {
         MagicLineRecord: {
             /** Format: uuid */
             audit_id: string;
+            /**
+             * Format: uuid
+             * @description The canonical Receipt.id this record's change stands for, the same id a done line lists in `receipt_ids`. A client joins a receipt's review actions by it. Absent on older responses.
+             */
+            receipt_id?: string;
             /** Format: date-time */
             occurred_at: string;
             entity: components["schemas"]["MagicEntityRef"];
@@ -49795,7 +49931,7 @@ export interface operations {
                      * @default task
                      * @enum {string}
                      */
-                    source?: "task" | "approval" | "suggestion" | "verdict";
+                    source?: "task" | "approval" | "suggestion" | "verdict" | "settlement";
                 };
             };
         };
@@ -50844,6 +50980,58 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    dismissRelationshipNudges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissRelationshipNudgesRequest"];
+            };
+        };
+        responses: {
+            /** @description Every listed contact is set aside for this reader. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getRelationshipNudge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reader's standing choice for this contact. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationshipNudgeState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     dismissRelationshipNudge: {
@@ -67694,13 +67882,12 @@ export interface operations {
                  *     longer folded into every reader's own queue, so it needs a queue of its own or
                  *     the product would have stopped mentioning it.
                  *
-                 *     It carries unanswered mail too, and that is the case it matters most for. A
-                 *     message has no assignee, so its owner is the owner of the record it is filed
-                 *     under — deal, then lead, then contact, then company, first owner found. A
-                 *     thread no owned record attributes to anybody is the customer nobody is looking
-                 *     at, which is exactly what this queue is opened to find. Unassigned work stays
-                 *     in this queue until somebody takes responsibility for it. `mine` requires
-                 *     a verified personal assignment or an explicitly requested decision.
+                 *     An email creates personal reply work only for its sole verified directly
+                 *     addressed member. Mailbox delivery and linked-record ownership do not assign
+                 *     that duty. Mail with unclear responsibility stays on its record and does not
+                 *     become shared unassigned work. Explicitly created unassigned tasks remain
+                 *     available here until someone takes responsibility. `mine` requires a verified
+                 *     personal assignment or an explicitly requested decision.
                  *
                  *     WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
                  *     going quiet, meetings and duplicate pairs are read under the caller's row
@@ -67743,7 +67930,7 @@ export interface operations {
                  *     than everything: absent is not false, and a reader asking what changed since a
                  *     night that never happened is owed nothing, not the whole queue.
                  */
-                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system" | "except_decisions" | "changed_since_brief";
+                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief";
                 /** @description How many ranked items to return. */
                 limit?: number;
                 /**
@@ -69094,6 +69281,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    keepDomainAsVendor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The domain to keep as a vendor; normalized to its registrable form. */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The domain is settled as a vendor. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

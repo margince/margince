@@ -18,6 +18,7 @@ func TestBccIsTheReadersOwnImportUnlessToOrCcNamesThem(t *testing.T) {
 	e := setupLoad(t)
 	e.exec(t, `UPDATE app_user SET email=$2 WHERE id=$1`, e.rep, "reader-"+e.rep.String()+"@ourco.example")
 	message := e.waitingFrom(t, "View the document", "sender@example.com", e.buyer(t))
+	e.directlyTo(t, message, e.other)
 	e.exec(t, `UPDATE activity SET sender_was_stranger = true, foreign_link = true WHERE id = $1`, message)
 
 	row, ok := present(t, storeAddressing(e, "reader@ourco.example"), e, message)
@@ -44,7 +45,7 @@ func TestBccIsTheReadersOwnImportUnlessToOrCcNamesThem(t *testing.T) {
 // NULL is mail captured before the facts existed, and reads as no evidence.
 func TestUnjudgedMailCarriesNoStrangerFacts(t *testing.T) {
 	e := setupLoad(t)
-	message := e.waitingFrom(t, "Question", "sender@example.com", e.buyer(t))
+	message := e.waitingFromToRep(t, "Question", "sender@example.com", e.buyer(t))
 	e.exec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, message, e.rep)
 
 	row, ok := present(t, storeAddressing(e, "reader@ourco.example"), e, message)

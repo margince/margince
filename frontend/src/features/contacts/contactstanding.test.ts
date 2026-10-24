@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
+import { bucketLabel } from "../../lib/bucketlabel";
 import { awaitsOurReply, contactDims, contactVerdict } from "./contactstanding";
 import {
   contactFigures,
@@ -334,5 +335,32 @@ describe("the timeline", () => {
       title: "12 days",
       sub: "no reply",
     });
+  });
+});
+
+describe("bucketLabel", () => {
+  const buckets: Strength["bucket"][] = ["none", "weak", "moderate", "strong"];
+  it.each(["en", "de", "vi"] as const)(
+    "names no signal yet for none and the band word otherwise (%s)",
+    (locale) => {
+      const say: Translator = (key, params) => translate(locale, key, params);
+      for (const bucket of buckets) {
+        const want =
+          bucket === "none"
+            ? translate(locale, "standing.ring.noInteractions")
+            : translate(locale, `contact.bandBadge.${bucket}`);
+        expect(bucketLabel(bucket, say)).toBe(want);
+      }
+    },
+  );
+
+  it("is the word the contact page's verdict prints", () => {
+    for (const bucket of buckets) {
+      const verdict = contactVerdict(
+        { ...VIEW, strength: strength(bucket, 40) },
+        t,
+      );
+      expect(verdict?.word).toBe(bucketLabel(bucket, t));
+    }
   });
 });

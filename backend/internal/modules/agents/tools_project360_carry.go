@@ -160,12 +160,10 @@ func project360Rollups(r crmcontracts.Project360Rollups) *Project360Rollups {
 		LastActivityAt:  r.LastActivityAt,
 		ActivityCount:   r.ActivityCount,
 	}
-	if r.OpenDealValue.AmountMinor != nil {
-		out.OpenDealValueMinor = *r.OpenDealValue.AmountMinor
-	}
-	if r.WonDealValue.AmountMinor != nil {
-		out.WonDealValueMinor = *r.WonDealValue.AmountMinor
-	}
+	out.OpenDealValueMinor = r.OpenDealValue.AmountMinor
+	out.WonDealValueMinor = r.WonDealValue.AmountMinor
+	out.OpenDealsUnpriced = r.OpenDealsUnpriced
+	out.WonDealsUnpriced = r.WonDealsUnpriced
 	return out
 }
 

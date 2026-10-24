@@ -100,6 +100,13 @@ const (
 	// change the record, so the button is honest rather than a 403 waiting to
 	// happen.
 	ReasonNotWritableByCaller Reason = "not_writable_by_caller"
+	// ReasonLaterCompanyChange means a technical lookup's company or facts were
+	// written after it, a same-value refresh included. Its snapshot no longer
+	// describes the rows, so putting it back would overwrite that later work.
+	ReasonLaterCompanyChange Reason = "later_company_change"
+	// ReasonNoRestoreSnapshot means a technical lookup recorded before receipts
+	// kept the rows it replaced. No earlier value is invented for it.
+	ReasonNoRestoreSnapshot Reason = "no_restore_snapshot"
 )
 
 // Reasons lists the refusals in the order the branches are asked. It is the
@@ -121,6 +128,8 @@ var Reasons = []Reason{
 	ReasonBehindErasureBoundary,
 	ReasonNotRestorableByThisPath,
 	ReasonNullUnwritableByModule,
+	ReasonNoRestoreSnapshot,
+	ReasonLaterCompanyChange,
 }
 
 // Undoability is the answer for one audit row.
@@ -232,6 +241,9 @@ func (e Evaluator) Evaluate(ctx context.Context, tx pgx.Tx, row AuditRow, mode M
 	// table this row is not on.
 	if row.EntityType == edgeEntityType {
 		return e.evaluateEdge(ctx, tx, row)
+	}
+	if isTechnicalReceipt(row) {
+		return e.evaluateTechnical(ctx, tx, row)
 	}
 	// A create, an archive, a promotion and a machine fill are undone by the
 	// module's own verb, not by replaying an image.

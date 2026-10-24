@@ -137,10 +137,18 @@ export function formatMoneyCompact(
   if (!abbreviated && !Number.isInteger(major)) {
     return formatMoney(amountMinor, currency, locale);
   }
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const vietnameseCompact = locale === "vi" && abbreviated;
+  const scale =
+    Math.abs(major) >= 1_000_000_000
+      ? 1_000_000_000
+      : Math.abs(major) >= 1_000_000
+        ? 1_000_000
+        : 1_000;
+  const unit = scale === 1_000 ? "K" : scale === 1_000_000 ? " triệu" : " tỷ";
+  const formatter = new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "currency",
     currency,
-    notation: abbreviated ? "compact" : "standard",
+    notation: abbreviated && !vietnameseCompact ? "compact" : "standard",
     // Spelled out: the currency style starts the minimum at the currency's own
     // digits, so a maximum of 1 alone always prints one digit ("€420.0k").
     minimumFractionDigits: 0,
@@ -148,7 +156,17 @@ export function formatMoneyCompact(
     // Half-up turns CHF 999,999.99 into "CHF 1M", a figure the record does
     // not reach; truncating drops digits but never adds any.
     roundingMode: "trunc",
-  }).format(major);
+  });
+  if (!vietnameseCompact) return formatter.format(major);
+  const parts = formatter.formatToParts(major / scale);
+  const lastDigit = parts.reduce(
+    (last, part, index) =>
+      part.type === "integer" || part.type === "fraction" ? index : last,
+    -1,
+  );
+  return parts
+    .map((part, index) => part.value + (index === lastDigit ? unit : ""))
+    .join("");
 }
 
 /**

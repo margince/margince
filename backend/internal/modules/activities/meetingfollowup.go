@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -92,7 +93,7 @@ func (s *Store) queryMeetingFollowUps(
 		instant, g.content, g.links, arg(windowDays), AwaitingReplyLookbackDays,
 		g.later, relstrength.InteractionCountsSQL("later"), arg(readerOrNobody(ctx)),
 		messageSnoozeLiftedSQL(at, g.back), g.customer, AwaitingReplyScanCap,
-		relstrength.MeetingTookPlaceSQL("a", at), addressable, maxActivityLinks, narrowed,
+		meetingHeldSQL("a", at), addressable, maxActivityLinks, narrowed,
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading meetings the reader owes a follow-up: %w", err)
@@ -178,13 +179,9 @@ var meetingFollowUpsSQL = `
 	   AND ` + meetingEndSQL + ` <= $%[1]d::timestamptz - make_interval(days => $%[4]d::int)
 	   AND ` + meetingEndSQL + ` >= $%[1]d::timestamptz - make_interval(days => $%[4]d::int + %[5]d)
 	   AND %[2]s
-	   -- The reader was in it: they held it, their calendar imported it, or
-	   -- they are one of its attendees. The last two are auth's
-	   -- activityMembershipArm; change them there and here.
-	   AND (a.host_user_id = $%[8]d
-	        OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $%[8]d)
-	        OR EXISTS (SELECT 1 FROM activity_participant me
-	                    WHERE me.activity_id = a.id AND me.user_id = $%[8]d))
+	   -- The reader took part in it, by the one meeting-responsibility rule.
+	   -- Importing a copy or being copied on its mail is not taking part.
+	   AND ` + storekit.MeetingResponsibilitySQL("a", "$%[8]d") + `
 	   -- Nothing from our side since to anyone it was with, filed under them
 	   -- or addressed to them: a message, a call or a later meeting is a
 	   -- follow-up already made. Only the recipients count, uncapped: a
@@ -208,3 +205,10 @@ var meetingFollowUpsSQL = `
 	 GROUP BY a.id, a.subject, a.occurred_at, attendees.recipients
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[11]d`
+
+// meetingHeldSQL is a meeting somebody said took place: its outcome was saved
+// as held, and its start has passed. A booked or unmarked past meeting owes
+// an outcome, which the outcome lane asks for once; it owes no follow-up yet.
+func meetingHeldSQL(alias, now string) string {
+	return "(" + alias + ".meeting_status = 'held' AND " + alias + ".occurred_at <= " + now + ")"
+}

@@ -787,7 +787,7 @@ paths:
               properties:
                 limit: {type: integer, minimum: 1, maximum: 1000}
                 after: {type: string, format: uuid}
-                source: {type: string, enum: [task, approval, suggestion, verdict], default: task}
+                source: {type: string, enum: [task, approval, suggestion, verdict, settlement], default: task}
       responses:
         '200':
           description: Exact reviewed identities, dispositions and rule version. Use the last identity to read the next page.
@@ -1744,9 +1744,53 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/nudge-dismissals:
+    put:
+      tags: [Contacts]
+      operationId: dismissRelationshipNudges
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Set several lapsed contacts aside at once — the Worklist's "Dismiss all".
+      description: |
+        The same per-reader decision as `PUT /contacts/{id}/nudge-dismissal`, applied to
+        every listed contact in one transaction: all of them are set aside, or none is.
+        A contact the caller cannot read answers 404 for the whole request, the same as
+        one that does not exist. Each contact is resumed on its own through the DELETE
+        verb.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DismissRelationshipNudgesRequest' }
+      responses:
+        '204': { description: 'Every listed contact is set aside for this reader.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /contacts/{id}/nudge-dismissal:
     parameters:
       - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Contacts]
+      operationId: getRelationshipNudge
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Whether THIS reader has set a quiet contact aside or stopped following it.
+      description: |
+        The calling reader's own choice only, never a colleague's. The contact page reads it
+        to offer Resume after the Worklist's Undo is gone. An id the caller cannot read
+        answers 404.
+      responses:
+        '200':
+          description: The reader's standing choice for this contact.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RelationshipNudgeState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [Contacts]
       operationId: dismissRelationshipNudge
@@ -1768,11 +1812,10 @@ paths:
         call. Contrast `not_sales` on a message, which is a fact about the thread and
         holds for everybody.
 
-        NEVER PERMANENT. `days` is capped, and there is no value meaning forever: a
-        permanent dismissal would silently delete a contact from a rep's attention and
-        leave nothing to notice it — the same failure the hidden-backlog guardrail exists
-        to catch, reached by a door that guardrail cannot see. A relationship worth
-        raising once is worth raising again.
+        TEMPORARY OR PERMANENT. `days` sets the contact aside for up to 90 days.
+        `permanent: true` stops following the contact with no end date: the reader has
+        decided the relationship is over. Both are reversible through the DELETE verb, and
+        neither changes the contact's own page, which still shows the silence.
 
         Reading the contact is the licence to set them aside: an id the caller cannot read
         answers 404, the same as one that does not exist.
@@ -1794,8 +1837,9 @@ paths:
       security: [{ cookieAuth: [] }]
       summary: Put a set-aside contact back on the lane — the undo behind the dismiss verb.
       description: |
-        Clears what THIS reader set aside. Idempotent: restoring a contact nobody dismissed
-        is the same success, because the reader's goal state already holds.
+        Clears what THIS reader set aside, temporary or permanent: the resume verb for a
+        stopped contact. Idempotent: restoring a contact nobody dismissed is the same
+        success, because the reader's goal state already holds.
       responses:
         '204': { description: 'Back on the lane, or was never off it.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -17293,13 +17337,12 @@ paths:
             longer folded into every reader's own queue, so it needs a queue of its own or
             the product would have stopped mentioning it.
 
-            It carries unanswered mail too, and that is the case it matters most for. A
-            message has no assignee, so its owner is the owner of the record it is filed
-            under — deal, then lead, then contact, then company, first owner found. A
-            thread no owned record attributes to anybody is the customer nobody is looking
-            at, which is exactly what this queue is opened to find. Unassigned work stays
-            in this queue until somebody takes responsibility for it. `mine` requires
-            a verified personal assignment or an explicitly requested decision.
+            An email creates personal reply work only for its sole verified directly
+            addressed member. Mailbox delivery and linked-record ownership do not assign
+            that duty. Mail with unclear responsibility stays on its record and does not
+            become shared unassigned work. Explicitly created unassigned tasks remain
+            available here until someone takes responsibility. `mine` requires a verified
+            personal assignment or an explicitly requested decision.
 
             WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
             going quiet, meetings and duplicate pairs are read under the caller's row
@@ -17311,7 +17354,7 @@ paths:
             licence to read a colleague's inbox.
         - name: filter
           in: query
-          schema: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system, except_decisions, changed_since_brief] }
+          schema: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief] }
           description: |
             Narrow the queue. Omitted means everything, which is the default view.
 
@@ -18998,6 +19041,37 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /capture/domain-questions/{domain}/keep-vendor:
+    post:
+      tags: [Capture]
+      operationId: keepDomainAsVendor
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Answer an open vendor question by keeping the vendor verdict.
+      description: |
+        The site triage read this domain as a mail or hosting vendor and left the question to a
+        colleague. This answer agrees: the domain is settled as `provider` by a human, no company is
+        created, and later mail from the domain raises no new question.
+
+        Only a colleague who was asked may answer. A caller with no open question about the
+        domain gets `404`, and a domain whose open question is not a vendor question gets `409`.
+
+        Demands `company:update`, the gate every domain decision takes.
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema: { type: string }
+          description: 'The domain to keep as a vendor; normalized to its registrable form.'
+      responses:
+        '204':
+          description: The domain is settled as a vendor.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/consumer-mail-baseline:
@@ -33836,6 +33910,9 @@ components:
         redirect_chain:
           type: array
           items: { type: string }
+        note:
+          type: string
+          description: The site triage's own sentence on a `vendor_verdict` question, in the workspace language.
 
     BlockedDomain:
       type: object
@@ -33873,7 +33950,7 @@ components:
             words and shows `note` for a decision somebody explained.
         reason_code:
           type: string
-          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, reserved_domain, unknown]
+          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, unknown]
           description: |
             Why, as a code the client words in the reader's language.
 
@@ -33883,8 +33960,8 @@ components:
               as a company.
             - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
               company this business works with. `sender_kind` says which, when it is known.
-            - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
-              question, as `source` describes each one.
+            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+              domain's open question, as `source` describes each one.
             - `unknown`: the row records a reason this server has no word for. `reason` still
               carries its stored sentence.
         note:
@@ -33901,14 +33978,15 @@ components:
             a company the reader may not see stays withheld by both.
         source:
           type: string
-          enum: [verdict, heuristic, human, unevidenced, stale_evidence, near_duplicate, forwarded_identity, reserved_domain]
+          enum: [verdict, heuristic, human, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain]
           description: |
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
             `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
             found named a company; `stale_evidence` means the newest mail from the domain is too
             old to mint one from today's site; `near_duplicate` means more than one company
             here already carries the name it resolved to, and which of them this domain belongs
-            to is a human's call rather than the machine's.
+            to is a human's call rather than the machine's; `vendor_verdict` means the site reads
+            as a mail or hosting vendor, and a colleague decides whether its staff get a company.
         decided_at: { type: string, format: date-time, description: 'When the decision was recorded. For an `undecided` domain, when the row last moved.' }
         company_id:
           type: string
@@ -34680,6 +34758,19 @@ components:
           type: [string, 'null']
           description: Pass back as `thread_cursor` for the next page. Null when this is the last.
 
+    BodyCompleteness:
+      type: string
+      enum: [complete, partial, unreadable, forwarded, unassessed]
+      description: |
+        How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
+        part was not read in full (it broke while decoding, or it ran past the size limit), so
+        the body may lack text. `unreadable`: none of it, so the body holds only the From and To
+        lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
+        text of the original it forwarded, not the sender's own words. `unassessed`: a mail
+        stored before this was recorded and not yet checked against its stored original, or one
+        with no original to check. Automatic work (promises, requests and their settlement, and
+        the events read from a conversation) is read only from a `complete` mail body.
+
     EmailPresentation:
       type: object
       x-email-presentation: entry
@@ -34708,6 +34799,12 @@ components:
           description: |
             The message as plain text, normalised. Null when withheld. Provider payloads are
             never handed to a browser to parse.
+        body_completeness:
+          allOf: [{ $ref: '#/components/schemas/BodyCompleteness' }]
+          readOnly: true
+          description: >-
+            How much of a mail's text Margince could decode. Absent when the content is
+            withheld or the body was erased.
         thread_key: { type: [string, 'null'] }
         from:
           type: array
@@ -45238,8 +45335,9 @@ components:
     Project360Rollups:
       type: object
       description: |
-        The header figures. Money is in the installation's base currency at each deal's frozen
-        rate, summed over the caller's deal row scope; the counts are over the caller's
+        The header figures. Open deals use the latest base-currency rate on or before today;
+        won deals keep their frozen amount. An unpriced sum is null, with its missing-price
+        count alongside it. Money follows the caller's deal row scope; work counts follow their
         activity row scope. Present only when the caller holds both the deal and the activity
         grant, since a header that showed one half would read as a project with no deals or
         no work.
@@ -45247,6 +45345,8 @@ components:
       properties:
         open_deal_value: { $ref: '#/components/schemas/Money' }
         won_deal_value: { $ref: '#/components/schemas/Money' }
+        open_deals_unpriced: { type: integer, minimum: 0, description: Open deal amounts with no available base-currency price. }
+        won_deals_unpriced: { type: integer, minimum: 0, description: Won deal amounts with no available base-currency price. }
         open_commitments:
           type: integer
           minimum: 0
@@ -46609,6 +46709,23 @@ components:
             This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it
             bulk. Per message, never per sender: the same address sends a newsletter and a reply,
             and treating the sender as bulk would bury the reply.
+        body_completeness:
+          allOf: [{ $ref: '#/components/schemas/BodyCompleteness' }]
+          readOnly: true
+          description: >-
+            How much of a mail's text Margince could decode. Absent when the content is
+            withheld or the body was erased.
+        automatic_kind:
+          type: string
+          nullable: true
+          readOnly: true
+          enum: [product, calendar, sending_system]
+          description: >-
+            What sent this activity when no human wrote it, or null when a human did. `product`
+            is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a
+            response or a cancellation, and `sending_system` mail from a sending system such as a
+            file-share notice, a notification or a delivery report. Such a row is never counted as
+            an exchange, a last contact or a direction of the relationship.
         audience:
           allOf: [{ $ref: '#/components/schemas/ActivityAudience' }]
           readOnly: true
@@ -47071,10 +47188,44 @@ components:
           description: The rows, each named by its lane and its id, as a pin names one.
           items: { $ref: '#/components/schemas/WorklistPinRequest' }
 
+    RelationshipNudgeState:
+      type: object
+      additionalProperties: false
+      required: [state]
+      properties:
+        state:
+          type: string
+          enum: [following, set_aside, stopped]
+          description: '`set_aside` until `dismissed_until`; `stopped` has no end; `following` is neither.'
+        dismissed_until:
+          type: string
+          format: date-time
+          description: 'When a `set_aside` contact comes back. Absent for the other states.'
+
+    DismissRelationshipNudgesRequest:
+      type: object
+      additionalProperties: false
+      required: [contact_ids]
+      properties:
+        contact_ids:
+          type: array
+          minItems: 1
+          maxItems: 50
+          uniqueItems: true
+          items: { type: string, format: uuid }
+          description: 'The contacts to set aside, as the Worklist listed them.'
+        days:
+          type: integer
+          minimum: 1
+          maximum: 90
+          description: 'How long they stay off the lane, counted from now. Send `days` or `permanent: true`, not both.'
+        permanent:
+          type: boolean
+          description: 'Stop following them for good, for this reader only, until resumed one by one.'
+
     DismissRelationshipNudgeRequest:
       type: object
       additionalProperties: false
-      required: [days]
       properties:
         days:
           type: integer
@@ -47084,12 +47235,13 @@ components:
             How long the contact stays off the lane, counted from now. A COUNT rather than
             a moment, because the server owns "now" — a client computing an instant from a
             clock that is minutes out writes a dismissal that expires early or late for a
-            reason nobody can see.
-
-            Capped at 90 days, and there is no value meaning forever. A quarter is the
-            longest a rep can honestly say "not this one" about a relationship without
-            that being a decision to drop the contact, which is a different act with its
-            own record.
+            reason nobody can see. Send `days` or `permanent: true`, not both.
+        permanent:
+          type: boolean
+          description: |
+            Stop following this contact for good, for this reader only. It has no end
+            date; the reader resumes it with the DELETE verb. A colleague, or a later
+            owner, keeps their own choice.
 
     SetActivityDispositionRequest:
       type: object
@@ -54304,14 +54456,14 @@ components:
       required: [id, version, action, reason]
       properties:
         id: {type: string, format: uuid}
-        source: {type: string, enum: [task, approval, suggestion, verdict]}
+        source: {type: string, enum: [task, approval, suggestion, verdict, settlement]}
         before_verdict: {type: string, enum: [asks_us, informs_us]}
         after_verdict: {type: string, enum: [asks_us, informs_us]}
         snapshot: {type: string, minLength: 64, maxLength: 64}
         version: {type: integer, format: int64}
         action:
           type: string
-          enum: [archive_automatic_reminder, withdraw_proposal, supersede_suggestion, reclassify_message, human_review, leave_current]
+          enum: [archive_automatic_reminder, withdraw_proposal, supersede_suggestion, reclassify_message, human_review, leave_current, revalidate_settlement]
         reason: {type: string}
 
     HomeRepairCounts:
@@ -54325,6 +54477,7 @@ components:
         supersede: {type: integer, minimum: 0}
         review: {type: integer, minimum: 0}
         keep: {type: integer, minimum: 0}
+        revalidate: {type: integer, minimum: 0, description: Older settled request verdicts the email-request settlement pass judges again.}
 
     DataTaskControl:
       type: object
@@ -54935,11 +55088,14 @@ components:
             `not_restorable_by_this_path` covers EVERY change to a project's company link
             whatever the verb — that kind takes write authority over the project row and a
             project must keep at least one company, so a generic reverse would be a side door
-            around both rules. `detail` names the kind.
+            around both rules. `detail` names the kind. `later_company_change` refuses a
+            technical lookup after any later write to the company or its facts, a refresh to
+            the same value included. `no_restore_snapshot` refuses a lookup recorded before
+            receipts kept the facts it replaced.
           enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded,
                  behind_erasure_boundary, already_undone, not_restorable_by_this_path,
                  record_archived, null_unwritable_by_module, not_writable_by_caller,
-                 edge_relink_unsupported, null]
+                 edge_relink_unsupported, later_company_change, no_restore_snapshot, null]
         detail:
           type: [string, 'null']
           description: >-
@@ -61828,6 +61984,9 @@ components:
         at_risk_more_available:
           type: boolean
           description: The deal risk scan was cut before its final scope and state checks. True means the returned rows are a lower bound, even when fewer than the scan limit remain. Absent when this source could not be read.
+        relationship_decay_more_available:
+          type: boolean
+          description: The quiet-relationship scan used its whole candidate budget and may have stopped before more eligible contacts. True means the returned rows are a lower bound, even when none came back. Absent when this source could not be read.
         notices_more_available:
           type: boolean
           description: |
@@ -62063,6 +62222,9 @@ components:
         domain_reason_code:
           type: string
           description: The domain question's reason code, rendered in the reader's language.
+        domain_note:
+          type: string
+          description: The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
@@ -62242,7 +62404,7 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, discard, reopen] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen] }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
@@ -62250,7 +62412,8 @@ components:
 
             Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
             company or matches the supplied `company_id`; forwarded identity requires an
-            explicit match. Discarding stops the caller's own mailboxes capturing that
+            explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
+            settles the domain as a vendor and creates nothing. Discarding stops the caller's own mailboxes capturing that
             domain. Reopening retries identification without settling identity. These verbs route
             to `/capture/domain-questions/{domain}/…`.
 
@@ -62400,6 +62563,14 @@ components:
             Whether money this reader can see still rests on this contact. Absent is not
             "no": a contact with an open deal the reader may not see reads the same as one
             with none, which is the answer every row-scoped read gives.
+        owner_id:
+          type: string
+          format: uuid
+          description: |
+            The contact's live owner, who this suggestion is for. Absent when the contact
+            has no owner or its owner has left: then the row is nobody's personal work and
+            appears only where unassigned work is listed. Being copied on, or writing, a
+            colleague's mail to the contact never makes a reader its owner.
 
     AttentionPairEvidence:
       type: object
@@ -62539,7 +62710,7 @@ components:
             `scope_options`, because the `team` worklist is the team's live work and the
             week is a lead's verdict on named colleagues. Absent from an older server, which
             a client reads as `none`.
-        filter: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system, except_decisions, changed_since_brief], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
+        filter: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:
           type: array
@@ -62797,6 +62968,12 @@ components:
       required: [as_of, receipts, truncated]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant these were read at.' }
+        since:
+          type: string
+          format: date-time
+          description: >-
+            Where the window starts: the same instant the Done for you lane on `/magic`
+            starts at, so both surfaces read one window. Absent on older responses.
         receipts:
           type: array
           items: { $ref: '#/components/schemas/Receipt' }
@@ -63016,7 +63193,7 @@ components:
       properties:
         category:
           type: string
-          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system]
+          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system]
           description: 'Which kind of work these numbers are about. The same vocabulary the filter uses.'
         considered:
           type: integer
@@ -63641,6 +63818,9 @@ components:
         domain_reason_code:
           type: string
           description: The domain question's reason code, rendered in the reader's language.
+        domain_note:
+          type: string
+          description: The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
@@ -63654,7 +63834,7 @@ components:
             row rather than a hundred. Its own facts ride in `batch`.
         category:
           type: string
-          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system]
+          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system]
           description: 'The badge, and the filter it answers to. A reader groups by this; the ORDER never does.'
         urgent:
           type: boolean
@@ -63839,7 +64019,7 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, discard, reopen] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen] }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string
@@ -64012,6 +64192,11 @@ components:
             this build cannot place. Infrastructure and configuration audits do not contribute
             to this count. It is reported only to a seat holding `ai_diagnostics` read. Its
             absence for any other seat is not a zero.
+        done_is_floor:
+          type: boolean
+          description: >-
+            The done lane's second source, the system's decisions, was read to its bound
+            and still had more, so the lane's total is a floor. Absent on older responses.
         not_shown_count_withheld:
           type: boolean
           description: >-
@@ -64186,6 +64371,13 @@ components:
       required: [audit_id, occurred_at, entity, changes, undo]
       properties:
         audit_id: { type: string, format: uuid }
+        receipt_id:
+          type: string
+          format: uuid
+          description: >-
+            The canonical Receipt.id this record's change stands for, the same id a done line
+            lists in `receipt_ids`. A client joins a receipt's review actions by it. Absent on
+            older responses.
         occurred_at: { type: string, format: date-time }
         entity: { $ref: '#/components/schemas/MagicEntityRef' }
         changes:

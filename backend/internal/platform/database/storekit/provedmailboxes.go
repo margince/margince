@@ -5,10 +5,12 @@ package storekit
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -38,4 +40,43 @@ func provedMailboxClause(alias string) string {
 	alias = pgx.Identifier{alias}.Sanitize()
 	return fmt.Sprintf(`(%[1]s.archived_at IS NULL AND coalesce(%[1]s.account_label,'') <> ''
  AND %[1]s.status='connected' AND %[1]s.provider IN ('gmail','gcal','graph','graphcal'))`, alias)
+}
+
+// ProvedMailSeatIdentitiesSQL binds each seat's provider-attested mailbox
+// addresses as a jsonb map from seat id to addresses. It reads
+// ProvedMailboxLabels, the one set SeatProvedAddressTx trusts, so a declared
+// alias or a delivered-to sighting proves nothing here either. An address two
+// seats proved belongs to neither.
+func ProvedMailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
+	labels, err := ProvedMailboxLabels(ctx, tx)
+	if err != nil {
+		return "", err
+	}
+	holders := map[string]map[ids.UUID]bool{}
+	for seat, values := range labels {
+		for _, label := range values {
+			address := mailidentity.ReaderAddress(label, "")
+			if address == "" {
+				continue
+			}
+			if holders[address] == nil {
+				holders[address] = map[ids.UUID]bool{}
+			}
+			holders[address][seat] = true
+		}
+	}
+	out := map[string][]string{}
+	for address, seats := range holders {
+		if len(seats) != 1 {
+			continue
+		}
+		for seat := range seats {
+			out[seat.String()] = append(out[seat.String()], address)
+		}
+	}
+	encoded, err := json.Marshal(out)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("$%d::jsonb", bind(encoded)), nil
 }

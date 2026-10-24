@@ -10,12 +10,9 @@ import (
 	"maps"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -148,7 +145,11 @@ func (s *Store) confirmCompanySiteReadTx(
 	if err != nil {
 		return Company{}, nil, err
 	}
-	if err := recordSiteReadConfirmation(ctx, tx, read, confirmation); err != nil {
+	changed, err := recordSiteReadConfirmation(ctx, tx, read, confirmation)
+	if err != nil {
+		return Company{}, nil, err
+	}
+	if err := s.locateLandedAddress(ctx, tx, confirmation.target.id, changed); err != nil {
 		return Company{}, nil, err
 	}
 	if err := s.followAnchorSaveTx(ctx, tx, confirmation.target); err != nil {
@@ -283,84 +284,6 @@ func stageConfirmedSiteReadContacts(
 		return nil, fmt.Errorf("stage website contacts: %w", err)
 	}
 	return proposalIDs, nil
-}
-
-func recordSiteReadConfirmation(ctx context.Context, tx pgx.Tx, read SiteRead, confirmation siteReadConfirmation) error {
-	action := actionUpdate
-	if confirmation.target.created {
-		action = actionCreate
-	}
-	before, after, err := anchorSaveImages(ctx, tx, confirmation.target)
-	if err != nil {
-		return err
-	}
-	// before/after carry the RECORD's own column images and nothing else. Which
-	// page was read, which draft was confirmed and which fields the human kept
-	// are context ABOUT the confirmation and ride audit_log.evidence, because
-	// anything placed in the images is projected by field history as a change
-	// to a field of that name (storekit.AuditWithEvidence).
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "company", confirmation.target.id.UUID, before, after, map[string]any{
-		auditKeySource: companySourceSiteRead, auditKeySourceURL: read.SeedURL,
-		auditKeyFields: confirmation.appliedSite, "human_fields": confirmation.appliedHuman,
-		auditKeyFacts: confirmation.appliedFacts, "site_read_id": read.ID, "draft_version": read.DraftVersion,
-	})
-	if err != nil {
-		return fmt.Errorf("audit company site-read confirmation: %w", err)
-	}
-	payload := siteReadConfirmationPayload(read, confirmation)
-	if err := storekit.EmitEvent(ctx, tx, auditID, confirmation.target.id.UUID, payload); err != nil {
-		return fmt.Errorf("emit %s: %w", payload.EventType(), err)
-	}
-	// coalesce, because "staged nobody" is an EMPTY list and not an unknown
-	// one. A read of a site that names no contactable contact stages nothing
-	// and hands back a nil slice, which encodes as SQL NULL against a NOT NULL
-	// column — so confirming an ordinary company page failed outright, at the
-	// last step of onboarding, with nothing but a 500 to show for it.
-	if _, err := tx.Exec(ctx, `UPDATE site_read
-		SET company_id = $2, proposal_ids = coalesce($3, '{}'::uuid[]),
-		    confirmed_at = now(), updated_at = now()
-		WHERE id = $1`, read.ID, confirmation.target.id, confirmation.proposalIDs); err != nil {
-		return fmt.Errorf("mark website read confirmed: %w", err)
-	}
-	return nil
-}
-
-// siteReadConfirmationPayload builds the company-side event a
-// confirmed site-read emits — company.created (the union struct)
-// when the confirmation minted a fresh company, or an
-// company.updated changed_fields note when it filled an existing
-// one — the ONE place that maps the applied site/human/fact deltas onto
-// the published schema. The two shapes are different published events,
-// not variants of one, so the return type is the shared events.Payload
-// seam.
-//
-//nolint:ireturn // dispatches to PublicEventCompanyCreated vs Updated by confirmation.created; tested directly via the interface in contact_company_payload_test.go
-func siteReadConfirmationPayload(read SiteRead, confirmation siteReadConfirmation) events.Payload {
-	delta := map[string]any{
-		auditKeyFields: confirmation.appliedSite,
-		"human_fields": confirmation.appliedHuman,
-		auditKeyFacts:  confirmation.appliedFacts,
-	}
-	if confirmation.target.created {
-		source := companySourceSiteRead
-		sourceURL := read.SeedURL
-		siteReadID := openapi_types.UUID(read.ID)
-		capturedBy := companySiteReadCapturedBy
-		return crmcontracts.PublicEventCompanyCreated{
-			Delta:      &delta,
-			Source:     &source,
-			SourceUrl:  &sourceURL,
-			SiteReadId: &siteReadID,
-			CapturedBy: &capturedBy,
-		}
-	}
-	return crmcontracts.PublicEventCompanyUpdated{
-		ChangedFields: map[string]any{
-			eventKeyDelta:  delta,
-			auditKeySource: companySourceSiteRead, auditKeySourceURL: read.SeedURL,
-			"site_read_id": read.ID, eventKeyCapturedBy: companySiteReadCapturedBy,
-		},
-	}
 }
 
 func lockOnboardingSiteRead(ctx context.Context, tx pgx.Tx, readID ids.UUID) (SiteRead, error) {

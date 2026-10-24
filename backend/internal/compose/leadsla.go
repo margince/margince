@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -39,7 +40,7 @@ import (
 // leadSLATaskSource is the (source_system) under which the escalation task
 // is logged; with the lead id and breach time as source_id it makes the
 // write idempotent across redelivery of the same breach event.
-const leadSLATaskSource = "lead_sla"
+const leadSLATaskSource = provenance.LeadSLATaskSource
 
 // activityKindTask is the activity kind the escalation writes.
 const activityKindTask = "task"

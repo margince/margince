@@ -178,6 +178,8 @@ func categoryOfSource(source crmcontracts.WorklistItemSource) crmcontracts.Workl
 		return "meetings"
 	case sourceTask, sourceWeeklyCommitment, "conversation_claim":
 		return "tasks"
+	case sourceDecay:
+		return categoryRelationships
 	case "approval", sourceDuplicate, sourceDealSuggestion, sourceTagSuggestion, "introduction_request":
 		// An introduction ask is a colleague waiting on this reader to decide,
 		// which classifyIntroduction files under decisions at levelBlocking.

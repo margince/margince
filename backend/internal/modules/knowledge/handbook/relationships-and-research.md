@@ -46,6 +46,19 @@ It counts and never shows the messages: "{total} interactions in 90 days · {inb
 
 Where the map is not complete, it says so: "{count} more not shown.", "Some colleagues are not shown."
 
+### When does the Worklist suggest a quiet contact?
+
+When a contact has gone quiet, the Worklist suggests that you get back in touch. These rows carry
+their own badge, **Quiet relationship**.
+
+- Only the contact's owner gets the suggestion. Writing to the contact, or being copied on a mail
+  to them, does not make it yours.
+- A contact with no owner, or whose owner has left, is in nobody's Mine. It shows under Unassigned.
+- After 180 days with no exchange, the contact leaves the Worklist. Its own page still shows how
+  long it has been quiet.
+- **Not now** hides the contact for a month. It is your choice only, and **Undo** brings the
+  contact back.
+
 ### How do I import my LinkedIn connections?
 To import your LinkedIn network, open **Settings**, then **Connections**, and use the **LinkedIn connections** card.
 1. On LinkedIn, open **Settings**, then **Data privacy**, then **Get a copy of your data**, and ask for the archive.
@@ -260,6 +273,12 @@ Every result of company research comes as a **staged proposal** in your approval
 Nobody named on the company's website is added. Someone found that way may only become a record once Margince can tell them it has their details. It must also record that it told them (the notice that GDPR Article 14 asks for). Until that exists, a read suggests no one, and such a proposal left from an earlier read cannot be accepted. You can still decline it to clear it.
 
 Every field shows **the passage it was read from**, word for word, or it is left out. A value the page does not clearly state is not filled in.
+
+### The address a read finds
+
+An accepted read fills the company's address only while every part is still empty. Margince puts each part in its own address field. Address filters then find the company, and it can be placed on a map.
+
+An address Margince cannot split stays whole under **Registered address** in the company profile. It leaves the address fields empty.
 
 ### Other readings
 

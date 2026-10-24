@@ -102,12 +102,13 @@ func previewNewCompanyReadColumns(fields []ColdStartFieldInput) []CompanyReadVal
 		if !backed || field.Value == "" {
 			continue
 		}
+		if column == columnAddress {
+			out = append(out, previewNewCompanyAddress(field)...)
+			continue
+		}
 		value := field.Value
 		if column == columnDescription {
 			value = headerLine(value)
-		}
-		if column == columnAddress {
-			column = columnAddressLine1
 		}
 		out = append(out, CompanyReadValue{Field: column, After: value, Proposed: value, SourceURL: field.SourceURL, Quote: field.EvidenceSnippet})
 	}

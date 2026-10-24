@@ -42,6 +42,9 @@ const (
 	// this domain resolved to. Creating would add yet another, and which of
 	// them the domain belongs to is a human's call rather than the machine's.
 	PendingNearDuplicate = "near_duplicate"
+	// PendingVendorVerdict: the site reads as a mail or hosting vendor. The
+	// site cannot tell the vendor's own staff from its customers, so a colleague does.
+	PendingVendorVerdict = "vendor_verdict"
 )
 
 // DomainUndecided is the admission value an open question carries on the wire.

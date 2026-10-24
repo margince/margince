@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // OffThreadAnswer is one answer of ours to a request that sits outside its
@@ -27,6 +28,8 @@ type OffThreadAnswer struct {
 	// reply that also meets the same-subject rule. It is thread mail, not an
 	// answer from outside it.
 	SameThread bool
+	// Incomplete is a body the mail parser did not decode in full.
+	Incomplete bool
 }
 
 // OffThreadAnswersTx reads the answers to a request that sit outside its
@@ -45,7 +48,8 @@ func OffThreadAnswersTx(ctx context.Context, tx pgx.Tx, request ids.UUID, asOf t
 		SELECT answer.id, answer.kind, coalesce(answer.subject, ''),
 		       coalesce(left(answer.body, $3), ''), answer.occurred_at,
 		       coalesce(answer.thread_key = a.thread_key AND answer.kind = a.kind
-		                AND answer.channel_provider IS NOT DISTINCT FROM a.channel_provider, false)
+		                AND answer.channel_provider IS NOT DISTINCT FROM a.channel_provider, false),
+		       NOT `+provenance.MailBodyCompleteSQL("answer")+`
 		  FROM activity a
 		  CROSS JOIN LATERAL (`+offThreadAnswersSQL("a", "$2")+`) found
 		  JOIN activity answer ON answer.id = found.id
@@ -62,7 +66,7 @@ func OffThreadAnswersTx(ctx context.Context, tx pgx.Tx, request ids.UUID, asOf t
 	for rows.Next() {
 		var answer OffThreadAnswer
 		if err := rows.Scan(&answer.ID, &answer.Kind, &answer.Subject, &answer.Body, &answer.At,
-			&answer.SameThread); err != nil {
+			&answer.SameThread, &answer.Incomplete); err != nil {
 			return nil, err
 		}
 		out = append(out, answer)

@@ -167,8 +167,10 @@ type Project360Filing struct {
 // currency over the caller's deal row scope, counts over their activity row
 // scope.
 type Project360Rollups struct {
-	OpenDealValueMinor int64      `json:"open_deal_value_minor"`
-	WonDealValueMinor  int64      `json:"won_deal_value_minor"`
+	OpenDealValueMinor *int64     `json:"open_deal_value_minor,omitempty"`
+	WonDealValueMinor  *int64     `json:"won_deal_value_minor,omitempty"`
+	OpenDealsUnpriced  *int       `json:"open_deals_unpriced,omitempty"`
+	WonDealsUnpriced   *int       `json:"won_deals_unpriced,omitempty"`
 	Currency           string     `json:"currency"`
 	OpenCommitments    int        `json:"open_commitments"`
 	LastActivityAt     *time.Time `json:"last_activity_at,omitempty"`

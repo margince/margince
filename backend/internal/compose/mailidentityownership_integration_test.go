@@ -58,7 +58,9 @@ func TestSharedMailIdentityMustResolveBeforeItAssignsPersonalWork(t *testing.T) 
 	check(first, "mine", ids.Nil, 0)
 	check(second, "mine", ids.Nil, 0)
 	check(first, "all", e.Rep2, 0)
-	check(first, "all", ids.Nil, 1)
+	// Unresolved, the mail is nobody's: neither team work nor unassigned work.
+	check(first, "all", ids.Nil, 0)
+	check(first, "unassigned", ids.Nil, 0)
 	board, err := feed.TeamBoard(first)
 	if err != nil {
 		t.Fatal(err)
@@ -101,7 +103,8 @@ func TestSharedMailIdentityMustResolveBeforeItAssignsPersonalWork(t *testing.T) 
 	check(first, "mine", ids.Nil, 1)
 	check(second, "mine", ids.Nil, 0)
 	check(second, "all", e.Rep1, 1)
-	// Two independent To addresses still name two seats, unlike one shared address.
+	// Two seats in the To line make no automatic duty for either, and no
+	// shared one. The mail stays on its record until somebody adopts it.
 	var secondAddress string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), "SELECT email FROM app_user WHERE id=$1", e.Rep2).Scan(&secondAddress)
@@ -115,26 +118,29 @@ func TestSharedMailIdentityMustResolveBeforeItAssignsPersonalWork(t *testing.T) 
 	if _, err := e.Activities.SetOwedVerdict(first, ids.UUID(other.Id), activities.OwedVerdictAsksUs, "fixture", at); err != nil {
 		t.Fatal(err)
 	}
-	check(first, "mine", ids.Nil, 2)
-	check(second, "mine", ids.Nil, 1)
-	check(first, "all", e.Rep2, 1)
+	check(first, "mine", ids.Nil, 1)
+	check(second, "mine", ids.Nil, 0)
+	check(first, "all", e.Rep2, 0)
 	page, err := feed.Worklist(first, "all", "all", ids.Nil, 100, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	found := false
 	for _, row := range page.Queue {
-		if row.Id != other.Id.String() {
-			continue
-		}
-		found = true
-		if row.Owner == nil || row.Owner.Kind != "shared" || row.Owner.Users == nil || len(*row.Owner.Users) != 2 {
-			t.Fatalf("multiple direct recipients lost shared ownership: %+v", row.Owner)
+		if row.Id == other.Id.String() {
+			t.Fatalf("a mail addressed to two seats became team work: %+v", row.Owner)
 		}
 	}
-	if !found {
-		t.Fatal("shared request disappeared from Team monitoring")
+	// One explicit adoption makes one owner.
+	adopted := ids.From[ids.UserKind](e.Rep2)
+	sourceMail := ids.UUID(other.Id)
+	taskSubject := "Send the plan"
+	if _, _, err := e.Activities.LogActivity(second, activities.LogActivityInput{
+		Kind: "task", Subject: &taskSubject, Source: "manual", AssigneeID: &adopted, SourceActivityID: &sourceMail, DueAt: &at,
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+	}); err != nil {
+		t.Fatal(err)
 	}
+	check(second, "mine", ids.Nil, 1)
 	check(first, "unassigned", ids.Nil, 0)
 }
 
@@ -220,5 +226,49 @@ func TestVerifiedMailIdentityOutranksClaimsAndDeliveryDoesNotProveDuty(t *testin
 				}
 			}
 		})
+	}
+}
+
+// Mail nobody answers for is left out before the waiting scan's cap. A queue
+// full of it cannot hide the one mail a seat does answer for.
+func TestAnOwnedWaitBehindAFullPageOfUnownedMailStillReachesTheTeamQueue(t *testing.T) {
+	e := integration.Setup(t)
+	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
+	first := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	contact := e.SeedContact(t, "Buyer", &e.AdminUser)
+	var address string
+	if err := integration.OwnerConn(t).QueryRow(context.Background(), "SELECT email FROM app_user WHERE id=$1", e.Rep1).Scan(&address); err != nil {
+		t.Fatal(err)
+	}
+	subject, body, direction := "Please send the plan", "Please send the plan for review.", "inbound"
+	owned, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "email", Subject: &subject, Body: &body, Direction: &direction, OccurredAt: &at, Source: "manual", EmailFrom: "buyer@customer.test", EmailTo: []string{address}, Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Activities.SetOwedVerdict(first, ids.UUID(owned.Id), activities.OwedVerdictAsksUs, "fixture", at); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := integration.OwnerConn(t).Exec(context.Background(), `
+		WITH unowned AS (
+		  SELECT gen_random_uuid() id, g FROM generate_series(1, $1::int) g)
+		, mail AS (
+		  INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by, audience)
+		  SELECT id, 'email', 'inbound', 'Unowned '||g, $2::timestamptz + g * interval '1 minute', 'unowned-'||g, 'manual', 'system', 'workspace'
+		    FROM unowned RETURNING id)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		SELECT id, 'contact', $3 FROM mail`, activities.WaitingScanCap+1, at, contact); err != nil {
+		t.Fatal(err)
+	}
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at.Add(6 * time.Hour) })
+	page, err := feed.Worklist(first, "all", "all", ids.Nil, 100, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, row := range page.Queue {
+		found = found || row.Id == owned.Id.String()
+	}
+	if !found {
+		t.Fatalf("the owned wait behind %d unowned mails is missing from the team queue", activities.WaitingScanCap+1)
 	}
 }

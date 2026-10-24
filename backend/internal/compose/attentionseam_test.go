@@ -5,6 +5,7 @@ package compose
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -80,7 +82,7 @@ func TestTheReceiptsReadAsksForTheLaneItFills(t *testing.T) {
 	}
 
 	engine := &stubApprovalPage{rows: page}
-	receipts, err := recentReceipts(decidedAt.Add(-time.Hour), doneLaneWidth, engine.list)
+	receipts, _, err := recentReceipts(decidedAt.Add(-time.Hour), doneLaneWidth, engine.list)
 	if err != nil {
 		t.Fatalf("reading the receipts: %v", err)
 	}
@@ -102,12 +104,12 @@ type stubApprovalPage struct {
 	asked int
 }
 
-func (s *stubApprovalPage) list(limit int) ([]crmcontracts.Approval, error) {
+func (s *stubApprovalPage) list(_ string, limit int) ([]crmcontracts.Approval, storekit.Page, error) {
 	s.asked = limit
 	if limit > len(s.rows) {
 		limit = len(s.rows)
 	}
-	return s.rows[:limit], nil
+	return s.rows[:limit], storekit.Page{}, nil
 }
 
 // The decay lane's CANDIDATES come from the projection's own threshold, and its
@@ -136,11 +138,11 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 	// projection's — because the lane, not the derivation, owes the rep the
 	// oldest silence on top.
 	quiet := quietRelationships(
-		[]search.InteractionEdge{
-			{ContactID: oldest, LastAt: oldestSpoke},
-			{ContactID: newer, LastAt: newerSpoke},
-			{ContactID: returned, LastAt: newerSpoke},
-		},
+		asQuiet(
+			search.InteractionEdge{ContactID: oldest, LastAt: oldestSpoke},
+			search.InteractionEdge{ContactID: newer, LastAt: newerSpoke},
+			search.InteractionEdge{ContactID: returned, LastAt: newerSpoke},
+		),
 		[]contacts.ContactChanges{
 			{
 				ContactID:   ids.From[ids.ContactKind](returned),
@@ -150,7 +152,7 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 			{
 				ContactID:   ids.From[ids.ContactKind](newer),
 				DisplayName: "Ines Sommer",
-				Changes:     []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, Days: 41}},
+				Changes:     []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: newerSpoke, Days: 41}},
 			},
 			{
 				ContactID:   ids.From[ids.ContactKind](oldest),
@@ -215,6 +217,46 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 	}
 }
 
+// asQuiet wraps edges as candidates with no live owner.
+func asQuiet(edges ...search.InteractionEdge) []search.QuietContact {
+	out := make([]search.QuietContact, 0, len(edges))
+	for _, edge := range edges {
+		out = append(out, search.QuietContact{Edge: edge})
+	}
+	return out
+}
+
+// A silence older than the suggestion ceiling leaves the lane, counted from
+// the touch the row prints, while one a day inside it stays.
+func TestAQuietRelationshipPastTheCeilingLeavesTheLane(t *testing.T) {
+	inside, past := ids.NewV7(), ids.NewV7()
+	owner := ids.NewV7()
+	ceiling := readInstantForDecay.AddDate(0, 0, -quietSuggestionCeilingDays)
+	lane := quietRelationships(
+		[]search.QuietContact{
+			{Edge: search.InteractionEdge{ContactID: inside, LastAt: ceiling.AddDate(0, 0, 1)}, OwnerID: owner},
+			{Edge: search.InteractionEdge{ContactID: past, LastAt: ceiling}, OwnerID: owner},
+		},
+		[]contacts.ContactChanges{
+			{
+				ContactID: ids.From[ids.ContactKind](inside), DisplayName: "Inside",
+				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: ceiling.AddDate(0, 0, 1), Days: quietSuggestionCeilingDays - 1}},
+			},
+			{
+				ContactID: ids.From[ids.ContactKind](past), DisplayName: "Past",
+				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: ceiling, Days: quietSuggestionCeilingDays}},
+			},
+		},
+		nil, readInstantForDecay,
+	)
+	if len(lane) != 1 || lane[0].Name != "Inside" {
+		t.Fatalf("the lane = %+v, want only the relationship inside %d days", lane, quietSuggestionCeilingDays)
+	}
+	if lane[0].OwnerID != owner {
+		t.Errorf("the row is for %s, want the contact's owner %s", lane[0].OwnerID, owner)
+	}
+}
+
 // readInstantForDecay is the moment the lane's derivations are scored at. Fixed
 // rather than time.Now(), because a band is a function of how long ago the last
 // exchange was and a wall clock would make the same fixture answer differently
@@ -227,7 +269,7 @@ var readInstantForDecay = time.Date(2026, 6, 15, 9, 0, 0, 0, time.UTC)
 func TestTheDecayLaneReportsNothingItCannotDerive(t *testing.T) {
 	edge := search.InteractionEdge{ContactID: ids.NewV7(), LastAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)}
 	quiet := quietRelationships(
-		[]search.InteractionEdge{edge}, nil, map[ids.UUID]bool{}, readInstantForDecay,
+		asQuiet(edge), nil, map[ids.UUID]bool{}, readInstantForDecay,
 	)
 	if len(quiet) != 0 {
 		t.Errorf("the lane invented %d relationships from an empty derivation", len(quiet))
@@ -263,7 +305,7 @@ func TestTheReconnectLaneKeepsTheFiveWorthWriting(t *testing.T) {
 	// leave it out of the five.
 	funded := map[ids.UUID]bool{edges[6].ContactID: true}
 
-	lane := quietRelationships(edges, changed, funded, spoke.AddDate(0, 0, 60))
+	lane := quietRelationships(asQuiet(edges...), changed, funded, spoke.AddDate(0, 0, 60))
 
 	if len(lane) != decayLaneCap {
 		t.Fatalf("the lane hands over %d rows, want %d", len(lane), decayLaneCap)
@@ -274,8 +316,47 @@ func TestTheReconnectLaneKeepsTheFiveWorthWriting(t *testing.T) {
 	}
 	// The premise guard: without the funded one the cut is still five, so the
 	// assertion above is about ORDER rather than about the cap.
-	unfunded := quietRelationships(edges, changed, nil, spoke.AddDate(0, 0, 60))
+	unfunded := quietRelationships(asQuiet(edges...), changed, nil, spoke.AddDate(0, 0, 60))
 	if len(unfunded) != decayLaneCap {
 		t.Errorf("an unfunded set hands over %d rows, want %d", len(unfunded), decayLaneCap)
+	}
+}
+
+// clampingInbox answers as the approvals inbox does: a page wider than it
+// serves comes back at its default width, with a cursor to the rest.
+type clampingInbox struct{ rows []crmcontracts.Approval }
+
+func (c clampingInbox) list(cursor string, width int) ([]crmcontracts.Approval, storekit.Page, error) {
+	if width > approvalPageWidth {
+		width = 50
+	}
+	start := 0
+	if cursor != "" {
+		start = len(cursor)
+	}
+	end := min(start+width, len(c.rows))
+	page := storekit.Page{HasMore: end < len(c.rows)}
+	if page.HasMore {
+		page.NextCursor = strings.Repeat("x", end)
+	}
+	return c.rows[start:end], page, nil
+}
+
+func TestTheReceiptsReadPagesPastTheInboxPageWidth(t *testing.T) {
+	decidedAt := time.Date(2026, 8, 25, 8, 0, 0, 0, time.UTC)
+	rows := make([]crmcontracts.Approval, 0, 450)
+	for range 450 {
+		rows = append(rows, approvalRow("Moved a deal", decidedAt))
+	}
+	receipts, more, err := recentReceipts(decidedAt.Add(-time.Hour), 400, clampingInbox{rows: rows}.list)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(receipts) != 400 || !more {
+		t.Fatalf("read %d receipts (more=%t), want 400 and more", len(receipts), more)
+	}
+	receipts, more, err = recentReceipts(decidedAt.Add(-time.Hour), 1000, clampingInbox{rows: rows}.list)
+	if err != nil || len(receipts) != 450 || more {
+		t.Fatalf("read %d receipts (more=%t, err=%v), want all 450 and no more", len(receipts), more, err)
 	}
 }

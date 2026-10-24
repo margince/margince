@@ -96,7 +96,7 @@ func (w *owedVerdictWorker) settleWorkspace(ctx context.Context, workspace ids.U
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 	wsCtx = principal.WithActor(wsCtx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "system:request_settlement",
+		Type: principal.PrincipalSystem, ID: activities.RequestSettlementActor,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
 	return w.settler.RunWorkspace(wsCtx, 0)

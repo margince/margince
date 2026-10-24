@@ -7,6 +7,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { useCompanySetAside } from "./companysetaside";
 import {
+  MayBeDoneVerb,
   momentBasis,
   momentDefer,
   momentFallbackVerb,
@@ -146,7 +147,13 @@ export function CompanyNextBar({
         late={lateTag}
         sub={moment.why_now}
         insight={momentBasis(moment)}
-        action={momentVerb({ moment, onOpenRecord, fallback })}
+        action={
+          moment.may_be_done ? (
+            <MayBeDoneVerb moment={moment} companyId={view.company.id} />
+          ) : (
+            momentVerb({ moment, onOpenRecord, fallback })
+          )
+        }
         snooze={defer && { onSnooze: defer.onDefer, pending: defer.pending }}
         more={more}
       />

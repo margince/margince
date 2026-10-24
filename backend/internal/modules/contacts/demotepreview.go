@@ -43,7 +43,7 @@ func (s *Store) PreviewLeadDemotion(ctx context.Context, id ids.LeadID, opts ...
 		if err != nil {
 			return err
 		}
-		if err := lockContactThenLead(ctx, tx, contactID, storekit.LiveOnly, id); err != nil {
+		if err := lockContactThenLead(ctx, tx, contactID, storekit.LiveOnly, id, nil); err != nil {
 			return err
 		}
 		lead, err := readLead(ctx, tx, id, storekit.IncludeArchived, nil)

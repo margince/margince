@@ -10,10 +10,9 @@ import (
 
 func days(n int) time.Duration { return time.Duration(n) * 24 * time.Hour }
 
-// The whole point of deriving: an agency and an enterprise seller stop getting
-// the same number. One compiled ninety judged both, and it was wrong in
-// opposite directions — a queue full of forgotten conversations for one, a
-// queue dropping live business for the other.
+// A fast installation gets a shorter horizon than the default. A slow one
+// never gets more than the 30-day ceiling, because an older automatic wait is
+// record information.
 func TestTheHorizonFollowsWhatTheInstallationActuallyDoes(t *testing.T) {
 	fast := derivedWaitingHorizonDays(waitingHorizonSpread{Slow: days(2), Answered: 500})
 	slow := derivedWaitingHorizonDays(waitingHorizonSpread{Slow: days(40), Answered: 500})
@@ -22,13 +21,14 @@ func TestTheHorizonFollowsWhatTheInstallationActuallyDoes(t *testing.T) {
 		t.Errorf("an installation whose slow answers take two days derives %d days, which is no shorter "+
 			"than the compiled %d — the agency case is unserved", fast, waitingHorizonDays)
 	}
-	if slow <= waitingHorizonDays {
-		t.Errorf("an installation whose slow answers take forty days derives %d days, which is no longer "+
-			"than the compiled %d — the enterprise case is unserved", slow, waitingHorizonDays)
+	if slow != 30 {
+		t.Errorf("an installation whose slow answers take forty days derives %d days, want the 30-day ceiling", slow)
 	}
-	if fast >= slow {
-		t.Errorf("the faster installation derived %d and the slower %d — the horizon does not follow the "+
-			"behaviour it is measured from", fast, slow)
+}
+
+func TestAStoredHorizonFromAnOlderRuleIsClampedToTheCeiling(t *testing.T) {
+	if got := horizonOrDefault(365); got != 30 {
+		t.Errorf("a stored 365-day horizon reads as %d days, want the 30-day ceiling", got)
 	}
 }
 

@@ -9,17 +9,6 @@ import { LocaleProvider } from "../../i18n";
 import type { CompanyNaming } from "./dealcompanymarks";
 import { buildColumns, buildStageTotals, FxLine, OffersPanel } from "./deals";
 
-// The board's money, and the two ways it can be absent.
-//
-// A money figure is an integer minor amount PLUS its ISO currency, and either
-// half can be missing: an unpriced deal carries neither, and a report grouped by
-// [stage_id, currency] answers such a stage with ONE row whose currency is null
-// and whose SUM is null. Both substitutes state something the server did not:
-// a zero total reads as an empty stage, and a currency the client chose cannot
-// be told apart from the one a deal actually carries.
-//
-// Kept out of deals.test.tsx, which is already at its size ceiling.
-
 type Stage = components["schemas"]["Stage"];
 type Deal = components["schemas"]["Deal"];
 
@@ -55,75 +44,44 @@ function deal(overrides: Partial<Deal>): Deal {
   };
 }
 
-describe("buildStageTotals with money the report did not state", () => {
-  // ONE row is not the same fact as one CURRENCY: the cross-currency test that
-  // hides a mixed sum says nothing about a stage whose only row names no
-  // currency at all, and that stage used to arrive as an EUR zero.
-  it("a single row with a null currency states neither figure nor currency", () => {
+describe("stage money the report did not state", () => {
+  it("never invents a base currency from a native row", () => {
     const totals = buildStageTotals([
-      {
-        stage_id: "s1",
-        currency: null,
-        deals: 3,
-        raw_minor: null,
-        weighted_minor: null,
-      },
+      { stage_id: "s1", currency: "USD", deals: 3, base_minor: 100 },
     ]);
-    expect(totals.get("s1")).toEqual({
+    expect(totals.get("s1")).toMatchObject({
       count: 3,
-      rawMinor: null,
-      weightedMinor: null,
       currency: null,
-      sumHidden: false,
+      baseMinor: null,
+      weightedBaseMinor: null,
     });
   });
-
-  // The count survives the missing total: the stage really does hold three
-  // deals, and dropping that alongside the figure would report an empty stage
-  // for the second time in the same column.
-  it("keeps the stage's real count when it has no total to state", () => {
-    const totals = buildStageTotals([
-      { stage_id: "s1", currency: null, deals: 7 },
-    ]);
-    expect(totals.get("s1")?.count).toBe(7);
-    expect(totals.get("s1")?.rawMinor).toBeNull();
-  });
-
-  // A named currency does not make a null SUM into a zero — a stage can hold
-  // deals stamped EUR that nobody has put an amount on.
-  it("a named currency with no summed amount still states no figure", () => {
-    const totals = buildStageTotals([
-      {
-        stage_id: "s1",
-        currency: "EUR",
-        deals: 2,
-        raw_minor: null,
-        weighted_minor: null,
-      },
-    ]);
-    expect(totals.get("s1")?.currency).toBe("EUR");
-    expect(totals.get("s1")?.rawMinor).toBeNull();
-    expect(totals.get("s1")?.weightedMinor).toBeNull();
-  });
-
-  // A cross-currency stage has no total in ANY currency, so it names none.
-  // sumHidden is what stops the column drawing a figure; the currency is null
-  // because there is no single one to attribute a sum to.
-  it("a mixed-currency stage names no currency either", () => {
-    const totals = buildStageTotals([
-      { stage_id: "s1", currency: "EUR", deals: 1, raw_minor: 100_000 },
-      { stage_id: "s1", currency: "USD", deals: 1, raw_minor: 100_000 },
-    ]);
-    expect(totals.get("s1")?.sumHidden).toBe(true);
-    expect(totals.get("s1")?.currency).toBeNull();
-    expect(totals.get("s1")?.rawMinor).toBeNull();
+  it("does not turn a null converted sum into zero", () => {
+    const totals = buildStageTotals(
+      [
+        {
+          stage_id: "s1",
+          deals: 2,
+          base_minor: null,
+          weighted_base_minor: null,
+        },
+      ],
+      "EUR",
+      "2026-10-01",
+    );
+    expect(totals.get("s1")).toMatchObject({
+      currency: "EUR",
+      baseMinor: null,
+      weightedBaseMinor: null,
+      unpricedCount: null,
+    });
   });
 });
 
 describe("buildColumns with money the deal does not carry", () => {
   it("carries a currency-less stage total through to the column", () => {
     const totals = buildStageTotals([
-      { stage_id: "s1", currency: null, deals: 2, raw_minor: null },
+      { stage_id: "s1", currency: null, deals: 2, base_minor: null },
     ]);
     const columns = buildColumns(stages, [], totals, noCompany);
     expect(columns[0].rawMinor).toBeNull();
