@@ -28,6 +28,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -83,7 +84,7 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		columns, ok := geocode.ColumnsFor("company")
 		if !ok {
-			return fmt.Errorf("company has no geocode columns")
+			return errors.New("company has no geocode columns")
 		}
 		locatedTerms := geocode.LocatedSQL("company", columns, arg)
 		// ROW SCOPE, and it is load-bearing rather than ceremonial. This
