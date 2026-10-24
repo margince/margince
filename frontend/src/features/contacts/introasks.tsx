@@ -189,8 +189,8 @@ function AskSummary({ ask }: Readonly<{ ask: IntroRequest }>) {
   );
 }
 
-// An introduction recorded after the fact has no reason to show: it says who
-// introduced whom, when, and how, and marks that nobody asked for it here.
+// An introduction recorded after the fact has no reason to show. It says who
+// introduced whom, when and how. It also marks that nobody asked for it here.
 function RecordedLine({ ask }: Readonly<{ ask: IntroRequest }>) {
   const t = useT();
   const { locale } = useLocale();

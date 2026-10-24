@@ -107,8 +107,8 @@ func introRowsNaming(t *testing.T, e *Env, words string) int {
 		       || ' ' || coalesce(decision_reason, '') ILIKE '%' || $1 || '%'`, words)
 }
 
-// A recorded introduction has no prose to scrub and must stay a clean introduced
-// fact: writing the ask tombstone into it would break the table's own rule that a
+// A recorded introduction has no prose to scrub and stays a clean introduced
+// fact. Writing the ask tombstone into it would break the table's rule that a
 // recorded row has no reason.
 func TestErasingASubjectLeavesARecordedIntroductionIntroduced(t *testing.T) {
 	e := Setup(t)

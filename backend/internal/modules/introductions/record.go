@@ -5,10 +5,10 @@ package introductions
 
 // Recording an introduction that already happened outside Margince.
 //
-// There is no ask behind such a row, so it skips the lifecycle: it is born
+// There is no ask behind such a row, so it skips the lifecycle. It is born
 // introduced and stays so. The lifecycle writers in this module leave it alone
-// by asking the origin, and the unique index on the pair turns a double click
-// into a conflict.
+// by asking the origin. The unique index on the pair turns a double click into
+// a conflict.
 
 import (
 	"context"
@@ -167,8 +167,8 @@ func admitRecording(in NewRecorded, now time.Time) error {
 }
 
 // requireLiveSeats refuses a seat that does not exist, has left, or is an
-// agent: the record says two colleagues met, and neither a departed seat nor a
-// credential can have.
+// agent. The record says two colleagues met. A departed seat or a credential
+// cannot have.
 func requireLiveSeats(ctx context.Context, tx pgx.Tx, introducer, introduced ids.UUID) error {
 	var live int
 	if err := tx.QueryRow(ctx, `

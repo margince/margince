@@ -69,9 +69,9 @@ func EveryStatus() []Status {
 
 // Origin is how a row came to exist, a separate axis from Status. An asked row
 // moves through the lifecycle above. A recorded row is an introduction that
-// already happened outside Margince: it is born introduced and no transition
-// applies to it, so a reader that moves or expires rows by status must also
-// ask the origin.
+// already happened outside Margince. It is born introduced and no transition
+// applies to it. A reader that moves or expires rows by status must also ask
+// the origin.
 type Origin string
 
 const (
@@ -89,7 +89,7 @@ func EveryOrigin() []Origin {
 
 // MayRecord reports whether this actor may record an introduction that already
 // happened. Only the colleague who introduced and the colleague who was
-// introduced can vouch for it; anyone else would be making a claim about
+// introduced can vouch for it. Anyone else would be making a claim about
 // the relationship of two other colleagues.
 func MayRecord(by Actor) error {
 	if by == ActorIntroducer || by == ActorRequester {

@@ -1880,7 +1880,7 @@ type PublicEventIntroRequestDecided struct {
 // PublicEventIntroRequestDecidedDecision defines model for PublicEventIntroRequestDecided.Decision.
 type PublicEventIntroRequestDecidedDecision string
 
-// PublicEventIntroRequestRecorded Payload for intro_request.recorded — a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed, which means an ask was marked done: a consumer of that event must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
+// PublicEventIntroRequestRecorded Payload for intro_request.recorded, a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed. That event means an ask was marked done, and its consumers must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
 type PublicEventIntroRequestRecorded struct {
 	ContactId        openapi_types.UUID `json:"contact_id"`
 	IntroRequestId   openapi_types.UUID `json:"intro_request_id"`

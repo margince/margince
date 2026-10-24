@@ -5,9 +5,9 @@
 
 package introductions
 
-// Recording an introduction that already happened, against a real database:
-// the write shape, who may record, who may read, and that no lifecycle writer
-// touches the row afterwards.
+// Recording an introduction that already happened, against a real database.
+// It holds the write shape, who may record and who may read. It also holds
+// that no lifecycle writer touches the row afterwards.
 
 import (
 	"context"
@@ -198,8 +198,8 @@ func TestARecordingNeedsAReadableLiveContactAndRefusesADuplicate(t *testing.T) {
 	}
 }
 
-// A recorded introduction is a fact two colleagues vouched for, so a colleague
-// who is neither can read it; an ask between the same two stays private.
+// Two colleagues vouched for a recorded introduction, so a third colleague can
+// read it. An ask between the same two stays private.
 func TestAnyReaderOfTheContactSeesARecordedIntroductionButNotAnAsk(t *testing.T) {
 	e := setupIntro(t)
 	recorded := e.recorded(t)
@@ -223,9 +223,9 @@ func TestAnyReaderOfTheContactSeesARecordedIntroductionButNotAnAsk(t *testing.T)
 	}
 }
 
-// Every writer keyed on status must leave a recorded row alone: it is
-// `introduced` from birth, which is the status the expiry sweep, the reply
-// consumer and the lifecycle each act on.
+// Every writer keyed on status must leave a recorded row alone. The row is
+// `introduced` from birth. The expiry sweep, the reply consumer and the
+// lifecycle each act on that status.
 func TestNoLifecycleWriterMovesARecordedIntroduction(t *testing.T) {
 	e := setupIntro(t)
 	id := e.recorded(t)

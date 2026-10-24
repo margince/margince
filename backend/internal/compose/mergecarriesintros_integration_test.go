@@ -395,7 +395,7 @@ func (c *carryEnv) archivedAt(t *testing.T, id ids.UUID) *time.Time {
 }
 
 // Two recorded introductions of one pair on the two halves are one after the
-// merge: the unique index on the pair would refuse the re-home, so the older
+// merge. The unique index on the pair would refuse the re-home. So the older
 // stands on the survivor and the newer is archived, in the preview and in the
 // merge alike. A recorded introduction of another pair is carried untouched.
 func TestAMergeKeepsTheOlderRecordedIntroductionOfAPair(t *testing.T) {

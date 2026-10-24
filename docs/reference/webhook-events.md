@@ -1025,7 +1025,7 @@ Payload for intro_request.decided. The colleague gave one of the four bounded an
 
 Record: `contact` · version 1
 
-Payload for intro_request.recorded, a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed, which means an ask was marked done: a consumer of that event must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
+Payload for intro_request.recorded, a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed. That event means an ask was marked done, and its consumers must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|

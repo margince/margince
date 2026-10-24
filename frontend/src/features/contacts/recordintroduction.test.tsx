@@ -6,8 +6,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { RecordIntroductionDialog } from "./recordintroduction";
 
-// The server decides who may record, so the form's own job is to hold the
-// submit back until the two colleagues, the day and the channel are named.
+// The server decides who may record. The form only holds the submit back until
+// the two colleagues, the day and the channel are named.
 
 function stubRoster() {
   vi.stubGlobal(

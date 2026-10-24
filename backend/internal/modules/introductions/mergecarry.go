@@ -161,7 +161,7 @@ func (s *Store) closeMergedDuplicates(ctx context.Context, tx pgx.Tx, from, to i
 }
 
 // archiveMergedRecordedDuplicates archives the newer of two recorded
-// introductions the merge would put on one pair, and answers which and when so
+// introductions the merge would put on one pair. It answers which and when, so
 // the caller audits them with the re-home. closeMergedDuplicates has already
 // locked every row of both contacts.
 func (s *Store) archiveMergedRecordedDuplicates(
