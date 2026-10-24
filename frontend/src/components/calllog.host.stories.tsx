@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { CallAction } from "../design-system/callaction";
 import { en } from "../i18n/en";
 import { useMe } from "../lib/session";
@@ -69,8 +69,10 @@ export const Host: Story = {
     await userEvent.click(call);
     const dialog = await within(document.body).findByRole("dialog", {
       name: en["log.title"],
+      description: "Dana Buyer",
     });
-    await expect(await within(dialog).findByText("Dana Buyer")).toBeVisible();
+    // The drawer fades in from transparent, so visible is a state it reaches.
+    await waitFor(() => expect(dialog).toBeVisible());
   },
 };
 

@@ -124,7 +124,7 @@ describe("CallAction starts the call's log", () => {
     expect(start.mock.calls).toEqual([[DANA], [DANA], [DANA]]);
   });
 
-  it.each(["ctrlKey", "metaKey", "shiftKey"])(
+  it.each(["ctrlKey", "metaKey", "shiftKey", "altKey"])(
     "leaves a %s press to the browser and opens no log",
     (key) => {
       const start = vi.fn();

@@ -11,8 +11,8 @@ import {
 import { useT } from "../i18n";
 import { MESSENGER_NAME, useCallMessengers } from "../lib/callmessengers";
 import { type CallRecord, useCallStart } from "../lib/callstart";
+import { opensElsewhere } from "../lib/linkclick";
 import "./callaction.css";
-import { opensElsewhere } from "./filechip";
 import { IconAction } from "./iconaction";
 import { OffsiteLink } from "./offsitelink";
 

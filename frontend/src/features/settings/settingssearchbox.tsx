@@ -6,6 +6,7 @@ import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { useCompanyContextShown } from "../../lib/companycontextreach";
 import { isImeCommit } from "../../lib/imecommit";
+import { opensElsewhere } from "../../lib/linkclick";
 import { navigate, routeHash } from "../../lib/router";
 import type { SettingsPage } from "../../lib/settingscatalog";
 import { settingsHref } from "../../lib/settingsrouting";
@@ -260,14 +261,7 @@ export function SettingsSearchBox({
                     event.preventDefault();
                   }}
                   onClick={(event) => {
-                    // Every modified click belongs to the browser (a new tab, a
-                    // new window, a download). Only the plain one is ours.
-                    if (
-                      event.metaKey ||
-                      event.ctrlKey ||
-                      event.shiftKey ||
-                      event.altKey
-                    ) {
+                    if (opensElsewhere(event)) {
                       return;
                     }
                     event.preventDefault();
