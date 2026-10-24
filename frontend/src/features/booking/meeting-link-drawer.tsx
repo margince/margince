@@ -122,8 +122,8 @@ function minutesOf(draft: LinkDraft): number {
 /**
  * What a save sends, against the profile the drawer opened on. The video pair
  * is written when the tile changed or the own address was edited. It is also
- * written when a video app is saved over a stored address, because the booking
- * would otherwise send that address beside the generated link.
+ * written when a video app is saved over a stored address. Otherwise the booking
+ * would send that address beside the generated link.
  */
 export function linkChanges(
   original: Profile,
