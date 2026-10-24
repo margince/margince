@@ -19,7 +19,7 @@ import { useRecordZone } from "../../../lib/recordzone";
 type Deal = components["schemas"]["Deal"];
 
 /**
- * The person's correction of the day a won or lost deal closed. The server
+ * A user's correction of the day a won or lost deal closed. The server
  * moves `closed_at`, freezes the exchange rate again for the new day, and
  * refuses an agent, so this verb is a human's alone.
  */

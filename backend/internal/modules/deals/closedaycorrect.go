@@ -3,7 +3,7 @@
 
 package deals
 
-// A person's correction of the day a closed deal closed.
+// A user's correction of the day a closed deal closed.
 //
 // closed_at is the one close day every report reads, and an imported win can
 // carry the import day instead of the real one. Only a human may move it: the
@@ -60,7 +60,7 @@ func (e *CloseDayFutureError) FieldFault() (field, code, message string) {
 // the installation's zone, and freezes the exchange rate again for that day.
 //
 // Midday keeps the instant on the named day in every zone within half a day of
-// the installation's, which is the reading the deal screen draws it in.
+// the installation's. The deal screen draws it in that reading.
 func (s *Store) CorrectCloseDay(ctx context.Context, id ids.DealID, in CorrectCloseDayInput) (crmcontracts.Deal, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.Deal{}, err

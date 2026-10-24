@@ -13,14 +13,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// closeDayEnv is a closed JPY deal with two stored rates: the older one is what
-// a close on the corrected day must freeze, the newer one what the real close
+// closeDayEnv is a closed JPY deal with two stored rates. The older one is what
+// a close on the corrected day must freeze. The newer one is what the real close
 // froze.
 type closeDayEnv struct {
 	*configEnv
@@ -33,7 +34,7 @@ type closeDayEnv struct {
 func setupClosedDealEnv(t *testing.T) closeDayEnv {
 	t.Helper()
 	e := setupConfigEnv(t)
-	now := time.Now().UTC()
+	now := clocktest.Now(t).UTC()
 	// Winning stamps correspondence and starts delivery through seams the
 	// composition injects; neither is under test here.
 	e.store = NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{
@@ -182,7 +183,7 @@ func TestAnOpenDealHasNoCloseDayToCorrect(t *testing.T) {
 		Timezone: func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
 	})
 	deal := seedDealInStage(t, e, openStage(t, e, SemanticOpen))
-	_, err := e.store.CorrectCloseDay(e.asDealWriter(), deal, CorrectCloseDayInput{ClosedOn: time.Now().UTC()})
+	_, err := e.store.CorrectCloseDay(e.asDealWriter(), deal, CorrectCloseDayInput{ClosedOn: clocktest.Now(t).UTC()})
 	var open *CloseDayOpenDealError
 	if !errors.As(err, &open) {
 		t.Fatalf("an open deal answered %v, want deal_not_closed", err)

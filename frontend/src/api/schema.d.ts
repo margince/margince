@@ -4044,7 +4044,7 @@ export interface paths {
          *     and freezes the exchange rate again for that day, so revenue by period and the base-currency
          *     figure follow the corrected day. The change is audited and emits `deal.updated`.
          *
-         *     A person's correction only: an agent is refused, because the day decides which period
+         *     A signed-in user's correction only: an agent is refused, because the day decides which period
          *     counts the revenue. An open deal answers 422 `deal_not_closed` (its forecast date is
          *     `expected_close_date`), a day after today answers 422 `close_day_future`, and a currency
          *     with no stored rate on or before the day answers 422 `fx_rate_unavailable`. The day the
