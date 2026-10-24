@@ -20,6 +20,7 @@ import (
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -405,6 +406,8 @@ func (m Message) ID() string { return m.messageID }
 // The counterparty (From/To) is folded into a compact header on the body —
 // the activity schema has no dedicated participant column, and the timeline
 // needs to show who the mail was with.
+//
+// Subject and body carry credentials masked; Raw keeps the original.
 func (m Message) ToRecord(connectorName string, raw []byte) connector.NormalizedRecord {
 	source := connectorName + ":" + m.messageID
 	body, stored := m.storedBody()
@@ -414,7 +417,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: m.messageID},
 		Fields: capture.ActivityFields{
 			Kind:             "email",
-			Subject:          m.subject,
+			Subject:          credentialmask.MaskText(m.subject),
 			Body:             body,
 			OccurredAt:       m.occurredAt,
 			Direction:        m.direction,

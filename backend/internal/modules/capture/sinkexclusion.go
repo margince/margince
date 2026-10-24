@@ -82,6 +82,7 @@ var _ connector.PreStoreJudge = (*Sink)(nil)
 // Upsert would refuse to admit is not judged here (false, nil); the full path
 // then answers for it exactly as it always did.
 func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedRecord) (bool, error) {
+	rec = maskCapturedCredentials(rec)
 	if _, err := admitRecord(ctx, rec); err != nil {
 		return false, nil //nolint:nilerr // not judged here; the full capture path answers for an unadmitted record
 	}

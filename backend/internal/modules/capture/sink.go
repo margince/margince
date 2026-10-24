@@ -193,6 +193,7 @@ var (
 // key. Replays return the existing row and write NOTHING new — an
 // at-least-once sync loop costs no duplicate audit entries.
 func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
+	rec = maskCapturedCredentials(rec)
 	actor, err := admitRecord(ctx, rec)
 	if err != nil {
 		return datasource.EntityRef{}, err
