@@ -17,6 +17,7 @@ import (
 	"slices"
 	"strconv"
 	"testing"
+	"unicode"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -34,10 +35,13 @@ func TestTheFrontendPhoneParseMatchesParsePhone(t *testing.T) {
 	}
 	source := string(raw)
 	body := tsFunctionBody(t, source, "e164Digits")
-	for _, use := range []string{`\.replace\(\s*PHONE_SEPARATORS\s*,`, `\bE164\.(?:exec|test)\(`} {
+	for _, use := range []string{`\.trim\(\)`, `\.replace\(\s*PHONE_SEPARATORS\s*,`, `\bE164\.(?:exec|test)\(`} {
 		if !regexp.MustCompile(use).MatchString(body) {
 			t.Errorf("%s: e164Digits no longer calls /%s/, so the declarations this gate compares are not the ones it runs", frontendContactURI, use)
 		}
+	}
+	if !regexp.MustCompile(`\be164Digits\(`).MatchString(tsFunctionBody(t, source, "messengerUris")) {
+		t.Errorf("%s: messengerUris no longer reads the number through e164Digits, so its links follow rules this gate does not compare", frontendContactURI)
 	}
 
 	goPattern := withoutCaptures(t, "values.E164Pattern", values.E164Pattern)
@@ -73,6 +77,7 @@ func compareSeparators(t *testing.T, tsClass string) {
 			t.Errorf("ParsePhone does not strip %q, which values.PhoneSeparators lists; build its replacer from that list", separator)
 		}
 	}
+	refusesUnlistedCharacters(t, inGo)
 	for _, r := range inGo {
 		if !slices.Contains(inTS, r) {
 			t.Errorf("separator %q: ParsePhone strips it and %s PHONE_SEPARATORS does not. Add it there or drop it from values.PhoneSeparators", r, frontendContactURI)
@@ -81,6 +86,20 @@ func compareSeparators(t *testing.T, tsClass string) {
 	for _, r := range inTS {
 		if !slices.Contains(inGo, r) {
 			t.Errorf("separator %q: %s PHONE_SEPARATORS strips it and ParsePhone does not. Drop it there or add it to values.PhoneSeparators", r, frontendContactURI)
+		}
+	}
+}
+
+// refusesUnlistedCharacters proves PhoneSeparators is the whole stripping rule: a second path
+// would strip a character the browser mirror keeps.
+func refusesUnlistedCharacters(t *testing.T, listed []rune) {
+	t.Helper()
+	for r := '\t'; r <= '~'; r++ {
+		if unicode.IsDigit(r) || slices.Contains(listed, r) {
+			continue
+		}
+		if _, err := values.ParsePhone("+49" + string(r) + "30123456"); err == nil {
+			t.Errorf("ParsePhone strips %q, which values.PhoneSeparators does not list. Add it there, and to PHONE_SEPARATORS in %s", r, frontendContactURI)
 		}
 	}
 }
@@ -115,6 +134,9 @@ func tsRegexLiteral(t *testing.T, source, name string) string {
 func tsFunctionBody(t *testing.T, source, name string) string {
 	t.Helper()
 	start := indexAfter(source, "\nfunction "+name+"(")
+	if start < 0 {
+		start = indexAfter(source, "\nexport function "+name+"(")
+	}
 	if start < 0 {
 		t.Fatalf("%s no longer declares function %s; the gate cannot see how the mirror is applied", frontendContactURI, name)
 	}
