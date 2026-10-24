@@ -26,6 +26,7 @@ import {
 } from "../../format/contactchannels";
 import { primaryPhone } from "../../format/contacturi";
 import { formatDateAbbrev } from "../../format/format";
+import { industryWords } from "../../format/industry";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
@@ -186,7 +187,7 @@ function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
         company.lifecycle && company.lifecycle !== "unknown"
           ? t(`company.lifecycle.${company.lifecycle}`)
           : null,
-        company.industry,
+        company.industry ? industryWords(t, company.industry) : null,
         company.address?.city,
       ]
         .filter(Boolean)

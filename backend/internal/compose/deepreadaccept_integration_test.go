@@ -226,7 +226,7 @@ func TestDeepReadFillsTheCompanysOwnIndustryAndSizeFromItsHomePage(t *testing.T)
 		seedURL: {text: readable("Acme home.") + " Acme builds industrial automation software. 140+ employees."},
 	}}
 	brain := laneFake{
-		profileReply: `{"fields":[{"f":"industry","v":"Industrial automation software","e":"s0","c":0.9}]}`,
+		profileReply: `{"fields":[{"f":"industry","v":"Software","e":"s0","c":0.9}]}`,
 		pageReplies: map[string]string{
 			seedURL: `{"facts":[{"f":"employee_range","v":"140+ employees","e":"s0"}],"contacts":[]}`,
 		},
@@ -262,7 +262,7 @@ func TestDeepReadFillsTheCompanysOwnIndustryAndSizeFromItsHomePage(t *testing.T)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if industry == nil || *industry != "Industrial automation software" {
+	if industry == nil || *industry != "software" {
 		t.Fatalf("industry = %v, want the sector the home page names", industry)
 	}
 	if sizeBand == nil || *sizeBand != "51-200" {

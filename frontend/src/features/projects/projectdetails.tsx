@@ -21,6 +21,7 @@ import { sectionState } from "../../design-system/surfacestate";
 import { COMPANY_LIFECYCLE_LABELS } from "../../format/companylifecycle";
 import { formatNumber } from "../../format/format";
 import { formatDateAbbrev } from "../../format/format.dates";
+import { industryWords } from "../../format/industry";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -153,9 +154,11 @@ function CompanyCard({
     summary?.lifecycle && summary.lifecycle !== "unknown"
       ? t(COMPANY_LIFECYCLE_LABELS[summary.lifecycle])
       : undefined;
-  const facts = [lifecycle, summary?.industry, summary?.address?.city].filter(
-    Boolean,
-  );
+  const facts = [
+    lifecycle,
+    summary?.industry ? industryWords(t, summary.industry) : undefined,
+    summary?.address?.city,
+  ].filter(Boolean);
   return (
     <RecordCard
       kind="company"

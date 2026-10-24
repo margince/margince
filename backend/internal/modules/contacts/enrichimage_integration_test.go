@@ -77,7 +77,7 @@ func TestAnEnrichmentRecordsTheEmptyColumnItFilled(t *testing.T) {
 	if value, present := before["industry"]; !present || value != nil {
 		t.Errorf("before[industry] = %v (present=%t), want a recorded absence", value, present)
 	}
-	if after["industry"] != "Automotive" {
+	if after["industry"] != "automotive" {
 		t.Errorf("after[industry] = %v, want the value the fill wrote", after["industry"])
 	}
 }
@@ -127,7 +127,7 @@ func TestAnEnrichmentDoesNotRecordAColumnAHumanTyped(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("reading the column back: %v", err)
 	}
-	if stored != human {
+	if stored != "automotive" {
 		t.Errorf("industry = %q, want the human's value untouched", stored)
 	}
 }

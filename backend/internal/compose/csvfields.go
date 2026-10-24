@@ -327,6 +327,8 @@ func storedValue(current map[string]json.RawMessage, field string) json.RawMessa
 func canonicalFor(field, value string) string {
 	trimmed := strings.TrimSpace(value)
 	switch field {
+	case fieldIndustry:
+		return canonicalIndustry(trimmed)
 	case fieldEmail:
 		return correspondence.Fold(trimmed)
 	case fieldDomain:

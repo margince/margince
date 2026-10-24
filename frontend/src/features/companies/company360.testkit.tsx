@@ -32,7 +32,7 @@ export const company: Company = {
   // writable (the fail-closed default) and loses the edit controls under test.
   writable: true,
   display_name: "Brandt Automotive GmbH",
-  industry: "Automotive",
+  industry: "automotive",
   captured_by: "human:u1",
   source: "manual",
   version: 1,

@@ -31,7 +31,7 @@ const company: Company = {
   legal_name: "Brandt Automotive GmbH",
   lifecycle: "customer",
   owner_id: "01a04298-1971-7076-8076-8064da20fd02",
-  industry: "Automotive",
+  industry: "automotive",
   size_band: "51-200",
   domains: [
     {

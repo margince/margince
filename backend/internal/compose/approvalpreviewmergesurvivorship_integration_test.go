@@ -55,7 +55,7 @@ func TestContactMergePreviewMatchesTheSurvivorFields(t *testing.T) {
 func TestCompanyMergePreviewKeepsExistingFieldsAndWholeAddresses(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
-	source, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Source account", LegalName: new("Source legal name"), Description: new("Discard this description"), Industry: new("Manufacturing"), Address: &crmcontracts.Address{City: new("Berlin"), PostalCode: new("10115")}, Source: "manual"})
+	source, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Source account", LegalName: new("Source legal name"), Description: new("Discard this description"), Industry: new("manufacturing"), Address: &crmcontracts.Address{City: new("Berlin"), PostalCode: new("10115")}, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestCompanyMergePreviewKeepsExistingFieldsAndWholeAddresses(t *testing.T) {
 		t.Fatal(err)
 	}
 	fields := normalizedMergeFields(t, preview.Fields)
-	if fields["legal_name"] != "Source legal name" || fields["industry"] != "Manufacturing" || len(fields) != 2 {
+	if fields["legal_name"] != "Source legal name" || fields["industry"] != "manufacturing" || len(fields) != 2 {
 		t.Fatalf("fields=%v", fields)
 	}
 	checkMergePreviewRefusals(t, e, "company", sourceID, targetID, preview, "industry")

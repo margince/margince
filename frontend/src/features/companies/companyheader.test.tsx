@@ -674,7 +674,7 @@ describe("the lifecycle control beside the name", () => {
 describe("the head's lines and pills", () => {
   const withSite: Company = {
     ...COMPANY,
-    industry: "Automotive",
+    industry: "automotive",
     website_url: "https://brandt.example",
   };
 

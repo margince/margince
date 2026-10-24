@@ -25,7 +25,7 @@ export const company = {
   legal_name: "Brandt Automotive GmbH",
   lifecycle: "customer" as const,
   owner_id: "u-1",
-  industry: "Automotive",
+  industry: "automotive" as const,
   size_band: "51-200" as const,
   linkedin_url: "https://linkedin.com/company/brandt",
   address: { city: "Munich", country: "DE" },
