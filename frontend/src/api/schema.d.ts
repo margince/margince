@@ -37597,8 +37597,12 @@ export interface components {
              */
             name: string;
             /**
-             * @description The six custom-field types, plus `id` for a reference to another record and
-             *     `domain` for a host column. The type decides the operators, which is why it is here.
+             * @description The six custom-field types, plus `id` for a reference to another record,
+             *     `domain` for a host column and `distance` for a place on the earth. A `distance`
+             *     field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
+             *     `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
+             *     name the builder showed for the center. Only companies that have a located address
+             *     can match. The type decides the operators, which is why it is here.
              *
              *     `domain` also decides what happens to the VALUE, and it is the only type that does:
              *     the operand is folded to the host the column stores, so
@@ -37609,13 +37613,13 @@ export interface components {
              *     a folded value has no fragment to match against.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "id" | "domain";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "id" | "domain" | "distance";
             /**
              * @description The operator subset this field's type admits (LVS-PARAM-1), in one
              *     stable order. An operator absent here is one the engine refuses for
              *     this field, so a builder can disable it rather than discover it.
              */
-            operators: ("eq" | "neq" | "gt" | "lt" | "gte" | "lte" | "in" | "contains" | "exists")[];
+            operators: ("eq" | "neq" | "gt" | "lt" | "gte" | "lte" | "in" | "contains" | "exists" | "within_radius")[];
             /**
              * @description Whether this is a workspace-defined custom-field column. Where true,
              *     `name` is the catalog's `column_name` — join on it to show an admin's

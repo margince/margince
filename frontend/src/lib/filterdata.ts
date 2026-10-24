@@ -39,6 +39,18 @@ export type FilterResource = FilterVocabulary["resource"];
  */
 export const PREVIEW_PAGE = 25;
 
+/**
+ * The fields the builder has an editor for. A `distance` field needs a place
+ * picker the builder does not have, so it is left out of what a reader can
+ * choose; the API still advertises and accepts it.
+ */
+export function offerableVocabulary(vocabulary: FilterVocabulary): FilterVocabulary {
+  return {
+    ...vocabulary,
+    fields: vocabulary.fields.filter((field) => field.type !== "distance"),
+  };
+}
+
 export function vocabularyQueryKey(resource: FilterResource) {
   return ["filter-vocabulary", resource] as const;
 }
@@ -59,6 +71,7 @@ export function useFilterVocabulary(resource: FilterResource, enabled = true) {
   return useQuery<FilterVocabulary>({
     queryKey: vocabularyQueryKey(resource),
     enabled,
+    select: offerableVocabulary,
     queryFn: async () => {
       return unwrap(
         await api.GET("/filters/vocabulary", {

@@ -187,7 +187,7 @@ admin can also change under Settings.
 | `certlog_base_url` | `MARGINCE_CERTLOG_BASE_URL` | `--certlog-base-url` | `string` | — | worker | Base URL of a certificate log, or public for a free public one; unset makes no outbound lookups of what a company runs. |
 | `connector_state_key` | `MARGINCE_CONNECTOR_STATE_KEY` | `--connector-state-key` | `string`, secret | — | api | HMAC key of at least 32 bytes signing the OAuth connect state; required for the Gmail and Graph connect flows. |
 | `dsn` | `MARGINCE_DSN` | `--dsn` | `string`, secret | — | api, migrate, worker | Postgres DSN of the runtime app role; migrate falls back to it when `MARGINCE_OWNER_DSN` is unset. |
-| `geocode_base_url` | `MARGINCE_GEOCODE_BASE_URL` | `--geocode-base-url` | `string` | — | api, worker | Nominatim base URL, or public; set it on the api and the worker together, or a lookup is never queued. |
+| `geocode_base_url` | `MARGINCE_GEOCODE_BASE_URL` | `--geocode-base-url` | `string` | — | api, worker | Nominatim base URL; unset or public uses the public service, off disables geocoding; give the api and the worker the same value, or a lookup is never queued. |
 | `gmail_client_id` | `MARGINCE_GMAIL_CLIENT_ID` | `--gmail-client-id` | `string` | — | api, worker | Google OAuth client id of the Gmail capture connector. |
 | `gmail_client_secret` | `MARGINCE_GMAIL_CLIENT_SECRET` | `--gmail-client-secret` | `string`, secret | — | api, worker | Google OAuth client secret of the Gmail capture connector. |
 | `gmail_jwks_url` | `MARGINCE_GMAIL_JWKS_URL` | `--gmail-jwks-url` | `string` | — | api | Override of the Google OIDC JWKS URL, for test and dev. |
@@ -523,12 +523,14 @@ every write that commits would leave its outbox row with nothing to send it.
 ### Lookups on public services
 
 `--geocode-base-url` and `--vat-check-base-url` are read by both roles: the worker does the lookup,
-and the api decides whether to queue one. Set each on both roles or on none. The value `public`
+and the api decides whether to queue one. Give each the same value on both roles. The value `public`
 picks the public service of each, which this installation asks one request at a time:
 
-- **Geocoding** uses the public Nominatim service, for a test only. Its rules let a scheduled client
-  send 4 requests a minute, so Margince waits 15 seconds between requests. Unset, company addresses
-  get no map point, and a `within_radius` query answers `distance_ranking_unavailable`.
+- **Geocoding** is on by default. Unset or `public` uses the public Nominatim service. Its rules let
+  a scheduled client send 4 requests a minute, so Margince waits 15 seconds between requests. The
+  value `off` switches geocoding off: company addresses get no map point, and a `within_radius`
+  query answers `distance_ranking_unavailable`. Any other value is the base URL of your own
+  Nominatim.
 - **VAT checks** use the VIES service of the EU, with 2 seconds between checks. Unset, Margince
   stores the VAT ID of a company as its web page stated it.
 - **`--certlog-base-url`**, on the worker, turns on the technical lookup. That reads what a company

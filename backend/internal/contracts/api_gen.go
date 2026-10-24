@@ -10362,15 +10362,16 @@ func (e FilterVocabularyResource) Valid() bool {
 
 // Defines values for FilterVocabularyFieldOperators.
 const (
-	FilterVocabularyFieldOperatorsContains FilterVocabularyFieldOperators = "contains"
-	FilterVocabularyFieldOperatorsEq       FilterVocabularyFieldOperators = "eq"
-	FilterVocabularyFieldOperatorsExists   FilterVocabularyFieldOperators = "exists"
-	FilterVocabularyFieldOperatorsGt       FilterVocabularyFieldOperators = "gt"
-	FilterVocabularyFieldOperatorsGte      FilterVocabularyFieldOperators = "gte"
-	FilterVocabularyFieldOperatorsIn       FilterVocabularyFieldOperators = "in"
-	FilterVocabularyFieldOperatorsLt       FilterVocabularyFieldOperators = "lt"
-	FilterVocabularyFieldOperatorsLte      FilterVocabularyFieldOperators = "lte"
-	FilterVocabularyFieldOperatorsNeq      FilterVocabularyFieldOperators = "neq"
+	FilterVocabularyFieldOperatorsContains     FilterVocabularyFieldOperators = "contains"
+	FilterVocabularyFieldOperatorsEq           FilterVocabularyFieldOperators = "eq"
+	FilterVocabularyFieldOperatorsExists       FilterVocabularyFieldOperators = "exists"
+	FilterVocabularyFieldOperatorsGt           FilterVocabularyFieldOperators = "gt"
+	FilterVocabularyFieldOperatorsGte          FilterVocabularyFieldOperators = "gte"
+	FilterVocabularyFieldOperatorsIn           FilterVocabularyFieldOperators = "in"
+	FilterVocabularyFieldOperatorsLt           FilterVocabularyFieldOperators = "lt"
+	FilterVocabularyFieldOperatorsLte          FilterVocabularyFieldOperators = "lte"
+	FilterVocabularyFieldOperatorsNeq          FilterVocabularyFieldOperators = "neq"
+	FilterVocabularyFieldOperatorsWithinRadius FilterVocabularyFieldOperators = "within_radius"
 )
 
 // Valid indicates whether the value is a known member of the FilterVocabularyFieldOperators enum.
@@ -10393,6 +10394,8 @@ func (e FilterVocabularyFieldOperators) Valid() bool {
 	case FilterVocabularyFieldOperatorsLte:
 		return true
 	case FilterVocabularyFieldOperatorsNeq:
+		return true
+	case FilterVocabularyFieldOperatorsWithinRadius:
 		return true
 	default:
 		return false
@@ -10437,6 +10440,7 @@ const (
 	FilterVocabularyFieldTypeBoolean     FilterVocabularyFieldType = "boolean"
 	FilterVocabularyFieldTypeCurrency    FilterVocabularyFieldType = "currency"
 	FilterVocabularyFieldTypeDate        FilterVocabularyFieldType = "date"
+	FilterVocabularyFieldTypeDistance    FilterVocabularyFieldType = "distance"
 	FilterVocabularyFieldTypeDomain      FilterVocabularyFieldType = "domain"
 	FilterVocabularyFieldTypeId          FilterVocabularyFieldType = "id"
 	FilterVocabularyFieldTypeMultiselect FilterVocabularyFieldType = "multiselect"
@@ -10453,6 +10457,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeCurrency:
 		return true
 	case FilterVocabularyFieldTypeDate:
+		return true
+	case FilterVocabularyFieldTypeDistance:
 		return true
 	case FilterVocabularyFieldTypeDomain:
 		return true
@@ -39083,8 +39089,12 @@ type FilterVocabularyField struct {
 	// `id`, so only a core field can carry a reference.
 	References *FilterVocabularyFieldReferences `json:"references,omitempty"`
 
-	// Type The six custom-field types, plus `id` for a reference to another record and
-	// `domain` for a host column. The type decides the operators, which is why it is here.
+	// Type The six custom-field types, plus `id` for a reference to another record,
+	// `domain` for a host column and `distance` for a place on the earth. A `distance`
+	// field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
+	// `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
+	// name the builder showed for the center. Only companies that have a located address
+	// can match. The type decides the operators, which is why it is here.
 	//
 	// `domain` also decides what happens to the VALUE, and it is the only type that does:
 	// the operand is folded to the host the column stores, so
@@ -39110,8 +39120,12 @@ type FilterVocabularyFieldOperators string
 // `id`, so only a core field can carry a reference.
 type FilterVocabularyFieldReferences string
 
-// FilterVocabularyFieldType The six custom-field types, plus `id` for a reference to another record and
-// `domain` for a host column. The type decides the operators, which is why it is here.
+// FilterVocabularyFieldType The six custom-field types, plus `id` for a reference to another record,
+// `domain` for a host column and `distance` for a place on the earth. A `distance`
+// field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
+// `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
+// name the builder showed for the center. Only companies that have a located address
+// can match. The type decides the operators, which is why it is here.
 //
 // `domain` also decides what happens to the VALUE, and it is the only type that does:
 // the operand is folded to the host the column stores, so

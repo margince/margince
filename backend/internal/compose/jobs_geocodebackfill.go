@@ -8,9 +8,9 @@ package compose
 //
 // Geocoding fires when an address is WRITTEN, which is the right trigger and a
 // complete answer only for a company written after this installation had a
-// geocoder. A seeded workspace, an import that ran last month, or an operator
-// setting MARGINCE_GEOCODE_BASE_URL on a system that already holds its
-// customers all leave rows nothing will ever write again — invisible to the
+// geocoder. A seeded workspace, an import that ran last month, or the first
+// boot of an installation that held its customers before geocoding became the
+// default all leave rows nothing will ever write again — invisible to the
 // trigger, and so never located. `within_radius` then answers from an empty
 // set while looking exactly like a query that works.
 //

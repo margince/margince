@@ -7,10 +7,10 @@ package contacts
 // had a geocoder, or before geocoding existed at all.
 //
 // Geocoding fires on an address WRITE, which is the right trigger and a
-// complete answer only for a company written after the feature was configured.
+// complete answer only for a company written after the feature was on.
 // Everything already in the database is invisible to it — a seeded workspace,
-// an import that ran last month, or the ordinary case of an operator setting
-// MARGINCE_GEOCODE_BASE_URL on a system that already holds its customers. None
+// an import that ran last month, or the first boot of an installation that
+// held its customers before geocoding became the default. None
 // of those rows will ever be written again, so none of them will ever be
 // located, and `within_radius` answers from an empty set while looking exactly
 // like a working query.

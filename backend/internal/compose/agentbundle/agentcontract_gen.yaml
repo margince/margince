@@ -16738,10 +16738,14 @@ components:
             since the catalog owns labels and this vocabulary does not.
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean, id, domain]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, id, domain, distance]
           description: |-
-            The six custom-field types, plus `id` for a reference to another record and
-            `domain` for a host column. The type decides the operators, which is why it is here.
+            The six custom-field types, plus `id` for a reference to another record,
+            `domain` for a host column and `distance` for a place on the earth. A `distance`
+            field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
+            `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
+            name the builder showed for the center. Only companies that have a located address
+            can match. The type decides the operators, which is why it is here.
         operators:
           type: array
           description: |-
@@ -16750,7 +16754,7 @@ components:
             this field, so a builder can disable it rather than discover it.
           items:
             type: string
-            enum: [eq, neq, gt, lt, gte, lte, in, contains, exists]
+            enum: [eq, neq, gt, lt, gte, lte, in, contains, exists, within_radius]
         custom:
           type: boolean
           description: |-

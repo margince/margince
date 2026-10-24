@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -832,4 +833,80 @@ func hasNote(result search.QueryResult, code string) bool {
 		}
 	}
 	return false
+}
+
+// The query grammar's within_radius and the filter engine's within_radius leaf
+// are two doors onto one predicate (geocode.Within). They must return the same
+// companies for the same center and radius, and neither may read a stale or
+// failed row.
+func TestQueryPlanAndFilterEngineAnswerTheSameCompaniesForOneRadius(t *testing.T) {
+	q := setupQuery(t)
+	q.seedFixture(t)
+	near := q.seedLocatedCompany(t, "Shared Zentrum GmbH", 48.7758, 9.1829)
+	mid := q.seedLocatedCompany(t, "Shared Mitte AG", 48.8800, 9.1829)
+	q.seedLocatedCompany(t, "Shared Muenchen GmbH", 48.1351, 11.5820)
+	stale := q.seedLocatedCompany(t, "Shared Umgezogen GmbH", 48.7800, 9.1900)
+	q.moveCompany(t, stale, "Neue Strasse 1")
+	failed := q.seedLocatedCompany(t, "Shared Fehler GmbH", 48.7900, 9.1900)
+	if _, err := q.Owner.Exec(context.Background(),
+		`UPDATE company SET geocode_status = 'failed' WHERE id = $1`, failed); err != nil {
+		t.Fatalf("marking the company failed: %v", err)
+	}
+
+	result := q.run(q.admin(), t, `{
+		"version": "v1", "target": "company",
+		"where": [{"field": "address", "op": "within_radius",
+		           "value": {"lat": 48.7758, "lon": 9.1829, "radius_km": 50}}],
+		"limit": 50}`)
+	fromQuery := map[ids.UUID]bool{}
+	for _, row := range result.Rows {
+		fromQuery[row.ID] = true
+	}
+
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	where, err := storekit.CompilePredicate(storekit.Predicate{
+		Field: "location", Op: storekit.OpWithinRadius,
+		Value: map[string]any{"lat": 48.7758, "lon": 9.1829, "radius_km": 50.0},
+	}, map[string]storekit.Field{
+		"location": {Expr: "t", Type: storekit.FieldDistance, GeoTarget: "company"},
+	}, arg)
+	if err != nil {
+		t.Fatalf("compiling the filter leaf: %v", err)
+	}
+	rows, err := q.Owner.Query(context.Background(), `SELECT t.id FROM company t WHERE `+where, args...)
+	if err != nil {
+		t.Fatalf("running the filter leaf: %v", err)
+	}
+	defer rows.Close()
+	fromFilter := map[ids.UUID]bool{}
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		fromFilter[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("reading the filter leaf: %v", err)
+	}
+
+	for _, id := range []ids.UUID{near, mid} {
+		if !fromQuery[id] || !fromFilter[id] {
+			t.Errorf("company %v: query grammar has it = %v, filter engine has it = %v; want both", id, fromQuery[id], fromFilter[id])
+		}
+	}
+	for _, id := range []ids.UUID{stale, failed} {
+		if fromQuery[id] || fromFilter[id] {
+			t.Errorf("company %v is stale or failed and still answers (query %v, filter %v)", id, fromQuery[id], fromFilter[id])
+		}
+	}
+	if len(fromQuery) != len(fromFilter) {
+		t.Errorf("query grammar returned %d companies, filter engine %d", len(fromQuery), len(fromFilter))
+	}
+	for id := range fromQuery {
+		if !fromFilter[id] {
+			t.Errorf("company %v is in the query answer and not in the filter answer", id)
+		}
+	}
 }
