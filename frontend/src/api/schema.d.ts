@@ -30522,7 +30522,8 @@ export interface components {
              * @description Colleagues who are on this contact's threads and have no connected mailbox, so
              *     later replies they alone receive may be missing here. Information only: a seat
              *     listed here is not a route in, owns no work and may not send. An invited seat
-             *     appears here and never in `colleagues`.
+             *     appears here and never in `colleagues`. At most ten are returned, most recent
+             *     first.
              */
             capture_gaps: components["schemas"]["ContactCaptureGap"][];
         };
