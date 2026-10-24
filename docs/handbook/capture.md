@@ -103,7 +103,7 @@ Colleagues see the pair only once the sender has been judged a business contact.
 ### Mail with a lead on it
 
 A captured email or meeting goes on the timeline of each open lead whose exact email address is on it. Case does not matter, and `lena@acme.example.org` is not `lena@acme.example`.
-Mail from before the lead was created goes on no lead, and nor does mail for a qualified or disqualified lead. Mail from a mail system, or from a sender judged a newsletter or spam, goes on no lead either. One message goes on at most 25 records, contacts first.
+Older mail goes on the lead only if no other lead ever had the address, and a qualified or disqualified lead gets no new mail. Mail from a mail system, or from a sender judged a newsletter or spam, goes on no lead. One message goes on at most 25 records, contacts first.
 It does not change who may read the mail: a colleague on the lead sees that a limited email exists, not what it says.
 
 ## When nothing matches

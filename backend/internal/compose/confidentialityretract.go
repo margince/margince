@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -56,6 +57,27 @@ func (e *ConfidentialityVerdictEngine) retractPrivateContactsTx(
 		}
 		e.log.InfoContext(ctx, "confidentiality: retracted a contact a private thread orphaned",
 			"contact", contact.ContactID.String())
+	}
+	return retractPrivateLeadLinksTx(ctx, tx, row.ThreadKey, row.UserID)
+}
+
+// privateThreadLeadReason is the evidence a lead link taken off a private
+// thread records.
+const privateThreadLeadReason = "personal_thread_verdict"
+
+// retractPrivateLeadLinksTx takes off the lead links capture filed for messages
+// a personal verdict has made private. It writes through the activities writer,
+// so each removal lands its audit row. A link a human filed stays.
+func retractPrivateLeadLinksTx(ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID) error {
+	links, err := capture.LeadLinksOrphanedByPrivacyTx(ctx, tx, threadKey, user)
+	if err != nil {
+		return err
+	}
+	for _, link := range links {
+		if _, err := activities.RetractMachineLeadTx(ctx, tx, link.ActivityID, link.LeadID,
+			map[string]any{"reason": privateThreadLeadReason, "decided_as": user}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

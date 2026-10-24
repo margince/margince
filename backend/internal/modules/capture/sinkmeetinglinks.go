@@ -58,6 +58,12 @@ const meetingKind = "meeting"
 // Held by: TestTheLinkCeilingHasOneValue (backend/gates/linkceilingparity_test.go)
 const maxDerivedMeetingLinks = 25
 
+// projectLinkReservation is the seat a meeting keeps for the project
+// ladder, which files it after the capture commits and reads no budget. The
+// ladder retries on every replay, so a meeting filled to 25 here would refuse
+// its project link forever.
+const projectLinkReservation = 1
+
 // linkResolvedMeetingParticipants files a captured meeting under each attendee
 // who is a live contact or a live lead (participantfiling.go), organizer first.
 //
@@ -65,12 +71,13 @@ const maxDerivedMeetingLinks = 25
 // with links is not held to its participants. A claimed link that was never
 // written would open a meeting that nothing files.
 func (s *Sink) linkResolvedMeetingParticipants(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int,
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int, private bool,
 ) (int, error) {
 	// The ceiling is on the activity, so a connector's own links count.
 	return fileUnderParticipants(tx, activityID, participantFiling{
 		decider: ctx,
-		budget:  maxDerivedMeetingLinks - existing,
+		budget:  max(maxDerivedMeetingLinks-existing-projectLinkReservation, 0),
+		private: private,
 		write:   insertParticipantLink(ctx, tx, activityID),
 	})
 }

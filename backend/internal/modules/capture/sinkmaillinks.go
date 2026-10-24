@@ -62,13 +62,14 @@ const postCommitLinkReservation = 3
 // TestFilingAConfidentialMessageDoesNotWidenWhoMayReadIt
 // (backend/internal/compose/integration/capture/capture_participantlink_integration_test.go)
 func (s *Sink) linkResolvedMailParticipants(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int,
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int, private bool,
 ) error {
 	// The ceiling is on the activity, so the budget is what the row can still
 	// take, less the seats kept for the writers after commit.
 	_, err := fileUnderParticipants(tx, activityID, participantFiling{
 		decider: ctx,
 		budget:  max(maxDerivedMeetingLinks-existing-postCommitLinkReservation, 0),
+		private: private,
 		write:   insertParticipantLink(ctx, tx, activityID),
 	})
 	return err

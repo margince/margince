@@ -47,8 +47,8 @@ var participantLinkColumns = map[datasource.EntityType]string{
 // A contact is followed through a merge before its liveness is judged. A merge
 // archives the source, and no reader of activity_link walks merged_into_id.
 //
-// A lead counts only if it existed when the activity happened. Older mail
-// would start its reply clock before anyone worked it.
+// A lead counts only if the address was already its own when the activity
+// happened. An address it took later belonged to someone else then.
 var participantRecordsSQL = `
 	SELECT entity_type, id FROM (
 		SELECT 'contact' AS entity_type, 0 AS rank, survivor.id,
@@ -64,7 +64,8 @@ var participantRecordsSQL = `
 		  JOIN activity a ON a.id = ap.activity_id
 		  JOIN lead ld ON ` + storekit.LeadEmailMatchClause("ld", "ap.address") + `
 		 WHERE ap.activity_id = $1 AND ap.address IS NOT NULL
-		   AND ` + storekit.LiveLeadClause("ld") + ` AND ld.created_at <= a.occurred_at
+		   AND ` + storekit.LiveLeadClause("ld") + `
+		   AND ` + storekit.LeadEmailHeldAtClause("ld", "ap.address", "a.occurred_at") + `
 		 GROUP BY ld.id
 	) named
 	ORDER BY organized DESC, rank, id`
@@ -112,6 +113,9 @@ func mayFileUnder(decider context.Context, tx pgx.Tx, record participantRecord) 
 type participantFiling struct {
 	decider context.Context
 	budget  int
+	// private says the message is private to the deciding seat, which files it
+	// under no lead (messageIsPrivateTx).
+	private bool
 	// wants narrows the candidates; nil takes every one.
 	wants func(participantRecord) bool
 	// write files the activity under one admitted record and answers whether a
@@ -131,7 +135,7 @@ func fileUnderParticipants(tx pgx.Tx, activityID ids.ActivityID, f participantFi
 		if written >= f.budget {
 			break
 		}
-		if f.wants != nil && !f.wants(record) {
+		if (f.wants != nil && !f.wants(record)) || (f.private && record.entity == datasource.EntityLead) {
 			continue
 		}
 		admitted, err := mayFileUnder(f.decider, tx, record)

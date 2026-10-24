@@ -34,7 +34,7 @@ const leadFilingReason = "captured_activity_filed_under_lead"
 
 // leadFilingCandidatesSQL selects live connector captures that a live lead's
 // address is on and that are not yet filed under it. It applies
-// participantRecordsSQL's match and age rule. Callers append the cursor.
+// participantRecordsSQL's match and address-history rule. Callers append the cursor.
 //
 // A message the ladder suppressed is filed under nobody. Its no_record hold
 // says so, and its ladder trace says so once a later audience replaced the hold.
@@ -49,7 +49,8 @@ var leadFilingCandidatesSQL = `
 	   AND EXISTS (SELECT 1 FROM activity_participant ap
 	                 JOIN lead ld ON ` + storekit.LeadEmailMatchClause("ld", "ap.address") + `
 	                WHERE ap.activity_id = a.id AND ap.address IS NOT NULL
-	                  AND ` + storekit.LiveLeadClause("ld") + ` AND ld.created_at <= a.occurred_at
+	                  AND ` + storekit.LiveLeadClause("ld") + `
+	                  AND ` + storekit.LeadEmailHeldAtClause("ld", "ap.address", "a.occurred_at") + `
 	                  AND NOT EXISTS (SELECT 1 FROM activity_link l
 	                                   WHERE l.activity_id = a.id AND l.lead_id = ld.id))`
 
@@ -104,8 +105,10 @@ func (r LeadFilingRepair) file(ctx context.Context, tx pgx.Tx, activity ids.Acti
 	}
 	var capturedBy string
 	var filed int
-	if err := tx.QueryRow(ctx, `SELECT a.captured_by, (SELECT count(*) FROM activity_link l WHERE l.activity_id = a.id)
-		FROM activity a WHERE a.id = $1`, activity).Scan(&capturedBy, &filed); err != nil {
+	var onProject bool
+	if err := tx.QueryRow(ctx, `SELECT a.captured_by, (SELECT count(*) FROM activity_link l WHERE l.activity_id = a.id),
+		EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'project')
+		FROM activity a WHERE a.id = $1`, activity).Scan(&capturedBy, &filed, &onProject); err != nil {
 		return 0, fmt.Errorf("capture: reading an activity to file under a lead: %w", err)
 	}
 	name, ok := strings.CutPrefix(capturedBy, "connector:")
@@ -120,6 +123,11 @@ func (r LeadFilingRepair) file(ctx context.Context, tx pgx.Tx, activity ids.Acti
 	if err != nil {
 		return 0, fmt.Errorf("capture: reading the mailboxes an activity came from: %w", err)
 	}
+	// The project ladder retries on every replay, so an activity not yet on a
+	// project keeps the seat a capture keeps for it.
+	if !onProject {
+		filed += projectLinkReservation
+	}
 	evidence := map[string]any{"reason": leadFilingReason}
 	written := 0
 	for _, seat := range seats {
@@ -131,9 +139,14 @@ func (r LeadFilingRepair) file(ctx context.Context, tx pgx.Tx, activity ids.Acti
 			return 0, err
 		}
 		evidence["decided_as"] = seat
+		private, err := storedMessageIsPrivateTx(ctx, tx, activity, seat)
+		if err != nil {
+			return 0, err
+		}
 		n, err := fileUnderParticipants(tx, activity, participantFiling{
 			decider: acting,
 			budget:  maxDerivedMeetingLinks - filed - written,
+			private: private,
 			wants:   func(record participantRecord) bool { return record.entity == datasource.EntityLead },
 			write: func(record participantRecord) (bool, error) {
 				return r.Filer.FileOnLead(ctx, tx, activity, record.id, evidence)

@@ -92,7 +92,10 @@ func TestTheLeadFilingTaskFilesEarlierMailOnceAndReplaysSafely(t *testing.T) {
 	l.e.WsExec(t, `DELETE FROM capture_trace WHERE source_id = 'swept@docusign.net'`)
 	reopened := l.mail(t, owedMail{from: "dse@eu.docusign.net", to: l.seat, subject: "Completed"}, true)
 	l.e.WsExec(t, `UPDATE activity SET audience = 'workspace', audience_reason = 'manual' WHERE id = $1`, reopened)
-	before := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Long ago", at: l.at.AddDate(0, 0, -30)}, true)
+	history := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Long ago", at: l.at.AddDate(0, 0, -30)}, true)
+	roleMail := l.mail(t, owedMail{from: "info@prospect.example", to: l.seat, subject: "Enquiry", at: l.at.AddDate(0, 0, -30)}, true)
+	l.moveAddress(t, "info@prospect.example", "bob@prospect.example")
+	carol := l.lead(t, "info@prospect.example")
 	lead := l.lead(t, "lena@prospect.example")
 	infrastructure := l.lead(t, "dse@eu.docusign.net")
 	asLeadReadingSeat(t, l)
@@ -103,10 +106,10 @@ func TestTheLeadFilingTaskFilesEarlierMailOnceAndReplaysSafely(t *testing.T) {
 	if estimated, more := estimateLeadFiling(ctx, t, l, 1); estimated != 1 || !more {
 		t.Fatalf("the estimate under a cap of 1 = %d (more %t); want 1 and more to come", estimated, more)
 	}
-	if estimated, more := estimateLeadFiling(ctx, t, l, 1000); estimated != 2 || more {
-		t.Fatalf("the estimate = %d (more %t); want the earlier mail and meeting alone", estimated, more)
+	if estimated, more := estimateLeadFiling(ctx, t, l, 1000); estimated != 3 || more {
+		t.Fatalf("the estimate = %d (more %t); want the earlier mail, the meeting and the lead's history", estimated, more)
 	}
-	if changed := leadFilingPass(ctx, t, l, true); changed != 2 || l.filedUnderLead(t, earlier, lead) {
+	if changed := leadFilingPass(ctx, t, l, true); changed != 3 || l.filedUnderLead(t, earlier, lead) {
 		t.Fatalf("a rolled-back pass changed %d activities and left the link: %t", changed, l.filedUnderLead(t, earlier, lead))
 	}
 
@@ -114,7 +117,7 @@ func TestTheLeadFilingTaskFilesEarlierMailOnceAndReplaysSafely(t *testing.T) {
 	task.Steps[0].Limit, task.Steps[0].MinLimit = 1, 1
 	runMachineAddressTask(ctx, t, l.e, task)
 
-	for name, activity := range map[string]ids.UUID{"the earlier mail": earlier, "the earlier meeting": meeting} {
+	for name, activity := range map[string]ids.UUID{"the earlier mail": earlier, "the earlier meeting": meeting, "mail from before the lead": history} {
 		if !l.filedUnderLead(t, activity, lead) {
 			t.Errorf("the task did not file %s under the lead", name)
 		}
@@ -124,8 +127,8 @@ func TestTheLeadFilingTaskFilesEarlierMailOnceAndReplaysSafely(t *testing.T) {
 			t.Errorf("the task filed a suppressed message, %s, under a lead holding its sender's address", name)
 		}
 	}
-	if l.filedUnderLead(t, before, lead) {
-		t.Error("the task filed mail from before the lead existed")
+	if l.filedUnderLead(t, roleMail, carol) {
+		t.Error("the task filed mail to an address another lead held then under the lead holding it now")
 	}
 	if n := l.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE action = 'activity_relink' AND entity_id = $1
 		AND after->>'entity_id' = $2::text`, earlier, lead.UUID); n != 1 {
@@ -137,7 +140,7 @@ func TestTheLeadFilingTaskFilesEarlierMailOnceAndReplaysSafely(t *testing.T) {
 	if changed := leadFilingPass(ctx, t, l, false); changed != 0 {
 		t.Fatalf("a second pass changed %d activities, want none", changed)
 	}
-	if n := l.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE lead_id = $1`, lead); n != 2 {
-		t.Errorf("the lead holds %d links after the replay, want the mail and the meeting once each", n)
+	if n := l.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE lead_id = $1`, lead); n != 3 {
+		t.Errorf("the lead holds %d links after the replay, want each of its three activities once", n)
 	}
 }

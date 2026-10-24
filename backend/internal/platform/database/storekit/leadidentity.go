@@ -49,6 +49,28 @@ func LeadEmailMatchClause(alias, address string) string {
 	return alias + ".email = lower(btrim(" + address + "))"
 }
 
+// LeadEmailHeldAtClause asks that address was already the lead's at the moment
+// at. The lead's first change of email after that moment must start from its
+// current address. Mail from before the lead was created is its history only
+// while no other lead, live or retired, holds or ever held the address. That
+// keeps an imported lead's history, and fails closed on an address that moved.
+func LeadEmailHeldAtClause(alias, address, at string) string {
+	folded := "lower(btrim(" + address + "))"
+	return `(` + at + ` >= ` + alias + `.created_at OR NOT (
+		EXISTS (SELECT 1 FROM lead other_holder
+		         WHERE other_holder.id <> ` + alias + `.id AND other_holder.email = ` + folded + `)
+		OR EXISTS (SELECT 1 FROM audit_log given_up
+		         WHERE given_up.entity_type = 'lead' AND given_up.entity_id <> ` + alias + `.id
+		           AND given_up.before ? 'email' AND lower(given_up.before->>'email') = ` + folded + `)))
+	   AND NOT EXISTS (SELECT 1 FROM (
+		SELECT email_change.before->>'email' AS held FROM audit_log email_change
+		 WHERE email_change.entity_type = 'lead' AND email_change.entity_id = ` + alias + `.id
+		   AND email_change.before ? 'email' AND email_change.after ? 'email'
+		   AND email_change.occurred_at > ` + at + `
+		 ORDER BY email_change.occurred_at, email_change.id LIMIT 1) first_change
+		 WHERE lower(first_change.held) IS DISTINCT FROM ` + alias + `.email)`
+}
+
 // LiveLeadByEmail reports the live lead holding this address, if any.
 func LiveLeadByEmail(ctx context.Context, tx pgx.Tx, email string, exclude *LeadSourceKey) (ids.LeadID, bool, error) {
 	if email == "" {

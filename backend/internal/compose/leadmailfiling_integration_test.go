@@ -53,14 +53,15 @@ func (l *leadMailEnv) connectorCtx(t *testing.T, name string, readsLeads bool) c
 	}
 	actor.ID = "connector:" + name
 	actor.Permissions.Objects = maps.Clone(actor.Permissions.Objects)
+	actor.Permissions.Objects["project"] = principal.ObjectGrant{Read: true}
 	if readsLeads {
 		actor.Permissions.Objects["lead"] = principal.ObjectGrant{Read: true}
 	}
 	return principal.WithActor(ctx, actor)
 }
 
-// lead creates a live lead holding the address, already working the day
-// before any mail these tests capture.
+// lead creates a live lead holding the address, after the mail these tests
+// date at l.at, as an imported lead arrives after its history.
 func (l *leadMailEnv) lead(t *testing.T, address string) ids.LeadID {
 	t.Helper()
 	created, _, err := l.e.Contacts.CreateLead(l.e.Admin(), contacts.CreateLeadInput{
@@ -69,7 +70,6 @@ func (l *leadMailEnv) lead(t *testing.T, address string) ids.LeadID {
 	if err != nil {
 		t.Fatalf("creating the lead for %s: %v", address, err)
 	}
-	l.e.WsExec(t, `UPDATE lead SET created_at = $2 WHERE id = $1`, created.Id, l.at.AddDate(0, 0, -1))
 	return ids.From[ids.LeadKind](ids.UUID(created.Id))
 }
 
@@ -98,11 +98,20 @@ func (l *leadMailEnv) mail(t *testing.T, m owedMail, readsLeads bool) ids.UUID {
 // meeting captures one calendar event with the lead's address as an attendee.
 func (l *leadMailEnv) meeting(t *testing.T, attendee string) ids.UUID {
 	t.Helper()
+	return l.meetingWith(t, "Discovery call", attendee)
+}
+
+// meetingWith captures one calendar event the seat called, with these attendees.
+func (l *leadMailEnv) meetingWith(t *testing.T, subject string, attendees ...string) ids.UUID {
+	t.Helper()
 	event := meetingmap.Event{
-		ID: "ev-" + ids.NewV7().String(), Subject: "Discovery call",
+		ID: "ev-" + ids.NewV7().String(), Subject: subject,
 		StartsAt: l.at, EndsAt: l.at.Add(time.Hour),
 		Organizer: meetingmap.Actor{Email: l.seat},
-		Attendees: []meetingmap.Actor{{Email: l.seat}, {Email: attendee, Name: "Lena Prospect"}},
+		Attendees: []meetingmap.Actor{{Email: l.seat}},
+	}
+	for _, attendee := range attendees {
+		event.Attendees = append(event.Attendees, meetingmap.Actor{Email: attendee})
 	}
 	decode := func([]byte, string) (meetingmap.Event, error) { return event, nil }
 	sink := newCaptureSink(l.e.Pool, CaptureConfig{})
@@ -139,10 +148,6 @@ func TestCapturedMailAndMeetingsAreFiledUnderTheLeadOnThem(t *testing.T) {
 		t.Errorf("a meeting filed under its lead attendee is audience %q, want workspace: a filed meeting is not a link-less record", audience)
 	}
 
-	older := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Before", at: l.at.AddDate(0, 0, -30)}, true)
-	if l.filedUnderLead(t, older, lead) {
-		t.Error("mail from before the lead existed is filed under it, which starts its reply clock before anyone worked it")
-	}
 	unread := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "No grant"}, false)
 	if l.filedUnderLead(t, unread, lead) {
 		t.Error("a mailbox whose seat may not read leads filed mail under one")

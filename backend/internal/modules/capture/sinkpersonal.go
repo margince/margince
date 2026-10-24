@@ -45,15 +45,20 @@ import (
 // already held to the contacts on it, and refusing the record is not a reason to
 // lose the mail.
 func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, string, error) {
-	user := actorUserID(ctx)
-	if user == ids.Nil || rec.ThreadKey == "" {
+	return threadIsPrivateForTx(ctx, tx, actorUserID(ctx), rec.ThreadKey, rec.Counterparty.Email)
+}
+
+// threadIsPrivateForTx is threadIsPrivateTx for one seat, thread and sender,
+// so a message already stored is judged by the same rule as an arriving one.
+func threadIsPrivateForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, threadKey, sender string) (bool, string, error) {
+	if user == ids.Nil || threadKey == "" {
 		return false, "", nil
 	}
 	var status, kind string
 	var seen []string
 	if err := tx.QueryRow(ctx, `
 		SELECT status, COALESCE(kind, ''), seen_addresses FROM capture_thread_verdict
-		 WHERE thread_key = $1 AND user_id = $2`, rec.ThreadKey, user).Scan(&status, &kind, &seen); err != nil {
+		 WHERE thread_key = $1 AND user_id = $2`, threadKey, user).Scan(&status, &kind, &seen); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// No verdict yet. The thread may still turn out to be personal, and
 			// the sweep that runs after the classifier answers is what catches
@@ -75,7 +80,7 @@ func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedR
 	//
 	// A party the verdict never saw is not in the conversation it judged, and
 	// the ordinary ladder decides about them.
-	if !senderWasSeen(rec, seen) {
+	if !addressWasSeen(sender, seen) {
 		return false, "", nil
 	}
 	// held_by_owner is the seat's own hand: they marked the conversation
@@ -262,6 +267,49 @@ func (s *PendingStore) SettledPersonalThreads(ctx context.Context, limit int) ([
 	})
 	if err != nil {
 		return nil, fmt.Errorf("capture: listing private threads whose contacts still stand: %w", err)
+	}
+	return out, nil
+}
+
+// PrivateThreadLeadLink is one lead link capture derived for a message that a
+// personal verdict has since made private to the only seat that imported it.
+type PrivateThreadLeadLink struct {
+	ActivityID ids.ActivityID
+	LeadID     ids.UUID
+}
+
+// LeadLinksOrphanedByPrivacyTx answers the lead links on a thread's messages
+// that the seat's verdict now makes private, by the rule that refuses them at
+// capture (storedMessageIsPrivateTx). A message a colleague also imported
+// stays filed: their copy is not private to them.
+func LeadLinksOrphanedByPrivacyTx(ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID) ([]PrivateThreadLeadLink, error) {
+	if threadKey == "" || user == ids.Nil {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT l.activity_id, l.lead_id
+		  FROM activity a
+		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'lead'
+		 WHERE a.thread_key = $1 AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $2)
+		   AND NOT EXISTS (SELECT 1 FROM capture_import o WHERE o.activity_id = a.id AND o.user_id <> $2)
+		 ORDER BY l.activity_id, l.lead_id`, threadKey, user)
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the lead links on a private thread: %w", err)
+	}
+	links, err := pgx.CollectRows(rows, pgx.RowToStructByPos[PrivateThreadLeadLink])
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the lead links on a private thread: %w", err)
+	}
+	var out []PrivateThreadLeadLink
+	for _, link := range links {
+		private, err := storedMessageIsPrivateTx(ctx, tx, link.ActivityID, user)
+		if err != nil {
+			return nil, err
+		}
+		if private {
+			out = append(out, link)
+		}
 	}
 	return out, nil
 }
