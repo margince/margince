@@ -22,7 +22,8 @@ describe("a colleague on the threads with no mailbox", () => {
     nodes: [anchor],
     edges: [],
     routes: [],
-  } as ContactGraph;
+    groups_omitted: [],
+  };
 
   it("is named in a notice that later mail may be missing", async () => {
     renderTab(
