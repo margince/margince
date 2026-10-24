@@ -381,11 +381,31 @@ describe("the close date says how much it is worth believing", () => {
   it("never calls a won or lost deal overdue for a date behind it", () => {
     // A closed deal's date is when it closed.
     for (const status of ["won", "lost"] as const) {
-      const close = words({ expected_close_date: "2026-08-23", status });
+      const close = words({
+        expected_close_date: "2026-08-23",
+        closed_at: "2026-08-23T12:00:00Z",
+        status,
+      });
       expect(close.parts.join(" ")).not.toMatch(/overdue/);
       expect(close.daysLeft).toBeUndefined();
       expect(close.date).toMatch(/23/);
     }
+  });
+
+  it("reads a closed deal's day from closed_at, not from the forecast", () => {
+    const close = words({
+      expected_close_date: "2026-03-02",
+      closed_at: "2026-08-23T12:00:00Z",
+      status: "won",
+    });
+    expect(close.date).toMatch(/23/);
+    expect(close.date).not.toMatch(/\b2\b/);
+  });
+
+  it("names the day an imported win closed though it has no forecast date", () => {
+    const close = words({ closed_at: "2026-08-23T12:00:00Z", status: "won" });
+    expect(close.date).toMatch(/23/);
+    expect(close.daysLeft).toBeUndefined();
   });
 
   it("names no day when nobody has set a date", () => {

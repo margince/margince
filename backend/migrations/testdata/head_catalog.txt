@@ -30,7 +30,7 @@ public.activity.activity_owed_verdict_check CHECK (((owed_verdict IS NULL) OR (o
 public.activity.activity_owed_verdict_ruleset_shape CHECK (((owed_verdict_ruleset IS NULL) OR (owed_verdict IS NOT NULL)))
 public.activity.activity_owed_verdict_stamped CHECK (((owed_verdict IS NULL) = (owed_verdict_at IS NULL)))
 public.activity.activity_pkey PRIMARY KEY (id)
-public.activity.activity_project_last_activity CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin))) EXECUTE FUNCTION trg_activity_project_last_activity()
+public.activity.activity_project_last_activity CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status))) EXECUTE FUNCTION trg_activity_project_last_activity()
 public.activity.activity_raw_capture_id_fkey FOREIGN KEY (raw_capture_id) REFERENCES raw_capture(id) ON DELETE SET NULL
 public.activity.activity_refuse_restricted_mutation CREATE TRIGGER activity_refuse_restricted_mutation BEFORE DELETE OR UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()
 public.activity.activity_reply_verdict_check CHECK (((reply_verdict IS NULL) OR (reply_verdict = ANY (ARRAY['positive'::text, 'negative'::text, 'neutral'::text]))))
@@ -4594,6 +4594,7 @@ public.idx_company_created_keyset CREATE INDEX idx_company_created_keyset ON pub
 public.idx_company_domain_company CREATE INDEX idx_company_domain_company ON public.company_domain USING btree (company_id)
 public.idx_company_domain_disposition_company CREATE INDEX idx_company_domain_disposition_company ON public.company_domain_disposition USING btree (company_id)
 public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_disposition_due ON public.company_domain_disposition USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
+public.idx_company_domain_trgm CREATE INDEX idx_company_domain_trgm ON public.company_domain USING gin (f_fold_apostrophes(lower(domain)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_company_fact_lookup CREATE INDEX idx_company_fact_lookup ON public.company_fact USING btree (category, field, value_key)
 public.idx_company_geocoded CREATE INDEX idx_company_geocoded ON public.company USING btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok'::text) AND (archived_at IS NULL))
 public.idx_company_import_display_name CREATE INDEX idx_company_import_display_name ON public.company USING btree (f_fold_import_name(display_name)) WHERE ((archived_at IS NULL) AND (merged_into_id IS NULL))
@@ -4619,6 +4620,7 @@ public.idx_contact_created_keyset CREATE INDEX idx_contact_created_keyset ON pub
 public.idx_contact_email_base CREATE INDEX idx_contact_email_base ON public.contact_email USING btree (regexp_replace(lower(email), '^([^+@]+)\+[^@]*@'::text, '\1@'::text)) WHERE (archived_at IS NULL)
 public.idx_contact_email_contact CREATE INDEX idx_contact_email_contact ON public.contact_email USING btree (contact_id)
 public.idx_contact_email_correspondence CREATE INDEX idx_contact_email_correspondence ON public.contact_email USING btree (email) WHERE (from_correspondence AND (archived_at IS NULL))
+public.idx_contact_email_trgm CREATE INDEX idx_contact_email_trgm ON public.contact_email USING gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_contact_exact_digraph_name_key CREATE INDEX idx_contact_exact_digraph_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä'::text, 'ae'::text), 'ö'::text, 'oe'::text), 'ü'::text, 'ue'::text))), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_exact_name_key CREATE INDEX idx_contact_exact_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_from_lead CREATE INDEX idx_contact_from_lead ON public.contact USING btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)
@@ -4702,6 +4704,7 @@ public.idx_import_record_map_run CREATE INDEX idx_import_record_map_run ON publi
 public.idx_import_run_status CREATE INDEX idx_import_run_status ON public.import_run USING btree (status)
 public.idx_lead_candidate_company CREATE INDEX idx_lead_candidate_company ON public.lead USING btree (candidate_company_key) WHERE ((candidate_company_key IS NOT NULL) AND (archived_at IS NULL))
 public.idx_lead_disqualify_reason CREATE INDEX idx_lead_disqualify_reason ON public.lead USING btree (disqualify_reason_id) WHERE (disqualify_reason_id IS NOT NULL)
+public.idx_lead_email_trgm CREATE INDEX idx_lead_email_trgm ON public.lead USING gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_lead_from_contact CREATE INDEX idx_lead_from_contact ON public.lead USING btree (from_contact_id) WHERE (from_contact_id IS NOT NULL)
 public.idx_lead_linkedin CREATE INDEX idx_lead_linkedin ON public.lead USING btree (linkedin_url) WHERE (linkedin_url IS NOT NULL)
 public.idx_lead_manual_signal_lead CREATE INDEX idx_lead_manual_signal_lead ON public.lead_manual_signal USING btree (lead_id, set_at DESC)
@@ -5033,7 +5036,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
+       AND (a.kind IN ('email','message','meeting','call','note') AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
      WHERE l.company_id = cid
     UNION ALL
     -- Filed against one of its deals.
@@ -5043,7 +5046,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
+       AND (a.kind IN ('email','message','meeting','call','note') AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
      WHERE d.company_id = cid
     UNION ALL
     -- Filed against a contact it currently employs, sent while they worked there.
@@ -5053,7 +5056,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
+       AND (a.kind IN ('email','message','meeting','call','note') AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
      WHERE r.company_id = cid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
        AND coalesce(r.started_at::timestamp AT TIME ZONE 'UTC', r.first_observed_at, a.occurred_at) <= a.occurred_at
@@ -5065,7 +5068,7 @@ public.last_activity_of_contact(cid uuid) secdef=false cfg=- acl=-
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
-     AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
+     AND (a.kind IN ('email','message','meeting','call','note') AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
    WHERE l.contact_id = cid
 
 public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=- 
@@ -5074,7 +5077,7 @@ public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=-
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
-     AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
+     AND (a.kind IN ('email','message','meeting','call','note') AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
    WHERE l.deal_id = did
 
 public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=- 
@@ -5083,6 +5086,7 @@ public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=-
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
+     AND (a.kind IN ('email','message','meeting','call','note') AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
    WHERE l.project_id = pid
 
 public.last_activity_reach(contact_ids uuid[], deal_ids uuid[], company_ids uuid[]) secdef=false cfg=- acl=- 
@@ -5670,7 +5674,7 @@ BEGIN
   PERFORM 1 FROM project WHERE id = pid FOR UPDATE;
   v := last_activity_of_project(pid);
   PERFORM set_config('margince.last_activity_move', 'on', true);
-  UPDATE project SET last_activity_at = v WHERE id = pid;
+  UPDATE project SET last_activity_at = v WHERE id = pid AND last_activity_at IS DISTINCT FROM v;
   PERFORM set_config('margince.last_activity_move', 'off', true);
 END;
 

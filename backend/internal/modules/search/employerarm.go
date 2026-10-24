@@ -43,7 +43,7 @@ const employerArmCompanies = maxPerType
 // Every refusal is decided before the first argument is bound, because a bound
 // parameter no statement references fails the whole search.
 func employerArmSQL(ctx context.Context, query string, headPos, tailPos int, hasFragment bool,
-	identifierPos func() int, arg func(any) int,
+	identifierPos identifierBinder, arg func(any) int,
 ) (string, error) {
 	if !auth.ReadGranted(ctx, entityContact) || !auth.ReadGranted(ctx, entityCompany) {
 		return "", nil

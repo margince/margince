@@ -64,11 +64,28 @@ func NotCalledOffSQL(alias string) string {
 	return "(" + alias + ".kind <> '" + kindMeeting + "' OR " + MeetingCountsSQL(alias) + ")"
 }
 
+// lastActivityKinds are the kinds that move a record's last-activity clock. A
+// task is intent, not contact, whether a member or an agent filed it. A note
+// moves the clock but never scores, so this is not interactionKinds.
+var lastActivityKinds = []string{kindEmail, kindMessage, kindMeeting, kindCall, "note"}
+
+// LastActivityKinds lists lastActivityKinds for the gate that holds the
+// frontend's copy of the set to this one.
+func LastActivityKinds() []string {
+	return slices.Clone(lastActivityKinds)
+}
+
+// LastActivityKindSQL admits an activity row whose kind moves the clock.
+func LastActivityKindSQL(alias string) string {
+	return alias + ".kind IN (" + sqlList(lastActivityKinds) + ")"
+}
+
 // LastActivityCountsSQL admits an activity row to a record's last-activity
-// clock: not a called-off meeting, and already happened at now. The
-// last_activity_of_* functions carry its text rendered with now().
+// clock: a kind that moves it, not a called-off meeting, and already happened
+// at now. The last_activity_of_* functions carry its text rendered with now().
 func LastActivityCountsSQL(alias, now string) string {
-	return "(" + NotCalledOffSQL(alias) + " AND " + alias + ".occurred_at <= " + now + ")"
+	return "(" + LastActivityKindSQL(alias) + " AND " + NotCalledOffSQL(alias) + " AND " +
+		alias + ".occurred_at <= " + now + ")"
 }
 
 // InteractionCountsSQL is the whole test for an activity row that counts as an

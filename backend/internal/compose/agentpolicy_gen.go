@@ -793,6 +793,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/deals/follow-up-drafts":                                       {Op: "draftDealFollowUps", Access: "tool", Tool: "draft_follow_ups_for", RecordType: "deal", Tier: "auto_execute", Scope: "draft", ServedBy: "registry"},
 	"POST /v1/deals/{id}/advance":                                           {Op: "advanceDeal", Access: "tool", Tool: "advance_deal", RecordType: "deal", Tier: "dynamic", Scope: "write"},
 	"POST /v1/deals/{id}/applied-changes/{changeId}/accept":                 {Op: "acceptAppliedDealChange", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/deals/{id}/close-day":                                         {Op: "correctDealCloseDay", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deals/{id}/legal-reviews":                                     {Op: "requestLegalReview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deals/{id}/move/dismiss":                                      {Op: "dismissDealMove", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deals/{id}/offers":                                            {Op: "createOffer", Access: "tool", Tool: "create_record", RecordType: "offer", Tier: "auto_execute", Scope: "write"},

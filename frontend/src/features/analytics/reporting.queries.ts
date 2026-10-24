@@ -20,6 +20,18 @@ export function useReportingPipelines() {
   });
 }
 
+// The metric catalog this seat may read, under one query key so every surface
+// that reads it shares one answer.
+export function useReportingCatalog(enabled = true) {
+  return useQuery({
+    queryKey: ["reporting-catalog"],
+    enabled,
+    queryFn: async () => {
+      return unwrap(await api.GET("/analytics/metrics"));
+    },
+  });
+}
+
 const EVALUATED_FIGURES = [
   "reporting-evaluation",
   "reporting-live",

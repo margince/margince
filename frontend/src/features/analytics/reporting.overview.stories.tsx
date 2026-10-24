@@ -7,6 +7,9 @@ import {
 import { ReportingOverview } from "./reporting.overview";
 import { sdrEvaluation } from "./reporting.scenarios";
 import {
+  reportingLeadsEvaluation,
+  reportingPartnersEvaluation,
+  reportingSectionRoutes,
   reportingStoryEvaluation,
   reportingStoryFramework,
   reportingStoryRoutes,
@@ -238,4 +241,33 @@ export const CustomRangeThroughFutureMonthEndDark: Story = {
 export const InvalidDateRangeDark: Story = {
   ...InvalidDateRange,
   globals: { theme: "dark" },
+};
+
+function renderView(view: "leads" | "partners") {
+  globalThis.location.hash = `#/analytics/performance?view=${view}`;
+  installFetchStub(
+    reportingSectionRoutes(
+      view === "leads" ? reportingLeadsEvaluation : reportingPartnersEvaluation,
+    ),
+  );
+  return (
+    <StoryProviders>
+      <ReportingOverview scope={reportingStoryScope} />
+    </StoryProviders>
+  );
+}
+
+// Leads by origin and by status moved to, the qualified share against its
+// target, and the first response time.
+export const Leads: Story = { render: () => renderView("leads") };
+// Partner money by partner and kind, one partner the reader cannot open.
+export const Partners: Story = { render: () => renderView("partners") };
+export const PartnersDark: Story = {
+  ...Partners,
+  globals: { theme: "dark" },
+};
+export const LeadsPhone: Story = {
+  ...Leads,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

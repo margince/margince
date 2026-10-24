@@ -2,6 +2,7 @@ import type { components } from "../../api/schema";
 import {
   formatDateAbbrev,
   formatDateTime,
+  formatHours,
   formatMoney,
   formatMoneyCompact,
   formatNumber,
@@ -45,6 +46,7 @@ export function reportingAmount(
   if (value == null) return "—";
   if (reportingMoneyUnit(unit, currency))
     return currency ? formatMoney(value, currency, locale) : "—";
+  if (unit === "hours") return formatHours(value, locale);
   return `${formatNumber(value, locale)}${unit === "percent" ? "%" : ""}`;
 }
 
@@ -53,6 +55,22 @@ export function metricLabel(metric: ReportingMetricID, t: Translator): string {
 }
 export function blockLabel(block: ReportingBlockKind, t: Translator): string {
   return t(`reporting.${block}`);
+}
+
+// What a metric's figures count, as the column or caption that names them.
+export function unitLabel(unit: string, t: Translator): string {
+  switch (unit) {
+    case "count":
+      return t("reporting.countUnit");
+    case "days":
+      return t("reporting.daysUnit");
+    case "hours":
+      return t("reporting.hoursUnit");
+    case "percent":
+      return "%";
+    default:
+      return t("reporting.amountUnit");
+  }
 }
 
 export function reportingMoneyUnit(unit: string, currency: string): boolean {

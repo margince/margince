@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -176,16 +177,26 @@ func TestStalledDealReadsAtRisk(t *testing.T) {
 	deal := ids.UUID(d.Id)
 	idleSince := healthClock.AddDate(0, 0, -90)
 	if _, err := owner.Exec(context.Background(),
-		`UPDATE deal SET last_activity_at = $2 WHERE id = $1`, deal, idleSince); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := owner.Exec(context.Background(),
 		`UPDATE deal_stage_history SET changed_at = $2 WHERE deal_id = $1`, deal, idleSince); err != nil {
 		t.Fatal(err)
 	}
-	overdue := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, source, captured_by)
-		VALUES ($1, 'task', 'never followed up', '2026-03-06T12:00:00Z', '2026-03-20T12:00:00Z', 'manual', 'human:x')`)
-	LinkActivity(t, owner, overdue, "deal", deal)
+	// The last word on the deal is a call 90 days back. The overdue task filed
+	// after it is no contact, so the deal stays idle since the call.
+	onDeal := []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}}
+	callSubject, taskSubject := "last call", "never followed up"
+	taskAt, dueAt := time.Date(2026, 3, 6, 12, 0, 0, 0, time.UTC), time.Date(2026, 3, 20, 12, 0, 0, 0, time.UTC)
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "call", Subject: &callSubject, OccurredAt: &idleSince, Source: "manual", Links: onDeal,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	task, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &taskSubject, OccurredAt: &taskAt, DueAt: &dueAt, Source: "manual", Links: onDeal,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	overdue := ids.UUID(task.Id)
 
 	got, err := e.Deals.DealHealth(ctx, ids.From[ids.DealKind](deal), healthClock)
 	if err != nil {

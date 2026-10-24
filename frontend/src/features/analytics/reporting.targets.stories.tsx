@@ -37,6 +37,19 @@ export const Empty: Story = {
   },
 };
 
+// A seat that reads targets but cannot set them, and holds none yet: who sets
+// them, and no verb to add one.
+export const ReaderEmpty: Story = {
+  render: () => {
+    installFetchStub(reportingStoryRoutes(undefined, true));
+    return (
+      <StoryProviders>
+        <ReportingTargets />
+      </StoryProviders>
+    );
+  },
+};
+
 export const RetiredAllocation: Story = {
   play: async () => {
     await userEvent.click(

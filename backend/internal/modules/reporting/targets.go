@@ -5,6 +5,7 @@ package reporting
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -37,7 +38,12 @@ func scanTarget(row pgx.Row) (crmcontracts.ReportingTarget, error) {
 
 func (s *Service) target(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (crmcontracts.ReportingTarget, error) {
 	var b bindings
-	query := "SELECT " + targetColumns + targetFrom + " WHERE t.id=" + b.add(id)
+	// One target by id answers to the same visibility as the list.
+	visible, err := s.targetClause(ctx, tx, &b)
+	if err != nil {
+		return crmcontracts.ReportingTarget{}, err
+	}
+	query := "SELECT " + targetColumns + targetFrom + " WHERE " + visible + " AND t.id=" + b.add(id)
 	if lock {
 		query += " FOR UPDATE OF t"
 	}
@@ -70,18 +76,54 @@ func (s *Service) GetTarget(ctx context.Context, id ids.UUID) (crmcontracts.Repo
 }
 
 func (s *Service) targetClause(ctx context.Context, tx pgx.Tx, b *bindings) (string, error) {
+	reach, err := s.targetReach(ctx, tx)
+	return reach.clause(b), err
+}
+
+// targetReach is which targets a seat reads, resolved once so a read that
+// matches many targets asks for the seat's members once.
+type targetReach struct {
+	every   bool
+	members []ids.UUID
+	teams   []ids.UUID
+}
+
+func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return "", apperrors.ErrPermissionDenied
+		return targetReach{}, apperrors.ErrPermissionDenied
 	}
 	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
-		return "TRUE", nil
+		return targetReach{every: true}, nil
+	}
+	// Only a seat that reaches every team and owner may set the company's
+	// target, so it reads every target it may set.
+	every, err := s.writeReaches(ctx, tx, crmcontracts.ReportingScope{Kind: reportingWorkspace})
+	if err != nil || every {
+		return targetReach{every: every}, err
 	}
 	members, err := s.authority.Members(ctx, tx)
-	if err != nil {
-		return "", err
+	return targetReach{members: members, teams: actor.TeamIDs}, err
+}
+
+func (r targetReach) clause(b *bindings) string {
+	if r.every {
+		return "TRUE"
 	}
-	return "((t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(members) + ")) OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(actor.TeamIDs) + ")))", nil
+	return "(t.scope_kind='workspace' OR (t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(r.members) + ")) OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.teams) + ")))"
+}
+
+// writeReaches reports whether the seat may set a target on scope, under the
+// reach CreateTarget checks.
+func (s *Service) writeReaches(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) (bool, error) {
+	if !auth.Allows(ctx, "sales_target", principal.ActionCreate) && !auth.Allows(ctx, "sales_target", principal.ActionUpdate) {
+		return false, nil
+	}
+	_, err := s.authority.Scope(ctx, tx, scope, true)
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 // TargetFilter selects current target definitions before pagination.
@@ -136,55 +178,61 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 	return out, err
 }
 
-func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingTargetInput) (crmcontracts.ReportingWindow, string, error) {
-	empty := crmcontracts.ReportingWindow{}
+// checkedTarget is what validateTarget derived from a valid target input.
+type checkedTarget struct {
+	interval crmcontracts.ReportingWindow
+	unit     string
+	metric   crmcontracts.ReportingMetricDefinition
+}
+
+func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingTargetInput) (checkedTarget, error) {
 	if in.Value < 0 || in.Value > values.MaxExactInteger {
-		return empty, "", refuse("value", "out_of_range", "enter a non-negative target")
+		return checkedTarget{}, refuse("value", "out_of_range", "enter a non-negative target")
 	}
 	if !values.HasVisibleText(in.Reason) {
-		return empty, "", refuse("reason", "required", "enter a revision reason")
+		return checkedTarget{}, refuse("reason", "required", "enter a revision reason")
 	}
 	if utf8.RuneCountInString(in.Reason) > 1000 {
-		return empty, "", refuse("reason", "too_long", "a revision reason holds at most 1000 characters")
+		return checkedTarget{}, refuse("reason", "too_long", "a revision reason holds at most 1000 characters")
 	}
 	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
 	if err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	index := slices.IndexFunc(catalog.Metrics, func(m crmcontracts.ReportingMetricDefinition) bool { return m.Id == in.Metric && m.SupportsTarget })
 	if index < 0 {
-		return empty, "", refuse("metric", "unsupported", "this metric does not support targets")
+		return checkedTarget{}, refuse("metric", "unsupported", "this metric does not support targets")
 	}
 	scope, err := s.authority.Scope(ctx, tx, in.Scope, true)
 	if err != nil {
-		return empty, "", refusedField("scope", err)
+		return checkedTarget{}, refusedField("scope", err)
 	}
 	in.Scope = scope
 	if err := s.authority.Pipeline(ctx, tx, (*ids.UUID)(in.PipelineId)); err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	calendar, err := s.calendar(ctx, tx)
 	if err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	zone, err := location(calendar)
 	if err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	day := in.PeriodStart.Time
 	start := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, zone)
 	interval, err := TargetWindow(crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 1)}, string(in.PeriodKind), calendar)
 	if err != nil {
-		return empty, "", refusedField("period_kind", err)
+		return checkedTarget{}, refusedField("period_kind", err)
 	}
 	if !interval.StartAt.Equal(start) {
-		return empty, "", refuse("period_start", "not_period_start", "the target must start on the first day of its month or fiscal quarter")
+		return checkedTarget{}, refuse("period_start", "not_period_start", "the target must start on the first day of its month or fiscal quarter")
 	}
 	unit := catalog.Metrics[index].Unit
 	if unit == "money" {
 		unit = calendar.Currency
 	}
-	return interval, unit, nil
+	return checkedTarget{interval: interval, unit: unit, metric: catalog.Metrics[index]}, nil
 }
 
 // CreateTarget records an explicit allocation without inferring child targets.
@@ -194,10 +242,14 @@ func (s *Service) CreateTarget(ctx context.Context, in crmcontracts.ReportingTar
 	}
 	out := crmcontracts.ReportingTarget{Id: openapi_types.UUID(ids.NewV7()), Definition: in, Revision: 1, Version: 1, CreatedAt: s.now()}
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		interval, unit, err := s.validateTarget(ctx, tx, &in)
+		checked, err := s.validateTarget(ctx, tx, &in)
 		if err != nil {
 			return err
 		}
+		if err := refuseUnfilteredPipeline(checked.metric, in); err != nil {
+			return err
+		}
+		interval, unit := checked.interval, checked.unit
 		out.Definition = in
 		out.Interval = interval
 		out.Unit = unit
@@ -213,6 +265,15 @@ func (s *Service) CreateTarget(ctx context.Context, in crmcontracts.ReportingTar
 		return recordChange(ctx, tx, "sales_target", ids.UUID(out.Id), "create", nil, out)
 	})
 	return out, storedError(err)
+}
+
+// refuseUnfilteredPipeline refuses a new target on a pipeline its figure ignores.
+// Only a create asks, since a stored target can never change its pipeline.
+func refuseUnfilteredPipeline(metric crmcontracts.ReportingMetricDefinition, in crmcontracts.ReportingTargetInput) error {
+	if in.PipelineId != nil && (metric.AllowedFilters == nil || !slices.Contains(*metric.AllowedFilters, "pipeline")) {
+		return refuse("pipeline_id", "not_filterable", "this metric counts every pipeline; save the target without one")
+	}
+	return nil
 }
 
 func (s *Service) saveTargetRevision(ctx context.Context, tx pgx.Tx, target crmcontracts.ReportingTarget) error {
@@ -271,10 +332,11 @@ func (s *Service) UpdateTarget(ctx context.Context, id ids.UUID, version int64, 
 		if before.Version != version {
 			return apperrors.ErrVersionSkew
 		}
-		interval, unit, err := s.validateTarget(ctx, tx, &in)
+		checked, err := s.validateTarget(ctx, tx, &in)
 		if err != nil {
 			return err
 		}
+		interval, unit := checked.interval, checked.unit
 		if err := refuseIdentityChange(before, in, interval, unit); err != nil {
 			return err
 		}

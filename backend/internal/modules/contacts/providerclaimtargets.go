@@ -114,5 +114,8 @@ func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.U
 	if err := auditCapturedEmployment(ctx, tx, edgeID, subject, companyID, relationshipOriginProvider); err != nil {
 		return ids.UUID{}, false, err
 	}
+	if err := fileEmployerTwins(ctx, tx, subject, connectorCapturedBy(providerName)); err != nil {
+		return ids.UUID{}, false, err
+	}
 	return edgeID, true, nil
 }

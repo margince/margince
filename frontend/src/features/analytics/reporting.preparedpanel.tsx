@@ -21,7 +21,10 @@ import {
   type PreparedReport,
   preparedSelection,
 } from "./reporting.prepared";
-import { useReportingPipelines } from "./reporting.queries";
+import {
+  useReportingCatalog,
+  useReportingPipelines,
+} from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
 
 type ReportingSelection = components["schemas"]["ReportingSelection"];
@@ -33,10 +36,7 @@ export function PreparedReports({
   ownLens,
 }: Readonly<{ scope: ReportingSelection["scope"]; ownLens: boolean }>) {
   const t = useT();
-  const catalog = useQuery({
-    queryKey: ["reporting-catalog"],
-    queryFn: async () => unwrap(await api.GET("/analytics/metrics")),
-  });
+  const catalog = useReportingCatalog();
   const pipelines = useReportingPipelines();
   const [open, setOpen] = useState<string | null>(null);
 

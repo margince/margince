@@ -119,12 +119,15 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	return c, nil
 }
 
+// NonImportedLeadSQL admits a lead under alias l that no import wrote. Response
+// timing reads only those, here and in the reporting catalog.
+const NonImportedLeadSQL = "NOT starts_with(COALESCE(l.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
+
 // Both the weekly counts and the funnel scorecard use the arrival cohort and
 // the same closing instant. A missing breach stamp does not prove an SLA target.
 const (
-	nonImportedLeadSQL        = "NOT starts_with(COALESCE(l.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
-	responseRecordedInWeekSQL = `l.first_response_at < $%[2]d AND ` + nonImportedLeadSQL
-	breachRecordedInWeekSQL   = `l.sla_breached_at < $%[2]d AND ` + nonImportedLeadSQL
+	responseRecordedInWeekSQL = `l.first_response_at < $%[2]d AND ` + NonImportedLeadSQL
+	breachRecordedInWeekSQL   = `l.sla_breached_at < $%[2]d AND ` + NonImportedLeadSQL
 )
 
 // countWeekLeads counts how the week's inbound leads were answered.
@@ -154,7 +157,7 @@ func countWeekLeads(
 	scope = orUnbounded(scope)
 	// One window expression, three counts over it.
 	const arrived = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d AND ` + nonImportedLeadSQL
+		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d AND ` + NonImportedLeadSQL
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
 		  (SELECT count(*) FROM lead l

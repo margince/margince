@@ -303,7 +303,7 @@ func withinClause(within []ids.UUID, arg func(any) int) string {
 // without contact.read gets no contact hits — search must not out-see the
 // entity lists), then the row scope.
 func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool,
-	identifierPos func() int, arg func(any) int,
+	identifierPos identifierBinder, arg func(any) int,
 ) ([]string, error) {
 	var branches []string
 	for _, branch := range searchBranches {

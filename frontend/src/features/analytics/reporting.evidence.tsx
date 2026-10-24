@@ -13,10 +13,11 @@ import { Popover } from "../../design-system/popover";
 import { QueryGate } from "../../design-system/querystates";
 import { Stack } from "../../design-system/stack";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isEntityKind } from "../../lib/entity";
-import { isVersionSkewOf, throwProblem, unwrap } from "../../lib/problem";
+import { isVersionSkewOf, throwProblem } from "../../lib/problem";
+import { breakdownLabel } from "./reporting.grouplabel";
 import {
   metricLabel,
   type ReportingEvaluation,
@@ -24,10 +25,14 @@ import {
   reportingAmount,
   reportingPeriodLabel,
   reportingQuery,
+  unitLabel,
 } from "./reporting.model";
 import { movementLabel } from "./reporting.movement";
 import { useReportingPages } from "./reporting.pagination";
-import { reloadReportingFigures } from "./reporting.queries";
+import {
+  reloadReportingFigures,
+  useReportingCatalog,
+} from "./reporting.queries";
 
 const metricDateHeading: Partial<
   Record<ReportingEvidenceRef["metric"], MessageKey>
@@ -35,7 +40,28 @@ const metricDateHeading: Partial<
   bookings_won: "reporting.closedOn",
   meetings_held: "reporting.meetingOn",
   accepted_opportunities: "reporting.acceptedOn",
+  leads_created: "reporting.createdOn",
+  leads_promoted: "reporting.createdOn",
+  lead_status_moves: "reporting.movedOn",
+  lead_first_response: "reporting.arrivedOn",
+  partner_pipeline: "reporting.createdOn",
+  partner_won: "reporting.closedOn",
+  partner_commission: "reporting.accruedOn",
 };
+
+// A record's figure is a deal's value unless the metric counts or times it, or
+// the money is a commission rather than the deal.
+function valueHeading(
+  reference: ReportingEvidenceRef,
+  unit: string | undefined,
+  t: Translator,
+): string {
+  if (reference.metric === "partner_commission")
+    return t("reporting.commissionAmount");
+  return unit === "count" || unit === "days" || unit === "hours"
+    ? unitLabel(unit, t)
+    : t("reporting.dealValue");
+}
 
 export function ReportingEvidenceDrawer({
   evaluation,
@@ -78,12 +104,7 @@ export function ReportingEvidenceDrawer({
       return result.data;
     },
   });
-  const catalog = useQuery({
-    queryKey: ["reporting-catalog"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/metrics"));
-    },
-  });
+  const catalog = useReportingCatalog();
   const definition = catalog.data?.metrics.find(
     (metric) => metric.id === reference.metric,
   );
@@ -123,7 +144,7 @@ export function ReportingEvidenceDrawer({
         <p className="t-caption">
           {evaluation.context.scope.label}
           {point?.label
-            ? ` · ${reference.context_id === "movement_delta" ? movementLabel(point.key, point.label, t) : point.label}`
+            ? ` · ${reference.context_id === "movement_delta" ? movementLabel(point.key, point.label, t) : breakdownLabel(point.key, point.label, t)}`
             : ""}
         </p>
         <p className="t-caption">
@@ -243,13 +264,7 @@ export function ReportingEvidenceDrawer({
                       },
                       {
                         key: "amount",
-                        header: t(
-                          metric?.unit === "days"
-                            ? "reporting.daysUnit"
-                            : metric?.unit === "count"
-                              ? "reporting.countUnit"
-                              : "reporting.dealValue",
-                        ),
+                        header: valueHeading(reference, metric?.unit, t),
                         render: (row) =>
                           reportingAmount(
                             row.value,

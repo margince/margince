@@ -135,3 +135,18 @@ func TestTookPlaceAndAheadSplitByTheClock(t *testing.T) {
 		t.Errorf("ahead = %q, want an untracked or booked meeting still to come", ahead)
 	}
 }
+
+func TestOnlyContactKindsMoveTheLastActivityClock(t *testing.T) {
+	t.Parallel()
+	rule := LastActivityCountsSQL("a", "now()")
+	const want = "a.kind IN ('email','message','meeting','call','note')"
+	if !strings.Contains(rule, want) {
+		t.Fatalf("LastActivityCountsSQL = %q, want it to carry %q", rule, want)
+	}
+	if strings.Contains(rule, "'task'") {
+		t.Fatalf("LastActivityCountsSQL = %q names a task, so filing one moves the clock", rule)
+	}
+	if got := LastActivityKinds(); strings.Join(got, ",") != "email,message,meeting,call,note" {
+		t.Fatalf("LastActivityKinds() = %v", got)
+	}
+}

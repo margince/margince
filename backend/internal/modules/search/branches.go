@@ -95,35 +95,47 @@ func snippetIsEvidence(entity string) bool {
 const activityRankSample = 2000
 
 // ownMatch is the predicate that finds a record by its own text: the name index,
-// or an exact identifier the record carries. identifierPos binds the query the
-// first time an identifier arm asks for it.
-func (b searchBranch) ownMatch(alias, tsquery string, identifierPos func() int) string {
+// or an identifier (whole or a fragment) the record carries. identifierPos
+// binds the query the first time an identifier arm asks for it.
+func (b searchBranch) ownMatch(alias, tsquery string, identifierPos identifierBinder) string {
 	if b.identifier.Table == "" {
 		return fmt.Sprintf("%s.search_tsv @@ %s", alias, tsquery)
 	}
 	return fmt.Sprintf("(%s.search_tsv @@ %s OR %s)",
-		alias, tsquery, b.identifier.MatchSQL(identifierPos(), alias+".id"))
+		alias, tsquery, b.identifier.MatchSQL(identifierPos(b.identifier == storekit.CompanyDomains), alias+".id"))
 }
 
-// ownScore lifts an identifier hit into the whole-word tier, so a pasted address
-// ranks its contact above every name that merely starts like it.
-func (b searchBranch) ownScore(alias, score string, identifierPos func() int) string {
+// ownScore lifts a whole-identifier hit into the whole-word tier, so a pasted
+// address ranks its contact above every name that merely starts like it. A
+// fragment hit stays unlifted.
+func (b searchBranch) ownScore(alias, score string, identifierPos identifierBinder) string {
 	if b.identifier.Table == "" {
 		return score
 	}
-	return fmt.Sprintf("(%s + (%s)::int)", score, b.identifier.MatchSQL(identifierPos(), alias+".id"))
+	return fmt.Sprintf("(%s + (%s)::int)", score, b.identifier.ExactSQL(identifierPos(b.identifier == storekit.CompanyDomains), alias+".id"))
 }
 
-// bindIdentifier binds the whole query for the identifier arms on first use. A
-// bound parameter no statement references fails the whole search, and every
-// identifier branch may be denied.
-func bindIdentifier(query string, arg func(any) int) func() int {
-	pos := 0
-	return func() int {
-		if pos == 0 {
-			pos = arg(query)
+// identifierBinder yields the bind position of the query the identifier arms
+// match on. A company's identifier is its domain, so it asks for the part after
+// the "@" (storekit.DomainTerm), as the company list does.
+type identifierBinder func(domain bool) int
+
+// bindIdentifier binds the query for the identifier arms on first use, once as
+// typed and once as a domain. A bound parameter no statement references fails
+// the whole search, and every identifier branch may be denied.
+func bindIdentifier(query string, arg func(any) int) identifierBinder {
+	var whole, domain int
+	return func(asDomain bool) int {
+		if asDomain {
+			if domain == 0 {
+				domain = arg(storekit.DomainTerm(query))
+			}
+			return domain
 		}
-		return pos
+		if whole == 0 {
+			whole = arg(query)
+		}
+		return whole
 	}
 }
 
@@ -230,7 +242,7 @@ var searchBranches = []searchBranch{
 	// A lead with no full name is already titled by that company.
 	{
 		entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)",
-		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END", snippetIsContext: true,
+		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END", snippetIsContext: true, identifier: storekit.LeadEmails,
 	},
 	// A project's name alone does not say which account's work it is, and two
 	// accounts can run a "Phase 2". The excerpt is the key and the company,

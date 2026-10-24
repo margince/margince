@@ -237,6 +237,17 @@ export function formatNumber(value: number, locale: Locale): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale]).format(value);
 }
 
+// A measured span in hours, to one decimal and in the reader's unit word: a
+// median first response of 3.5 hours reads "3.5 hr", "3,5 Std." or "3,5 giờ".
+export function formatHours(hours: number, locale: Locale): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "unit",
+    unit: "hour",
+    unitDisplay: "short",
+    maximumFractionDigits: 1,
+  }).format(hours);
+}
+
 /**
  * A share of a whole as a whole-number percentage: "42%", or "42 %" for a
  * German reader, whose typography puts a space before the sign.

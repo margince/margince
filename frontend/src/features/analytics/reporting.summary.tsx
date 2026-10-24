@@ -35,13 +35,20 @@ export function TargetProgress({
 }
 
 // Results over the period first, then where this quarter is heading, then
-// what is open now.
+// what is open now. Each view shows the ones it read.
 const HEADLINE_METRICS = [
   "bookings_won",
   "forecast_landing",
   "open_pipeline",
   "meetings_held",
   "accepted_opportunities",
+  "leads_created",
+  "leads_promoted",
+  "lead_first_response",
+  "partner_pipeline",
+  "partner_won",
+  "partner_commission",
+  "partner_activity",
 ] as const;
 
 export function ResultsSummary({
@@ -153,6 +160,10 @@ function OutcomePeriod({
         {metric.id === "bookings_won" && metric.coverage.status === "no_data"
           ? `${t("reporting.noSalesWon")} · `
           : ""}
+        {/* Out of nothing says no more than the status beside it. */}
+        {!metric.denominator
+          ? ""
+          : `${t("reporting.outOf", { total: formatNumber(metric.denominator, locale) })} · `}
         {headlineBasis(evaluation, metric, { t, plural, locale })}
       </span>
       {metric.coverage.status !== "ok" &&
@@ -186,6 +197,12 @@ function headlineBasis(
   }
   if (metric.id === "forecast_landing") {
     return t("reporting.forecastLandingBasis");
+  }
+  // A figure read as things stand names the moment, not a period.
+  if (metric.evidence.context_id === "state") {
+    return t("reporting.openPipelineAsOf", {
+      at: formatDateAbbrev(context.state_at, locale, context.timezone),
+    });
   }
   return reportingPeriodLabel(context.interval, context.timezone, locale);
 }
