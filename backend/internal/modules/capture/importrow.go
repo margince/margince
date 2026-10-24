@@ -252,7 +252,8 @@ func seatDeliveredTx(
 // rewrote the identity, a mailbox echoing its own send.
 //
 // Otherwise only on evidence that the two mailboxes hold ONE message rather than
-// two that share a Message-ID: the same subject, body and files.
+// two that share a Message-ID: the same subject, body and files. Masked text is
+// no such evidence, so masked mail asks storedRowNamesSeatTx instead.
 //
 // The address test below cannot answer that on its own. It reads the addresses
 // off the record being captured, and on a replay that record is whatever this
@@ -296,6 +297,13 @@ func replayClaimIsProvenTx(
 	held, err := SeatHoldsActivityTx(ctx, tx, id)
 	if err != nil || held {
 		return held, err
+	}
+	masked, err := eitherSideMaskedTx(ctx, tx, id, fields)
+	if err != nil {
+		return false, err
+	}
+	if masked {
+		return storedRowNamesSeatTx(ctx, tx, id)
 	}
 	var same bool
 	if err := tx.QueryRow(ctx, `

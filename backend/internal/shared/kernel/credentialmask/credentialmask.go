@@ -20,7 +20,7 @@ const (
 	// Text is text as it is stored, where a line break is a real one.
 	Text Lane = iota
 	// JSON is text inside an encoded JSON document. A line break there is the
-	// escape \n, so the rules that read line structure do not run. No rule
+	// escape \n, so the rules that read line structure do not run. No JSON rule
 	// matches across a quote or a backslash, so a replacement keeps the framing.
 	JSON
 )
@@ -42,7 +42,7 @@ func MaskText(s string) string {
 func Replace(text []byte, lane Lane, mark func(kind string) string) ([]byte, []string) {
 	var found []string
 	for _, r := range rules {
-		if r.textOnly && lane != Text {
+		if !r.runsIn(lane) {
 			continue
 		}
 		text = r.re.ReplaceAllFunc(text, func(match []byte) []byte {
@@ -52,7 +52,7 @@ func Replace(text []byte, lane Lane, mark func(kind string) string) ([]byte, []s
 				value = groups[2]
 			}
 			marker := []byte(mark(r.kind))
-			if bytes.Equal(value, marker) {
+			if bytes.Equal(value, marker) || (r.accept != nil && !r.accept(value)) {
 				return match
 			}
 			found = append(found, r.kind)
@@ -70,6 +70,15 @@ func Replace(text []byte, lane Lane, mark func(kind string) string) ([]byte, []s
 	return text, found
 }
 
+// laneScope is the lane a rule runs in.
+type laneScope int
+
+const (
+	bothLanes laneScope = iota
+	textOnly
+	jsonOnly
+)
+
 type rule struct {
 	kind string
 	re   *regexp.Regexp
@@ -78,23 +87,45 @@ type rule struct {
 	// keepSuffix keeps the last group. RE2 has no lookahead, so a rule that
 	// needs a trailing anchor consumes it and puts it back.
 	keepSuffix bool
-	// textOnly marks a rule that reads real line breaks (see JSON).
-	textOnly bool
+	lane       laneScope
+	// accept, when set, must hold for the value or the match stays.
+	accept func(value []byte) bool
 }
 
-// The labels a credential value follows, in both lanes. pin and token are
-// common JSON keys with short plain values, so they are named for text only.
+func (r rule) runsIn(lane Lane) bool {
+	return r.lane == bothLanes || (r.lane == textOnly) == (lane == Text)
+}
+
+// Text labels are of two sorts. A password label is followed by a secret
+// whatever its value looks like. An ambiguous label also heads prose ("The
+// secret: preparation"), so its value must look like a credential.
 const (
-	secretLabels   = `password|passwd|pwd|passwort|kennwort|passcode|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key`
-	textLabels     = `pin(?:[ -]?code)?|token`
-	passwordLabels = `password|passwd|pwd|passwort|kennwort|passcode|pin`
-	loginLabels    = `login|user(?:name)?|benutzer(?:name)?`
+	passwordLabels  = `password|passwd|pwd|passwort|kennwort|passcode|pin(?:[ -]?code)?`
+	ambiguousLabels = `secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|token|key`
+	loginLabels     = `login|user(?:name)?|benutzer(?:name)?`
+	// jsonLabels are the labels of the model-bound payload's assignment rule.
+	// pin, token and key are left out: they are common JSON keys with short
+	// plain values, such as "pin": true.
+	jsonLabels = `password|passwd|pwd|passwort|kennwort|passcode|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key`
 )
 
-// assignment matches "label: value" and "label=value". The value stops at
-// whitespace, quotes and separators, so only the secret goes.
-func assignment(labels string) *regexp.Regexp {
-	return regexp.MustCompile(`(?i)\b((?:` + labels + `)["']?\s*[:=]\s*["']?)([^\s"'\\,;&]{4,})`)
+// labelled is a label, an optional closing quote and a separator on one line.
+func labelled(labels string) string {
+	return `(?i)\b((?:` + labels + `)["']?[ \t]*[:=][ \t]*`
+}
+
+// looksLikeCredential is one word of at least 8 characters with a digit or a
+// symbol in it, which a word of prose almost never is.
+func looksLikeCredential(value []byte) bool {
+	return len(value) >= 8 && bytes.ContainsFunc(value, func(r rune) bool {
+		return !('a' <= r && r <= 'z' || 'A' <= r && r <= 'Z')
+	})
+}
+
+// nextLine is a label alone on its line and a one-word value alone on the next,
+// so a heading over a sentence keeps the sentence.
+func nextLine(labels string) *regexp.Regexp {
+	return regexp.MustCompile(`(?im)^([ \t]*(?:` + labels + `)[ \t]*:?[ \t]*\r?\n[ \t]*)([^\s]{4,})([ \t]*\r?)$`)
 }
 
 var rules = []rule{
@@ -122,17 +153,28 @@ var rules = []rule{
 	// Before the bearer rule, so the kind names what was caught.
 	{kind: "jwt", re: regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}`)},
 	{kind: "bearer_token", re: regexp.MustCompile(`(?i)\bbearer[ \t]+[A-Za-z0-9._~+/=-]{16,}`)},
-	{kind: "credential_assignment", keepPrefix: true, re: assignment(secretLabels)},
-	{kind: "credential_assignment", keepPrefix: true, textOnly: true, re: assignment(textLabels)},
-	// A label alone on its line and the value alone on the next. The value line
-	// must be one word, so a heading over a sentence keeps the sentence.
+	// The value stops at whitespace, quotes and separators, so only the secret goes.
 	{
-		kind: "credential_next_line", keepPrefix: true, keepSuffix: true, textOnly: true,
-		re: regexp.MustCompile(`(?im)^([ \t]*(?:` + secretLabels + `|` + textLabels + `)[ \t]*:?[ \t]*\r?\n[ \t]*)([^\s]{4,})([ \t]*\r?)$`),
+		kind: "credential_assignment", keepPrefix: true, lane: jsonOnly,
+		re: regexp.MustCompile(`(?i)\b((?:` + jsonLabels + `)["']?\s*[:=]\s*["']?)([^\s"'\\,;&]{4,})`),
 	},
+	// A quoted passphrase is masked through its closing quote, and an unquoted one
+	// to the end of its line, so no word of it stays.
+	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: regexp.MustCompile(labelled(passwordLabels) + `")([^"\r\n]+)(")`)},
+	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: regexp.MustCompile(labelled(passwordLabels) + `')([^'\r\n]+)(')`)},
+	{
+		kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly,
+		re: regexp.MustCompile(`(?m)` + labelled(passwordLabels) + `)([^\s"'][^\r\n]*?)([ \t]*\r?)$`),
+	},
+	{
+		kind: "credential_assignment", keepPrefix: true, lane: textOnly, accept: looksLikeCredential,
+		re: regexp.MustCompile(labelled(ambiguousLabels) + `["']?)([^\s"'\\,;&]+)`),
+	},
+	{kind: "credential_next_line", keepPrefix: true, keepSuffix: true, lane: textOnly, re: nextLine(passwordLabels)},
+	{kind: "credential_next_line", keepPrefix: true, keepSuffix: true, lane: textOnly, accept: looksLikeCredential, re: nextLine(ambiguousLabels)},
 	// The login on the line above a password line: the pair is the credential.
 	{
-		kind: "login_name", keepPrefix: true, keepSuffix: true, textOnly: true,
+		kind: "login_name", keepPrefix: true, keepSuffix: true, lane: textOnly,
 		re: regexp.MustCompile(`(?im)^([ \t]*(?:` + loginLabels + `)[ \t]*[:=][ \t]*)([^\s]{2,})([ \t]*\r?\n[ \t]*(?:` + passwordLabels + `)\b)`),
 	},
 }

@@ -40,7 +40,7 @@ message is not only internal. It then stores the message and adds it to the
 timelines of the contacts on it, with its links and attachments. The audit log
 records that this happened, never the subject or the body. Mail whose text Margince could not read in full is explained in [When a mail cannot be read](when-a-mail-cannot-be-read.md).
 
-Passwords, PINs, access keys and tokens in the subject and text are stored as `[masked]` behind their label, and text inside attachments is not masked.
+When Margince captures a message, it stores passwords, PINs, access keys and tokens in the subject and text as `[masked]` behind their label. A message stored before Margince masked them can still show them. Text inside attachments is not masked.
 
 **4. Deciding about the sender.** See the ladder below.
 

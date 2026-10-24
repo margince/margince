@@ -15,6 +15,14 @@ func TestMaskTextMasksEveryCredentialShapeAndKeepsTheLabel(t *testing.T) {
 		"kennwort":           {"Kennwort = Quokka7", "Kennwort = [masked]"},
 		"pin":                {"PIN: 4711", "PIN: [masked]"},
 		"bracket in value":   {"password: ab[cd1234", "password: [masked]"},
+		"quoted passphrase":  {`password: "correct horse battery staple" ok`, `password: "[masked]" ok`},
+		"single-quoted":      {"pwd='correct horse'", "pwd='[masked]'"},
+		"passphrase to eol":  {"Passwort: correct horse battery\nBis bald", "Passwort: [masked]\nBis bald"},
+		"secret value":       {"Secret: s3cr3t-Value9 thanks", "Secret: [masked] thanks"},
+		"api key value":      {"API key: abc123def456", "API key: [masked]"},
+		"prose secret":       {"The secret: preparation wins deals", "The secret: preparation wins deals"},
+		"prose token":        {"Token: unit economics", "Token: unit economics"},
+		"short token":        {"Token: ab12", "Token: ab12"},
 		"value that is [x":   {"password: [hunter2]", "password: [masked]"},
 		"pin code":           {"PIN-Code: 4711", "PIN-Code: [masked]"},
 		"passcode":           {"Passcode: 993311", "Passcode: [masked]"},
@@ -44,7 +52,7 @@ func TestMaskTextMasksEveryCredentialShapeAndKeepsTheLabel(t *testing.T) {
 // No rule finds a masked value again, so a second pass over stored text changes
 // nothing and reports nothing.
 func TestMaskedTextMasksToItself(t *testing.T) {
-	text := "Login: anna\nPasswort: Quokka7\nPassword:\nQuokka8\nToken: abcd1234\npwd: ab[cd1234\nhttps://u:pw12@h.example/ " + stripeSecret
+	text := "Login: anna\nPasswort: Quokka7\nPassword:\nQuokka8\nToken: abcd1234\npwd: ab[cd1234\npassword: \"correct horse\"\nPIN: 47 11\nhttps://u:pw12@h.example/ " + stripeSecret
 	once := MaskText(text)
 	twice, found := Replace([]byte(once), Text, func(string) string { return Marker })
 	if string(twice) != once || len(found) != 0 {
