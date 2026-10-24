@@ -1,5 +1,6 @@
 // Unknown refusal codes retain the generic refusal instead of exposing a code.
-// `recordable`: the surface offers a reason to record, so the sentence may ask for one.
+// `recordable`: the surface draws a control to answer the refusal, so the sentence
+// may ask the rep to use it. A read-only surface gets the fact alone.
 export function sendPermissionReasonKey(
   reason: string | undefined,
   recordable = false,
@@ -26,9 +27,13 @@ export function sendPermissionReasonKey(
         ? ("sendPermission.unprovenHint" as const)
         : ("sendPermission.unprovenRefuses" as const);
     case "no_marketing_consent":
-      return "sendPermission.reason.noMarketingConsent" as const;
+      return recordable
+        ? ("sendPermission.reason.noMarketingConsent" as const)
+        : ("sendPermission.reason.noMarketingConsentFact" as const);
     case "legacy_transactional_unevidenced":
-      return "sendPermission.reason.legacyPurpose" as const;
+      return recordable
+        ? ("sendPermission.reason.legacyPurpose" as const)
+        : ("sendPermission.reason.legacyPurposeFact" as const);
     case "unknown_purpose":
       return "sendPermission.reason.unknownPurpose" as const;
     case "claim_contradicts_resolution":

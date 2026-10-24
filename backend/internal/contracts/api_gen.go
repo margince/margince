@@ -24771,7 +24771,7 @@ type Activity struct {
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
 
-	// Links One activity may link to >1 entity (contact + deal).
+	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
@@ -47656,10 +47656,17 @@ type ReplaceChannelTokenRequest struct {
 // ReplyRecipient Who a reply to a message is addressed to: one contact, resolved from the
 // message's participants by role.
 //
+// A call, meeting, note or task is written about a contact, not replied to. Its
+// `address` comes from its links alone, never its participants: the reachable
+// address of its one live linked contact the caller may read. Links to companies,
+// deals and other records do not count. Two or more such contacts, none, a contact
+// without an address, a shared mailbox, a seat's login or a colleague's address
+// answer empty.
+//
 // One contact rather than a list. A reply is written to somebody, and a group
 // thread degrades to the most likely counterparty rather than to nobody.
 type ReplyRecipient struct {
-	// Address Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
+	// Address Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. A written-about row follows its own rule, above. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
 	Address string `json:"address"`
 
 	// DealOwnerUserId The owner of the deal this message is filed under, for the client to name through its roster. Null when the message is filed under no deal the caller may read, or that deal has no owner. A deal the caller cannot read answers null, the same as no deal.
@@ -49273,6 +49280,8 @@ type SendAuthorizationPreviewRecipient struct {
 	// opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
 	// offered an override on those would render a button that cannot achieve what it
 	// promises, and the rep would type a justification the staging gate then ignores.
+	// A recorded reason lifts one category, so a refusal that resolved to no single
+	// category, such as `unknown_purpose`, answers false.
 	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
 
 	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule

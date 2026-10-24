@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -252,4 +253,94 @@ func TestAThreadUnderNoDealNamesNoOwner(t *testing.T) {
 	s := setupStanding(t)
 	anchor := s.clientToColleague(t, "thread-1")
 	wantStanding(t, s.standing(s.replier(true), t, anchor), false, nil)
+}
+
+// buyerDomain is the own-domain reader compose wires, for an installation at @authz.test.
+type buyerDomain struct{}
+
+func (buyerDomain) Covers(context.Context) (func(string) bool, error) {
+	return func(address string) bool { return strings.HasSuffix(address, "@authz.test") }, nil
+}
+
+// writtenAbout logs a row of kind through the activity writer, filed on links.
+func (s *standingEnv) writtenAbout(t *testing.T, kind string, links ...activities.ActivityLinkInput) ids.UUID {
+	t.Helper()
+	subject := "Revised quote"
+	logged, _, err := s.Activities.LogActivity(s.As(s.Rep1, []ids.UUID{s.Team1}, activityLifecyclePerms),
+		activities.LogActivityInput{Kind: kind, Subject: &subject, Links: links})
+	if err != nil {
+		t.Fatalf("logging the %s: %v", kind, err)
+	}
+	return ids.UUID(logged.Id)
+}
+
+func (s *standingEnv) contactAt(t *testing.T, name, address string) activities.ActivityLinkInput {
+	t.Helper()
+	contact := s.SeedContact(t, name, &s.Rep1)
+	if address != "" {
+		s.WsExec(t, `INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+			VALUES ($1, $2, true, 'manual', 'human:seed')`, contact, address)
+	}
+	return activities.ActivityLinkInput{EntityType: "contact", EntityID: contact}
+}
+
+func (s *standingEnv) offered(t *testing.T, row ids.UUID) string {
+	t.Helper()
+	ctx := s.As(s.Rep1, []ids.UUID{s.Team1}, activityLifecyclePerms)
+	rec := httptest.NewRecorder()
+	activities.NewHandlers(s.DB()).WithColleagues(buyerDomain{}).GetReplyRecipient(rec,
+		httptest.NewRequest(http.MethodGet, "/v1/activities/x/reply-recipient", nil).WithContext(ctx),
+		crmcontracts.Id(row))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("reply-recipient answered %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+	var out crmcontracts.ReplyRecipient
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decoding the recipient: %v", err)
+	}
+	return out.Address
+}
+
+func TestAWrittenAboutRowOffersItsOneLinkedContact(t *testing.T) {
+	s := setupStanding(t)
+	deal := activities.ActivityLinkInput{EntityType: "deal", EntityID: s.dealOwnedBy(t, s.Rep3)}
+	cases := []struct {
+		name, want string
+		row        func(t *testing.T) ids.UUID
+	}{
+		{"a task on one contact", "anna@buyer.test", func(t *testing.T) ids.UUID {
+			return s.writtenAbout(t, "task", s.contactAt(t, "Anna Weber", "anna@buyer.test"))
+		}},
+		{"a deal-page note on one contact", "ben@buyer.test", func(t *testing.T) ids.UUID {
+			return s.writtenAbout(t, "note", deal, s.contactAt(t, "Ben Kraus", "ben@buyer.test"))
+		}},
+		{"a call, whose participants do not count", "cleo@buyer.test", func(t *testing.T) ids.UUID {
+			return s.writtenAbout(t, "call", s.contactAt(t, "Cleo Hahn", "cleo@buyer.test"))
+		}},
+		{"a call on two contacts", "", func(t *testing.T) ids.UUID {
+			return s.writtenAbout(t, "call", s.contactAt(t, "Jana Kurz", "jana@buyer.test"), s.contactAt(t, "Karl Mohr", "karl@buyer.test"))
+		}},
+		{"a meeting on two contacts", "", func(t *testing.T) ids.UUID {
+			return s.writtenAbout(t, "meeting", s.contactAt(t, "Dora Lenz", "dora@buyer.test"), s.contactAt(t, "Emil Roth", "emil@buyer.test"))
+		}},
+		{"a task on two contacts", "", func(t *testing.T) ids.UUID {
+			return s.writtenAbout(t, "task", s.contactAt(t, "Fritz Abel", "fritz@buyer.test"), s.contactAt(t, "Gina Vogt", "gina@buyer.test"))
+		}},
+		{"a task on a contact without an address", "", func(t *testing.T) ids.UUID {
+			return s.writtenAbout(t, "task", s.contactAt(t, "Hans Ost", ""))
+		}},
+		{"a task on a colleague's address", "", func(t *testing.T) ids.UUID {
+			return s.writtenAbout(t, "task", s.contactAt(t, "Ines Berg", "ines@authz.test"))
+		}},
+		{"a task on a deal alone", "", func(t *testing.T) ids.UUID {
+			return s.writtenAbout(t, "task", deal)
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := s.offered(t, tc.row(t)); got != tc.want {
+				t.Errorf("address = %q, want %q", got, tc.want)
+			}
+		})
+	}
 }

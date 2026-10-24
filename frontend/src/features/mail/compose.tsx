@@ -139,6 +139,8 @@ export type ComposeProps = Readonly<{
   // close, and only then: a caller whose own reading of the record depends on
   // what was sent re-asks on this, and not on a cancel that changed nothing.
   onSent?: () => void;
+  /** The control the reader pressed, which gets focus back on close. */
+  openedFrom?: HTMLElement;
 }>;
 
 /**
@@ -196,6 +198,7 @@ export function ComposeWindow({
   open,
   onClose,
   onSent,
+  openedFrom,
 }: ComposeProps) {
   const t = useT();
   // A shut composer asks for nothing it does not share with the page behind it.
@@ -369,6 +372,7 @@ export function ComposeWindow({
           onClose={savedDraft.requestClose}
           closeDisabled={sendPending}
           bodyId={bodyId}
+          openedFrom={openedFrom}
         >
           {!isChannelReply && (
             <ThreadBar

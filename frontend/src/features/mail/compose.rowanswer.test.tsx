@@ -1,5 +1,11 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChannelReplyAction } from "./compose";
@@ -18,7 +24,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function person(id: string, address: string | null) {
+function contactFixture(id: string, address: string | null) {
   return {
     id,
     full_name: `Contact ${id}`,
@@ -35,13 +41,28 @@ const onContact = (id: string) => ({
   entity_id: id,
 });
 
-function row(over: Partial<Activity> & Pick<Activity, "id" | "kind">) {
+function row(
+  over: Partial<Activity> & Pick<Activity, "id" | "kind">,
+): Activity {
   return {
     ...activity202,
     occurred_at: "2026-07-01T09:30:00Z",
     links: [onContact("p-1")],
     ...over,
-  } as Activity;
+  };
+}
+
+// What the server answers for a row filed on one contact: that contact's address.
+const fillsTo = (id: string, address: string) => ({
+  [`GET /activities/${id}/reply-recipient`]: () =>
+    jsonResponse({ full_name: "Anna Weber", first_name: "Anna", address }),
+});
+
+async function toField(dialog: HTMLElement): Promise<HTMLElement> {
+  const input = await within(dialog).findByLabelText("To");
+  const field = input.closest(".compose-address-field");
+  if (!(field instanceof HTMLElement)) throw new Error("To has no field");
+  return field;
 }
 
 function Verb({
@@ -71,12 +92,15 @@ const EMAIL = row({ id: "a-mail", kind: "email", subject: "Angebot" });
 function draw(
   rows: Activity[],
   page: { type: RelinkKind; id: string; contactId?: string },
-  people = [person("p-1", "anna@example.test")],
+  contacts = [contactFixture("p-1", "anna@example.test")],
   routes: Record<string, () => Response> = {},
 ) {
   stubRoutes({
     ...Object.fromEntries(
-      people.map((one) => [`GET /contacts/${one.id}`, () => jsonResponse(one)]),
+      contacts.map((one) => [
+        `GET /contacts/${one.id}`,
+        () => jsonResponse(one),
+      ]),
     ),
     ...Object.fromEntries(
       rows.map((one) => [`GET /activities/${one.id}`, () => jsonResponse(one)]),
@@ -159,7 +183,7 @@ describe("what a row offers to write", () => {
     const drawn = draw(
       [row({ id: "a-note", kind: "note", subject: "Called back" })],
       CONTACT_PAGE,
-      [person("p-1", null)],
+      [contactFixture("p-1", null)],
     );
 
     await contactRead(drawn, "p-1");
@@ -167,25 +191,55 @@ describe("what a row offers to write", () => {
     expect(screen.queryByRole("button", { name: "Reply" })).toBeNull();
   });
 
-  it("writes to the row's own contact on a deal timeline", async () => {
-    draw(
-      [
-        row({
-          id: "a-note",
-          kind: "note",
-          links: [
-            { entity_type: "deal" as const, entity_id: "d-1" },
-            onContact("p-2"),
-          ],
-        }),
-      ],
+  it.each([
+    [
+      "a deal-page note",
+      row({
+        id: "a-note",
+        kind: "note",
+        links: [
+          { entity_type: "deal" as const, entity_id: "d-1" },
+          onContact("p-1"),
+        ],
+      }),
       DEAL_PAGE,
-      [person("p-2", "ben@example.test")],
-    );
+    ],
+    ["a contact-page task", row({ id: "a-task", kind: "task" }), CONTACT_PAGE],
+  ] as const)(
+    "writes to the one contact of %s, with To filled",
+    async (_, activity, page) => {
+      const user = userEvent.setup();
+      draw(
+        [activity],
+        page,
+        undefined,
+        fillsTo(activity.id, "anna@example.test"),
+      );
 
-    expect(
-      await screen.findByRole("button", { name: "Write email" }),
-    ).toBeTruthy();
+      await user.click(
+        await screen.findByRole("button", { name: "Write email" }),
+      );
+      const dialog = await screen.findByRole("dialog", { name: /^New email/ });
+      expect(
+        await within(await toField(dialog)).findByText("anna@example.test"),
+      ).toBeTruthy();
+    },
+  );
+
+  it("offers nothing on a contact-page note filed on two contacts", async () => {
+    const shared = row({
+      id: "a-shared",
+      kind: "note",
+      links: [onContact("p-1"), onContact("p-2")],
+    });
+    const own = row({ id: "a-own", kind: "note", subject: "Called back" });
+    draw([own, shared], CONTACT_PAGE);
+
+    // The note filed on this contact alone is the positive control.
+    await screen.findByRole("button", { name: "Write email" });
+    expect(screen.getAllByRole("button", { name: "Write email" })).toHaveLength(
+      1,
+    );
   });
 
   it("offers nothing on a deal note the row links to no contact", async () => {
@@ -223,8 +277,8 @@ describe("what a row offers to write", () => {
   ])("offers no email on a task: $subject", async (task) => {
     const note = row({ id: "a-note", kind: "note", subject: "Called back" });
     draw([note, task], DEAL_PAGE, [
-      person("p-1", "anna@example.test"),
-      person("p-2", "ben@example.test"),
+      contactFixture("p-1", "anna@example.test"),
+      contactFixture("p-2", "ben@example.test"),
     ]);
 
     // The note's verb waits on the same contact read the task would.
@@ -250,6 +304,24 @@ describe("what a row offers to write", () => {
     expect(document.activeElement).toBe(verb);
   });
 
+  // Safari does not focus a button it clicks, so the press itself names the verb.
+  it("hands focus back to a verb the click never focused", async () => {
+    const user = userEvent.setup();
+    draw(
+      [row({ id: "a-call", kind: "call", subject: "Voicemail" })],
+      CONTACT_PAGE,
+    );
+
+    const verb = await screen.findByRole("button", { name: "Write email" });
+    fireEvent.click(verb);
+    const dialog = await screen.findByRole("dialog", { name: /^New email/ });
+    expect(document.activeElement).not.toBe(verb);
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(verb);
+  });
+
   it("titles the email New email while the subject holds only the project key", async () => {
     const user = userEvent.setup();
     const call = row({
@@ -261,7 +333,7 @@ describe("what a row offers to write", () => {
         onContact("p-1"),
       ],
     });
-    draw([call], DEAL_PAGE, [person("p-1", "anna@example.test")], {
+    draw([call], DEAL_PAGE, [contactFixture("p-1", "anna@example.test")], {
       "GET /deals/d-1": () =>
         jsonResponse({
           id: "d-1",
@@ -292,10 +364,7 @@ describe("what a row offers to write", () => {
     await user.click(
       await screen.findByRole("button", { name: "Write email" }),
     );
-    const subject = (await screen.findByLabelText(
-      "Subject",
-    )) as HTMLInputElement;
-    await waitFor(() => expect(subject.value).toBe("[N2P-1]"));
+    await screen.findByDisplayValue("[N2P-1]");
     expect(screen.getByRole("dialog", { name: /^New email/ })).toBeTruthy();
     expect(screen.queryByRole("dialog", { name: "[N2P-1]" })).toBeNull();
   });

@@ -75,9 +75,11 @@ export function ChannelReplyAction({
   // opens and keys the composer, so each press gets a composer of its own — a
   // drawer that outlives its close would otherwise reopen on the draft the
   // reader abandoned, and offer to send it again.
-  const [reply, setReply] = useState<{ seq: number; open: boolean } | null>(
-    null,
-  );
+  const [reply, setReply] = useState<{
+    seq: number;
+    open: boolean;
+    from: HTMLElement;
+  } | null>(null);
   const reachable = useAnswerReachable(
     { kind, links, automaticKind, provider: channelProvider },
     contactId,
@@ -95,9 +97,14 @@ export function ChannelReplyAction({
     <>
       <Button
         variant={proposed ? "ai" : undefined}
-        onClick={() =>
-          setReply((prior) => ({ seq: (prior?.seq ?? 0) + 1, open: true }))
-        }
+        onClick={(event) => {
+          const from = event.currentTarget;
+          setReply((prior) => ({
+            seq: (prior?.seq ?? 0) + 1,
+            open: true,
+            from,
+          }));
+        }}
       >
         {proposed && <Sparkles aria-hidden="true" />}
         {proposed?.label ??
@@ -141,6 +148,7 @@ export function ChannelReplyAction({
           open={reply.open}
           onClose={() => setReply({ ...reply, open: false })}
           onSent={onSent}
+          openedFrom={reply.from}
         />
       )}
     </>

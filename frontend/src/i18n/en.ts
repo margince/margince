@@ -6220,8 +6220,12 @@ export const en = {
     "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
   "sendPermission.reason.noMarketingConsent":
     "Marketing needs the recipient’s consent, and none is on record. If this message is not marketing, pick the contact reason that fits.",
+  "sendPermission.reason.noMarketingConsentFact":
+    "Marketing needs the recipient’s consent, and none is on record.",
   "sendPermission.reason.legacyPurpose":
     "This message uses an old purpose that nothing on record supports. Pick a contact reason so Margince can check it.",
+  "sendPermission.reason.legacyPurposeFact":
+    "This message uses an old purpose that nothing on record supports.",
   "sendPermission.reason.unknownPurpose":
     "This message names a purpose Margince does not know. Pick a contact reason from the list.",
   "sendPermission.reason.claimContradicts":

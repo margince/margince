@@ -34368,7 +34368,7 @@ export interface components {
              * @description The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
              */
             readonly source_activity_id?: string | null;
-            /** @description One activity may link to >1 entity (contact + deal). */
+            /** @description Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360. */
             links?: components["schemas"]["ActivityLink"][];
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
@@ -35034,6 +35034,13 @@ export interface components {
          * @description Who a reply to a message is addressed to: one contact, resolved from the
          *     message's participants by role.
          *
+         *     A call, meeting, note or task is written about a contact, not replied to. Its
+         *     `address` comes from its links alone, never its participants: the reachable
+         *     address of its one live linked contact the caller may read. Links to companies,
+         *     deals and other records do not count. Two or more such contacts, none, a contact
+         *     without an address, a shared mailbox, a seat's login or a colleague's address
+         *     answer empty.
+         *
          *     One contact rather than a list. A reply is written to somebody, and a group
          *     thread degrades to the most likely counterparty rather than to nobody.
          */
@@ -35059,7 +35066,7 @@ export interface components {
             full_name: string;
             /** @description What a greeting uses. Split server-side rather than in a prompt: a model asked to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call. */
             first_name: string;
-            /** @description Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves. */
+            /** @description Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. A written-about row follows its own rule, above. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves. */
             address: string;
         };
         /**
@@ -35662,6 +35669,8 @@ export interface components {
              *     opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
              *     offered an override on those would render a button that cannot achieve what it
              *     promises, and the rep would type a justification the staging gate then ignores.
+             *     A recorded reason lifts one category, so a refusal that resolved to no single
+             *     category, such as `unknown_purpose`, answers false.
              */
             can_be_overruled?: boolean;
             /**

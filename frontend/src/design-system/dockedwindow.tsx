@@ -49,6 +49,7 @@ export function DockedWindow({
   onClose,
   closeDisabled,
   initialFocusTo,
+  openedFrom,
   children,
 }: Readonly<{
   /** Names the window and its folded bar; a heading, not a dialog title row. */
@@ -60,6 +61,8 @@ export function DockedWindow({
   closeDisabled?: boolean;
   /** The control focus lands on when the window first opens. */
   initialFocusTo?: () => HTMLElement | null;
+  /** The control that opened the window, which gets focus back on close. */
+  openedFrom?: HTMLElement;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -88,13 +91,18 @@ export function DockedWindow({
     () => globalThis.matchMedia?.(SHEET).matches ?? false,
   );
   const focusFirst = useRef(initialFocusTo);
-  // Where focus was as the window opened. Closing hands focus back to that verb
-  // instead of dropping the reader on the page body.
-  const opener = useRef<HTMLElement | null>(null);
+  // The pressed control, else where focus was: Safari does not focus a clicked
+  // button. Closing hands focus back there instead of to the page body.
+  const opener = useRef(openedFrom ?? null);
   useEffect(() => {
     const before = document.activeElement;
-    opener.current =
-      before instanceof HTMLElement && before !== document.body ? before : null;
+    if (
+      !opener.current &&
+      before instanceof HTMLElement &&
+      before !== document.body
+    ) {
+      opener.current = before;
+    }
     (focusFirst.current?.() ?? box.current)?.focus();
   }, []);
   useFocusHandoff(box, () =>

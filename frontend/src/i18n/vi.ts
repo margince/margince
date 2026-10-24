@@ -6006,8 +6006,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
   "sendPermission.reason.noMarketingConsent":
     "Tin tiếp thị cần sự đồng ý của người nhận, nhưng chưa có sự đồng ý nào được ghi nhận. Nếu đây không phải tin tiếp thị, chọn lý do liên hệ phù hợp.",
+  "sendPermission.reason.noMarketingConsentFact":
+    "Tin tiếp thị cần sự đồng ý của người nhận, nhưng chưa có sự đồng ý nào được ghi nhận.",
   "sendPermission.reason.legacyPurpose":
     "Tin nhắn này dùng một mục đích kiểu cũ mà không dữ liệu nào xác nhận. Chọn lý do liên hệ để Margince kiểm tra được.",
+  "sendPermission.reason.legacyPurposeFact":
+    "Tin nhắn này dùng một mục đích kiểu cũ mà không dữ liệu nào xác nhận.",
   "sendPermission.reason.unknownPurpose":
     "Tin nhắn này nêu một mục đích mà Margince không nhận ra. Chọn lý do liên hệ trong danh sách.",
   "sendPermission.reason.claimContradicts":

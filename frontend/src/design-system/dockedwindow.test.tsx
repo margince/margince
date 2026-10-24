@@ -40,18 +40,19 @@ function Harness({ onClose = vi.fn() }: Readonly<{ onClose?: () => void }>) {
 
 // The verb that opened the window gets focus back when it closes.
 function Opener() {
-  const [open, setOpen] = useState(false);
+  const [from, setFrom] = useState<HTMLElement | null>(null);
   return (
     <LocaleProvider initial="en">
-      <button type="button" onClick={() => setOpen(true)}>
+      <button type="button" onClick={(event) => setFrom(event.currentTarget)}>
         Write email
       </button>
-      {open && (
+      {from && (
         <DockedWindow
           title="Re: Budget"
           state="open"
           onStateChange={() => undefined}
-          onClose={() => setOpen(false)}
+          onClose={() => setFrom(null)}
+          openedFrom={from}
         >
           <input aria-label="Words" />
         </DockedWindow>
@@ -71,6 +72,17 @@ describe("a window docked beside the page", () => {
     );
     await user.click(screen.getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(verb);
+  });
+
+  // Safari does not focus a button it clicks; the press still names the verb.
+  it("hands focus back to the pressed verb the click never focused", async () => {
+    const user = userEvent.setup();
+    render(<Opener />);
+    const verb = screen.getByRole("button", { name: "Write email" });
+    fireEvent.click(verb);
+    expect(document.activeElement).not.toBe(verb);
+    await user.click(screen.getByRole("button", { name: "Close" }));
     expect(document.activeElement).toBe(verb);
   });
 

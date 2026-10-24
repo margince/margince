@@ -14836,7 +14836,8 @@ components:
             The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
         links:
           type: array
-          description: One activity may link to >1 entity (contact + deal).
+          description: >-
+            Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
           items: {$ref: '#/components/schemas/ActivityLink'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
@@ -15285,7 +15286,7 @@ components:
         address:
           type: string
           description: >-
-            Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
+            Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. A written-about row follows its own rule, above. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
     CommunicationEvidence:
       type: object
       description: |-

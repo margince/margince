@@ -6171,8 +6171,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
   "sendPermission.reason.noMarketingConsent":
     "Marketing braucht die Einwilligung der empfangenden Person, und keine ist erfasst. Wenn diese Nachricht kein Marketing ist, wähle den passenden Kontaktgrund.",
+  "sendPermission.reason.noMarketingConsentFact":
+    "Marketing braucht die Einwilligung der empfangenden Person, und keine ist erfasst.",
   "sendPermission.reason.legacyPurpose":
     "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt. Wähle einen Kontaktgrund, damit Margince sie prüfen kann.",
+  "sendPermission.reason.legacyPurposeFact":
+    "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt.",
   "sendPermission.reason.unknownPurpose":
     "Diese Nachricht nennt einen Zweck, den Margince nicht kennt. Wähle einen Kontaktgrund aus der Liste.",
   "sendPermission.reason.claimContradicts":

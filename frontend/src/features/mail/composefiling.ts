@@ -15,7 +15,6 @@ import { unwrap } from "../../lib/problem";
 import { useCompany360 } from "../companies/company360";
 import { useContact360 } from "../contacts/contact360";
 import {
-  stripEveryKeyTag,
   stripSubjectTag,
   subjectTag,
   useProjectRecord,
@@ -92,6 +91,9 @@ function useAnchorProject(
  * It returns whenever a draft or a retype replaces the subject. The switch
  * turned off keeps it out the same way; picking None removes it.
  */
+// The rep's switch, or a restored subject still to be read against the key.
+type TagChoice = boolean | { saved: string };
+
 function useProjectFiling(input: {
   activityId?: string;
   /** The deal the message is written from, when it is one. */
@@ -143,36 +145,36 @@ function useProjectFiling(input: {
   const ownTag = subjectTag(project);
   // Off holds for one message and is never stored. The tag files the client's
   // answer, so the next message carries it again.
-  const [untagged, setUntagged] = useState<ReadonlySet<string>>(new Set());
-  const tagged = !untagged.has(filingKey);
+  const [choices, setChoices] = useState<Record<string, TagChoice>>({});
+  const choice = choices[filingKey];
   const setTagged = useCallback(
     (next: boolean) => {
-      setUntagged((current) => {
-        const kept = new Set(current);
-        if (next) kept.delete(filingKey);
-        else kept.add(filingKey);
-        return kept;
-      });
+      setChoices((current) => ({ ...current, [filingKey]: next }));
     },
     [filingKey],
   );
-  // A restored draft's subject says what the rep chose when it was saved. The
-  // project read may still be out, so any leading key counts.
   const adoptSavedSubject = useCallback(
     (saved: string) => {
-      setTagged(leadsWithKey(saved));
+      setChoices((current) => ({ ...current, [filingKey]: { saved } }));
     },
-    [setTagged],
+    [filingKey],
   );
+  // A restored subject is read against this project's own key, so a foreign
+  // key stays the rep's text. Until that key is known, nothing is decided.
+  const awaiting = typeof choice === "object" && !ownTag;
+  const tagged =
+    typeof choice === "object"
+      ? ownTag !== "" && choice.saved.startsWith(ownTag)
+      : choice !== false;
   const tag = tagged ? ownTag : "";
-  const setSubject = input.setSubject;
   const subject = input.subject;
+  const setSubject = input.setSubject;
   const open = input.open;
   const previousTag = useRef("");
   useEffect(() => {
     // A shut composer reads no project, so this rule would strip the tag off
     // a draft nobody is looking at.
-    if (!open) return;
+    if (!open || awaiting) return;
     const priorTag = previousTag.current;
     previousTag.current = tag;
     const withoutOld = priorTag ? stripSubjectTag(subject, priorTag) : subject;
@@ -182,7 +184,7 @@ function useProjectFiling(input: {
     if (wanted !== subject) {
       setSubject(wanted);
     }
-  }, [open, tag, ownTag, subject, setSubject]);
+  }, [open, awaiting, tag, ownTag, subject, setSubject]);
   return {
     projectId,
     setProjectId: setPicked,
@@ -192,11 +194,6 @@ function useProjectFiling(input: {
     setTagged,
     adoptSavedSubject,
   };
-}
-
-function leadsWithKey(subject: string): boolean {
-  const lead = /^\[[^\]]*\]/.exec(subject)?.[0];
-  return lead !== undefined && stripEveryKeyTag(lead) === "";
 }
 
 /**

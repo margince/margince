@@ -313,6 +313,36 @@ describe("every refusal says what is wrong and what to do", () => {
   });
 });
 
+// A scheduled send or an approval row has no picker, so nothing asks for one.
+describe("a read-only surface states the fact without the instruction", () => {
+  it.each([
+    [
+      "no_marketing_consent",
+      "sendPermission.reason.noMarketingConsentFact",
+      "sendPermission.reason.noMarketingConsent",
+    ],
+    [
+      "legacy_transactional_unevidenced",
+      "sendPermission.reason.legacyPurposeFact",
+      "sendPermission.reason.legacyPurpose",
+    ],
+  ] as const)("%s", (code, fact, instruction) => {
+    draw(
+      preview(
+        answer({
+          reason_code: code,
+          decided_by: "machine",
+          would_refuse: true,
+          can_be_overruled: true,
+        }),
+      ),
+    );
+    expect(screen.getByText(translate("en", fact))).toBeInTheDocument();
+    expect(screen.queryByText(translate("en", instruction))).toBeNull();
+    expect(screen.queryByText(/pick/i)).toBeNull();
+  });
+});
+
 describe("what the hint tells a rep to do", () => {
   // With the control, the hint says how to answer. Without it, "say so" would
   // be the dead button in prose: an instruction the surface cannot take.

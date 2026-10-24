@@ -101,7 +101,7 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 		writeStoreErr(w, r, err)
 		return
 	}
-	address, err := h.replyAddress(ctx, anchor, recipient.FiledAddress)
+	address, err := h.offeredAddress(ctx, anchor, recipient)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -137,6 +137,22 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 	})
 }
 
+// offeredAddress is what the composer prefills. A written-about row offers its filed
+// contact, and only here: an automation stages unread and stays on ReplyAddressFor.
+func (h Handlers) offeredAddress(ctx context.Context, anchor ids.ActivityID, recipient ReplyRecipient) (string, error) {
+	if !recipient.WrittenAbout {
+		return h.replyAddress(ctx, anchor)
+	}
+	if h.colleagues == nil || recipient.FiledAddress == "" {
+		return "", nil
+	}
+	covers, err := h.colleagues.Covers(ctx)
+	if err != nil || (covers != nil && covers(recipient.FiledAddress)) {
+		return "", err
+	}
+	return recipient.FiledAddress, nil
+}
+
 // replyAddress is the counterparty address for this anchor, empty when the
 // thread carries none to answer.
 //
@@ -144,10 +160,7 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 // fault: ReplyAddressFor refuses it as NoReplyAddressError, and a composer
 // that shows an empty field there is telling the truth. Every other failure
 // is the caller's to see.
-//
-// filed (a note's contact) is offered only here: a rep sees it in To before
-// anything sends, while an automation stages unread and stays on ReplyAddressFor.
-func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID, filed string) (string, error) {
+func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID) (string, error) {
 	if h.colleagues == nil {
 		return "", nil
 	}
@@ -156,11 +169,8 @@ func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID, filed
 		return "", err
 	}
 	address, err := h.store.ReplyAddressFor(ctx, anchor, covers)
-	if none, ok := errors.AsType[*NoReplyAddressError](err); ok {
-		if none.Colleague || filed == "" || (covers != nil && covers(filed)) {
-			return "", nil
-		}
-		return filed, nil
+	if _, ok := errors.AsType[*NoReplyAddressError](err); ok {
+		return "", nil
 	}
 	if err != nil {
 		return "", err
@@ -177,7 +187,7 @@ func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID, filed
 // counterparty produce the same empty field, and only the log tells them
 // apart afterwards.
 func (h Handlers) replyAddresses(ctx context.Context, anchor ids.ActivityID) *[]openapi_types.Email {
-	address, err := h.replyAddress(ctx, anchor, "")
+	address, err := h.replyAddress(ctx, anchor)
 	if err != nil {
 		slog.WarnContext(ctx, "reply address unavailable; drafting without a recipient", "err", err)
 		return nil

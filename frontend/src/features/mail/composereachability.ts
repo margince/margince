@@ -78,11 +78,9 @@ export function useAnswerReachable(
 ) {
   const isChannel = row.kind === "message";
   const writesEmail = rowAnswer(row.kind, row.automaticKind) === "about";
-  // A new email fills To from the row's own contact, which a deal or company
-  // timeline does not name for it.
-  const contactId = writesEmail
-    ? linkedContactId(row, pageContactId)
-    : pageContactId;
+  // The server fills To only from a row filed on one contact alone. So the page's
+  // own contact takes no precedence here, whatever page shows the row.
+  const contactId = writesEmail ? linkedContactId(row) : pageContactId;
   const contact = useQuery({
     ...contactQuery(contactId),
     enabled: isChannel || writesEmail,

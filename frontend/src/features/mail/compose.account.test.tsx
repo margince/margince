@@ -272,10 +272,9 @@ describe("ComposeModal started from an account", () => {
   const replyBackend = (
     links: { entity_type: string; entity_id: string }[],
     projects: { project_id: string; name: string; key: string }[],
-    routes: Record<string, () => Response> = {},
+    routes: Record<string, () => Response | Promise<Response>> = {},
   ) =>
     stubRoutes({
-      ...routes,
       "GET /activities/act-1": () =>
         jsonResponse({
           id: "act-1",
@@ -317,6 +316,7 @@ describe("ComposeModal started from an account", () => {
         jsonResponse({ id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }),
       "GET /projects/pr-1": () =>
         jsonResponse({ id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" }),
+      ...routes,
     });
 
   const openReply = async () => {
@@ -548,11 +548,12 @@ describe("ComposeModal started from an account", () => {
     );
   });
 
-  // A draft saved with the key off comes back off, and the key stays out. One
-  // saved with the key comes back with the switch on.
+  // A restored subject is read against this project's own key. Another
+  // project's key is the rep's text, so it stays and the switch is off.
   it.each([
     ["Re: Angebot", "false"],
     ["[N2P-1] Re: Angebot", "true"],
+    ["[RP-3] Re: Angebot", "false"],
   ])(
     "takes the switch from a restored draft's subject %s",
     async (saved, on) => {
@@ -574,6 +575,42 @@ describe("ComposeModal started from an account", () => {
       expect(subject().value).toBe(saved);
     },
   );
+
+  it("waits for the project before reading a restored subject", async () => {
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
+      {
+        "GET /mail-drafts": () =>
+          jsonResponse(savedReply("[N2P-1] Re: Angebot")),
+        "GET /projects/pr-9": async () => {
+          await held;
+          return jsonResponse({
+            id: "pr-9",
+            name: "Netcare 2 project",
+            key: "N2P-1",
+          });
+        },
+      },
+    );
+    const subject = await openReply();
+    await screen.findByText("Saved draft restored");
+    expect(subject().value).toBe("[N2P-1] Re: Angebot");
+
+    release?.();
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("switch", { name: KEY_SWITCH })
+          .getAttribute("aria-checked"),
+      ).toBe("true"),
+    );
+    expect(subject().value).toBe("[N2P-1] Re: Angebot");
+  });
 
   it("puts the tag back when the switch is turned on again", async () => {
     const user = userEvent.setup();

@@ -548,7 +548,7 @@ type Activity struct {
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
 
-	// Links One activity may link to >1 entity (contact + deal).
+	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
