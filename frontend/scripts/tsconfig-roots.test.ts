@@ -68,7 +68,11 @@ const configAt = (path: string) =>
     ? join(path, "tsconfig.json")
     : path;
 
-type Invocation = { config: string; build: boolean };
+type Invocation = {
+  config: string;
+  build: boolean;
+  overrides: ts.CompilerOptions;
+};
 
 // The configs one shell command compiles, resolved against `cwd`. A leading
 // `cd <dir> &&` moves it, which is how the Makefile reaches frontend/.
@@ -79,6 +83,9 @@ function configsInvoked(command: string, cwd: string): Invocation[] {
   return [...calls].flatMap((call) => {
     const args = call[1].trim().split(/\s+/).filter(Boolean);
     const build = args.some((a) => a === "-b" || a === "--build");
+    const overrides = ts.parseCommandLine(
+      args.filter((a) => a !== "-b" && a !== "--build"),
+    ).options;
     const project = args.findIndex((a) => a === "-p" || a === "--project");
     const named =
       project >= 0
@@ -87,6 +94,7 @@ function configsInvoked(command: string, cwd: string): Invocation[] {
     return (named.length > 0 ? named : ["."]).map((path) => ({
       config: configAt(resolve(dir, path)),
       build,
+      overrides,
     }));
   });
 }
@@ -144,13 +152,17 @@ function builtConfigs(files: string[]): Map<string, ts.ParsedCommandLine> {
   );
   for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
     const parsed = built.get(next.config) ?? parseConfig(next.config);
-    built.set(next.config, parsed);
+    built.set(next.config, {
+      ...parsed,
+      options: { ...parsed.options, ...next.overrides },
+    });
     if (!next.build || expanded.has(next.config)) continue;
     expanded.add(next.config);
     for (const ref of parsed.projectReferences ?? [])
       pending.push({
         config: ts.resolveProjectReferencePath(ref),
         build: true,
+        overrides: next.overrides,
       });
   }
   return built;
@@ -228,7 +240,7 @@ describe("the frontend's tsconfig projects", () => {
       .map(([path]) => relative(repo, path));
     expect(
       declaring,
-      `these projects turn on declaration emit (composite or declaration), so a large enough en catalog fails tsc with TS7056 for no fault of the change; set "incremental": true instead and drop both:\n${declaring.join("\n")}`,
+      `these projects turn on declaration emit (composite or declaration, in the config or on the tsc command line), so a large enough en catalog fails tsc with TS7056 for no fault of the change; set "incremental": true instead and drop both:\n${declaring.join("\n")}`,
     ).toEqual([]);
   });
 });
