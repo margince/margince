@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -126,12 +127,7 @@ func readUnevidencedPage(ctx context.Context, tx pgx.Tx, after ids.UUID, limit i
 }
 
 func isStockManualSignalReason(reason string) bool {
-	for _, stock := range stockManualSignalReasons {
-		if reason == stock {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(stockManualSignalReasons, reason)
 }
 
 // CountUnevidencedManualSignals counts, up to limit+1, the signals the repair

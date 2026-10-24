@@ -37,7 +37,7 @@ func signalWith(factor, band, reason string) contacts.SetLeadManualSignalInput {
 func leadTrail(t *testing.T, e *integration.Env, lead ids.LeadID) (audits, events int) {
 	t.Helper()
 	audits = e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'lead' AND entity_id = $1`, lead.UUID)
-	events = e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'entity_id' = $1 OR envelope::text LIKE '%' || $1 || '%'`, lead.UUID.String())
+	events = e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'entity_id' = $1 OR envelope::text LIKE '%' || $1 || '%'`, lead.String())
 	return audits, events
 }
 
@@ -53,8 +53,7 @@ func TestTheStoreRefusesAManualSignalWithoutEvidenceAndWritesNothing(t *testing.
 		"stock vi": contacts.StockManualSignalReasons()[2],
 	} {
 		_, err := e.Contacts.SetLeadManualSignal(e.Admin(), lead, signalWith("employees", "51-200", reason))
-		var refused *contacts.ReasonRequiredError
-		if !errors.As(err, &refused) {
+		if _, ok := errors.AsType[*contacts.ReasonRequiredError](err); !ok {
 			t.Errorf("%s: err = %v, want ReasonRequiredError", name, err)
 		}
 	}
