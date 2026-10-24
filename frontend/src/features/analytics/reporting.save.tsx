@@ -1,5 +1,5 @@
 import "./reporting.css";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -33,6 +33,7 @@ import {
   type ReportingReport,
   type ReportingSelection,
 } from "./reporting.model";
+import { useReportingCatalog } from "./reporting.queries";
 import { reportRevisionsKey } from "./reporting.versions";
 
 export function SaveReportingDialog({
@@ -59,12 +60,7 @@ export function SaveReportingDialog({
   );
   const [metrics, setMetrics] = useState(selection.metrics);
   const [layout, setLayout] = useState(layoutOf(selection));
-  const catalog = useQuery({
-    queryKey: ["reporting-catalog"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/metrics"));
-    },
-  });
+  const catalog = useReportingCatalog();
   // Each selected metric's charts, from the catalog once it has loaded and from
   // the report's own blocks until then.
   const metricBlocks = new Map(

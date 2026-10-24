@@ -5,6 +5,7 @@ package reporting
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -37,7 +38,12 @@ func scanTarget(row pgx.Row) (crmcontracts.ReportingTarget, error) {
 
 func (s *Service) target(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (crmcontracts.ReportingTarget, error) {
 	var b bindings
-	query := "SELECT " + targetColumns + targetFrom + " WHERE t.id=" + b.add(id)
+	// One target by id answers to the same visibility as the list.
+	visible, err := s.targetClause(ctx, tx, &b)
+	if err != nil {
+		return crmcontracts.ReportingTarget{}, err
+	}
+	query := "SELECT " + targetColumns + targetFrom + " WHERE " + visible + " AND t.id=" + b.add(id)
 	if lock {
 		query += " FOR UPDATE OF t"
 	}
@@ -70,18 +76,54 @@ func (s *Service) GetTarget(ctx context.Context, id ids.UUID) (crmcontracts.Repo
 }
 
 func (s *Service) targetClause(ctx context.Context, tx pgx.Tx, b *bindings) (string, error) {
+	reach, err := s.targetReach(ctx, tx)
+	return reach.clause(b), err
+}
+
+// targetReach is which targets a seat reads, resolved once so a read that
+// matches many targets asks for the seat's members once.
+type targetReach struct {
+	every   bool
+	members []ids.UUID
+	teams   []ids.UUID
+}
+
+func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return "", apperrors.ErrPermissionDenied
+		return targetReach{}, apperrors.ErrPermissionDenied
 	}
 	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
-		return "TRUE", nil
+		return targetReach{every: true}, nil
+	}
+	// Only a seat that reaches every team and owner may set the company's
+	// target, so it reads every target it may set.
+	every, err := s.writeReaches(ctx, tx, crmcontracts.ReportingScope{Kind: reportingWorkspace})
+	if err != nil || every {
+		return targetReach{every: every}, err
 	}
 	members, err := s.authority.Members(ctx, tx)
-	if err != nil {
-		return "", err
+	return targetReach{members: members, teams: actor.TeamIDs}, err
+}
+
+func (r targetReach) clause(b *bindings) string {
+	if r.every {
+		return "TRUE"
 	}
-	return "((t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(members) + ")) OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(actor.TeamIDs) + ")))", nil
+	return "(t.scope_kind='workspace' OR (t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(r.members) + ")) OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.teams) + ")))"
+}
+
+// writeReaches reports whether the seat may set a target on scope, under the
+// reach CreateTarget checks.
+func (s *Service) writeReaches(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) (bool, error) {
+	if !auth.Allows(ctx, "sales_target", principal.ActionCreate) && !auth.Allows(ctx, "sales_target", principal.ActionUpdate) {
+		return false, nil
+	}
+	_, err := s.authority.Scope(ctx, tx, scope, true)
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 // TargetFilter selects current target definitions before pagination.

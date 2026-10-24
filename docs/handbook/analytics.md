@@ -48,7 +48,7 @@ The **Reports** section lists saved reports and starts a custom report with **Ne
 
 A company field shows as its name with "(company)", and groups each deal by its company's value. A deal whose company you cannot open is left out of that grouping. Under **Group by**, the report says how many of the deals you can read have a value in each such field. A grouping by a field few deals hold puts most deals in the empty group. If an admin turns the field off or retires it, a saved report that uses it says so instead of showing numbers. Ask again without the field, or ask an admin to turn it back on.
 
-The **My outcomes** section shows your own open deals and meetings, for a rep only.
+The **My outcomes** section shows your own targets, open deals and meetings, for a rep only.
 The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
 
 ### How do I share a report view?
@@ -188,22 +188,20 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 ## Performance
 
 **Performance** shows sales won, target progress when targets are set, trends
-and pipeline charts. Switch to **SDR outcomes** for held meetings and accepted
-opportunities. Every chart opens its evidence and offers a table of numbers.
+and pipeline charts. Switch to **SDR outcomes**, **Leads** or **Partners** for
+those figures. Every chart opens its evidence and offers a table of numbers.
 Small groups are held back rather than shown as zero. See [Performance and saved
 sales reports](sales-reporting.md).
 
 ## My outcomes
 
-The **My outcomes** section of Analytics shows your own work, in two panels.
+The **My outcomes** section of Analytics shows your own work, in three panels.
+
+**My targets**: each figure that can take a target, against your own target for this month or this fiscal quarter. A card reads "10 of 15", with the dates the target covers and "67% of target" under it. A figure with no target says **No target set** and shows the month so far. Only targets on your own name for all pipelines show here; team, company and single-pipeline targets are listed under **Targets**.
 
 **My open deals**: deals and value, both opening the Deals section.
 
-**My meetings**: meetings *you host*, counted by where each stands today.
-The states are **Booked, Held, No-show, Canceled.** The line under it states
-the rule that readers often get wrong: "A held meeting no longer counts as
-booked." The count has no date filter; use **Performance → SDR outcomes** for
-period totals.
+**My meetings**: meetings *you host*, counted by where each stands today. The states are **Booked, Held, No-show, Canceled.** The line under it states the rule that readers often get wrong: "A held meeting no longer counts as booked." The count has no date filter; use **Performance → SDR outcomes** for period totals.
 
 ## Delivery
 

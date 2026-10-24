@@ -27,8 +27,18 @@ import {
   type ReportingSelection,
   reportingQuery,
 } from "./reporting.model";
-import { useReportingPipelines } from "./reporting.queries";
+import {
+  useReportingCatalog,
+  useReportingPipelines,
+} from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
+import {
+  isReportingView,
+  metricView,
+  REPORTING_VIEWS,
+  type ReportingView,
+  VIEW_SHAPE,
+} from "./reporting.views";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 
@@ -45,12 +55,7 @@ export function ReportingOverview({
   emptyNotice?: EmptyNotice;
 }>) {
   const t = useT();
-  const catalog = useQuery({
-    queryKey: ["reporting-catalog"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/metrics"));
-    },
-  });
+  const catalog = useReportingCatalog();
   const pipelines = useReportingPipelines();
   const setup = useQuery({
     queryKey: ["reporting-overview-setup"],
@@ -87,12 +92,10 @@ function useOverviewFilters(
   pipelines: readonly components["schemas"]["Pipeline"][],
 ) {
   const [params] = useUrlParams();
-  const template =
-    params.get("view") === "sdr"
-      ? "sdr"
-      : params.get("view") === "sales"
-        ? "sales"
-        : defaultTemplate;
+  const view = params.get("view");
+  const template: ReportingView = isReportingView(view)
+    ? view
+    : defaultTemplate;
   const setTemplate = (value: string) => replaceDial("view", value);
   const from = params.get("from") ?? "";
   const through = params.get("through") ?? "";
@@ -158,7 +161,7 @@ function OverviewBody({
   const zone = useRecordZone();
   const { locale } = useLocale();
   const {
-    template,
+    template: chosen,
     setTemplate,
     start,
     end,
@@ -176,28 +179,26 @@ function OverviewBody({
   const canSave = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
+  // A view whose metrics this seat may not read is not offered, and an
+  // address that names one opens the first view the seat has.
+  const views = REPORTING_VIEWS.filter((view) =>
+    catalog.metrics.some((metric) => metricView(metric.id) === view),
+  );
+  const template = views.includes(chosen) ? chosen : (views[0] ?? chosen);
+  const shape = VIEW_SHAPE[template];
   const metrics = catalog.metrics
-    .filter((metric) =>
-      template === "sdr"
-        ? ["meetings_held", "accepted_opportunities"].includes(metric.id)
-        : !["meetings_held", "accepted_opportunities"].includes(metric.id) &&
-          // The expected finish is always this fiscal quarter's, so it is
-          // asked only when the page reads this quarter too.
-          (metric.id !== "forecast_landing" || period === "this_quarter"),
+    .filter(
+      (metric) =>
+        metricView(metric.id) === template &&
+        // The expected finish is always this fiscal quarter's, so it is
+        // asked only when the page reads this quarter too.
+        (metric.id !== "forecast_landing" || period === "this_quarter"),
     )
     .map((metric) => metric.id);
-  const desired: ReportingSelection["blocks"] =
-    template === "sdr"
-      ? ["sdr_outcomes", "target_progress"]
-      : [
-          "bookings_trend",
-          "stage_distribution",
-          "owner_attainment",
-          "stage_age",
-        ];
+  const desired = shape.blocks;
   const selection: ReportingSelection = {
     scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
-    pipeline_id: template === "sales" ? pipelineId || undefined : undefined,
+    pipeline_id: shape.dealFilters ? pipelineId || undefined : undefined,
     period,
     interval:
       period === "custom" && start && end
@@ -216,7 +217,9 @@ function OverviewBody({
       ),
     ),
   };
-  const validPeriod = validDateRange(period, start, end);
+  const validDates = validDateRange(period, start, end);
+  // A seat whose catalog holds none of the view's metrics has nothing to ask.
+  const validPeriod = validDates && metrics.length > 0;
   const query = useQuery({
     enabled: validPeriod,
     queryKey: ["reporting-evaluation", selection],
@@ -249,7 +252,7 @@ function OverviewBody({
           </>
         }
         caption={
-          validPeriod
+          validDates
             ? resultsThrough(query.data, locale, t)
             : t("reporting.chooseDates")
         }
@@ -257,9 +260,14 @@ function OverviewBody({
         {scopeControl}
         <SegmentedControl
           label={t("reporting.view")}
-          options={["sales", "sdr"]}
+          options={views}
           value={template}
-          labels={{ sales: t("reporting.sales"), sdr: t("reporting.sdr") }}
+          labels={{
+            sales: t(VIEW_SHAPE.sales.label),
+            sdr: t(VIEW_SHAPE.sdr.label),
+            leads: t(VIEW_SHAPE.leads.label),
+            partners: t(VIEW_SHAPE.partners.label),
+          }}
           onChange={(next) => {
             setTemplate(next);
             setEvidence(null);
@@ -268,8 +276,8 @@ function OverviewBody({
         <ReportingFilters
           selection={selection}
           showScope={false}
-          showCloseWindow={template === "sales"}
-          showPipeline={template === "sales"}
+          showCloseWindow={shape.dealFilters}
+          showPipeline={shape.dealFilters}
           showTargets={false}
           dates={{
             from: start,
@@ -287,10 +295,7 @@ function OverviewBody({
                 next.period === "this_quarter" ? "fiscal_quarter" : "month",
               );
             }
-            if (
-              template === "sales" &&
-              next.pipeline_id !== selection.pipeline_id
-            )
+            if (shape.dealFilters && next.pipeline_id !== selection.pipeline_id)
               setPipelineId(next.pipeline_id ?? "");
             if (next.target_basis !== targetBasis)
               setTargetBasis(next.target_basis);

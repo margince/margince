@@ -8,22 +8,33 @@ import (
 	"reflect"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestReportingCatalogTranslationsCoverExactlyTheRegisteredMetrics(t *testing.T) {
-	langcopytest.Census(t, reportingDefinitionWords)
-	if len(reportingDefinitionWords) != len(reportingMetrics) {
-		t.Fatal("definition table differs from registered metrics")
+	tables := map[string]map[crmcontracts.ReportingMetricID]langcopy.Phrase{
+		"definition":  reportingDefinitionWords,
+		"attribution": reportingAttributionWords,
+		"incomplete":  reportingIncompleteWords,
 	}
+	langcopytest.Census(t, reportingBreakdownLabels)
+	langcopytest.Census(t, reportingLeadStatusLabels)
 	grants := map[string]principal.ObjectGrant{}
-	for _, spec := range reportingMetrics {
-		if _, ok := reportingDefinitionWords[spec.definition.Id]; !ok {
-			t.Fatalf("missing definition for %s", spec.definition.Id)
+	for name, table := range tables {
+		langcopytest.Census(t, table)
+		if len(table) != len(reportingMetrics) {
+			t.Fatalf("%s table differs from registered metrics", name)
 		}
-		grants[spec.object] = principal.ObjectGrant{Read: true}
+		for _, spec := range reportingMetrics {
+			if _, ok := table[spec.definition.Id]; !ok {
+				t.Fatalf("missing %s for %s", name, spec.definition.Id)
+			}
+			grants[spec.object] = principal.ObjectGrant{Read: true}
+		}
 	}
 	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, Permissions: principal.Permissions{Objects: grants}})
 	evaluator := metricEvaluator{}
@@ -34,16 +45,26 @@ func TestReportingCatalogTranslationsCoverExactlyTheRegisteredMetrics(t *testing
 	if len(original.Metrics) != len(reportingMetrics) {
 		t.Fatal("catalog test did not reach every metric")
 	}
-	for _, language := range []textlang.Lang{textlang.German, textlang.Vietnamese} {
+	for _, language := range textlang.Shipped {
+		if language == textlang.English {
+			continue
+		}
 		translated, err := evaluator.Catalog(ctx, language)
 		if err != nil {
 			t.Fatal(err)
 		}
 		for i := range translated.Metrics {
-			if translated.Metrics[i].Definition == "" || translated.Metrics[i].Definition == original.Metrics[i].Definition {
-				t.Fatalf("%s missing translation for %s", language, translated.Metrics[i].Id)
+			got, want := &translated.Metrics[i], original.Metrics[i]
+			for name, pair := range map[string][2]string{
+				"definition":  {got.Definition, want.Definition},
+				"attribution": {*got.Attribution, *want.Attribution},
+				"incomplete":  {*got.IncompletePolicy, *want.IncompletePolicy},
+			} {
+				if pair[0] == "" || pair[0] == pair[1] {
+					t.Fatalf("%s serves an untranslated %s for %s", language, name, got.Id)
+				}
 			}
-			translated.Metrics[i].Definition = original.Metrics[i].Definition
+			got.Definition, got.Attribution, got.IncompletePolicy = want.Definition, want.Attribution, want.IncompletePolicy
 		}
 		if !reflect.DeepEqual(translated, original) {
 			t.Fatalf("%s changed metric facts or supported operations", language)

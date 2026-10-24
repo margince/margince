@@ -126,6 +126,9 @@ export function ChartContext({
           {t(`reporting.status.${chart.coverage.status}`)}
         </Badge>
       )}
+      {chart.coverage.withheld && (
+        <span className="t-caption">{t("reporting.withheld")}</span>
+      )}
       {chart.capture_status?.failure && (
         <p className="t-caption" role="status">
           {chart.capture_status.failure}

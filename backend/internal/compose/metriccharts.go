@@ -165,3 +165,44 @@ func reportingGroupValue(facts []reporting.Fact, kind crmcontracts.ReportingBloc
 	}
 	return value, upper, count, status
 }
+
+// reportingBreakdownChart splits one metric's reading into the groups its facts
+// name, largest first, each with its own evidence.
+func reportingBreakdownChart(out *reporting.Evaluation, chart crmcontracts.ReportingChart, metric crmcontracts.ReportingMetric) crmcontracts.ReportingChart {
+	frame := out.Result.Context
+	chart.ContextId = metric.Evidence.ContextId
+	if chart.ContextId == reportingState {
+		chart.StateAt = &frame.StateAt
+	} else {
+		chart.Interval = &frame.Interval
+	}
+	groups := map[string][]reporting.Fact{}
+	labels := map[string]string{}
+	for _, fact := range metricFacts(out.Facts, chart.Metric, chart.ContextId) {
+		groups[fact.GroupKey] = append(groups[fact.GroupKey], fact)
+		labels[fact.GroupKey] = fact.GroupLabel
+	}
+	for key, facts := range groups {
+		value, count, exact := metricSum(facts)
+		status := crmcontracts.ReportingStatus("ok")
+		if !exact {
+			status = reportingUnavailable
+		}
+		group := key
+		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: key, Label: labels[key], Value: value, Observations: &count, Status: status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: chart.ContextId, GroupKey: &group}})
+	}
+	slices.SortFunc(chart.Points, func(a, b crmcontracts.ReportingPoint) int {
+		if order := cmp.Compare(pointValue(b), pointValue(a)); order != 0 {
+			return order
+		}
+		return cmp.Compare(a.Key, b.Key)
+	})
+	return chart
+}
+
+func pointValue(point crmcontracts.ReportingPoint) float64 {
+	if point.Value == nil {
+		return 0
+	}
+	return *point.Value
+}

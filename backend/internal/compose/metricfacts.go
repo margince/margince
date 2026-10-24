@@ -29,6 +29,9 @@ type metricFactQuery struct {
 	revision                                                                   int64
 	from, where, owner, at, value, key, stage, stageLabel, outcome, provenance string
 	money                                                                      bool
+	// group renders the breakdown key and label columns; nil for a metric
+	// with no breakdown.
+	group func(context.Context, *reportingBindings) (key, label string, err error)
 }
 
 func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, spec metricFactQuery) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
@@ -67,7 +70,13 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 	}
 	said := reporting.ExplanationCopy(frame)
 	stageLabel := "COALESCE(" + spec.stageLabel + "," + b.add(said.Say(reportingLabelWords.Unmapped)) + ")"
-	query := "SELECT " + spec.key + ",t.id,t.name," + spec.owner + ",COALESCE(u.display_name," + b.add(said.Say(reportingLabelWords.Unassigned)) + ")," + spec.at + "," + value + "," + spec.stage + "," + stageLabel + "," + spec.outcome + "," + spec.provenance + "," + position + " FROM deal t " + from + " LEFT JOIN app_user u ON u.id=" + spec.owner + " WHERE " + where + " ORDER BY " + spec.key + " LIMIT " + b.add(reportingFactLimit+1)
+	groupKey, groupLabel := "''", "''"
+	if spec.group != nil {
+		if groupKey, groupLabel, err = spec.group(ctx, &b); err != nil {
+			return nil, crmcontracts.ReportingCoverage{}, err
+		}
+	}
+	query := "SELECT " + spec.key + ",t.id,t.name," + spec.owner + ",COALESCE(u.display_name," + b.add(said.Say(reportingLabelWords.Unassigned)) + ")," + spec.at + "," + value + "," + spec.stage + "," + stageLabel + "," + spec.outcome + "," + spec.provenance + "," + position + "," + groupKey + "," + groupLabel + " FROM deal t " + from + " LEFT JOIN app_user u ON u.id=" + spec.owner + " WHERE " + where + " ORDER BY " + spec.key + " LIMIT " + b.add(reportingFactLimit+1)
 	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
@@ -92,9 +101,9 @@ func scanDealMetricFact(row pgx.CollectableRow, metric crmcontracts.ReportingMet
 	var amount *int64
 	var err error
 	if money {
-		err = row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, &amount, &fact.StageID, &fact.StageLabel, &fact.Outcome, &fact.Provenance, &fact.StagePosition)
+		err = row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, &amount, &fact.StageID, &fact.StageLabel, &fact.Outcome, &fact.Provenance, &fact.StagePosition, &fact.GroupKey, &fact.GroupLabel)
 	} else {
-		err = row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, &value, &fact.StageID, &fact.StageLabel, &fact.Outcome, &fact.Provenance, &fact.StagePosition)
+		err = row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, &value, &fact.StageID, &fact.StageLabel, &fact.Outcome, &fact.Provenance, &fact.StagePosition, &fact.GroupKey, &fact.GroupLabel)
 	}
 	if err != nil {
 		return fact, err

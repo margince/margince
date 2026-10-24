@@ -1,5 +1,5 @@
 import "./reporting.css";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -20,11 +20,14 @@ import { formatDateAbbrev, monthName } from "../../format/format";
 import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { dayInZone, UTC_ZONE } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { throwProblem } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { metricLabel, type ReportingMetricID } from "./reporting.model";
-import { useReportingPipelines } from "./reporting.queries";
+import {
+  useReportingCatalog,
+  useReportingPipelines,
+} from "./reporting.queries";
 import { TargetHistory } from "./reporting.targethistory";
 
 type Target = components["schemas"]["ReportingTarget"];
@@ -69,12 +72,7 @@ export function ReportingTargetDialog({
   const [amount, setAmount] = useState(
     targetAmount(target, context.base_currency),
   );
-  const catalog = useQuery({
-    queryKey: ["reporting-catalog"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/metrics"));
-    },
-  });
+  const catalog = useReportingCatalog();
   const pipelines = useReportingPipelines();
   const definition = catalog.data?.metrics.find(
     (candidate) => candidate.id === metric,

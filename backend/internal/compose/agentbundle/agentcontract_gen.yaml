@@ -16896,8 +16896,20 @@ components:
         - meetings_held
         - accepted_opportunities
         - forecast_landing
+        - leads_created
+        - lead_status_moves
+        - leads_promoted
+        - lead_first_response
+        - partner_pipeline
+        - partner_won
+        - partner_commission
+        - partner_activity
     ReportingBlockKind:
       type: string
+      description: |-
+        `breakdown` splits one metric's figure into named groups: a lead's origin,
+        the status a lead moved to, a partner and whether it sourced or influenced
+        the deal, or whether a partner is active.
       enum:
         - bookings_trend
         - stage_distribution
@@ -16908,6 +16920,7 @@ components:
         - forecast_support
         - pipeline_movement
         - metric_reading
+        - breakdown
     ReportingStatus:
       type: string
       description: |-
@@ -17041,6 +17054,7 @@ components:
         - forecast_support
         - pipeline_movement
         - metric_reading
+        - breakdown
         - question
     ReportingCardQuestion:
       type: object
