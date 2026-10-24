@@ -41601,9 +41601,11 @@ export interface components {
          * @description What happens to a record past its window. One action per policy row — a ladder is separate
          *     rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
          *     `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
+         *     `expire` acts on a row an extension owns: it deletes the row, or clears the personal
+         *     columns the extension declared. It destroys data, so the posture suppresses it too.
          * @enum {string}
          */
-        RetentionAction: "archive" | "anonymize" | "erase";
+        RetentionAction: "archive" | "anonymize" | "erase" | "expire";
         /**
          * @description One storage-limitation rule (DM-DDL-10, UC-GDPR-09). At most one row exists per scope,
          *     enforced by the database rather than by this surface.
@@ -41691,7 +41693,7 @@ export interface components {
             reason: string;
         };
         /** @enum {string} */
-        HeldEntityType: "contact" | "company" | "deal" | "lead" | "project";
+        HeldEntityType: "contact" | "company" | "deal" | "lead" | "project" | "extension";
         HeldRecord: {
             entity_type: components["schemas"]["HeldEntityType"];
             /** Format: uuid */
@@ -71272,7 +71274,10 @@ export interface operations {
     };
     placeLegalHold: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The extension table of the row. Required when entityType is extension, refused otherwise. */
+                table?: string;
+            };
             header?: {
                 /**
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -71331,7 +71336,10 @@ export interface operations {
     };
     liftLegalHold: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The extension table of the row. Required when entityType is extension, refused otherwise. */
+                table?: string;
+            };
             header?: {
                 /**
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a

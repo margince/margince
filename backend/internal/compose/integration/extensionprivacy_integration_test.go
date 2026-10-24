@@ -11,6 +11,7 @@ package integration
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -33,7 +34,8 @@ func probeUnit(t *testing.T, version extension.Version, personal ...string) exte
 		`GRANT USAGE ON SCHEMA ext TO margince_app`,
 		`CREATE TABLE IF NOT EXISTS ext.ext_probe_note (
 			id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-			contact_id uuid, company_id uuid, lead_id uuid, body text)`,
+			contact_id uuid, company_id uuid, lead_id uuid, body text,
+			created_at timestamptz NOT NULL DEFAULT now())`,
 		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_note TO margince_app`,
 	} {
 		if _, err := owner.Exec(t.Context(), stmt); err != nil {
@@ -119,6 +121,31 @@ func TestBootRefusesADeclaredColumnTheTableLacks(t *testing.T) {
 
 	if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{probeUnit(t, "1.0.0", "no_such_column")}); err == nil {
 		t.Error("a declared personal column the table does not have booted")
+	}
+}
+
+func TestBootChecksTheAgeColumnTheSweepCountsFrom(t *testing.T) {
+	env := Setup(t)
+	for i, c := range []struct {
+		column   string
+		wantBoot bool
+	}{{"created_at", true}, {"no_such_column", false}, {"body", false}} {
+		column, wantBoot := c.column, c.wantBoot
+		// A new version each time: the same version may not change its declaration.
+		unit := probeUnit(t, extension.Version(fmt.Sprintf("1.%d.0", i)), "body")
+		unit.Privacy[0].AgeColumn = column
+		if column == "body" {
+			// A personal column cannot be the age, so the type check is reached
+			// through a table whose text column is not declared personal.
+			unit.Privacy[0].Personal = nil
+		}
+		err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
+		if wantBoot && err != nil {
+			t.Errorf("age column %q was refused: %v", column, err)
+		}
+		if !wantBoot && err == nil {
+			t.Errorf("age column %q booted, though the sweep cannot count a row's age from it", column)
+		}
 	}
 }
 

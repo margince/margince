@@ -6,7 +6,7 @@ follow the same privacy and retention rules as core data. It is for those who bu
 
 Extension data follows core's rules in three steps. An extension declares what personal data it holds, so
 core can clear, export and guard it. Its raw SQL reaches only its own tables, so core's records change only
-through core's own verbs. Core will then apply retention and legal hold to the declared data.
+through core's own verbs. Core then applies retention and legal hold to the declared data.
 
 ## The features
 
@@ -14,7 +14,7 @@ through core's own verbs. Core will then apply retention and legal hold to the d
 |---|---|---|---|
 | 1. Privacy declaration for extension data | Declare each table's personal data. Core clears, exports and guards it. | [Add an extension](../how-to/add-an-extension.md#declare-the-personal-data-in-your-tables) and [privacy and consent](../explanation/privacy-and-consent.md#extension-tables) | Done |
 | 2. Limit raw database access | Run SQL in `Tx` on the extension's own tables only. A core table is refused with `ErrCoreTableRefused`; core records are reached through `Tx.Core()`, the read calls and `Ingest`. | [Add an extension](../how-to/add-an-extension.md) and [what the tier does not guard against](../explanation/extensibility.md#what-the-tier-does-not-guard-against) | Done |
-| 3. Retention sweep and legal hold | Nothing yet. | None yet | Planned |
+| 3. Retention sweep and legal hold | Name a date column in the declaration. A `retention_policy` row for `extension/<table>` then makes core delete old rows, but never a row inside its retention class floor. Hold a row, and release the hold. A hold blocks erasure and the sweep. Core writes the audit entries and events. | [Privacy and consent](../explanation/privacy-and-consent.md#extension-tables) and [Add an extension](../how-to/add-an-extension.md#declare-the-personal-data-in-your-tables) | Done |
 | 4. Set-up from files | Nothing yet. | None yet | Planned |
 | 5. Extension activation step | Nothing yet. | None yet | Planned |
 
@@ -33,6 +33,13 @@ All extensions share one database role, `ext_runtime`. It holds the whole `ext` 
 still read the tables of another. A role for each extension would close that and is not asked for here.
 The role also does not stop a unit that means harm, because an extension runs in the same process as core. A statement that
 ends in another role is caught, and nothing it did is kept. One that switches to another role and back inside itself stays hidden.
+
+## What feature 3 leaves open
+
+The settings screen and the retention policy API list a fixed set of scopes. The scope of an extension
+table is the table's own name. So a policy row for `extension/<table>` is added to `retention_policy`
+directly, and none exists by default. A core rule that strips a contact of its name keeps the contact while
+one of its extension rows is held. It picks the contact again on each pass.
 
 ## How to read this page
 

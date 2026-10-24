@@ -8345,6 +8345,7 @@ export const en = {
   "retention.actionArchive": "Archive",
   "retention.actionAnonymize": "Anonymize",
   "retention.actionErase": "Erase",
+  "retention.actionExpire": "Expire",
   "retention.scopeLeadUnconverted": "Leads that never converted",
   "retention.scopeActivity": "All captured activity",
   "retention.scopeActivityTranscript": "Call transcripts",

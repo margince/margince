@@ -8303,6 +8303,7 @@ export const de = {
   "retention.actionArchive": "Archivieren",
   "retention.actionAnonymize": "Anonymisieren",
   "retention.actionErase": "Löschen",
+  "retention.actionExpire": "Ablaufen lassen",
   "retention.scopeLeadUnconverted": "Nie konvertierte Leads",
   "retention.scopeActivity": "Alle erfassten Aktivitäten",
   "retention.scopeActivityTranscript": "Gesprächstranskripte",

@@ -34,6 +34,7 @@ func VerifySchema(ctx context.Context, q Querier, namespace string, declared []p
 	defer rows.Close()
 	columns := map[string][]string{}
 	unclearable := map[string]error{}
+	dataTypes := map[string]string{}
 	for rows.Next() {
 		var table, column, dataType string
 		var nullable bool
@@ -41,6 +42,7 @@ func VerifySchema(ctx context.Context, q Querier, namespace string, declared []p
 			return err
 		}
 		columns[table] = append(columns[table], column)
+		dataTypes[table+"."+column] = dataType
 		if column == "id" {
 			if dataType != "uuid" {
 				unclearable[table+".id"] = errors.New("the row id must be a uuid, because the core audits each cleared row by it")
@@ -72,16 +74,36 @@ func VerifySchema(ctx context.Context, q Querier, namespace string, declared []p
 		if err := checkColumns(t, have, unclearable); err != nil {
 			return err
 		}
+		if err := checkAgeColumn(t, dataTypes); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+// checkAgeColumn holds a declared age column to being a point in time, the only
+// thing a retention window can be counted from.
+func checkAgeColumn(t privacy.Table, dataTypes map[string]string) error {
+	if t.AgeColumn == "" {
+		return nil
+	}
+	switch dataTypes[t.Name+"."+t.AgeColumn] {
+	case "timestamp with time zone", "timestamp without time zone", "date":
+		return nil
+	case "":
+		return fmt.Errorf("extprivacy: privacy declares age column %s.%s, which the table does not have", t.Name, t.AgeColumn)
+	}
+	return fmt.Errorf("extprivacy: age column %s.%s is a %s; a retention sweep needs a timestamp or a date",
+		t.Name, t.AgeColumn, dataTypes[t.Name+"."+t.AgeColumn])
 }
 
 // checkColumns holds one declared table to the columns the migrated table has,
 // and to the clear the core can run on each personal one.
 func checkColumns(t privacy.Table, have []string, unclearable map[string]error) error {
-	// Only a table the core clears needs a row id: it audits each cleared row by it.
+	// Only a table the core clears, holds or sweeps needs a row id: it audits each
+	// row by it.
 	var need []string
-	if len(t.Personal) > 0 {
+	if identifiable(t) {
 		need = append(need, "id")
 	}
 	for _, c := range append(slices.Clone(need), t.Personal...) {

@@ -348,7 +348,8 @@ func (s *RetentionService) evaluatePolicy(ctx context.Context, pol retentionPoli
 		scope += *pol.Category
 	}
 	selector, known := retentionSelectors[scope]
-	if !known {
+	extTable, sweepsExtension := s.sweptExtensionTable(pol)
+	if !known && !sweepsExtension {
 		s.log.Warn("retention: policy scope has no selector — skipped, not half-applied",
 			"scope", scope, "policy", pol.ID)
 		return nil
@@ -372,10 +373,20 @@ func (s *RetentionService) evaluatePolicy(ctx context.Context, pol retentionPoli
 			"scope", scope, "policy", pol.ID, "action", pol.Action)
 		return nil
 	}
-	due, err := s.dueRecords(ctx, pol, selector, ref)
+	var due []ids.UUID
+	if sweepsExtension {
+		due, err = s.dueExtensionRows(ctx, extTable, pol, ref)
+	} else {
+		due, err = s.dueRecords(ctx, pol, selector, ref)
+	}
 	if err != nil {
 		return fmt.Errorf("retention %s: select: %w", scope, err)
 	}
+	return s.applyDue(ctx, pol, scope, due)
+}
+
+// applyDue acts on one batch of due records, one transaction each.
+func (s *RetentionService) applyDue(ctx context.Context, pol retentionPolicy, scope string, due []ids.UUID) error {
 	for _, id := range due {
 		// The posture is re-read per RECORD for a destructive policy, not per
 		// stage. A stage is up to retentionBatch records, each in its own
@@ -469,7 +480,7 @@ func (s *RetentionService) retainOnly(ctx context.Context) (bool, error) {
 // sets archived_at and the record stays readable — so it is the one action the
 // retain-only posture leaves alone.
 func isDestructive(action string) bool {
-	return action == actionAnonymize || action == actionErase
+	return action == actionAnonymize || action == actionErase || action == actionExpire
 }
 
 // voiceSignalRetention note: the deadline itself is stamped per row

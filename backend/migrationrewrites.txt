@@ -4,3 +4,4 @@
 1792562859_an_admin_can_describe_a_second_legal_entity.up.sql | *, audit_log, role | the procedural body is the trigger that keeps the default entity; audit_log gets one row for the one default entity, and role updates the fixed set of system roles
 1792762767_a_unit_sql_runs_as_the_ext_runtime_role.up.sql | * | the procedural body only grants and revokes privileges on the ext schema; it reads and writes no row
 1792762767_a_unit_sql_runs_as_the_ext_runtime_role.down.sql | * | the procedural body only grants and revokes privileges on the ext schema; it reads and writes no row
+1792788138_extension_rows_can_be_held_and_expire.down.sql | retention_policy | the rollback deletes only the policy rows with the new expire action, and an installation has at most one such row per declared extension table

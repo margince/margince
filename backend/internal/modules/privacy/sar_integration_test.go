@@ -167,6 +167,9 @@ func exportContext(ws, user ids.UUID) context.Context {
 				// Without it the audience suites reach a permission denial rather
 				// than the audience decision they are about.
 				"audit_log": {Read: true},
+				// The controller decides a legal hold on an extension row, and
+				// the retention pass reads the policies it applies.
+				"retention_policy": {Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

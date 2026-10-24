@@ -42,7 +42,8 @@ type HeldPage struct {
 	HasMore    bool
 }
 
-// heldRecordsSQL unions the five holdable tables.
+// heldRecordsSQL unions the five holdable tables and the holds on extension
+// rows, which name their table where a core record names itself.
 //
 // Every arm reads `legal_hold AND archived_at IS NULL`: an archived record is
 // still held and still un-erasable, but it is not what a controller is asked to
@@ -59,7 +60,9 @@ const heldRecordsSQL = `
 	UNION ALL
 	  SELECT 'lead', id, coalesce(full_name, email, company_name, id::text), created_at FROM lead WHERE legal_hold AND archived_at IS NULL
 	UNION ALL
-	  SELECT 'project', id, name, created_at FROM project WHERE legal_hold AND archived_at IS NULL`
+	  SELECT 'project', id, name, created_at FROM project WHERE legal_hold AND archived_at IS NULL
+	UNION ALL
+	  SELECT 'extension', row_id, table_name, placed_at FROM extension_legal_hold`
 
 // ListLegalHolds answers which records a hold is preserving, oldest first.
 func ListLegalHolds(ctx context.Context, db *database.DB, cursor *string, limit *int) (HeldPage, error) {

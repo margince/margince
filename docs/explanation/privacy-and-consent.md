@@ -383,8 +383,55 @@ flowchart LR
 | Subject export | Lists the declared columns of the same rows under `extension_data`. |
 | Merge of a contact, lead or company | Refuses with a conflict that counts the rows linking to it. Archive the record instead. Core deletes no contact or company. |
 | A website lead is erased because its notice failed. This is the one lead core deletes | Clears the rows linked to the lead, and to the notice mail it deletes, before the lead goes. |
+| Retention policy on a table (`extension/<table>`, action `expire`) | Deletes each row past its window. Clears the personal columns instead when the table declares any, and marks the row so the next pass skips it. Writes an `expire` audit entry and a `retention.applied` event. |
+| Legal hold on a row | Blocks erasure and the sweep for that row. See [Legal hold on an extension row](#legal-hold-on-an-extension-row). |
 
 The retention class comes from the core's closed set. A unit cannot add a class.
+
+#### How a sweep decides
+
+The core acts on a table only when its declaration names an `AgeColumn`, the timestamp or date that dates
+each row. A row is due when it is older than the policy's `retain_days` and older than the floor
+its retention class puts in force. The class floor is the selected jurisdiction's, or the strictest
+compiled-in one when none is selected. A floor carried over a change to a weaker jurisdiction binds
+extension rows too, for the `commercial_correspondence` class.
+
+```mermaid
+flowchart LR
+    P[Policy for extension/table] --> W{Older than the window and the floor?}
+    W -- no --> K[Row kept]
+    W -- yes --> H{Held?}
+    H -- yes --> K
+    H -- no --> A[Core deletes or clears the row]
+    A --> L[Core writes the audit entry and the event]
+```
+
+The hold and the floor are checked again inside the transaction that acts, because either can change
+between choosing a row and acting on it. The `retain_only` posture stops `expire`, as it stops every
+action that destroys data. A policy for a table with no `AgeColumn`, or one no unit declares, is skipped
+with a warning in the log.
+
+#### Legal hold on an extension row
+
+A legal hold on a row of an extension table works as it does on a core record. The calls are
+`POST /retention/legal-holds/extension/{recordId}/place` and `.../lift`, with the table in the `table`
+query parameter. They write the `place_legal_hold` and `lift_legal_hold` audit entries, with the stated
+reason. A second place, or a lift of a row that is not held, returns `409`. The hold is a row of
+`extension_legal_hold`, because a unit's table carries no core column.
+
+- **Erasure refuses a held row.** Say a subject's linked extension rows include a held one. An erasure
+  of the subject, or a retention rule that strips the subject of its name, is then refused with `409`
+  before any row changes. A retention pass that meets the refusal keeps the record and goes on.
+- **The sweep never takes a held row.** It also skips a row that names a held contact, lead or company.
+  A row that names only an activity follows the hold on the row itself.
+- A table with no personal column and no `AgeColumn` takes no hold, because the core has no row id to
+  name.
+
+The list of held records (`GET /retention/legal-holds`) names an extension row by its table.
+
+A retention policy for an extension table is not offered in the settings screen. The scope is the
+table's own name, which no fixed list holds, so the row is added to `retention_policy` directly. No row
+exists by default, so the core removes nothing until someone adds one.
 
 For the declaration and the boot check, see
 [Add an extension](../how-to/add-an-extension.md#declare-the-personal-data-in-your-tables).

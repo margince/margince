@@ -72,6 +72,7 @@ export const ACTION_LABEL_KEYS: Record<RetentionAction, MessageKey> = {
   archive: "retention.actionArchive",
   anonymize: "retention.actionAnonymize",
   erase: "retention.actionErase",
+  expire: "retention.actionExpire",
 };
 
 export function actionLabelKey(action: RetentionAction): MessageKey {
@@ -133,6 +134,7 @@ const ACTION_TONES: Record<RetentionAction, "warning" | "danger" | undefined> =
     archive: undefined,
     anonymize: "warning",
     erase: "danger",
+    expire: "danger",
   };
 
 export function actionTone(

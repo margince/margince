@@ -203,6 +203,10 @@ func TestEveryExecutorPairIsReachableAndEveryReachablePairHasAnExecutor(t *testi
 		}
 		authorableTypes[scope.ObjectType] = true
 	}
+	// The scope of an extension's table is the table's own name, which no
+	// static list can hold. TestTheSweepExpiresWhatIsPastItsWindowAndSkipsAHeldRow
+	// reaches that executor through declared tables instead.
+	authorableTypes[extensionObjectType] = true
 	for pair := range retentionActions {
 		objectType, action, found := strings.Cut(pair, "/")
 		if !found {

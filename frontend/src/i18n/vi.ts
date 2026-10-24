@@ -8086,6 +8086,7 @@ export const vi = {
   "retention.actionArchive": "Chuyển vào kho lưu trữ",
   "retention.actionAnonymize": "Ẩn danh hóa",
   "retention.actionErase": "Xóa",
+  "retention.actionExpire": "Hết hạn",
   "retention.scopeLeadUnconverted": "Lead chưa từng chuyển đổi",
   "retention.scopeActivity": "Toàn bộ hoạt động đã thu thập",
   "retention.scopeActivityTranscript": "Bản chép lời cuộc gọi",

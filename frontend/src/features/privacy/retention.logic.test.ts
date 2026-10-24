@@ -153,7 +153,10 @@ describe("the authorable scope list and the contract enum", () => {
 
   it("offers every action the contract admits, exactly once", () => {
     const offered = [...RETENTION_ACTIONS];
-    const admitted = Object.keys(ACTION_LABEL_KEYS) as RetentionAction[];
+    // `expire` acts on an extension's table, a scope this screen cannot author.
+    const admitted = (
+      Object.keys(ACTION_LABEL_KEYS) as RetentionAction[]
+    ).filter((action) => action !== "expire");
     expect([...offered].sort()).toEqual([...admitted].sort());
     expect(new Set(offered).size).toBe(offered.length);
   });

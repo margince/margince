@@ -167,9 +167,15 @@ var handelsbriefArm = `a.retention_class IS NOT NULL
 // ref, because mixed-unit periods only order against an instant. The zero
 // class means no pack declares one.
 func statutoryCorrespondenceFloor(ref time.Time) jurisdiction.RetentionClass {
+	return strictestClass(jurisdiction.CommercialCorrespondence, ref)
+}
+
+// strictestClass is the strictest compiled-in pack's class of that name, with
+// the same ordering and the same zero value as the correspondence floor.
+func strictestClass(name jurisdiction.RetentionClassName, ref time.Time) jurisdiction.RetentionClass {
 	floor := jurisdiction.RetentionClass{}
 	for _, pack := range jurisdiction.Applicable() {
-		class := correspondenceClassOf(pack)
+		class := classOf(pack, name)
 		if class.Name != "" && class.ProtectedSince(ref).Before(floor.ProtectedSince(ref)) {
 			floor = class
 		}

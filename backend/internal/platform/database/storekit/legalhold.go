@@ -67,7 +67,20 @@ func SetLegalHold(
 	// already carries the actor, the moment and the correlation id.
 	after := p.After()
 	after["reason"] = reason
-	if _, err := Audit(ctx, tx, legalHoldAction(held), table, id, p.Before(), after); err != nil {
+	return writeHoldAudit(ctx, tx, table, id, held, p.Before(), after)
+}
+
+// AuditLegalHold writes the audit row of a hold on a row that has no
+// `legal_hold` column to patch, such as one in an extension table. It writes
+// the row SetLegalHold writes, so a hold reads the same wherever it sits.
+func AuditLegalHold(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, held bool, reason string) error {
+	return writeHoldAudit(ctx, tx, table, id, held,
+		map[string]any{legalHoldColumn: !held}, map[string]any{legalHoldColumn: held, "reason": reason})
+}
+
+//craft:ignore naked-any the audit seam: before/after images are serialized to jsonb as the audit row's snapshot
+func writeHoldAudit(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, held bool, before, after any) error {
+	if _, err := Audit(ctx, tx, legalHoldAction(held), table, id, before, after); err != nil {
 		return fmt.Errorf("audit legal hold: %w", err)
 	}
 	return nil
