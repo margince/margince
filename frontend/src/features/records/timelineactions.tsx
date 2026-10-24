@@ -46,11 +46,26 @@ type Activity = components["schemas"]["Activity"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];
 type AudienceMember = components["schemas"]["AudienceMember"];
 
-// The per-row verbs a 360 timeline mounts on each entry; it owns both open states.
-// Reply is offered on every row, since a send anchored to a non-mail row starts a new thread.
-// A `message` row offers it only while its transport reaches the contact (useChannelReachable).
-// Relink is offered on every row: an entry on a 360 timeline is already linked to that record.
-// `extra` holds the contact page's meeting brief and Call, which need a drawer and a phone number.
+// The per-row action cluster the 360 timelines mount in each entry's action
+// slot.
+//
+// Reply, because a send anchored to something that was never mail carries no
+// RFC822 identity to thread against and simply starts a conversation — which is
+// how the backend already reads it. Gating the composer on an email row instead
+// makes a fresh workspace, whose only rows are logged notes, unable to send at
+// all. A `message` row carries the opposite gate: it is withheld, not always
+// offered, when the contact behind it cannot be reached on the transport that
+// carried it (see useChannelReachable).
+//
+// Relink, because an activity shown on a 360 timeline is by construction already
+// linked to the entity whose timeline renders it, so re-associating it to the
+// right record is always meaningful — and the Activity list payload carries no
+// `links` to gate on regardless. It is offered unconditionally.
+//
+// It owns the two open states so the timeline mapper stays presentational.
+//
+// `extra` holds the contact page's meeting brief and Call; it renders before
+// Relink, so the row's own verbs lead.
 export function TimelineActions({
   activity,
   entityType,

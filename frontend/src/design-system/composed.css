@@ -789,10 +789,8 @@
   padding-block: var(--space-3) var(--space-4);
   min-inline-size: 0;
 }
-/* The head never narrows past its longest word or badge; the verbs wrap
-   beside it instead of covering the kind or cutting its status. */
 .timeline .tl-body:has(> .tl-actions) {
-  grid-template-columns: minmax(min-content, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 .timeline .tl-body > * {
   grid-column: 1 / -1;
@@ -801,12 +799,17 @@
   grid-column: 1;
 }
 
-/* Below 38rem the verbs drop under the entry on one track: a floor for the
-   head beside them would push the row past its edge. */
-@container chronology (max-width: 38rem) {
-  .timeline .tl-body:has(> .tl-actions) {
-    grid-template-columns: minmax(0, 1fr);
+/* A kind line keeps its longest word or badge whole; the verbs wrap beside it.
+   Not on email rows: their nowrap subject would push the verbs off the row. */
+@container chronology (width > 38rem) {
+  .timeline .tl-body:has(> .tl-head:first-child):has(> .tl-actions) {
+    grid-template-columns: minmax(min-content, 1fr) auto;
   }
+}
+
+/* The verbs' `auto` track wins over the head beside it, so in a narrow list
+   the head drew at zero width. Below 38rem the verbs drop under the entry. */
+@container chronology (max-width: 38rem) {
   .timeline .tl-body > :first-child:has(~ .tl-actions),
   .timeline .tl-body > .tl-actions {
     grid-column: 1 / -1;
