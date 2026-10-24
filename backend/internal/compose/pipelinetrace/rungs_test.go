@@ -257,7 +257,7 @@ func TestMaterialEventsRungAnswersEachArmOfTheOffer(t *testing.T) {
 	// nothing done to it yet. Each case below breaks exactly one thing.
 	offered := ThreadReading{
 		Known: true, ReachesOneAccount: true, IsOneBodyOfWork: true,
-		IsFullyOpen: true, HasANamedReader: true, HasSettled: true, HasMoved: true,
+		IsFullyOpen: true, IsFullyRead: true, HasANamedReader: true, HasSettled: true, HasMoved: true,
 	}
 	with := func(edit func(*ThreadReading)) *ThreadReading {
 		out := offered
@@ -319,6 +319,11 @@ func TestMaterialEventsRungAnswersEachArmOfTheOffer(t *testing.T) {
 			name: "carrying a message withheld from the summary's readers", facts: emailOnAThread,
 			reading: with(func(r *ThreadReading) { r.IsFullyOpen = false }),
 			status:  trace.StatusSkipped, reason: trace.ReasonThreadNotAllOpen,
+		},
+		{
+			name: "carrying a message not read in full", facts: emailOnAThread,
+			reading: with(func(r *ThreadReading) { r.IsFullyRead = false }),
+			status:  trace.StatusSkipped, reason: trace.ReasonThreadNotAllRead,
 		},
 		{
 			name: "with no reader a finding could answer to", facts: emailOnAThread,

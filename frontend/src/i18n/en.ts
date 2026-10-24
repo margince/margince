@@ -20,6 +20,8 @@ export const en = {
     "The new check is uncertain. Review the message before changing its result.",
   "homeRepair.reason.classificationAdopted":
     "Human changes or missing audit evidence prevent an automatic correction.",
+  "homeRepair.reason.classificationIncomplete":
+    "The mail, or the last mail sent to it before, was not read in full.",
   "homeRepair.reason.classificationWithheld":
     "Some message context is outside current access. Review it before changing this result.",
   "homeRepair.reason.classificationCurrent":
@@ -71,6 +73,10 @@ export const en = {
   "homeRepair.reason.cancelled": "The source meeting was canceled.",
   "homeRepair.reason.requestAge":
     "The original request is past the waiting horizon; archiving does not mark it answered.",
+  "homeRepair.reason.sourceUnassessed":
+    "The text of the source mail has not been checked yet.",
+  "homeRepair.reason.sourceIncomplete":
+    "The text of this mail was only read in part.",
   "homeRepair.reason.contextUnread": "Later messages have not been read.",
   "homeRepair.reason.contextUnassessed":
     "Later messages have not been assessed for changes to this commitment.",
@@ -89,6 +95,26 @@ export const en = {
     "Results to change: {reclassify}. Reminders to archive: {archive}. Proposals to withdraw: {withdraw}. Deal suggestions to retire: {supersede}. Keep for review: {review}; keep as current work: {keep}.",
   "homeRepair.apply_one": "Apply {count} reviewed change",
   "homeRepair.apply_other": "Apply {count} reviewed changes",
+  "homeRepair.settlements": "Answered requests",
+  "homeRepair.revalidate": "Judge the request again",
+  "homeRepair.revalidateSummary_one": "{count} request is judged again.",
+  "homeRepair.revalidateSummary_other": "{count} requests are judged again.",
+  "homeRepair.reason.settlementRevalidate":
+    "Margince closed this request before it recorded what it read. It is judged again; a reminder it closed reopens only if work is still owed.",
+  "homeRepair.reason.settlementProvenance":
+    "No record shows that Margince closed this request, so it stays as it is.",
+  "homeRepair.reason.settlementHuman":
+    "A colleague worked on this reminder, so it stays as it is.",
+  "homeRepair.reason.settlementPastHorizon":
+    "The request is past the waiting horizon and stays closed as a record.",
+  "homeRepair.reason.settlementNoAnswers":
+    "No answer Margince may read is left, so it cannot judge this request again. Review it yourself.",
+  "homeRepair.reason.settlementPending":
+    "Margince was asked to judge this request again and has not done so yet.",
+  "homeRepair.reason.settlementUnavailable":
+    "This request is under a hold and cannot be reviewed here.",
+  "homeRepair.reason.settlementChanged":
+    "This request changed after the page was listed. Preview again.",
   "homeRepair.started":
     "The reviewed run is queued. Its progress appears above.",
 
@@ -2186,7 +2212,7 @@ export const en = {
   "board.count_one": "{count} deal",
   "board.count_other": "{count} deals",
   "board.weighted": "weighted {value}",
-  "board.mixedCurrencies": "several currencies, no single total",
+  "board.convertedAt": "Converted · rates as of {date}",
   "dealfiles.hidden": "Hidden from this deal",
   "dealfiles.unhidden": "Shown on this deal again",
   "deal.stalledBadge": "Stalled",
@@ -3622,8 +3648,6 @@ export const en = {
   "chronology.all": "All",
   "chronology.conversations": "Threads",
   "chronology.conversationsEmpty": "No threads yet.",
-  "convo.yourMove": "Needs reply",
-  "convo.waitingOnThem": "Awaiting their reply",
   "chronology.changesEmpty":
     "No field has changed since this record was created.",
   "chronology.truncatedActivities":
@@ -3726,6 +3750,14 @@ export const en = {
   "email.thread.fold": "Fold the message from {name}",
   "email.thread.toLine": "to {names}",
   "email.thread.details": "Details",
+  "email.thread.textForwarded":
+    "The text below is the forwarded mail, not words the sender wrote.",
+  "email.thread.textPartial":
+    "Part of the text of this mail could not be read.",
+  "email.thread.textUnassessed":
+    "Margince has not yet checked whether it read all of this mail’s text.",
+  "email.thread.textUnreadable": "The text of this mail could not be read.",
+  "email.thread.textUnreadableHint": "Open it in your mail program to see it.",
   "email.thread.replied": "Sent and added to this thread.",
   "email.forward": "Forward",
   "email.forwardHeader": "Forwarded message",
@@ -3743,6 +3775,10 @@ export const en = {
     "Historical commitment without a current deadline.",
   "commitment.review.beforeBaseline":
     "Sent before the date this mailbox suggests commitments from.",
+  "commitment.review.sourceUnassessed":
+    "The text of the source mail has not been checked yet.",
+  "commitment.review.sourceIncomplete":
+    "The text of this mail was only read in part.",
   "commitment.review.incomplete":
     "Later messages were not fully read. The commitment may already be fulfilled.",
   "commitment.review.unknownDate": "The source date could not be verified.",
@@ -4797,6 +4833,10 @@ export const en = {
     "Loaded deals only. No total while a tag filter is on.",
   "deals.totalsNoSearch":
     "Loaded deals only. The stage totals cannot apply a search, so none is shown.",
+  "deals.totalsNoArchived":
+    "Loaded deals only. Totals are unavailable while archived deals are included.",
+  "deals.totalsNoStageFilter":
+    "Loaded deals only. Totals are unavailable with a stage filter.",
   "deals.totalsNoTeamFilter":
     "Loaded deals only. The stage totals cannot narrow by team or to unassigned deals, so none is shown.",
   "deals.filterPartner": "Partner",
@@ -6262,6 +6302,7 @@ export const en = {
   "analytics.field.meeting_status": "Meeting status",
   "analytics.field.open_commitments": "Open commitments",
   "analytics.field.open_deal_value_minor": "Open deal value",
+  "analytics.field.open_deal_unpriced": "Open deals not priced",
   "analytics.field.overdue_commitments": "Overdue commitments",
   "analytics.field.close_month": "Close month",
   "analytics.field.owner_id": "Owner",
@@ -6284,6 +6325,7 @@ export const en = {
   "analytics.field.weighted_base_minor": "Converted weighted amount",
   "analytics.field.win_probability": "Win probability",
   "analytics.field.won_deal_value_minor": "Won deal value",
+  "analytics.field.won_deal_unpriced": "Won deals not priced",
   "analytics.fn.count": "Count",
   "analytics.fn.count_distinct": "Distinct values",
   "analytics.fn.sum": "Sum",
@@ -9349,11 +9391,15 @@ export const en = {
     "Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
   "worklist.domainReview.effects":
     "Create adds a company. Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
+  "worklist.domainReview.keepVendor": "Keep as vendor",
+  "worklist.domainReview.vendorEffects":
+    "Create adds a company and links its contacts. Keep as vendor creates nothing and does not ask again. Exclude stops capture for your mailboxes.",
   "worklist.batch.domain_questions_one": "Review {count} domain",
   "worklist.batch.domain_questions_other": "Review {count} domains",
   "blockedDomains.source.unevidenced": "No company named on the site",
   "blockedDomains.source.staleEvidence": "Supporting mail too old",
   "blockedDomains.source.nearDuplicate": "Company name already exists",
+  "blockedDomains.source.vendorVerdict": "Reads as a mail or hosting vendor",
   "blockedDomains.rowAdmit": "Allow",
   "blockedDomains.rowRefuse": "Refuse",
   "blockedDomains.rowReopen": "Ask again",
@@ -10501,11 +10547,6 @@ export const en = {
   "auto.preview.explainer":
     "Read-only dry run. No records are changed and nothing is sent.",
 
-  "strength.bucket.none": "Dormant",
-  "strength.bucket.weak": "Weak",
-  "strength.bucket.moderate": "Warm",
-  "strength.bucket.strong": "Strong",
-
   // The relationship-graph coverage card (ADR-0078).
   "coverage.seatWithheld": "A contact you cannot read",
   "coverage.daysSinceTouch": "{days} days",
@@ -11149,6 +11190,8 @@ export const en = {
     "this thread does not map to exactly one company, so its findings have no certain destination",
   "pipeline.reason.two_bodies_of_work":
     "this thread spans 2 projects, so its findings would be wrong for one of them",
+  "pipeline.reason.thread_not_all_read":
+    "a message on this thread was not read in full, so a summary of the rest could leave out what changed it",
   "pipeline.reason.thread_not_all_open":
     "a message on this thread is hidden from some of its readers, so a summary of the whole would present a partial view as complete",
   "pipeline.reason.answered_on_the_company":
@@ -15365,6 +15408,8 @@ export const en = {
   "project.aside.closeNote": "Closing a project asks for a reason.",
   "project.standing.event.lastUpdate": "{date} · last update",
   "project.more.contacts": "Companies and contacts",
+  "project.openDealValue": "Open deal value",
+  "project.wonDealValue": "Won deal value",
   "project.deals.openAt": "Open · {stage}",
   "project.deals.wonOn": "Won {date}",
   "project.deals.lostOn": "Lost {date}",
@@ -15893,6 +15938,10 @@ export const en = {
   "worklist.verb.discard": "Exclude domain",
   "worklist.verb.domainKept": "Company created from domain",
   "worklist.verb.domainKeepFailed": "Company was not created. Retry.",
+  "worklist.verb.keepAsVendor": "Keep as vendor",
+  "worklist.verb.domainKeptAsVendor": "Kept as a vendor. No company created",
+  "worklist.verb.domainKeepAsVendorFailed":
+    "The vendor answer was not saved. Retry.",
   // The discard wording says WHOSE mail stops being captured, because the
   // colleague reading it shares this installation with people whose answer may
   // differ — and a sentence that said "excluded" flatly would read as a

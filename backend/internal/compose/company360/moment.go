@@ -77,7 +77,10 @@ func (a *assembly) readMoment() error {
 		return err
 	}
 	said := momentCopyFor(string(a.recordLanguage()))
-	moment := said.momentOf(a.now, items)
+	moment, err := a.svc.askDone(a.ctx, a.tx, a.companyID, a.now, said, items, said.momentOf(a.now, items))
+	if err != nil {
+		return err
+	}
 	momentaction.Withhold(a.ctx, string(said.Lang()), &moment)
 	a.out.Moment = &moment
 	return nil

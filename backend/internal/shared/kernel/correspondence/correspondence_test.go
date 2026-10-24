@@ -51,3 +51,41 @@ func TestFoldLeavesAnEmptyAddressEmpty(t *testing.T) {
 		t.Errorf("Fold(whitespace) = %q, want empty", got)
 	}
 }
+
+func TestAPlusTagIsCutFromTheLocalPart(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct{ local, want string }{
+		{"anna", "anna"},
+		{"anna+crm", "anna"},
+		{"anna+crm+2", "anna"},
+		{"+crm", "+crm"},
+		{"", ""},
+	}
+	for _, c := range cases {
+		if got := LocalPartBase(c.local); got != c.want {
+			t.Errorf("LocalPartBase(%q) = %q, want %q", c.local, got, c.want)
+		}
+	}
+}
+
+func TestABaseAddressIsFoldedAndUntagged(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		address, want string
+		tagged        bool
+	}{
+		{"Anna@Example.com", "anna@example.com", false},
+		{" anna+Accounting@example.com ", "anna@example.com", true},
+		{"anna+a+b@example.com", "anna@example.com", true},
+		{"+tag@example.com", "+tag@example.com", false},
+		{"no-host", "no-host", false},
+	}
+	for _, c := range cases {
+		got, tagged := BaseAddress(c.address)
+		if got != c.want || tagged != c.tagged {
+			t.Errorf("BaseAddress(%q) = (%q, %v), want (%q, %v)", c.address, got, tagged, c.want, c.tagged)
+		}
+	}
+}

@@ -39,8 +39,9 @@ func MeetingStatusCounts(status string) bool {
 }
 
 // InteractionCounts is InteractionCountsSQL for a reader holding the row in Go.
-func InteractionCounts(kind, meetingStatus string) bool {
-	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus))
+// automatic is the row's Evidence.Automatic, empty when a human wrote it.
+func InteractionCounts(kind, meetingStatus string, automatic AutomaticKind) bool {
+	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus)) && automatic == ""
 }
 
 // MeetingTookPlaceSQL is a meeting that counts as contact we had: not called
@@ -70,11 +71,12 @@ func LastActivityCountsSQL(alias, now string) string {
 	return "(" + NotCalledOffSQL(alias) + " AND " + alias + ".occurred_at <= " + now + ")"
 }
 
-// InteractionCountsSQL is the whole test for an activity row that counts
-// toward contact strength: an interaction kind, and if it is a meeting, one
-// nobody called off.
+// InteractionCountsSQL is the whole test for an activity row that counts as an
+// exchange. It needs an interaction kind and a meeting nobody called off. It
+// also needs a row a human wrote (WrittenByHumanSQL).
 func InteractionCountsSQL(alias string) string {
-	return alias + ".kind IN " + InteractionKindSQLGroup() + " AND " + NotCalledOffSQL(alias)
+	return alias + ".kind IN " + InteractionKindSQLGroup() + " AND " + NotCalledOffSQL(alias) +
+		" AND " + WrittenByHumanSQL(alias)
 }
 
 // How an account's contact stands, by what made it so.

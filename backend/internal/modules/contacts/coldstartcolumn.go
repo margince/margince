@@ -22,6 +22,9 @@ func writeCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	if !overwrite {
 		return applyUnclaimedCompanyColumn(ctx, tx, companyID, column, value)
 	}
+	if column == columnAddress {
+		return writeCompanyAddress(ctx, tx, companyID, value, replaceStanding)
+	}
 	write, ok := companyColumnWrites[column]
 	if !ok {
 		return false, fmt.Errorf("contacts: %q is not a coldstart-writable column", column)
@@ -53,6 +56,9 @@ func applyUnclaimedCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.C
 	authority, value, err := unclaimedCompanyColumn(ctx, tx, companyID, column, value)
 	if err != nil || value == "" {
 		return false, err
+	}
+	if column == columnAddress {
+		return writeCompanyAddress(ctx, tx, companyID, value, authority)
 	}
 	tag, err := tx.Exec(ctx, write.statementFor(authority), companyID, value)
 	if err != nil {

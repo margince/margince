@@ -243,6 +243,52 @@ export const Detail: StoryObj = {
   },
 };
 
+/** A mail whose text the server could not decode: only the From and To lines. */
+export const DetailTextUnreadable: StoryObj = {
+  render: () => {
+    installFetchStub({
+      "GET /activities/11111111-1111-4111-8111-111111111111/email-presentation":
+        () =>
+          jsonResponse({
+            id: BASE.activity_id,
+            lifecycle: "delivered",
+            occurred_at: BASE.occurred_at,
+            summary: { ...BASE, preview: null },
+            body: "From: ana@brandt.example\nTo: lars@margince.example",
+            body_completeness: "unreadable",
+            from: [
+              { address: "ana@brandt.example", display_name: "Ana Sommer" },
+            ],
+            to: [{ address: "lars@margince.example", display_name: "Lars J." }],
+            cc: [],
+            bcc: [],
+            bcc_withheld: false,
+            attachments: [],
+            links: [],
+            thread: { members: [], next_cursor: null },
+            access: {
+              content_state: "available",
+              display_status: "team",
+              can_change: false,
+              change_mode: "none",
+            },
+            can_reply: true,
+            can_relink: false,
+            version: 3,
+          }),
+    });
+    return (
+      <StoryProviders>
+        <EmailDetail
+          activityId={BASE.activity_id}
+          onClose={() => {}}
+          formatWhen={() => "1 Sep 09:12"}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
 export const ReplyTarget: StoryObj = {
   render: () => (
     <EmailEntry

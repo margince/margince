@@ -31,6 +31,7 @@ export const vi = {
     "Lần kiểm tra mới chưa chắc chắn. Xem xét tin nhắn trước khi đổi kết quả.",
   "homeRepair.reason.classificationAdopted":
     "Thay đổi của người dùng hoặc thiếu bằng chứng kiểm toán ngăn việc sửa tự động.",
+  "homeRepair.reason.classificationIncomplete": "Thư này, hoặc thư gửi đi gần nhất trước đó, chưa được đọc hết.",
   "homeRepair.reason.classificationWithheld":
     "Một phần ngữ cảnh tin nhắn nằm ngoài quyền truy cập hiện tại. Xem xét trước khi đổi kết quả.",
   "homeRepair.reason.classificationCurrent":
@@ -79,6 +80,8 @@ export const vi = {
   "homeRepair.reason.cancelled": "Cuộc họp nguồn đã bị hủy.",
   "homeRepair.reason.requestAge":
     "Yêu cầu gốc đã quá thời hạn chờ; lưu trữ không đánh dấu yêu cầu là đã trả lời.",
+  "homeRepair.reason.sourceUnassessed": "Nội dung của thư nguồn chưa được kiểm tra.",
+  "homeRepair.reason.sourceIncomplete": "Nội dung thư chỉ được đọc một phần.",
   "homeRepair.reason.contextUnread": "Các tin nhắn sau đó chưa được đọc.",
   "homeRepair.reason.contextUnassessed":
     "Các tin nhắn sau đó chưa được đánh giá về thay đổi đối với cam kết này.",
@@ -96,6 +99,28 @@ export const vi = {
     "Kết quả cần đổi: {reclassify}. Lời nhắc cần lưu trữ: {archive}. Đề xuất cần rút: {withdraw}. Đề xuất deal cần ngừng: {supersede}. Giữ để xem xét: {review}; giữ làm công việc hiện tại: {keep}.",
   "homeRepair.apply_one": "Áp dụng {count} thay đổi đã xem xét",
   "homeRepair.apply_other": "Áp dụng {count} thay đổi đã xem xét",
+  "homeRepair.settlements":
+    "Yêu cầu đã trả lời",
+  "homeRepair.revalidate":
+    "Đánh giá lại yêu cầu",
+  "homeRepair.revalidateSummary_one": "{count} yêu cầu được đánh giá lại.",
+  "homeRepair.revalidateSummary_other": "{count} yêu cầu được đánh giá lại.",
+  "homeRepair.reason.settlementRevalidate":
+    "Margince đã đóng yêu cầu này trước khi ghi lại những gì đã đọc. Yêu cầu được đánh giá lại; nhắc việc đã đóng chỉ mở lại nếu vẫn còn việc cần làm.",
+  "homeRepair.reason.settlementProvenance":
+    "Không có bản ghi cho thấy Margince đã đóng yêu cầu này, nên yêu cầu được giữ nguyên.",
+  "homeRepair.reason.settlementHuman":
+    "Một đồng nghiệp đã xử lý nhắc việc này, nên nhắc việc được giữ nguyên.",
+  "homeRepair.reason.settlementPastHorizon":
+    "Yêu cầu đã quá thời hạn chờ và được giữ đóng như một bản ghi.",
+  "homeRepair.reason.settlementNoAnswers":
+    "Không còn câu trả lời nào Margince được đọc, nên không thể đánh giá lại yêu cầu này. Hãy tự xem xét.",
+  "homeRepair.reason.settlementPending":
+    "Margince đã được yêu cầu đánh giá lại yêu cầu này nhưng chưa thực hiện.",
+  "homeRepair.reason.settlementUnavailable":
+    "Yêu cầu này đang bị tạm giữ và không thể xem xét ở đây.",
+  "homeRepair.reason.settlementChanged":
+    "Yêu cầu này đã thay đổi sau khi danh sách được tạo. Hãy xem trước lại.",
   "homeRepair.started":
     "Lượt xử lý đã xem xét đang chờ chạy. Tiến độ hiển thị ở trên.",
   "approval.scheduled.rearm":
@@ -2166,7 +2191,7 @@ export const vi = {
   "board.count_one": "{count} deal",
   "board.count_other": "{count} deal",
   "board.weighted": "có trọng số {value}",
-  "board.mixedCurrencies": "nhiều loại tiền, không có tổng chung",
+  "board.convertedAt": "Đã quy đổi · tỷ giá ngày {date}",
   "dealfiles.hidden": "Đã ẩn khỏi deal này",
   "dealfiles.unhidden": "Đã hiển thị lại trên deal này",
   "deal.stalledBadge": "Đình trệ",
@@ -3530,8 +3555,6 @@ export const vi = {
   "chronology.all": "Tất cả",
   "chronology.conversations": "Chuỗi thư",
   "chronology.conversationsEmpty": "Chưa có chuỗi thư nào.",
-  "convo.yourMove": "Cần trả lời",
-  "convo.waitingOnThem": "Đang chờ họ trả lời",
   "chronology.changesEmpty":
     "Chưa có trường nào thay đổi kể từ khi tạo hồ sơ này.",
   "chronology.truncatedActivities":
@@ -3622,6 +3645,11 @@ export const vi = {
   "email.thread.fold": "Thu gọn thư của {name}",
   "email.thread.toLine": "gửi {names}",
   "email.thread.details": "Chi tiết",
+  "email.thread.textForwarded": "Nội dung bên dưới là thư được chuyển tiếp, không phải lời của chính bên gửi.",
+  "email.thread.textPartial": "Không đọc được một phần nội dung của thư này.",
+  "email.thread.textUnassessed": "Margince chưa kiểm tra xem đã đọc hết nội dung của thư này hay chưa.",
+  "email.thread.textUnreadable": "Không đọc được nội dung của thư này.",
+  "email.thread.textUnreadableHint": "Hãy mở thư trong ứng dụng thư để xem.",
   "email.thread.replied": "Đã gửi và thêm vào chuỗi thư này.",
   "email.forward": "Chuyển tiếp",
   "email.forwardHeader": "Thư được chuyển tiếp",
@@ -3638,6 +3666,8 @@ export const vi = {
   "commitment.review.historical": "Cam kết cũ không có hạn chót hiện tại.",
   "commitment.review.beforeBaseline":
     "Gửi trước ngày hộp thư này bắt đầu gợi ý cam kết.",
+  "commitment.review.sourceUnassessed": "Nội dung của thư nguồn chưa được kiểm tra.",
+  "commitment.review.sourceIncomplete": "Nội dung thư chỉ được đọc một phần.",
   "commitment.review.incomplete":
     "Chưa đọc hết các tin nhắn sau đó. Cam kết có thể đã được hoàn thành.",
   "commitment.review.unknownDate": "Chưa xác minh được ngày của nguồn.",
@@ -4662,6 +4692,10 @@ export const vi = {
     "Chỉ hiển thị deal đã tải. Không hiển thị tổng khi đang dùng bộ lọc thẻ.",
   "deals.totalsNoSearch":
     "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể áp dụng tìm kiếm nên không hiển thị.",
+  "deals.totalsNoArchived":
+    "Chỉ hiển thị deal đã tải. Không có tổng khi bao gồm deal đã lưu trữ.",
+  "deals.totalsNoStageFilter":
+    "Chỉ hiển thị deal đã tải. Không có tổng khi lọc theo giai đoạn.",
   "deals.totalsNoTeamFilter":
     "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo nhóm hay theo deal chưa giao nên không hiển thị.",
   "deals.filterPartner": "Đối tác",
@@ -6055,6 +6089,7 @@ export const vi = {
   "analytics.field.meeting_status": "Trạng thái cuộc họp",
   "analytics.field.open_commitments": "Cam kết đang mở",
   "analytics.field.open_deal_value_minor": "Giá trị deal đang mở",
+  "analytics.field.open_deal_unpriced": "Deal đang mở chưa định giá",
   "analytics.field.overdue_commitments": "Cam kết quá hạn",
   "analytics.field.close_month": "Tháng chốt",
   "analytics.field.owner_id": "Người chịu trách nhiệm",
@@ -6077,6 +6112,7 @@ export const vi = {
   "analytics.field.weighted_base_minor": "Số tiền có trọng số đã quy đổi",
   "analytics.field.win_probability": "Xác suất thắng",
   "analytics.field.won_deal_value_minor": "Giá trị deal đã chốt",
+  "analytics.field.won_deal_unpriced": "Deal đã chốt chưa định giá",
   "analytics.fn.count": "Số lượng",
   "analytics.fn.count_distinct": "Số giá trị khác nhau",
   "analytics.fn.sum": "Tổng",
@@ -9056,11 +9092,15 @@ export const vi = {
     "Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
   "worklist.domainReview.effects":
     "Tạo sẽ thêm công ty. Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
+  "worklist.domainReview.keepVendor": "Giữ là nhà cung cấp",
+  "worklist.domainReview.vendorEffects":
+    "Tạo sẽ thêm công ty và liên kết các liên hệ của nó. Giữ là nhà cung cấp không tạo gì và không hỏi lại. Loại trừ dừng thu thập cho hộp thư của bạn.",
   "worklist.batch.domain_questions_one": "Xem xét {count} tên miền",
   "worklist.batch.domain_questions_other": "Xem xét {count} tên miền",
   "blockedDomains.source.unevidenced": "Trang web không nêu tên công ty nào",
   "blockedDomains.source.staleEvidence": "Email làm căn cứ đã quá cũ",
   "blockedDomains.source.nearDuplicate": "Tên công ty đã tồn tại",
+  "blockedDomains.source.vendorVerdict": "Có vẻ là nhà cung cấp email hoặc hosting",
   "blockedDomains.rowAdmit": "Cho phép",
   "blockedDomains.rowRefuse": "Từ chối",
   "blockedDomains.rowReopen": "Hỏi lại",
@@ -10153,11 +10193,6 @@ export const vi = {
   "auto.preview.explainer":
     "Chạy thử chỉ đọc. Không thay đổi hồ sơ nào và không gửi gì.",
 
-  "strength.bucket.none": "Tạm lắng",
-  "strength.bucket.weak": "Yếu",
-  "strength.bucket.moderate": "Thân thiết",
-  "strength.bucket.strong": "Bền chặt",
-
   // The relationship-graph coverage card (ADR-0078).
   "coverage.seatWithheld": "Một liên hệ bạn không xem được",
   "coverage.daysSinceTouch": "{days} ngày",
@@ -10797,6 +10832,7 @@ export const vi = {
     "chuỗi thư này không gắn với đúng một công ty, nên các phát hiện không có nơi lưu chắc chắn",
   "pipeline.reason.two_bodies_of_work":
     "chuỗi thư này trải trên 2 dự án, nên các phát hiện sẽ sai với một trong hai dự án",
+  "pipeline.reason.thread_not_all_read": "một thư trong chuỗi này chưa được đọc hết, nên bản tóm tắt phần còn lại có thể bỏ sót điều đã thay đổi nó",
   "pipeline.reason.thread_not_all_open":
     "một tin nhắn trong chuỗi thư này bị ẩn với một số thành viên xem chuỗi thư, nên bản tóm tắt toàn bộ chuỗi thư sẽ cho thấy một phần như thể là toàn bộ",
   "pipeline.reason.answered_on_the_company":
@@ -15040,6 +15076,8 @@ export const vi = {
   "project.standing.event.due": "hạn {date}",
   "project.standing.event.lastUpdate": "{date} · cập nhật gần nhất",
   "project.more.contacts": "Công ty và liên hệ",
+  "project.openDealValue": "Giá trị deal đang mở",
+  "project.wonDealValue": "Giá trị deal đã thắng",
   "project.deals.openAt": "Đang mở · {stage}",
   "project.deals.wonOn": "Thắng ngày {date}",
   "project.deals.lostOn": "Thua ngày {date}",
@@ -15561,6 +15599,9 @@ export const vi = {
   "worklist.verb.discard": "Loại trừ tên miền",
   "worklist.verb.domainKept": "Đã tạo công ty từ tên miền",
   "worklist.verb.domainKeepFailed": "Không thể tạo công ty. Thử lại.",
+  "worklist.verb.keepAsVendor": "Giữ là nhà cung cấp",
+  "worklist.verb.domainKeptAsVendor": "Đã giữ là nhà cung cấp. Không tạo công ty",
+  "worklist.verb.domainKeepAsVendorFailed": "Chưa lưu được câu trả lời. Thử lại.",
   "worklist.verb.domainDiscarded":
     "Đã ngừng thu thập thư từ tên miền này trong hộp thư của bạn.",
   "worklist.verb.domainDiscardFailed": "Không thể loại trừ tên miền. Thử lại.",

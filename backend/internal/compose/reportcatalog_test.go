@@ -112,6 +112,17 @@ func TestReportDefaultsRenderEachHalfOnlyWhenItExists(t *testing.T) {
 			spec: reportSpec{defaultAggs: []reportAggregate{{Fn: "count", As: "deals"}}},
 			want: "count as deals over the whole set",
 		},
+
+		{
+			name: "sum already named by its field",
+			spec: reportSpec{defaultAggs: []reportAggregate{{Fn: "sum", Field: "open_deal_unpriced", As: "open_deal_unpriced"}}},
+			want: "sum(open_deal_unpriced) over the whole set",
+		},
+		{
+			name: "renamed sum",
+			spec: reportSpec{defaultAggs: []reportAggregate{{Fn: "sum", Field: "amount_minor", As: "total"}}},
+			want: "sum(amount_minor) as total over the whole set",
+		},
 		{
 			name: "grouping with no aggregates",
 			spec: reportSpec{defaultBy: []string{"kind"}},

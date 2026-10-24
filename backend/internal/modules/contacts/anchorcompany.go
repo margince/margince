@@ -73,6 +73,7 @@ const (
 	actionUpdate       = "update"
 	auditKeyFields     = "fields"
 	auditKeySource     = "source"
+	auditKeyStatus     = "status"
 	auditKeyCapturedBy = "captured_by"
 	auditKeySourceURL  = "source_url"
 	// auditKeySourceRef names WHICH source: the activity a signature came
@@ -313,6 +314,9 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		payload := companySaveEventPayload(target.created, applied, by)
 		if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, payload); err != nil {
 			return fmt.Errorf("emit %s: %w", payload.EventType(), err)
+		}
+		if err := s.locateLandedAddress(ctx, tx, companyID, after); err != nil {
+			return err
 		}
 		if err := s.followAnchorSaveTx(ctx, tx, target); err != nil {
 			return err

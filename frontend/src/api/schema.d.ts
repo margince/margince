@@ -12884,6 +12884,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/domain-questions/{domain}/keep-vendor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer an open vendor question by keeping the vendor verdict.
+         * @description The site triage read this domain as a mail or hosting vendor and left the question to a
+         *     colleague. This answer agrees: the domain is settled as `provider` by a human, no company is
+         *     created, and later mail from the domain raises no new question.
+         *
+         *     Only a colleague who was asked may answer. A caller with no open question about the
+         *     domain gets `404`, and a domain whose open question is not a vendor question gets `409`.
+         *
+         *     Demands `company:update`, the gate every domain decision takes.
+         */
+        post: operations["keepDomainAsVendor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/consumer-mail-baseline": {
         parameters: {
             query?: never;
@@ -23133,6 +23160,8 @@ export interface components {
             evidence_at?: string;
             effective_url?: string;
             redirect_chain?: string[];
+            /** @description The site triage's own sentence on a `vendor_verdict` question, in the workspace language. */
+            note?: string;
         };
         /**
          * @description One domain and where its company question stands. `suppressed` refuses it a company —
@@ -23176,13 +23205,13 @@ export interface components {
              *       as a company.
              *     - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
              *       company this business works with. `sender_kind` says which, when it is known.
-             *     - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
-             *       question, as `source` describes each one.
+             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+             *       domain's open question, as `source` describes each one.
              *     - `unknown`: the row records a reason this server has no word for. `reason` still
              *       carries its stored sentence.
              * @enum {string}
              */
-            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "reserved_domain" | "unknown";
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "unknown";
             /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
             note?: string;
             /**
@@ -23201,10 +23230,11 @@ export interface components {
              *     found named a company; `stale_evidence` means the newest mail from the domain is too
              *     old to mint one from today's site; `near_duplicate` means more than one company
              *     here already carries the name it resolved to, and which of them this domain belongs
-             *     to is a human's call rather than the machine's.
+             *     to is a human's call rather than the machine's; `vendor_verdict` means the site reads
+             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "reserved_domain";
+            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -23888,6 +23918,18 @@ export interface components {
             next_cursor?: string | null;
         };
         /**
+         * @description How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
+         *     part was not read in full (it broke while decoding, or it ran past the size limit), so
+         *     the body may lack text. `unreadable`: none of it, so the body holds only the From and To
+         *     lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
+         *     text of the original it forwarded, not the sender's own words. `unassessed`: a mail
+         *     stored before this was recorded and not yet checked against its stored original, or one
+         *     with no original to check. Automatic work (promises, requests and their settlement, and
+         *     the events read from a conversation) is read only from a `complete` mail body.
+         * @enum {string}
+         */
+        BodyCompleteness: "complete" | "partial" | "unreadable" | "forwarded" | "unassessed";
+        /**
          * @description One email, composed for reading. The message and its parties come from the activity's
          *     own store; the access block is assembled from the same authority that performs the
          *     write, so what this says a caller may do is what the caller may do.
@@ -23913,6 +23955,8 @@ export interface components {
              *     never handed to a browser to parse.
              */
             body?: string | null;
+            /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
+            readonly body_completeness?: components["schemas"]["BodyCompleteness"];
             thread_key?: string | null;
             from: components["schemas"]["EmailParty"][];
             to: components["schemas"]["EmailParty"][];
@@ -32651,8 +32695,9 @@ export interface components {
             unattributed_nearby: number;
         };
         /**
-         * @description The header figures. Money is in the installation's base currency at each deal's frozen
-         *     rate, summed over the caller's deal row scope; the counts are over the caller's
+         * @description The header figures. Open deals use the latest base-currency rate on or before today;
+         *     won deals keep their frozen amount. An unpriced sum is null, with its missing-price
+         *     count alongside it. Money follows the caller's deal row scope; work counts follow their
          *     activity row scope. Present only when the caller holds both the deal and the activity
          *     grant, since a header that showed one half would read as a project with no deals or
          *     no work.
@@ -32660,6 +32705,10 @@ export interface components {
         Project360Rollups: {
             open_deal_value: components["schemas"]["Money"];
             won_deal_value: components["schemas"]["Money"];
+            /** @description Open deal amounts with no available base-currency price. */
+            open_deals_unpriced?: number;
+            /** @description Won deal amounts with no available base-currency price. */
+            won_deals_unpriced?: number;
             /** @description Open tasks filed under the project, whole lifecycle. */
             open_commitments: number;
             /**
@@ -33945,6 +33994,13 @@ export interface components {
             readonly capture_label?: null | "commitment" | "meeting" | "noise";
             /** @description This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply. */
             readonly bulk_mail_attested?: boolean;
+            /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
+            readonly body_completeness?: components["schemas"]["BodyCompleteness"];
+            /**
+             * @description What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+             * @enum {string|null}
+             */
+            readonly automatic_kind?: "product" | "calendar" | "sending_system" | null;
             /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains. */
             readonly audience?: components["schemas"]["ActivityAudience"];
             /** @description Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`. */
@@ -39660,7 +39716,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            source?: "task" | "approval" | "suggestion" | "verdict";
+            source?: "task" | "approval" | "suggestion" | "verdict" | "settlement";
             /** @enum {string} */
             before_verdict?: "asks_us" | "informs_us";
             /** @enum {string} */
@@ -39669,7 +39725,7 @@ export interface components {
             /** Format: int64 */
             version: number;
             /** @enum {string} */
-            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current";
+            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current" | "revalidate_settlement";
             reason: string;
         };
         HomeRepairCounts: {
@@ -39679,6 +39735,8 @@ export interface components {
             supersede: number;
             review: number;
             keep: number;
+            /** @description Older settled request verdicts the email-request settlement pass judges again. */
+            revalidate?: number;
         };
         DataTaskControl: {
             task_id: string;
@@ -46360,6 +46418,8 @@ export interface components {
             readonly requested_decider_id?: string;
             /** @description The domain question's reason code, rendered in the reader's language. */
             domain_reason_code?: string;
+            /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
+            domain_note?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -46537,7 +46597,8 @@ export interface components {
              *
              *     Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
              *     company or matches the supplied `company_id`; forwarded identity requires an
-             *     explicit match. Discarding stops the caller's own mailboxes capturing that
+             *     explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
+             *     settles the domain as a vendor and creates nothing. Discarding stops the caller's own mailboxes capturing that
              *     domain. Reopening retries identification without settling identity. These verbs route
              *     to `/capture/domain-questions/{domain}/…`.
              *
@@ -46548,7 +46609,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard" | "reopen")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -47866,6 +47927,8 @@ export interface components {
             source_record?: components["schemas"]["AttentionSubject"];
             /** @description The domain question's reason code, rendered in the reader's language. */
             domain_reason_code?: string;
+            /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
+            domain_note?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -48043,7 +48106,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard" | "reopen")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -49868,7 +49931,7 @@ export interface operations {
                      * @default task
                      * @enum {string}
                      */
-                    source?: "task" | "approval" | "suggestion" | "verdict";
+                    source?: "task" | "approval" | "suggestion" | "verdict" | "settlement";
                 };
             };
         };
@@ -69218,6 +69281,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    keepDomainAsVendor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The domain to keep as a vendor; normalized to its registrable form. */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The domain is settled as a vendor. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

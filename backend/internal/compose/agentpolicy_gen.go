@@ -693,6 +693,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/capture/counterparty-holds/share-history":                     {Op: "shareCaptureCounterpartyHoldHistory", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/domain-questions/{domain}/discard":                    {Op: "discardDomainQuestion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/domain-questions/{domain}/keep":                       {Op: "keepDomainQuestion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/capture/domain-questions/{domain}/keep-vendor":                {Op: "keepDomainAsVendor", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/email-domains":                                        {Op: "createWorkspaceEmailDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/exclusions":                                           {Op: "createCaptureExclusion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/capture/exclusions/{id}/purge":                                {Op: "purgeCaptureExclusion", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

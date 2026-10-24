@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // approvalMailDelay is how long an approval's email waits before it is sent,
@@ -73,4 +74,61 @@ func approvalMailMessage(items []approvalMailItem, base string, words mailcopy.C
 	body.Action(words.MailReview, mailcopy.Destination(base, mailcopy.WorklistFragment))
 	subject := words.NotificationSubject + fmt.Sprintf(words.MailBurstCount, len(items))
 	return subject, body.Message(subject, string(words.Language), words.NotificationPreview)
+}
+
+// reserveApprovalMail reads the decisions the message carries through the
+// shared send basis, as the recipient, and holds that basis just before the
+// relay call. It keeps those still waiting on them, with their promises open
+// and their source readable. The words kept are the ones read at the versions
+// held.
+func (w *notificationMailWorker) reserveApprovalMail(ctx, seatCtx context.Context, items []approvalMailItem, words mailcopy.Copy) []approvalMailItem {
+	kept, won, err := reserveSend(seatCtx, w.pool, w.approvalReading(seatCtx, items, words), reserveInOwnTx[[]approvalMailItem](seatCtx, w.pool))
+	if err != nil {
+		w.failApprovalMail(ctx, items, "the decision changed or could not be rechecked before the send")
+		return nil
+	}
+	if !won {
+		return nil
+	}
+	return kept
+}
+
+// approvalReading renders the claimed notices as the recipient, leaving out
+// the decisions excluded and the ones no longer theirs. Two readings agree
+// when they make the same message.
+func (w *notificationMailWorker) approvalReading(seatCtx context.Context, items []approvalMailItem, words mailcopy.Copy) sendReading[[]approvalMailItem] {
+	clock := func() time.Time { return mailNow(w.now) }
+	render := func(excluded map[ids.UUID]bool) ([]approvalMailItem, sendRefs, bool, error) {
+		var kept []approvalMailItem
+		var refs sendRefs
+		for _, item := range items {
+			if item.attempt.ApprovalID != nil && excluded[item.attempt.ApprovalID.UUID] {
+				continue
+			}
+			refreshed, facts, current, err := refreshApprovalNotice(seatCtx, w.pool, item.attempt, clock(), forSingleEmail)
+			if err != nil {
+				return nil, refs, false, err
+			}
+			if !current {
+				continue
+			}
+			if refreshed.ApprovalID != nil {
+				refs.approvals = append(refs.approvals, refreshed.ApprovalID.UUID)
+			}
+			kept = append(kept, approvalMailItem{attempt: refreshed, facts: facts})
+		}
+		return kept, refs, len(kept) > 0, nil
+	}
+	same := func(a, b []approvalMailItem) bool {
+		subjectA, messageA := approvalMailMessage(a, w.mail.PublicBaseURL, words)
+		subjectB, messageB := approvalMailMessage(b, w.mail.PublicBaseURL, words)
+		return subjectA == subjectB && messageA.Text == messageB.Text
+	}
+	return sendReading[[]approvalMailItem]{seat: items[0].attempt.Recipient.UUID, clock: clock, render: render, same: same}
+}
+
+func (w *notificationMailWorker) failApprovalMail(ctx context.Context, items []approvalMailItem, cause string) {
+	for _, item := range items {
+		w.recordMailFailure(ctx, item.attempt.Notice.ID, cause)
+	}
 }

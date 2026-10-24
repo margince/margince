@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // threadMessages reads one window of a conversation, oldest first, so the
@@ -91,8 +92,9 @@ func threadWindow(
 	rows, err := tx.Query(ctx, `
 		SELECT id, coalesce(direction, ''), coalesce(subject, ''),
 		       coalesce(left(body, $1), ''),
-		       coalesce(substring(body FROM $1 + 1), ''), occurred_at
-		  FROM (SELECT id, direction, subject, body, occurred_at
+		       coalesce(substring(body FROM $1 + 1), ''), occurred_at, NOT complete
+		  FROM (SELECT id, direction, subject, body, occurred_at,
+		               `+provenance.MailBodyCompleteSQL("activity")+` AS complete
 		          FROM activity
 		         WHERE thread_key = $2 AND kind = 'email' AND archived_at IS NULL
 		           -- The audience, tested HERE and not only in the pass that
@@ -130,7 +132,7 @@ func threadWindow(
 		var message threadMessage
 		var remainder string
 		if err := rows.Scan(&message.ID, &message.Direction, &message.Subject,
-			&message.Body, &remainder, &message.At); err != nil {
+			&message.Body, &remainder, &message.At, &message.Incomplete); err != nil {
 			return nil, err
 		}
 		message.UnreadRunes = utf8.RuneCountInString(remainder)

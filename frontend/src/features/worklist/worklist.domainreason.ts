@@ -8,5 +8,6 @@ export const domainReasonLabels: Record<string, MessageKey> = {
   stale_evidence: "blockedDomains.source.staleEvidence",
   near_duplicate: "blockedDomains.source.nearDuplicate",
   forwarded_identity: "blockedDomains.source.forwardedIdentity",
+  vendor_verdict: "blockedDomains.source.vendorVerdict",
   reserved_domain: "blockedDomains.source.reservedDomain",
 };

@@ -2,6 +2,7 @@ defacl public objtype=r acl=margince_app=arwd/margince_owner
 public.activity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity.activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
 public.activity.activity_audience_check CHECK ((audience = ANY (ARRAY['workspace'::text, 'participants'::text, 'selected'::text])))
+public.activity.activity_body_completeness_check CHECK ((body_completeness = ANY (ARRAY['complete'::text, 'partial'::text, 'unreadable'::text, 'forwarded'::text, 'unassessed'::text])))
 public.activity.activity_calendar_method_check CHECK ((calendar_method = ANY (ARRAY['PUBLISH'::text, 'REQUEST'::text, 'REPLY'::text, 'ADD'::text, 'CANCEL'::text, 'REFRESH'::text, 'COUNTER'::text, 'DECLINECOUNTER'::text])))
 public.activity.activity_capture_label_check CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'noise'::text]))))
 public.activity.activity_capture_label_stamped CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))
@@ -52,6 +53,7 @@ public.activity.assignee_id uuid gen=- def=-
 public.activity.audience text NOT NULL gen=- def='workspace'::text
 public.activity.audience_reason text gen=- def=-
 public.activity.body text gen=- def=-
+public.activity.body_completeness text NOT NULL gen=- def='complete'::text
 public.activity.booking_interval_exact boolean NOT NULL gen=- def=false
 public.activity.bulk_mail_attested boolean NOT NULL gen=- def=false
 public.activity.calendar_method text gen=- def=-
@@ -98,8 +100,10 @@ public.activity.restricted_until timestamp with time zone gen=- def=-
 public.activity.retention_class text gen=- def=-
 public.activity.retention_class_at timestamp with time zone gen=- def=-
 public.activity.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(subject, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(subject, ''::text))), 'A'::"char")) || setweight(to_tsvector(activity_ts_config(language), f_unaccent(((COALESCE(subject, ''::text) || ' '::text) || COALESCE(body, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(body, ''::text))), 'C'::"char"))
+public.activity.sender_is_machine boolean NOT NULL gen=- def=false
 public.activity.sender_was_stranger boolean gen=- def=-
 public.activity.sent_by_colleague uuid gen=- def=-
+public.activity.settlement_evidence_share CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_activity()
 public.activity.source text NOT NULL gen=- def=-
 public.activity.source_activity_id uuid gen=- def=-
 public.activity.source_author_id uuid gen=- def=-
@@ -209,6 +213,7 @@ public.activity_link.entity_type text NOT NULL gen=- def=-
 public.activity_link.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_link.lead_id uuid gen=- def=-
 public.activity_link.project_id uuid gen=- def=-
+public.activity_link.settlement_evidence_share CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_link()
 public.activity_link_pkey CREATE UNIQUE INDEX activity_link_pkey ON public.activity_link USING btree (id)
 public.activity_link_refuses_a_company_meeting() secdef=false cfg=- acl=- 
 DECLARE
@@ -347,6 +352,7 @@ public.activity_participant.created_at timestamp with time zone NOT NULL gen=- d
 public.activity_participant.display_name text gen=- def=-
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_participant.role text NOT NULL gen=- def=-
+public.activity_participant.settlement_evidence_share CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_participant()
 public.activity_participant.user_id uuid gen=- def=-
 public.activity_participant_pkey CREATE UNIQUE INDEX activity_participant_pkey ON public.activity_participant USING btree (id)
 public.activity_participant_replay acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -528,9 +534,11 @@ public.activity_request_settlement.confidence numeric NOT NULL gen=- def=-
 public.activity_request_settlement.decided_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_request_settlement.decided_by text NOT NULL gen=- def=-
 public.activity_request_settlement.due_at timestamp with time zone gen=- def=-
+public.activity_request_settlement.judged_evidence text gen=- def=-
 public.activity_request_settlement.judged_through_activity_id uuid NOT NULL gen=- def=-
 public.activity_request_settlement.remaining text gen=- def=-
 public.activity_request_settlement.request_activity_id uuid NOT NULL gen=- def=-
+public.activity_request_settlement.revalidation_requested_at timestamp with time zone gen=- def=-
 public.activity_request_settlement.verdict text NOT NULL gen=- def=-
 public.activity_request_settlement_pkey CREATE UNIQUE INDEX activity_request_settlement_pkey ON public.activity_request_settlement USING btree (request_activity_id)
 public.activity_retention_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -2488,7 +2496,7 @@ public.company_domain_disposition.company_domain_disposition_admission_source_ch
 public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
 public.company_domain_disposition.company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
-public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text, 'near_duplicate'::text, 'forwarded_identity'::text, 'reserved_domain'::text]))))
+public.company_domain_disposition.company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text, 'near_duplicate'::text, 'forwarded_identity'::text, 'vendor_verdict'::text, 'reserved_domain'::text]))))
 public.company_domain_disposition.company_domain_disposition_pending_reason_shape CHECK (((pending_reason IS NULL) OR ((status = 'pending'::text) AND (admission IS DISTINCT FROM 'suppressed'::text))))
 public.company_domain_disposition.company_domain_disposition_pkey PRIMARY KEY (id)
 public.company_domain_disposition.company_domain_disposition_settled_shape CHECK ((((status = 'pending'::text) AND (source IS NULL)) OR ((status = 'company'::text) AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal'::text, 'provider'::text, 'no_site'::text])) AND (source IS NOT NULL))))
@@ -3172,6 +3180,7 @@ public.contact_email.from_correspondence boolean NOT NULL gen=- def=true
 public.contact_email.id uuid NOT NULL gen=- def=uuidv7()
 public.contact_email.is_primary boolean NOT NULL gen=- def=false
 public.contact_email.position integer NOT NULL gen=- def=0
+public.contact_email.settlement_evidence_share CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.contact_email FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_contact_email()
 public.contact_email.source text NOT NULL gen=- def=-
 public.contact_email.trg_contact_email_updated CREATE TRIGGER trg_contact_email_updated BEFORE UPDATE ON public.contact_email FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.contact_email.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -3272,6 +3281,7 @@ public.contact_signature_enrich_state.contact_id uuid NOT NULL gen=- def=-
 public.contact_signature_enrich_state.contact_signature_enrich_state_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.contact_signature_enrich_state.contact_signature_enrich_state_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_signature_enrich_state.contact_signature_enrich_state_pkey PRIMARY KEY (contact_id)
+public.contact_signature_enrich_state.history_depth smallint gen=- def=-
 public.contact_signature_enrich_state.last_activity_at timestamp with time zone NOT NULL gen=- def=-
 public.contact_signature_enrich_state_pkey CREATE UNIQUE INDEX contact_signature_enrich_state_pkey ON public.contact_signature_enrich_state USING btree (contact_id)
 public.contact_social acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -4614,8 +4624,10 @@ public.idx_consent_event_lead CREATE INDEX idx_consent_event_lead ON public.cons
 public.idx_contact_channel_identity_contact CREATE INDEX idx_contact_channel_identity_contact ON public.contact_channel_identity USING btree (contact_id)
 public.idx_contact_confirm_submission_token CREATE INDEX idx_contact_confirm_submission_token ON public.contact_confirm_submission USING btree (token_id)
 public.idx_contact_created_keyset CREATE INDEX idx_contact_created_keyset ON public.contact USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_contact_email_base CREATE INDEX idx_contact_email_base ON public.contact_email USING btree (regexp_replace(lower(email), '^([^+@]+)\+[^@]*@'::text, '\1@'::text)) WHERE (archived_at IS NULL)
 public.idx_contact_email_contact CREATE INDEX idx_contact_email_contact ON public.contact_email USING btree (contact_id)
 public.idx_contact_email_correspondence CREATE INDEX idx_contact_email_correspondence ON public.contact_email USING btree (email) WHERE (from_correspondence AND (archived_at IS NULL))
+public.idx_contact_exact_digraph_name_key CREATE INDEX idx_contact_exact_digraph_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä'::text, 'ae'::text), 'ö'::text, 'oe'::text), 'ü'::text, 'ue'::text))), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_exact_name_key CREATE INDEX idx_contact_exact_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_from_lead CREATE INDEX idx_contact_from_lead ON public.contact USING btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)
 public.idx_contact_last_activity_keyset CREATE INDEX idx_contact_last_activity_keyset ON public.contact USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
@@ -6951,6 +6963,81 @@ public.setting.setting_pkey PRIMARY KEY (key)
 public.setting.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.setting.value jsonb NOT NULL gen=- def=-
 public.setting_pkey CREATE UNIQUE INDEX setting_pkey ON public.setting USING btree (key)
+public.settlement_evidence_activity_keys(row_value activity) secdef=false cfg=- acl=- 
+    SELECT CASE WHEN row_value.kind IN ('email', 'message', 'call', 'meeting') THEN ARRAY[
+        settlement_evidence_key('thread', row_value.thread_key),
+        settlement_evidence_key('address', lower(btrim(row_value.counterparty_email)))] END
+
+public.settlement_evidence_contact_email_keys(row_value contact_email) secdef=false cfg=- acl=- 
+    SELECT ARRAY[settlement_evidence_key('contact', row_value.contact_id::text),
+                 settlement_evidence_key('address', lower(btrim(row_value.email)))]
+
+public.settlement_evidence_key(scope text, value text) secdef=false cfg=- acl=-  SELECT hashtextextended('margince.settlement.' || scope || ':' || value, 0) 
+public.settlement_evidence_participant_keys(row_value activity_participant) secdef=false cfg=- acl=- 
+    SELECT ARRAY[settlement_evidence_key('contact', row_value.contact_id::text),
+                 settlement_evidence_key('address', lower(btrim(row_value.address)))]
+
+public.settlement_evidence_share(keys bigint[]) secdef=false cfg=- acl=- 
+DECLARE
+    k bigint;
+BEGIN
+    FOR k IN SELECT DISTINCT u FROM unnest(keys) u WHERE u IS NOT NULL ORDER BY u LOOP
+        PERFORM pg_advisory_xact_lock_shared(k);
+    END LOOP;
+END 
+public.settlement_evidence_share_activity() secdef=false cfg=- acl=- 
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_activity_keys(OLD));
+        RETURN OLD;
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_activity_keys(OLD) || settlement_evidence_activity_keys(NEW));
+    ELSE
+        PERFORM settlement_evidence_share(settlement_evidence_activity_keys(NEW));
+    END IF;
+    RETURN NEW;
+END 
+public.settlement_evidence_share_contact_email() secdef=false cfg=- acl=- 
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_contact_email_keys(OLD));
+        RETURN OLD;
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_contact_email_keys(OLD) || settlement_evidence_contact_email_keys(NEW));
+    ELSE
+        PERFORM settlement_evidence_share(settlement_evidence_contact_email_keys(NEW));
+    END IF;
+    RETURN NEW;
+END 
+public.settlement_evidence_share_link() secdef=false cfg=- acl=- 
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        PERFORM settlement_evidence_share(ARRAY[settlement_evidence_key('contact', OLD.contact_id::text)]);
+        RETURN OLD;
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        PERFORM settlement_evidence_share(ARRAY[settlement_evidence_key('contact', OLD.contact_id::text),
+                                                settlement_evidence_key('contact', NEW.contact_id::text)]);
+    ELSE
+        PERFORM settlement_evidence_share(ARRAY[settlement_evidence_key('contact', NEW.contact_id::text)]);
+    END IF;
+    RETURN NEW;
+END 
+public.settlement_evidence_share_participant() secdef=false cfg=- acl=- 
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_participant_keys(OLD));
+        RETURN OLD;
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_participant_keys(OLD) || settlement_evidence_participant_keys(NEW));
+    ELSE
+        PERFORM settlement_evidence_share(settlement_evidence_participant_keys(NEW));
+    END IF;
+    RETURN NEW;
+END 
 public.setup_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.setup_token.consumed_at timestamp with time zone gen=- def=-
 public.setup_token.created_at timestamp with time zone NOT NULL gen=- def=now()

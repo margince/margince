@@ -103,7 +103,7 @@ func (s *Store) DemoteLead(
 		}
 		// The lead lock serializes a demote against a concurrent re-promote or
 		// second demote; the loser re-reads the state and answers 409.
-		if err := lockContactThenLead(ctx, tx, contactID, storekit.LiveOnly, id); err != nil {
+		if err := lockContactThenLead(ctx, tx, contactID, storekit.LiveOnly, id, nil); err != nil {
 			return err
 		}
 		lead, err := readLead(ctx, tx, id, storekit.IncludeArchived, nil)

@@ -95,13 +95,10 @@ func LastTouchFor(
 	}
 	touched += opts.projectScope(arg)
 	touched += fmt.Sprintf(" AND a.occurred_at <= $%d", arg(now))
-	// Both direction clocks skip a called-off meeting, which the last contact
-	// already does through InteractionCountsSQL. A meeting nobody attended is
-	// not a touch in either direction, and leaving it in moved these clocks
-	// while the tile beside them stood still.
-	//
-	// NotCalledOffSQL rather than InteractionCountsSQL: a direction clock
-	// answers when a message last went each way, so any directed kind counts.
+	// Both direction clocks skip a called-off meeting and automatic mail, as
+	// the last contact does through InteractionCountsSQL. DirectionClockSQL
+	// rather than InteractionCountsSQL: a direction clock answers when a
+	// human's message last went each way, so any directed kind counts.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH touched AS (
 		  SELECT reach.company_id, a.id, a.occurred_at, a.kind, a.direction,
@@ -123,7 +120,7 @@ func LastTouchFor(
 		LEFT JOIN last_contact lc ON lc.company_id = %[1]s.id
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
 		lastTouchCompanyAlias, touched, wantedPos, visible,
-		relstrength.NotCalledOffSQL("a"), relstrength.InteractionCountsSQL("a")), args...)
+		relstrength.DirectionClockSQL("a"), relstrength.InteractionCountsSQL("a")), args...)
 	if err != nil {
 		return nil, err
 	}

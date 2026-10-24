@@ -21,7 +21,11 @@
 // mail addressing is plumbing, not CRM.
 package mailrole
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+)
 
 // Match reports whether an address names a role mailbox, and which token said
 // so. The token is for a ledger reason and for tests; it is never shown to a
@@ -135,14 +139,11 @@ func split(address string) (local, domain string, ok bool) {
 		return "", "", false
 	}
 	local, domain = address[:at], address[at+1:]
-	if base, _, found := strings.Cut(local, "+"); found {
-		if base == "" {
-			// `+tag@host` carries no local part at all. Nothing to read.
-			return "", "", false
-		}
-		local = base
+	if strings.HasPrefix(local, "+") {
+		// `+tag@host` carries no local part at all. Nothing to read.
+		return "", "", false
 	}
-	return local, domain, true
+	return correspondence.LocalPartBase(local), domain, true
 }
 
 // localPartRole reads the local part as a sequence of words and reports the
@@ -154,9 +155,7 @@ func localPartRole(local string) (string, bool) {
 	if local == "" {
 		return "", false
 	}
-	if base, _, found := strings.Cut(local, "+"); found && base != "" {
-		local = base
-	}
+	local = correspondence.LocalPartBase(local)
 	if token, whole := roleTokens[local]; whole {
 		_ = token
 		return local, true

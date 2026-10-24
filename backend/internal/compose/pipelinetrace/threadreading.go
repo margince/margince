@@ -27,6 +27,7 @@ type ThreadReading struct {
 	ReachesOneAccount bool
 	IsOneBodyOfWork   bool
 	IsFullyOpen       bool
+	IsFullyRead       bool
 	HasANamedReader   bool
 	HasSettled        bool
 	IsParked          bool

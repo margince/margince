@@ -14,6 +14,7 @@ import {
 import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { SettingRow } from "../../design-system/settingrow";
+import { middayInstant } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
 import { INTL_LOCALE } from "../../format/intllocale";
 import { viewerZone, zoneNameAndOffset } from "../../format/timezone";
@@ -43,7 +44,7 @@ export function HistoryBaselineRow({
               date: formatDate(baseline.date, locale, baseline.timezone),
               zone: zoneNameAndOffset(
                 INTL_LOCALE[locale],
-                new Date(baseline.date),
+                new Date(middayInstant(baseline.date, baseline.timezone)),
                 baseline.timezone,
               ),
             })} ${help}`

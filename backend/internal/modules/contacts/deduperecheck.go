@@ -195,13 +195,6 @@ func archiveDedupeCandidateTx(ctx context.Context, tx pgx.Tx, id ids.UUID, reaso
 	return true, nil
 }
 
-// bothNamesFold reports the name-collision lane's own test: two records written
-// with the same name, which that lane files whatever else disagrees.
-func bothNamesFold(a, b string) bool {
-	key := NormalizeContactName(a)
-	return key != "" && key == NormalizeContactName(b)
-}
-
 // contactSide is what the contact score reads about one end of a pair.
 type contactSide struct {
 	name           string
@@ -221,7 +214,10 @@ func contactPairStillFiled(ctx context.Context, tx pgx.Tx, consumerMail *freemai
 		return true, pair.confidence, err
 	}
 	score := max(contactScore(left, right, consumerMail), contactScore(right, left, consumerMail))
-	return score >= dedupeReviewThreshold || bothNamesFold(left.name, right.name), score, nil
+	// The review lanes' own pair tests. A pair stays while the evidence it was
+	// filed on still holds, and retires once an edit removes it.
+	_, _, variant := addressVariantPair(left.emails, right.emails)
+	return score >= dedupeReviewThreshold || contactNamesCollide(left.name, right.name) || variant, score, nil
 }
 
 // contactScore is contactConfidence with one side as the candidate and the
@@ -334,8 +330,9 @@ func readLeadSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (leadSide, bool, 
 }
 
 // companyPairStillFiled re-scores two companies with the name pairing the
-// filing path uses. Companies carry no corroboration rule, so a pair closes
-// here only when a name changed since it was filed.
+// filing path uses, and keeps a pair whose domains still nest (domainNests).
+// Companies carry no corroboration rule, so a pair closes here only when a
+// name or a domain changed since it was filed.
 func companyPairStillFiled(ctx context.Context, tx pgx.Tx, pair openPair) (bool, float64, error) {
 	var leftDisplay, leftLegal, rightDisplay, rightLegal string
 	err := tx.QueryRow(ctx, `
@@ -352,7 +349,11 @@ func companyPairStillFiled(ctx context.Context, tx pgx.Tx, pair openPair) (bool,
 	forward := bestCompanyNamePairing(leftDisplay, leftLegal, rightDisplay, rightLegal)
 	backward := bestCompanyNamePairing(rightDisplay, rightLegal, leftDisplay, leftLegal)
 	score := max(forward.Confidence, backward.Confidence)
-	return score >= dedupeReviewThreshold || forward.ExactName || backward.ExactName, score, nil
+	if score >= dedupeReviewThreshold || forward.ExactName || backward.ExactName {
+		return true, score, nil
+	}
+	nests, err := companyDomainsNest(ctx, tx, pair.left, pair.right)
+	return nests, score, err
 }
 
 // refileArchivedCandidateTx brings back an open pair the system archived without

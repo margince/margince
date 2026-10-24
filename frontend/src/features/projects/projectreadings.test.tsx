@@ -35,7 +35,7 @@ function cell(strip: HTMLElement, label: string): HTMLElement {
 describe("the project's figures", () => {
   it("reads phase time, open commitments and the files", () => {
     const strip = plate(deliveringProject360());
-    expect(strip.childElementCount).toBe(3);
+    expect(strip.childElementCount).toBe(5);
     expect(
       within(cell(strip, en["project.standing.phaseTime"])).getByText(
         "134 days",
@@ -86,4 +86,36 @@ describe("the project's figures", () => {
       ),
     ).toBeTruthy();
   });
+});
+
+it("shows the server deal values and names an unpriced shortfall", () => {
+  const strip = plate(
+    project360({
+      rollups: {
+        open_deal_value: { amount_minor: 125_000, currency: "EUR" },
+        won_deal_value: { amount_minor: null, currency: "EUR" },
+        open_deals_unpriced: 1,
+        won_deals_unpriced: 2,
+        open_commitments: 0,
+        last_activity_at: null,
+        activity_count: 0,
+      },
+    }),
+  );
+  expect(
+    within(cell(strip, en["project.openDealValue"])).getByText("€1,250.00"),
+  ).toBeTruthy();
+  expect(
+    within(cell(strip, en["project.openDealValue"])).getByText(
+      "1 deal not priced · excluded",
+    ),
+  ).toBeTruthy();
+  expect(
+    within(cell(strip, en["project.wonDealValue"])).getByText("—"),
+  ).toBeTruthy();
+  expect(
+    within(cell(strip, en["project.wonDealValue"])).getByText(
+      "2 deals not priced · excluded",
+    ),
+  ).toBeTruthy();
 });

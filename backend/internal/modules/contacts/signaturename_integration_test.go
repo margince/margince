@@ -34,10 +34,10 @@ func TestASignedNameReplacesWhatTheDisplaySplitGuessed(t *testing.T) {
 	}
 
 	// His own signature names him.
-	if _, err := e.store.ApplySignatureFields(ctx, res.ContactID, e.openSignatureSource(ctx, t), []SignatureField{
+	if _, err := e.store.ApplySignatureFields(ctx, res.ContactID, e.openSignatureSource(ctx, t, res.ContactID), []SignatureField{
 		{Name: FieldFirstName, Value: "Marcus", Evidence: "Marcus Greven", Confidence: 0.9},
 		{Name: FieldLastName, Value: "Greven", Evidence: "Marcus Greven", Confidence: 0.9},
-	}); err != nil {
+	}, true); err != nil {
 		t.Fatalf("applying the signed name: %v", err)
 	}
 
@@ -70,10 +70,10 @@ func TestASignedNameLeavesANameAColleagueTypedAlone(t *testing.T) {
 	}
 
 	// A signature stating something else does not get to rule on it.
-	if _, err := e.store.ApplySignatureFields(ctx, res.ContactID, e.openSignatureSource(ctx, t), []SignatureField{
+	if _, err := e.store.ApplySignatureFields(ctx, res.ContactID, e.openSignatureSource(ctx, t, res.ContactID), []SignatureField{
 		{Name: FieldFirstName, Value: "Marc", Evidence: "Marc Greven", Confidence: 0.95},
 		{Name: FieldLastName, Value: "Greven", Evidence: "Marc Greven", Confidence: 0.95},
-	}); err != nil {
+	}, true); err != nil {
 		t.Fatalf("applying the signed name: %v", err)
 	}
 

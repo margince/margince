@@ -97,6 +97,7 @@ const (
 	ReasonNoSingleAccount   Reason = "no_single_account"
 	ReasonTwoBodiesOfWork   Reason = "two_bodies_of_work"
 	ReasonThreadNotAllOpen  Reason = "thread_not_all_open"
+	ReasonThreadNotAllRead  Reason = "thread_not_all_read"
 	ReasonNoNamedReader     Reason = "no_named_reader"
 
 	// StageCompanyTriage, whose subject is a DOMAIN. These are the per-domain

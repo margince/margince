@@ -293,6 +293,8 @@ func threadRefusal(reading ThreadReading) (trace.Reason, bool) {
 		return trace.ReasonTwoBodiesOfWork, true
 	case !reading.IsFullyOpen:
 		return trace.ReasonThreadNotAllOpen, true
+	case !reading.IsFullyRead:
+		return trace.ReasonThreadNotAllRead, true
 	case !reading.HasANamedReader:
 		return trace.ReasonNoNamedReader, true
 	case !reading.HasSettled:

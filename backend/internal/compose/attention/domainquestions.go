@@ -39,4 +39,6 @@ type DomainQuestion struct {
 	// The first question date stays stable across retries and pagination.
 	AskedAt    time.Time
 	EvidenceAt *time.Time
+	// The site triage's own sentence on a vendor question.
+	Note string
 }

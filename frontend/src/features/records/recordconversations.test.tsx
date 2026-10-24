@@ -81,8 +81,31 @@ describe("which groups become conversation rows", () => {
   });
 });
 
+function summary(
+  move: NonNullable<TimelineEntry["emailSummary"]>["move"],
+  subject?: string,
+): NonNullable<TimelineEntry["emailSummary"]> {
+  return {
+    subject,
+    activity_id: "11111111-1111-4111-8111-111111111111",
+    occurred_at: "2026-07-03T10:00:00Z",
+    display_status: "team",
+    attachment_count: 0,
+    move,
+    version: 1,
+  };
+}
+
+function badgesOf(title: string): (string | null)[] {
+  const row = screen.getByText(title).closest("li");
+  expect(row).toBeTruthy();
+  return Array.from(row?.querySelectorAll(".badge") ?? []).map(
+    (b) => b.textContent,
+  );
+}
+
 describe("whose move a conversation is waiting on", () => {
-  it("marks the thread that ended on their word as ours to answer", () => {
+  it("marks the thread whose newest message the server says needs a reply", () => {
     draw([
       group("inbound-1", [
         entry("email", {
@@ -90,6 +113,7 @@ describe("whose move a conversation is waiting on", () => {
           title: "Re: Contract terms",
           atIso: "2026-07-03T10:00:00Z",
           direction: "inbound",
+          emailSummary: summary("needs_reply", "Re: Contract terms"),
         }),
         entry("email", {
           id: "in-1",
@@ -100,31 +124,51 @@ describe("whose move a conversation is waiting on", () => {
       ]),
     ]);
 
-    const row = screen.getByText("Re: Contract terms").closest("li");
-    expect(row).toBeTruthy();
-    expect(
-      row &&
-        Array.from(row.querySelectorAll(".badge")).map((b) => b.textContent),
-    ).toContain("Needs reply");
+    expect(badgesOf("Re: Contract terms")).toContain("Needs reply");
   });
 
-  it("marks the thread that ended on our word as waiting on them", () => {
+  it("marks the thread the server says waits on them", () => {
     draw([
       group("outbound-1", [
-        entry("message", {
+        entry("email", {
           id: "out-1",
           title: "Following up",
           direction: "outbound",
+          emailSummary: summary("waiting_for_them", "Following up"),
         }),
       ]),
     ]);
 
-    const row = screen.getByText("Following up").closest("li");
-    expect(row).toBeTruthy();
-    expect(
-      row &&
-        Array.from(row.querySelectorAll(".badge")).map((b) => b.textContent),
-    ).toContain("Awaiting their reply");
+    expect(badgesOf("Following up")).toContain("Awaiting their reply");
+  });
+
+  it("draws no move on a received invitation the server says needs nothing", () => {
+    draw([
+      group("invite-1", [
+        entry("email", {
+          id: "invite-1",
+          title: "Invitation: Kickoff",
+          direction: "inbound",
+          emailSummary: summary("none", "Invitation: Kickoff"),
+        }),
+      ]),
+    ]);
+
+    expect(badgesOf("Invitation: Kickoff")).not.toContain("Needs reply");
+  });
+
+  it("draws no move on a chat row, which carries no server move", () => {
+    draw([
+      group("chat-1", [
+        entry("message", {
+          id: "chat-1",
+          title: "Quick check-in",
+          direction: "inbound",
+        }),
+      ]),
+    ]);
+
+    expect(badgesOf("Quick check-in")).not.toContain("Needs reply");
   });
 });
 

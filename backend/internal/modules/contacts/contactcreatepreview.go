@@ -92,8 +92,16 @@ func admitAndDedupeContactCreate(ctx context.Context, tx pgx.Tx, in CreateContac
 }
 
 func contactCreationReviewTarget(ctx context.Context, tx pgx.Tx, match ContactResolution) (*ids.ContactID, error) {
-	switch match.Decision {
-	case DecisionFuzzyReview, DecisionNameCollisionReview, DecisionExactCollision:
+	if match.Decision.queuesReview() {
+		// Only a match the caller may see is named, and a hidden one changes
+		// nothing: the preview reads as it would without that record.
+		shown, err := firstVisibleReview(ctx, tx, match)
+		if err != nil || shown == nil {
+			return nil, err
+		}
+		return &shown.ContactID, nil
+	}
+	if match.Decision == DecisionExactCollision {
 		if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
 			return nil, err
 		}

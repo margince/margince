@@ -46,6 +46,9 @@ type ActivityFields struct {
 	// CalendarMethod is that part's RFC 5546 METHOD, or "" when none is known.
 	// REPLY, COUNTER and DECLINECOUNTER answer an invitation rather than ask.
 	CalendarMethod string
+	// BodyCompleteness says how much of a mail's text the parser decoded. Zero
+	// for anything not parsed from a mail, which is stored as complete.
+	BodyCompleteness BodyCompleteness
 
 	// SentByColleague is the live seat who wrote a mail this mailbox holds a
 	// copy of (asSentByColleagueTx); zero for every other record.
@@ -110,4 +113,27 @@ func StorableDuration(seconds *int) *int {
 		return nil
 	}
 	return seconds
+}
+
+// BodyCompleteness is how much of a mail's text the parser could decode.
+type BodyCompleteness string
+
+// The stored values of activity.body_completeness.
+const (
+	BodyComplete BodyCompleteness = "complete"
+	// BodyPartial is a mail with a text part that was not read in full. The
+	// part broke while decoding, or it was cut at the per-part limit.
+	BodyPartial BodyCompleteness = "partial"
+	// BodyUnreadable is a mail whose Body holds only the From/To lines.
+	BodyUnreadable BodyCompleteness = "unreadable"
+	// BodyForwarded is a mail that said nothing of its own, whose Body is the
+	// text of the original it forwarded. Those are not its sender's words.
+	BodyForwarded BodyCompleteness = "forwarded"
+)
+
+func (c BodyCompleteness) stored() BodyCompleteness {
+	if c == "" {
+		return BodyComplete
+	}
+	return c
 }

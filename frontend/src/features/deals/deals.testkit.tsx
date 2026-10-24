@@ -145,6 +145,8 @@ export function stubBackend(
     pipelines?: components["schemas"]["Pipeline"][];
     agentTools?: components["schemas"]["AgentTool"][];
     stageTotalsRows?: Record<string, unknown>[];
+    stageTotalsAsOf?: string;
+    stageTotalsTimezone?: string;
     // Answers the totals report with this status and a problem body instead.
     stageTotalsStatus?: number;
     onStageTotalsBody?: (body: unknown) => void;
@@ -254,6 +256,9 @@ export function stubBackend(
       }
       return jsonResponse({
         report: "deals-by-stage",
+        base_currency: "EUR",
+        as_of: opts.stageTotalsAsOf ?? "2026-10-01",
+        timezone: opts.stageTotalsTimezone,
         plan: {},
         columns: [],
         rows: opts.stageTotalsRows ?? [],

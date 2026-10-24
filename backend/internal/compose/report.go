@@ -13,7 +13,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -168,7 +167,9 @@ type reportSpec struct {
 	activityWalk bool
 	dimensions   map[string]string
 	measures     map[string]string
-	filters      map[string]string
+	// sumCoverage finalizes nullable sums after grouping, keeping empty rows from hiding unknown money.
+	sumCoverage map[string]string
+	filters     map[string]string
 	// rowKeys are the dimensions that each name one row. A listing report
 	// groups by them to list its records. A typed question that does so asks
 	// for groups of one, which the floor withholds every time. A filter on
@@ -480,7 +481,7 @@ func aggregateSelect(spec reportSpec, agg reportAggregate) (name, sel string, er
 		if !ok {
 			return "", "", &FieldNotAllowedError{Field: agg.Field, Slot: slotAggregates, Allowed: allowedReportNames(spec.measures)}
 		}
-		return name, fmt.Sprintf("%s(%s) AS %s", agg.Fn, expr, quoteIdent(name)), nil
+		return name, reportMoneyAggregateSQL(spec, agg, expr) + " AS " + quoteIdent(name), nil
 	case aggFnMedian, aggFnP75:
 		expr, ok := spec.measures[agg.Field]
 		if !ok {
@@ -495,5 +496,3 @@ func aggregateSelect(spec reportSpec, agg reportAggregate) (name, sel string, er
 		return "", "", &FieldNotAllowedError{Field: "fn=" + agg.Fn}
 	}
 }
-
-var errUnknownEntity = errors.New("compose: entity outside the schema descriptors")

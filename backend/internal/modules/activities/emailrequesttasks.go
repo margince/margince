@@ -34,9 +34,10 @@ func emailRequestAssigneeSQL(identities string) string {
       WHERE ci.activity_id = a.id AND u.id = ` + strings.ReplaceAll(soleDirectSeatSQL(identities), "%", "%%")
 }
 
-// CaptureEmailRequests reconciles recent confirmed requests into undated tasks
-// for their one directly addressed importing seat, and retires the ones it filed
-// whose request has aged past the waiting horizon untouched. Historical and ambiguously
+// CaptureEmailRequests reconciles recent confirmed requests into tasks for
+// their one directly addressed importing seat. A task is due on the day the
+// request states (statedRequestDue) and is otherwise undated. The pass retires
+// the ones it filed whose request has aged past the waiting horizon untouched. Historical and ambiguously
 // addressed requests remain in review; this pass neither assigns them silently
 // nor recreates reminders a human archived or completed.
 func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error {
@@ -117,6 +118,13 @@ func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID id
 	request, err := emailRequestTask(ctx, tx, source, seat, asOf)
 	if err != nil {
 		return err
+	}
+	due, stated, err := s.statedRequestDue(ctx, tx, source, asOf)
+	if err != nil {
+		return err
+	}
+	if stated {
+		request.DueAt = &due
 	}
 	_, _, err = s.LogActivityTx(ctx, tx, request)
 	return err

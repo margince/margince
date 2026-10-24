@@ -23,7 +23,7 @@ func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts
 	// Reserve a slot for the selected anchor, which may be in the page.
 	limit, kind := replyContextTurns+1, string(crmcontracts.ActivityKindEmail)
 	rows, _, err := d.store.ListActivities(ctx, activities.ListActivitiesInput{
-		ThreadKey: anchor.ThreadKey, Kind: &kind, Limit: &limit,
+		ThreadKey: anchor.ThreadKey, Kind: &kind, Limit: &limit, WrittenByHuman: true,
 	})
 	if err != nil {
 		return "", err

@@ -23,6 +23,8 @@ export const de = {
     "Die neue Prüfung ist unsicher. Prüfe die Nachricht, bevor du das Ergebnis änderst.",
   "homeRepair.reason.classificationAdopted":
     "Menschliche Änderungen oder fehlende Nachweise verhindern eine automatische Korrektur.",
+  "homeRepair.reason.classificationIncomplete":
+    "Die Mail oder die letzte Mail davor an diesen Kontakt wurde nicht vollständig gelesen.",
   "homeRepair.reason.classificationWithheld":
     "Ein Teil des Nachrichtenkontexts ist nicht zugänglich. Prüfe ihn vor einer Änderung.",
   "homeRepair.reason.classificationCurrent":
@@ -73,6 +75,10 @@ export const de = {
   "homeRepair.reason.cancelled": "Der zugrunde liegende Termin wurde abgesagt.",
   "homeRepair.reason.requestAge":
     "Die ursprüngliche Anfrage liegt außerhalb des Wartezeitraums. Archivieren markiert sie nicht als beantwortet.",
+  "homeRepair.reason.sourceUnassessed":
+    "Der Text der Quellmail wurde noch nicht geprüft.",
+  "homeRepair.reason.sourceIncomplete":
+    "Der Text der Mail wurde nur zum Teil gelesen.",
   "homeRepair.reason.contextUnread":
     "Spätere Nachrichten wurden noch nicht gelesen.",
   "homeRepair.reason.contextUnassessed":
@@ -93,6 +99,27 @@ export const de = {
     "Zu ändernde Ergebnisse: {reclassify}. Erinnerungen zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zurückzuziehende Deal-Vorschläge: {supersede}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
   "homeRepair.apply_one": "{count} geprüfte Änderung anwenden",
   "homeRepair.apply_other": "{count} geprüfte Änderungen anwenden",
+  "homeRepair.settlements": "Beantwortete Anfragen",
+  "homeRepair.revalidate": "Anfrage neu beurteilen",
+  "homeRepair.revalidateSummary_one": "{count} Anfrage wird neu beurteilt.",
+  "homeRepair.revalidateSummary_other":
+    "{count} Anfragen werden neu beurteilt.",
+  "homeRepair.reason.settlementRevalidate":
+    "Margince hat diese Anfrage geschlossen, bevor es festhielt, was es gelesen hat. Die Anfrage wird neu beurteilt; eine geschlossene Erinnerung öffnet sich nur, wenn noch etwas offen ist.",
+  "homeRepair.reason.settlementProvenance":
+    "Kein Eintrag zeigt, dass Margince diese Anfrage geschlossen hat. Die Anfrage bleibt unverändert.",
+  "homeRepair.reason.settlementHuman":
+    "Ein Teammitglied hat an dieser Erinnerung gearbeitet. Die Erinnerung bleibt unverändert.",
+  "homeRepair.reason.settlementPastHorizon":
+    "Die Anfrage liegt außerhalb des Wartezeitraums und bleibt als Eintrag geschlossen.",
+  "homeRepair.reason.settlementNoAnswers":
+    "Es gibt keine Antwort mehr, die Margince lesen darf. Margince kann diese Anfrage nicht neu beurteilen; prüfe sie selbst.",
+  "homeRepair.reason.settlementPending":
+    "Margince soll diese Anfrage neu beurteilen und hat es noch nicht getan.",
+  "homeRepair.reason.settlementUnavailable":
+    "Diese Anfrage ist gesperrt und kann hier nicht geprüft werden.",
+  "homeRepair.reason.settlementChanged":
+    "Diese Anfrage hat sich nach dem Auflisten geändert. Zeige die Vorschau erneut an.",
   "homeRepair.started":
     "Der geprüfte Lauf ist vorgemerkt. Der Fortschritt erscheint oben.",
 
@@ -2233,7 +2260,7 @@ export const de = {
   "board.count_one": "Deal: {count}",
   "board.count_other": "Deals: {count}",
   "board.weighted": "gewichtet {value}",
-  "board.mixedCurrencies": "mehrere Währungen, keine Gesamtsumme",
+  "board.convertedAt": "Umgerechnet · Wechselkurse vom {date}",
   "dealfiles.hidden": "An diesem Deal ausgeblendet",
   "dealfiles.unhidden": "Wieder an diesem Deal sichtbar",
   "deal.stalledBadge": "Stockt",
@@ -3624,8 +3651,6 @@ export const de = {
   "chronology.all": "Alles",
   "chronology.conversations": "Threads",
   "chronology.conversationsEmpty": "Noch keine Threads.",
-  "convo.yourMove": "Antwort nötig",
-  "convo.waitingOnThem": "Wartet auf Antwort der Gegenseite",
   "chronology.changesEmpty":
     "Seit dem Erstellen dieses Datensatzes wurde kein Feld geändert.",
   "chronology.truncatedActivities":
@@ -3717,6 +3742,16 @@ export const de = {
   "email.thread.fold": "Nachricht von {name} einklappen",
   "email.thread.toLine": "an {names}",
   "email.thread.details": "Details",
+  "email.thread.textForwarded":
+    "Der Text unten stammt aus der weitergeleiteten Mail, nicht vom Verfasser selbst.",
+  "email.thread.textPartial":
+    "Ein Teil des Textes dieser Mail konnte nicht gelesen werden.",
+  "email.thread.textUnassessed":
+    "Margince hat noch nicht geprüft, ob der ganze Text dieser Mail gelesen wurde.",
+  "email.thread.textUnreadable":
+    "Der Text dieser Mail konnte nicht gelesen werden.",
+  "email.thread.textUnreadableHint":
+    "Öffne sie in deinem E-Mail-Programm, um ihn zu sehen.",
   "email.thread.replied": "Antwort gesendet und zum Thread hinzugefügt",
   "email.forward": "Weiterleiten",
   "email.forwardHeader": "Weitergeleitete Nachricht",
@@ -3733,6 +3768,10 @@ export const de = {
   "commitment.review.historical": "Ältere Zusage ohne aktuelle Frist.",
   "commitment.review.beforeBaseline":
     "Vor dem Datum gesendet, ab dem dieses Postfach Zusagen vorschlägt.",
+  "commitment.review.sourceUnassessed":
+    "Der Text der Quellmail wurde noch nicht geprüft.",
+  "commitment.review.sourceIncomplete":
+    "Der Text der Mail wurde nur zum Teil gelesen.",
   "commitment.review.incomplete":
     "Spätere Nachrichten wurden nicht vollständig gelesen. Die Zusage könnte bereits erfüllt sein.",
   "commitment.review.unknownDate":
@@ -4776,6 +4815,10 @@ export const de = {
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.totalsNoSearch":
     "Nur geladene Deals. Es wird keine Summe angezeigt, da die Phasensummen keine Suche berücksichtigen können.",
+  "deals.totalsNoArchived":
+    "Nur geladene Deals. Keine Summen, solange archivierte Deals einbezogen werden.",
+  "deals.totalsNoStageFilter":
+    "Nur geladene Deals. Keine Summen, solange ein Phasenfilter aktiv ist.",
   "deals.totalsNoTeamFilter":
     "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Team oder auf nicht zugewiesene Deals eingrenzen lassen.",
   "deals.filterPartner": "Partner",
@@ -6204,6 +6247,7 @@ export const de = {
   "analytics.field.meeting_status": "Terminstatus",
   "analytics.field.open_commitments": "Offene Zusagen",
   "analytics.field.open_deal_value_minor": "Offener Deal-Wert",
+  "analytics.field.open_deal_unpriced": "Nicht bewertete offene Deals",
   "analytics.field.overdue_commitments": "Überfällige Zusagen",
   "analytics.field.close_month": "Abschlussmonat",
   "analytics.field.owner_id": "Verantwortlich",
@@ -6226,6 +6270,7 @@ export const de = {
   "analytics.field.weighted_base_minor": "Gewichteter umgerechneter Betrag",
   "analytics.field.win_probability": "Gewinnwahrscheinlichkeit",
   "analytics.field.won_deal_value_minor": "Gewonnener Deal-Wert",
+  "analytics.field.won_deal_unpriced": "Nicht bewertete gewonnene Deals",
   "analytics.fn.count": "Anzahl",
   "analytics.fn.count_distinct": "Verschiedene Werte",
   "analytics.fn.sum": "Summe",
@@ -9289,12 +9334,17 @@ export const de = {
     "Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
   "worklist.domainReview.effects":
     "Erstellen legt ein Unternehmen an. Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
+  "worklist.domainReview.keepVendor": "Als Anbieter behalten",
+  "worklist.domainReview.vendorEffects":
+    "Erstellen legt ein Unternehmen an und verknüpft seine Kontakte. Als Anbieter behalten legt nichts an und fragt nicht erneut. Ausschließen stoppt die Erfassung für deine Postfächer.",
   "worklist.batch.domain_questions_one": "{count} Domain prüfen",
   "worklist.batch.domain_questions_other": "{count} Domains prüfen",
   "blockedDomains.source.unevidenced":
     "Kein Unternehmen auf der Website genannt",
   "blockedDomains.source.staleEvidence": "Belegende E-Mails zu alt",
   "blockedDomains.source.nearDuplicate": "Unternehmensname existiert bereits",
+  "blockedDomains.source.vendorVerdict":
+    "Wirkt wie ein Mail- oder Hosting-Anbieter",
   "blockedDomains.rowAdmit": "Zulassen",
   "blockedDomains.rowRefuse": "Ablehnen",
   "blockedDomains.rowReopen": "Erneut prüfen",
@@ -10431,11 +10481,6 @@ export const de = {
   "auto.preview.explainer":
     "Probelauf ohne Schreibzugriff. Es werden keine Datensätze geändert und nichts gesendet.",
 
-  "strength.bucket.none": "Ruhend",
-  "strength.bucket.weak": "Schwach",
-  "strength.bucket.moderate": "Warm",
-  "strength.bucket.strong": "Stark",
-
   // Die Abdeckungskarte des Beziehungsgraphen (ADR-0078).
   "coverage.seatWithheld": "Ein Kontakt, den du nicht lesen kannst",
   "coverage.daysSinceTouch": "{days} T",
@@ -11098,6 +11143,8 @@ export const de = {
     "die Befunde dieses Threads haben kein sicheres Ziel, da sich der Thread nicht genau einem Unternehmen zuordnen lässt",
   "pipeline.reason.two_bodies_of_work":
     "die Befunde dieses Threads wären für eines der Projekte falsch, da der Thread 2 Projekte umfasst",
+  "pipeline.reason.thread_not_all_read":
+    "eine Mail in diesem Thread wurde nicht vollständig gelesen, daher könnte eine Zusammenfassung des Rests auslassen, was sie ändert",
   "pipeline.reason.thread_not_all_open":
     "eine Zusammenfassung des ganzen Threads würde eine Teilansicht als vollständig darstellen, da eine Nachricht in diesem Thread für einen Teil seiner Lesenden verborgen ist",
   "pipeline.reason.answered_on_the_company":
@@ -15419,6 +15466,8 @@ export const de = {
   "project.standing.event.due": "fällig am {date}",
   "project.standing.event.lastUpdate": "{date} · letzte Aktualisierung",
   "project.more.contacts": "Unternehmen und Kontakte",
+  "project.openDealValue": "Wert offener Deals",
+  "project.wonDealValue": "Wert gewonnener Deals",
   "project.deals.openAt": "Offen · {stage}",
   "project.deals.wonOn": "Gewonnen am {date}",
   "project.deals.lostOn": "Verloren am {date}",
@@ -15951,6 +16000,11 @@ export const de = {
   "worklist.verb.domainKept": "Unternehmen aus Domain erstellt",
   "worklist.verb.domainKeepFailed":
     "Das Unternehmen konnte nicht erstellt werden. Bitte versuche es erneut.",
+  "worklist.verb.keepAsVendor": "Als Anbieter behalten",
+  "worklist.verb.domainKeptAsVendor":
+    "Als Anbieter behalten. Kein Unternehmen angelegt",
+  "worklist.verb.domainKeepAsVendorFailed":
+    "Die Antwort wurde nicht gespeichert. Erneut versuchen.",
   "worklist.verb.domainDiscarded":
     "Deine E-Mails von dieser Domain werden nicht mehr erfasst.",
   "worklist.verb.domainDiscardFailed":

@@ -223,6 +223,27 @@ func (e AccountDraftReasonKind) Valid() bool {
 	}
 }
 
+// Defines values for ActivityAutomaticKind.
+const (
+	ActivityAutomaticKindCalendar      ActivityAutomaticKind = "calendar"
+	ActivityAutomaticKindProduct       ActivityAutomaticKind = "product"
+	ActivityAutomaticKindSendingSystem ActivityAutomaticKind = "sending_system"
+)
+
+// Valid indicates whether the value is a known member of the ActivityAutomaticKind enum.
+func (e ActivityAutomaticKind) Valid() bool {
+	switch e {
+	case ActivityAutomaticKindCalendar:
+		return true
+	case ActivityAutomaticKindProduct:
+		return true
+	case ActivityAutomaticKindSendingSystem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityCaptureLabel.
 const (
 	ActivityCaptureLabelCommitment ActivityCaptureLabel = "commitment"
@@ -2355,21 +2376,22 @@ func (e AttentionConnectionFactsMedium) Valid() bool {
 
 // Defines values for AttentionItemActions.
 const (
-	AttentionItemActionsAcknowledge AttentionItemActions = "acknowledge"
-	AttentionItemActionsAct         AttentionItemActions = "act"
-	AttentionItemActionsComplete    AttentionItemActions = "complete"
-	AttentionItemActionsDecide      AttentionItemActions = "decide"
-	AttentionItemActionsDiscard     AttentionItemActions = "discard"
-	AttentionItemActionsDismiss     AttentionItemActions = "dismiss"
-	AttentionItemActionsKeep        AttentionItemActions = "keep"
-	AttentionItemActionsMerge       AttentionItemActions = "merge"
-	AttentionItemActionsOpen        AttentionItemActions = "open"
-	AttentionItemActionsReopen      AttentionItemActions = "reopen"
-	AttentionItemActionsReply       AttentionItemActions = "reply"
-	AttentionItemActionsRetry       AttentionItemActions = "retry"
-	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
-	AttentionItemActionsSnooze      AttentionItemActions = "snooze"
-	AttentionItemActionsUndo        AttentionItemActions = "undo"
+	AttentionItemActionsAcknowledge  AttentionItemActions = "acknowledge"
+	AttentionItemActionsAct          AttentionItemActions = "act"
+	AttentionItemActionsComplete     AttentionItemActions = "complete"
+	AttentionItemActionsDecide       AttentionItemActions = "decide"
+	AttentionItemActionsDiscard      AttentionItemActions = "discard"
+	AttentionItemActionsDismiss      AttentionItemActions = "dismiss"
+	AttentionItemActionsKeep         AttentionItemActions = "keep"
+	AttentionItemActionsKeepAsVendor AttentionItemActions = "keep_as_vendor"
+	AttentionItemActionsMerge        AttentionItemActions = "merge"
+	AttentionItemActionsOpen         AttentionItemActions = "open"
+	AttentionItemActionsReopen       AttentionItemActions = "reopen"
+	AttentionItemActionsReply        AttentionItemActions = "reply"
+	AttentionItemActionsRetry        AttentionItemActions = "retry"
+	AttentionItemActionsSetAside     AttentionItemActions = "set_aside"
+	AttentionItemActionsSnooze       AttentionItemActions = "snooze"
+	AttentionItemActionsUndo         AttentionItemActions = "undo"
 )
 
 // Valid indicates whether the value is a known member of the AttentionItemActions enum.
@@ -2388,6 +2410,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsDismiss:
 		return true
 	case AttentionItemActionsKeep:
+		return true
+	case AttentionItemActionsKeepAsVendor:
 		return true
 	case AttentionItemActionsMerge:
 		return true
@@ -3421,6 +3445,7 @@ const (
 	BlockedDomainReasonCodeStated            BlockedDomainReasonCode = "stated"
 	BlockedDomainReasonCodeUnevidenced       BlockedDomainReasonCode = "unevidenced"
 	BlockedDomainReasonCodeUnknown           BlockedDomainReasonCode = "unknown"
+	BlockedDomainReasonCodeVendorVerdict     BlockedDomainReasonCode = "vendor_verdict"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainReasonCode enum.
@@ -3445,6 +3470,8 @@ func (e BlockedDomainReasonCode) Valid() bool {
 	case BlockedDomainReasonCodeUnevidenced:
 		return true
 	case BlockedDomainReasonCodeUnknown:
+		return true
+	case BlockedDomainReasonCodeVendorVerdict:
 		return true
 	default:
 		return false
@@ -3481,6 +3508,7 @@ const (
 	BlockedDomainSourceReservedDomain    BlockedDomainSource = "reserved_domain"
 	BlockedDomainSourceStaleEvidence     BlockedDomainSource = "stale_evidence"
 	BlockedDomainSourceUnevidenced       BlockedDomainSource = "unevidenced"
+	BlockedDomainSourceVendorVerdict     BlockedDomainSource = "vendor_verdict"
 	BlockedDomainSourceVerdict           BlockedDomainSource = "verdict"
 )
 
@@ -3501,7 +3529,36 @@ func (e BlockedDomainSource) Valid() bool {
 		return true
 	case BlockedDomainSourceUnevidenced:
 		return true
+	case BlockedDomainSourceVendorVerdict:
+		return true
 	case BlockedDomainSourceVerdict:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BodyCompleteness.
+const (
+	BodyCompletenessComplete   BodyCompleteness = "complete"
+	BodyCompletenessForwarded  BodyCompleteness = "forwarded"
+	BodyCompletenessPartial    BodyCompleteness = "partial"
+	BodyCompletenessUnassessed BodyCompleteness = "unassessed"
+	BodyCompletenessUnreadable BodyCompleteness = "unreadable"
+)
+
+// Valid indicates whether the value is a known member of the BodyCompleteness enum.
+func (e BodyCompleteness) Valid() bool {
+	switch e {
+	case BodyCompletenessComplete:
+		return true
+	case BodyCompletenessForwarded:
+		return true
+	case BodyCompletenessPartial:
+		return true
+	case BodyCompletenessUnassessed:
+		return true
+	case BodyCompletenessUnreadable:
 		return true
 	default:
 		return false
@@ -11008,6 +11065,7 @@ const (
 	HomeRepairTaskActionHumanReview              HomeRepairTaskAction = "human_review"
 	HomeRepairTaskActionLeaveCurrent             HomeRepairTaskAction = "leave_current"
 	HomeRepairTaskActionReclassifyMessage        HomeRepairTaskAction = "reclassify_message"
+	HomeRepairTaskActionRevalidateSettlement     HomeRepairTaskAction = "revalidate_settlement"
 	HomeRepairTaskActionSupersedeSuggestion      HomeRepairTaskAction = "supersede_suggestion"
 	HomeRepairTaskActionWithdrawProposal         HomeRepairTaskAction = "withdraw_proposal"
 )
@@ -11022,6 +11080,8 @@ func (e HomeRepairTaskAction) Valid() bool {
 	case HomeRepairTaskActionLeaveCurrent:
 		return true
 	case HomeRepairTaskActionReclassifyMessage:
+		return true
+	case HomeRepairTaskActionRevalidateSettlement:
 		return true
 	case HomeRepairTaskActionSupersedeSuggestion:
 		return true
@@ -11071,6 +11131,7 @@ func (e HomeRepairTaskBeforeVerdict) Valid() bool {
 // Defines values for HomeRepairTaskSource.
 const (
 	HomeRepairTaskSourceApproval   HomeRepairTaskSource = "approval"
+	HomeRepairTaskSourceSettlement HomeRepairTaskSource = "settlement"
 	HomeRepairTaskSourceSuggestion HomeRepairTaskSource = "suggestion"
 	HomeRepairTaskSourceTask       HomeRepairTaskSource = "task"
 	HomeRepairTaskSourceVerdict    HomeRepairTaskSource = "verdict"
@@ -11080,6 +11141,8 @@ const (
 func (e HomeRepairTaskSource) Valid() bool {
 	switch e {
 	case HomeRepairTaskSourceApproval:
+		return true
+	case HomeRepairTaskSourceSettlement:
 		return true
 	case HomeRepairTaskSourceSuggestion:
 		return true
@@ -20430,21 +20493,22 @@ func (e WorklistDealVerdictStanding) Valid() bool {
 
 // Defines values for WorklistItemActions.
 const (
-	WorklistItemActionsAcknowledge WorklistItemActions = "acknowledge"
-	WorklistItemActionsAct         WorklistItemActions = "act"
-	WorklistItemActionsComplete    WorklistItemActions = "complete"
-	WorklistItemActionsDecide      WorklistItemActions = "decide"
-	WorklistItemActionsDiscard     WorklistItemActions = "discard"
-	WorklistItemActionsDismiss     WorklistItemActions = "dismiss"
-	WorklistItemActionsKeep        WorklistItemActions = "keep"
-	WorklistItemActionsMerge       WorklistItemActions = "merge"
-	WorklistItemActionsOpen        WorklistItemActions = "open"
-	WorklistItemActionsReopen      WorklistItemActions = "reopen"
-	WorklistItemActionsReply       WorklistItemActions = "reply"
-	WorklistItemActionsRetry       WorklistItemActions = "retry"
-	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
-	WorklistItemActionsSnooze      WorklistItemActions = "snooze"
-	WorklistItemActionsUndo        WorklistItemActions = "undo"
+	WorklistItemActionsAcknowledge  WorklistItemActions = "acknowledge"
+	WorklistItemActionsAct          WorklistItemActions = "act"
+	WorklistItemActionsComplete     WorklistItemActions = "complete"
+	WorklistItemActionsDecide       WorklistItemActions = "decide"
+	WorklistItemActionsDiscard      WorklistItemActions = "discard"
+	WorklistItemActionsDismiss      WorklistItemActions = "dismiss"
+	WorklistItemActionsKeep         WorklistItemActions = "keep"
+	WorklistItemActionsKeepAsVendor WorklistItemActions = "keep_as_vendor"
+	WorklistItemActionsMerge        WorklistItemActions = "merge"
+	WorklistItemActionsOpen         WorklistItemActions = "open"
+	WorklistItemActionsReopen       WorklistItemActions = "reopen"
+	WorklistItemActionsReply        WorklistItemActions = "reply"
+	WorklistItemActionsRetry        WorklistItemActions = "retry"
+	WorklistItemActionsSetAside     WorklistItemActions = "set_aside"
+	WorklistItemActionsSnooze       WorklistItemActions = "snooze"
+	WorklistItemActionsUndo         WorklistItemActions = "undo"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemActions enum.
@@ -20463,6 +20527,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsDismiss:
 		return true
 	case WorklistItemActionsKeep:
+		return true
+	case WorklistItemActionsKeepAsVendor:
 		return true
 	case WorklistItemActionsMerge:
 		return true
@@ -21541,6 +21607,7 @@ func (e RelinkActivityJSONBodyEntityType) Valid() bool {
 // Defines values for PreviewHomeRepairJSONBodySource.
 const (
 	PreviewHomeRepairJSONBodySourceApproval   PreviewHomeRepairJSONBodySource = "approval"
+	PreviewHomeRepairJSONBodySourceSettlement PreviewHomeRepairJSONBodySource = "settlement"
 	PreviewHomeRepairJSONBodySourceSuggestion PreviewHomeRepairJSONBodySource = "suggestion"
 	PreviewHomeRepairJSONBodySourceTask       PreviewHomeRepairJSONBodySource = "task"
 	PreviewHomeRepairJSONBodySourceVerdict    PreviewHomeRepairJSONBodySource = "verdict"
@@ -21550,6 +21617,8 @@ const (
 func (e PreviewHomeRepairJSONBodySource) Valid() bool {
 	switch e {
 	case PreviewHomeRepairJSONBodySourceApproval:
+		return true
+	case PreviewHomeRepairJSONBodySourceSettlement:
 		return true
 	case PreviewHomeRepairJSONBodySourceSuggestion:
 		return true
@@ -24296,7 +24365,13 @@ type Activity struct {
 	// WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
 	Author *SourceAuthor `json:"author,omitempty"`
-	Body   *string       `json:"body,omitempty"`
+
+	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
+	Body          *string                `json:"body,omitempty"`
+
+	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
+	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
@@ -24387,6 +24462,9 @@ type Activity struct {
 	Version              *RowVersion            `json:"version,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+type ActivityAutomaticKind string
 
 // ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 type ActivityCaptureLabel string
@@ -27785,7 +27863,8 @@ type AttentionItem struct {
 	//
 	// Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
 	// company or matches the supplied `company_id`; forwarded identity requires an
-	// explicit match. Discarding stops the caller's own mailboxes capturing that
+	// explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
+	// settles the domain as a vendor and creates nothing. Discarding stops the caller's own mailboxes capturing that
 	// domain. Reopening retries identification without settling identity. These verbs route
 	// to `/capture/domain-questions/{domain}/…`.
 	//
@@ -27869,6 +27948,9 @@ type AttentionItem struct {
 	// Both now travel typed — `quiet_days` and `staged` below — and the client writes
 	// the sentence in the reader's own language.
 	Detail *string `json:"detail,omitempty"`
+
+	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+	DomainNote *string `json:"domain_note,omitempty"`
 
 	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
 	DomainReasonCode *string `json:"domain_reason_code,omitempty"`
@@ -28950,8 +29032,8 @@ type BlockedDomain struct {
 	//   as a company.
 	// - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 	//   company this business works with. `sender_kind` says which, when it is known.
-	// - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
-	//   question, as `source` describes each one.
+	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+	//   domain's open question, as `source` describes each one.
 	// - `unknown`: the row records a reason this server has no word for. `reason` still
 	//   carries its stored sentence.
 	ReasonCode BlockedDomainReasonCode `json:"reason_code"`
@@ -28964,7 +29046,8 @@ type BlockedDomain struct {
 	// found named a company; `stale_evidence` means the newest mail from the domain is too
 	// old to mint one from today's site; `near_duplicate` means more than one company
 	// here already carries the name it resolved to, and which of them this domain belongs
-	// to is a human's call rather than the machine's.
+	// to is a human's call rather than the machine's; `vendor_verdict` means the site reads
+	// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
 	Source BlockedDomainSource `json:"source"`
 }
 
@@ -28981,8 +29064,8 @@ type BlockedDomainAdmission string
 //     as a company.
 //   - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 //     company this business works with. `sender_kind` says which, when it is known.
-//   - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
-//     question, as `source` describes each one.
+//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+//     domain's open question, as `source` describes each one.
 //   - `unknown`: the row records a reason this server has no word for. `reason` still
 //     carries its stored sentence.
 type BlockedDomainReasonCode string
@@ -28995,7 +29078,8 @@ type BlockedDomainSenderKind string
 // found named a company; `stale_evidence` means the newest mail from the domain is too
 // old to mint one from today's site; `near_duplicate` means more than one company
 // here already carries the name it resolved to, and which of them this domain belongs
-// to is a human's call rather than the machine's.
+// to is a human's call rather than the machine's; `vendor_verdict` means the site reads
+// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -29007,6 +29091,16 @@ type BlockedDomainListResponse struct {
 	// page size would tell an operator their domain was never refused when it was.
 	Total int `json:"total"`
 }
+
+// BodyCompleteness How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
+// part was not read in full (it broke while decoding, or it ran past the size limit), so
+// the body may lack text. `unreadable`: none of it, so the body holds only the From and To
+// lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
+// text of the original it forwarded, not the sender's own words. `unassessed`: a mail
+// stored before this was recorded and not yet checked against its stored original, or one
+// with no original to check. Automatic work (promises, requests and their settlement, and
+// the events read from a conversation) is read only from a `complete` mail body.
+type BodyCompleteness string
 
 // BoughtField One value on a contact that a data provider's purchase wrote and still owns.
 type BoughtField struct {
@@ -37550,13 +37644,16 @@ type DisqualifyLeadRequest struct {
 
 // DomainQuestion defines model for DomainQuestion.
 type DomainQuestion struct {
-	AskedAt       time.Time  `json:"asked_at"`
-	Deferred      bool       `json:"deferred"`
-	Domain        string     `json:"domain"`
-	EffectiveUrl  *string    `json:"effective_url,omitempty"`
-	EvidenceAt    *time.Time `json:"evidence_at,omitempty"`
-	ReasonCode    string     `json:"reason_code"`
-	RedirectChain *[]string  `json:"redirect_chain,omitempty"`
+	AskedAt      time.Time  `json:"asked_at"`
+	Deferred     bool       `json:"deferred"`
+	Domain       string     `json:"domain"`
+	EffectiveUrl *string    `json:"effective_url,omitempty"`
+	EvidenceAt   *time.Time `json:"evidence_at,omitempty"`
+
+	// Note The site triage's own sentence on a `vendor_verdict` question, in the workspace language.
+	Note          *string   `json:"note,omitempty"`
+	ReasonCode    string    `json:"reason_code"`
+	RedirectChain *[]string `json:"redirect_chain,omitempty"`
 }
 
 // DomainQuestionPage defines model for DomainQuestionPage.
@@ -37757,12 +37854,15 @@ type EmailPresentation struct {
 
 	// Body The message as plain text, normalised. Null when withheld. Provider payloads are
 	// never handed to a browser to parse.
-	Body      *string            `json:"body,omitempty"`
-	CanRelink bool               `json:"can_relink"`
-	CanReply  bool               `json:"can_reply"`
-	Cc        []EmailParty       `json:"cc"`
-	From      []EmailParty       `json:"from"`
-	Id        openapi_types.UUID `json:"id"`
+	Body *string `json:"body,omitempty"`
+
+	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
+	BodyCompleteness *BodyCompleteness  `json:"body_completeness,omitempty"`
+	CanRelink        bool               `json:"can_relink"`
+	CanReply         bool               `json:"can_reply"`
+	Cc               []EmailParty       `json:"cc"`
+	From             []EmailParty       `json:"from"`
+	Id               openapi_types.UUID `json:"id"`
 
 	// Lifecycle What kind of message this is. One value today: this read serves delivered
 	// correspondence. A scheduled send and a draft awaiting approval will borrow the
@@ -39391,9 +39491,12 @@ type HomeRepairCounts struct {
 	Archive    int `json:"archive"`
 	Keep       int `json:"keep"`
 	Reclassify int `json:"reclassify"`
-	Review     int `json:"review"`
-	Supersede  int `json:"supersede"`
-	Withdraw   int `json:"withdraw"`
+
+	// Revalidate Older settled request verdicts the email-request settlement pass judges again.
+	Revalidate *int `json:"revalidate,omitempty"`
+	Review     int  `json:"review"`
+	Supersede  int  `json:"supersede"`
+	Withdraw   int  `json:"withdraw"`
 }
 
 // HomeRepairReview defines model for HomeRepairReview.
@@ -45213,8 +45316,9 @@ type Project360 struct {
 	// Project A project — the body of work a client relationship is made of. Mirrors the `project` table.
 	Project Project `json:"project"`
 
-	// Rollups The header figures. Money is in the installation's base currency at each deal's frozen
-	// rate, summed over the caller's deal row scope; the counts are over the caller's
+	// Rollups The header figures. Open deals use the latest base-currency rate on or before today;
+	// won deals keep their frozen amount. An unpriced sum is null, with its missing-price
+	// count alongside it. Money follows the caller's deal row scope; work counts follow their
 	// activity row scope. Present only when the caller holds both the deal and the activity
 	// grant, since a header that showed one half would read as a project with no deals or
 	// no work.
@@ -45300,8 +45404,9 @@ type Project360PhaseTransition struct {
 	ToPhase   string             `json:"to_phase"`
 }
 
-// Project360Rollups The header figures. Money is in the installation's base currency at each deal's frozen
-// rate, summed over the caller's deal row scope; the counts are over the caller's
+// Project360Rollups The header figures. Open deals use the latest base-currency rate on or before today;
+// won deals keep their frozen amount. An unpriced sum is null, with its missing-price
+// count alongside it. Money follows the caller's deal row scope; work counts follow their
 // activity row scope. Present only when the caller holds both the deal and the activity
 // grant, since a header that showed one half would read as a project with no deals or
 // no work.
@@ -45318,8 +45423,14 @@ type Project360Rollups struct {
 	// OpenDealValue Money as integer minor-units + ISO-4217 currency. Never a float.
 	OpenDealValue Money `json:"open_deal_value"`
 
+	// OpenDealsUnpriced Open deal amounts with no available base-currency price.
+	OpenDealsUnpriced *int `json:"open_deals_unpriced,omitempty"`
+
 	// WonDealValue Money as integer minor-units + ISO-4217 currency. Never a float.
 	WonDealValue Money `json:"won_deal_value"`
+
+	// WonDealsUnpriced Won deal amounts with no available base-currency price.
+	WonDealsUnpriced *int `json:"won_deals_unpriced,omitempty"`
 }
 
 // Project360Section One section of the project page, as `sections_omitted` names it.
@@ -54022,6 +54133,9 @@ type WorklistItem struct {
 	// Absent or empty means the row leaves through its own verb in `actions`, or,
 	// where it has none, a reason in `because` says why.
 	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
+
+	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+	DomainNote *string `json:"domain_note,omitempty"`
 
 	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
 	DomainReasonCode *string `json:"domain_reason_code,omitempty"`
@@ -63041,12 +63155,28 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "author")
 	}
 
+	if raw, found := object["automatic_kind"]; found {
+		err = json.Unmarshal(raw, &a.AutomaticKind)
+		if err != nil {
+			return fmt.Errorf("error reading 'automatic_kind': %w", err)
+		}
+		delete(object, "automatic_kind")
+	}
+
 	if raw, found := object["body"]; found {
 		err = json.Unmarshal(raw, &a.Body)
 		if err != nil {
 			return fmt.Errorf("error reading 'body': %w", err)
 		}
 		delete(object, "body")
+	}
+
+	if raw, found := object["body_completeness"]; found {
+		err = json.Unmarshal(raw, &a.BodyCompleteness)
+		if err != nil {
+			return fmt.Errorf("error reading 'body_completeness': %w", err)
+		}
+		delete(object, "body_completeness")
 	}
 
 	if raw, found := object["bulk_mail_attested"]; found {
@@ -63367,10 +63497,24 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AutomaticKind != nil {
+		object["automatic_kind"], err = json.Marshal(a.AutomaticKind)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'automatic_kind': %w", err)
+		}
+	}
+
 	if a.Body != nil {
 		object["body"], err = json.Marshal(a.Body)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'body': %w", err)
+		}
+	}
+
+	if a.BodyCompleteness != nil {
+		object["body_completeness"], err = json.Marshal(a.BodyCompleteness)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'body_completeness': %w", err)
 		}
 	}
 
@@ -74044,6 +74188,9 @@ type ServerInterface interface {
 	// Answer an open domain question by keeping the company.
 	// (POST /capture/domain-questions/{domain}/keep)
 	KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
+	// Answer an open vendor question by keeping the vendor verdict.
+	// (POST /capture/domain-questions/{domain}/keep-vendor)
+	KeepDomainAsVendor(w http.ResponseWriter, r *http.Request, domain string)
 	// The workspace's own email domains.
 	// (GET /capture/email-domains)
 	ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request)
@@ -77338,6 +77485,12 @@ func (_ Unimplemented) DiscardDomainQuestion(w http.ResponseWriter, r *http.Requ
 // Answer an open domain question by keeping the company.
 // (POST /capture/domain-questions/{domain}/keep)
 func (_ Unimplemented) KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer an open vendor question by keeping the vendor verdict.
+// (POST /capture/domain-questions/{domain}/keep-vendor)
+func (_ Unimplemented) KeepDomainAsVendor(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -89720,6 +89873,38 @@ func (siw *ServerInterfaceWrapper) KeepDomainQuestion(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.KeepDomainQuestion(w, r, domain)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// KeepDomainAsVendor operation middleware
+func (siw *ServerInterfaceWrapper) KeepDomainAsVendor(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.KeepDomainAsVendor(w, r, domain)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -120050,6 +120235,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/keep", wrapper.KeepDomainQuestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/keep-vendor", wrapper.KeepDomainAsVendor)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/email-domains", wrapper.ListWorkspaceEmailDomains)

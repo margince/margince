@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -159,4 +160,44 @@ func CommitmentAdmissionStateTx(ctx context.Context, tx pgx.Tx, source ids.Activ
 		return false, false, fmt.Errorf("activities: checking prior commitment admission: %w", err)
 	}
 	return held, recorded, nil
+}
+
+// CommitmentStillOpenTx is whether the recorded decision for one promise
+// still makes it open, current work. A staged proposal that names no claim
+// rests on this decision. One with no decision on record has no basis to
+// rebuild, so it is withdrawn rather than mailed or accepted.
+func CommitmentStillOpenTx(ctx context.Context, tx pgx.Tx, source ids.UUID, locator string) (bool, error) {
+	_, open, err := readCommitmentAdmissionTx(ctx, tx, source, locator, "")
+	return open, err
+}
+
+// CommitmentAdmissionTx reads that decision as a delayed send's basis: a
+// fingerprint of the whole row, which any re-evaluation changes, and whether
+// it is still open.
+func CommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, source ids.UUID, locator string) (int64, bool, error) {
+	return readCommitmentAdmissionTx(ctx, tx, source, locator, "")
+}
+
+// HoldCommitmentAdmissionTx is CommitmentAdmissionTx under a share lock, so a
+// re-evaluation waits for the send's reservation to commit.
+func HoldCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, source ids.UUID, locator string) (int64, bool, error) {
+	return readCommitmentAdmissionTx(ctx, tx, source, locator, " FOR SHARE")
+}
+
+func readCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, source ids.UUID, locator, lock string) (int64, bool, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return 0, false, err
+	}
+	var fingerprint int64
+	var open bool
+	err := tx.QueryRow(ctx, `SELECT hashtextextended(adm::text, 0), adm.current_work AND coalesce(adm.meaning->>'state', 'open') = 'open'
+		  FROM activity_commitment_admission adm WHERE adm.source_activity_id = $1 AND adm.locator = $2`+lock,
+		source, locator).Scan(&fingerprint, &open)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, fmt.Errorf("activities: reading whether a promise is still open: %w", err)
+	}
+	return fingerprint, open, nil
 }

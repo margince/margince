@@ -50,6 +50,10 @@ type LastTouch struct {
 // — so reading it off reachability told a reader "they wrote last" about a
 // message somebody else sent into a conversation this contact is on.
 //
+// Only a row a human wrote moves either clock (relstrength.WrittenByHumanSQL):
+// a calendar invitation, a sending system's notice or the product's own mail
+// is nobody writing.
+//
 // An aggregate, not a per-row read: it has to agree for every colleague, so it
 // asks whether the WORKSPACE may see the row (auth.AudienceWorkspaceOnly)
 // rather than the caller-scoped arm the timeline uses for content — a private
@@ -95,7 +99,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		FROM contact c
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
 		reached, contacts.SenderPredicate("c.id", "a"), wantedPos, visible,
-		relstrength.LastActivityCountsSQL("a", "now()"), activities.ImportedHistorySQL), args...)
+		relstrength.LastActivityCountsSQL("a", "now()")+" AND "+relstrength.WrittenByHumanSQL("a"), activities.ImportedHistorySQL), args...)
 	if err != nil {
 		return nil, err
 	}

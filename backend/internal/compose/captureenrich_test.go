@@ -164,6 +164,7 @@ func TestASignatureNamingSomebodyElseIsNotReadAsTheirs(t *testing.T) {
 		// word-bounded reads Joanne's title onto Ann.
 		"a longer name containing theirs": "Viele Grüße\nJoanne Brown\nCEO",
 		"a different contact entirely":    "Best\nMarcus Greven\nPartner Manager",
+		"no signature":                    "",
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

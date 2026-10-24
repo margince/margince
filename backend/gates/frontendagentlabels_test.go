@@ -155,6 +155,10 @@ func qualifiedAsIdents(consts packageConsts, parsed gatekit.ParsedFile, expr ast
 		}
 	case *ast.ParenExpr:
 		return &ast.ParenExpr{X: qualifiedAsIdents(consts, parsed, node.X, table)}
+	case *ast.CallExpr:
+		if name, ok := node.Fun.(*ast.Ident); ok && name.Name == "string" && len(node.Args) == 1 {
+			return &ast.CallExpr{Fun: node.Fun, Args: []ast.Expr{qualifiedAsIdents(consts, parsed, node.Args[0], table)}}
+		}
 	}
 	return expr
 }

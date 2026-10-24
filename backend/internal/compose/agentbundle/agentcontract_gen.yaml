@@ -8427,6 +8427,18 @@ components:
         next_cursor:
           type: [string, 'null']
           description: Pass back as `thread_cursor` for the next page. Null when this is the last.
+    BodyCompleteness:
+      type: string
+      enum: [complete, partial, unreadable, forwarded, unassessed]
+      description: |-
+        How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
+        part was not read in full (it broke while decoding, or it ran past the size limit), so
+        the body may lack text. `unreadable`: none of it, so the body holds only the From and To
+        lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
+        text of the original it forwarded, not the sender's own words. `unassessed`: a mail
+        stored before this was recorded and not yet checked against its stored original, or one
+        with no original to check. Automatic work (promises, requests and their settlement, and
+        the events read from a conversation) is read only from a `complete` mail body.
     EmailPresentation:
       type: object
       description: |-
@@ -8451,6 +8463,11 @@ components:
           description: |-
             The message as plain text, normalised. Null when withheld. Provider payloads are
             never handed to a browser to parse.
+        body_completeness:
+          allOf: [{$ref: '#/components/schemas/BodyCompleteness'}]
+          readOnly: true
+          description: >-
+            How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
         thread_key: {type: [string, 'null']}
         from:
           type: array
@@ -13811,8 +13828,9 @@ components:
     Project360Rollups:
       type: object
       description: |-
-        The header figures. Money is in the installation's base currency at each deal's frozen
-        rate, summed over the caller's deal row scope; the counts are over the caller's
+        The header figures. Open deals use the latest base-currency rate on or before today;
+        won deals keep their frozen amount. An unpriced sum is null, with its missing-price
+        count alongside it. Money follows the caller's deal row scope; work counts follow their
         activity row scope. Present only when the caller holds both the deal and the activity
         grant, since a header that showed one half would read as a project with no deals or
         no work.
@@ -13820,6 +13838,8 @@ components:
       properties:
         open_deal_value: {$ref: '#/components/schemas/Money'}
         won_deal_value: {$ref: '#/components/schemas/Money'}
+        open_deals_unpriced: {type: integer, minimum: 0, description: Open deal amounts with no available base-currency price.}
+        won_deals_unpriced: {type: integer, minimum: 0, description: Won deal amounts with no available base-currency price.}
         open_commitments:
           type: integer
           minimum: 0
@@ -14676,6 +14696,18 @@ components:
           readOnly: true
           description: >-
             This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
+        body_completeness:
+          allOf: [{$ref: '#/components/schemas/BodyCompleteness'}]
+          readOnly: true
+          description: >-
+            How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
+        automatic_kind:
+          type: string
+          nullable: true
+          readOnly: true
+          enum: [product, calendar, sending_system]
+          description: >-
+            What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
         audience:
           allOf: [{$ref: '#/components/schemas/ActivityAudience'}]
           readOnly: true

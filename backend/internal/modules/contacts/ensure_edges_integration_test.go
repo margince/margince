@@ -269,10 +269,10 @@ func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *t
 		t.Fatal(err)
 	}
 
-	res, err := e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t), []SignatureField{
+	res, err := e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t, contactID), []SignatureField{
 		{Name: "title", Value: "AI CTO", Evidence: "AI CTO", Confidence: 0.9},
 		{Name: "", Value: "   ", Evidence: ""}, // a blank value is dropped before any write
-	})
+	}, true)
 	if err != nil {
 		t.Fatalf("ApplySignatureFields: %v", err)
 	}
@@ -308,9 +308,9 @@ func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *t
 	}); err != nil {
 		t.Fatal(err)
 	}
-	res, err = e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t), []SignatureField{
+	res, err = e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t, contactID), []SignatureField{
 		{Name: "phone", Value: "+49 30 1234567", Evidence: "+49 30 1234567", Confidence: 0.8},
-	})
+	}, true)
 	if err != nil {
 		t.Fatalf("phone apply: %v", err)
 	}
@@ -336,9 +336,9 @@ func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *t
 
 	// A statement OLDER than the one on the record changes nothing: mail is
 	// re-delivered, and a replay must not walk a value backwards.
-	res, err = e.store.ApplySignatureFields(ctx, contactID, e.agedSignatureSource(ctx, t), []SignatureField{
+	res, err = e.store.ApplySignatureFields(ctx, contactID, e.agedSignatureSource(ctx, t, contactID), []SignatureField{
 		{Name: "title", Value: "Stale Title", Evidence: "Stale Title", Confidence: 0.9},
-	})
+	}, true)
 	if err != nil {
 		t.Fatalf("aged apply: %v", err)
 	}
@@ -354,7 +354,7 @@ func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *t
 		t.Fatalf("title = %q after an older statement, want the newer one to stand", title)
 	}
 
-	if res, err = e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t), nil); err != nil || res.Applied != 0 || res.Skipped != 0 {
+	if res, err = e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t, contactID), nil, true); err != nil || res.Applied != 0 || res.Skipped != 0 {
 		t.Fatalf("empty apply = %+v (err %v), want a zero no-op", res, err)
 	}
 }

@@ -31,6 +31,22 @@ const MOVE_LABEL: Record<string, MessageKey> = {
   waiting_for_them: "email.move.waitingForThem",
 };
 
+/**
+ * The label for whose move a message is waiting on, from the server's own
+ * reading of it, or undefined when it waits on nobody. The message row, the
+ * thread card and the detail view all draw their chip from this, so they
+ * cannot disagree about one message. A withheld message claims no move.
+ */
+export function moveLabel(
+  summary: Pick<EmailSummary, "move"> | undefined,
+  withheld: boolean,
+): MessageKey | undefined {
+  if (withheld || !summary) {
+    return undefined;
+  }
+  return MOVE_LABEL[summary.move];
+}
+
 // The row's direction line, as one whole sentence.
 //
 // Each direction has a form WITH a name and a form without, and the STRING
@@ -169,7 +185,7 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
       : summary.subject?.trim() || t("email.noSubject"),
     who: direction ?? t("email.aMessage"),
     preview: withheld ? null : summary.preview,
-    move: withheld || summary.move === "none" ? null : MOVE_LABEL[summary.move],
+    move: moveLabel(summary, withheld) ?? null,
   };
 }
 

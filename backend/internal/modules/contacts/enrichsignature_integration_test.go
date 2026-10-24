@@ -430,7 +430,7 @@ func TestApplySignatureFieldsLandOwnerScopedMailTheCandidateQueryOffers(t *testi
 
 	res, err := e.store.ApplySignatureFields(ctx, picked.ContactID, picked.ActivityID, []SignatureField{
 		{Name: "title", Value: "VP Finance", Evidence: "Regards, Dana | VP Finance", Confidence: 0.95},
-	})
+	}, true)
 	if err != nil {
 		t.Fatalf("applying the message selection just offered: %v", err)
 	}
@@ -626,9 +626,10 @@ func TestApplySignatureFieldsSkipsASourceLimitedWhileTheModelRan(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("seed the source message: %v", err)
 		}
+		e.writtenBy(ctx, t, contactID, activityID)
 		res, err := e.store.ApplySignatureFields(ctx, contactID, activityID, []SignatureField{
 			{Name: "title", Value: "VP Finance", Evidence: "Regards, Dana | VP Finance", Confidence: 0.95},
-		})
+		}, true)
 		if err != nil {
 			t.Fatalf("applying signature fields from %s mail: %v", audience, err)
 		}

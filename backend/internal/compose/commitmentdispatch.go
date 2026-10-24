@@ -86,7 +86,10 @@ type Commitment struct {
 	PromisedTo *ids.ContactID
 	Recipients []ids.ContactID
 	// DueDate is the day the source stated, YYYY-MM-DD, or empty.
-	DueDate    string
+	DueDate string
+	// DueZone is the IANA zone that day ends in: the promiser's own when the
+	// day was read from their week, the installation's when empty.
+	DueZone    string
 	Confidence float64
 	// NeedsConfirmation keeps reported promises from assigning work without review.
 	NeedsConfirmation bool
@@ -159,6 +162,10 @@ func NewCommitmentDispatcher(pool *pgxpool.Pool, approval *approvals.Service) *C
 func (d *CommitmentDispatcher) DispatchTx(
 	ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID,
 ) (CommitmentOutcome, ids.UUID, error) {
+	c, err := withStatedWeek(ctx, tx, c)
+	if err != nil {
+		return CommitmentRemembered, ids.UUID{}, err
+	}
 	outcome, id, err := d.routeCommitment(ctx, tx, c, bundleID)
 	if err != nil || outcome == CommitmentRemembered || outcome == CommitmentOutcome(activities.CommitmentSourceUnavailable) {
 		return outcome, id, err
@@ -271,7 +278,7 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 	if !c.NeedsConfirmation && c.Confidence >= CommitmentTaskConfidence {
 		task, err := writeCommitmentTask(ctx, tx, d.tasks, d.claims, commitmentTask{
 			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body,
-			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate,
+			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate, DueZone: c.DueZone,
 			Assignee: asked, ClaimID: claimID, ClaimIDs: claimIDs, PrivateTo: c.PrivateTo,
 			Origin: activities.OriginAgent,
 		})
@@ -279,7 +286,7 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 	}
 	proposal := CommitmentTaskProposal{
 		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party,
-		SeatID: &asked, PromiserSeatID: &asked, DueDate: c.DueDate, Links: c.Links, Quote: c.Quote,
+		SeatID: &asked, PromiserSeatID: &asked, DueDate: c.DueDate, DueZone: c.DueZone, Links: c.Links, Quote: c.Quote,
 		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo,
 	}
 	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state))
@@ -388,7 +395,7 @@ func (d *CommitmentDispatcher) fileClaim(
 		Renewal: c.AdmissionSourceID != nil && reason == activities.CommitmentCurrent,
 	}
 	if c.DueDate != "" {
-		due, err := commitmentDueInstant(ctx, tx, c.DueDate)
+		due, err := commitmentDueInstant(ctx, tx, c.DueDate, c.DueZone)
 		if err != nil {
 			return crmcontracts.ConversationClaim{}, false, err
 		}

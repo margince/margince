@@ -54,7 +54,7 @@ func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal app
 	}
 	var due *time.Time
 	if staged.DueDate != "" {
-		at, err := commitmentDueInstant(ctx, tx, staged.DueDate)
+		at, err := commitmentDueInstant(ctx, tx, staged.DueDate, staged.DueZone)
 		if err != nil {
 			return item, err
 		}

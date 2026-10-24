@@ -102,7 +102,7 @@ func TestTheGoAndSQLMeetingRulesAgree(t *testing.T) {
 	if !MeetingStatusCounts("") || !strings.Contains(meeting, "IS NULL") {
 		t.Error("an untracked meeting must count in both rules")
 	}
-	if InteractionCounts("meeting", "canceled") || !InteractionCounts("email", "") || InteractionCounts("note", "") {
+	if InteractionCounts("meeting", "canceled", "") || !InteractionCounts("email", "", "") || InteractionCounts("note", "", "") {
 		t.Error("InteractionCounts must refuse a canceled meeting and a note, and admit an email")
 	}
 }

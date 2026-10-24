@@ -111,8 +111,12 @@ func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyM
 		}
 		return match, nil
 	}
+	subdomains, err := subdomainClaimants(ctx, tx, c.Domains, c.ExcludeID)
+	if err != nil {
+		return CompanyMatch{}, err
+	}
 	if NormalizeCompanyName(c.DisplayName) == "" && NormalizeCompanyName(c.LegalName) == "" {
-		return CompanyMatch{Decision: DecisionNoMatch}, nil
+		return rankNameDomainClaimantFirst(CompanyMatch{Decision: DecisionNoMatch}, subdomains), nil
 	}
 	claimants, err := nameDomainClaimant(ctx, tx, c)
 	if err != nil {
@@ -122,7 +126,7 @@ func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyM
 	if err != nil {
 		return CompanyMatch{}, err
 	}
-	return rankNameDomainClaimantFirst(match, claimants), nil
+	return rankNameDomainClaimantFirst(match, append(claimants, subdomains...)), nil
 }
 
 // DedupeCompanyForCreate is PO-F-2 for a path that is about to MINT a

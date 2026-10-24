@@ -108,6 +108,11 @@ func taskSourcesOf(currency taskCurrency) []string {
 // about is current. It is live, not in the future, and inside the waiting
 // horizon. The mail's own time decides, never the capture's. source is a
 // compile-time column reference.
+//
+// It reads metadata only, not body completeness. The work it keeps current is
+// which deal a message is filed on, decided from the thread and the records.
+// A body not read in full does not make that wrong. Work derived from the
+// text reads provenance.MailBodyCompleteSQL.
 func CurrentSourceMailClause(source string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	return `EXISTS (SELECT 1 FROM activity current_source WHERE current_source.id = ` + source + `
