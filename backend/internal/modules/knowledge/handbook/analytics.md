@@ -23,8 +23,9 @@ A manager records a call with **Update forecast**. Also called: sales forecast, 
 
 ### How do I see my team's pipeline?
 To see your team's pipeline in Margince, open **Analytics** and pick the team in the **Record scope** picker above the numbers.
-A seat whose scope is its teams, such as a team lead's, is offered **My teams**, each of those teams and its own records. If the seat is in no team, it is offered only its own records. A seat that sees everything is also offered **Whole company**.
-A rep who sees only their own records gets no picker, only "These numbers cover {scope}."
+Every seat is offered **Whole company**, every live team and its own records; a seat whose scope is its teams also gets **My teams** first.
+Totals are the same for everyone. You can read a team's totals without being in it, but only the owners you may measure show by name.
+A rep opens on their own records.
 Also called: team forecast, my team's deals, manager view, team report.
 
 ### How do I see my pipeline report?

@@ -5,6 +5,7 @@ package forecasting
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -135,11 +137,20 @@ func (h Handlers) GetForecast(
 			return err
 		}
 		out.ScopeHoldsDeals = &holds
-		refs, err := h.store.SnapshotRefsTx(ctx, tx, period, scope, baseCurrency)
+		// Totals are readable more widely than a standing call is: the call,
+		// its author and its snapshots are an assertion about a population,
+		// shown only to a seat that may assert about it.
+		mayAssert, err := h.mayAssertAbout(ctx, tx, scope)
 		if err != nil {
 			return err
 		}
-		out.Snapshots = snapshotRefsToWire(refs)
+		if mayAssert {
+			refs, err := h.store.SnapshotRefsTx(ctx, tx, period, scope, baseCurrency)
+			if err != nil {
+				return err
+			}
+			out.Snapshots = snapshotRefsToWire(refs)
+		}
 
 		// A standing call is an assertion about ONE named population. The
 		// managed-teams reading covers several, so there is no call to look up
@@ -151,6 +162,8 @@ func (h Handlers) GetForecast(
 		var called *int64
 		call, err := h.store.CurrentCallTx(ctx, tx, period, scope)
 		switch {
+		case !mayAssert:
+			// The call exists for others; this seat is shown none.
 		case err == nil:
 			wire := callToWire(call)
 			out.CurrentCall = &wire
@@ -168,6 +181,24 @@ func (h Handlers) GetForecast(
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// mayAssertAbout asks the write authority whether this seat may see the
+// standing call of a resolved population. A refusal hides the call; any other
+// failure is real.
+func (h Handlers) mayAssertAbout(ctx context.Context, tx pgx.Tx, scope Scope) (bool, error) {
+	if scope.Kind == ScopeManagedTeams {
+		return true, nil
+	}
+	_, err := h.resolve(ctx, tx, scope)
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
+		return false, nil
+	default:
+		return false, err
+	}
 }
 
 // project adds where the period lands and whether the pipeline supports it.

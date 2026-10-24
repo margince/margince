@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -52,10 +53,9 @@ func (h analyticsContextHandlers) GetAnalyticsContext(w http.ResponseWriter, r *
 	ctx := r.Context()
 	var out crmcontracts.AnalyticsContext
 	err := h.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The same gate the rest of the analytics surface takes: this route
-		// discloses which teams and contacts a caller may measure, which is not
-		// a thing to hand somebody who may not read a forecast at all.
-		if err := auth.Require(ctx, objectForecast, principal.ActionRead); err != nil {
+		// This route discloses which teams a caller may measure, which is not
+		// a thing to hand somebody who may read neither forecasts nor deals.
+		if err := requireForecastOrDealRead(ctx); err != nil {
 			return err
 		}
 		frame, err := readReportFrame(ctx, tx)
@@ -76,6 +76,17 @@ func (h analyticsContextHandlers) GetAnalyticsContext(w http.ResponseWriter, r *
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// requireForecastOrDealRead admits a seat that reads forecasts or deals: the
+// picker offers populations for the deal totals too, and a deal reader with no
+// forecast grant would otherwise get no picker.
+func requireForecastOrDealRead(ctx context.Context) error {
+	err := auth.Require(ctx, objectForecast, principal.ActionRead)
+	if err == nil || !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return err
+	}
+	return auth.Require(ctx, tableDeal, principal.ActionRead)
 }
 
 // analyticsContextFor assembles the caller's frame, minus the installation's
