@@ -14,6 +14,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+var conversationNow = time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+
 func TestReplyConversationOmitsWithheldMessagesAndBoundsTheEvidence(t *testing.T) {
 	anchor := crmcontracts.Activity{Id: crmcontracts.Id(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail}
 	withheld := crmcontracts.ActivityContentStateWithheld
@@ -22,7 +24,7 @@ func TestReplyConversationOmitsWithheldMessagesAndBoundsTheEvidence(t *testing.T
 	for range 10 {
 		rows = append(rows, crmcontracts.Activity{Id: crmcontracts.Id(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail, Body: &longBody})
 	}
-	got := replyConversationText(draftcore.Conversation(rows, &anchor, time.Now(), replyContextTurns))
+	got := replyConversationText(draftcore.Conversation(rows, &anchor, conversationNow, replyContextTurns))
 	if strings.Contains(got, secret) || strings.Count(got, "界") != 6*draftcore.TurnTextRunes || len([]rune(got)) > replyActivityMaxRunes {
 		t.Fatalf("conversation bounds or withheld filtering failed: %d runes", len([]rune(got)))
 	}
@@ -37,14 +39,12 @@ func TestTheReplyAndContactDraftersReadTheSameTurns(t *testing.T) {
 		subject := "Pricing"
 		return crmcontracts.Activity{
 			Id: crmcontracts.Id(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail, Direction: &out,
-			Subject: &subject, Body: &body, OccurredAt: time.Now().Add(-time.Duration(hoursAgo) * time.Hour),
+			Subject: &subject, Body: &body, OccurredAt: conversationNow.Add(-time.Duration(hoursAgo) * time.Hour),
 		}
 	}
 	rows := []crmcontracts.Activity{mail(1), mail(2)}
-	now := time.Now()
-
-	reply := replyConversationText(draftcore.Conversation(rows, nil, now, replyContextTurns))
-	for i, recent := range contactdraft.FoldRecent(rows, now) {
+	reply := replyConversationText(draftcore.Conversation(rows, nil, conversationNow, replyContextTurns))
+	for i, recent := range contactdraft.FoldRecent(rows, conversationNow) {
 		if recent.Said == "" || !strings.Contains(reply, recent.Said) {
 			t.Errorf("turn %d: the contact drafter reads %q, which the reply drafter does not", i, recent.Said)
 		}
