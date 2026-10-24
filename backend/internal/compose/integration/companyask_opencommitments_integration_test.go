@@ -75,16 +75,17 @@ func TestWhatIsOpenNamesThePromiseEvenWhenTheModelNamesOnlyTheTask(t *testing.T)
 	if answer.GeneratedBy != crmcontracts.WrittenByDeterministic {
 		t.Fatalf("generated_by = %q, want the floor: the reply left the promise out", answer.GeneratedBy)
 	}
-	var text string
+	var sentences strings.Builder
 	var chip string
 	for _, sentence := range answer.Sentences {
-		text += sentence.Text + "\n"
+		sentences.WriteString(sentence.Text + "\n")
 		for _, cite := range sentence.Evidence {
 			if cite.EntityId.String() == account.activity.String() && cite.Name != nil {
 				chip = *cite.Name
 			}
 		}
 	}
+	text := sentences.String()
 	if !strings.Contains(text, "Send the security audit") || !strings.Contains(text, "Call the CFO") {
 		t.Errorf("answer %q does not name both the task and the promise", text)
 	}
@@ -108,10 +109,11 @@ func TestAReaderWhoCannotSeeTheContactIsToldTheListMayBeIncomplete(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var text string
+	var sentences strings.Builder
 	for _, sentence := range answer.Sentences {
-		text += sentence.Text + "\n"
+		sentences.WriteString(sentence.Text + "\n")
 	}
+	text := sentences.String()
 	if strings.Contains(text, "Send the security audit") {
 		t.Errorf("answer %q names a promise whose contact this reader cannot see", text)
 	}

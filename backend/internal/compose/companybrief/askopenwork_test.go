@@ -226,9 +226,8 @@ func TestEveryInputListIsClassifiedAsOpenWorkOrNot(t *testing.T) {
 	for _, group := range requiredOpenCitations(taskAndCommitment()) {
 		required[group.Field] = group
 	}
-	typ := reflect.TypeOf(Input{})
-	for i := range typ.NumField() {
-		field := typ.Field(i)
+	typ := reflect.TypeFor[Input]()
+	for field := range typ.Fields() {
 		if field.Type.Kind() != reflect.Slice || notOpenWork[field.Name] {
 			continue
 		}
