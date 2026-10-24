@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // buildCompanyPatch folds the caller's sparse company edit into a patch.
@@ -132,8 +133,13 @@ func setCompanyAssessAgainst(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 	if in.AssessAgainstEntityID == nil {
 		return nil
 	}
+	if err := auth.Require(ctx, legalEntityObject, principal.ActionRead); err != nil {
+		return err
+	}
 	var isDefault, archived bool
-	err := tx.QueryRow(ctx, `SELECT is_default, archived_at IS NOT NULL FROM legal_entity WHERE id = $1`,
+	// FOR SHARE blocks a concurrent archive, which locks the row and then counts
+	// the companies pointing at it, until this company update commits.
+	err := tx.QueryRow(ctx, `SELECT is_default, archived_at IS NOT NULL FROM legal_entity WHERE id = $1 FOR SHARE`,
 		*in.AssessAgainstEntityID).Scan(&isDefault, &archived)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && archived) {
 		return httperr.Validation("assess_against_entity_id", "not_a_live_legal_entity",

@@ -129,6 +129,11 @@ func (s *Store) GetCompanyContext(ctx context.Context, requested []CompanyContex
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return CompanyContext{}, err
 	}
+	if !offering.EntityID.IsZero() {
+		if err := auth.Require(ctx, legalEntityObject, principal.ActionRead); err != nil {
+			return CompanyContext{}, err
+		}
+	}
 	var out CompanyContext
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		offered, err := readOffering(ctx, tx, offering)
@@ -212,7 +217,7 @@ func assembleCompanyContext(company Company, requested []CompanyContextScope, ge
 		CompanyID:     company.CompanyID,
 		SchemaVersion: 1,
 		Scopes:        ordered,
-		Fingerprint:   fingerprintCompanyContext(ordered),
+		Fingerprint:   fingerprintCompanyContext(company.DisplayName, ordered),
 		GeneratedAt:   generatedAt,
 	}
 }
@@ -258,8 +263,12 @@ func companyContextItemKey(item CompanyContextItem) string {
 	return strings.Join([]string{item.Key, item.Value, item.Source, item.CapturedBy, item.SourceURL, confidence}, "\x00")
 }
 
-func fingerprintCompanyContext(sections []CompanyContextSection) string {
+// The display name is hashed because callers cache it beside the facts, and a
+// rename must not leave the cached name stale.
+func fingerprintCompanyContext(displayName string, sections []CompanyContextSection) string {
 	var canonical strings.Builder
+	canonical.WriteString(displayName)
+	canonical.WriteByte('\n')
 	for _, section := range sections {
 		canonical.WriteString(string(section.Scope))
 		canonical.WriteByte('\n')
