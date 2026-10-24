@@ -45,9 +45,33 @@ func RefreshDisplayNameTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		return false, fmt.Errorf("contacts: reading the name contact %s shows: %w", contactID, err)
 	}
 	stale, err := displayNameIsStaleTx(ctx, tx, contactID)
-	if err != nil || !stale {
+	if err != nil {
 		return false, err
 	}
 	learned := strings.TrimSpace(first) + " " + strings.TrimSpace(last)
+	if !stale {
+		var ok bool
+		if learned, ok, err = initialsTargetTx(ctx, tx, contactID, previous, first, last); err != nil || !ok {
+			return false, err
+		}
+	}
 	return rewriteFullNameTx(ctx, tx, contactID, previous, learned)
+}
+
+// initialsTargetTx answers the local part that replaces the initials capture
+// guessed, for a contact with no split columns. It asks the same statement as
+// the selector, under the row lock, so a name typed since the select stays.
+func initialsTargetTx(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, previous, first, last string,
+) (string, bool, error) {
+	if first != "" || last != "" || len(previous) > maxInitialsDisplayLen {
+		return "", false, nil
+	}
+	rule := displayRule{unsplitMaxLen: maxInitialsDisplayLen}
+	found, err := captureGuessedDisplayNamesTx(ctx, tx, &contactID, nil, rule, 1)
+	if err != nil || len(found) != 1 {
+		return "", false, err
+	}
+	candidate, ok, err := initialsCandidateTx(ctx, tx, contactID)
+	return candidate.Proposed, ok, err
 }
