@@ -128,6 +128,22 @@ func TestAProvedMailboxAddressCountsAsAMember(t *testing.T) {
 	if _, reason := audienceOf(t, e, toMailbox); reason != activities.ReasonMembersOnly {
 		t.Fatalf("mail to a colleague's connected mailbox reads %q, want members_only", reason)
 	}
+
+	archiveSeat(t, e, e.Rep3)
+	afterArchive := sentToColleague(env, t, "rep3@sister.example", "", "members-mailbox-archived@myco.example")
+	if _, reason := audienceOf(t, e, afterArchive); reason == activities.ReasonMembersOnly {
+		t.Fatal("an archived seat's mailbox still made the mail members-only")
+	}
+}
+
+func archiveSeat(t *testing.T, e *integration.SearchEnv, seat ids.UUID) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE app_user SET archived_at = now() WHERE id = $1`, seat)
+		return err
+	}); err != nil {
+		t.Fatalf("archiving the colleague: %v", err)
+	}
 }
 
 func TestOneOutsidePartyKeepsTheMailAsBefore(t *testing.T) {
@@ -177,12 +193,7 @@ func TestAnOwnDomainAddressCountsAsAMemberAndAnArchivedSeatDoesNot(t *testing.T)
 		t.Fatalf("mail copied to an address on the workspace's own domain reads %q, want members_only", reason)
 	}
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `UPDATE app_user SET archived_at = now() WHERE id = $1`, e.Rep3)
-		return err
-	}); err != nil {
-		t.Fatalf("archiving the colleague: %v", err)
-	}
+	archiveSeat(t, e, e.Rep3)
 	archived := sentToColleague(env, t, colleagueLogin, "", "members-archived@myco.example")
 	if _, reason := audienceOf(t, e, archived); reason == activities.ReasonMembersOnly {
 		t.Fatal("mail to an archived seat's address was held as mail between colleagues")
