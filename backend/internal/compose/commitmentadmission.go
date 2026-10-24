@@ -27,7 +27,8 @@ type commitmentRead struct {
 }
 
 // proposeLate is true when the horizon stopped a promise whose evidence a
-// colleague logged by hand: it is put to its promiser instead of filed as history.
+// colleague logged by hand. Such a promise is put to its promiser instead of
+// being filed as history.
 func (read commitmentRead) proposeLate() bool {
 	return read.Reason == activities.CommitmentHistorical && read.LoggedByHand
 }

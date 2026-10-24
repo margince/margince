@@ -23,8 +23,8 @@ import (
 )
 
 // A meeting typed up after the horizon is still evidence a colleague supplied
-// today, so its promise is put to the promiser and, once accepted, stays on
-// the Worklist past the horizon.
+// today. Its promise is put to the promiser and, once accepted, stays on the
+// Worklist past the horizon.
 func TestALateLoggedMeetingPromiseIsProposedAndAcceptedWorkStaysOnTheWorklist(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE activity SET occurred_at = now() - interval '35 days' WHERE id = $1`, e.activity)
@@ -73,8 +73,8 @@ func TestALateLoggedMeetingPromiseIsProposedAndAcceptedWorkStaysOnTheWorklist(t 
 	t.Fatal("the accepted task left the Worklist 60 days after the meeting")
 }
 
-// The rule keys on who supplied the evidence, not on the kind of activity,
-// and captured sources, private mail and promises of the customer keep the
+// The rule keys on who supplied the evidence, not on the kind of activity.
+// Captured sources, private mail and promises of the customer keep the
 // horizon's old outcome.
 func TestOnlyHandLoggedEvidenceIsProposedPastTheHorizon(t *testing.T) {
 	asOf := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
