@@ -206,6 +206,13 @@ var lifecycleEdgeReads = gatekit.Waive(map[string]string{
 // deferral and moved to ruledEdgeReads.
 var deferredEdgeReads = gatekit.Waive(map[string]string{})
 
+// calleeGatedEdgeReads: a fragment whose every runner takes the edge gate by a
+// path the census cannot follow, such as a storekit.Field value.
+var calleeGatedEdgeReads = gatekit.Waive(map[string]string{
+	"internal/modules/collections/vocabstandardfields.go:contactEmployerLink":        "the contact list's employer filter leaf. It travels inside contactEmployerField, which is Withheld until bindEmployerScope asks auth.EdgeReadAdmitted and fills its scope with auth.EdgeReadScope",
+	"internal/modules/contacts/linkedinmatchfields.go:linkedInCurrentEmploymentJoin": "the current employment joined as `cur` for the LinkedIn review. Its one runner is suggestedMatches, which asks auth.Require(ctx, \"contact\", read); cur.id reaches a card only when linkedInOfferColumns' employerScope (auth.EdgeReadScope) admits that edge",
+})
+
 // ruledEdgeReads: a DISCLOSING read the product has ruled needs no edge gate.
 //
 // A fourth verdict rather than a stretched third, because the three existing
@@ -278,8 +285,8 @@ func TestEveryReaderOfTheRelationshipTableCarriesTheEdgeGateOrAVerdict(t *testin
 				t.Errorf("%s reads the relationship table without the edge gate and without a verdict.\n"+
 					"  Reading an edge discloses its endpoints AS A PAIR, which is what relationship.read "+
 					"governs — the endpoints' own grants do not cover it.\n"+
-					"  Either call auth.EdgeReadScope, or declare the read in predicateEdgeReads / "+
-					"lifecycleEdgeReads / deferredEdgeReads with the reason it needs no gate.\n"+
+					"  Either call auth.EdgeReadScope, or declare the read in predicateEdgeReads / lifecycleEdgeReads / "+
+					"calleeGatedEdgeReads / ruledEdgeReads / deferredEdgeReads with the reason it needs no gate.\n"+
 					"  Left alone it is indistinguishable from a read nobody considered.\n"+
 					"  The read: %s", subject, site.sql)
 			}
@@ -291,17 +298,18 @@ func TestEveryReaderOfTheRelationshipTableCarriesTheEdgeGateOrAVerdict(t *testin
 			"extractor that stopped recognising this tree's SQL would report exactly this, and it "+
 			"reads the same as a clean tree", satisfied, wantMinimumGatedSites)
 	}
-	t.Logf("edge reads: %d gated, %d predicate, %d lifecycle, %d ruled, %d DEFERRED (still disclosing)",
+	t.Logf("edge reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED (still disclosing)",
 		satisfied, len(predicateEdgeReads.Subjects()), len(lifecycleEdgeReads.Subjects()),
-		len(ruledEdgeReads.Subjects()), len(deferredEdgeReads.Subjects()))
+		len(calleeGatedEdgeReads.Subjects()), len(ruledEdgeReads.Subjects()), len(deferredEdgeReads.Subjects()))
 
 	predicateEdgeReads.AssertAllMatched(t)
 	lifecycleEdgeReads.AssertAllMatched(t)
+	calleeGatedEdgeReads.AssertAllMatched(t)
 	ruledEdgeReads.AssertAllMatched(t)
 	deferredEdgeReads.AssertAllMatched(t)
 }
 
-// edgeVerdicts are the four declarations, in the order a reader meets them
+// edgeVerdicts are the five declarations, in the order a reader meets them
 // above. Named as one list because "which declaration a read sits in IS its
 // verdict" is only true if every declaration is asked — a set left off this
 // list would silently stop counting as a verdict and start reading as a
@@ -309,6 +317,7 @@ func TestEveryReaderOfTheRelationshipTableCarriesTheEdgeGateOrAVerdict(t *testin
 var edgeVerdicts = []namedVerdict{
 	{"predicate", predicateEdgeReads},
 	{"lifecycle", lifecycleEdgeReads},
+	{"callee-gated", calleeGatedEdgeReads},
 	{"ruled", ruledEdgeReads},
 	{"deferred", deferredEdgeReads},
 }

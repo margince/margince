@@ -62,6 +62,7 @@ var companyGate = objectGate{
 // than in the gated set: removing the company condition could only WIDEN the
 // result the caller already sees.
 var predicateCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/sitereadlogo.go:logoUnwornByAnyCompany":                 "the NOT EXISTS that keeps a parked logo key while any company wears it, inside the release UPDATE on site_read. Nothing of a company is selected; removing it could only release more keys",
 	"internal/compose/dealscoutbuyer.go:scoutBuyerSignal":                              "company liveness only narrows verified buyer eligibility; the predicate returns no company fields, and the suggestion or signal reader separately checks the named company",
 	"internal/modules/deals/legalreviewview.go:readPacketNames":                        "names the company of a stored review pack at each open, so no copy outlives an erasure or rename. packetWire shows it only when readReviewerSight says the reader may see that company now",
 	"internal/modules/collections/tagsuggestion.go:tagSuggestionStandsClause":          "whether a tag suggestion still stands: the company appears only inside EXISTS, to ask that it is live and not yet tagged. Nothing is selected; composed into the system-only superseding pass and into the gated visible-suggestions read, where removing it could only show more suggestions",

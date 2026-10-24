@@ -214,6 +214,7 @@ var calleeGatedContactReads = gatekit.Waive(map[string]string{
 	"internal/compose/introseams.go:accountContacts":                             "the contacts offered as an introduction route. Its caller asks the contact object gate before composing the seam",
 	"internal/compose/meetingbrief/meeting.go":                                   "the pre-meeting brief's room statement. scopeFor asks auth.ReadGranted for each object it scopes, so a caller with no contact grant gets that join matched away; the census cannot see it because the object arrives as a PARAMETER",
 	"internal/compose/network/contactgraphcompany.go:readCompanyContacts":        "the colleagues band of the contact graph, behind the graph assembly's own contact gate",
+	"internal/modules/contacts/linkedinmatch.go:nameEmployerCandidatesSQL":       "the name arm of the LinkedIn match, run by nameMatchCandidates. Its one caller chain is matchInTx ← runLinkedInMatch, which asks auth.Require(ctx, \"contact\", read) before either tier runs",
 	"internal/modules/contacts/linkedinmatch.go:emailMatchCandidates":            "the address arm of the LinkedIn match. Its one caller chain is matchInTx ← runLinkedInMatch, which asks auth.Require(ctx, \"contact\", read) before either tier runs; the row scope and the per-contact write clause travel inside the SELECT itself",
 	"internal/modules/search/graphactivitysubjects.go:employerSubjects":          "the employer band beside it, which walks contacts to reach the companies they work for and asks auth.ReadGranted for the company half itself",
 	"internal/modules/search/graphactivitysubjects.go:participantSubjects":       "the participant band of a record's context — contact ids and names. Its enclosing read asks the contact object gate before assembling the bands",
@@ -358,15 +359,46 @@ func readsThenRunsGiven(ctx context.Context, tx pgx.Tx) {
 	tx.QueryRow(ctx, "SELECT p.title FROM contact p WHERE p.id = $1")
 	runsGiven(ctx, tx, "")
 }
+
+func runsStray(ctx context.Context, tx pgx.Tx) { tx.Query(ctx, straySQL) }
+
+func flushedClause(ctx context.Context, pipe redis.Pipeliner) string {
+	pipe.Exec(ctx)
+	if !auth.ReadGranted(ctx, "contact") {
+		return "false"
+	}
+	return "true"
+}
+
+func scopedAfterFlush(ctx context.Context, tx pgx.Tx, pipe redis.Pipeliner) {
+	tx.Query(ctx, "SELECT p.phone FROM contact p WHERE "+flushedClause(ctx, pipe))
+}
+
+func runsBare(ctx context.Context, db *sql.DB, statement string) {
+	if !auth.ReadGranted(ctx, "contact") {
+		return
+	}
+	db.Query(statement)
+}
+
+func readsThenRunsBare(ctx context.Context, tx pgx.Tx, db *sql.DB) {
+	tx.QueryRow(ctx, "SELECT p.city FROM contact p WHERE p.id = $1")
+	runsBare(ctx, db, "")
+}
 `
 
-// strayFragmentFixture is a file whose gated-looking functions each spend their
-// gate on a read of their own, beside a fragment none of them names.
+// strayFragmentFixture holds a fragment beside gated-looking functions that
+// never name it. Its one runner, in the other file, is ungated.
 const strayFragmentFixture = `package fixture
 
 const straySQL = "SELECT p.full_name FROM contact p"
 
-func runsStray(ctx context.Context, tx pgx.Tx) { tx.Query(ctx, straySQL) }
+func strayClause(ctx context.Context) string {
+	if !auth.ReadGranted(ctx, "contact") {
+		return "false"
+	}
+	return "true"
+}
 
 func scopedTitle(ctx context.Context, tx pgx.Tx) {
 	tx.Query(ctx, "SELECT p.title FROM contact p WHERE "+visibleClause(ctx))
@@ -398,7 +430,8 @@ func TestAReaderGatingOnlyItselfVouchesForNoCaller(t *testing.T) {
 	walk := contactGate.walkPackages(t, files)
 	want := map[string]bool{
 		"spent.go:offeredSQL": true, "spent.go:cutOff": false, "spent.go:scoped": true,
-		"spent.go:readsThenRunsGiven": false, "stray.go:straySQL": false,
+		"spent.go:readsThenRunsGiven": false, "spent.go:scopedAfterFlush": true,
+		"spent.go:readsThenRunsBare": false, "stray.go:straySQL": false,
 		"stray.go:scopedTitle": true, "stray.go:selfGatedEmail": true,
 	}
 	got := map[string]bool{}

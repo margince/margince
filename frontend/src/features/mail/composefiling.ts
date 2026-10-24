@@ -220,11 +220,19 @@ function useProjectFiling(input: {
   const setSubject = input.setSubject;
   const open = input.open;
   const previousTag = useRef("");
+  // A restored key is the one in the subject once, when the restore is read.
+  // After that the key last applied is what a change strips.
+  const seededFrom = useRef<string | undefined>(undefined);
   useEffect(() => {
     // A shut composer reads no project, so this rule would strip the tag off
     // a draft nobody is looking at.
     if (!open || awaiting) return;
-    const priorTag = carried ?? previousTag.current;
+    const restoreSeed = carried && `${filingKey} ${carried}`;
+    if (restoreSeed && seededFrom.current !== restoreSeed) {
+      seededFrom.current = restoreSeed;
+      previousTag.current = carried;
+    }
+    const priorTag = previousTag.current;
     previousTag.current = tag;
     const withoutOld = priorTag ? stripSubjectTag(subject, priorTag) : subject;
     const wanted = tag
@@ -233,7 +241,7 @@ function useProjectFiling(input: {
     if (wanted !== subject) {
       setSubject(wanted);
     }
-  }, [open, awaiting, carried, tag, ownTag, subject, setSubject]);
+  }, [open, awaiting, carried, filingKey, tag, ownTag, subject, setSubject]);
   return {
     projectId,
     setProjectId: chooseProject,

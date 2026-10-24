@@ -186,13 +186,8 @@ type objectWalk struct {
 	bodies map[string]packageReferences
 }
 
-// walkPackages resolves, per package directory, every function that
-// reaches the object's gate — directly, or through another function in the
-// same package. Transitive because this tree routinely splits a read across the
-// function holding the SQL and the helper building its predicate (company360's
-// edgeScope, meetingbrief's seatJoinPredicate), and a gate asking only about
-// direct calls would report the reader red while its admission sits in the file
-// next door.
+// walkPackages resolves, per package, every function that reaches the gate.
+// Transitive, because a read and the helper building its predicate often sit apart.
 func (g objectGate) walkPackages(t *testing.T, files []gatekit.ParsedFile) objectWalk {
 	t.Helper()
 	// The WHOLE package, not only the files that read the table. The admission
@@ -247,10 +242,8 @@ func (g objectGate) vouchingFunctions(pkg string, walked packageReferences) map[
 	return gated
 }
 
-// carries is whether a read site is behind the admission. A fragment counts
-// as gated by a function of its file that vouches, or that names the fragment
-// and holds or reaches the gate. A function that runs only its own read says
-// nothing about a fragment it never names.
+// carries is whether a read site is behind the admission. A fragment counts as
+// gated only by a function of its file that names it and holds or reaches the gate.
 func (w objectWalk) carries(t *testing.T, g objectGate, parsed gatekit.ParsedFile, s site, consts map[string]string) bool {
 	t.Helper()
 	pkg := pkgOf(parsed.Path)
@@ -258,10 +251,7 @@ func (w objectWalk) carries(t *testing.T, g objectGate, parsed gatekit.ParsedFil
 		return s.carriesGate(w.gated[pkg])
 	}
 	names := w.bodies[pkg].namingFragments(s.fragments)
-	for name, decls := range functionBodies(parsed, consts) {
-		if w.gated[pkg][name] {
-			return true
-		}
+	for _, decls := range functionBodies(parsed, consts) {
 		for _, refs := range decls {
 			namesIt := slices.ContainsFunc(names, func(n string) bool { return refs.idents[n] })
 			if namesIt && (g.holdsSeedGate(refs, pkg) || callsAGatedHelper(refs.calls, w.gated[pkg])) {
@@ -440,15 +430,20 @@ func (p packageReferences) namingFragments(declared []string) []string {
 // statementRunners are the calls that run SQL.
 var statementRunners = []string{"Query", "QueryRow", "Exec", "SendBatch"}
 
-// noteStatement records the SQL a runner call is handed. A literal is already
-// among the literals, a name may be a fragment, and anything else is unreadable.
-// A one-argument Query is url.Values, not SQL.
+// noteStatement records the SQL a runner call is handed: its first argument
+// after the context. A literal is already among the literals, a name may be a
+// fragment, and anything else is unreadable. A call handed only a context, such
+// as a redis pipeline's Exec(ctx), runs no SQL.
 func (r *references) noteStatement(call *ast.CallExpr, runner string) {
-	if !slices.Contains(statementRunners, runner) || len(call.Args) < 2 {
+	args := call.Args
+	if len(args) > 0 && isContext(args[0]) {
+		args = args[1:]
+	}
+	if !slices.Contains(statementRunners, runner) || len(args) == 0 {
 		return
 	}
 	r.runs = true
-	switch sql := call.Args[1].(type) {
+	switch sql := args[0].(type) {
 	case *ast.BasicLit:
 	case *ast.Ident:
 		if runner == "SendBatch" {
@@ -459,6 +454,23 @@ func (r *references) noteStatement(call *ast.CallExpr, runner string) {
 	default:
 		r.opaqueRun = true
 	}
+}
+
+// isContext reports whether an argument is the context a call is made under.
+func isContext(arg ast.Expr) bool {
+	if ident, isIdent := arg.(*ast.Ident); isIdent {
+		return ident.Name == "ctx"
+	}
+	call, isCall := arg.(*ast.CallExpr)
+	if !isCall {
+		return false
+	}
+	selector, isSelector := call.Fun.(*ast.SelectorExpr)
+	if !isSelector {
+		return false
+	}
+	pkg, isIdent := selector.X.(*ast.Ident)
+	return isIdent && pkg.Name == "context"
 }
 
 func parsePackage(t *testing.T, pkg string, entries []os.DirEntry, dir string) []*ast.File {
