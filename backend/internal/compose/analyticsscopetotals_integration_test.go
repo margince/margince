@@ -12,7 +12,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
