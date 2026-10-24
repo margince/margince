@@ -52,6 +52,8 @@ it("creates a monetary commitment in minor units and refuses an incomplete targe
   const dialog = within(await screen.findByRole("dialog"));
   expect(dialog.getByRole("button", { name: "Set target" })).toBeDisabled();
   await dialog.findByRole("combobox", { name: "Metrics" });
+  // Sales won filters by pipeline, so its target may be held to one.
+  expect(dialog.getByRole("combobox", { name: "Pipeline" })).toBeEnabled();
   fireEvent.change(dialog.getByLabelText(/Year/), {
     target: { value: "2026" },
   });
@@ -102,7 +104,8 @@ it("revises a count target without rescaling it or changing its identity", async
   await user.click(within(row).getByRole("button", { name: "Revise target" }));
   const dialog = within(await screen.findByRole("dialog"));
   expect(dialog.getByLabelText(/Year/)).toBeDisabled();
-  expect(dialog.getByRole("combobox", { name: "Pipeline" })).toBeDisabled();
+  // Meetings count every pipeline, so the editor offers none.
+  expect(dialog.queryByRole("combobox", { name: "Pipeline" })).toBeNull();
   expect(dialog.getByRole("spinbutton", { name: /^Target/ })).toHaveValue(40);
   fireEvent.change(dialog.getByRole("spinbutton", { name: /^Target/ }), {
     target: { value: "45" },

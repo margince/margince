@@ -17,6 +17,7 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isEntityKind } from "../../lib/entity";
 import { isVersionSkewOf, throwProblem } from "../../lib/problem";
+import { breakdownLabel } from "./reporting.grouplabel";
 import {
   metricLabel,
   type ReportingEvaluation,
@@ -143,7 +144,7 @@ export function ReportingEvidenceDrawer({
         <p className="t-caption">
           {evaluation.context.scope.label}
           {point?.label
-            ? ` · ${reference.context_id === "movement_delta" ? movementLabel(point.key, point.label, t) : point.label}`
+            ? ` · ${reference.context_id === "movement_delta" ? movementLabel(point.key, point.label, t) : breakdownLabel(point.key, point.label, t)}`
             : ""}
         </p>
         <p className="t-caption">

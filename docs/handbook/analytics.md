@@ -187,11 +187,9 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 ## Performance
 
-**Performance** shows sales won, target progress when targets are set, trends
-and pipeline charts. Switch to **SDR outcomes**, **Leads** or **Partners** for
-those figures. Every chart opens its evidence and offers a table of numbers.
-Small groups are held back rather than shown as zero. See [Performance and saved
-sales reports](sales-reporting.md).
+**Performance** shows sales won, target progress when targets are set, trends and pipeline charts. Every chart opens its evidence and offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
+
+Switch to **SDR outcomes** for held meetings and accepted opportunities. **Leads** shows new leads, status changes, leads qualified and first response time. **Partners** shows partner pipeline, sales won, commission and active partners. A view is not offered when your role cannot read its figures.
 
 ## My outcomes
 

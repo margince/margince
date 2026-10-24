@@ -962,6 +962,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.sales": "Bán hàng",
   "reporting.sdr": "Kết quả SDR",
   "reporting.leads": "Lead",
+  "reporting.group.sourced": "Mang deal về",
+  "reporting.group.influenced": "Hỗ trợ deal",
+  "reporting.group.active": "Đang hoạt động",
+  "reporting.group.inactive": "Không hoạt động",
+  "reporting.group.partnerHidden": "Đối tác không xem được",
+  "reporting.noViews":
+    "Vai trò hiện tại không được xem số liệu nào trên trang này. Liên hệ quản trị viên để được cấp quyền.",
   "reporting.partners": "Đối tác",
   "reporting.qualification": "Giai đoạn xác nhận đủ điều kiện",
   "reporting.publish": "Lưu cài đặt báo cáo",

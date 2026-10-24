@@ -33,6 +33,7 @@ const (
 	reportingSubject                  = "subject"
 	reportingStateAt                  = "state_at"
 	reportingMoney                    = "money"
+	reportingMinorUnits               = "minor_units"
 	reportingMetricReading            = "metric_reading"
 	reportingTargetProgress           = "target_progress"
 	reportingSdrOutcomes              = "sdr_outcomes"

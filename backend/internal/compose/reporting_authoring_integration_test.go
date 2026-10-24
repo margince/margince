@@ -171,6 +171,29 @@ func TestReportingTargetsRejectAmbiguousPeriodsAndIdentityChanges(t *testing.T) 
 	}
 }
 
+func TestReportingTargetsTakeAPipelineOnlyWhereTheFigureFiltersByOne(t *testing.T) {
+	f := reportingBusiness(t)
+	for _, metric := range []crmcontracts.ReportingMetricID{"leads_promoted", "meetings_held", "accepted_opportunities"} {
+		input := f.target.Definition
+		input.Metric = metric
+		_, err := f.service.CreateTarget(f.human, input)
+		requireRefusedField(t, err, "pipeline_id")
+	}
+	input := f.target.Definition
+	input.Metric = "partner_pipeline"
+	if _, err := f.service.CreateTarget(f.human, input); err != nil {
+		t.Fatalf("partner pipeline takes a pipeline: %v", err)
+	}
+	input.Metric, input.PipelineId = "leads_promoted", nil
+	leads, err := f.service.CreateTarget(f.human, input)
+	if err != nil {
+		t.Fatalf("lead target without a pipeline: %v", err)
+	}
+	input.PipelineId = f.target.Definition.PipelineId
+	_, err = f.service.UpdateTarget(f.human, ids.UUID(leads.Id), leads.Version, input)
+	requireRefusedField(t, err, "pipeline_id")
+}
+
 // requireRefusedField holds the 422 shape the contract lists: a refusal that
 // names the field to fix, not a bare invalid argument.
 func requireRefusedField(t *testing.T, err error, field string) {

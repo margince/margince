@@ -5,15 +5,21 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatHours, formatMoneyCompact } from "../../format/format";
 import { en } from "../../i18n/en";
-import { installFetchStub, StoryProviders } from "../../testing/story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import type { ReportingEvaluation } from "./reporting.model";
 import { ReportingOverview } from "./reporting.overview";
 import {
   reportingLeadsEvaluation,
   reportingPartnersEvaluation,
   reportingSectionRoutes,
+  reportingSectionsCatalog,
   reportingStoryScope,
 } from "./reporting.story-fixtures";
+import { metricView, type ReportingView } from "./reporting.views";
 
 const originalFetch = globalThis.fetch;
 afterEach(() => {
@@ -22,14 +28,28 @@ afterEach(() => {
   window.location.hash = "";
 });
 
+type Catalog = typeof reportingSectionsCatalog;
+
 // The Performance page on one view, answering every evaluation with one
 // fixture. Returns the addresses it asked, so a case can read what it sent.
-function showView(view: "leads" | "partners", evaluation: ReportingEvaluation) {
-  window.location.hash = `#/analytics/performance?view=${view}`;
-  installFetchStub(reportingSectionRoutes(evaluation));
+function showView(
+  view: ReportingView,
+  evaluation: ReportingEvaluation,
+  catalog: Catalog = reportingSectionsCatalog,
+  address = "",
+) {
+  window.location.hash = `#/analytics/performance?view=${view}${address}`;
+  installFetchStub({
+    ...reportingSectionRoutes(evaluation),
+    "GET /analytics/metrics": () =>
+      jsonResponse({ ...catalog, schedule_ready: true }),
+  });
   const stub = globalThis.fetch;
   const asked: URL[] = [];
-  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+  const recording: typeof fetch = (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ) => {
     asked.push(
       new URL(
         input instanceof Request ? input.url : String(input),
@@ -37,7 +57,8 @@ function showView(view: "leads" | "partners", evaluation: ReportingEvaluation) {
       ),
     );
     return stub(input, init);
-  }) as typeof fetch;
+  };
+  globalThis.fetch = recording;
   render(
     <StoryProviders>
       <ReportingOverview scope={reportingStoryScope} />
@@ -74,6 +95,21 @@ describe("the Leads view", () => {
     // Lead readers refuse a pipeline, so none is sent and none is offered.
     expect(evaluate?.searchParams.get("pipeline_id")).toBeNull();
     expect(screen.queryByRole("combobox", { name: /Pipeline/ })).toBeNull();
+  });
+
+  it("asks with the default close window whatever the address names", async () => {
+    const asked = showView(
+      "leads",
+      reportingLeadsEvaluation,
+      reportingSectionsCatalog,
+      "&close=fiscal_quarter",
+    );
+
+    await panel(titled(en["reporting.leads_created"]));
+    const evaluate = asked.find((url) =>
+      url.pathname.endsWith("/analytics/evaluate"),
+    );
+    expect(evaluate?.searchParams.get("close_window")).toBe("all_open");
   });
 
   it("states a first response in hours and a qualified share out of its total", async () => {
@@ -128,9 +164,13 @@ describe("the Leads view", () => {
     expect(created.queryByRole("button", { name: /Website/ })).toBeNull();
   });
 
-  it("says a breakdown leaves out what the reader may not see", async () => {
+  it("says once for the view, not on each card, that it leaves out what the reader may not see", async () => {
     const withheld: ReportingEvaluation = {
       ...reportingLeadsEvaluation,
+      metrics: reportingLeadsEvaluation.metrics.map((metric) => ({
+        ...metric,
+        coverage: { ...metric.coverage, withheld: true },
+      })),
       charts: reportingLeadsEvaluation.charts.map((chart) => ({
         ...chart,
         coverage: { status: "ok", withheld: true },
@@ -139,7 +179,8 @@ describe("the Leads view", () => {
     showView("leads", withheld);
 
     const created = await panel(titled(en["reporting.leads_created"]));
-    expect(created.getByText(en["reporting.withheld"])).toBeVisible();
+    expect(created.queryByText(en["reporting.withheld"])).toBeNull();
+    expect(screen.getAllByText(en["reporting.withheld"])).toHaveLength(1);
   });
 });
 
@@ -185,5 +226,36 @@ describe("the Partners view", () => {
         }),
       ).toBeInTheDocument();
     }
+  });
+});
+
+describe("a seat that cannot read a view", () => {
+  const withoutLeads: Catalog = {
+    metrics: reportingSectionsCatalog.metrics.filter(
+      (metric) => metricView(metric.id) !== "leads",
+    ),
+  };
+
+  it("is not offered it, and its address opens the first view the seat has", async () => {
+    showView("leads", reportingPartnersEvaluation, withoutLeads);
+
+    expect(
+      await screen.findByRole("button", {
+        name: en["reporting.sales"],
+        pressed: true,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: en["reporting.leads"] }),
+    ).toBeNull();
+  });
+
+  it("says why there is no view to choose when it reads none", async () => {
+    showView("sales", reportingPartnersEvaluation, { metrics: [] });
+
+    expect(await screen.findByText(en["reporting.noViews"])).toBeVisible();
+    expect(
+      screen.queryByRole("group", { name: en["reporting.view"] }),
+    ).toBeNull();
   });
 });

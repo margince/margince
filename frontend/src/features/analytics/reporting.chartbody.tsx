@@ -15,6 +15,7 @@ import {
 } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { withDealCount } from "./reporting.dealcount";
+import { breakdownLabel } from "./reporting.grouplabel";
 import {
   blockLabel,
   metricLabel,
@@ -328,9 +329,16 @@ function Breakdown({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const named = {
+    ...chart,
+    points: chart.points.map((point) => ({
+      ...point,
+      label: breakdownLabel(point.key, point.label, t),
+    })),
+  };
   return (
     <GroupedBars
-      chart={chart}
+      chart={named}
       label={label}
       amount={(point) =>
         reportingCompactAmount(

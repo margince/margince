@@ -977,6 +977,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.sales": "Vertrieb",
   "reporting.sdr": "SDR-Ergebnisse",
   "reporting.leads": "Leads",
+  "reporting.group.sourced": "Vermittelt",
+  "reporting.group.influenced": "Beeinflusst",
+  "reporting.group.active": "Aktiv",
+  "reporting.group.inactive": "Inaktiv",
+  "reporting.group.partnerHidden": "Nicht sichtbares Partnerunternehmen",
+  "reporting.noViews":
+    "Deine Rolle darf keine Kennzahl auf dieser Seite lesen. Wende dich für Zugriff an die Administration.",
   "reporting.partners": "Partnerunternehmen",
   "reporting.qualification": "Qualifizierungsphasen",
   "reporting.publish": "Berichtseinstellungen speichern",

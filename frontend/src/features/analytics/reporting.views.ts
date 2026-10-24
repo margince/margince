@@ -27,8 +27,8 @@ const METRIC_VIEW: Readonly<Record<ReportingMetricID, ReportingView>> = {
 };
 
 // What each view is called, which charts it draws, and whether its figures
-// take a pipeline and a close window. Only deal views do: the lead and partner
-// readers refuse a pipeline as unsupported.
+// take a pipeline and a close window. Only deal views do: the lead readers and
+// the partner commission and activity readers refuse a pipeline.
 export const VIEW_SHAPE: Readonly<
   Record<
     ReportingView,

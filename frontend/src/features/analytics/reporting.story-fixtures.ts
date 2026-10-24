@@ -206,6 +206,11 @@ function sectionDefinition(
     unit,
     temporal_basis,
     supports_target,
+    // Only the partner deal figures read a pipeline, as the server's catalog says.
+    allowed_filters:
+      id === "partner_pipeline" || id === "partner_won"
+        ? ["scope", "period", "target_basis", "pipeline"]
+        : ["scope", "period", "target_basis"],
     definition: `How ${id} is counted.`,
     blocks: [...blocks, "metric_reading"],
   };

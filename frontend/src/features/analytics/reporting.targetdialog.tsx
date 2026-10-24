@@ -73,7 +73,6 @@ export function ReportingTargetDialog({
     targetAmount(target, context.base_currency),
   );
   const catalog = useReportingCatalog();
-  const pipelines = useReportingPipelines();
   const definition = catalog.data?.metrics.find(
     (candidate) => candidate.id === metric,
   );
@@ -128,7 +127,7 @@ export function ReportingTargetDialog({
               input: {
                 metric,
                 scope,
-                pipeline_id: pipeline || undefined,
+                pipeline_id: heldPipeline(definition, pipeline),
                 period_kind: periodKind,
                 period_start: periodStart,
                 value,
@@ -176,23 +175,12 @@ export function ReportingTargetDialog({
               }
             />
           )}
-          <Field label={t("reporting.pipeline")}>
-            {(field) => (
-              <Select
-                {...field}
-                disabled={!!target}
-                value={pipeline}
-                options={[
-                  { value: "", label: t("reporting.allPipelines") },
-                  ...(pipelines.data?.data ?? []).map((pipeline) => ({
-                    value: pipeline.id,
-                    label: pipeline.name,
-                  })),
-                ]}
-                onChange={setPipeline}
-              />
-            )}
-          </Field>
+          <TargetPipelineField
+            definition={definition}
+            disabled={!!target}
+            value={pipeline}
+            onChange={setPipeline}
+          />
           <Field label={t("reporting.targetBasis")}>
             {(field) => (
               <Select
@@ -348,6 +336,56 @@ export function ReportingTargetDialog({
       </DrawerFoot>
     </Modal>
   );
+}
+
+type MetricDefinition = components["schemas"]["ReportingMetricDefinition"];
+
+// A figure without the pipeline filter counts every pipeline, and the server
+// refuses a target held to one.
+function takesPipeline(definition: MetricDefinition | undefined): boolean {
+  return !!definition?.allowed_filters?.includes("pipeline");
+}
+
+function TargetPipelineField({
+  definition,
+  disabled,
+  value,
+  onChange,
+}: Readonly<{
+  definition: MetricDefinition | undefined;
+  disabled: boolean;
+  value: string;
+  onChange: (value: string) => void;
+}>) {
+  const t = useT();
+  const pipelines = useReportingPipelines();
+  if (!takesPipeline(definition)) return null;
+  return (
+    <Field label={t("reporting.pipeline")}>
+      {(field) => (
+        <Select
+          {...field}
+          disabled={disabled}
+          value={value}
+          options={[
+            { value: "", label: t("reporting.allPipelines") },
+            ...(pipelines.data?.data ?? []).map((pipeline) => ({
+              value: pipeline.id,
+              label: pipeline.name,
+            })),
+          ]}
+          onChange={onChange}
+        />
+      )}
+    </Field>
+  );
+}
+
+function heldPipeline(
+  definition: MetricDefinition | undefined,
+  pipeline: string,
+): string | undefined {
+  return takesPipeline(definition) && pipeline ? pipeline : undefined;
 }
 
 function targetAmount(target: Target | undefined, currency: string): string {

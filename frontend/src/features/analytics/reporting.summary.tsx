@@ -170,7 +170,6 @@ function OutcomePeriod({
         !(
           metric.id === "bookings_won" && metric.coverage.status === "no_data"
         ) && <span>{t(`reporting.status.${metric.coverage.status}`)}</span>}
-      {metric.coverage.withheld && <span>{t("reporting.withheld")}</span>}
     </>
   );
 }

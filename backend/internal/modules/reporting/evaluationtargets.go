@@ -82,39 +82,9 @@ func (s *Service) ownerTargets(ctx context.Context, tx pgx.Tx, reach targetReach
 	if chart.Coverage.Withheld || chart.Coverage.Status == crmcontracts.ReportingStatusFailed {
 		return nil
 	}
-	var b bindings
-	rows, err := tx.Query(ctx, "SELECT id,display_name FROM app_user WHERE id=ANY("+b.add(frame.MemberIds)+") ORDER BY display_name,id", b.values...)
-	if err != nil {
+	if err := addUnmeasuredOwners(ctx, tx, frame, chart); err != nil {
 		return err
 	}
-	type member struct {
-		id    openapi_types.UUID
-		label string
-	}
-	members, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (member, error) {
-		var m member
-		err := row.Scan(&m.id, &m.label)
-		return m, err
-	})
-	if err != nil {
-		return err
-	}
-	for _, m := range members {
-		found := false
-		for _, point := range chart.Points {
-			if point.Key == m.id.String() {
-				found = true
-				break
-			}
-		}
-		if found {
-			continue
-		}
-		zero := float64(0)
-		group := "owner:" + m.id.String()
-		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: m.id.String(), Label: m.label, Value: &zero, Status: "ok", Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: chart.ContextId, GroupKey: &group}})
-	}
-
 	if !targetAppliesToInterval(frame, chart.Interval) {
 		return nil
 	}
@@ -139,6 +109,37 @@ func (s *Service) ownerTargets(ctx context.Context, tx pgx.Tx, reach targetReach
 		}
 	}
 	return s.ownerTargetAllocation(ctx, tx, reach, frame, chart)
+}
+
+// addUnmeasuredOwners gives each member with no reading a zero point, so an
+// owner who sold nothing still stands against a target.
+func addUnmeasuredOwners(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, chart *crmcontracts.ReportingChart) error {
+	var b bindings
+	rows, err := tx.Query(ctx, "SELECT id,display_name FROM app_user WHERE id=ANY("+b.add(frame.MemberIds)+") ORDER BY display_name,id", b.values...)
+	if err != nil {
+		return err
+	}
+	type member struct {
+		id    openapi_types.UUID
+		label string
+	}
+	members, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (member, error) {
+		var m member
+		err := row.Scan(&m.id, &m.label)
+		return m, err
+	})
+	if err != nil {
+		return err
+	}
+	for _, m := range members {
+		if slices.ContainsFunc(chart.Points, func(point crmcontracts.ReportingPoint) bool { return point.Key == m.id.String() }) {
+			continue
+		}
+		zero := float64(0)
+		group := "owner:" + m.id.String()
+		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: m.id.String(), Label: m.label, Value: &zero, Status: "ok", Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: chart.ContextId, GroupKey: &group}})
+	}
+	return nil
 }
 
 func applyChartTarget(frame crmcontracts.ReportingContext, metrics []crmcontracts.ReportingMetric, chart *crmcontracts.ReportingChart) {

@@ -946,6 +946,13 @@ export const en = {
   "reporting.sales": "Sales",
   "reporting.sdr": "SDR outcomes",
   "reporting.leads": "Leads",
+  "reporting.group.sourced": "Sourced",
+  "reporting.group.influenced": "Influenced",
+  "reporting.group.active": "Active",
+  "reporting.group.inactive": "Inactive",
+  "reporting.group.partnerHidden": "Partner you cannot see",
+  "reporting.noViews":
+    "Your role cannot read any figure on this page. Ask an admin for access.",
   "reporting.partners": "Partners",
   "reporting.qualification": "Qualification stages",
   "reporting.publish": "Save reporting settings",

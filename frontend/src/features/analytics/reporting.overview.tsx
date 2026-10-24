@@ -2,7 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, SegmentedControl } from "../../design-system/atoms";
+import {
+  Button,
+  EmptyState,
+  SegmentedControl,
+} from "../../design-system/atoms";
 import { type ISODate, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
@@ -200,15 +204,11 @@ function OverviewBody({
     scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
     pipeline_id: shape.dealFilters ? pipelineId || undefined : undefined,
     period,
-    interval:
-      period === "custom" && start && end
-        ? {
-            start_at: startOfDayInZone(start, zone),
-            end_at: startOfDayInZone(end, zone, 1),
-          }
-        : undefined,
+    interval: customInterval(period, start, end, zone),
     target_basis: targetBasis,
-    close_window: closeWindow,
+    // The contract asks for a close window on every selection. Only deal
+    // figures read it, so other views keep the default and never the address's.
+    close_window: shape.dealFilters ? closeWindow : "all_open",
     metrics,
     blocks: desired.filter((block) =>
       catalog.metrics.some(
@@ -258,16 +258,9 @@ function OverviewBody({
         }
       >
         {scopeControl}
-        <SegmentedControl
-          label={t("reporting.view")}
-          options={views}
+        <ViewSwitch
+          views={views}
           value={template}
-          labels={{
-            sales: t(VIEW_SHAPE.sales.label),
-            sdr: t(VIEW_SHAPE.sdr.label),
-            leads: t(VIEW_SHAPE.leads.label),
-            partners: t(VIEW_SHAPE.partners.label),
-          }}
           onChange={(next) => {
             setTemplate(next);
             setEvidence(null);
@@ -305,6 +298,7 @@ function OverviewBody({
           }}
         />
       </FilterBar>
+      {views.length === 0 && <EmptyState>{t("reporting.noViews")}</EmptyState>}
       {invalidSelection && <ErrorLine error={query.error} />}
       {/* Its sources are its own, so a failed or unasked evaluation does not
           take the list down with it. */}
@@ -347,6 +341,45 @@ function OverviewBody({
       )}
     </>
   );
+}
+
+// The views a seat reads, each named as VIEW_SHAPE names it. A seat that reads
+// none is told so under the filters, so it draws no switch.
+function ViewSwitch({
+  views,
+  value,
+  onChange,
+}: Readonly<{
+  views: readonly ReportingView[];
+  value: ReportingView;
+  onChange: (next: string) => void;
+}>) {
+  const t = useT();
+  if (views.length === 0) return null;
+  return (
+    <SegmentedControl<string>
+      label={t("reporting.view")}
+      options={views}
+      value={value}
+      labels={Object.fromEntries(
+        views.map((view) => [view, t(VIEW_SHAPE[view].label)]),
+      )}
+      onChange={onChange}
+    />
+  );
+}
+
+function customInterval(
+  period: string,
+  start: ISODate | "",
+  end: ISODate | "",
+  zone: string,
+): ReportingSelection["interval"] {
+  if (period !== "custom" || !start || !end) return undefined;
+  return {
+    start_at: startOfDayInZone(start, zone),
+    end_at: startOfDayInZone(end, zone, 1),
+  };
 }
 
 function validDateRange(period: string, start: string, end: string): boolean {

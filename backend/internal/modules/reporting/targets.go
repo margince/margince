@@ -197,6 +197,11 @@ func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontract
 	if index < 0 {
 		return empty, "", refuse("metric", "unsupported", "this metric does not support targets")
 	}
+	// A figure without the pipeline filter reads nothing on one, so a target
+	// held to a pipeline would never show.
+	if in.PipelineId != nil && (catalog.Metrics[index].AllowedFilters == nil || !slices.Contains(*catalog.Metrics[index].AllowedFilters, "pipeline")) {
+		return empty, "", refuse("pipeline_id", "not_filterable", "this metric counts every pipeline; save the target without one")
+	}
 	scope, err := s.authority.Scope(ctx, tx, in.Scope, true)
 	if err != nil {
 		return empty, "", refusedField("scope", err)
