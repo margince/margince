@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -863,14 +864,16 @@ func TestQueryPlanAndFilterEngineAnswerTheSameCompaniesForOneRadius(t *testing.T
 		fromQuery[row.ID] = true
 	}
 
+	engine, ok, err := (&collections.Store{}).SegmentEngine(q.admin(), "company")
+	if err != nil || !ok {
+		t.Fatalf("the company filter vocabulary: ok=%v err=%v", ok, err)
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	where, err := storekit.CompilePredicate(storekit.Predicate{
 		Field: "location", Op: storekit.OpWithinRadius,
 		Value: map[string]any{"lat": 48.7758, "lon": 9.1829, "radius_km": 50.0},
-	}, map[string]storekit.Field{
-		"location": {Expr: "t", Type: storekit.FieldDistance, GeoTarget: "company"},
-	}, arg)
+	}, engine.Fields, arg)
 	if err != nil {
 		t.Fatalf("compiling the filter leaf: %v", err)
 	}

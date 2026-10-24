@@ -14610,6 +14610,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.op.atLeast": "\u00edt nh\u1ea5t l\u00e0",
   "filters.op.lessThan": "nh\u1ecf h\u01a1n",
   "filters.op.atMost": "nhi\u1ec1u nh\u1ea5t l\u00e0",
+  "filters.op.withinRadius": "n\u1eb1m trong b\u00e1n k\u00ednh",
+  "filters.sentence.radiusOf": "{km} km quanh {place}",
   "filters.join.and": "và",
   "filters.join.or": "hoặc",
   "filters.sentence.clause": "{field} {op} {value}",

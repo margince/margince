@@ -4,6 +4,7 @@
 package storekit
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -71,5 +72,16 @@ func TestADistanceFieldAdmitsOnlyWithinRadius(t *testing.T) {
 	var perr *PredicateError
 	if !errors.As(err, &perr) || perr.Code != CodeFilterOpNotAllowed {
 		t.Fatalf("eq on a distance field: err = %v, want %s", err, CodeFilterOpNotAllowed)
+	}
+}
+
+func TestADistanceFieldIsNeverReadAsAValue(t *testing.T) {
+	q := Query{Table: "company", Fields: placeFields}
+	reading, err := q.readField(context.Background(), "location", placeFields["location"], func(any) int { return 1 })
+	if err != nil {
+		t.Fatalf("readField: %v", err)
+	}
+	if reading.expr != "" || reading.hidden || !reading.valueless {
+		t.Fatalf("reading = %+v, want valueless with no SQL: Expr %q is the whole row", reading, placeFields["location"].Expr)
 	}
 }

@@ -14,8 +14,8 @@ type Columns struct {
 	Lat, Lon, Status string
 }
 
-// ResolvedStatus is the one status a radius query may read. It mirrors
-// contacts.GeocodeOK, spelled here because platform may not import modules.
+// ResolvedStatus is the one status a radius query may read, and the value
+// contacts.GeocodeOK writes.
 const ResolvedStatus = "ok"
 
 // locatable maps a record type to the columns that make it locatable.

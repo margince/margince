@@ -14980,6 +14980,8 @@ export const en = {
   "filters.op.atLeast": "is at least",
   "filters.op.lessThan": "is less than",
   "filters.op.atMost": "is at most",
+  "filters.op.withinRadius": "is within",
+  "filters.sentence.radiusOf": "{km} km of {place}",
   "filters.join.and": "and",
   "filters.join.or": "or",
   "filters.sentence.clause": "{field} {op} {value}",

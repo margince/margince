@@ -29,10 +29,12 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -79,6 +81,11 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		args := []any{key}
 		arg := func(v any) int { args = append(args, v); return len(args) }
+		columns, ok := geocode.ColumnsFor("company")
+		if !ok {
+			return fmt.Errorf("company has no geocode columns")
+		}
+		locatedTerms := geocode.LocatedSQL("company", columns, arg)
 		// ROW SCOPE, and it is load-bearing rather than ceremonial. This
 		// answers a point derived from companies, so without the predicate a
 		// caller who may see none of them still learns that SOMEBODY is located
@@ -89,8 +96,8 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 		if err != nil {
 			return err
 		}
-		// geocode_status = 'ok' is REQUIRED, and it is the same predicate the
-		// radius query itself applies (querygeo.go). A row keeps its old point
+		// The located terms are REQUIRED, and they are the very predicate the
+		// radius query applies (geocode.LocatedSQL). A row keeps its old point
 		// when its address changes and is stamped `stale` — "not queryable,
 		// deliberately" in geocode.go's own words — so averaging one in would
 		// measure this city from where a company USED to be. Coordinates that
@@ -107,9 +114,7 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 			       count(*)
 			  FROM company
 			 WHERE archived_at IS NULL
-			   AND geocode_status = 'ok'
-			   AND geocode_lat IS NOT NULL
-			   AND geocode_lon IS NOT NULL
+			   AND `+strings.Join(locatedTerms, " AND ")+`
 			   AND lower(btrim(address_city)) = $1
 			   AND `+scope, args...).
 			Scan(&lat, &lon, &latSpread, &lonSpread, &located)

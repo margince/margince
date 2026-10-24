@@ -15019,6 +15019,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.op.atLeast": "ist mindestens",
   "filters.op.lessThan": "ist kleiner als",
   "filters.op.atMost": "ist h\u00f6chstens",
+  "filters.op.withinRadius": "liegt im Umkreis von",
+  "filters.sentence.radiusOf": "{km} km um {place}",
   "filters.join.and": "und",
   "filters.join.or": "oder",
   "filters.sentence.clause": "{field} {op} {value}",
