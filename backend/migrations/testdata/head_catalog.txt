@@ -3655,17 +3655,6 @@ public.deal_document_hide.deal_id uuid NOT NULL gen=- def=-
 public.deal_document_hide.hidden_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_document_hide.hidden_by text NOT NULL gen=- def=-
 public.deal_document_hide_pkey CREATE UNIQUE INDEX deal_document_hide_pkey ON public.deal_document_hide USING btree (deal_id, attachment_id)
-public.deal_forecast_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.deal_forecast_history.amount_minor_at_change bigint gen=- def=-
-public.deal_forecast_history.changed_at timestamp with time zone NOT NULL gen=- def=now()
-public.deal_forecast_history.changed_by text NOT NULL gen=- def=-
-public.deal_forecast_history.close_date_at_change date gen=- def=-
-public.deal_forecast_history.currency_at_change character(3) gen=- def=-
-public.deal_forecast_history.deal_forecast_history_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
-public.deal_forecast_history.deal_forecast_history_pkey PRIMARY KEY (id)
-public.deal_forecast_history.deal_id uuid NOT NULL gen=- def=-
-public.deal_forecast_history.id uuid NOT NULL gen=- def=uuidv7()
-public.deal_forecast_history_pkey CREATE UNIQUE INDEX deal_forecast_history_pkey ON public.deal_forecast_history USING btree (id)
 public.deal_move_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_move_dismissal.deal_id uuid NOT NULL gen=- def=-
 public.deal_move_dismissal.deal_move_dismissal_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
@@ -4649,7 +4638,6 @@ public.idx_deal_commercial_motion CREATE INDEX idx_deal_commercial_motion ON pub
 public.idx_deal_company CREATE INDEX idx_deal_company ON public.deal USING btree (company_id) WHERE ((company_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_deal_correction_deal CREATE INDEX idx_deal_correction_deal ON public.deal_correction USING btree (deal_id)
 public.idx_deal_document_hide_attachment CREATE INDEX idx_deal_document_hide_attachment ON public.deal_document_hide USING btree (attachment_id)
-public.idx_deal_forecast_history_deal CREATE INDEX idx_deal_forecast_history_deal ON public.deal_forecast_history USING btree (deal_id, changed_at)
 public.idx_deal_name_trgm CREATE INDEX idx_deal_name_trgm ON public.deal USING gin (f_fold_apostrophes(lower(name)) gin_trgm_ops)
 public.idx_deal_owner CREATE INDEX idx_deal_owner ON public.deal USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_deal_partner CREATE INDEX idx_deal_partner ON public.deal USING btree (partner_company_id) WHERE ((partner_company_id IS NOT NULL) AND (archived_at IS NULL))

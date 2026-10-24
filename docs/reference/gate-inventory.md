@@ -396,7 +396,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `singleliteralcheck_test.go` | H2 | A CHECK that admits one value and no other is a discriminator or it is nothing. |
 | `sonarbinaryexclusions_test.go` | H3 | The scan's file-encoding obligation. |
 | `sonarwaivers_test.go` | H3 | A rule waiver in sonar-project.properties has to keep pointing at something, and there are two ways one stops, neither of which announces itself. |
-| `sourcecensus_test.go` | H2 | The two source censuses written in Go, and the corpus that holds both halves of each of them to the same cases. |
 | `stagingdecision_test.go` | H3 | Every path that stages a delivery records why it was allowed to. |
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
 | `storedobjectdeclaration_test.go` | H2 | A writer that puts bytes into the object store declares them first, or says why its key needs no declaration. |
@@ -505,7 +504,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `constraintnameleak_test.go` | H2 | A constraint's name goes in the operator's log, never in the caller's refusal. |
 | `contactvocabulary_test.go` | H1 | The record is called a contact, and its retired name fails here. |
 | `contentionprobe_test.go` | H2 | A contention probe that cannot see the backend it is waiting for. |
-| `dealforecastmovement_test.go` | H2 | A deal row changes through one door, and that door records the forecast. |
 | `dealmoneypairwriters_test.go` | H2 | The deal money pairing rule is decided in one function, and this fails when a second place decides it. |
 | `dealvaluationspelling_test.go` | H2 | A frozen-only sum loses open foreign-currency and legacy won values. |
 | `docsplainwords_test.go` | H2 | A page whose first line is \<!-- prose:plain --> or \<!-- prose:plain max-words=N --> is written in plain words: short sentences and a vocabulary of fewer than 1,000 general words plus named technical terms, and with the optional limit, at most N words. |
