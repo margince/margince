@@ -65,6 +65,17 @@ describe("messengerUris", () => {
     );
   });
 
+  it("reads a number the way the server stores it", () => {
+    // ParsePhone takes 00 for + and drops only the brackets around a trunk 0.
+    expect(messengerUris("0049 30 1234567")?.whatsapp).toBe(
+      "https://wa.me/49301234567",
+    );
+    expect(messengerUris("+84 (0) 912 345 678")?.whatsapp).toBe(
+      "https://wa.me/840912345678",
+    );
+    expect(messengerUris("+49 30\n1234567")).toBeNull();
+  });
+
   it("lets nothing but the digits reach the address", () => {
     for (const bad of [
       "+49 30 1234567?text=hi",

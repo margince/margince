@@ -116,7 +116,7 @@ function WithheldFileChip({
 // Whether the reader asked for this file somewhere OTHER than here: a new tab,
 // a new window, a saved copy. Cancelling the navigation under any of those
 // takes away a move the browser offers on every link in the product.
-function opensElsewhere(event: MouseEvent<HTMLAnchorElement>): boolean {
+export function opensElsewhere(event: MouseEvent<HTMLAnchorElement>): boolean {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
 }
 

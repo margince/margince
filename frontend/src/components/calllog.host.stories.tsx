@@ -9,6 +9,7 @@ import { en } from "../i18n/en";
 import { useMe } from "../lib/session";
 import {
   installFetchStub,
+  jsonResponse,
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
@@ -28,6 +29,8 @@ const DANA = { entityType: "contact", entityId: "p-1" } as const;
 function stubSeat() {
   installFetchStub({
     "GET /me": meRoute({ activity: ["create"] }, { seat: "full" }),
+    "GET /contacts/p-1": () =>
+      jsonResponse({ id: "p-1", full_name: "Dana Buyer" }),
   });
 }
 
@@ -44,12 +47,16 @@ export const Host: Story = {
       <StoryProviders>
         <CallLogHost>
           <OnceSeated>
-            <CallAction
-              appearance="button"
-              number="+49 30 1234 5678"
-              label={en["record.verb.call"]}
-              record={DANA}
-            />
+            {/* A manual press in Storybook would hand the `tel:` to the
+                operating system; the story is about the form it opens. */}
+            <div onClickCapture={(event) => event.preventDefault()}>
+              <CallAction
+                appearance="button"
+                number="+49 30 1234 5678"
+                label={en["record.verb.call"]}
+                record={DANA}
+              />
+            </div>
           </OnceSeated>
         </CallLogHost>
       </StoryProviders>
@@ -60,11 +67,10 @@ export const Host: Story = {
       name: en["record.verb.call"],
     });
     await userEvent.click(call);
-    await expect(
-      await within(document.body).findByRole("dialog", {
-        name: en["log.title"],
-      }),
-    ).toBeVisible();
+    const dialog = await within(document.body).findByRole("dialog", {
+      name: en["log.title"],
+    });
+    await expect(await within(dialog).findByText("Dana Buyer")).toBeVisible();
   },
 };
 

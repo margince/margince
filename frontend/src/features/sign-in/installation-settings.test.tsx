@@ -498,7 +498,7 @@ it("saves regional formats together and updates existing date readers", async ()
   expect(await screen.findByText("23.09.2026")).toBeTruthy();
 });
 
-function languageRefetches(
+function serverTextRefetches(
   invalidate: MockInstance<QueryClient["invalidateQueries"]>,
 ): unknown[] {
   const prefixes = new Set(
@@ -529,7 +529,7 @@ describe("the calling switches", () => {
           .getAttribute("aria-checked"),
       ).toBe("false"),
     );
-    expect(languageRefetches(invalidate)).toEqual([]);
+    expect(serverTextRefetches(invalidate)).toEqual([]);
   });
 
   it("refetches every model-written text when the base language is saved", async () => {
@@ -550,7 +550,32 @@ describe("the calling switches", () => {
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
     await waitFor(() => expect(patch()).toEqual({ base_language: "de" }));
     await waitFor(() =>
-      expect(languageRefetches(invalidate)).toHaveLength(
+      expect(serverTextRefetches(invalidate)).toHaveLength(
+        LANGUAGE_DEPENDENT_QUERY_PREFIXES.length,
+      ),
+    );
+  });
+
+  it("refetches every model-written text when the reporting timezone is saved", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    render(<InstallationSettingsCard />, client);
+
+    const dialog = await openFrom(user, /edit reporting timezone/i);
+    const zone = within(dialog).getByLabelText(/reporting timezone/i);
+    await user.clear(zone);
+    await user.type(zone, "Asia/Ho_Chi_Minh");
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() =>
+      expect(patch()).toEqual({ timezone: "Asia/Ho_Chi_Minh" }),
+    );
+    await waitFor(() =>
+      expect(serverTextRefetches(invalidate)).toHaveLength(
         LANGUAGE_DEPENDENT_QUERY_PREFIXES.length,
       ),
     );

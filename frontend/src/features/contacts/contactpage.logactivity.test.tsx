@@ -335,7 +335,7 @@ describe("logging a call started on the page", () => {
 
     const [number] = await screen.findAllByRole("link", { name: NUMBER });
     expect(fireEvent.click(number)).toBe(true);
-    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    const dialog = screen.getByRole("dialog", { name: "Log activity" });
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(
       within(dialog).getByRole("combobox", { name: "Type" }).textContent,
@@ -383,8 +383,6 @@ describe("logging a call started on the page", () => {
 
     const [number] = await screen.findAllByRole("link", { name: NUMBER });
     expect(fireEvent.click(number)).toBe(true);
-    await expect(
-      screen.findByRole("dialog", undefined, { timeout: 300 }),
-    ).rejects.toThrow();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

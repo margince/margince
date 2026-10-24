@@ -79,7 +79,7 @@ export const ValueWithTelegramOff: Story = {
   },
 };
 
-const LONG = "+84 (0) 912 345 678 90";
+const LONG = "+849123456789012";
 
 /**
  * The header's facts strip at 390px: the chats go under a long number rather

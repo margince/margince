@@ -14,3 +14,10 @@
 .logactivity-drawer-body .logactivity-body-field > .richtext {
   flex: 1 0 auto;
 }
+
+/* The title and the record it is about, one step apart. */
+.logactivity-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

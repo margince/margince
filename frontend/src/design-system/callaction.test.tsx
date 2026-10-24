@@ -124,6 +124,23 @@ describe("CallAction starts the call's log", () => {
     expect(start.mock.calls).toEqual([[DANA], [DANA], [DANA]]);
   });
 
+  it.each(["ctrlKey", "metaKey", "shiftKey"])(
+    "leaves a %s press to the browser and opens no log",
+    (key) => {
+      const start = vi.fn();
+      render(
+        <CallStartProvider start={start}>
+          <CallAction appearance="value" number={DIALS} record={DANA} />
+        </CallStartProvider>,
+      );
+      const link = screen.getByRole("link", { name: DIALS });
+      expect(fireEvent.click(link, { [key]: true })).toBe(true);
+      expect(start).not.toHaveBeenCalled();
+      fireEvent.click(link);
+      expect(start).toHaveBeenCalledWith(DANA);
+    },
+  );
+
   it("only dials where nothing hosts a log", () => {
     render(<CallAction appearance="value" number={DIALS} record={DANA} />);
     const link = screen.getByRole("link", { name: DIALS });

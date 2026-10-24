@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { type Translator, useT } from "../i18n";
+import { useT } from "../i18n";
 import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
 import { useBackdropDismiss } from "./backdrop";
 import { ConfirmModal } from "./confirmmodal";
@@ -68,6 +68,7 @@ export function Modal({
   open,
   onClose,
   labelledBy,
+  describedBy,
   intent,
   span = "intent",
   onSpanChange,
@@ -81,6 +82,8 @@ export function Modal({
   open: boolean;
   onClose: () => void;
   labelledBy: string;
+  /** A line under the title that says what the dialog is about. */
+  describedBy?: string;
   // Resolve at close time when a mutation replaces the opener (for example,
   // Deactivate becoming Reactivate). A callback can find the newly mounted control.
   returnFocusTo?: () => HTMLElement | null;
@@ -190,6 +193,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
+        aria-describedby={describedBy}
         className={box}
         ref={dialog}
         // Focusable so a dialog whose body is pure text still receives focus
@@ -234,15 +238,15 @@ export function Modal({
         </div>
       </div>
       {/* Portalled to the body on its own; it sits here only for React. */}
-      {discardDraftQuestion(
-        t,
-        open && asking,
-        () => setAsking(false),
-        () => {
+      <DiscardDraftQuestion
+        open={open && asking}
+        body={t("unsaved.dialogBody")}
+        onKeep={() => setAsking(false)}
+        onDiscard={() => {
           setAsking(false);
           onClose();
-        },
-      )}
+        }}
+      />
     </div>,
     document.body,
   );
@@ -266,12 +270,19 @@ function modalClass(intent: ModalIntent, span: DrawerSpan) {
 }
 
 /** The question a dirty close asks, for a dialog and for a form open inside one. */
-export function discardDraftQuestion(
-  t: Translator,
-  open: boolean,
-  onKeep: () => void,
-  onDiscard: () => void,
-) {
+export function DiscardDraftQuestion({
+  open,
+  body,
+  onKeep,
+  onDiscard,
+}: Readonly<{
+  open: boolean;
+  // What closing loses, in the caller's words; the title alone asks it.
+  body?: string;
+  onKeep: () => void;
+  onDiscard: () => void;
+}>) {
+  const t = useT();
   return (
     <ConfirmModal
       open={open}
@@ -282,7 +293,7 @@ export function discardDraftQuestion(
       onClose={onKeep}
       onConfirm={onDiscard}
     >
-      <p>{t("unsaved.dialogBody")}</p>
+      {body && <p>{body}</p>}
     </ConfirmModal>
   );
 }

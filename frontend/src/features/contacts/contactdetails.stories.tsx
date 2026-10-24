@@ -375,7 +375,7 @@ const twoNumbers: components["schemas"]["Contact"] = {
     {
       ...manual,
       id: "p-2",
-      phone: "+84 (0) 912 345 678 90",
+      phone: "+849123456789012",
       phone_type: "work",
       is_primary: false,
       position: 1,

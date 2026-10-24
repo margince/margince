@@ -79,7 +79,7 @@ export const Live: Story = {
   },
 };
 
-const LONG_NUMBER = "+84 (0) 912 345 678 90";
+const LONG_NUMBER = "+849123456789012";
 
 // The longest number a messenger takes, at 390px: its chats wrap under it and
 // nothing runs past the edge.

@@ -12,6 +12,7 @@ import { useT } from "../i18n";
 import { MESSENGER_NAME, useCallMessengers } from "../lib/callmessengers";
 import { type CallRecord, useCallStart } from "../lib/callstart";
 import "./callaction.css";
+import { opensElsewhere } from "./filechip";
 import { IconAction } from "./iconaction";
 import { OffsiteLink } from "./offsitelink";
 
@@ -50,7 +51,8 @@ export function CallAction(props: Readonly<CallActionProps>) {
   // leaves a pressed link unfocused, and the log form hands focus back to it.
   const onClick = start
     ? (event: MouseEvent<HTMLAnchorElement>) => {
-        event.currentTarget.focus();
+        if (opensElsewhere(event)) return;
+        event.currentTarget.focus({ preventScroll: true });
         start(props.record);
       }
     : undefined;
@@ -124,7 +126,7 @@ function withChats(number: string, dial: ReactNode) {
 }
 
 // Its own component so only a number with a country code reads the settings.
-// No wrapper: the number stays the first child a host's layout measures.
+// A fragment, so the number is the first child a host's layout measures.
 function WithMessengers({
   dial,
   chats,

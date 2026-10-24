@@ -27,7 +27,10 @@ import {
   INSTALLATION_SETTINGS_KEY,
   useInstallationSettings,
 } from "../../lib/uploadlimit";
-import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
+import {
+  LANGUAGE_DEPENDENT_QUERY_PREFIXES,
+  SETTINGS_IN_SERVER_TEXT,
+} from "./aicaches";
 import { CallingSettingsRows } from "./installation-settings.calling";
 import {
   fiscalYearStartSummary,
@@ -84,10 +87,9 @@ export function useUpdateInstallationSettings(onSaved?: () => void) {
     },
     onSuccess: (data, patch) => {
       queryClient.setQueryData(INSTALLATION_SETTINGS_KEY, data);
-      // Model-written text is cached by record id alone and focus does not
-      // refetch, so an open page would keep its old-language text. Only a patch
-      // that carries the language refetches; one that changes nothing costs one read.
-      if (patch.base_language !== undefined) {
+      // These texts are cached by record id alone, and focus does not refetch.
+      // An open page would keep text written in the old language or zone.
+      if (SETTINGS_IN_SERVER_TEXT.some((key) => patch[key] !== undefined)) {
         for (const prefix of LANGUAGE_DEPENDENT_QUERY_PREFIXES) {
           void queryClient.invalidateQueries({ queryKey: prefix });
         }

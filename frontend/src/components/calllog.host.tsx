@@ -14,7 +14,7 @@ import { Button } from "../design-system/atoms";
 import { focusableWithin } from "../design-system/dialogfocus";
 import { useFocusHandoff } from "../design-system/focushandoff";
 import { Heading } from "../design-system/heading";
-import { discardDraftQuestion } from "../design-system/modal";
+import { DiscardDraftQuestion } from "../design-system/modal";
 import { useT } from "../i18n";
 import {
   type CallRecord,
@@ -27,10 +27,10 @@ import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
 import { EntityRef } from "./entityref";
 import { LogActivityAction, LogActivityForm } from "./logactivity";
 
-export type StartedCall = CallRecord & Readonly<{ seq: number }>;
+type StartedCall = CallRecord & Readonly<{ seq: number }>;
 
 /** The call started last, counted so each press mounts a fresh form. */
-export function useStartedCall(enabled: boolean): Readonly<{
+function useStartedCall(enabled: boolean): Readonly<{
   call: StartedCall | null;
   start: CallStart | null;
   close: () => void;
@@ -50,12 +50,12 @@ export function useStartedCall(enabled: boolean): Readonly<{
 export function useCallLogFor(contactId: string | undefined) {
   const outer = useCallStart();
   const { call, start, close } = useStartedCall(outer !== null);
-  const routed: CallStart | null =
-    outer && start
-      ? (record) =>
-          record.entityId === contactId ? start(record) : outer(record)
-      : null;
-  return { call, start: routed, close };
+  const routed = useCallback(
+    (record: CallRecord) =>
+      record.entityId === contactId ? start?.(record) : outer?.(record),
+    [contactId, start, outer],
+  );
+  return { call, start: outer && start ? routed : null, close };
 }
 
 // Once, in the shell, so a surface showing a number names its contact and knows
@@ -134,15 +134,14 @@ export function CallLogInline({
           )}
         />
       </UnsavedContext.Provider>
-      {discardDraftQuestion(
-        t,
-        asking,
-        () => setAsking(false),
-        () => {
+      <DiscardDraftQuestion
+        open={asking}
+        onKeep={() => setAsking(false)}
+        onDiscard={() => {
           onClose();
           opener.current?.focus();
-        },
-      )}
+        }}
+      />
     </section>
   );
 }

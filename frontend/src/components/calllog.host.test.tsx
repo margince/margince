@@ -68,11 +68,16 @@ describe("a call started under the shell's host", () => {
 
     expect(link.getAttribute("href")).toBe(telUri(DIALS));
     expect(fireEvent.click(link)).toBe(true);
-    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    const dialog = screen.getByRole("dialog", { name: "Log activity" });
     expect(
       within(dialog).getByRole("combobox", { name: "Type" }).textContent,
     ).toContain("Call");
-    expect(await within(dialog).findByText("Dana Buyer")).toBeTruthy();
+    expect(
+      await screen.findByRole("dialog", {
+        name: "Log activity",
+        description: "Dana Buyer",
+      }),
+    ).toBe(dialog);
   });
 
   it("keeps the open log and its words when the page under it changes", async () => {
@@ -163,9 +168,7 @@ describe("a call started under the shell's host", () => {
 
     expect(fireEvent.click(link)).toBe(true);
     expect(link.getAttribute("href")).toBe(telUri(DIALS));
-    await expect(
-      screen.findByRole("dialog", undefined, { timeout: 300 }),
-    ).rejects.toThrow();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 
@@ -225,9 +228,7 @@ describe("a call started inside a surface that logs in place", () => {
     mountInline(null);
 
     fireEvent.click(screen.getByRole("link", { name: "Call own" }));
-    await expect(
-      screen.findByRole("region", undefined, { timeout: 300 }),
-    ).rejects.toThrow();
+    expect(screen.queryByRole("region")).toBeNull();
   });
 
   it("brings focus back to the open form on a second press", async () => {
