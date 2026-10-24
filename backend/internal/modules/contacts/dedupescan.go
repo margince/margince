@@ -49,6 +49,18 @@ func (e DedupeScanEntity) subjectsSQL() (string, error) {
 	return "", fmt.Errorf("contacts: the duplicate scan has no record type %q", string(e))
 }
 
+// requireRead asks the read grant of the record type, each spelled as its
+// own object so the grant census can name it.
+func (e DedupeScanEntity) requireRead(ctx context.Context) error {
+	switch e {
+	case DedupeScanCompanies:
+		return auth.Require(ctx, companyEntity, principal.ActionRead)
+	case DedupeScanContacts:
+		return auth.Require(ctx, contactEntity, principal.ActionRead)
+	}
+	return fmt.Errorf("contacts: the duplicate scan has no record type %q", string(e))
+}
+
 // DedupeScanPage is one batch of the scan. Scanned holds the records it read,
 // in order, and Filed counts the pairs new on the queue.
 type DedupeScanPage struct {
@@ -68,7 +80,7 @@ func newDedupeScanner(ctx context.Context, tx pgx.Tx, entity DedupeScanEntity, c
 	if err := auth.RequireSystem(ctx); err != nil {
 		return dedupeScanner{}, err
 	}
-	if err := auth.Require(ctx, string(entity), principal.ActionRead); err != nil {
+	if err := entity.requireRead(ctx); err != nil {
 		return dedupeScanner{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -151,7 +163,7 @@ func CountDedupeScanSubjects(ctx context.Context, q interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 }, entity DedupeScanEntity, limit int64,
 ) (int64, error) {
-	if err := auth.Require(ctx, string(entity), principal.ActionRead); err != nil {
+	if err := entity.requireRead(ctx); err != nil {
 		return 0, err
 	}
 	subjects, err := entity.subjectsSQL()
