@@ -68,12 +68,9 @@ type ImageReading struct {
 // Three outcomes stay apart. They are a reply, *ImageNotCarriedError and
 // ErrReadRefused. Any other error is the lane's.
 func ReadImage(ctx context.Context, lane ImageLane, in ImageReading) (json.RawMessage, error) {
-	img, err := readableImage(in.Image)
+	img, err := readableImage(ctx, lane, in.Image)
 	if err != nil {
 		return nil, err
-	}
-	if !model.CarriesMIME(lane.AttachmentMIMEs(), img.MIME) {
-		return nil, &ImageNotCarriedError{MIME: img.MIME}
 	}
 	req := ImageRequest(in, img)
 	if !in.Subject.ID.IsZero() {
@@ -109,15 +106,27 @@ func ImageRequest(in ImageReading, img model.Attachment) model.Request {
 	}
 }
 
-// readableImage bounds the image and turns a HEIC or HEIF photo into JPEG.
-func readableImage(img model.Attachment) (model.Attachment, error) {
+// readableImage bounds the image, checks that the lane can carry what will be
+// sent, and only then turns a HEIC or HEIF photo into JPEG. A lane that reads no
+// images never costs a decode.
+func readableImage(ctx context.Context, lane ImageLane, img model.Attachment) (model.Attachment, error) {
 	if len(img.Bytes) > MaxImageBytes {
 		return model.Attachment{}, fmt.Errorf("%w: the image is larger than %d MB", ErrReadRefused, MaxImageBytes>>20)
 	}
+	carried := lane.AttachmentMIMEs()
 	if !isHEIF(img.Bytes) {
+		if !model.CarriesMIME(carried, img.MIME) {
+			return model.Attachment{}, &ImageNotCarriedError{MIME: img.MIME}
+		}
 		return img, nil
 	}
-	jpeg, err := imagenorm.HEICToJPEG(img.Bytes)
+	if !model.CarriesMIME(carried, mimeJPEG) {
+		return model.Attachment{}, &ImageNotCarriedError{MIME: img.MIME}
+	}
+	jpeg, err := imagenorm.HEICToJPEG(ctx, img.Bytes)
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return model.Attachment{}, err
+	}
 	if err != nil {
 		return model.Attachment{}, fmt.Errorf("%w: %w", ErrReadRefused, model.ErrAttachmentMislabelled)
 	}

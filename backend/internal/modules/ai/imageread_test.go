@@ -140,3 +140,13 @@ func TestSniffImageDecidesFromTheBytes(t *testing.T) {
 		}
 	}
 }
+
+func TestReadImageChecksCarriageBeforeDecodingAHEIC(t *testing.T) {
+	lane := &imageLane{}
+	undecodable := heicFixture(t)[:200]
+	_, err := ReadImage(context.Background(), lane, reading(model.Attachment{MIME: mimeHEIC, Bytes: undecodable}))
+	var notCarried *ImageNotCarriedError
+	if !errors.As(err, &notCarried) {
+		t.Fatalf("err = %v, want ImageNotCarriedError before any decode is tried", err)
+	}
+}

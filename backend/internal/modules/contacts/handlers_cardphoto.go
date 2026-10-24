@@ -56,9 +56,9 @@ func (h Handlers) ImportCardPhoto(w http.ResponseWriter, r *http.Request) {
 		httperr.NotImplementedBecause(w, r, "This installation has no model configured to read photos.")
 		return
 	}
-	// upload:route /v1/contacts/card-photos. The ceiling is granted to that path
-	// in compose.uploadCeilings, and TestEveryMultipartParseNamesItsRoute holds
-	// the two together.
+	// upload:route /v1/contacts/card-photos
+	// The ceiling is granted to that path in compose.uploadCeilings, and
+	// TestEveryMultipartParseNamesItsRoute holds the two together.
 	//nolint:gosec // G120 wants a bound, and the bound is the chassis's own MaxBytesReader on this route: this argument is the spill threshold.
 	if err := r.ParseMultipartForm(vcardSpillBytes); err != nil {
 		httperr.Write(w, r, httperr.Validation("file", "unreadable",

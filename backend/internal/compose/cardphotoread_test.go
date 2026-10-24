@@ -41,7 +41,7 @@ func cardPNG(t *testing.T) []byte {
 
 const twoCards = `{"cards":[
  {"full_name":" 田中 太郎 ","title":"部長","company":"Müller & Söhne GmbH","emails":["taro@mueller.example","not-an-address"],"phones":["+81 3 1234 5678"],"url":"","address":"","confidence":0.9},
- {"full_name":"Blurry Person","title":"","company":"","emails":[],"phones":[],"url":"","address":"","confidence":0.2}]}`
+ {"full_name":"Blurry Name","title":"","company":"","emails":[],"phones":[],"url":"","address":"","confidence":0.2}]}`
 
 func TestReadCardPhotoMarksEveryCardModelReadAndDropsTheUnsure(t *testing.T) {
 	lane := &cardLane{carries: []string{"image/png"}, reply: twoCards}

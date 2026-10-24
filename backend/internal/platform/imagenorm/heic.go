@@ -5,6 +5,7 @@ package imagenorm
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -13,9 +14,23 @@ import (
 	xdraw "golang.org/x/image/draw"
 )
 
-// maxHEICPixels bounds a HEIC decode by its declared size. A phone sensor is
-// up to 48 Mpx, so this sits well above the 8 Mpx a company mark may be.
-const maxHEICPixels = 64 << 20
+// maxHEICPixels bounds a HEIC decode by its declared size. It is above a 12 Mpx
+// phone photo and far under a sensor's largest frame. A decode holds the whole
+// raster in memory, and a business card needs no more than this.
+const maxHEICPixels = 16 << 20
+
+// maxConcurrentHEICDecodes bounds decodes running at once, so a burst of
+// uploads queues instead of holding many rasters in memory together.
+const maxConcurrentHEICDecodes = 2
+
+var heicSlots = make(chan struct{}, maxConcurrentHEICDecodes)
+
+// The decoder entry points, replaceable in a test that must prove an image is
+// refused before any pixel is decoded.
+var (
+	heicDecodeConfig = heic.DecodeConfig
+	heicDecode       = heic.Decode
+)
 
 // photoJPEGEdge is the longest edge of the JPEG a HEIC photo becomes. Card
 // print stays legible at this size. The file stays inside one model request.
@@ -28,12 +43,18 @@ const photoJPEGQuality = 90
 // cannot read HEIC can read the photo. A multi-image file yields its first
 // frame. Bytes that do not decode, or that declare more than maxHEICPixels,
 // are ErrUnsupported.
-func HEICToJPEG(src []byte) ([]byte, error) {
-	cfg, err := heic.DecodeConfig(bytes.NewReader(src))
-	if err != nil || cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width*cfg.Height > maxHEICPixels {
+func HEICToJPEG(ctx context.Context, src []byte) ([]byte, error) {
+	cfg, err := heicDecodeConfig(bytes.NewReader(src))
+	if err != nil || cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > maxHEICPixels/cfg.Height {
 		return nil, ErrUnsupported
 	}
-	img, err := heic.Decode(bytes.NewReader(src))
+	select {
+	case heicSlots <- struct{}{}:
+		defer func() { <-heicSlots }()
+	case <-ctx.Done():
+		return nil, fmt.Errorf("imagenorm: waiting for a free HEIC decode: %w", ctx.Err())
+	}
+	img, err := heicDecode(bytes.NewReader(src))
 	if err != nil {
 		return nil, ErrUnsupported
 	}
