@@ -2481,6 +2481,9 @@ paths:
         the introducer sees an empty list rather than a refusal: whether a colleague was asked
         about this contact is exactly the fact the row protects.
 
+        An introduction recorded after the fact (`origin: recorded`) is the exception: both
+        colleagues vouched for it, so every reader of the contact sees it.
+
         Newest first. Settled asks stay in the list — what was asked and answered is the
         history the next ask is decided against.
       responses:
@@ -2518,6 +2521,44 @@ paths:
       responses:
         '201':
           description: The ask is recorded and the colleague can see it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntroRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /contacts/{id}/introductions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Contacts]
+      operationId: recordIntroduction
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Record an introduction to this contact that already happened.
+      description: |
+        A colleague introduced another colleague to this contact outside Margince, with no ask
+        behind it. The row is an `IntroRequest` with `origin: recorded`, born `introduced`, so
+        nothing mistakes it for an ask that went through accept and mark.
+
+        Only the colleague who introduced (`introducer_user_id`) or the colleague who was
+        introduced (`introduced_user_id`) may record it, and the caller must be one of the two.
+        Anyone who can read the contact can read the recorded row. Both seats must be live
+        members of the workspace and must differ.
+
+        Recording the same pair for the same contact twice answers `409`. Recording is a
+        human's claim about two colleagues, so no agent tool does it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecordIntroductionInput' }
+      responses:
+        '201':
+          description: The introduction is recorded.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/IntroRequest' }
@@ -42095,19 +42136,25 @@ components:
         - requester_user_id
         - introducer_user_id
         - route_type
-        - internal_reason
+        - origin
         - status
         - name_drop_allowed
         - fallback_policy
         - note_generated_by
         - note_ai_generated
         - requested_at
-        - due_at
         - version
       properties:
         id: { type: string, format: uuid }
         contact_id: { type: string, format: uuid }
-        requester_user_id: { type: string, format: uuid }
+        origin:
+          $ref: '#/components/schemas/IntroOrigin'
+        recorded_channel:
+          $ref: '#/components/schemas/IntroRecordedChannel'
+        requester_user_id:
+          type: string
+          format: uuid
+          description: The colleague who asked, or for a recorded introduction the colleague who was introduced.
         requester_display_name: { type: string }
         introducer_user_id: { type: string, format: uuid }
         introducer_display_name: { type: string }
@@ -42119,8 +42166,10 @@ components:
           description: Set when the ask goes via someone else at the contact's company.
         through_display_name: { type: string }
         internal_reason:
-          type: string
-          description: Why the requester is asking. Read by the colleague, never by the contact.
+          type: [string, 'null']
+          description: >-
+            Why the requester is asking. Read by the colleague, never by the contact. Null for
+            a recorded introduction, which has no ask behind it.
         value_for_target:
           type: string
           description: What is in it for the contact, in the requester's words.
@@ -42162,9 +42211,11 @@ components:
             the audit trail.
         requested_at: { type: string, format: date-time }
         due_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          description: When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on.
+          description: >-
+            When an unanswered ask goes stale. A colleague's silence is an answer the requester
+            needs to be able to act on. Null for a recorded introduction, which nobody answers.
         decided_at: { type: [string, 'null'], format: date-time }
         introduced_at: { type: [string, 'null'], format: date-time }
         name_dropped_at: { type: [string, 'null'], format: date-time }
@@ -42239,6 +42290,46 @@ components:
         in the drawer, so the answer survives the tab that gave it.
       enum: [name_drop, next_route, none]
       x-enum-varnames: [IntroFallbackPolicyNameDrop, IntroFallbackPolicyNextRoute, IntroFallbackPolicyNone]
+
+    IntroOrigin:
+      type: string
+      description: >-
+        How the row came to be. `asked` went through the ask lifecycle. `recorded` is an
+        introduction that already happened outside Margince, born `introduced`.
+      enum: [asked, recorded]
+      x-enum-varnames: [IntroOriginAsked, IntroOriginRecorded]
+
+    IntroRecordedChannel:
+      type: string
+      description: How a recorded introduction was made.
+      enum: [in_person, email, call, other]
+      x-enum-varnames:
+        - IntroRecordedChannelInPerson
+        - IntroRecordedChannelEmail
+        - IntroRecordedChannelCall
+        - IntroRecordedChannelOther
+
+    RecordIntroductionInput:
+      type: object
+      description: >-
+        An introduction that already happened. The caller must be the introducer or the
+        introduced colleague; the two must differ.
+      required: [introducer_user_id, introduced_user_id, introduced_on, channel]
+      properties:
+        introducer_user_id:
+          type: string
+          format: uuid
+          description: The colleague who made the introduction.
+        introduced_user_id:
+          type: string
+          format: uuid
+          description: The colleague who was introduced to the contact.
+        introduced_on:
+          type: string
+          format: date
+          description: The day it happened. Not in the future.
+        channel:
+          $ref: '#/components/schemas/IntroRecordedChannel'
 
     IntroRequestListResponse:
       type: object

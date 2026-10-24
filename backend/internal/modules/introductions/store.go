@@ -53,7 +53,9 @@ type Request struct {
 	IntroducerUser   ids.UUID
 	RouteType        string
 	ThroughContactID *ids.UUID
-	InternalReason   string
+	InternalReason   *string
+	Origin           Origin
+	RecordedChannel  *string
 	ValueForTarget   string
 	ForwardableNote  string
 	NoteGeneratedBy  string
@@ -64,7 +66,7 @@ type Request struct {
 	DecisionReason   *string
 	SuggestedUserID  *ids.UUID
 	SourceActivityID *ids.UUID
-	DueAt            time.Time
+	DueAt            *time.Time
 	RequestedAt      time.Time
 	DecidedAt        *time.Time
 	IntroducedAt     *time.Time

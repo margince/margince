@@ -12238,6 +12238,48 @@ func (e IntroNoteOrigin) Valid() bool {
 	}
 }
 
+// Defines values for IntroOrigin.
+const (
+	IntroOriginIntroOriginAsked    IntroOrigin = "asked"
+	IntroOriginIntroOriginRecorded IntroOrigin = "recorded"
+)
+
+// Valid indicates whether the value is a known member of the IntroOrigin enum.
+func (e IntroOrigin) Valid() bool {
+	switch e {
+	case IntroOriginIntroOriginAsked:
+		return true
+	case IntroOriginIntroOriginRecorded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntroRecordedChannel.
+const (
+	IntroRecordedChannelIntroRecordedChannelCall     IntroRecordedChannel = "call"
+	IntroRecordedChannelIntroRecordedChannelEmail    IntroRecordedChannel = "email"
+	IntroRecordedChannelIntroRecordedChannelInPerson IntroRecordedChannel = "in_person"
+	IntroRecordedChannelIntroRecordedChannelOther    IntroRecordedChannel = "other"
+)
+
+// Valid indicates whether the value is a known member of the IntroRecordedChannel enum.
+func (e IntroRecordedChannel) Valid() bool {
+	switch e {
+	case IntroRecordedChannelIntroRecordedChannelCall:
+		return true
+	case IntroRecordedChannelIntroRecordedChannelEmail:
+		return true
+	case IntroRecordedChannelIntroRecordedChannelInPerson:
+		return true
+	case IntroRecordedChannelIntroRecordedChannelOther:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IntroRequestDecisionInputDecision.
 const (
 	IntroRequestDecisionInputDecisionIntroDecisionAccepted         IntroRequestDecisionInputDecision = "accepted"
@@ -41181,6 +41223,9 @@ type IntroFallbackPolicy string
 // IntroNoteOrigin Who wrote the forwardable note. `deterministic` is the product's own template, which is what a client gets when no model is configured — a stated floor rather than a failure.
 type IntroNoteOrigin string
 
+// IntroOrigin How the row came to be. `asked` went through the ask lifecycle. `recorded` is an introduction that already happened outside Margince, born `introduced`.
+type IntroOrigin string
+
 // IntroPaths What `intro_path_to` answers: the colleagues who know someone at the company, warmest first.
 type IntroPaths struct {
 	CandidatesTruncated bool               `json:"candidates_truncated"`
@@ -41195,6 +41240,9 @@ type IntroPaths struct {
 		UserId          openapi_types.UUID `json:"user_id"`
 	} `json:"routes"`
 }
+
+// IntroRecordedChannel How a recorded introduction was made.
+type IntroRecordedChannel string
 
 // IntroRequest One rep's ask that a colleague open a door, and how it was answered.
 //
@@ -41213,8 +41261,8 @@ type IntroRequest struct {
 	// DecisionReason The colleague's words when they declined or suggested somebody else.
 	DecisionReason *string `json:"decision_reason,omitempty"`
 
-	// DueAt When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on.
-	DueAt time.Time `json:"due_at"`
+	// DueAt When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on. Null for a recorded introduction, which nobody answers.
+	DueAt *time.Time `json:"due_at,omitempty"`
 
 	// FallbackPolicy What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
 	FallbackPolicy IntroFallbackPolicy `json:"fallback_policy"`
@@ -41223,8 +41271,8 @@ type IntroRequest struct {
 	ForwardableNote *string            `json:"forwardable_note,omitempty"`
 	Id              openapi_types.UUID `json:"id"`
 
-	// InternalReason Why the requester is asking. Read by the colleague, never by the contact.
-	InternalReason        string             `json:"internal_reason"`
+	// InternalReason Why the requester is asking. Read by the colleague, never by the contact. Null for a recorded introduction, which has no ask behind it.
+	InternalReason        *string            `json:"internal_reason,omitempty"`
 	IntroducedAt          *time.Time         `json:"introduced_at,omitempty"`
 	IntroducerDisplayName *string            `json:"introducer_display_name,omitempty"`
 	IntroducerUserId      openapi_types.UUID `json:"introducer_user_id"`
@@ -41237,11 +41285,19 @@ type IntroRequest struct {
 	NoteAiGenerated bool `json:"note_ai_generated"`
 
 	// NoteGeneratedBy Who wrote the forwardable note. `deterministic` is the product's own template, which is what a client gets when no model is configured — a stated floor rather than a failure.
-	NoteGeneratedBy      IntroNoteOrigin    `json:"note_generated_by"`
-	RepliedAt            *time.Time         `json:"replied_at,omitempty"`
-	RequestedAt          time.Time          `json:"requested_at"`
-	RequesterDisplayName *string            `json:"requester_display_name,omitempty"`
-	RequesterUserId      openapi_types.UUID `json:"requester_user_id"`
+	NoteGeneratedBy IntroNoteOrigin `json:"note_generated_by"`
+
+	// Origin How the row came to be. `asked` went through the ask lifecycle. `recorded` is an introduction that already happened outside Margince, born `introduced`.
+	Origin IntroOrigin `json:"origin"`
+
+	// RecordedChannel How a recorded introduction was made.
+	RecordedChannel      *IntroRecordedChannel `json:"recorded_channel,omitempty"`
+	RepliedAt            *time.Time            `json:"replied_at,omitempty"`
+	RequestedAt          time.Time             `json:"requested_at"`
+	RequesterDisplayName *string               `json:"requester_display_name,omitempty"`
+
+	// RequesterUserId The colleague who asked, or for a recorded introduction the colleague who was introduced.
+	RequesterUserId openapi_types.UUID `json:"requester_user_id"`
 
 	// RouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
 	RouteType ContactGraphRouteType `json:"route_type"`
@@ -47045,6 +47101,21 @@ type RecordGrantRecordType string
 
 // RecordGrantSubjectType defines model for RecordGrant.SubjectType.
 type RecordGrantSubjectType string
+
+// RecordIntroductionInput An introduction that already happened. The caller must be the introducer or the introduced colleague; the two must differ.
+type RecordIntroductionInput struct {
+	// Channel How a recorded introduction was made.
+	Channel IntroRecordedChannel `json:"channel"`
+
+	// IntroducedOn The day it happened. Not in the future.
+	IntroducedOn openapi_types.Date `json:"introduced_on"`
+
+	// IntroducedUserId The colleague who was introduced to the contact.
+	IntroducedUserId openapi_types.UUID `json:"introduced_user_id"`
+
+	// IntroducerUserId The colleague who made the introduction.
+	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
+}
 
 // RecordListsResponse defines model for RecordListsResponse.
 type RecordListsResponse struct {
@@ -63050,6 +63121,9 @@ type DraftIntroNoteJSONRequestBody DraftIntroNoteJSONBody
 // CreateIntroRequestJSONRequestBody defines body for CreateIntroRequest for application/json ContentType.
 type CreateIntroRequestJSONRequestBody = IntroRequestInput
 
+// RecordIntroductionJSONRequestBody defines body for RecordIntroduction for application/json ContentType.
+type RecordIntroductionJSONRequestBody = RecordIntroductionInput
+
 // MergeContactJSONRequestBody defines body for MergeContact for application/json ContentType.
 type MergeContactJSONRequestBody MergeContactJSONBody
 
@@ -75398,6 +75472,9 @@ type ServerInterface interface {
 	// Ask a colleague to introduce you to this contact.
 	// (POST /contacts/{id}/intro-requests)
 	CreateIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Record an introduction to this contact that already happened.
+	// (POST /contacts/{id}/introductions)
+	RecordIntroduction(w http.ResponseWriter, r *http.Request, id Id)
 	// Merge this contact into a target (non-lossy).
 	// (POST /contacts/{id}/merge)
 	MergeContact(w http.ResponseWriter, r *http.Request, id Id, params MergeContactParams)
@@ -79175,6 +79252,12 @@ func (_ Unimplemented) ListIntroRequests(w http.ResponseWriter, r *http.Request,
 // Ask a colleague to introduce you to this contact.
 // (POST /contacts/{id}/intro-requests)
 func (_ Unimplemented) CreateIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record an introduction to this contact that already happened.
+// (POST /contacts/{id}/introductions)
+func (_ Unimplemented) RecordIntroduction(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -97294,6 +97377,38 @@ func (siw *ServerInterfaceWrapper) CreateIntroRequest(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateIntroRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordIntroduction operation middleware
+func (siw *ServerInterfaceWrapper) RecordIntroduction(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordIntroduction(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -121680,6 +121795,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/intro-requests", wrapper.CreateIntroRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/introductions", wrapper.RecordIntroduction)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/merge", wrapper.MergeContact)

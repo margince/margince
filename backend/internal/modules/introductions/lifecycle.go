@@ -67,6 +67,37 @@ func EveryStatus() []Status {
 	}
 }
 
+// Origin is how a row came to exist, a separate axis from Status. An asked row
+// moves through the lifecycle above. A recorded row is an introduction that
+// already happened outside Margince: it is born introduced and no transition
+// applies to it, so a reader that moves or expires rows by status must also
+// ask the origin.
+type Origin string
+
+const (
+	// OriginAsked went through the ask lifecycle.
+	OriginAsked Origin = "asked"
+	// OriginRecorded was typed in after the fact by one of its two colleagues.
+	OriginRecorded Origin = "recorded"
+)
+
+// EveryOrigin is the census an exhaustive check iterates.
+// Held by: TestEveryOriginIsCensused (lifecycle_test.go)
+func EveryOrigin() []Origin {
+	return []Origin{OriginAsked, OriginRecorded}
+}
+
+// MayRecord reports whether this actor may record an introduction that already
+// happened. Only the colleague who introduced and the colleague who was
+// introduced can vouch for it; anyone else would be making a claim about two
+// other people's relationship.
+func MayRecord(by Actor) error {
+	if by == ActorIntroducer || by == ActorRequester {
+		return nil
+	}
+	return apperrors.ErrPermissionDenied
+}
+
 // Actor is who is attempting a move, in the only terms the rules care about.
 type Actor string
 

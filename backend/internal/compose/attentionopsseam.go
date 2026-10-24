@@ -288,15 +288,20 @@ func (a attentionIntroductions) Pending(
 	}
 	out := make([]attention.PendingIntroduction, 0, len(asks))
 	for _, ask := range asks {
+		// AwaitingMyAnswer lists only `requested` asks, which always carry a
+		// reason and a deadline; a recorded introduction has neither.
+		if ask.InternalReason == nil || ask.DueAt == nil {
+			continue
+		}
 		out = append(out, attention.PendingIntroduction{
 			ID:        ask.ID,
 			ContactID: ask.ContactID,
 			// The requester's own words, carried rather than summarised: the
 			// colleague is deciding whether to spend their relationship, and a
 			// paraphrase is not what they would be agreeing to.
-			Reason:      ask.InternalReason,
+			Reason:      *ask.InternalReason,
 			RequestedAt: ask.RequestedAt,
-			DueAt:       ask.DueAt,
+			DueAt:       *ask.DueAt,
 		})
 	}
 	return out, nil

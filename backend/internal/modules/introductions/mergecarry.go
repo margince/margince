@@ -36,6 +36,9 @@ import (
 const (
 	mergedDuplicateReason = "the contact was merged into a record that already had this ask open"
 	mergedSelfRouteReason = "the contact was merged into the one this route ran through"
+	// mergedRecordedDuplicateReason is shown in the merge preview for the recorded
+	// introduction the merge archives, the newer of two for one pair.
+	mergedRecordedDuplicateReason = "the contact was merged into a record that already had this introduction recorded"
 )
 
 // CarryIntrosTx implements contacts.IntroCarrier.
@@ -48,6 +51,9 @@ func (s *Store) CarryIntrosTx(ctx context.Context, tx pgx.Tx, from, to ids.Conta
 		return err
 	}
 	if err := s.closeMergedDuplicates(ctx, tx, from, to); err != nil {
+		return err
+	}
+	if err := s.archiveMergedRecordedDuplicates(ctx, tx, from, to); err != nil {
 		return err
 	}
 	rows, err := tx.Query(ctx, `
@@ -139,6 +145,33 @@ func (s *Store) closeMergedDuplicates(ctx context.Context, tx pgx.Tx, from, to i
 	}
 	for _, c := range closed {
 		if err := auditMergeClosedAsk(ctx, tx, c.id, c.about, c.before); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// archiveMergedRecordedDuplicates archives the newer of two recorded
+// introductions the merge would put on one pair, and audits each. closeMergedDuplicates
+// has already locked every row of both contacts.
+func (s *Store) archiveMergedRecordedDuplicates(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error {
+	archivedAt := s.now().UTC()
+	rows, err := tx.Query(ctx, `
+		UPDATE intro_request r
+		   SET archived_at = @archived_at, version = r.version + 1, updated_at = now()
+		 WHERE r.id IN (`+introCarryRecordedLosers+`)
+		RETURNING r.id`,
+		pgx.NamedArgs{"source": from, "target": to, "archived_at": archivedAt})
+	if err != nil {
+		return fmt.Errorf("introductions: archiving recorded introductions the merge made duplicates: %w", err)
+	}
+	archived, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("introductions: archiving recorded introductions the merge made duplicates: %w", err)
+	}
+	for _, id := range archived {
+		if _, err := storekit.Audit(ctx, tx, "update", "intro_request", id,
+			map[string]any{"archived_at": nil}, map[string]any{"archived_at": archivedAt}); err != nil {
 			return err
 		}
 	}

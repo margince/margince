@@ -236,6 +236,17 @@ func (c *carryEnv) introPreview(t *testing.T, source, target ids.ContactID, expe
 func (c *carryEnv) assertIntroPreview(t *testing.T, preview []introduction.CarriedRequest) {
 	t.Helper()
 	for _, change := range preview {
+		if change.StatusAfter == "archived" {
+			var archived bool
+			if err := c.e.Pool.QueryRow(context.Background(),
+				"SELECT archived_at IS NOT NULL FROM intro_request WHERE id=$1", change.ID).Scan(&archived); err != nil {
+				t.Fatal(err)
+			}
+			if !archived || change.CancellationReason == "" {
+				t.Fatalf("merge disagrees with preview %+v: archived=%v", change, archived)
+			}
+			continue
+		}
 		status, contact, through := c.askStatus(t, change.ID)
 		if status != change.StatusAfter || contact != change.ContactAfter || !reflect.DeepEqual(through, change.ThroughAfter) {
 			t.Fatalf("merge disagrees with preview %+v: %s %s %v", change, status, contact, through)
@@ -352,5 +363,64 @@ func TestMergeIntroductionPreviewRefusesToTruncateItsScope(t *testing.T) {
 	preview, err = c.contacts.PreviewMergeSurvivorship(c.asker(), "contact", source.UUID, target.UUID, nil, nil)
 	if !errors.Is(err, apperrors.ErrInvalidArgument) || !reflect.DeepEqual(preview, contacts.MergeSurvivorship{}) {
 		t.Fatalf("truncated scope returned: %+v, %v", preview, err)
+	}
+}
+
+// record writes one recorded introduction through the real writer, as the
+// colleague who made it.
+func (c *carryEnv) record(t *testing.T, contact ids.ContactID, introducer, introduced ids.UUID, daysAgo int) ids.UUID {
+	t.Helper()
+	perms := integration.AdminPerms
+	perms.Objects = maps.Clone(perms.Objects)
+	perms.Objects["introduction"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	id, err := c.intros.Record(c.e.As(introducer, nil, perms), introductions.NewRecorded{
+		ContactID: contact.UUID, IntroducerUser: introducer, IntroducedUser: introduced,
+		On: time.Now().AddDate(0, 0, -daysAgo), Channel: "call",
+	})
+	if err != nil {
+		t.Fatalf("recording the introduction: %v", err)
+	}
+	return id
+}
+
+func (c *carryEnv) archivedAt(t *testing.T, id ids.UUID) *time.Time {
+	t.Helper()
+	var at *time.Time
+	if err := c.e.Pool.QueryRow(context.Background(),
+		`SELECT archived_at FROM intro_request WHERE id = $1`, id).Scan(&at); err != nil {
+		t.Fatal(err)
+	}
+	return at
+}
+
+// Two recorded introductions of one pair on the two halves are one after the
+// merge: the unique index on the pair would refuse the re-home, so the older
+// stands on the survivor and the newer is archived, in the preview and in the
+// merge alike. A recorded introduction of another pair is carried untouched.
+func TestAMergeKeepsTheOlderRecordedIntroductionOfAPair(t *testing.T) {
+	c := setupCarry(t)
+	retired := c.contactAt(t, "Rec Retired", "rec@carry.test")
+	survivor := c.contactAt(t, "Rec Survivor", "rec-survivor@carry.test")
+	older := c.record(t, retired, c.e.Rep1, c.e.Rep2, 5)
+	newer := c.record(t, survivor, c.e.Rep1, c.e.Rep2, 1)
+	otherPair := c.record(t, retired, c.e.Rep2, c.e.Rep1, 1)
+
+	preview := c.introPreview(t, retired, survivor, older, otherPair, newer)
+	c.merge(t, retired, survivor)
+	c.assertIntroPreview(t, preview)
+
+	if c.archivedAt(t, older) != nil {
+		t.Error("the older recorded introduction was archived")
+	}
+	if c.archivedAt(t, newer) == nil {
+		t.Error("the newer recorded introduction of the same pair stands beside the older")
+	}
+	for _, id := range []ids.UUID{older, otherPair} {
+		if _, contact, _ := c.askStatus(t, id); contact != survivor.UUID {
+			t.Errorf("recorded introduction %s names %s, want the survivor", id, contact)
+		}
+	}
+	if c.archivedAt(t, otherPair) != nil {
+		t.Error("a recorded introduction of another pair was archived")
 	}
 }

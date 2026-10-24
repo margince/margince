@@ -39,8 +39,16 @@ func (s *Store) load(ctx context.Context, tx pgx.Tx, id ids.UUID) (*Request, err
 	if err != nil {
 		return nil, fmt.Errorf("introductions: reading the ask: %w", err)
 	}
-	if s.roleOf(ctx, &r) == "" {
+	if s.roleOf(ctx, &r) != "" {
+		return &r, nil
+	}
+	// A recorded introduction is readable by anyone who can read its contact;
+	// an ask is the two colleagues' alone.
+	if r.Origin != OriginRecorded {
 		return nil, apperrors.ErrNotFound
+	}
+	if err := auth.EnsureVisibleExisting(ctx, tx, "contact", r.ContactID); err != nil {
+		return nil, err
 	}
 	return &r, nil
 }
@@ -50,7 +58,7 @@ func (s *Store) load(ctx context.Context, tx pgx.Tx, id ids.UUID) (*Request, err
 // works is the one whose scan happens to line up.
 const requestColumns = `
 	SELECT id, contact_id, requester_user_id, introducer_user_id, route_type,
-	       through_contact_id, internal_reason, value_for_target, forwardable_note,
+	       through_contact_id, internal_reason, origin, recorded_channel, value_for_target, forwardable_note,
 	       note_generated_by, note_ai_generated, fallback_policy, name_drop_allowed,
 	       status, decision_reason, suggested_user_id, source_activity_id,
 	       due_at, requested_at, decided_at, introduced_at, name_dropped_at,
@@ -62,7 +70,7 @@ type row interface{ Scan(dest ...any) error }
 func scanRequest(src row, r *Request) error {
 	return src.Scan(
 		&r.ID, &r.ContactID, &r.RequesterUserID, &r.IntroducerUser, &r.RouteType,
-		&r.ThroughContactID, &r.InternalReason, &r.ValueForTarget, &r.ForwardableNote,
+		&r.ThroughContactID, &r.InternalReason, &r.Origin, &r.RecordedChannel, &r.ValueForTarget, &r.ForwardableNote,
 		&r.NoteGeneratedBy, &r.NoteAIGenerated, &r.FallbackPolicy, &r.NameDropAllowed,
 		&r.Status, &r.DecisionReason, &r.SuggestedUserID, &r.SourceActivityID,
 		&r.DueAt, &r.RequestedAt, &r.DecidedAt, &r.IntroducedAt, &r.NameDroppedAt,
@@ -137,13 +145,15 @@ func (s *Store) ForContact(ctx context.Context, contactID ids.UUID, limit int) (
 		// Only the asks this caller is party to. A rep browsing a contact does
 		// not learn which of their colleagues has been asked about them and
 		// refused: that is the introducer's answer to give, not the record's.
+		// A recorded introduction is the exception: two colleagues vouched for
+		// it, so every reader of the contact sees it.
 		// The full row, not a summary: the colleague deciding reads the reason
 		// and the note on this payload, and a second round-trip per ask to
 		// fetch what the list already had in hand would be one.
 		rows, err := tx.Query(ctx, requestColumns+`
 			  FROM intro_request
 			 WHERE contact_id = $1 AND archived_at IS NULL
-			   AND (requester_user_id = $2 OR introducer_user_id = $2)
+			   AND (requester_user_id = $2 OR introducer_user_id = $2 OR origin = 'recorded')
 			 ORDER BY requested_at DESC, id DESC
 			 LIMIT $3`, contactID, actor.UserID, limit)
 		if err != nil {

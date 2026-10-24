@@ -4901,18 +4901,23 @@ public.intro_request.contact_id uuid NOT NULL gen=- def=-
 public.intro_request.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.intro_request.decided_at timestamp with time zone gen=- def=-
 public.intro_request.decision_reason text gen=- def=-
-public.intro_request.due_at timestamp with time zone NOT NULL gen=- def=-
+public.intro_request.due_at timestamp with time zone gen=- def=-
 public.intro_request.fallback_policy text NOT NULL gen=- def='none'::text
 public.intro_request.forwardable_note text NOT NULL gen=- def=''::text
 public.intro_request.id uuid NOT NULL gen=- def=uuidv7()
-public.intro_request.internal_reason text NOT NULL gen=- def=-
+public.intro_request.internal_reason text gen=- def=-
+public.intro_request.intro_request_asked_has_due CHECK (((origin <> 'asked'::text) OR (due_at IS NOT NULL)))
+public.intro_request.intro_request_channel_iff_recorded CHECK (((origin = 'recorded'::text) = (recorded_channel IS NOT NULL)))
 public.intro_request.intro_request_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.intro_request.intro_request_distinct_seats CHECK ((requester_user_id <> introducer_user_id))
 public.intro_request.intro_request_fallback CHECK ((fallback_policy = ANY (ARRAY['name_drop'::text, 'next_route'::text, 'none'::text])))
 public.intro_request.intro_request_introducer_user_id_fkey FOREIGN KEY (introducer_user_id) REFERENCES app_user(id)
 public.intro_request.intro_request_note_origin CHECK ((note_generated_by = ANY (ARRAY['human'::text, 'model'::text, 'deterministic'::text])))
+public.intro_request.intro_request_origin_known CHECK ((origin = ANY (ARRAY['asked'::text, 'recorded'::text])))
 public.intro_request.intro_request_pkey PRIMARY KEY (id)
-public.intro_request.intro_request_reason_present CHECK ((internal_reason <> ''::text))
+public.intro_request.intro_request_reason_by_origin CHECK ((((origin = 'asked'::text) AND (internal_reason IS NOT NULL) AND (internal_reason <> ''::text)) OR ((origin = 'recorded'::text) AND (internal_reason IS NULL))))
+public.intro_request.intro_request_recorded_channel_known CHECK (((recorded_channel IS NULL) OR (recorded_channel = ANY (ARRAY['in_person'::text, 'email'::text, 'call'::text, 'other'::text]))))
+public.intro_request.intro_request_recorded_is_introduced CHECK (((origin <> 'recorded'::text) OR ((status = 'introduced'::text) AND (introduced_at IS NOT NULL) AND (through_contact_id IS NULL) AND (decision_reason IS NULL) AND (suggested_user_id IS NULL) AND (decided_at IS NULL) AND (name_dropped_at IS NULL) AND (replied_at IS NULL) AND (source_activity_id IS NULL) AND (closed_at IS NULL))))
 public.intro_request.intro_request_requester_user_id_fkey FOREIGN KEY (requester_user_id) REFERENCES app_user(id)
 public.intro_request.intro_request_route_shape CHECK (((route_type = 'through_contact'::text) = (through_contact_id IS NOT NULL)))
 public.intro_request.intro_request_route_type CHECK ((route_type = ANY (ARRAY['direct'::text, 'through_contact'::text])))
@@ -4927,6 +4932,8 @@ public.intro_request.name_drop_allowed boolean NOT NULL gen=- def=false
 public.intro_request.name_dropped_at timestamp with time zone gen=- def=-
 public.intro_request.note_ai_generated boolean NOT NULL gen=- def=false
 public.intro_request.note_generated_by text NOT NULL gen=- def='human'::text
+public.intro_request.origin text NOT NULL gen=- def='asked'::text
+public.intro_request.recorded_channel text gen=- def=-
 public.intro_request.replied_at timestamp with time zone gen=- def=-
 public.intro_request.requested_at timestamp with time zone NOT NULL gen=- def=now()
 public.intro_request.requester_user_id uuid NOT NULL gen=- def=-
@@ -4943,6 +4950,7 @@ public.intro_request_due CREATE INDEX intro_request_due ON public.intro_request 
 public.intro_request_for_contact CREATE INDEX intro_request_for_contact ON public.intro_request USING btree (contact_id, requested_at DESC)
 public.intro_request_open_route CREATE UNIQUE INDEX intro_request_open_route ON public.intro_request USING btree (contact_id, introducer_user_id, through_contact_id) NULLS NOT DISTINCT WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
 public.intro_request_pkey CREATE UNIQUE INDEX intro_request_pkey ON public.intro_request USING btree (id)
+public.intro_request_recorded_pair CREATE UNIQUE INDEX intro_request_recorded_pair ON public.intro_request USING btree (contact_id, introducer_user_id, requester_user_id) WHERE ((origin = 'recorded'::text) AND (archived_at IS NULL))
 public.ix_confirm_token_contact CREATE INDEX ix_confirm_token_contact ON public.confirm_token USING btree (contact_id)
 public.ix_confirm_token_lead CREATE INDEX ix_confirm_token_lead ON public.confirm_token USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.ix_contact_confirm_submission_contact CREATE INDEX ix_contact_confirm_submission_contact ON public.contact_confirm_submission USING btree (contact_id)

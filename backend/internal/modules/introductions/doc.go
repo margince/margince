@@ -18,5 +18,12 @@
 // door had been opened that nobody opened. `replied` is reached only from
 // captured activity, never from a checkbox, so the word means what it says.
 //
+// The module also owns introductions recorded after the fact: two colleagues
+// vouching that one introduced the other to a contact outside Margince, with no
+// ask behind it. `origin` is a separate axis from `status` for that reason: a
+// recorded row is born `introduced`, but nothing was accepted or marked, so
+// every reader that moves or expires rows by status also asks the origin.
+// Unlike an ask, a recorded row is readable by anyone who can read the contact.
+//
 // Tables owned: intro_request
 package introductions
