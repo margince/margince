@@ -4,8 +4,6 @@ import type { MessageKey } from "./en";
 // parity with en at compile time. i18n.test.ts re-checks it at runtime, so a
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
-// Annotated, not inferred: the inferred literal type of a catalog this size is
-// past what tsc will serialize (TS7056).
 export const de: Readonly<Record<MessageKey, string>> = {
   "homeRepair.taskPermission":
     "Zum Archivieren geprüfter Aufgaben brauchst du die Berechtigung, Aktivitäten zu archivieren.",

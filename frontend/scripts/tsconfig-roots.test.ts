@@ -213,4 +213,22 @@ describe("the frontend's tsconfig projects", () => {
       `no built tsconfig project lists these files, so nothing typechecks them:\n${untyped.join("\n")}`,
     ).toEqual([]);
   });
+
+  it("run no declaration emit", () => {
+    // Declaration emit spells out the inferred type of the en catalog, which
+    // outgrows what tsc will serialize (TS7056); no lane reads a frontend .d.ts.
+    expect(builtPaths).toContain("frontend/tsconfig.app.json");
+    expect(builtPaths).toContain("frontend/tsconfig.node.json");
+    const declaring = [...built.entries()]
+      .filter(
+        ([, project]) =>
+          project.options.composite === true ||
+          project.options.declaration === true,
+      )
+      .map(([path]) => relative(repo, path));
+    expect(
+      declaring,
+      `these projects turn on declaration emit (composite or declaration), so a large enough en catalog fails tsc with TS7056 for no fault of the change; set "incremental": true instead and drop both:\n${declaring.join("\n")}`,
+    ).toEqual([]);
+  });
 });
