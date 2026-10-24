@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -64,7 +65,7 @@ func RefreshDisplayNameTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 func initialsTargetTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, previous, first, last string,
 ) (string, bool, error) {
-	if first != "" || last != "" || len(previous) > maxInitialsDisplayLen {
+	if first != "" || last != "" || utf8.RuneCountInString(previous) > maxInitialsDisplayLen {
 		return "", false, nil
 	}
 	rule := displayRule{unsplitMaxLen: maxInitialsDisplayLen}

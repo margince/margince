@@ -153,8 +153,8 @@ func parseDisplayName(displayName string) (ParsedName, bool) {
 
 // readableLocalPart returns the local part of an address and, when it reads as
 // name-shaped words, those words. ok is false when the local part is empty, a
-// role mailbox, or has a field that did not read as a word; a dropped field
-// would change WHICH human this is ("josé.maria.garcia" minus a decomposed
+// role mailbox, or has a field that did not read as a word. A dropped field
+// would change which contact this is ("josé.maria.garcia" minus a decomposed
 // "josé" is a different contact), so the whole reading is refused.
 func readableLocalPart(email string) (local string, tokens []string, ok bool) {
 	local, _, found := strings.Cut(strings.TrimSpace(email), "@")
@@ -174,10 +174,10 @@ func readableLocalPart(email string) (local string, tokens []string, ok bool) {
 	return local, tokens, true
 }
 
-// parseLocalPart reads the mailbox identifier — the last evidence there is.
+// parseLocalPart reads the mailbox identifier, the last evidence there is.
 //
-// It is far more willing to abstain than the display-name path: a local part is
-// not a claim about a name, it is an address that sometimes contains one.
+// It abstains far more often than the display-name path. A local part is not a
+// claim about a name, it is an address that sometimes contains one.
 func parseLocalPart(email string) ParsedName {
 	local, tokens, ok := readableLocalPart(email)
 	if !ok {
@@ -200,54 +200,6 @@ func parseLocalPart(email string) ParsedName {
 		parsed.First, parsed.Last, parsed.Confident = first, last, true
 	}
 	return parsed
-}
-
-// addressGuessName is the display an address alone used to be read as: its
-// tokens title-cased and joined by a space. The repair compares a stored name
-// against it to tell capture's guess from a name somebody typed.
-func addressGuessName(tokens []string) string {
-	cased := make([]string, 0, len(tokens))
-	for _, token := range tokens {
-		cased = append(cased, titleCaseToken(token))
-	}
-	return strings.Join(cased, " ")
-}
-
-// readsAsInitials reports whether every token has at most two letters. A
-// two-letter local part is almost always initials, and abstaining costs a null
-// column while guessing writes a wrong name that every greeting repeats.
-func readsAsInitials(tokens []string) bool {
-	for _, token := range tokens {
-		letters := 0
-		for _, r := range token {
-			if unicode.IsLetter(r) {
-				letters++
-			}
-		}
-		if letters > initialsMaxLetters {
-			return false
-		}
-	}
-	return len(tokens) > 0
-}
-
-const initialsMaxLetters = 2
-
-// maxInitialsDisplayLen bounds the displays the repair reads: three tokens of
-// initials plus the separators between them.
-const maxInitialsDisplayLen = maxNameTokens*initialsMaxLetters + maxNameTokens - 1
-
-// initialsDisplayReplacement answers the local part that should replace a
-// stored full name, only when that name is exactly what the address alone
-// produced before initials were refused. A header name that happens to read
-// "Dv" never equals the guess for a different address, and a typed name never
-// equals it at all.
-func initialsDisplayReplacement(fullName, email string) (string, bool) {
-	local, tokens, ok := readableLocalPart(email)
-	if !ok || !readsAsInitials(tokens) || fullName != addressGuessName(tokens) {
-		return "", false
-	}
-	return local, true
 }
 
 // localPartTokens splits a local part into name-shaped words: separators become

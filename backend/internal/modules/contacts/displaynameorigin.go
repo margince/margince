@@ -132,7 +132,8 @@ func displayNameIsCapturesGuessTx(ctx context.Context, tx pgx.Tx, contactID ids.
 // needPair is the repair's rule that it never writes one half.
 // keepWhenPairShown keeps a display that already holds both halves.
 // unsplitMaxLen, when above zero, offers only contacts with no split columns and
-// a display no longer than that, and after is the keyset the page resumes from.
+// a display no longer than that.
+// after is the keyset the page resumes from.
 type displayRule struct {
 	needPair, keepWhenPairShown bool
 	unsplitMaxLen               int
