@@ -12,15 +12,14 @@ import { filesUnder, parseSource } from "../../scripts/lib/source-tree";
 //
 // `calendarDaysBetween` takes the zone as a required third argument, so tsc
 // already fails a caller that forgets it. This gate covers the two ways to
-// count in UTC that tsc cannot see: passing the literal "UTC", and flooring a
-// millisecond span to days by hand (`Math.floor(x / 86_400_000)`) outside the
-// one module that owns the rule. Written like zone-by-purpose.test.ts: every
-// file is read through the parser, so a screen added tomorrow is gated the day
-// it lands.
+// count in UTC that tsc cannot see. One is passing the literal "UTC". The other
+// is flooring a millisecond span to days by hand (`Math.floor(x / 86_400_000)`)
+// outside the one module that owns the rule. Like zone-by-purpose.test.ts, it reads every
+// file through the parser, so a new screen is gated the day it lands.
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const owner = join(srcRoot, "format", "format.dates.ts");
-// Files whose day floor counts ELAPSED TIME on purpose, not a calendar. Each
+// Files whose day floor counts elapsed time, not a calendar. Each
 // entry must still contain a floor, so one cannot outlive its reason.
 const elapsedSpans: Record<string, string> = {
   "format/format.ts":

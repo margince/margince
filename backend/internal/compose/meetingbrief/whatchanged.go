@@ -164,3 +164,24 @@ func (said briefCopy) changedClaimLine(claim ClaimIn) string {
 		return fmt.Sprintf(said.Say(changedWords.Said), claim.ContactName, claim.Body)
 	}
 }
+
+// readSinceLastSpoke reads when the caller last spoke with this room and what
+// moved on the linked deal since. Both are nil without a baseline.
+func (s *Service) readSinceLastSpoke(
+	ctx context.Context, tx pgx.Tx, room meeting, scope *ids.ProjectID, language string,
+) (*time.Time, []DealMoveIn, bool, error) {
+	spoke, ever, err := s.readLastSpoke(ctx, tx, room, scope, s.now().UTC())
+	if err != nil {
+		return nil, nil, false, err
+	}
+	if !ever {
+		// No baseline is first contact, and nothing has moved "since" a
+		// conversation that never happened.
+		return nil, nil, false, nil
+	}
+	if room.Deal == nil {
+		return &spoke, nil, false, nil
+	}
+	moves, hidden, err := briefCopyFor(language).readDealMoves(ctx, tx, room.Deal.ID, spoke, s.now().UTC())
+	return &spoke, moves, hidden, err
+}

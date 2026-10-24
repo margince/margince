@@ -11,11 +11,11 @@
 // counted CALENDAR days and the other counted elapsed hours divided by 24, so
 // the two drifted apart for most of every day and agreed only around midnight.
 //
-// The calendar count is the correct one, and not as a matter of taste. The
-// deal card is cached on the day in the installation zone: counting elapsed hours would flip
-// "today" to "yesterday" twenty-four hours after the contact — mid-afternoon,
-// say — while the cache key waits for midnight, and the card would spend the
-// gap saying something the records do not support with nothing to notice.
+// The calendar count is the correct one. The deal card is cached on the day
+// in the installation zone. Counting elapsed hours would flip "today" to
+// "yesterday" twenty-four hours after the contact, mid-afternoon, while the
+// cache key waits for midnight. The card would spend the gap saying something
+// the records do not support.
 // Counting the same way the key does means the wording can only change when
 // the key does.
 //
@@ -41,7 +41,7 @@ func CalendarDay(t time.Time, loc *time.Location) time.Time {
 	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
 }
 
-// Days counts whole days between two moments BY THE CALENDAR of loc, the zone
+// Days counts whole days between two moments by the calendar of loc, the zone
 // the sentence is drawn in.
 //
 // Not by elapsed duration: 23:00 Monday to 01:00 Tuesday is one day here and

@@ -49,10 +49,11 @@ func HealthReasons(h DealHealth, now time.Time, loc *time.Location, language str
 //
 // Not by elapsed hours, and the difference is one a reader can catch the
 // product in. The deal status card is cached on a fingerprint that includes the
-// day in the installation zone, so a sentence whose words change on the elapsed clock changes while
-// the key stands still: last activity at 14:00 on the 20th, a card written at
-// 09:00 on the 22nd says "1 days ago", and at 14:00 that afternoon the sentence
-// is wrong and stays wrong until midnight because nothing has invalidated it.
+// day in the installation zone. A sentence whose words change on the elapsed
+// clock changes while the key stands still. Take last activity at 14:00 on the
+// 20th and a card written at 09:00 on the 22nd that says "1 days ago". At 14:00
+// that afternoon the sentence is wrong. It stays wrong until midnight because
+// nothing has invalidated it.
 //
 // Counting the same way the key does means the wording can only change when the
 // key does. It is also how a reader looking at two dates counts: 23:00 Monday

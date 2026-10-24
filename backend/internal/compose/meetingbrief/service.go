@@ -342,20 +342,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		if err != nil {
 			return err
 		}
-		spoke, ever, err := s.readLastSpoke(ctx, tx, loaded, scope, s.now().UTC())
-		if err != nil {
-			return err
-		}
-		if !ever {
-			// No baseline is FIRST CONTACT, and nothing has moved "since" a
-			// conversation that never happened.
-			return nil
-		}
-		lastSpoke = &spoke
-		if loaded.Deal == nil {
-			return nil
-		}
-		moves, roomHidden, err = briefCopyFor(language).readDealMoves(ctx, tx, loaded.Deal.ID, spoke, s.now().UTC())
+		lastSpoke, moves, roomHidden, err = s.readSinceLastSpoke(ctx, tx, loaded, scope, language)
 		return err
 	})
 	if err != nil {

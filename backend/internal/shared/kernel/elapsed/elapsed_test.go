@@ -74,7 +74,7 @@ func TestDaysCountsInTheZoneTheSentenceIsDrawnIn(t *testing.T) {
 	}
 }
 
-// A zone-carrying timestamp counts the same as the instant it names: reading
+// A zone-carrying timestamp counts the same as the instant it names. Reading
 // the server's local wall-clock fields would make the answer depend on where
 // the process runs.
 func TestDaysIgnoresTheZoneTheMomentsAreCarriedIn(t *testing.T) {

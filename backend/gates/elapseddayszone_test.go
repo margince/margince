@@ -8,14 +8,14 @@ package gates
 // A day count is reckoned in the zone the sentence is drawn in.
 //
 // elapsed.Days takes the zone as its third argument so a caller cannot forget
-// it. This gate fails the two ways a caller can still count in UTC: passing
-// time.UTC, time.Local or nil as the zone, and flooring to a UTC day by hand
-// with Truncate(24 * time.Hour) in a file that counts days.
+// it. This gate fails the two ways a caller can still count in UTC. One is
+// passing time.UTC, time.Local or nil as the zone. The other is flooring to a
+// UTC day by hand with Truncate(24 * time.Hour) in a file that counts days.
 //
 // The subject is derived from the tree: every non-test Go file under
 // internal/ that imports shared/kernel/elapsed. The UTC day floors that stay
-// (rate effective dates, rollups, automation clocks) are dates of rates and
-// rollups, not reader sentences, and none of those files imports elapsed.
+// are dates of rates, rollups and automation clocks. They are not reader
+// sentences, and none of those files imports elapsed.
 
 import (
 	"go/ast"

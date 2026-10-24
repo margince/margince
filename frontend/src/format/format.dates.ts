@@ -221,19 +221,19 @@ export function formatDateTime(
 /**
  * calendarDaysBetween counts whole days between two instants by the calendar of
  * a named zone. It is the frontend spelling of the backend's
- * shared/kernel/elapsed.Days, and the zone is required so a caller cannot count
- * in a calendar other than the one the date beside the count is drawn in.
+ * shared/kernel/elapsed.Days. The zone is required so a caller cannot count in
+ * another calendar than the one its date is drawn in.
  *
  * Not by elapsed milliseconds: calendar days and a duration divided by 24 hours
- * agree only around midnight. The server counts calendar days, so a screen
+ * agree only around midnight. The server counts calendar days. A screen
  * counting the other way would print two numbers for one silence.
  *
- * Each instant is named with `calendarDay`, and the two names are read as UTC
- * midnights, which are a whole number of days apart even across a DST change.
+ * Each instant is named with `calendarDay`. The two names are read as UTC
+ * midnights, a whole number of days apart even across a DST change.
  *
- * Held by: format.calendar-days.test.ts, which pins the boundary cases
- * (23:00 to 01:00 is one day, not zero, and the zone moves the answer), and
- * calendar-days-zone.test.ts, which fails a caller that names no zone.
+ * Held by two tests. format.calendar-days.test.ts pins the boundary cases:
+ * 23:00 to 01:00 is one day, not zero, and the zone moves the answer.
+ * calendar-days-zone.test.ts fails a caller that names no zone.
  */
 export function calendarDaysBetween(
   from: Date,

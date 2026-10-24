@@ -246,7 +246,7 @@ func TestHealthIsAssembledAfterTheStateStripItReads(t *testing.T) {
 
 // The last-met count follows the zone the dates are drawn in. East of UTC a
 // meeting at 15:00 local the day before, read at 01:00 local, is one day ago
-// while UTC still says zero; west of UTC the same silent UTC midnight makes a
+// while UTC still says zero. West of UTC the same UTC midnight makes a
 // same-evening meeting read "1 day ago" instead of today.
 func TestLastMetCountsDaysInTheInstallationZone(t *testing.T) {
 	bangkok := time.FixedZone("UTC+7", 7*3600)

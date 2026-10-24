@@ -300,10 +300,11 @@ func threadIn(th crmcontracts.DealRoomThread) ThreadIn {
 // assembled input, the prompt version, the reader, and the DAY.
 //
 // The day is in the key because the card says "the last contact was 4 days
-// ago" — prose rendered from the clock at write time, over facts that have not
-// moved. It is the day in the installation zone, the zone those day counts are
-// reckoned in, so the key turns over at the reader's midnight and not UTC's. Without it a card written on Monday still says "4 days ago" on
-// Friday, and the fingerprint has no reason to notice. A day's granularity is
+// ago". That prose is rendered from the clock at write time, over facts that
+// have not moved. It is the day in the installation zone, the zone those day counts are
+// reckoned in. The key turns over at the reader's midnight and not UTC's.
+// Without it a card written on Monday still says "4 days ago" on Friday, and
+// the fingerprint has no reason to notice. A day's granularity is
 // exactly what those sentences resolve to; anything finer would rewrite a
 // quiet deal for nothing.
 //

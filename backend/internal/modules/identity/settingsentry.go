@@ -290,9 +290,8 @@ func TimezoneAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.ApplyTx(ctx, tx, Timezone)
 }
 
-// ZoneAppliedTx is TimezoneAppliedTx resolved to a location: the one place a
-// compose read turns the installation's zone setting into the zone a calendar
-// day or "N days ago" is counted in.
+// ZoneAppliedTx is TimezoneAppliedTx resolved to a location. A compose read
+// uses it to get the zone a calendar day or "N days ago" is counted in.
 func ZoneAppliedTx(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
 	name, err := TimezoneAppliedTx(ctx, tx)
 	if err != nil {

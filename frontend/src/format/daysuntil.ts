@@ -14,12 +14,11 @@ import { calendarDaysBetween, displayDay } from "./format";
  * Whole calendar days from `now` until a date a record carries, counted in the
  * zone that same date is DRAWN in.
  *
- * A count in UTC is the wrong answer beside a rendered date. A reader thirteen hours
- * ahead of UTC, opening a project on the morning of the 18th, read a target end
- * of the 20th as three mornings off rather than two: UTC had not turned the
- * page yet, so the count was measured from a day the reader was no longer in
- * while the date beside it was drawn in the day they were. Both halves name
- * their day the same way here, so they cannot disagree.
+ * A count in UTC is wrong beside a rendered date. A reader thirteen hours
+ * ahead of UTC, opening a project on the morning of the 18th, read a target
+ * end of the 20th as three mornings off. The right answer is two. UTC had not turned the
+ * page yet. The count started from a day the reader was no longer in.
+ * Both halves name their day the same way here, so they cannot disagree.
  *
  * It is `calendarDaysBetween` in the record zone, with the date rendered
  * through `displayDay` first.

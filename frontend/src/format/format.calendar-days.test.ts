@@ -58,8 +58,8 @@ describe("calendarDaysBetween", () => {
 });
 
 describe("calendarDaysBetween in a reader zone", () => {
-  // Fixed instants, no real clock: the same pair is a different number of
-  // calendar days depending on the zone the date beside it is drawn in.
+  // Fixed instants, no real clock. The same pair is a different number of
+  // calendar days in each zone.
   it("counts 15:00 yesterday to 01:00 as one day in UTC+7 and zero in UTC", () => {
     const met = new Date("2026-10-06T08:00:00Z");
     const now = new Date("2026-10-06T18:00:00Z");
