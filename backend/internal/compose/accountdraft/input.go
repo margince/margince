@@ -288,6 +288,26 @@ func projectFact(project crmcontracts.Company360Project, view crmcontracts.Compa
 // because a project's target end has no time of day.
 const isoDate = "2006-01-02"
 
+func recipientOf(contact crmcontracts.Company360Contact) RecipientIn {
+	out := RecipientIn{
+		ID:        contact.ContactId.String(),
+		Name:      contact.FullName,
+		FirstName: firstName(contact.FullName),
+		LastName:  lastName(contact.FullName),
+	}
+	if contact.Title != nil {
+		out.Title = *contact.Title
+	}
+	if contact.PrimaryEmail != nil {
+		out.Email = *contact.PrimaryEmail
+	}
+	out.Bucket = string(contact.Strength.Bucket)
+	if contact.Strength.LastInteraction != nil {
+		out.LastInteraction = contact.Strength.LastInteraction.UTC().Format(rfc3339)
+	}
+	return out
+}
+
 const rfc3339 = "2006-01-02T15:04:05Z"
 
 // foldCommitment takes the soonest open task. `next_steps.data` arrives
@@ -379,6 +399,27 @@ func foldRecent(view crmcontracts.Company360) []ActIn {
 		out = append(out, item)
 	}
 	return out
+}
+
+// findContact resolves the named recipient WITHIN the caller's own 360, which
+// is what makes the lookup a permission check as well as a lookup: a contact
+// that caller cannot see is not in the view, and the refusal is the same
+// 422 as a contact id that names nobody. Deliberately not a separate contacts
+// read — that would find contacts the 360 deliberately withheld.
+func findContact(
+	view crmcontracts.Company360, contactID string,
+) (crmcontracts.Company360Contact, error) {
+	if view.Contacts == nil {
+		return crmcontracts.Company360Contact{}, fieldError("contact_id",
+			"the account's contacts are not readable by you, so there is nobody here to write to")
+	}
+	for _, contact := range view.Contacts.Data {
+		if contact.ContactId.String() == contactID {
+			return contact, nil
+		}
+	}
+	return crmcontracts.Company360Contact{}, fieldError("contact_id",
+		"that contact is not a contact you can see on this account")
 }
 
 // findDeal resolves the named deal the same way. The caller checks for an
