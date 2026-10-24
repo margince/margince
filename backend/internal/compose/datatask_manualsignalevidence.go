@@ -15,8 +15,8 @@ import (
 )
 
 // manualSignalNoEvidenceDataTask replaces the sentence the lead form used to
-// invent for a signal saved without evidence with the marker the screen shows
-// as "No evidence recorded".
+// invent for a signal saved without evidence. The new marker is the one the
+// screen shows as "No evidence recorded".
 func manualSignalNoEvidenceDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792809942_manual_signal_no_evidence", Version: 1,

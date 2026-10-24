@@ -33,7 +33,7 @@ type SignalCatalogFactor = components["schemas"]["LeadSignalCatalogFactor"];
 
 /**
  * The factors a human may supply and the bands each accepts, as the server
- * validates them. Read from `/lead-signal-catalog`, so the form offers exactly
+ * validates them. Read from `/lead-signal-catalog`, so the form offers
  * what the store will take and the band list is spelled in one place.
  */
 export function useLeadSignalCatalog() {
