@@ -40859,6 +40859,17 @@ export interface components {
             page: components["schemas"]["PageInfo"];
             /** @description On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole. */
             types_with_more?: ("contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
+            /** @description Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor. */
+            near_matches?: components["schemas"]["SearchNearMatch"][];
+        };
+        SearchNearMatch: {
+            /** @enum {string} */
+            type: "contact" | "company" | "deal" | "lead";
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** @description The company beside a lead's name, as a lead hit carries it. */
+            snippet?: string;
         };
         ContextEntityRef: {
             /**

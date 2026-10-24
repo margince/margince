@@ -137,6 +137,9 @@ the line **Works at** and the company's name. They come after the contacts whose
 own name matched. A result that came from a connected system is marked **From a
 connected system**.
 
+When nothing matches, the **Search results** page offers **Did you mean:** with up to five
+names spelt close to what you typed. It lists only names you may open.
+
 ### What is the command palette?
 The command palette is the Margince box that finds any screen, action, setting or record from one place. It opens over the page you are on, and its empty field reads **Search or ask Margince**.
 

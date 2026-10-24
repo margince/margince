@@ -11982,6 +11982,32 @@
           "coverage": {
             "type": "string"
           },
+          "near_matches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "record_type": {
+                  "type": "string"
+                },
+                "snippet": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "record_type",
+                "title"
+              ]
+            }
+          },
           "next_cursor": {
             "type": "string"
           },

@@ -39,6 +39,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate, routeHash, useRoute } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { companyTabRoute } from "../companies/companytab";
+import { NearMatches } from "./searchnearmatches";
 import { type OpenHit, useSearchPanels } from "./searchpanels";
 import "./search.css";
 
@@ -205,7 +206,10 @@ function GroupedResults({
     <QueryGate query={query} pendingLabel={t("search.pending")}>
       {(data) =>
         data.data.length === 0 ? (
-          <EmptyState>{t("search.empty", { q })}</EmptyState>
+          <>
+            <EmptyState>{t("search.empty", { q })}</EmptyState>
+            <NearMatches matches={data.near_matches} />
+          </>
         ) : (
           <SearchGroups
             results={data.data}
@@ -253,7 +257,10 @@ function NarrowedResults({
   return (
     <QueryStates query={query} pendingLabel={t("search.pending")}>
       {hits.length === 0 ? (
-        <EmptyState>{t("search.empty", { q })}</EmptyState>
+        <>
+          <EmptyState>{t("search.empty", { q })}</EmptyState>
+          <NearMatches matches={query.data?.pages[0]?.near_matches} />
+        </>
       ) : (
         <>
           <SearchGroups results={hits} onOpen={onOpen} />

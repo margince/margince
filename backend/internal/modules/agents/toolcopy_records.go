@@ -11,7 +11,8 @@ var searchRecordsCopy = toolCopy{
 	Purpose: "Find records by the words they carry, best match first: contacts, companies, deals, " +
 		"leads and projects, and products, offer templates or activity when you name them.",
 	Limits: "It needs words in q. It searches the timeline (message bodies, call notes, meetings) " +
-		"only when you name activity.",
+		"only when you name activity. When nothing matches, near_matches may list up to five " +
+		"records whose names are spelt close to q; they are suggestions, not matches.",
 	Instead: "Use list_records to list records without words or by a condition, read_record when " +
 		"you already hold the record's id, and run_report when the question is a count, a total " +
 		"or a breakdown rather than a set of records.",

@@ -36,6 +36,8 @@ type RecordSearchQuery struct {
 	Cursor        string
 	PerType       *int
 	WithEmployees bool
+	// NearMatches asks an empty first page for names spelt close to the words.
+	NearMatches bool
 }
 
 // RecordSearchPage is one page of the engine's answer, in its ranked order.
@@ -44,6 +46,15 @@ type RecordSearchPage struct {
 	Hits          []RecordSearchHit
 	NextCursor    string
 	TypesWithMore []string
+	// NearMatches is set when nothing matched: names spelt close to the words.
+	NearMatches []RecordNearMatch
+}
+
+// RecordNearMatch is a record whose name is spelt close to the words searched.
+type RecordNearMatch struct {
+	Ref     datasource.EntityRef
+	Title   string
+	Snippet string
 }
 
 // RecordSearchHit is one ranked ref and why it matched.
@@ -77,9 +88,25 @@ type SearchRecordsResult struct {
 	// Coverage is complete_exact only on a page holding every match, each read
 	// back. Not omitempty: an absent coverage would read as a complete one.
 	Coverage string `json:"coverage"`
+	// NearMatches is present only when no record matched: records whose names
+	// are spelt close to the words. They are not matches.
+	NearMatches []nearRecord `json:"near_matches,omitempty"`
 	// Notes say why coverage is lowered, never null on the wire.
 	Notes []QueryNote `json:"notes"`
 }
+
+// nearRecord is a suggested record: its type, id and name, read back before it
+// is offered.
+type nearRecord struct {
+	RecordType string   `json:"record_type"`
+	ID         ids.UUID `json:"id"`
+	Title      string   `json:"title"`
+	Snippet    string   `json:"snippet,omitempty"`
+}
+
+// CodeNearMatchesOnly is search_records' note for an answer with no match and
+// some close names.
+const CodeNearMatchesOnly = "near_matches_only"
 
 // CodeMoreRecordsMatch is search_records' note for a page with a remainder:
 // more records match than it holds.
@@ -228,7 +255,7 @@ func (a searchRecordsArgs) query(ctx context.Context) (RecordSearchQuery, error)
 	}
 	return RecordSearchQuery{
 		Text: a.Q, Types: named, Limit: limit, Cursor: a.Cursor,
-		PerType: a.PerType, WithEmployees: a.WithEmployees,
+		PerType: a.PerType, WithEmployees: a.WithEmployees, NearMatches: true,
 	}, nil
 }
 
@@ -269,6 +296,9 @@ func (t searchRecords) hydrate(ctx context.Context, page RecordSearchPage) (Sear
 		result.Coverage = CoveragePartialDegraded
 		result.Notes = append(result.Notes, *more)
 	}
+	if err := t.addNearMatches(ctx, &result, page); err != nil {
+		return SearchRecordsResult{}, err
+	}
 	if dropped {
 		result.Coverage = CoveragePartialDegraded
 		result.Notes = append(result.Notes, QueryNote{
@@ -294,4 +324,29 @@ func remainderNote(page RecordSearchPage) *QueryNote {
 	default:
 		return nil
 	}
+}
+
+// addNearMatches reads each suggested name back through the same second gate
+// the hits pass and drops one it cannot read, without a count. Coverage stays
+// complete_exact: the exact set is complete, and empty.
+func (t searchRecords) addNearMatches(ctx context.Context, result *SearchRecordsResult, page RecordSearchPage) error {
+	for _, near := range page.NearMatches {
+		_, readable, err := readServable(ctx, t.p, near.Ref)
+		if err != nil {
+			return err
+		}
+		if readable {
+			result.NearMatches = append(result.NearMatches, nearRecord{
+				RecordType: string(near.Ref.Type), ID: near.Ref.ID, Title: near.Title, Snippet: near.Snippet,
+			})
+		}
+	}
+	if len(result.NearMatches) > 0 {
+		result.Notes = append(result.Notes, QueryNote{
+			Code: CodeNearMatchesOnly,
+			Detail: "no record matches these words; near_matches lists records whose names are spelt " +
+				"close to them, and they are not matches",
+		})
+	}
+	return nil
 }

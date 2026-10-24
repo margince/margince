@@ -2224,6 +2224,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kontakte, Unternehmen, Deals, Projekte, Produkte, Aktivitäten, Leads durchsuchen…",
   "search.prompt": "Gib einen Suchbegriff ein.",
   "search.empty": "Keine Treffer für „{q}“.",
+  "search.nearMatches": "Meinten Sie:",
   "search.group.contact": "Kontakte",
   "search.group.company": "Unternehmen",
   "search.group.deal": "Deals",

@@ -71,6 +71,7 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 	}
 	in.PerType = params.PerType
 	in.WithEmployees = params.WithEmployees != nil && *params.WithEmployees
+	in.NearMatches = true
 
 	page, err := h.store.Search(r.Context(), in)
 	if err != nil {
@@ -96,6 +97,9 @@ func wirePage(page Page) crmcontracts.SearchResponse {
 			more = append(more, crmcontracts.SearchResponseTypesWithMore(entity))
 		}
 		response.TypesWithMore = &more
+	}
+	if len(page.NearMatches) > 0 {
+		response.NearMatches = wireNearMatches(page.NearMatches)
 	}
 	return response
 }
@@ -148,4 +152,20 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 		data = append(data, result)
 	}
 	return data
+}
+
+// wireNearMatches renders the suggested names, leaving the field to the caller
+// to omit when there are none.
+func wireNearMatches(matches []NearMatch) *[]crmcontracts.SearchNearMatch {
+	out := make([]crmcontracts.SearchNearMatch, 0, len(matches))
+	for _, m := range matches {
+		near := crmcontracts.SearchNearMatch{
+			Id: openapi_types.UUID(m.ID), Type: crmcontracts.SearchNearMatchType(m.Type), Title: m.Title,
+		}
+		if m.Snippet != "" {
+			near.Snippet = new(m.Snippet)
+		}
+		out = append(out, near)
+	}
+	return &out
 }

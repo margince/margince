@@ -18968,6 +18968,20 @@ components:
           items: {type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag]}
           description: >-
             On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
+        near_matches:
+          type: array
+          maxItems: 5
+          items: {$ref: '#/components/schemas/SearchNearMatch'}
+          description: >-
+            Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor.
+    SearchNearMatch:
+      type: object
+      required: [type, id, title]
+      properties:
+        type: {type: string, enum: [contact, company, deal, lead]}
+        id: {type: string, format: uuid}
+        title: {type: string}
+        snippet: {type: string, description: 'The company beside a lead''s name, as a lead hit carries it.'}
     ColdStartField:
       type: object
       description: |-

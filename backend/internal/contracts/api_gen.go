@@ -16846,6 +16846,30 @@ func (e SchedulingProfileProvider) Valid() bool {
 	}
 }
 
+// Defines values for SearchNearMatchType.
+const (
+	SearchNearMatchTypeCompany SearchNearMatchType = "company"
+	SearchNearMatchTypeContact SearchNearMatchType = "contact"
+	SearchNearMatchTypeDeal    SearchNearMatchType = "deal"
+	SearchNearMatchTypeLead    SearchNearMatchType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the SearchNearMatchType enum.
+func (e SearchNearMatchType) Valid() bool {
+	switch e {
+	case SearchNearMatchTypeCompany:
+		return true
+	case SearchNearMatchTypeContact:
+		return true
+	case SearchNearMatchTypeDeal:
+		return true
+	case SearchNearMatchTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SearchResponseTypesWithMore.
 const (
 	SearchResponseTypesWithMoreActivity      SearchResponseTypesWithMore = "activity"
@@ -49181,10 +49205,26 @@ type SearchHitEmployer struct {
 	CompanyName string             `json:"company_name"`
 }
 
+// SearchNearMatch defines model for SearchNearMatch.
+type SearchNearMatch struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Snippet The company beside a lead's name, as a lead hit carries it.
+	Snippet *string             `json:"snippet,omitempty"`
+	Title   string              `json:"title"`
+	Type    SearchNearMatchType `json:"type"`
+}
+
+// SearchNearMatchType defines model for SearchNearMatch.Type.
+type SearchNearMatchType string
+
 // SearchResponse defines model for SearchResponse.
 type SearchResponse struct {
 	Data []SearchResult `json:"data"`
-	Page PageInfo       `json:"page"`
+
+	// NearMatches Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor.
+	NearMatches *[]SearchNearMatch `json:"near_matches,omitempty"`
+	Page        PageInfo           `json:"page"`
 
 	// TypesWithMore On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
 	TypesWithMore *[]SearchResponseTypesWithMore `json:"types_with_more,omitempty"`
