@@ -19,6 +19,7 @@ import (
 //
 // The body is carried whole. It is the field a reader most often wants back,
 // and "the body changed" without the text is a history entry nobody can act on.
+// storekit masks the credentials in it on the way into audit_log.
 //
 // Reading content off this row is sound because every caller reaches it past
 // EnsureActivityWritable, whose first act is EnsureActivityContentVisibleLive:

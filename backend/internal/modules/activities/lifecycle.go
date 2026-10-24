@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -275,6 +276,7 @@ func admitActivityPatch(
 	if err := renormalizeTranscriptPatch(current, in); err != nil {
 		return crmcontracts.Activity{}, held, err
 	}
+	maskMailPatch(current, in)
 	if !held && in.Subject != nil && current.Kind == crmcontracts.ActivityKindTask {
 		subject, err := taskSubject(*in.Subject)
 		if err != nil {
@@ -339,6 +341,22 @@ func renormalizeTranscriptPatch(current crmcontracts.Activity, in *UpdateActivit
 	}
 	in.Body = &normalized
 	return nil
+}
+
+// maskMailPatch masks the credentials in an edit to a mail's subject and body,
+// as capture already does, so an edit cannot put one back on the row. A note, a
+// task and the other kinds a member writes keep the text as typed, because the
+// member chose to store it there. Their audit images are masked in storekit.
+func maskMailPatch(current crmcontracts.Activity, in *UpdateActivityInput) {
+	if current.Kind != crmcontracts.ActivityKindEmail {
+		return
+	}
+	for _, field := range []**string{&in.Subject, &in.Body} {
+		if *field != nil {
+			masked := credentialmask.MaskText(**field)
+			*field = &masked
+		}
+	}
 }
 
 // RefuseArchiveActivity answers every authority refusal ArchiveActivity would
