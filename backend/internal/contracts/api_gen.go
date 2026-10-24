@@ -17329,6 +17329,69 @@ func (e SetTransitionPolicyRequestMode) Valid() bool {
 	}
 }
 
+// Defines values for SetUpPartnerRequestPartnerRole.
+const (
+	SetUpPartnerRequestPartnerRoleConsulting SetUpPartnerRequestPartnerRole = "consulting"
+	SetUpPartnerRequestPartnerRoleHosting    SetUpPartnerRequestPartnerRole = "hosting"
+	SetUpPartnerRequestPartnerRoleStrategic  SetUpPartnerRequestPartnerRole = "strategic"
+)
+
+// Valid indicates whether the value is a known member of the SetUpPartnerRequestPartnerRole enum.
+func (e SetUpPartnerRequestPartnerRole) Valid() bool {
+	switch e {
+	case SetUpPartnerRequestPartnerRoleConsulting:
+		return true
+	case SetUpPartnerRequestPartnerRoleHosting:
+		return true
+	case SetUpPartnerRequestPartnerRoleStrategic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetUpPartnerRequestRelationshipStage.
+const (
+	SetUpPartnerRequestRelationshipStageActive           SetUpPartnerRequestRelationshipStage = "active"
+	SetUpPartnerRequestRelationshipStageActiveReferring  SetUpPartnerRequestRelationshipStage = "active_referring"
+	SetUpPartnerRequestRelationshipStageAgreementPending SetUpPartnerRequestRelationshipStage = "agreement_pending"
+	SetUpPartnerRequestRelationshipStageContacted        SetUpPartnerRequestRelationshipStage = "contacted"
+	SetUpPartnerRequestRelationshipStageDormant          SetUpPartnerRequestRelationshipStage = "dormant"
+	SetUpPartnerRequestRelationshipStageFitConfirmed     SetUpPartnerRequestRelationshipStage = "fit_confirmed"
+	SetUpPartnerRequestRelationshipStageIdentified       SetUpPartnerRequestRelationshipStage = "identified"
+	SetUpPartnerRequestRelationshipStageInConversation   SetUpPartnerRequestRelationshipStage = "in_conversation"
+	SetUpPartnerRequestRelationshipStageNoFit            SetUpPartnerRequestRelationshipStage = "no_fit"
+	SetUpPartnerRequestRelationshipStageResearch         SetUpPartnerRequestRelationshipStage = "research"
+)
+
+// Valid indicates whether the value is a known member of the SetUpPartnerRequestRelationshipStage enum.
+func (e SetUpPartnerRequestRelationshipStage) Valid() bool {
+	switch e {
+	case SetUpPartnerRequestRelationshipStageActive:
+		return true
+	case SetUpPartnerRequestRelationshipStageActiveReferring:
+		return true
+	case SetUpPartnerRequestRelationshipStageAgreementPending:
+		return true
+	case SetUpPartnerRequestRelationshipStageContacted:
+		return true
+	case SetUpPartnerRequestRelationshipStageDormant:
+		return true
+	case SetUpPartnerRequestRelationshipStageFitConfirmed:
+		return true
+	case SetUpPartnerRequestRelationshipStageIdentified:
+		return true
+	case SetUpPartnerRequestRelationshipStageInConversation:
+		return true
+	case SetUpPartnerRequestRelationshipStageNoFit:
+		return true
+	case SetUpPartnerRequestRelationshipStageResearch:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SettingOriginSource.
 const (
 	SettingOriginSourceConfigFile SettingOriginSource = "config_file"
@@ -50125,6 +50188,21 @@ type SetTransitionPolicyRequest struct {
 // SetTransitionPolicyRequestMode defines model for SetTransitionPolicyRequest.Mode.
 type SetTransitionPolicyRequestMode string
 
+// SetUpPartnerRequest What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
+// or `served_segments`: the tier is a human's choice, and the others are set after set-up.
+type SetUpPartnerRequest struct {
+	NextStep          *string                               `json:"next_step,omitempty"`
+	NextStepDueAt     *openapi_types.Date                   `json:"next_step_due_at,omitempty"`
+	PartnerRole       SetUpPartnerRequestPartnerRole        `json:"partner_role"`
+	RelationshipStage *SetUpPartnerRequestRelationshipStage `json:"relationship_stage,omitempty"`
+}
+
+// SetUpPartnerRequestPartnerRole defines model for SetUpPartnerRequest.PartnerRole.
+type SetUpPartnerRequestPartnerRole string
+
+// SetUpPartnerRequestRelationshipStage defines model for SetUpPartnerRequest.RelationshipStage.
+type SetUpPartnerRequestRelationshipStage string
+
 // SettingLock A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`.
 type SettingLock struct {
 	// Key The setting's key, such as `capture.auto_enrich_daily_cap`.
@@ -57806,6 +57884,22 @@ type UpsertPartnerParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// SetUpPartnerParams defines parameters for SetUpPartner.
+type SetUpPartnerParams struct {
+	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+	// It is held for 24h per caller and tool, not per path: the same key on two records of one
+	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
 // UpdateCompanyProfileFieldParams defines parameters for UpdateCompanyProfileField.
 type UpdateCompanyProfileFieldParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -63225,6 +63319,9 @@ type MergeCompanyJSONRequestBody MergeCompanyJSONBody
 
 // UpsertPartnerJSONRequestBody defines body for UpsertPartner for application/json ContentType.
 type UpsertPartnerJSONRequestBody = UpsertPartnerRequest
+
+// SetUpPartnerJSONRequestBody defines body for SetUpPartner for application/json ContentType.
+type SetUpPartnerJSONRequestBody = SetUpPartnerRequest
 
 // UpdateCompanyProfileFieldJSONRequestBody defines body for UpdateCompanyProfileField for application/json ContentType.
 type UpdateCompanyProfileFieldJSONRequestBody = UpdateCompanyProfileFieldRequest
@@ -75484,6 +75581,9 @@ type ServerInterface interface {
 	// Create/update the partner extension on a company (adds `partner` to its relationship types).
 	// (PUT /companies/{id}/partner)
 	UpsertPartner(w http.ResponseWriter, r *http.Request, id Id, params UpsertPartnerParams)
+	// Set up a partner program on a company that has none, with no margin tier.
+	// (POST /companies/{id}/partner/setup)
+	SetUpPartner(w http.ResponseWriter, r *http.Request, id Id, params SetUpPartnerParams)
 	// The company's confirmed profile fields (company_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it.
 	// (GET /companies/{id}/profile-fields)
 	ListCompanyProfileFields(w http.ResponseWriter, r *http.Request, id Id)
@@ -79030,6 +79130,12 @@ func (_ Unimplemented) GetPartner(w http.ResponseWriter, r *http.Request, id Id)
 // Create/update the partner extension on a company (adds `partner` to its relationship types).
 // (PUT /companies/{id}/partner)
 func (_ Unimplemented) UpsertPartner(w http.ResponseWriter, r *http.Request, id Id, params UpsertPartnerParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set up a partner program on a company that has none, with no margin tier.
+// (POST /companies/{id}/partner/setup)
+func (_ Unimplemented) SetUpPartner(w http.ResponseWriter, r *http.Request, id Id, params SetUpPartnerParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -94484,6 +94590,83 @@ func (siw *ServerInterfaceWrapper) UpsertPartner(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpsertPartner(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetUpPartner operation middleware
+func (siw *ServerInterfaceWrapper) SetUpPartner(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetUpPartnerParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey ToolIdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetUpPartner(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -121885,6 +122068,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/companies/{id}/partner", wrapper.UpsertPartner)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/companies/{id}/partner/setup", wrapper.SetUpPartner)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/profile-fields", wrapper.ListCompanyProfileFields)

@@ -208,6 +208,12 @@ func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (jso
 	return nil, errSeamReached
 }
 
+func (seamProbeLifecycle) Check(context.Context, ids.UUID) error { return errSeamReached }
+
+func (seamProbeLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) error {
+	return errSeamReached
+}
+
 func (seamProbeLifecycle) DemoteLead(context.Context, ids.UUID, string, *int64) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
@@ -330,7 +336,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, errSeamReached })
 	RegisterCommsTools(r, &recordingComms{}, seamProbeProvider{})
 	RegisterLifecycleTools(r, seamProbeProvider{},
-		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
+		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
 	RegisterEnrichTool(r, seamProbeProvider{}, seamProbeLifecycle{})
 	RegisterBulkTool(r, seamProbeLifecycle{})
 	RegisterQueryTool(r, seamProbeProvider{}, func(context.Context, json.RawMessage) (QueryAnswer, error) {

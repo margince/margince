@@ -417,6 +417,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.precisionMonth": "Nur Monat",
   "approval.preview.mergeTags":
     "Das Quell-Tag auf den gezeigten Datensätzen durch das verbleibende Tag ersetzen. Wenn beide Tags vorhanden sind, nur die doppelte Quell-Zuordnung entfernen. Das Quell-Tag archivieren und seinen Namen zur erneuten Verwendung freigeben; er bleibt nicht als Alias erhalten.",
+  "approval.preview.partnerTierUnset":
+    "Margenstufe: nicht gesetzt. Ein Mensch legt sie im Partner-Tab der Firma fest.",
   "approval.preview.mergeTagSource": "Zu entfernendes Tag",
   "approval.preview.mergeTagTarget": "Verbleibendes Tag",
   "approval.preview.mergeTagMove": "Datensatz, der das verbleibende Tag erhält",
@@ -3510,6 +3512,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.merge_records": "Datensätze zusammenführen",
   "approval.kind.merge_tags": "Tags zusammenführen",
   "approval.kind.archive_tag": "Tag stilllegen",
+  "approval.kind.set_up_partner": "Partnerprogramm einrichten",
   "approval.kind.change_record_parts": "Teile eines Datensatzes ändern",
   "approval.kind.update_record": "Datensatz aktualisieren",
   "approval.kind.create_record": "Datensatz erstellen",

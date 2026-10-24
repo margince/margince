@@ -211,7 +211,7 @@ func fullRegistry(t *testing.T) *Registry {
 		func(context.Context, ids.UUID) ([]IntroRoute, bool, error) { return nil, false, nil },
 		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, nil })
 	RegisterCommsTools(r, &recordingComms{}, &multiLinkProvider{})
-	RegisterLifecycleTools(r, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
+	RegisterLifecycleTools(r, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
 	RegisterEnrichTool(r, nil, inertLifecycle{})
 	RegisterBulkTool(r, inertLifecycle{})
 	RegisterQueryTool(r, nil, func(context.Context, json.RawMessage) (QueryAnswer, error) {
@@ -276,6 +276,10 @@ func (inertLifecycle) RelinkActivities(context.Context, []ids.UUID, string, ids.
 func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.RawMessage, error) {
 	return nil, nil
 }
+
+func (inertLifecycle) Check(context.Context, ids.UUID) error { return nil }
+
+func (inertLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) error { return nil }
 
 func (inertLifecycle) DemoteLead(context.Context, ids.UUID, string, *int64) (json.RawMessage, error) {
 	return nil, nil

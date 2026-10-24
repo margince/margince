@@ -113,6 +113,10 @@ type UpsertPartnerInput struct {
 	// non-nil non-empty = the written reason for a human fit score.
 	FitOverrideReason *string
 	IfVersion         *int64
+	// MustCreate makes the write a set-up: it refuses a company whose program
+	// is live and starts the program with no margin tier, including a revived
+	// archived row that kept one.
+	MustCreate bool
 }
 
 // PartnerFitOverrideReasonRequiredError rejects a human partner-fit score
@@ -181,13 +185,7 @@ func applyPartnerFitOverride(current partnerFitState, score *int16, reason *stri
 // partner if it is not one yet. Promotion is a company mutation as much as a
 // partner one, so both write grants are required.
 func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmcontracts.Partner, error) {
-	if err := auth.Require(ctx, "partner", principal.ActionUpdate); err != nil {
-		return crmcontracts.Partner{}, err
-	}
-	// Promotion adds `partner` to the company's relationship types — that is a
-	// company mutation, so the company's own write grant is required too; the
-	// partner grant alone must not become a side door onto companies.
-	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
+	if err := requirePartnerWriteGrants(ctx); err != nil {
 		return crmcontracts.Partner{}, err
 	}
 	if err := refuseUnclearablePartnerFields(in.Cleared); err != nil {
@@ -221,6 +219,12 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 			return err
 		}
 		in.Cleared = cleared
+		if in.MustCreate {
+			if err := checkPartnerSetUp(ctx, tx, in.CompanyID); err != nil {
+				return err
+			}
+			in.Cleared = withoutMarginTier(in.Cleared)
+		}
 		// Before the upsert and under the lock: the statement coalesces every
 		// absent field onto its current value, so what the request actually
 		// moved is only knowable by comparing against the standing row.

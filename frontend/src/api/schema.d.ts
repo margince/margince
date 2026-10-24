@@ -2946,6 +2946,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/{id}/partner/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set up a partner program on a company that has none, with no margin tier.
+         * @description The answer the `set_up_partner` agent tool gives, run by the same tool on both doors. It
+         *     creates the company's partner program with a role, a relationship stage and a next step,
+         *     and adds `partner` to its `relationship_types`. The certification status starts at
+         *     `applied`. The margin tier stays unset: it is the rate the commission ledger multiplies a
+         *     won deal by, so a human sets it on the company's Partner tab through `PUT /companies/{id}/partner`.
+         *     A body naming `margin_tier` is refused.
+         *
+         *     Confirm-first for an agent: the call stages one approval and answers 403 `approval_required`
+         *     naming it. A human who may update both partners and companies approves it. Repeat the same
+         *     call with that id as `approval_id`, or as the `X-Approval-Token` header. A human's own call
+         *     is its approval.
+         *
+         *     A company that already has a live partner program answers 409 `partner_row_exists`.
+         *     A program ends only when the company is archived.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's result. An
+         *     `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["setUpPartner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}/enrich": {
         parameters: {
             query?: never;
@@ -42674,6 +42713,19 @@ export interface components {
             next_step_due_at?: string | null;
             served_segments?: string[] | null;
         };
+        /**
+         * @description What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
+         *     or `served_segments`: the tier is a human's choice, and the others are set after set-up.
+         */
+        SetUpPartnerRequest: {
+            /** @enum {string} */
+            partner_role: "hosting" | "consulting" | "strategic";
+            /** @enum {string} */
+            relationship_stage?: "research" | "identified" | "contacted" | "in_conversation" | "fit_confirmed" | "agreement_pending" | "active" | "active_referring" | "dormant" | "no_fit";
+            next_step?: string;
+            /** Format: date */
+            next_step_due_at?: string;
+        };
         ConsentPurpose: {
             /** Format: uuid */
             id: string;
@@ -54027,6 +54079,54 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setUpPartner: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+                 *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+                 *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+                 */
+                "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
+                /**
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetUpPartnerRequest"];
+            };
+        };
+        responses: {
+            /** @description The partner program as set up, with no margin tier. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Partner"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

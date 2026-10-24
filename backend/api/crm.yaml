@@ -4472,6 +4472,53 @@ paths:
               schema: { $ref: '#/components/schemas/Partner' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /companies/{id}/partner/setup:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Companies, Partners]
+      operationId: setUpPartner
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Set up a partner program on a company that has none, with no margin tier.
+      description: |
+        The answer the `set_up_partner` agent tool gives, run by the same tool on both doors. It
+        creates the company's partner program with a role, a relationship stage and a next step,
+        and adds `partner` to its `relationship_types`. The certification status starts at
+        `applied`. The margin tier stays unset: it is the rate the commission ledger multiplies a
+        won deal by, so a human sets it on the company's Partner tab through `PUT /companies/{id}/partner`.
+        A body naming `margin_tier` is refused.
+
+        Confirm-first for an agent: the call stages one approval and answers 403 `approval_required`
+        naming it. A human who may update both partners and companies approves it. Repeat the same
+        call with that id as `approval_id`, or as the `X-Approval-Token` header. A human's own call
+        is its approval.
+
+        A company that already has a live partner program answers 409 `partner_row_exists`.
+        A program ends only when the company is archived.
+
+        A retry with the same `idempotency_key` answers the first call's result. An
+        `Idempotency-Key` header is taken as that key.
+      x-mcp-tool: { verb: set_up_partner, record_type: company, tier: confirmation_required, scope: write, served_by: registry }
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetUpPartnerRequest' }
+      responses:
+        '200':
+          description: The partner program as set up, with no margin tier.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Partner' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /companies/{id}/enrich:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -58166,6 +58213,19 @@ components:
         next_step: { type: [string, 'null'] }
         next_step_due_at: { type: [string, 'null'], format: date }
         served_segments: { type: [array, 'null'], items: { type: string } }
+
+    SetUpPartnerRequest:
+      type: object
+      description: |
+        What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
+        or `served_segments`: the tier is a human's choice, and the others are set after set-up.
+      required: [partner_role]
+      additionalProperties: false
+      properties:
+        partner_role: { type: string, enum: [hosting, consulting, strategic] }
+        relationship_stage: { type: string, enum: [research, identified, contacted, in_conversation, fit_confirmed, agreement_pending, active, active_referring, dormant, no_fit] }
+        next_step: { type: string }
+        next_step_due_at: { type: string, format: date }
 
     # ---- Per-purpose consent (ADR-0011) ----
     ConsentPurpose:

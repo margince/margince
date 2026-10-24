@@ -416,6 +416,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.precisionMonth": "Chỉ tháng",
   "approval.preview.mergeTags":
     "Thay nhãn nguồn trên các bản ghi được hiển thị bằng nhãn giữ lại. Nếu đã có cả hai nhãn, chỉ xóa gán nhãn nguồn trùng lặp. Lưu trữ nhãn nguồn và cho phép dùng lại tên; tên không được giữ làm bí danh.",
+  "approval.preview.partnerTierUnset":
+    "Bậc biên lợi nhuận: chưa đặt. Một người đặt bậc này ở tab Đối tác của công ty.",
   "approval.preview.mergeTagSource": "Nhãn sẽ xóa",
   "approval.preview.mergeTagTarget": "Nhãn giữ lại",
   "approval.preview.mergeTagMove": "Bản ghi sẽ nhận nhãn giữ lại",
@@ -3416,6 +3418,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.merge_records": "Gộp hồ sơ",
   "approval.kind.merge_tags": "Gộp thẻ",
   "approval.kind.archive_tag": "Ngừng dùng thẻ",
+  "approval.kind.set_up_partner": "Thiết lập chương trình đối tác",
   "approval.kind.change_record_parts": "Thay đổi các phần của hồ sơ",
   "approval.kind.update_record": "Cập nhật hồ sơ",
   "approval.kind.create_record": "Tạo hồ sơ",

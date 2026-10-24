@@ -723,6 +723,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/companies/{id}/growth-fit":                                    {Op: "refreshCompanyGrowthFit", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/companies/{id}/intro-request-draft":                           {Op: "draftIntroRequest", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/companies/{id}/merge":                                         {Op: "mergeCompany", Access: "tool", Tool: "merge_records", RecordType: "company", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/companies/{id}/partner/setup":                                 {Op: "setUpPartner", Access: "tool", Tool: "set_up_partner", RecordType: "company", Tier: "confirmation_required", Scope: "write", ServedBy: "registry"},
 	"POST /v1/companies/{id}/profile-fields/{field}/confirm":                {Op: "confirmCompanyProfileField", Access: "tool", Tool: "change_record_parts", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/companies/{id}/reject":                                        {Op: "rejectCompany", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/companies/{id}/scan":                                          {Op: "ensureCompanyScan", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

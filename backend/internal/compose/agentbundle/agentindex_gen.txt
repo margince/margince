@@ -40,6 +40,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /companies/{id}/coverage` | getCompanyCoverage | How well this account is covered — who answers, who is missing from the buying team, and the warmest way in. | Read records | at once |
 | `GET /companies/{id}/contacts` | listCompanyContacts | The account's contacts, ranked by who is worth writing to next, filtered and paged over the WHOLE account. | Read records | at once |
 | `GET /companies/{id}/partner` | getPartner | Read the partner extension on a company (404 if the company is not a partner). | Read records | at once |
+| `POST /companies/{id}/partner/setup` | setUpPartner | Set up a partner program on a company that has none, with no margin tier. | Change records | waits for approval |
 | `POST /companies/{id}/enrich` | scrapeCompany | Enrich this company from its website (evidence-or-omit) — a staged proposal. | Buy contact data | waits for approval |
 | `POST /companies/{id}/deep-read` | deepReadCompany | Read the company's WHOLE site in the background — a crawl that ends in staged proposals. | Buy contact data | waits for approval |
 | `POST /companies/{id}/technical-enrich` | technicalEnrichCompany | Read what the company publicly runs — mail system, website stack, operated services, hosting. | Buy contact data | waits for approval |

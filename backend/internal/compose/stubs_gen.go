@@ -1127,6 +1127,10 @@ func (stubs) UpsertPartner(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "UpsertPartner")
 }
 
+func (stubs) SetUpPartner(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SetUpPartnerParams) {
+	httperr.NotImplemented(w, r, "SetUpPartner")
+}
+
 func (stubs) ListCompanyProfileFields(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListCompanyProfileFields")
 }
