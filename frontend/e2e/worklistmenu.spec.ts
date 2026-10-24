@@ -9,20 +9,59 @@ import { mockApi } from "./seed";
  * disposition write is recorded from the request, not answered.
  */
 
+// A row as GET /v1/worklist returns it for an inbound mail to the reader that
+// asks for something and has no reply yet.
 const WAITING_ROW = {
-  id: "waiting-sonya",
-  source: "customer_waiting",
-  category: "customer_waiting",
+  above_next: { comparator: "waiting_days" },
+  actions: ["open", "reply"],
   band: "now",
-  level: 1,
-  urgent: true,
+  because: [
+    { kind: "buyer_wrote_last" },
+    { kind: "waiting_days", value: { days: 0, kind: "days" } },
+  ],
+  brief_section: "respond_now",
+  category: "customer_waiting",
+  changed_since_brief: false,
   consequence: "buyer_waits",
-  title: "Meet next Tues?",
-  because: [{ kind: "buyer_wrote_last" }],
-  subject: { type: "contact", id: "contact-sonya", label: "Sonya Beck" },
-  move: { action: "draft_reply", activity_id: "mail-sonya" },
-  actions: ["open"],
-  dispositions: ["handled", "snooze", "not_mine", "not_sales"],
+  contact: {
+    id: "01a16e34-d56e-74e8-b4e8-431c007701d5",
+    label: "Sonya Beck",
+    touch: {
+      last_inbound_at: "2026-10-24T20:39:57+07:00",
+      last_outbound_at: null,
+    },
+  },
+  destination: "today",
+  dispositions: ["handled", "snooze", "not_sales"],
+  email_summary: {
+    activity_id: "01a16e36-ef6a-7107-a907-b0a605203cfc",
+    attachment_count: 0,
+    direction: "inbound",
+    display_status: "workspace",
+    move: "needs_reply",
+    occurred_at: "2026-10-24T19:00:56+07:00",
+    preview: "Could you let me know by Friday?",
+    request_has_reminder: false,
+    subject: "Price list for the pumps",
+    version: 2,
+  },
+  id: "01a16e36-ef6a-7107-a907-b0a605203cfc",
+  level: 1,
+  move: {
+    action: "draft_reply",
+    activity_id: "01a16e36-ef6a-7107-a907-b0a605203cfc",
+  },
+  occurred_at: "2026-10-24T19:00:56+07:00",
+  owner: {
+    id: "01a16e1f-78d2-770f-825e-0c4a8cc62423",
+    kind: "user",
+    label: "Demo Admin",
+  },
+  primary_action: "open",
+  source: "customer_waiting",
+  subject: { id: "01a16e34-d56e-74e8-b4e8-431c007701d5", type: "contact" },
+  title: "Price list for the pumps",
+  urgent: true,
 };
 
 const WIDTHS = [
@@ -89,3 +128,61 @@ for (const { name, wide } of WIDTHS) {
     expect(writes[0]).toContain("snooze");
   });
 }
+
+// The lines' heights and whether every line is on screen, for the open panel.
+function openPanelShape(page: Page) {
+  return page
+    .locator(".overflow-menu-items:not([hidden])")
+    .evaluate((panel) => {
+      const box = panel.getBoundingClientRect();
+      return {
+        lines: [...panel.children].map((line) =>
+          Math.round(line.getBoundingClientRect().height),
+        ),
+        scrolls: panel.scrollHeight > panel.clientHeight + 1,
+        inside: box.top >= 0 && box.bottom <= innerHeight,
+      };
+    });
+}
+
+// Room below the trigger less than the panel needs, so the panel must open
+// upward rather than squeeze its lines into the room below.
+test("a row menu with little room below opens upward at full height", async ({
+  page,
+}) => {
+  await openQueue(page, "0");
+  const menu = page
+    .getByRole("dialog")
+    .getByRole("button", { name: /Weitere Aktionen für Price list/ });
+  const bottom = await menu.evaluate(
+    (trigger) => trigger.getBoundingClientRect().bottom,
+  );
+  await page.setViewportSize({ width: 1280, height: Math.round(bottom) + 170 });
+  await menu.click();
+  const shape = await openPanelShape(page);
+  expect(shape.lines).toHaveLength(7);
+  for (const line of shape.lines) {
+    expect(line).toBeGreaterThanOrEqual(30);
+  }
+  expect(shape).toMatchObject({ scrolls: false, inside: true });
+});
+
+// No room for the whole menu on either side: the lines keep their height and
+// the panel scrolls.
+test("a row menu taller than the window scrolls instead of squeezing", async ({
+  page,
+}) => {
+  await openQueue(page, "0");
+  const menu = page
+    .getByRole("dialog")
+    .getByRole("button", { name: /Weitere Aktionen für Price list/ });
+  await menu.evaluate((trigger) => trigger.scrollIntoView({ block: "center" }));
+  await page.setViewportSize({ width: 1280, height: 360 });
+  await menu.evaluate((trigger) => trigger.scrollIntoView({ block: "center" }));
+  await menu.click();
+  const shape = await openPanelShape(page);
+  for (const line of shape.lines) {
+    expect(line).toBeGreaterThanOrEqual(30);
+  }
+  expect(shape).toMatchObject({ scrolls: true, inside: true });
+});

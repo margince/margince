@@ -1840,6 +1840,11 @@ span.error-line {
  * The transition is NOT redeclared: .btn already tweens background-color and
  * color over --dur-state/--ease-out, which is the highlight travel a menu
  * wants, and a second declaration here would be a second answer to it. */
+/* A line keeps its height under the cap, so a capped panel scrolls; a shrunk
+   line squeezed its words into a strip too thin to read or press. */
+.overflow-menu-items > * {
+  flex-shrink: 0;
+}
 .overflow-menu-items .btn {
   width: 100%;
   justify-content: flex-start;
