@@ -79,7 +79,7 @@ func TestAReportPreviewedAsARoleReadsWhatThatRoleMay(t *testing.T) {
 		t.Fatalf("a rep may read the company totals, but the preview was refused: %v", err)
 	}
 	if len(asRep.Context.MemberIds) > 1 {
-		t.Errorf("a rep's preview lists %d people, want only the ones a rep may measure", len(asRep.Context.MemberIds))
+		t.Errorf("a rep's preview lists %d members, want only the owners a rep may measure", len(asRep.Context.MemberIds))
 	}
 	if _, err := preview(admin, "no-such-role"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("an unknown role answered %v, want not found", err)

@@ -32,10 +32,18 @@ import { SaveReportingDialog } from "./reporting.save";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 
+// Draws the empty-scope notice from the population flag of the answer beside it.
+type EmptyNotice = (holdsDeals: boolean | undefined) => ReactNode;
+
 export function ReportingOverview({
   scope,
   scopeControl,
-}: Readonly<{ scope: AnalyticsScope; scopeControl?: ReactNode }>) {
+  emptyNotice,
+}: Readonly<{
+  scope: AnalyticsScope;
+  scopeControl?: ReactNode;
+  emptyNotice?: EmptyNotice;
+}>) {
   const t = useT();
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
@@ -60,6 +68,7 @@ export function ReportingOverview({
                 <OverviewBody
                   scope={scope}
                   scopeControl={scopeControl}
+                  emptyNotice={emptyNotice}
                   catalog={catalog}
                   template={setup.definition.template}
                   pipelines={pipelines.data}
@@ -133,12 +142,14 @@ function useOverviewFilters(
 function OverviewBody({
   scope,
   scopeControl,
+  emptyNotice,
   catalog,
   template: defaultTemplate,
   pipelines,
 }: Readonly<{
   scope: AnalyticsScope;
   scopeControl?: ReactNode;
+  emptyNotice?: EmptyNotice;
   catalog: Catalog;
   template: "sales" | "sdr";
   pipelines: readonly components["schemas"]["Pipeline"][];
@@ -297,6 +308,7 @@ function OverviewBody({
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
           {(evaluation) => (
             <>
+              {emptyNotice?.(evaluation.context.scope_holds_deals)}
               <ReportingCharts
                 evaluation={evaluation}
                 afterSummary={<AnalyticsAttention scope={scope} />}

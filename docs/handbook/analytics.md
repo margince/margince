@@ -98,18 +98,19 @@ Where you have more than one to choose from, it is a picker labelled **Record
 scope**. Where you have only one, which is the usual case for a rep, it is a
 plain sentence instead: **"These numbers cover {scope}."**
 
-- A seat that sees everything is offered **Whole company**, every live team,
-  and its own records.
-- A seat whose scope is its teams is offered **My teams**, each of its own live
-  teams, and its own records. If it is in no team, it is offered only its own
-  records.
-- Everyone else is offered their own records.
+Every seat is offered **Whole company**, every live team and its own records.
+Totals for won, pipeline, forecast and meetings are the same for everyone. A
+seat whose scope is its teams also gets **My teams** first. Archived teams are
+never offered. A rep still opens on their own records.
 
-Archived teams are never offered.
+A total counts the whole scope you picked. An owner chart, ranking or list shows
+only the owners you may measure, and the answer says so. A scope with no deals
+says so instead of showing zeros, and points you to **Whole company** if you
+own none.
 
 The scope picker rules Performance, Forecast, Pipeline and Custom reports, so
 these sections count the same records. Delivery does not follow the picker: it
-covers every project you can read.
+covers every project you can read, and says so on the page.
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Grouping one by owner counts only

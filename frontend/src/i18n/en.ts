@@ -6300,6 +6300,14 @@ export const en = {
   "analytics.firstRunBody":
     "Analytics fills in as the deals you can see are recorded. Open Deals to create one or import your records.",
   "analytics.firstRunAction": "Open Deals",
+  "analytics.emptyOwnTitle": "You own no deals",
+  "analytics.emptyOwnBody":
+    "These numbers cover only your own deals, and you own none. Pick Whole company to see the company’s numbers.",
+  "analytics.emptyOwnAction": "Show Whole company",
+  "analytics.emptyTeamTitle": "{scope} holds no deals",
+  "analytics.emptyTeamBody": "No deal is owned by anyone in {scope}.",
+  "analytics.deliveryCoversAll":
+    "These numbers cover every project you can read.",
   "analytics.attention": "Needs your attention",
   "analytics.attentionNoOwner": "No owner",
   "analytics.attentionAtStake": "{amount} at stake",

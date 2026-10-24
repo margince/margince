@@ -6081,6 +6081,13 @@ export const vi = {
   "analytics.firstRunBody":
     "Phân tích sẽ có dữ liệu khi các deal bạn xem được được ghi nhận. Mở Deal để tạo mới hoặc nhập dữ liệu.",
   "analytics.firstRunAction": "Mở Deal",
+  "analytics.emptyOwnTitle": "Bạn chưa sở hữu deal nào",
+  "analytics.emptyOwnBody":
+    "Các số liệu này chỉ gồm deal của riêng bạn, và bạn chưa có deal nào. Chọn Whole company để xem số liệu của công ty.",
+  "analytics.emptyOwnAction": "Xem Whole company",
+  "analytics.emptyTeamTitle": "{scope} chưa có deal nào",
+  "analytics.emptyTeamBody": "Không ai trong {scope} sở hữu deal nào.",
+  "analytics.deliveryCoversAll": "Các số liệu này bao gồm mọi dự án bạn đọc được.",
   "analytics.attention": "Cần chú ý",
   "analytics.attentionNoOwner": "Chưa giao",
   "analytics.attentionAtStake": "{amount} bị ảnh hưởng",

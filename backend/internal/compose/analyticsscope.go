@@ -19,7 +19,7 @@ package compose
 //
 // Two decisions live here. Totals: every seat that reads deals may measure the
 // whole company or any live team, so the figures agree for all of them.
-// People: which owners a seat may measure one by one (resolveOwnerScope) still
+// Owners: which owners a seat may measure one by one (resolveOwnerScope) still
 // follows the principal's own row-scope tier, and every owner-keyed output
 // narrows to it through the owner gate. Assertions about a population (a
 // forecast call, a share) stay on the strict tier rules in ResolveAssertionScope.

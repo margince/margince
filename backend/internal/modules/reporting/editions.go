@@ -202,7 +202,7 @@ func (s *Service) editionContextWithheld(ctx context.Context, tx pgx.Tx, scope c
 	return false, nil
 }
 
-// rosterNarrowed answers whether a stored roster names people the reader may
+// rosterNarrowed answers whether a stored roster names owners the reader may
 // not measure one by one. A company or team edition is open to every seat for
 // totals, but its owner list and targets are not.
 func (s *Service) rosterNarrowed(ctx context.Context, tx pgx.Tx, roster []openapi_types.UUID) (bool, error) {

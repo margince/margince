@@ -6245,6 +6245,14 @@ export const de = {
   "analytics.firstRunBody":
     "Die Auswertungen füllen sich, sobald Deals erfasst werden, die du sehen kannst. Öffne Deals, um einen anzulegen oder deine Daten zu importieren.",
   "analytics.firstRunAction": "Deals öffnen",
+  "analytics.emptyOwnTitle": "Du hast keine Deals",
+  "analytics.emptyOwnBody":
+    "Diese Zahlen umfassen nur deine eigenen Deals, und du hast keine. Wähle Gesamtes Unternehmen, um die Zahlen des Unternehmens zu sehen.",
+  "analytics.emptyOwnAction": "Gesamtes Unternehmen zeigen",
+  "analytics.emptyTeamTitle": "{scope} hat keine Deals",
+  "analytics.emptyTeamBody": "Niemand in {scope} hat einen Deal.",
+  "analytics.deliveryCoversAll":
+    "Diese Zahlen umfassen jedes Projekt, das du lesen kannst.",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
   "analytics.attentionNoOwner": "Kein Verantwortlicher",
   "analytics.attentionAtStake": "{amount} betroffen",

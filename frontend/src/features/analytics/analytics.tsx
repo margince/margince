@@ -55,7 +55,7 @@ import "./analytics.css";
 // and then summed, so neither screen re-derives one from the raw total. All
 // three bodies render into ONE panel whose action band carries the explain
 // toggle: the segment changes what the panel holds, not what the page is.
-import { ReportCard, SECTION_REPORTS } from "./analytics.reports";
+import { ReportCard, SECTION_REPORTS, useReportRun } from "./analytics.reports";
 
 export { buildStageAggregates, ForecastTile } from "./analytics.pipeline";
 
@@ -265,7 +265,6 @@ export function AnalyticsScreen({
         }
       />
       <div className="analytics-body">
-        {DEAL_SECTIONS.includes(section) && <FirstRunNotice />}
         <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
           <SectionBody
             section={section}
@@ -305,14 +304,6 @@ const SETUP_LABEL: Readonly<Record<SetupSection, MessageKey>> = {
   coverage: "analytics.sectionCoverage",
 };
 
-// The sections whose figures are about deals, where "no deals yet" explains
-// an empty page. Setup, delivery and custom reports measure other things.
-const DEAL_SECTIONS: readonly Section[] = [
-  "performance",
-  "pipeline",
-  "forecast",
-];
-
 function isSetupSection(section: Section): section is SetupSection {
   return section in SETUP_LABEL;
 }
@@ -349,12 +340,24 @@ function SectionBody({
   stages: readonly Stage[];
 }>) {
   const t = useT();
+  // Each deal section hands the notice the population flag of its own answer,
+  // so the message and the figures beside it come from one server evaluation.
+  const emptyNotice = (holdsDeals: boolean | undefined) =>
+    selection && context ? (
+      <FirstRunNotice
+        holdsDeals={holdsDeals}
+        scope={selection.scope}
+        allowedScopes={context.allowed_scopes}
+        onSelectScope={onSelectScope}
+      />
+    ) : null;
   switch (section) {
     case "performance":
       return selection ? (
         <ReportingOverview
           scope={selection.scope}
           scopeControl={scopeControl}
+          emptyNotice={emptyNotice}
         />
       ) : null;
     case "reports":
@@ -394,6 +397,7 @@ function SectionBody({
           selection={selection}
           canSubmit={context.capabilities.submit_manager_forecast}
           scopeControl={scopeControl}
+          emptyNotice={emptyNotice}
         />
       ) : null;
     case "pipeline":
@@ -404,11 +408,15 @@ function SectionBody({
           scopeControl={scopeControl}
           stages={stages}
           locale={locale}
+          emptyNotice={emptyNotice}
         />
       );
     default:
       return (
         <>
+          {section === "delivery" && (
+            <p className="sub">{t("analytics.deliveryCoversAll")}</p>
+          )}
           {SECTION_REPORTS[section].map((report) => (
             <ReportCard
               key={report}
@@ -440,15 +448,22 @@ function PipelineSection({
   scopeControl,
   stages,
   locale,
+  emptyNotice,
 }: Readonly<{
   selection: AnalyticsSelection | null;
   contextQuery: ContextQuery;
   scopeControl: ReactNode;
   stages: readonly Stage[];
   locale: Locale;
+  emptyNotice: (holdsDeals: boolean | undefined) => ReactNode;
 }>) {
   const t = useT();
   const refused = problemStatus(contextQuery.error) === 403;
+  const first = useReportRun(
+    SECTION_REPORTS.pipeline[0],
+    selection?.scope,
+    selection != null || refused,
+  );
   if (!selection && !refused) {
     return (
       <QueryStates
@@ -465,6 +480,7 @@ function PipelineSection({
       {scope && (
         <FilterBar label={t("analytics.filters")}>{scopeControl}</FilterBar>
       )}
+      {emptyNotice(first.data?.scope_holds_deals)}
       {SECTION_REPORTS.pipeline.map((report) => (
         <ReportCard
           // Keyed by scope too, so an open explanation never outlives the

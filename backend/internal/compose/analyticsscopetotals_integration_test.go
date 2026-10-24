@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -59,7 +60,7 @@ func TestARepIsOfferedTheCompanyAndEveryLiveTeam(t *testing.T) {
 	e := setupForecast(t)
 	rep := e.ownLensRepCtx(e.Rep1)
 	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(e.forecastReader(rep), func(ctx context.Context, tx pgx.Tx) error {
-		got, err := analyticsContextFor(ctx, tx, time.Now())
+		got, err := analyticsContextFor(ctx, tx, clocktest.Now(t))
 		if err != nil {
 			return err
 		}

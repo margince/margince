@@ -3,103 +3,119 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { useQuery } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  StoryProviders,
-} from "../../testing/story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
+import type { AnalyticsScope } from "./analytics.context";
 import { FirstRunNotice } from "./analytics.firstrun";
-import { render as renderScreen, reportsStub } from "./analytics.testkit";
+import {
+  ownLensContext,
+  render as renderScreen,
+  reportsStub,
+} from "./analytics.testkit";
 
-const originalFetch = globalThis.fetch;
 afterEach(() => {
   cleanup();
-  globalThis.fetch = originalFetch;
+  vi.unstubAllGlobals();
   window.location.hash = "";
 });
 
-// Says when the probe has answered, so a test of the notice's absence reads
-// the settled answer and not the loading state.
-function ProbeSettled() {
-  const probe = useQuery({ queryKey: ["deals", "first-run"], enabled: false });
-  return probe.isSuccess ? <span>probe settled</span> : null;
-}
+const company: AnalyticsScope = { kind: "workspace", label: "Whole company" };
+const mine: AnalyticsScope = { kind: "owner", id: "u-rep-1", label: "Riley" };
+const team: AnalyticsScope = { kind: "team", id: "t-1", label: "Berlin" };
 
-function draw(deals: unknown[]) {
-  const asked: string[] = [];
-  installFetchStub({
-    "GET /me": meRoute({ deal: ["read"] }),
-    "GET /deals": () =>
-      jsonResponse({ data: deals, page: { next_cursor: null } }),
-  });
-  const stub = globalThis.fetch;
-  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-    asked.push(input instanceof Request ? input.url : String(input));
-    return stub(input, init);
-  }) as typeof fetch;
+function notice(
+  holdsDeals: boolean | undefined,
+  scope: AnalyticsScope,
+  onSelectScope = vi.fn(),
+) {
   render(
     <StoryProviders>
-      <FirstRunNotice />
-      <ProbeSettled />
+      <FirstRunNotice
+        holdsDeals={holdsDeals}
+        scope={scope}
+        allowedScopes={[company, team, mine]}
+        onSelectScope={onSelectScope}
+      />
     </StoryProviders>,
   );
-  return asked;
+  return onSelectScope;
 }
 
-it("names the first step when the reader can see no deal, archived ones included", async () => {
-  const asked = draw([]);
-  expect(
-    await screen.findByText("No deals to report on yet"),
-  ).toBeInTheDocument();
-  expect(
-    asked.some(
-      (url) => url.includes("/deals") && url.includes("include_archived=true"),
-    ),
-  ).toBe(true);
+it("points an empty own scope to Whole company", async () => {
+  const select = notice(false, mine);
+  expect(screen.getByText("You own no deals")).toBeInTheDocument();
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "Show Whole company" }));
+  expect(select).toHaveBeenCalledWith(company);
+});
+
+it("names the first step when the whole company holds no deal", async () => {
+  notice(false, company);
+  expect(screen.getByText("No deals to report on yet")).toBeInTheDocument();
   await userEvent
     .setup()
     .click(screen.getByRole("button", { name: "Open Deals" }));
   expect(window.location.hash).toMatch(/^#\/deals/);
 });
 
-it("says nothing once a deal exists", async () => {
-  draw([{ id: "d-1", name: "First" }]);
-  expect(await screen.findByText("probe settled")).toBeInTheDocument();
+it("says an empty team holds no deal", () => {
+  notice(false, team);
+  expect(screen.getByText("Berlin holds no deals")).toBeInTheDocument();
+});
+
+it("says nothing when the scope holds deals or the server did not say", () => {
+  notice(true, mine);
+  notice(undefined, mine);
+  expect(screen.queryByText("You own no deals")).toBeNull();
   expect(screen.queryByText("No deals to report on yet")).toBeNull();
 });
 
-it("shows on the deal sections and not on Delivery", async () => {
-  vi.stubGlobal("fetch", reportsStub({ dealRead: true }));
+it("tells Pipeline's empty own scope from the server flag, without asking for deals", async () => {
+  const stub = reportsStub({
+    dealRead: true,
+    scopeHoldsDeals: false,
+    context: {
+      ...ownLensContext,
+      allowed_scopes: [
+        { kind: "workspace", label: "Whole company" },
+        ...ownLensContext.allowed_scopes,
+      ],
+    },
+  });
+  vi.stubGlobal("fetch", stub);
   window.location.hash = "#/analytics/pipeline";
-  const view = renderScreen(<AnalyticsScreen />);
-  expect(
-    await screen.findByText("No deals to report on yet"),
-  ).toBeInTheDocument();
-  view.unmount();
+  renderScreen(<AnalyticsScreen />);
+  expect(await screen.findByText("You own no deals")).toBeInTheDocument();
+  const asked = stub.mock.calls.map(([input]) =>
+    input instanceof Request ? input.url : String(input),
+  );
+  expect(asked.some((url) => /\/deals(\?|$)/.test(url))).toBe(false);
+});
 
-  window.location.hash = "#/analytics/delivery";
-  const asked: string[] = [];
-  const reported: string[] = [];
+it("draws no notice on Pipeline when the scope holds deals", async () => {
   vi.stubGlobal(
     "fetch",
-    reportsStub({ dealRead: true, onRun: (key) => reported.push(key) }),
+    reportsStub({
+      dealRead: true,
+      scopeHoldsDeals: true,
+      context: ownLensContext,
+    }),
   );
-  const stub = globalThis.fetch;
-  vi.stubGlobal("fetch", ((input: RequestInfo | URL, init?: RequestInit) => {
-    asked.push(input instanceof Request ? input.url : String(input));
-    return stub(input, init);
-  }) as typeof fetch);
+  window.location.hash = "#/analytics/pipeline";
   renderScreen(<AnalyticsScreen />);
-  // Delivery's three cards have asked for their reports, so the screen has
-  // mounted everything it will; a notice there would have probed by now.
-  await vi.waitFor(() => expect(reported).toContain("projects-by-phase"));
-  expect(asked.some((url) => /\/deals(\?|$)/.test(url))).toBe(false);
-  expect(screen.queryByText("No deals to report on yet")).toBeNull();
-  vi.unstubAllGlobals();
+  await screen.findByText("Qualify");
+  expect(screen.queryByText("You own no deals")).toBeNull();
+});
+
+it("says on Delivery that every readable project is covered", async () => {
+  vi.stubGlobal("fetch", reportsStub({ dealRead: true }));
+  window.location.hash = "#/analytics/delivery";
+  renderScreen(<AnalyticsScreen />);
+  expect(
+    await screen.findByText("These numbers cover every project you can read."),
+  ).toBeInTheDocument();
 });

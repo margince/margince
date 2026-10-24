@@ -82,6 +82,11 @@ function wonSentence(
     words.locale,
   );
   if (won.coverage.status === "no_data") {
+    // An empty scope is told by the notice; "no sales won" is for a scope
+    // that holds deals.
+    if (context.scope_holds_deals === false) {
+      return null;
+    }
     return words.t("reporting.writtenNoneWon", { period });
   }
   if (won.coverage.status !== "ok" || won.value == null) {

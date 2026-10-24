@@ -38,7 +38,7 @@ const narrowedToMeasurableOwners = "owners_you_may_measure"
 // A spec on the caller's own population is already narrowed to the owners
 // they may measure, so naming anyone else there answers nothing. A named
 // workspace or team scope is open to every seat for totals, so it opens the
-// gate on any spec: the people inside it are not all people the seat may
+// gate on any spec: the owners inside it are not all owners the seat may
 // measure.
 func ownerGated(spec reportSpec, requested RequestedScope) bool {
 	return spec.population == measureEveryReadableRow || namesTotalsScope(requested)
@@ -50,7 +50,7 @@ func namesTotalsScope(requested RequestedScope) bool {
 
 // narrowsOwnerBreakdown answers whether a breakdown by owner is cut to the
 // owners the caller may measure. Only an owner scope is already inside that
-// lens; every other request, named or not, is a population of people the seat
+// lens; every other request, named or not, is a population of owners the seat
 // may not all measure. Headline, drill-through and typed query all ask here.
 func narrowsOwnerBreakdown(requested RequestedScope, breakdown, pinned bool) bool {
 	return breakdown && !pinned && requested.Kind != ScopeKindOwner

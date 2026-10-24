@@ -143,7 +143,7 @@ func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Se
 		WithQuestions(reportingQuestions{floor: analyticsquery.DefaultFloor, names: newAttentionNames(db)})
 }
 
-// measurableMemberIDs narrows a scope's members to the people the reader may
+// measurableMemberIDs narrows a scope's members to the owners the reader may
 // measure one by one, so owner targets and owner lists name no one else.
 func measurableMemberIDs(ctx context.Context, tx pgx.Tx, scopeMembers []openapi_types.UUID) ([]openapi_types.UUID, error) {
 	actor, ok := principal.Actor(ctx)
