@@ -9814,6 +9814,10 @@ components:
           description: >-
             Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
         parent_company_id: {type: [string, 'null'], format: uuid, description: Single-level hierarchy FK; no cycles.}
+        assess_against_entity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The legal entity whose offering the growth fit judges this company against. Null means the main offering.
         merged_into_id: {type: [string, 'null'], format: uuid}
         computed_fields:
           type: array
@@ -9930,6 +9934,13 @@ components:
         address: {$ref: '#/components/schemas/Address'}
         owner_id: {type: [string, 'null'], format: uuid}
         parent_company_id: {type: [string, 'null'], format: uuid}
+        assess_against_entity_id:
+          type: [string, 'null']
+          format: uuid
+          description: |-
+            The legal entity whose offering the growth fit judges this company against. Send the
+            default entity's id to return to the main offering. An entity that does not exist or is
+            archived answers 422 naming this field. Absent leaves it untouched.
         domains:
           type: array
           description: Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.

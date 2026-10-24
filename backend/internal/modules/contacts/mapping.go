@@ -279,16 +279,17 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 
 func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64) UpdateCompanyInput {
 	in := UpdateCompanyInput{
-		DisplayName:     req.DisplayName,
-		LegalName:       req.LegalName,
-		Description:     req.Description,
-		Industry:        req.Industry,
-		OwnerID:         idArg[ids.UserKind](req.OwnerId),
-		ParentCompanyID: idArg[ids.CompanyKind](req.ParentCompanyId),
-		IfVersion:       ifVersion,
-		CustomFields:    req.AdditionalProperties,
-		LinkedInURL:     req.LinkedinUrl,
-		Visibility:      companyVisibilityArg(req.Visibility),
+		DisplayName:           req.DisplayName,
+		LegalName:             req.LegalName,
+		Description:           req.Description,
+		Industry:              req.Industry,
+		OwnerID:               idArg[ids.UserKind](req.OwnerId),
+		ParentCompanyID:       idArg[ids.CompanyKind](req.ParentCompanyId),
+		AssessAgainstEntityID: idArg[ids.LegalEntityKind](req.AssessAgainstEntityId),
+		IfVersion:             ifVersion,
+		CustomFields:          req.AdditionalProperties,
+		LinkedInURL:           req.LinkedinUrl,
+		Visibility:            companyVisibilityArg(req.Visibility),
 	}
 	in.Address = req.Address
 	if req.SizeBand != nil {

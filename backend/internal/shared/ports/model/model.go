@@ -222,6 +222,10 @@ type Request struct {
 	// conditional. Compose consumes and clears the flag before routing; it
 	// cannot select scopes or bypass a policy-none declaration.
 	IncludeCompanyContext bool
+	// CompanyContextOffering names the legal entity whose offering the company
+	// context describes; empty is the main offering. Compose honours it only for
+	// a task whose policy is offering_selectable and clears it before routing.
+	CompanyContextOffering string
 	// ResponseSchema, when non-nil, is a JSON Schema the completion must
 	// conform to. Providers with schema-constrained decoding enforce it at
 	// GENERATION so a weak model cannot emit the wrong shape — Ollama via

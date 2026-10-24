@@ -10142,7 +10142,7 @@ export interface paths {
          * Archive a legal entity nobody works for any more.
          * @description Needs `legal_entity:delete`. The default entity is refused as 409
          *     `legal_entity_default_is_permanent`. An entity that still has members is refused as
-         *     409 `legal_entity_has_members`: move its users to another entity first.
+         *     409 `legal_entity_has_members`: move its users to another entity first. 409 `legal_entity_is_assessed_against`: companies are still judged against its offering; choose another for them first.
          *     A stale `If-Match` version is refused as 409 `version_skew`.
          */
         post: operations["archiveLegalEntity"];
@@ -27418,6 +27418,11 @@ export interface components {
              * @description Single-level hierarchy FK; no cycles.
              */
             parent_company_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The legal entity whose offering the growth fit judges this company against. Null means the main offering.
+             */
+            assess_against_entity_id?: string | null;
             /** Format: uuid */
             merged_into_id?: string | null;
             /**
@@ -27531,6 +27536,13 @@ export interface components {
             owner_id?: string | null;
             /** Format: uuid */
             parent_company_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The legal entity whose offering the growth fit judges this company against. Send the
+             *     default entity's id to return to the main offering. An entity that does not exist or is
+             *     archived answers 422 naming this field. Absent leaves it untouched.
+             */
+            assess_against_entity_id?: string | null;
             /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. */
             domains?: components["schemas"]["CompanyDomainInput"][];
             /**
@@ -27831,6 +27843,15 @@ export interface components {
          * @enum {string}
          */
         GrowthFitNextStep: "gather_inputs" | "record_profile" | "confirm_offering" | "configure_model" | "retry_later";
+        /** @description The legal entity whose offering a growth fit was measured against. */
+        GrowthFitOffering: {
+            /** Format: uuid */
+            entity_id: string;
+            /** @description The entity's name; for the default entity, the company's name. */
+            display_name: string;
+            /** @description True when this is the main offering. */
+            is_default: boolean;
+        };
         /**
          * @description Cached per reader (DOSS-DDL-2), because it folds seat-dependent workspace context
          *     and makes recommendations.
@@ -27851,6 +27872,7 @@ export interface components {
              */
             band_capped_reason?: string | null;
             data_completeness: components["schemas"]["DataCompleteness"];
+            assessed_against?: components["schemas"]["GrowthFitOffering"];
             /**
              * @description The one named thing to do that would most improve this answer, or absent when
              *     nothing is holding it back.
@@ -41156,6 +41178,7 @@ export interface components {
             bic?: string | null;
             /** @description The legal notice the entity prints, up to 4000 characters. */
             imprint?: string | null;
+            offering?: components["schemas"]["LegalEntityOffering"];
             /** @description Where the entity's logo is streamed from. Null when it has none. */
             logo_url?: string | null;
             /** @description How many users are assigned to the entity. Always 0 on the default entity, whose members are the users with no assignment. */
@@ -41177,6 +41200,19 @@ export interface components {
             city?: string | null;
             region?: string | null;
         };
+        /**
+         * @description What a further legal entity sells and to whom, the offering a company can be judged against.
+         *     The default entity's offering is the company profile, so these stay null there and a write to
+         *     them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+         *     has a name, an `offer_summary` and an `icp`.
+         */
+        LegalEntityOffering: {
+            offer_summary?: string | null;
+            /** @description The ideal customer profile. */
+            icp?: string | null;
+            value_proposition?: string | null;
+            usp?: string | null;
+        };
         LegalEntityListResponse: {
             data: components["schemas"]["LegalEntity"][];
         };
@@ -41196,6 +41232,7 @@ export interface components {
             iban?: string;
             bic?: string;
             imprint?: string;
+            offering?: components["schemas"]["LegalEntityOffering"];
         };
         /** @description A field left out keeps its value; a field sent as an empty string is cleared. */
         UpdateLegalEntityRequest: {
@@ -41211,6 +41248,7 @@ export interface components {
             iban?: string;
             bic?: string;
             imprint?: string;
+            offering?: components["schemas"]["LegalEntityOffering"];
         };
         LegalEntityMember: {
             /** Format: uuid */

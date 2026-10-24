@@ -182,7 +182,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "47ff6b4fa43e9dc26473d8386e1ea07496d2308ff4215fb372c0120bde325017"
+const TaskContractHash = "9baa1796e46cf639d81d1ea1323081c1344d83dd6bdb8772e40689d01ec354d3"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -611,6 +611,9 @@ type CompanyContextPolicy struct {
 	Scopes      []string
 	TokenBudget int
 	Conditional bool
+	// OfferingSelectable is true when the caller may name the legal entity whose
+	// offering the context describes.
+	OfferingSelectable bool
 }
 
 var taskCompanyContext = map[Task]CompanyContextPolicy{
@@ -627,7 +630,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskDocumentExtract:               {TokenBudget: 0, Conditional: false},
 	TaskDraftReply:                    {Scopes: []string{"positioning", "sales", "proof", "market"}, TokenBudget: 1400, Conditional: false},
 	TaskEnrich:                        {TokenBudget: 0, Conditional: false},
-	TaskGrowthFit:                     {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false},
+	TaskGrowthFit:                     {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false, OfferingSelectable: true},
 	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: true},
 	TaskOfferDraft:                    {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},
 	TaskOwedVerdict:                   {TokenBudget: 0, Conditional: false},

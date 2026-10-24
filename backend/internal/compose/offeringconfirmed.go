@@ -8,68 +8,67 @@ package compose
 
 import (
 	"context"
+	"errors"
 
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// offeringConfirmed reports whether this installation has described what it
-// sells well enough for a growth fit to be measured against it (DOSS-AC-13).
+// offeringConfirmed reports whether the offering a company is judged against
+// is described well enough for a growth fit to be measured against it
+// (DOSS-AC-13), and digests what it says so a cached fit is invalidated when
+// that changes.
 //
-// "Confirmed" is the anchor company's own `minimum_complete`: a display
-// name, an offer summary and an ideal-customer profile, each written by a
-// human through the company form. That is the same bar onboarding uses to
-// decide the installation has finished describing itself, so the growth fit
-// and the onboarding flow cannot disagree about whether we know who we are.
-//
-// An installation that has never saved its company reads as NOT confirmed
-// rather than as an error. The 404 from GetCompany is the onboarding signal,
-// not a fault, and a workspace mid-onboarding should still get capped bands
-// with the reason spelled out — not a broken panel.
-func offeringConfirmed(store *contacts.Store) companydossier.SelfOffering {
-	return func(ctx context.Context) (companydossier.Offering, error) {
-		// The STANDING, not the profile. The growth fit is a reading aid any
-		// human seat opens, and the administered profile read is an
-		// administrator's — asking it here would refuse the page to every
-		// other seat, for a fact that is a yes/no about ourselves.
-		exists, complete, err := store.AnchorProfileStanding(ctx)
-		if err != nil {
-			return companydossier.Offering{}, err
-		}
-		if !exists {
-			return companydossier.Offering{}, nil
-		}
-		fingerprint, err := offeringFingerprint(ctx, store)
-		if err != nil {
-			return companydossier.Offering{}, err
-		}
-		return companydossier.Offering{Confirmed: complete, Fingerprint: fingerprint}, nil
-	}
-}
-
-// offeringFingerprint digests what this workspace says it sells, so a cached
-// growth fit is invalidated when that changes.
-//
-// It is the fingerprint of the COMPANY CONTEXT the growth-fit task actually
-// sends, resolved from that task's own declared scopes — not a second digest
-// rolled here. The two would drift, and the way they would drift is silent:
-// this surface's own profile fields are only part of what the context carries.
-// It also folds in the anchor's offering and signal FACTS, and a digest that
-// covered the fields alone would let a new proof point change what the model is
-// told we sell while every cached band stayed exactly where it was.
+// "Confirmed" and the fingerprint both come from ONE read of the company
+// context the growth-fit task sends, so they cannot describe two different
+// states of the offering. Confirmed is the bar onboarding uses to decide the
+// installation has finished describing itself: a name, an offer summary and an
+// ideal-customer profile. The main offering is the anchor company's profile; a
+// legal entity named by entityID carries its own.
 //
 // The content never leaves as text — a fit derived from what WE sell is an
 // assessment about THEM and must still cite their records (DOSS-AC-6). Only the
 // digest travels, onto a cache key nothing renders.
-func offeringFingerprint(ctx context.Context, store *contacts.Store) (string, error) {
+//
+// An offering that does not exist yet (an installation that has never saved its
+// company, or an entity archived since it was chosen) reads as NOT confirmed
+// rather than as an error: a workspace mid-onboarding should still get capped
+// bands with the reason spelled out, not a broken panel.
+func offeringConfirmed(store *contacts.Store) companydossier.SelfOffering {
+	return func(ctx context.Context, entityID string) (companydossier.Offering, error) {
+		return readOffering(ctx, store, entityID)
+	}
+}
+
+type companyContextStore interface {
+	GetCompanyContext(context.Context, []contacts.CompanyContextScope, contacts.OfferingSelector) (contacts.CompanyContext, error)
+}
+
+func readOffering(ctx context.Context, store companyContextStore, entityID string) (companydossier.Offering, error) {
+	selector, err := contacts.ParseOfferingSelector(entityID)
+	if err != nil {
+		return companydossier.Offering{}, err
+	}
 	scopes, err := companyContextScopesFor(ai.TaskGrowthFit)
 	if err != nil {
-		return "", err
+		return companydossier.Offering{}, err
 	}
-	assembled, err := store.GetCompanyContext(ctx, scopes)
+	assembled, err := store.GetCompanyContext(ctx, scopes, selector)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return companydossier.Offering{}, nil
+	}
 	if err != nil {
-		return "", err
+		return companydossier.Offering{}, err
 	}
-	return assembled.Fingerprint, nil
+	offering := companydossier.Offering{
+		Confirmed: assembled.Confirmed, Fingerprint: assembled.Fingerprint,
+		Name: assembled.OfferingName,
+	}
+	if !assembled.OfferingID.IsZero() {
+		offering.ID = assembled.OfferingID.String()
+		offering.IsDefault = selector.EntityID.IsZero()
+	}
+	return offering, nil
 }

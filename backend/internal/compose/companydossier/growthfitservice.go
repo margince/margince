@@ -67,8 +67,9 @@ var growthFitPromptVersion = ai.PromptDigest(func(fence promptfence.Fence) strin
 // v2 adds the sub-scores (DOSS-AC-17). A v1 payload has none, and serving one
 // would render a card with a band and no bars that looks like a complete
 // answer. v3 carries the missing inputs and the next step as
-// codes. A v2 payload holds English sentences the client no longer words.
-const growthFitStoredVersion = 3
+// codes. A v2 payload holds English sentences the client no longer words. v4 names the
+// offering the company was judged against; a v3 payload has no such name.
+const growthFitStoredVersion = 4
 
 // GrowthFitService assembles and caches one company's growth fit per reader.
 type GrowthFitService struct {
@@ -156,6 +157,14 @@ type storedGrowthFit struct {
 	// StaleAt is when the completeness figure above stops being true on the
 	// clock alone. Zero means nothing it counted can age out.
 	StaleAt time.Time `json:"stale_at"`
+	// Offering names what the band was measured against.
+	Offering storedOffering `json:"offering"`
+}
+
+type storedOffering struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	IsDefault bool   `json:"is_default"`
 }
 
 // Get serves the growth fit, re-assessing when the cache no longer describes
@@ -186,7 +195,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 		// every company a stronger band than the evidence supports.
 		return zero, errors.New("the growth fit has no way to read this workspace's own offering")
 	}
-	offering, err := s.self(ctx)
+	offering, err := s.self(ctx, in.AssessAgainst)
 	if err != nil {
 		return zero, err
 	}
@@ -229,6 +238,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 		Completeness: assessed.Completeness,
 		Claims:       assessed.Claims,
 		StaleAt:      assessed.StaleAt,
+		Offering:     storedOffering{ID: offering.ID, Name: offering.Name, IsDefault: offering.IsDefault},
 	}
 	// A degraded answer is NOT cached. With no usable entry to fall back on the
 	// abstention is the honest response to this request, but storing it under
@@ -289,9 +299,9 @@ func growthFitFingerprint(in Input, routingVersion string, offering Offering, la
 	if err != nil {
 		return "", fmt.Errorf("fingerprint the growth-fit input: %w", err)
 	}
-	sum := sha256.Sum256(fmt.Appendf(nil, "%s\x00%s\x00%s\x00%t\x00%s\x00%s\x00%s",
+	sum := sha256.Sum256(fmt.Appendf(nil, "%s\x00%s\x00%s\x00%t\x00%s\x00%s\x00%s\x00%s",
 		growthFitAssemblyVersion, growthFitPromptVersion, routingVersion,
-		offering.Confirmed, offering.Fingerprint, lang, encoded))
+		offering.Confirmed, offering.Fingerprint, in.AssessAgainst, lang, encoded))
 	return hex.EncodeToString(sum[:]), nil
 }
 
@@ -306,6 +316,13 @@ func (g storedGrowthFit) wire(companyID ids.CompanyID) crmcontracts.CompanyGrowt
 	// Both stay ABSENT rather than empty when nothing capped the band and
 	// nothing is outstanding: an empty string would render as a reason and a
 	// next step that say nothing, which reads as a finding rather than as none.
+	if g.Offering.ID != "" {
+		if id, err := ids.Parse(g.Offering.ID); err == nil {
+			out.AssessedAgainst = &crmcontracts.GrowthFitOffering{
+				EntityId: openapi_types.UUID(id), DisplayName: g.Offering.Name, IsDefault: g.Offering.IsDefault,
+			}
+		}
+	}
 	if g.CappedReason != "" {
 		out.BandCappedReason = &g.CappedReason
 	}

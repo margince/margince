@@ -22,9 +22,12 @@ type contextReaderStub struct {
 	result contacts.CompanyContext
 	err    error
 	calls  [][]contacts.CompanyContextScope
+	// offerings records the selector each read was asked for.
+	offerings []contacts.OfferingSelector
 }
 
-func (s *contextReaderStub) GetCompanyContext(_ context.Context, scopes []contacts.CompanyContextScope) (contacts.CompanyContext, error) {
+func (s *contextReaderStub) GetCompanyContext(_ context.Context, scopes []contacts.CompanyContextScope, offering contacts.OfferingSelector) (contacts.CompanyContext, error) {
+	s.offerings = append(s.offerings, offering)
 	s.calls = append(s.calls, append([]contacts.CompanyContextScope(nil), scopes...))
 	return s.result, s.err
 }
@@ -300,5 +303,93 @@ func TestCompanyContextProviderRejectsUndeclaredTask(t *testing.T) {
 	_, err := newCompanyContextProvider(nil).Prepare(context.Background(), ai.Task("future_task"), model.Request{})
 	if err == nil || !strings.Contains(err.Error(), "no company-context policy") {
 		t.Fatalf("undeclared task must fail closed, got %v", err)
+	}
+}
+
+// Only a task whose policy is offering_selectable may read another offering.
+// The set of such tasks is derived from the registry, so a task that opts in
+// later is covered and a task that does not stays on the main offering even
+// when a caller sets the field by mistake.
+func TestOnlyAnOfferingSelectableTaskReadsTheChosenOffering(t *testing.T) {
+	chosen := ids.New[ids.LegalEntityKind]()
+	selectable := 0
+	for _, task := range ai.AllTasks() {
+		policy, _ := ai.CompanyContextFor(task)
+		if len(policy.Scopes) == 0 {
+			continue
+		}
+		reader := &contextReaderStub{result: contacts.CompanyContext{Fingerprint: strings.Repeat("a", 64)}}
+		_, err := newCompanyContextProvider(reader).Prepare(context.Background(), task, model.Request{
+			IncludeCompanyContext: true, CompanyContextOffering: chosen.String(),
+		})
+		if err != nil {
+			t.Fatalf("%s: prepare: %v", task, err)
+		}
+		if len(reader.offerings) != 1 {
+			t.Fatalf("%s: company context read %d times, want once", task, len(reader.offerings))
+		}
+		got := reader.offerings[0].EntityID
+		if policy.OfferingSelectable {
+			selectable++
+			if got != chosen {
+				t.Errorf("%s is offering_selectable but read %v, want %v", task, got, chosen)
+			}
+		} else if !got.IsZero() {
+			t.Errorf("%s is not offering_selectable but read offering %v", task, got)
+		}
+	}
+	if selectable == 0 {
+		t.Fatal("no task is offering_selectable; the growth fit must be")
+	}
+}
+
+func TestAnOfferingThatIsNotAnIdIsRefusedNotWidenedToTheMainOne(t *testing.T) {
+	reader := &contextReaderStub{result: contacts.CompanyContext{Fingerprint: strings.Repeat("a", 64)}}
+	_, err := newCompanyContextProvider(reader).Prepare(context.Background(), ai.TaskGrowthFit,
+		model.Request{CompanyContextOffering: "not-an-id"})
+	if err == nil {
+		t.Fatal("a malformed offering was accepted")
+	}
+	if len(reader.offerings) != 0 {
+		t.Fatal("a malformed offering still read the company context")
+	}
+}
+
+func TestThePreparedRequestCarriesNoOfferingChoiceOnward(t *testing.T) {
+	reader := &contextReaderStub{result: contacts.CompanyContext{Fingerprint: strings.Repeat("a", 64)}}
+	prepared, err := newCompanyContextProvider(reader).Prepare(context.Background(), ai.TaskGrowthFit,
+		model.Request{CompanyContextOffering: ids.New[ids.LegalEntityKind]().String()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prepared.CompanyContextOffering != "" {
+		t.Errorf("prepared request still names offering %q", prepared.CompanyContextOffering)
+	}
+}
+
+// Confirmed and the fingerprint the cache key folds in come from one read, so
+// they cannot describe two states of the offering.
+func TestTheOfferingIsReadOnceForConfirmationAndFingerprint(t *testing.T) {
+	reader := &contextReaderStub{result: contacts.CompanyContext{
+		Fingerprint: strings.Repeat("b", 64), Confirmed: true, OfferingName: "Wien",
+		OfferingID: ids.New[ids.LegalEntityKind](),
+	}}
+	got, err := readOffering(context.Background(), reader, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reader.offerings) != 1 {
+		t.Fatalf("offering read %d times, want once", len(reader.offerings))
+	}
+	if !got.Confirmed || got.Fingerprint != reader.result.Fingerprint || got.Name != "Wien" || !got.IsDefault {
+		t.Errorf("offering = %+v, want the single read's confirmation, fingerprint and name", got)
+	}
+}
+
+func TestAMissingOfferingReadsAsNotConfirmed(t *testing.T) {
+	reader := &contextReaderStub{err: apperrors.ErrNotFound}
+	got, err := readOffering(context.Background(), reader, ids.New[ids.LegalEntityKind]().String())
+	if err != nil || got.Confirmed || got.Fingerprint != "" {
+		t.Fatalf("offering = %+v, %v; want an unconfirmed offering and no error", got, err)
 	}
 }

@@ -31167,6 +31167,9 @@ type Company struct {
 	Address    *Address   `json:"address,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
+	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Null means the main offering.
+	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
+
 	// Author Who created this company in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
@@ -32935,6 +32938,9 @@ type CompanyGraphSignalRoute struct {
 // dropped. Our own profile is not a record this reader can open, and citing it would
 // invent a citation (DOSS-AC-6).
 type CompanyGrowthFit struct {
+	// AssessedAgainst The legal entity whose offering a growth fit was measured against.
+	AssessedAgainst *GrowthFitOffering `json:"assessed_against,omitempty"`
+
 	// Band How well this company fits what we sell (DOSS-PARAM-8).
 	//
 	// `unknown` is the ABSTENTION, not a low score. It says the assembly did not have
@@ -36211,12 +36217,18 @@ type CreateLegalEntityRequest struct {
 	DisplayName     string  `json:"display_name"`
 
 	// Iban Spaces are removed and letters upper-cased before the check.
-	Iban           *string `json:"iban,omitempty"`
-	Imprint        *string `json:"imprint,omitempty"`
-	LegalName      string  `json:"legal_name"`
-	RegisterCourt  *string `json:"register_court,omitempty"`
-	RegisterNumber *string `json:"register_number,omitempty"`
-	VatId          *string `json:"vat_id,omitempty"`
+	Iban      *string `json:"iban,omitempty"`
+	Imprint   *string `json:"imprint,omitempty"`
+	LegalName string  `json:"legal_name"`
+
+	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
+	// The default entity's offering is the company profile, so these stay null there and a write to
+	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+	// has a name, an `offer_summary` and an `icp`.
+	Offering       *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt  *string              `json:"register_court,omitempty"`
+	RegisterNumber *string              `json:"register_number,omitempty"`
+	VatId          *string              `json:"vat_id,omitempty"`
 }
 
 // CreateListRequest defines model for CreateListRequest.
@@ -39463,6 +39475,16 @@ type GrowthFitInput string
 // `configure_model` is to set up a model and `retry_later` is to try the read again.
 type GrowthFitNextStep string
 
+// GrowthFitOffering The legal entity whose offering a growth fit was measured against.
+type GrowthFitOffering struct {
+	// DisplayName The entity's name; for the default entity, the company's name.
+	DisplayName string             `json:"display_name"`
+	EntityId    openapi_types.UUID `json:"entity_id"`
+
+	// IsDefault True when this is the main offering.
+	IsDefault bool `json:"is_default"`
+}
+
 // GrowthFitSubScore One dimension of the growth-fit assessment, with the reason for its score.
 //
 // The reason is REQUIRED: a bar with a number and no sentence is the unexplainable score
@@ -42298,6 +42320,12 @@ type LegalEntity struct {
 	// MemberCount How many users are assigned to the entity. Always 0 on the default entity, whose members are the users with no assignment.
 	MemberCount int `json:"member_count"`
 
+	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
+	// The default entity's offering is the company profile, so these stay null there and a write to
+	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+	// has a name, an `offer_summary` and an `icp`.
+	Offering *LegalEntityOffering `json:"offering,omitempty"`
+
 	// RegisterCourt The court that keeps the entity's commercial register entry.
 	RegisterCourt *string `json:"register_court,omitempty"`
 
@@ -42334,6 +42362,18 @@ type LegalEntityMember struct {
 // LegalEntityMemberListResponse defines model for LegalEntityMemberListResponse.
 type LegalEntityMemberListResponse struct {
 	Data []LegalEntityMember `json:"data"`
+}
+
+// LegalEntityOffering What a further legal entity sells and to whom, the offering a company can be judged against.
+// The default entity's offering is the company profile, so these stay null there and a write to
+// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+// has a name, an `offer_summary` and an `icp`.
+type LegalEntityOffering struct {
+	// Icp The ideal customer profile.
+	Icp              *string `json:"icp,omitempty"`
+	OfferSummary     *string `json:"offer_summary,omitempty"`
+	Usp              *string `json:"usp,omitempty"`
+	ValueProposition *string `json:"value_proposition,omitempty"`
 }
 
 // LegalReview A review as the reviewer reads it.
@@ -51572,6 +51612,11 @@ type UpdateCompanyRequest struct {
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
+	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Send the
+	// default entity's id to return to the main offering. An entity that does not exist or is
+	// archived answers 422 naming this field. Absent leaves it untouched.
+	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
+
 	// Description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.
 	Description *string `json:"description,omitempty"`
 	DisplayName *string `json:"display_name,omitempty"`
@@ -52280,9 +52325,15 @@ type UpdateLegalEntityRequest struct {
 	Iban              *string             `json:"iban,omitempty"`
 	Imprint           *string             `json:"imprint,omitempty"`
 	LegalName         *string             `json:"legal_name,omitempty"`
-	RegisterCourt     *string             `json:"register_court,omitempty"`
-	RegisterNumber    *string             `json:"register_number,omitempty"`
-	VatId             *string             `json:"vat_id,omitempty"`
+
+	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
+	// The default entity's offering is the company profile, so these stay null there and a write to
+	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+	// has a name, an `offer_summary` and an `icp`.
+	Offering       *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt  *string              `json:"register_court,omitempty"`
+	RegisterNumber *string              `json:"register_number,omitempty"`
+	VatId          *string              `json:"vat_id,omitempty"`
 }
 
 // UpdateListRequest defines model for UpdateListRequest.
@@ -64485,6 +64536,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "archived_at")
 	}
 
+	if raw, found := object["assess_against_entity_id"]; found {
+		err = json.Unmarshal(raw, &a.AssessAgainstEntityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'assess_against_entity_id': %w", err)
+		}
+		delete(object, "assess_against_entity_id")
+	}
+
 	if raw, found := object["author"]; found {
 		err = json.Unmarshal(raw, &a.Author)
 		if err != nil {
@@ -64787,6 +64846,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.AssessAgainstEntityId != nil {
+		object["assess_against_entity_id"], err = json.Marshal(a.AssessAgainstEntityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'assess_against_entity_id': %w", err)
 		}
 	}
 
@@ -72162,6 +72228,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["assess_against_entity_id"]; found {
+		err = json.Unmarshal(raw, &a.AssessAgainstEntityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'assess_against_entity_id': %w", err)
+		}
+		delete(object, "assess_against_entity_id")
+	}
+
 	if raw, found := object["description"]; found {
 		err = json.Unmarshal(raw, &a.Description)
 		if err != nil {
@@ -72281,6 +72355,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.AssessAgainstEntityId != nil {
+		object["assess_against_entity_id"], err = json.Marshal(a.AssessAgainstEntityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'assess_against_entity_id': %w", err)
 		}
 	}
 

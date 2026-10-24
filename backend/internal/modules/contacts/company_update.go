@@ -41,8 +41,12 @@ type UpdateCompanyInput struct {
 	SizeBand        *string
 	OwnerID         *ids.UserID
 	ParentCompanyID *ids.CompanyID
-	Address         *crmcontracts.Address
-	IfVersion       *int64
+	// AssessAgainstEntityID, when non-nil, chooses the legal entity whose
+	// offering the growth fit judges this company against. The default
+	// entity's id means the main offering and stores NULL.
+	AssessAgainstEntityID *ids.LegalEntityID
+	Address               *crmcontracts.Address
+	IfVersion             *int64
 	// LinkedInURL, when non-nil, sets or (when empty) clears the canonical
 	// LinkedIn company URL (PO-DDL-N-2). nil leaves it untouched.
 	LinkedInURL *string

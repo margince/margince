@@ -15687,7 +15687,7 @@ paths:
       description: |
         Needs `legal_entity:delete`. The default entity is refused as 409
         `legal_entity_default_is_permanent`. An entity that still has members is refused as
-        409 `legal_entity_has_members`: move its users to another entity first.
+        409 `legal_entity_has_members`: move its users to another entity first. 409 `legal_entity_is_assessed_against`: companies are still judged against its offering; choose another for them first.
         A stale `If-Match` version is refused as 409 `version_skew`.
       parameters:
         - $ref: '#/components/parameters/IfMatch'
@@ -38642,6 +38642,10 @@ components:
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
         parent_company_id: { type: [string, 'null'], format: uuid, description: Single-level hierarchy FK; no cycles. }
+        assess_against_entity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The legal entity whose offering the growth fit judges this company against. Null means the main offering.
         merged_into_id: { type: [string, 'null'], format: uuid }
         computed_fields:
           type: array
@@ -38814,6 +38818,13 @@ components:
         address: { $ref: '#/components/schemas/Address' }
         owner_id: { type: [string, 'null'], format: uuid }
         parent_company_id: { type: [string, 'null'], format: uuid }
+        assess_against_entity_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The legal entity whose offering the growth fit judges this company against. Send the
+            default entity's id to return to the main offering. An entity that does not exist or is
+            archived answers 422 naming this field. Absent leaves it untouched.
         domains:
           type: array
           description: Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
@@ -39153,6 +39164,14 @@ components:
         is to record our own profile, `confirm_offering` is to confirm our own offering,
         `configure_model` is to set up a model and `retry_later` is to try the read again.
 
+    GrowthFitOffering:
+      type: object
+      description: The legal entity whose offering a growth fit was measured against.
+      required: [entity_id, display_name, is_default]
+      properties:
+        entity_id: { type: string, format: uuid }
+        display_name: { type: string, description: "The entity's name; for the default entity, the company's name." }
+        is_default: { type: boolean, description: True when this is the main offering. }
     CompanyGrowthFit:
       type: object
       description: |
@@ -39174,6 +39193,8 @@ components:
             Why the band could not go higher — our own offering context being unconfirmed
             caps it at `moderate` (DOSS-AC-13). Null when nothing capped it.
         data_completeness: { $ref: '#/components/schemas/DataCompleteness' }
+        assessed_against:
+          $ref: '#/components/schemas/GrowthFitOffering'
         next_step:
           $ref: '#/components/schemas/GrowthFitNextStep'
           description: |
@@ -56327,6 +56348,7 @@ components:
           type: string
           nullable: true
           description: The legal notice the entity prints, up to 4000 characters.
+        offering: { $ref: '#/components/schemas/LegalEntityOffering' }
         logo_url:
           type: string
           nullable: true
@@ -56347,6 +56369,18 @@ components:
         postal_code: { type: string, nullable: true }
         city: { type: string, nullable: true }
         region: { type: string, nullable: true }
+    LegalEntityOffering:
+      type: object
+      description: |
+        What a further legal entity sells and to whom, the offering a company can be judged against.
+        The default entity's offering is the company profile, so these stay null there and a write to
+        them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+        has a name, an `offer_summary` and an `icp`.
+      properties:
+        offer_summary: { type: string, nullable: true, maxLength: 4000 }
+        icp: { type: string, nullable: true, maxLength: 4000, description: The ideal customer profile. }
+        value_proposition: { type: string, nullable: true, maxLength: 4000 }
+        usp: { type: string, nullable: true, maxLength: 4000 }
     LegalEntityListResponse:
       type: object
       required: [data]
@@ -56370,6 +56404,7 @@ components:
         iban: { type: string, description: Spaces are removed and letters upper-cased before the check. }
         bic: { type: string }
         imprint: { type: string, maxLength: 4000 }
+        offering: { $ref: '#/components/schemas/LegalEntityOffering' }
     UpdateLegalEntityRequest:
       type: object
       description: A field left out keeps its value; a field sent as an empty string is cleared.
@@ -56386,6 +56421,7 @@ components:
         iban: { type: string }
         bic: { type: string }
         imprint: { type: string, maxLength: 4000 }
+        offering: { $ref: '#/components/schemas/LegalEntityOffering' }
     LegalEntityMember:
       type: object
       required: [user_id, legal_entity_id, assigned_at]
