@@ -24,7 +24,7 @@ import (
 func leadScoresFollowOriginDataTask(now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1792811003_lead_scores_follow_origin", Version: 1,
-		Title: "Scoring leads by where they came from", Requires: []string{"core/1792801001"},
+		Title: "Scoring leads by where they came from", Requires: []string{"core/1792840940"},
 		Steps: []datatask.Step{
 			{
 				Name: "origin_from_retained_capture", Limit: 200, MinLimit: 10,
