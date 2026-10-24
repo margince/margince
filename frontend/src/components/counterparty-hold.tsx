@@ -174,10 +174,11 @@ function useLiftHold() {
 /**
  * The hold control for one correspondent, for the record rails.
  *
- * `scope` is either the address a contact is known by (both verbs: this address,
- * or everyone at its domain) or the domain a company is known by (only the
- * domain verb, since a company has no address of its own). An empty value
- * stands the control down rather than offering a press with nothing to name.
+ * `scope` is either the address a contact is known by or the domain a company
+ * is known by. A contact offers both verbs: this address, or everyone at its
+ * domain. A company offers only the domain verb, since it has no address of its
+ * own. An empty value stands the control down rather than offering a press
+ * with nothing to name.
  */
 export function CounterpartyHoldRow({ scope }: Readonly<{ scope: HoldScope }>) {
   const t = useT();
