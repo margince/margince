@@ -100,21 +100,21 @@ It is also listed when the names are close and the mail domain is the employer's
 Nothing is merged by itself. The same check runs when an edit or a data provider adds an address.
 Colleagues see the pair only once the sender has been judged a business contact. A sender kept private, for example because the message is held, is not shown to them.
 
+### Mail with a lead on it
+
+A captured email, meeting or calendar event goes on the timeline of each open lead whose exact email address is on it, as sender, recipient, Cc or attendee. Case does not matter, and `lena@acme.example.org` is not `lena@acme.example`.
+Some mail goes on no lead: mail from before the lead was created, mail from a mail system or from a sender already judged a newsletter or spam, and mail for a lead that was qualified or disqualified. One message goes on at most 25 records, contacts first.
+Putting mail on a lead does not change who may read it. A colleague who opens the lead sees that a limited email exists, not what it says.
+
 ## When nothing matches
 
-An unknown sender goes into a queue, which Margince works through every 10
-minutes.
+An unknown sender goes into a queue, which Margince works through every 10 minutes.
 
-**An AI model is asked one question:** what kind of sender is this? It is asked
-once per *sender*, never per message, and only for senders the plain rules could
-not sort. The answers it can give:
+**An AI model is asked one question:** what kind of sender is this? It is asked once per *sender*, never per message, and only for senders the plain rules could not sort. The answers it can give:
 
-- **A contact**: create the contact, and check whether the domain should get a
-  company.
-- **A role mailbox** or **a company sender**: keep the mail visible, create no
-  contact.
-- **A newsletter**, **something transactional**, or **spam**: hide the mail and
-  mark the domain as not a company.
+- **A contact**: create the contact, and check whether the domain should get a company.
+- **A role mailbox** or **a company sender**: keep the mail visible, create no contact.
+- **A newsletter**, **something transactional**, or **spam**: hide the mail and mark the domain as not a company.
 
 Calendar notifications and meeting notes from Google are never hidden this way.
 They are the record that a meeting took place, so Margince keeps them visible
