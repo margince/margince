@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// ListLeadOrigins returns every origin, retired ones included.
 func (h Handlers) ListLeadOrigins(w http.ResponseWriter, r *http.Request) {
 	out, err := h.store.ListLeadOrigins(r.Context())
 	if err != nil {
@@ -23,6 +24,9 @@ func (h Handlers) ListLeadOrigins(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// CreateLeadOrigin adds an origin.
+//
+//nolint:dupl // Same shape as CreateLeadSource, a different table and contract type.
 func (h Handlers) CreateLeadOrigin(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateLeadOriginParams) {
 	var req crmcontracts.CreateLeadOriginRequest
 	if !httperr.Decode(w, r, &req) {
@@ -47,6 +51,7 @@ func (h Handlers) CreateLeadOrigin(w http.ResponseWriter, r *http.Request, _ crm
 	httperr.WriteJSON(w, http.StatusCreated, out)
 }
 
+// UpdateLeadOrigin renames, reorders, re-weights or retires an origin.
 func (h Handlers) UpdateLeadOrigin(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UpdateLeadOriginParams) {
 	var req crmcontracts.UpdateLeadOriginRequest
 	if !httperr.Decode(w, r, &req) {
@@ -65,6 +70,7 @@ func (h Handlers) UpdateLeadOrigin(w http.ResponseWriter, r *http.Request, id cr
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// DeleteLeadOrigin removes an origin no lead carries.
 func (h Handlers) DeleteLeadOrigin(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	if err := h.store.DeleteLeadOrigin(r.Context(), ids.UUID(id)); err != nil {
 		writeStoreErr(w, r, err)

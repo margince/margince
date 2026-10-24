@@ -417,8 +417,10 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 	// Margince writes how a row arrived. A client may echo the stored value
 	// back; any other value would let a caller rewrite "Added via".
 	if in.Source != nil && strings.TrimSpace(*in.Source) != current.Source {
-		return nil, false, &values.ParseError{Field: "source", Code: "read_only",
-			Message: "source records how the lead reached Margince and cannot be changed; set origin to say where it came from"}
+		return nil, false, &values.ParseError{
+			Field: "source", Code: "read_only",
+			Message: "source records how the lead reached Margince and cannot be changed; set origin to say where it came from",
+		}
 	}
 	if err := setLeadOrigin(p, current, in); err != nil {
 		return nil, false, err

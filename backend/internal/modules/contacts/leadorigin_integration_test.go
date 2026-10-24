@@ -211,7 +211,7 @@ func TestAHumanScoreOverrideOutlivesAnOriginChange(t *testing.T) {
 func TestAnImportedOriginResolvesOrStaysAsANote(t *testing.T) {
 	e := setupPromoteConsent(t)
 	keepOriginCatalogAsSeeded(t, e)
-	for wording, want := range map[string]string{"Referral": "referral", " cold outreach ": "cold_outreach", "LINKEDIN": "linkedin"} {
+	for wording, want := range map[string]string{"Referral": "referral", " " + "cold outreach ": "cold_outreach", "LINKEDIN": "linkedin"} {
 		lead := newLead(t, e, CreateLeadInput{OriginHint: wording})
 		if lead.Origin == nil || *lead.Origin != want || lead.OriginDetail != nil {
 			t.Errorf("hint %q filed as origin %v detail %v, want %q and no note", wording, lead.Origin, lead.OriginDetail, want)

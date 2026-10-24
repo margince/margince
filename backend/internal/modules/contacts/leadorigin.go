@@ -32,7 +32,13 @@ import (
 const (
 	leadOriginField       = "origin"
 	leadOriginDetailField = "origin_detail"
-	LeadOriginDetailMax   = values.MaxLeadOriginDetailRunes
+	leadOriginLabelField  = "label"
+	leadOriginKeyField    = "key"
+	leadOriginIntentField = "intent"
+	msgLabelNotEmpty      = "label must not be empty"
+	msgLabelRequired      = "label is required"
+	// LeadOriginDetailMax is the longest origin_detail, in characters.
+	LeadOriginDetailMax = values.MaxLeadOriginDetailRunes
 	// leadOriginFilterUnset is the list filter's word for a lead with no origin.
 	leadOriginFilterUnset = "unset"
 )
@@ -261,18 +267,20 @@ func (s *Store) CreateLeadOrigin(ctx context.Context, in CreateLeadOriginInput) 
 	}
 	label := strings.TrimSpace(in.Label)
 	if label == "" {
-		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: "label", Code: codeRequired, Message: "label is required"}
+		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: leadOriginLabelField, Code: codeRequired, Message: msgLabelRequired}
 	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
 		key = deriveSourceKey(label)
 	}
 	if key == "" || key != strings.ToLower(key) {
-		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: "key", Code: "invalid_key", Message: "key must be a non-empty lowercase value"}
+		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: leadOriginKeyField, Code: "invalid_key", Message: "key must be a non-empty lowercase value"}
 	}
 	if key == leadOriginFilterUnset {
-		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: "key", Code: "reserved_key",
-			Message: "unset is reserved: the lead list uses it to mean no origin recorded"}
+		return crmcontracts.LeadOrigin{}, &values.ParseError{
+			Field: leadOriginKeyField, Code: "reserved_key",
+			Message: "unset is reserved: the lead list uses it to mean no origin recorded",
+		}
 	}
 	intent := in.Intent
 	if intent == "" {
@@ -294,7 +302,7 @@ func (s *Store) CreateLeadOrigin(ctx context.Context, in CreateLeadOriginInput) 
 			return fmt.Errorf("insert lead origin: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "lead_origin", id, nil,
-			map[string]any{"key": key, "label": label, "intent": string(intent)}); err != nil {
+			map[string]any{leadOriginKeyField: key, leadOriginLabelField: label, leadOriginIntentField: string(intent)}); err != nil {
 			return err
 		}
 		out, err = readLeadOrigin(ctx, tx, id, false)
@@ -310,7 +318,7 @@ func (s *Store) UpdateLeadOrigin(ctx context.Context, id ids.UUID, in UpdateLead
 		return crmcontracts.LeadOrigin{}, err
 	}
 	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
-		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: "label", Code: codeRequired, Message: "label must not be empty"}
+		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: leadOriginLabelField, Code: codeRequired, Message: msgLabelNotEmpty}
 	}
 	if in.Intent != nil {
 		if _, err := ParseSourceIntent(string(*in.Intent)); err != nil {
@@ -383,7 +391,7 @@ func (s *Store) DeleteLeadOrigin(ctx context.Context, id ids.UUID) error {
 			return fmt.Errorf("delete lead origin: %w", err)
 		}
 		_, err = storekit.Audit(ctx, tx, "erase", "lead_origin", id,
-			map[string]any{"key": current.Key, "label": current.Label}, nil)
+			map[string]any{leadOriginKeyField: current.Key, leadOriginLabelField: current.Label}, nil)
 		return err
 	})
 }

@@ -46,31 +46,21 @@ func noteWithHint(hint string, detail *string) string {
 // does not resolve the wording is kept in the detail with origin left NULL.
 func admitLeadOrigin(ctx context.Context, tx pgx.Tx, in CreateLeadInput) (CreateLeadInput, error) {
 	if in.Origin != nil {
-		key := strings.TrimSpace(*in.Origin)
-		in.Origin = nil
-		if key != "" {
-			if err := ensureAssignableOrigin(ctx, tx, key, nil); err != nil {
-				return in, err
-			}
-			in.Origin = &key
-		}
-	} else if hint := strings.TrimSpace(in.OriginHint); hint != "" {
-		key, ok, err := ResolveOrigin(ctx, tx, hint)
+		named, err := assignableOrigin(ctx, tx, *in.Origin)
 		if err != nil {
 			return in, err
 		}
-		if ok {
-			in.Origin = &key
-		} else {
-			detail := noteWithHint(hint, in.OriginDetail)
-			in.OriginDetail = &detail
+		in.Origin = named
+	} else if hint := strings.TrimSpace(in.OriginHint); hint != "" {
+		var err error
+		if in, err = admitOriginHint(ctx, tx, in, hint); err != nil {
+			return in, err
 		}
 	}
 	if in.OriginDetail != nil {
-		detail := cleanOriginDetail(*in.OriginDetail, false)
-		if utf8.RuneCountInString(detail) > LeadOriginDetailMax {
-			return in, &values.ParseError{Field: leadOriginDetailField, Code: "too_long",
-				Message: fmt.Sprintf("origin_detail is at most %d characters", LeadOriginDetailMax)}
+		detail, err := checkOriginDetail(*in.OriginDetail)
+		if err != nil {
+			return in, err
 		}
 		in.OriginDetail = nil
 		if detail != "" {
@@ -92,10 +82,9 @@ func setLeadOrigin(p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadIn
 		p.Set(leadOriginField, current.Origin, origin)
 	}
 	if in.OriginDetail != nil {
-		detail := cleanOriginDetail(*in.OriginDetail, false)
-		if utf8.RuneCountInString(detail) > LeadOriginDetailMax {
-			return &values.ParseError{Field: leadOriginDetailField, Code: "too_long",
-				Message: fmt.Sprintf("origin_detail is at most %d characters", LeadOriginDetailMax)}
+		detail, err := checkOriginDetail(*in.OriginDetail)
+		if err != nil {
+			return err
 		}
 		p.Set(leadOriginDetailField, current.OriginDetail, detail)
 	}
@@ -123,5 +112,46 @@ func settleOriginHint(ctx context.Context, tx pgx.Tx, current crmcontracts.Lead,
 		detail := noteWithHint(hint, in.OriginDetail)
 		in.OriginDetail = &detail
 	}
+	return in, nil
+}
+
+// checkOriginDetail cleans a note and refuses one past the bound.
+func checkOriginDetail(raw string) (string, error) {
+	detail := cleanOriginDetail(raw, false)
+	if utf8.RuneCountInString(detail) > LeadOriginDetailMax {
+		return "", &values.ParseError{
+			Field: leadOriginDetailField, Code: codeTooLong,
+			Message: fmt.Sprintf("origin_detail is at most %d characters", LeadOriginDetailMax),
+		}
+	}
+	return detail, nil
+}
+
+// assignableOrigin returns the trimmed key when it is an active catalog key,
+// and nil for a blank one.
+func assignableOrigin(ctx context.Context, tx pgx.Tx, raw string) (*string, error) {
+	key := strings.TrimSpace(raw)
+	if key == "" {
+		return nil, nil //nolint:nilnil // a blank origin is "no origin", not a failure
+	}
+	if err := ensureAssignableOrigin(ctx, tx, key, nil); err != nil {
+		return nil, err
+	}
+	return &key, nil
+}
+
+// admitOriginHint resolves an importer's wording to a catalog key, or keeps it
+// in the detail when no key matches.
+func admitOriginHint(ctx context.Context, tx pgx.Tx, in CreateLeadInput, hint string) (CreateLeadInput, error) {
+	key, ok, err := ResolveOrigin(ctx, tx, hint)
+	if err != nil {
+		return in, err
+	}
+	if ok {
+		in.Origin = &key
+		return in, nil
+	}
+	detail := noteWithHint(hint, in.OriginDetail)
+	in.OriginDetail = &detail
 	return in, nil
 }
