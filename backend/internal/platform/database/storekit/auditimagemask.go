@@ -46,8 +46,8 @@ func maskAuditColumns(entityType string, columns ...*[]byte) error {
 }
 
 // maskAuditImage masks every string in one encoded column. Numbers decode as
-// json.Number so an int64 keeps every digit, and a column with nothing to mask
-// is stored exactly as it was encoded.
+// json.Number so an int64 keeps every digit. A column with nothing to mask keeps
+// the bytes it was encoded with.
 func maskAuditImage(entityType string, image []byte) ([]byte, error) {
 	if image == nil || !textMaskedAuditTypes[entityType] {
 		return image, nil

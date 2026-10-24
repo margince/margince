@@ -74,8 +74,8 @@ func TestANoteEditThatAddedAPasswordCanBePutBack(t *testing.T) {
 	}
 }
 
-// The trail, not the masked text, says whether a colleague wrote the body since:
-// an edit that changed only the password leaves text that masks the same.
+// An edit that changed only the password leaves text that masks the same. So
+// the trail says whether the body was written since, not the masked text.
 func TestALaterPasswordChangeStillOvertakesTheEdit(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()

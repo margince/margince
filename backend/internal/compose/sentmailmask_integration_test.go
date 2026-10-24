@@ -27,8 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The sent row and the sender's synced copy of the same mail must read alike,
-// or the echo that joins the row would have to rewrite it.
+// The sent row and the sender's synced copy of one mail must read alike.
+// Otherwise the echo that joins the row would have to rewrite it.
 func TestASentMailKeepsOneMaskedRowThroughItsEcho(t *testing.T) {
 	e := integration.Setup(t)
 	address := seatAddress(t, e, e.Rep1)

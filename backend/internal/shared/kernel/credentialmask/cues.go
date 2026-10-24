@@ -11,9 +11,9 @@ import (
 	"unicode"
 )
 
-// A rule's cues are strings one of which every match of the rule contains. They
-// are read off the rule's own pattern, so a rule never runs where it cannot
-// match and a new label is covered without a second list.
+// Every match of a rule contains one of the rule's cues. The cues are read off
+// the rule's own pattern. A rule then never runs where it cannot match, and a
+// new label needs no second list.
 //
 // Text and cues are compared case-folded, so a cue also holds for a pattern
 // that matches case-sensitively. A rule whose pattern yields no cues runs on
@@ -51,9 +51,9 @@ func cuesOf(pattern string) [][]byte {
 	return cues
 }
 
-// stemLength is how much of a cue is looked for. Every part of a string a match
-// must contain is one it must contain too, and a short stem covers the spelling
-// variants of one label at once.
+// stemLength is how much of a cue is looked for. A match that must contain a
+// string also contains every part of it. A short stem covers the spellings of
+// one label at once.
 const stemLength = 4
 
 func stem(cue string) string {
@@ -65,8 +65,8 @@ func stem(cue string) string {
 	return cue
 }
 
-// cueSet is a set of folded strings. exact means the part matches exactly
-// these strings; otherwise every match only contains one of them.
+// cueSet is a set of folded strings. exact means the part matches these
+// strings and no others. Otherwise every match only contains one of them.
 type cueSet struct {
 	strings []string
 	exact   bool
@@ -217,8 +217,8 @@ func shortest(set *cueSet) int {
 	return length
 }
 
-// fold maps every rune to the smallest rune of its case orbit, the way (?i)
-// matches: K, k and the Kelvin sign fold alike, and so do S, s and the long s.
+// fold maps every rune to the smallest rune of its case orbit, as (?i) matches.
+// K, k and the Kelvin sign fold alike, and so do S, s and the long s.
 func fold(s string) string {
 	return string(foldBytes([]byte(s)))
 }

@@ -46,15 +46,23 @@ func newRecordTypeSet(names ...string) map[string]bool {
 	return set
 }
 
-// humanValueMoved reports whether a proposal changes the value a human's
-// latest write left. The trail keeps typed text masked, so where the image holds
-// masked text the proposal is compared with the live column, and with no
-// table to read the tie goes to asking the human.
-func humanValueMoved(entityType, table string, image json.RawMessage, differsFromImage, differsFromLive bool) bool {
-	if !liveStandsInForImage(entityType, image, false) {
-		return differsFromImage
+// humanWrite is the latest human write of one key, as the precedence query
+// compares the proposal with it.
+type humanWrite struct {
+	image            json.RawMessage
+	differsFromImage bool
+	differsFromLive  bool
+}
+
+// moved reports whether the proposal changes the value the human's write left.
+// The trail keeps typed text masked. Where the image holds masked text, the
+// proposal is compared with the live column. With no table to read, the tie
+// goes to asking the human.
+func (w humanWrite) moved(entityType, table string) bool {
+	if !liveStandsInForImage(entityType, w.image, false) {
+		return w.differsFromImage
 	}
-	return table == "" || differsFromLive
+	return table == "" || w.differsFromLive
 }
 
 // liveValueOf renders the record's current value of latest.key, or NULL
@@ -209,12 +217,12 @@ func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType stri
 		defer rows.Close()
 		for rows.Next() {
 			var field string
-			var audited, differsFromImage, differsFromLive bool
-			var image json.RawMessage
-			if err := rows.Scan(&field, &audited, &image, &differsFromImage, &differsFromLive); err != nil {
+			var audited bool
+			var latest humanWrite
+			if err := rows.Scan(&field, &audited, &latest.image, &latest.differsFromImage, &latest.differsFromLive); err != nil {
 				return err
 			}
-			if !audited || humanValueMoved(entityType, table, image, differsFromImage, differsFromLive) {
+			if !audited || latest.moved(entityType, table) {
 				conflicts = append(conflicts, field)
 			}
 		}

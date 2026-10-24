@@ -232,8 +232,8 @@ type Evaluator struct {
 	// follows it: reversing a create archives the link and asks the delete grant,
 	// where reversing an update asks update.
 	EdgeWritable func(ctx context.Context, tx pgx.Tx, facts contacts.EdgeFacts, entryAction string) error
-	// MaskedText names the patch keys whose value the trail keeps masked while
-	// the record keeps the text as typed, so the patch would write the marker.
+	// MaskedText names the patch keys whose value the trail keeps masked. The
+	// record keeps that text as typed, so the patch would write the marker.
 	MaskedText func(ctx context.Context, tx pgx.Tx, row AuditRow, patch map[string]json.RawMessage) ([]string, error)
 }
 

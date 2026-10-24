@@ -302,11 +302,7 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 // store-opened (LogActivity) and caller-opened (LogActivityTx) entry
 // points.
 func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
-	maskTextOfKind(crmcontracts.ActivityKind(in.Kind), &in.Subject, &in.Body)
-	if err := prepareFollowUpSource(ctx, tx, &in); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	if err := validateActivityDuration(in.DurationSeconds); err != nil {
+	if err := prepareLoggedActivity(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	by, err := storekit.CapturedBy(ctx)

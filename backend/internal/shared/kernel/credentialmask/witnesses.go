@@ -9,9 +9,9 @@ import (
 )
 
 // A rule's witnesses are texts it must mask. Together they take every branch of
-// the rule's alternations, and the tests hold each one against the rule's cues,
-// so a cue that misses a shape fails a test. Vendor-shaped witnesses are built
-// by concatenation, so the source holds nothing a secret scanner reads as a key.
+// the rule's alternations. The tests hold each one against the rule's cues, so
+// a cue that misses a shape fails a test. Vendor-shaped witnesses are built by
+// concatenation, so the source holds nothing a secret scanner reads as a key.
 
 // The bare words of the ambiguous labels, which the strong labels end in.
 const (

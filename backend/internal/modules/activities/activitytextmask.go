@@ -38,8 +38,7 @@ func maskTextOfKind(kind crmcontracts.ActivityKind, texts ...**string) {
 // keepsTypedText reports whether a kind stores its subject and body as the
 // member typed them. A mail and a channel message are stored masked, as capture
 // stores them. A note, a task and the other kinds keep the text, because the
-// member chose to store it there; only their audit images are masked, in
-// storekit.
+// member chose to store it there. Only their audit images are masked.
 func keepsTypedText(kind crmcontracts.ActivityKind) bool {
 	return kind != crmcontracts.ActivityKindEmail && kind != crmcontracts.ActivityKindMessage
 }

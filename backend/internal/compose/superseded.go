@@ -138,10 +138,10 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]strin
 
 // columnsThatMoved names the image keys that are columns of the record and
 // hold something other than the image's value now. A timestamp column is the
-// same value in any zone, and the audit image is spelled in the writer's zone where
-// the row is read in the session's, so those two compare as instants. The image
-// stores text with its credentials masked, so a column nobody wrote since
-// compares in that form too.
+// same value in any zone. The image spells it in the writer's zone and the row
+// reads it in the session's, so the two compare as instants. The image stores
+// text with its credentials masked, so a column nobody wrote since compares in
+// that form too.
 func columnsThatMoved(ctx context.Context, tx pgx.Tx, row AuditRow, asked []byte) ([]string, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT k.key, to_jsonb(r) -> k.key, k.value,

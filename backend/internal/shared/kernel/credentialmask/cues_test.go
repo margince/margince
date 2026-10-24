@@ -14,8 +14,8 @@ import (
 )
 
 // labelWords spells every word a label pattern matches. It walks the pattern
-// on its own, without the cue derivation, so a cue the derivation drops shows
-// up as a label line the masker no longer masks.
+// without the cue derivation. A cue the derivation drops then shows up as a
+// label line the masker no longer masks.
 func labelWords(t *testing.T, pattern string) []string {
 	t.Helper()
 	re, err := syntax.Parse(pattern, syntax.Perl)
@@ -69,7 +69,7 @@ func spell(t *testing.T, re *syntax.Regexp) []string {
 }
 
 // Every label line the rules mask is masked the same with the cue check as
-// without it, in every case a reader may type it, the Kelvin sign included.
+// without it. That holds in every case a reader may type, the Kelvin sign too.
 func TestTheCueCheckSkipsNoLabelARuleMatches(t *testing.T) {
 	var lines []string
 	for _, labels := range []string{passwordLabels, strongLabels, ambiguousLabels, jsonLabels} {
@@ -105,8 +105,8 @@ func TestEveryRuleHasCuesAndWitnesses(t *testing.T) {
 	}
 }
 
-// witnessForms are the ways a witness reaches the masker: alone, inside prose,
-// in another case, and for the JSON lane as a string inside a JSON document.
+// witnessForms are the ways a witness reaches the masker: alone, inside prose
+// and in another case. For the JSON lane each is also a string in a document.
 func witnessForms(t *testing.T, witness string, lane Lane) []string {
 	t.Helper()
 	cased := []string{witness, strings.ToUpper(witness), strings.ToLower(witness), mixedCase(witness)}
@@ -140,9 +140,9 @@ func mixedCase(s string) string {
 	return string(runes)
 }
 
-// Every rule of the table, through every witness it declares: the witness is
-// a match, every form of it the rule matches holds one of the rule's cues, and
-// the masker answers the same with the cue check as without it.
+// Each witness of each rule is a match of the rule. Every form of it the rule
+// matches holds one of the rule's cues. The masker answers the same with the
+// cue check as without it.
 func TestEveryWitnessHoldsItsRulesCues(t *testing.T) {
 	mark := func(kind string) string { return "<" + kind + ">" }
 	for i, r := range rules {

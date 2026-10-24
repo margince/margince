@@ -193,7 +193,7 @@ func TestEveryColumnOfAMailTextAuditRowIsStoredMasked(t *testing.T) {
 }
 
 // A mail or a channel message logged by hand or imported is stored masked, as
-// capture stores it, and a later edit masks the same way. A note is not.
+// capture stores it. A later edit masks the same way. A note is not masked.
 func TestALoggedMailOrMessageStoresItsPasswordMasked(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)

@@ -56,7 +56,7 @@ func TestAChannelReplyStoresMaskedTextAndDeliversWhatWasTyped(t *testing.T) {
 }
 
 // assertMaskedText holds a stored field to the text capture would store for
-// the same typed text, so a sent row and its synced copy read alike.
+// the same typed text. A sent row and its synced copy then read alike.
 func assertMaskedText(t *testing.T, field string, stored *string, typed string) {
 	t.Helper()
 	if stored == nil {
