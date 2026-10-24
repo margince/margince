@@ -1,5 +1,11 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatDayMonth, formatMoney } from "../../format/format";
@@ -668,6 +674,41 @@ describe("DealScreen reopen", () => {
     await userEvent.click(dialog.getByRole("button", { name: "Reopen" }));
     await waitFor(() => expect(moves.length).toBe(1));
     expect(moves[0]).toEqual([{ to_stage_id: "s1", status: "open" }, "4"]);
+  });
+
+  it("correcting the close day of a closed deal posts the picked day under the version it was read at", async () => {
+    const posts: [unknown, string | null][] = [];
+    const d = deal({
+      id: "x",
+      status: "won",
+      stage_id: "s3",
+      closed_at: "2026-08-20T12:00:00Z",
+    });
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([d], { single: d, onCloseDay: (b, m) => posts.push([b, m]) }),
+    );
+    render(<DealScreen id="x" />);
+    await openHeaderMenu();
+    await userEvent.click(screen.getByTestId("correct-close-day-open"));
+    const dialog = within(await screen.findByRole("dialog"));
+    const input = dialog.getByTestId("correct-close-day-input");
+    expect((input as HTMLInputElement).value).toBe("2026-08-20");
+    fireEvent.change(input, { target: { value: "2026-08-12" } });
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Save close day" }),
+    );
+    await waitFor(() => expect(posts.length).toBe(1));
+    expect(posts[0]).toEqual([{ closed_on: "2026-08-12" }, "4"]);
+  });
+
+  it("offers no close-day correction on an open deal", async () => {
+    const d = deal({ id: "z", status: "open" });
+    vi.stubGlobal("fetch", stubBackend([d], { single: d }));
+    render(<DealScreen id="z" />);
+    await openHeaderMenu();
+    await screen.findByTestId("archive-record");
+    expect(screen.queryByTestId("correct-close-day-open")).toBeNull();
   });
 
   it("reopen is not offered for an open deal", async () => {

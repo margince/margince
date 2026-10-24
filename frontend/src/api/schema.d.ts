@@ -4026,6 +4026,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/close-day": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Correct the day a won or lost deal closed.
+         * @description Moves `closed_at` of a closed deal to midday of `closed_on` in the installation's zone,
+         *     and freezes the exchange rate again for that day, so revenue by period and the base-currency
+         *     figure follow the corrected day. The change is audited and emits `deal.updated`.
+         *
+         *     A person's correction only: an agent is refused, because the day decides which period
+         *     counts the revenue. An open deal answers 422 `deal_not_closed` (its forecast date is
+         *     `expected_close_date`), a day after today answers 422 `close_day_future`, and a currency
+         *     with no stored rate on or before the day answers 422 `fx_rate_unavailable`. The day the
+         *     deal already closed on changes nothing and answers 200.
+         */
+        post: operations["correctDealCloseDay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/progress": {
         parameters: {
             query?: never;
@@ -32333,6 +32364,13 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        CorrectDealCloseDayRequest: {
+            /**
+             * Format: date
+             * @description The calendar day the deal closed, in the installation's zone. Not after today.
+             */
+            closed_on: string;
+        };
         AdvanceDealRequest: {
             /**
              * Format: uuid
@@ -55687,6 +55725,47 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    correctDealCloseDay: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectDealCloseDayRequest"];
+            };
+        };
+        responses: {
+            /** @description The deal with its corrected close day. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Deal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

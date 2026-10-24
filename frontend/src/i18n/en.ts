@@ -4863,6 +4863,12 @@ export const en = {
   "deal.reopen": "Reopen",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
+  "deal.correctCloseDay": "Correct close day",
+  "deal.correctCloseDayTitle": "Correct the day this deal closed",
+  "deal.correctCloseDayLabel": "Day the deal closed",
+  "deal.correctCloseDayHint":
+    "Revenue by period follows this day, and the exchange rate is set again for it.",
+  "deal.correctCloseDayConfirm": "Save close day",
   "deal.fcCommit": "Commit",
   "deal.fcBestCase": "Best case",
   "deal.fcPipeline": "Pipeline",

@@ -4853,6 +4853,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
+  "deal.correctCloseDay": "Abschlusstag korrigieren",
+  "deal.correctCloseDayTitle": "Den Abschlusstag dieses Deals korrigieren",
+  "deal.correctCloseDayLabel": "Tag des Abschlusses",
+  "deal.correctCloseDayHint":
+    "Der Umsatz nach Zeitraum folgt diesem Tag, und der Wechselkurs wird für ihn neu festgesetzt.",
+  "deal.correctCloseDayConfirm": "Abschlusstag speichern",
   "deal.fcCommit": "Commit",
   "deal.fcBestCase": "Best Case",
   "deal.fcPipeline": "Pipeline",

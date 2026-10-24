@@ -30,6 +30,7 @@ import type { MessageKey } from "../../../i18n/en";
 import { useRecordZone } from "../../../lib/recordzone";
 import { useViewerId } from "../../../lib/session";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
+import { closeDayOf } from "../closeday";
 import {
   LostReasonFact,
   type WonWithoutContract,
@@ -48,6 +49,7 @@ export type DealIdentity = Partial<
     | "currency"
     | "stage_id"
     | "expected_close_date"
+    | "closed_at"
     | "close_date_provisional"
     | "forecast_category"
     | "wait_until"
@@ -200,7 +202,8 @@ export type CloseWords = Readonly<{
 }>;
 
 /**
- * The words for when the deal is expected to close.
+ * The words for when the deal closes: the day it closed once it is won or lost,
+ * the day it is expected to otherwise.
  *
  * Counted in the record's zone, the one the date is drawn in, so the date and
  * the count cannot name different days. A won or lost deal's date is when it
@@ -212,13 +215,12 @@ export function closeWords(
   zone: string,
   t: Translator,
 ): CloseWords {
-  if (!deal.expected_close_date) {
+  const closeDay = closeDayOf(deal);
+  if (!closeDay) {
     return { parts: [], warn: false };
   }
   const closed = deal.status === "won" || deal.status === "lost";
-  const daysLeft = closed
-    ? undefined
-    : calendarDaysUntil(deal.expected_close_date, zone);
+  const daysLeft = closed ? undefined : calendarDaysUntil(closeDay, zone);
   const parts: string[] = [];
   if (daysLeft !== undefined) {
     parts.push(
@@ -247,7 +249,7 @@ export function closeWords(
     );
   }
   return {
-    date: formatDayMonth(deal.expected_close_date, locale, zone),
+    date: formatDayMonth(closeDay, locale, zone),
     parts,
     daysLeft,
     warn:

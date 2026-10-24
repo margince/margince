@@ -35653,6 +35653,12 @@ type ConversationMemoryEntryDirection string
 // ConversationMemoryEntryStatus The state a reader acts on: `replied`, `unanswered`, `awaiting_them`, or null when the entry carries no such claim. Derived from direction and what followed it.
 type ConversationMemoryEntryStatus string
 
+// CorrectDealCloseDayRequest defines model for CorrectDealCloseDayRequest.
+type CorrectDealCloseDayRequest struct {
+	// ClosedOn The calendar day the deal closed, in the installation's zone. Not after today.
+	ClosedOn openapi_types.Date `json:"closed_on"`
+}
+
 // CreateAcquisitionSourceRequest defines model for CreateAcquisitionSourceRequest.
 type CreateAcquisitionSourceRequest struct {
 	// Key Derived from the label when omitted.
@@ -59050,6 +59056,16 @@ type AcceptAppliedDealChangeParams struct {
 	IfMatch string `json:"If-Match"`
 }
 
+// CorrectDealCloseDayParams defines parameters for CorrectDealCloseDay.
+type CorrectDealCloseDayParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // ListDealDocumentsParams defines parameters for ListDealDocuments.
 type ListDealDocumentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -63234,6 +63250,9 @@ type UpdateDealJSONRequestBody = UpdateDealRequest
 
 // AdvanceDealJSONRequestBody defines body for AdvanceDeal for application/json ContentType.
 type AdvanceDealJSONRequestBody = AdvanceDealRequest
+
+// CorrectDealCloseDayJSONRequestBody defines body for CorrectDealCloseDay for application/json ContentType.
+type CorrectDealCloseDayJSONRequestBody = CorrectDealCloseDayRequest
 
 // RequestLegalReviewJSONRequestBody defines body for RequestLegalReview for application/json ContentType.
 type RequestLegalReviewJSONRequestBody = RequestLegalReviewRequest
@@ -75712,6 +75731,9 @@ type ServerInterface interface {
 	// Accept a recorded automatic deal change.
 	// (POST /deals/{id}/applied-changes/{changeId}/accept)
 	AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request, id Id, changeId openapi_types.UUID, params AcceptAppliedDealChangeParams)
+	// Correct the day a won or lost deal closed.
+	// (POST /deals/{id}/close-day)
+	CorrectDealCloseDay(w http.ResponseWriter, r *http.Request, id Id, params CorrectDealCloseDayParams)
 	// What the customer committed to that this deal waits on.
 	// (GET /deals/{id}/commitments)
 	GetDealCommitments(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -79708,6 +79730,12 @@ func (_ Unimplemented) AdvanceDeal(w http.ResponseWriter, r *http.Request, id Id
 // Accept a recorded automatic deal change.
 // (POST /deals/{id}/applied-changes/{changeId}/accept)
 func (_ Unimplemented) AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request, id Id, changeId openapi_types.UUID, params AcceptAppliedDealChangeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Correct the day a won or lost deal closed.
+// (POST /deals/{id}/close-day)
+func (_ Unimplemented) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request, id Id, params CorrectDealCloseDayParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101224,6 +101252,62 @@ func (siw *ServerInterfaceWrapper) AcceptAppliedDealChange(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// CorrectDealCloseDay operation middleware
+func (siw *ServerInterfaceWrapper) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CorrectDealCloseDayParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CorrectDealCloseDay(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetDealCommitments operation middleware
 func (siw *ServerInterfaceWrapper) GetDealCommitments(w http.ResponseWriter, r *http.Request) {
 
@@ -122035,6 +122119,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/applied-changes/{changeId}/accept", wrapper.AcceptAppliedDealChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/close-day", wrapper.CorrectDealCloseDay)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/commitments", wrapper.GetDealCommitments)

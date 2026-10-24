@@ -26,6 +26,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useRecordTags } from "../../lib/tags.queries";
+import { closeDayOf } from "./closeday";
 import {
   MOTION_OPTIONS,
   PRIORITY_OPTIONS,
@@ -189,7 +190,7 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
     row(
       "close",
       "deal.standing.close",
-      day(deal.expected_close_date, facts),
+      day(closeDayOf(deal), facts),
       "expected_close_date",
     ),
     row(

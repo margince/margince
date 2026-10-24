@@ -5967,6 +5967,44 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /deals/{id}/close-day:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: correctDealCloseDay
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Correct the day a won or lost deal closed.
+      description: |
+        Moves `closed_at` of a closed deal to midday of `closed_on` in the installation's zone,
+        and freezes the exchange rate again for that day, so revenue by period and the base-currency
+        figure follow the corrected day. The change is audited and emits `deal.updated`.
+
+        A person's correction only: an agent is refused, because the day decides which period
+        counts the revenue. An open deal answers 422 `deal_not_closed` (its forecast date is
+        `expected_close_date`), a day after today answers 422 `close_day_future`, and a currency
+        with no stored rate on or before the day answers 422 `fx_rate_unavailable`. The day the
+        deal already closed on changes nothing and answers 200.
+      x-agent-access: human-only
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CorrectDealCloseDayRequest' }
+      responses:
+        '200':
+          description: The deal with its corrected close day.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deals/{id}/progress:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -44903,6 +44941,14 @@ components:
       additionalProperties: true
       x-extension: true
 
+    CorrectDealCloseDayRequest:
+      type: object
+      required: [closed_on]
+      properties:
+        closed_on:
+          type: string
+          format: date
+          description: The calendar day the deal closed, in the installation's zone. Not after today.
     AdvanceDealRequest:
       type: object
       required: [to_stage_id]
