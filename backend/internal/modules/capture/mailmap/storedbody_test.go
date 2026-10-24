@@ -134,3 +134,28 @@ func TestACapturedSubjectIsStoredWithItsCredentialsMasked(t *testing.T) {
 		t.Errorf("subject = %q, want the password masked behind its label", fields.Subject)
 	}
 }
+
+// The record says masking changed it only when a credential was masked, never
+// for text a sender typed as "[masked]".
+func TestTheRecordSaysWhenMaskingChangedIt(t *testing.T) {
+	for name, tc := range map[string]struct {
+		text string
+		want bool
+	}{
+		"a password":      {"Passwort: Quokka7", true},
+		"a typed marker":  {"hello [masked]", false},
+		"nothing to mask": {"hello", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			raw := mailOf("text/plain; charset=utf-8", "", tc.text, "")
+			msg, err := Parse(raw, walkOwner)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			fields, ok := msg.ToRecord("gmail", raw).Fields.(capture.ActivityFields)
+			if !ok || fields.CredentialsMasked != tc.want {
+				t.Errorf("CredentialsMasked = %v, want %v", fields.CredentialsMasked, tc.want)
+			}
+		})
+	}
+}

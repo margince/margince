@@ -112,6 +112,7 @@ type Meeting struct {
 	icalUID         string
 	subject         string
 	body            string
+	masked          bool
 	occurredAt      time.Time
 	allDay          bool
 	durationSeconds *int
@@ -129,12 +130,14 @@ func Classify(ev Event, owner string) Meeting {
 	ownerDom := domainOf(owner)
 	attendeeEmails, external := classifyAttendees(ev.Attendees, ownerDom)
 	organizerDom := domainOf(ev.Organizer.Email)
+	body, masked := buildBody(ev, attendeeEmails)
 
 	return Meeting{
 		id:              strings.TrimSpace(ev.ID),
 		icalUID:         strings.TrimSpace(ev.ICalUID),
 		subject:         strings.TrimSpace(ev.Subject),
-		body:            buildBody(ev, attendeeEmails),
+		body:            body,
+		masked:          masked,
 		occurredAt:      ev.StartsAt,
 		allDay:          ev.AllDay,
 		durationSeconds: eventDuration(ev),
@@ -216,11 +219,13 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		EntityType: datasource.EntityActivity,
 		NaturalKey: connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id},
 		Fields: capture.ActivityFields{
-			Kind:            "meeting",
-			Subject:         m.subject,
-			Body:            m.body,
-			OccurredAt:      m.occurredAt,
-			DurationSeconds: m.durationSeconds,
+			Kind:    "meeting",
+			Subject: m.subject,
+			Body:    m.body,
+			// The sink adds a mask of the subject to this.
+			CredentialsMasked: m.masked,
+			OccurredAt:        m.occurredAt,
+			DurationSeconds:   m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
 			Direction: "",
 		},
@@ -274,16 +279,18 @@ func classifyAttendees(attendees []Actor, ownerDom string) (emails []string, ext
 // buildBody folds the organizer, the attendee list, and the event description
 // into the stored meeting body, bounded to a legible excerpt. Credentials are
 // masked before the cut, so a key the cut would split is still found whole.
-func buildBody(ev Event, attendeeEmails []string) string {
+// masked says the mask changed the body.
+func buildBody(ev Event, attendeeEmails []string) (body string, masked bool) {
 	header := "Organizer: " + orDash(strings.TrimSpace(ev.Organizer.Email))
 	if len(attendeeEmails) > 0 {
 		header += "\nAttendees: " + strings.Join(attendeeEmails, ", ")
 	}
-	body := header
+	body = header
 	if desc := strings.TrimSpace(ev.Description); desc != "" {
 		body = header + "\n\n" + desc
 	}
-	return textcut.BytesMarked(credentialmask.MaskText(body), MaxBodyLen, "…")
+	maskedBody := credentialmask.MaskText(body)
+	return textcut.BytesMarked(maskedBody, MaxBodyLen, "…"), maskedBody != body
 }
 
 // AllDayStart anchors an all-day date (YYYY-MM-DD) at noon UTC.

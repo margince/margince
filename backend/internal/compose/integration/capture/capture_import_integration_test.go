@@ -46,8 +46,15 @@ const secondSeatAddress = "colleague@myco.example"
 func secondMailbox(t *testing.T, e *integration.SearchEnv, user ids.UUID) func(t *testing.T, raws ...[]byte) {
 	t.Helper()
 	seedCaptureRoleFor(t, e, user)
-	conn := &mailBatchConnector{accountLabel: secondSeatAddress}
-	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	return mailboxFor(t, e, user, secondSeatAddress, compose.CaptureConfig{})
+}
+
+// mailboxFor connects one seat's gmail mailbox, authenticated as label, on a
+// registry built from cfg.
+func mailboxFor(t *testing.T, e *integration.SearchEnv, user ids.UUID, label string, cfg compose.CaptureConfig) func(t *testing.T, raws ...[]byte) {
+	t.Helper()
+	conn := &mailBatchConnector{accountLabel: label}
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), cfg)
 	registry.Register(conn)
 	grantCtx := humanWithScopes(e, user, []principal.Scope{principal.ScopeRead})
 	connID, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh"))

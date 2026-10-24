@@ -49,6 +49,9 @@ type ActivityFields struct {
 	// BodyCompleteness says how much of a mail's text the parser decoded. Zero
 	// for anything not parsed from a mail, which is stored as complete.
 	BodyCompleteness BodyCompleteness
+	// CredentialsMasked says masking changed this record's subject or body. Only
+	// then may equal text fail to prove one message (replaymaskedproof.go).
+	CredentialsMasked bool
 
 	// SentByColleague is the live seat who wrote a mail this mailbox holds a
 	// copy of (asSentByColleagueTx); zero for every other record.

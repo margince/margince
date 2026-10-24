@@ -27,6 +27,13 @@ func (m Message) unmaskedBody(text string) string {
 	return body
 }
 
+// masksCredentials says the stored subject or body differs from this message's
+// own text because credentials were masked.
+func (m Message) masksCredentials() bool {
+	full := m.unmaskedBody(m.body)
+	return credentialmask.MaskText(m.subject) != m.subject || credentialmask.MaskText(full) != full
+}
+
 func cutBody(body string, limit int) (string, bool) {
 	return textcut.BytesMarked(body, limit, "…"), len(body) > limit
 }

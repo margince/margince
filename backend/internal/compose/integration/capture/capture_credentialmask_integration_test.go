@@ -13,8 +13,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -90,8 +93,12 @@ func TestACapturedMailStoresItsCredentialsMasked(t *testing.T) {
 }
 
 func passwordMail(msgID, to, cc, password string) []byte {
+	return plainMail("anna@acme.example", to, cc, msgID, "Passwort: "+password)
+}
+
+func plainMail(from, to, cc, msgID, text string) []byte {
 	return []byte(strings.Join([]string{
-		"From: Anna Acme <anna@acme.example>",
+		"From: " + from,
 		"To: " + to,
 		"Cc: " + cc,
 		"Subject: Portal access",
@@ -99,7 +106,33 @@ func passwordMail(msgID, to, cc, password string) []byte {
 		"Message-ID: <" + msgID + ">",
 		"Content-Type: text/plain; charset=utf-8",
 		"",
-		"Passwort: " + password,
+		text,
+		"",
+	}, "\r\n"))
+}
+
+// passwordMailWithFile is passwordMail carrying one file whose bytes are file.
+func passwordMailWithFile(msgID, to, cc, file string) []byte {
+	return []byte(strings.Join([]string{
+		"From: anna@acme.example",
+		"To: " + to,
+		"Cc: " + cc,
+		"Subject: Portal access",
+		"Date: Wed, 04 Jun 2026 08:00:00 +0000",
+		"Message-ID: <" + msgID + ">",
+		"MIME-Version: 1.0",
+		`Content-Type: multipart/mixed; boundary="F"`,
+		"",
+		"--F",
+		"Content-Type: text/plain; charset=utf-8",
+		"",
+		"Passwort: AlphaSecret",
+		"--F",
+		"Content-Type: text/plain",
+		`Content-Disposition: attachment; filename="access.txt"`,
+		"",
+		file,
+		"--F--",
 		"",
 	}, "\r\n"))
 }
@@ -146,5 +179,58 @@ func TestMaskedTextIsNoProofThatTwoMailboxesHoldOneMessage(t *testing.T) {
 	syncOther(t, passwordMail("pw-older@acme.example", captureOwner, secondSeatAddress, "AlphaSecret"))
 	if !importedBy(t, e, older, e.Rep3) {
 		t.Error("a recipient's masked copy did not join a row stored before masking")
+	}
+}
+
+// The masked proof asks for more than a matching address. The address must be
+// the mailbox the provider attested for the seat, on the stored row's To or Cc
+// line. Text a sender typed as "[masked]" with nothing masked keeps the
+// equality proof.
+func TestAMaskedReplayNeedsAnAttestedRecipient(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	syncOther := secondMailbox(t, e, e.Rep3)
+
+	declareIdentity(t, e, e.Rep3, capturemod.IdentityKindAddress, "alias@myco.example")
+	sync(t, passwordMail("pw-alias@acme.example", captureOwner, "alias@myco.example", "AlphaSecret"))
+	syncOther(t, passwordMail("pw-alias@acme.example", captureOwner, "alias@myco.example", "AlphaSecret"))
+	if importedBy(t, e, activityIDOf(t, e, "pw-alias@acme.example"), e.Rep3) {
+		t.Error("a self-declared alias on the Cc line proved a masked replay")
+	}
+
+	sent := plainMail(secondSeatAddress, captureOwner, "anna@acme.example", "pw-sent@myco.example", "Passwort: AlphaSecret")
+	sync(t, sent)
+	syncOther(t, sent)
+	if importedBy(t, e, activityIDOf(t, e, "pw-sent@myco.example"), e.Rep3) {
+		t.Error("the seat that sent a masked mail became an importer of the recipient's row")
+	}
+
+	sync(t, plainMail("anna@acme.example", captureOwner, secondSeatAddress, "literal@acme.example", "hello"))
+	syncOther(t, plainMail("anna@acme.example", captureOwner, secondSeatAddress, "literal@acme.example", "hello [masked]"))
+	if importedBy(t, e, activityIDOf(t, e, "literal@acme.example"), e.Rep3) {
+		t.Error("a typed [masked] with nothing masked skipped the equality proof and joined another text")
+	}
+}
+
+// On the masked path, as on the text path, the stored files must be ones the
+// arriving copy carried.
+func TestAMaskedReplayNeedsTheSameFiles(t *testing.T) {
+	e := integration.SetupSearch(t)
+	seedCaptureRole(t, e)
+	seedCaptureRoleFor(t, e, e.Rep3)
+	cfg := compose.CaptureConfig{Blob: blobstore.NewMemory()}
+	sync := mailboxFor(t, e, e.Rep1, captureOwner, cfg)
+	syncOther := mailboxFor(t, e, e.Rep3, secondSeatAddress, cfg)
+
+	sync(t, passwordMailWithFile("pw-file@acme.example", captureOwner, secondSeatAddress, "the original file"))
+	syncOther(t, passwordMailWithFile("pw-file@acme.example", captureOwner, secondSeatAddress, "another file"))
+	if importedBy(t, e, activityIDOf(t, e, "pw-file@acme.example"), e.Rep3) {
+		t.Error("a masked copy carrying another file joined the row")
+	}
+
+	sync(t, passwordMailWithFile("pw-same-file@acme.example", captureOwner, secondSeatAddress, "the original file"))
+	syncOther(t, passwordMailWithFile("pw-same-file@acme.example", captureOwner, secondSeatAddress, "the original file"))
+	if !importedBy(t, e, activityIDOf(t, e, "pw-same-file@acme.example"), e.Rep3) {
+		t.Error("a recipient's masked copy carrying the same file did not join the row")
 	}
 }

@@ -17,8 +17,9 @@ func maskCapturedCredentials(rec connector.NormalizedRecord) connector.Normalize
 	if !ok {
 		return rec
 	}
-	fields.Subject = credentialmask.MaskText(fields.Subject)
-	fields.Body = credentialmask.MaskText(fields.Body)
+	subject, body := credentialmask.MaskText(fields.Subject), credentialmask.MaskText(fields.Body)
+	fields.CredentialsMasked = fields.CredentialsMasked || subject != fields.Subject || body != fields.Body
+	fields.Subject, fields.Body = subject, body
 	rec.Fields = fields
 	return rec
 }

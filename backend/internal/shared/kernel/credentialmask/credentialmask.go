@@ -96,12 +96,14 @@ func (r rule) runsIn(lane Lane) bool {
 	return r.lane == bothLanes || (r.lane == textOnly) == (lane == Text)
 }
 
-// Text labels are of two sorts. A password label is followed by a secret
-// whatever its value looks like. An ambiguous label also heads prose ("The
-// secret: preparation"), so its value must look like a credential.
+// Text labels are of three sorts. A password label is followed by a secret
+// whatever its value looks like, and so is a strong label, which names a kind
+// of key. A bare ambiguous word also heads prose ("The secret: preparation"),
+// so its value must look like a credential.
 const (
 	passwordLabels  = `password|passwd|pwd|passwort|kennwort|passcode|pin(?:[ -]?code)?`
-	ambiguousLabels = `secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|token|key`
+	strongLabels    = `api[ _-]?key|apikey|access[ _-]?token|auth[ _-]?token|client[ _-]?secret|private[ _-]?key|secret[ _-]?key`
+	ambiguousLabels = `secret|token|key`
 	loginLabels     = `login|user(?:name)?|benutzer(?:name)?`
 	// jsonLabels are the labels of the model-bound payload's assignment rule.
 	// pin, token and key are left out: they are common JSON keys with short
@@ -120,6 +122,13 @@ func looksLikeCredential(value []byte) bool {
 	return len(value) >= 8 && bytes.ContainsFunc(value, func(r rune) bool {
 		return !('a' <= r && r <= 'z' || 'A' <= r && r <= 'Z')
 	})
+}
+
+// toLineEnd is a label, an opening quote if any, and a value that runs to the
+// end of the line. A value that excludes the quote never reaches the end of a
+// line on which the quote closes.
+func toLineEnd(labels, quote, value string) *regexp.Regexp {
+	return regexp.MustCompile(`(?m)` + labelled(labels) + quote + `)(` + value + `)([ \t]*\r?)$`)
 }
 
 // nextLine is a label alone on its line and a one-word value alone on the next,
@@ -158,19 +167,22 @@ var rules = []rule{
 		kind: "credential_assignment", keepPrefix: true, lane: jsonOnly,
 		re: regexp.MustCompile(`(?i)\b((?:` + jsonLabels + `)["']?\s*[:=]\s*["']?)([^\s"'\\,;&]{4,})`),
 	},
-	// A quoted passphrase is masked through its closing quote, and an unquoted one
-	// to the end of its line, so no word of it stays.
+	// A quoted passphrase is masked through its closing quote. An unquoted one, or
+	// one whose quote never closes on its line, is masked to the end of the line.
 	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: regexp.MustCompile(labelled(passwordLabels) + `")([^"\r\n]+)(")`)},
 	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: regexp.MustCompile(labelled(passwordLabels) + `')([^'\r\n]+)(')`)},
+	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, `"`, `[^"\r\n]+?`)},
+	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, `'`, `[^'\r\n]+?`)},
+	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, ``, `[^\s"'][^\r\n]*?`)},
 	{
-		kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly,
-		re: regexp.MustCompile(`(?m)` + labelled(passwordLabels) + `)([^\s"'][^\r\n]*?)([ \t]*\r?)$`),
+		kind: "credential_assignment", keepPrefix: true, lane: textOnly,
+		re: regexp.MustCompile(labelled(strongLabels) + `["']?)([^\s"'\\,;&]{4,})`),
 	},
 	{
 		kind: "credential_assignment", keepPrefix: true, lane: textOnly, accept: looksLikeCredential,
 		re: regexp.MustCompile(labelled(ambiguousLabels) + `["']?)([^\s"'\\,;&]+)`),
 	},
-	{kind: "credential_next_line", keepPrefix: true, keepSuffix: true, lane: textOnly, re: nextLine(passwordLabels)},
+	{kind: "credential_next_line", keepPrefix: true, keepSuffix: true, lane: textOnly, re: nextLine(passwordLabels + `|` + strongLabels)},
 	{kind: "credential_next_line", keepPrefix: true, keepSuffix: true, lane: textOnly, accept: looksLikeCredential, re: nextLine(ambiguousLabels)},
 	// The login on the line above a password line: the pair is the credential.
 	{

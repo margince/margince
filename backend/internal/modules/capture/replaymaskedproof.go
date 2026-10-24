@@ -6,8 +6,6 @@ package capture
 import (
 	"context"
 	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -15,11 +13,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// eitherSideMaskedTx answers whether the arriving or the stored subject or body
-// holds the credential mask. Masking makes two different secrets read the same,
-// so equal masked text proves nothing about which message a seat holds.
+// eitherSideMaskedTx answers whether masking changed the arriving copy, or the
+// stored row holds the mask. Masking makes two different secrets read the same,
+// so equal text then proves nothing about which message a seat holds. Text a
+// sender typed as "[masked]" with nothing masked keeps the equality proof,
+// unless the stored row holds the mark too.
 func eitherSideMaskedTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields ActivityFields) (bool, error) {
-	if strings.Contains(fields.Subject, credentialmask.Marker) || strings.Contains(fields.Body, credentialmask.Marker) {
+	if fields.CredentialsMasked {
 		return true, nil
 	}
 	var stored bool
@@ -32,25 +32,52 @@ func eitherSideMaskedTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, field
 	return stored, nil
 }
 
-// storedRowNamesSeatTx is the replay proof for masked mail. The stored row must
-// name one of the seat's own exact addresses as a party. The first capture wrote
-// those parties from its own copy. A seat that copied the Message-ID into a mail
-// to itself is not among them. A colleague only on Bcc is not named either
-// and keeps a row of their own, which is the safe direction.
-func storedRowNamesSeatTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool, error) {
-	self, err := ownerIdentitiesTx(ctx, tx)
-	if err != nil || self.Empty() {
-		return false, err
+// maskedReplayIsProvenTx is the replay proof for masked mail, in place of equal
+// text. The stored row must name, as a To or Cc recipient, an address the
+// provider attested as this seat's mailbox and no other seat's
+// (ProvedUnambiguouslyTx). The first capture wrote those recipients from its own
+// copy, so a forger who put themselves on Cc of a copy is not among them. A
+// self-declared alias is no proof, and neither is being the sender. The stored
+// files must be ones this capture carried, as on the text path.
+//
+// A colleague only on Bcc, or on IMAP, keeps a row of their own, which is the
+// safe direction.
+func maskedReplayIsProvenTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID, carried []string) (bool, error) {
+	var filesCarried bool
+	args := []any{id, carried}
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $1 AND `+storedFilesWereCarried(len(args))+`)`,
+		args...).Scan(&filesCarried); err != nil {
+		return false, fmt.Errorf("capture: comparing the files of %s: %w", id, err)
+	}
+	if !filesCarried {
+		return false, nil
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT address FROM activity_participant
-		 WHERE activity_id = $1 AND address IS NOT NULL`, id)
+		 WHERE activity_id = $1 AND address IS NOT NULL AND role IN ('to', 'cc')`, id)
 	if err != nil {
-		return false, fmt.Errorf("capture: reading the parties of %s: %w", id, err)
+		return false, fmt.Errorf("capture: reading the recipients of %s: %w", id, err)
 	}
-	addresses, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	recipients, err := pgx.CollectRows(rows, pgx.RowTo[string])
 	if err != nil {
-		return false, fmt.Errorf("capture: reading the parties of %s: %w", id, err)
+		return false, fmt.Errorf("capture: reading the recipients of %s: %w", id, err)
 	}
-	return slices.ContainsFunc(addresses, self.CoversAddressExactly), nil
+	for _, address := range recipients {
+		proved, err := ProvedUnambiguouslyTx(ctx, tx, seat, address)
+		if err != nil || proved {
+			return proved, err
+		}
+	}
+	return false, nil
+}
+
+// storedFilesWereCarried is the condition that every file stored on activity a
+// has a checksum among the ones in the placeholder $n. A file kept by name only
+// has no checksum, so a row carrying one never passes.
+func storedFilesWereCarried(n int) string {
+	return fmt.Sprintf(`NOT EXISTS (
+		SELECT 1 FROM attachment f
+		 WHERE f.activity_id = a.id
+		   AND (f.checksum IS NULL OR f.checksum <> ALL($%d)))`, n)
 }

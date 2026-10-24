@@ -290,7 +290,11 @@ func TestTheBodyIsStoredWithItsCredentialsMasked(t *testing.T) {
 		Organizer:   Actor{Email: owner},
 		Attendees:   []Actor{{Email: "client@acme.test"}},
 	}, owner)
-	body := activityFields(t, m.ToRecord("graphcal", nil)).Body
+	fields := activityFields(t, m.ToRecord("graphcal", nil))
+	body := fields.Body
+	if !fields.CredentialsMasked {
+		t.Error("the record does not say masking changed its body")
+	}
 	if !strings.Contains(body, "Passcode: [masked]") || strings.Contains(body, "993311") {
 		t.Errorf("body = %.120q…, want the passcode masked behind its label", body)
 	}
