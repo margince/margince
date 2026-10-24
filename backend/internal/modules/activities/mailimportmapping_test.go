@@ -176,7 +176,7 @@ func TestOnlyAReceivedEmailIsRefusedForAMailSystemSender(t *testing.T) {
 	human.Direction = directionOf("inbound")
 	human.Participants = participantsOf("anna@example.test", []string{"us@example.test"}, []string{"bounces@example.test"})
 	if _, err := LogActivityInputFrom(human); err != nil {
-		t.Fatalf("a reply from a person, with a mail-system address in Cc, was refused: %v", err)
+		t.Fatalf("a reply from the sender, with a mail-system address in Cc, was refused: %v", err)
 	}
 }
 
