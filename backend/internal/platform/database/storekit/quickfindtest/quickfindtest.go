@@ -53,32 +53,16 @@ func (n planNode) walk(visit func(planNode)) {
 // had no index to use.
 func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Identifier, identifierIndex string) {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, dsn)
-	if err != nil {
-		t.Fatalf("connecting to the test database: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := conn.Close(context.Background()); err != nil {
-			t.Errorf("closing the plan connection: %v", err)
-		}
-	})
-	if err := testdb.EnsureSchema(ctx, conn); err != nil {
-		t.Fatalf("bringing the test database to head: %v", err)
-	}
-	tx, err := conn.Begin(ctx)
+	tx, err := planConn(ctx, t).Begin(ctx)
 	if err != nil {
 		t.Fatalf("opening the plan transaction: %v", err)
 	}
-	defer func() {
+	t.Cleanup(func() {
 		if err := tx.Rollback(ctx); err != nil {
 			t.Errorf("rolling back the plan transaction: %v", err)
 		}
-	}()
+	})
 	if _, err := tx.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
 		t.Fatalf("pricing out sequential scans: %v", err)
 	}
@@ -97,15 +81,7 @@ func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Iden
 	if err := json.Unmarshal(raw, &plans); err != nil || len(plans) != 1 {
 		t.Fatalf("reading the %s quick-find plan (%v): %s", table, err, raw)
 	}
-	used, identifierUsed := false, false
-	plans[0].Plan.walk(func(n planNode) {
-		used = used || n.IndexName == index
-		identifierUsed = identifierUsed || n.IndexName == identifierIndex
-		if n.NodeType == "Seq Scan" {
-			t.Errorf("the %s quick-find scans %s, so every search reads that whole table. Plan: %s",
-				table, n.RelationName, raw)
-		}
-	})
+	used, identifierUsed := planReads(t, table, plans[0].Plan, index, identifierIndex, raw)
 	if !used {
 		t.Errorf("the %s quick-find over %s does not read %s; index the exact expression the query "+
 			"matches. Plan: %s", table, nameExpr, index, raw)
@@ -114,6 +90,43 @@ func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Iden
 		t.Errorf("the %s identifier arm does not read %s; index the exact expression the contains "+
 			"arm matches. Plan: %s", table, identifierIndex, raw)
 	}
+}
+
+// planConn connects to the test database at head, closed when the test ends.
+func planConn(ctx context.Context, t *testing.T) *pgx.Conn {
+	t.Helper()
+	dsn := os.Getenv("MARGINCE_TEST_DSN")
+	if dsn == "" {
+		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	}
+	conn, err := pgx.Connect(ctx, dsn)
+	if err != nil {
+		t.Fatalf("connecting to the test database: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := conn.Close(ctx); err != nil {
+			t.Errorf("closing the plan connection: %v", err)
+		}
+	})
+	if err := testdb.EnsureSchema(ctx, conn); err != nil {
+		t.Fatalf("bringing the test database to head: %v", err)
+	}
+	return conn
+}
+
+// planReads reports whether the plan reads index and identifierIndex, and fails
+// t for every sequential scan in it.
+func planReads(t *testing.T, table string, root planNode, index, identifierIndex string, raw []byte) (used, identifierUsed bool) {
+	t.Helper()
+	root.walk(func(n planNode) {
+		used = used || n.IndexName == index
+		identifierUsed = identifierUsed || n.IndexName == identifierIndex
+		if n.NodeType == "Seq Scan" {
+			t.Errorf("the %s quick-find scans %s, so every search reads that whole table. Plan: %s",
+				table, n.RelationName, raw)
+		}
+	})
+	return used, identifierUsed
 }
 
 // dropCompetingIndexes drops, inside the plan transaction, every index on table
