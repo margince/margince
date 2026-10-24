@@ -22,7 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func seedAccountClaim(t *testing.T, e *integration.Env, contact, company ids.UUID, kind, body string, due *time.Time) crmcontracts.ConversationClaim {
+func seedAccountClaim(t *testing.T, e *integration.Env, contact ids.UUID, kind, body string, due *time.Time) crmcontracts.ConversationClaim {
 	t.Helper()
 	ctx := e.Admin()
 	subject, direction, at := "Re: "+body, "outbound", company360Clock.Add(-72*time.Hour)
@@ -49,8 +49,8 @@ func TestTheCompanyPageListsBothSidesOfTheOpenCommitmentsAndTheCardReadsTheSameR
 	contact := e.SeedContact(t, "Carol", &e.Rep1)
 	e.WsExec(t, `INSERT INTO relationship(kind,contact_id,company_id,source,captured_by) VALUES('employment',$1,$2,'manual','human:test')`, contact, company)
 	soon, late := company360Clock.Add(48*time.Hour), company360Clock.Add(-24*time.Hour)
-	ours := seedAccountClaim(t, e, contact, company, "commitment_ours", "Send the signed order", &soon)
-	theirs := seedAccountClaim(t, e, contact, company, "commitment_theirs", "Pay the deposit", &late)
+	ours := seedAccountClaim(t, e, contact, "commitment_ours", "Send the signed order", &soon)
+	theirs := seedAccountClaim(t, e, contact, "commitment_theirs", "Pay the deposit", &late)
 
 	page, err := svc.Assemble(e.Admin(), ids.From[ids.CompanyKind](company))
 	if err != nil {

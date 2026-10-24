@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -286,7 +287,7 @@ func TestTwoPromisesFromOneMessageNeedASentenceEach(t *testing.T) {
 	if uncitedOpenWork(one, in) != "OpenCommitments" {
 		t.Error("one sentence passed for two promises")
 	}
-	two := append(one, Sentence{Text: "You book the site visit.", Evidence: cite})
+	two := append(slices.Clone(one), Sentence{Text: "You book the site visit.", Evidence: cite})
 	if missing := uncitedOpenWork(two, in); missing != "" {
 		t.Errorf("a sentence per promise still leaves out %s", missing)
 	}
