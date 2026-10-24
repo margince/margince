@@ -24,6 +24,7 @@ import {
   EMAIL_TYPE_LABEL,
   PHONE_TYPE_LABEL,
 } from "../../format/contactchannels";
+import { primaryPhone } from "../../format/contacturi";
 import { formatDateAbbrev } from "../../format/format";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
@@ -55,8 +56,9 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
   const linkedin =
     typeof contact.social?.linkedin === "string" ? contact.social.linkedin : "";
   const linkedinHref = linkedinUrl(linkedin);
-  const email = primaryOf(contact.emails, (row) => row.email);
-  const phone = primaryOf(contact.phones, (row) => row.phone);
+  const email = contact.primary_email;
+  const emailRow = contact.emails?.find((row) => row.email === email);
+  const phone = primaryPhone(contact.phones);
   const address = [contact.address?.city, contact.address?.country]
     .filter(Boolean)
     .join(", ");
@@ -92,12 +94,12 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
             <>
               <ContactLink
                 kind="email"
-                value={email.email}
+                value={email}
                 record={{ entityType: "contact", entityId: contact.id }}
               />
               <BoughtMark
-                bought={bought.get(`email:${email.id}`)}
-                subject={email.email}
+                bought={emailRow && bought.get(`email:${emailRow.id}`)}
+                subject={email}
               />
             </>
           ),
@@ -167,15 +169,6 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
       ],
     },
   ];
-}
-
-// The address a rep reaches first: the one marked primary, else the first.
-function primaryOf<Row extends { is_primary?: boolean }>(
-  rows: readonly Row[] | undefined,
-  value: (row: Row) => string,
-): Row | undefined {
-  const live = (rows ?? []).filter((row) => value(row) !== "");
-  return live.find((row) => row.is_primary) ?? live[0];
 }
 
 /**

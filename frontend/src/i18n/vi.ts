@@ -76,6 +76,8 @@ export const vi = {
   "homeRepair.reason.unavailable":
     "Quyền truy cập hiện tại không cho phép kiểm tra nguồn.",
   "homeRepair.reason.historical": "Nguồn cũ không có thời hạn hiện tại.",
+  "homeRepair.reason.lateProposed":
+    "Do đồng nghiệp ghi sau 30 ngày; đề xuất vẫn gửi cho chính đồng nghiệp đã hứa.",
   "homeRepair.reason.baseline": "Nguồn có trước mốc lịch sử hộp thư đã chọn.",
   "homeRepair.reason.cancelled": "Cuộc họp nguồn đã bị hủy.",
   "homeRepair.reason.requestAge":
@@ -1142,7 +1144,6 @@ export const vi = {
     "Tạo cùng mỗi lời mời trên lịch, kể cả lịch họp đặt qua liên kết đặt lịch. Có thể tắt cho từng cuộc họp khi đặt lịch.",
   "scheduling.videoTeamsHelp":
     "Cần tài khoản Microsoft 365 cơ quan hoặc trường học.",
-  "scheduling.locationFallback": "Dùng cho cuộc họp không có gọi video.",
   "scheduling.unsaved": "Có thay đổi chưa lưu",
   "scheduling.discard": "Bỏ thay đổi",
   "scheduling.brand": "Tên và logo công ty",
@@ -1355,7 +1356,6 @@ export const vi = {
   "contact.meetings.inDays_one": "{days} ngày nữa",
   "contact.meetings.inDays_other": "{days} ngày nữa",
   "contact.meetings.waitingOn": "Đang chờ {name}",
-  "contact.meetings.waitingOnReply": "Đang chờ trả lời",
   "contact.meetings.personalLink": "Liên kết cá nhân",
   "contact.meetings.offeredTimes": "Khung giờ đã đề xuất",
   "contact.meetings.sentExpires": "Đã gửi {sent} · hết hạn {expires}",
@@ -4319,8 +4319,8 @@ export const vi = {
   "lead.signalSuperseded": "Trước đây là {value}, {source} đã thay thế",
   "lead.signalAutomaticSource": "nguồn tự động",
   "lead.signalReason": "Bằng chứng",
-  "lead.signalReasonHint": "Không bắt buộc. Lưu cùng điểm.",
-  "lead.signalReasonUnstated": "Không nêu bằng chứng. Nhập thủ công.",
+  "lead.signalReasonHint": "Bắt buộc. Nêu bạn biết điều này từ đâu. Lưu cùng điểm.",
+  "lead.signalNoEvidence": "Chưa ghi nhận bằng chứng",
   "lead.signalSave": "Cộng vào điểm",
   "lead.signal.web_traffic": "Lưu lượng web",
   "lead.signal.employees": "Số nhân viên",
@@ -5431,6 +5431,8 @@ export const vi = {
     "Không thể tải phần này. Phần còn lại của trang không bị ảnh hưởng.",
   "today.quiet": "Hiện chưa có gì cần chú ý.",
   "task.untitled": "Việc cần làm chưa có tiêu đề",
+  "task.next.openContact": "Mở liên hệ",
+  "task.next.noAddress": "Liên hệ này chưa có địa chỉ email.",
   "today.withheld":
     "Không bao gồm: {sections}. Bạn không có quyền truy cập các mục này.",
   "today.source.moments": "phát hiện của Margince",
@@ -8868,12 +8870,14 @@ export const vi = {
   "connectors.historyBaseline.clear": "Xóa ngày",
   "hold.sectionTitle": "Trao đổi riêng tư",
   "hold.notHeld": "Thư với liên hệ này tuân theo cài đặt hộp thư của bạn.",
+  "hold.notHeldCompany":
+    "Thư với công ty này tuân theo cài đặt hộp thư của bạn.",
   "hold.heldByAddress":
     "Thư với địa chỉ này chỉ những người có trong thư mới xem được.",
   "hold.heldByDomain":
     "Thư với {domain} chỉ những người có trong thư mới xem được.",
-  "hold.holdAddress": "Giữ riêng tư",
-  "hold.holdDomain": "Giữ riêng tư toàn bộ {domain}",
+  "hold.holdAddress": "Giữ riêng tư với địa chỉ này",
+  "hold.holdDomain": "Giữ riêng tư với tất cả tại {domain}",
   "hold.lift": "Bỏ giữ",
   "hold.liftingWidensNothing":
     "Bỏ giữ áp dụng cho thư mới. Thư đã giữ vẫn bị giữ.",
@@ -13998,6 +14002,7 @@ export const vi = {
   "contact.action.noTransport":
     "Không có địa chỉ và không có chuỗi thư nào để trả lời.",
   "contact.action.call": "Gọi",
+  "contact.action.noPhone": "Liên hệ này chưa có số điện thoại.",
   "contact.action.meetings": "Cuộc họp",
   "contact.action.workAsLead": "Xử lý như lead",
   "contact.action.openLead": "Mở lead",
@@ -16334,7 +16339,6 @@ export const vi = {
   "scheduling.video.own": "Liên kết hoặc địa chỉ riêng",
   "scheduling.video.ownHelp":
     "Một phòng Zoom, một số điện thoại hoặc một địa chỉ văn phòng. Giống nhau cho mọi lượt đặt.",
-  "scheduling.video.ownSaved": "Địa chỉ đã lưu: {location}",
   "scheduling.video.none": "Không có địa điểm",
   "scheduling.video.noneHelp": "Thống nhất chi tiết với khách qua email.",
   "scheduling.locationLabel": "Liên kết hoặc địa chỉ",

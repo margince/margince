@@ -753,6 +753,8 @@
   grid-row: 1;
   justify-self: end;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--space-2);
 }
 
@@ -797,6 +799,19 @@
   grid-column: 1;
 }
 
+/* The kind line alone floors its column, so its status badge stays whole.
+   The lines under it are contained, so a long word cannot push the verbs off. */
+@container chronology (width > 38rem) {
+  .timeline .tl-body:has(> .tl-head:first-child):has(> .tl-actions) {
+    grid-template-columns: minmax(min-content, 1fr) auto;
+  }
+  .timeline
+    .tl-body:has(> .tl-head:first-child):has(> .tl-actions)
+    > :not(.tl-head, .tl-actions) {
+    contain: inline-size;
+  }
+}
+
 /* The verbs' `auto` track wins over the head beside it, so in a narrow list
    the head drew at zero width. Below 38rem the verbs drop under the entry. */
 @container chronology (max-width: 38rem) {
@@ -808,7 +823,7 @@
     grid-row: auto;
     order: 1;
     justify-self: start;
-    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 }
 

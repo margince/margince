@@ -123,7 +123,7 @@ func (d *CommitmentDispatcher) reconcileTaskRecipients(ctx context.Context, tx p
 	return CommitmentRemembered, ids.Nil, nil
 }
 
-func (d *CommitmentDispatcher) reconcilePendingRecipients(ctx context.Context, tx pgx.Tx, c Commitment, held approvals.Offer, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
+func (d *CommitmentDispatcher) reconcilePendingRecipients(ctx context.Context, tx pgx.Tx, c Commitment, held approvals.Offer, bundleID ids.UUID, late bool) (CommitmentOutcome, ids.UUID, error) {
 	if !held.Pending() || c.Theirs != nil || c.Meaning.withheldOutcome() != "" || len(commitmentRecipients(c)) == 0 {
 		return CommitmentRemembered, ids.Nil, nil
 	}
@@ -138,15 +138,7 @@ func (d *CommitmentDispatcher) reconcilePendingRecipients(ctx context.Context, t
 	if err != nil {
 		return CommitmentRemembered, ids.Nil, err
 	}
-	changed := false
-	for _, claim := range claims {
-		if (proposal.ClaimID != nil && *proposal.ClaimID == claim) || slices.Contains(proposal.ClaimIDs, claim) {
-			continue
-		}
-		proposal.ClaimIDs = append(proposal.ClaimIDs, claim)
-		changed = true
-	}
-	if !changed {
+	if !proposal.addUnlistedClaims(claims) {
 		return CommitmentRemembered, ids.Nil, nil
 	}
 	asked, state, err := d.pendingProposalAskedOf(ctx, tx, c, &proposal)
@@ -160,7 +152,21 @@ func (d *CommitmentDispatcher) reconcilePendingRecipients(ctx context.Context, t
 			return CommitmentRemembered, ids.Nil, err
 		}
 	}
-	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state))
+	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state, late))
+}
+
+// addUnlistedClaims appends the claims the proposal does not name yet and
+// reports whether it added any.
+func (p *CommitmentTaskProposal) addUnlistedClaims(claims []ids.UUID) bool {
+	changed := false
+	for _, claim := range claims {
+		if (p.ClaimID != nil && *p.ClaimID == claim) || slices.Contains(p.ClaimIDs, claim) {
+			continue
+		}
+		p.ClaimIDs = append(p.ClaimIDs, claim)
+		changed = true
+	}
+	return changed
 }
 
 func (d *CommitmentDispatcher) recipientTaskTarget(ctx context.Context, tx pgx.Tx, c Commitment) (activities.CommitmentTaskTarget, ids.UUID, error) {

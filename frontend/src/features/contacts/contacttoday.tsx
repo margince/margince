@@ -1,6 +1,7 @@
 import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { NextBar } from "../../design-system/nextbar";
@@ -120,6 +121,10 @@ function MomentBar({
   const { locale } = useLocale();
   const notNow = useMomentSetAside(view.contact.id);
   const defer = notNow.deferOf(moment);
+  const task = momentTask(moment, view);
+  const call = task && (
+    <TaskCallAction task={task} pageContact={view.contact} />
+  );
   return (
     <NextBar
       title={moment.headline}
@@ -132,11 +137,14 @@ function MomentBar({
       }
       action={
         moment.may_be_done ? (
-          <MayBeDoneVerbs
-            moment={moment}
-            question={moment.may_be_done}
-            view={view}
-          />
+          <>
+            <MayBeDoneVerbs
+              moment={moment}
+              question={moment.may_be_done}
+              view={view}
+            />
+            {call}
+          </>
         ) : (
           <>
             <ActionVerb
@@ -144,6 +152,7 @@ function MomentBar({
               primary
               onAction={onAction}
             />
+            {call}
             {notNow.failure && <ErrorLine error={notNow.failure} inline />}
           </>
         )
@@ -212,10 +221,13 @@ function TaskBar({
           : t("co.next.undated")
       }
       action={
-        <MoveButton
-          contactId={view.contact.id}
-          move={{ action: "open_task", arguments: { activity_id: task.id } }}
-        />
+        <>
+          <TaskCallAction task={task} pageContact={view.contact} />
+          <MoveButton
+            contactId={view.contact.id}
+            move={{ action: "open_task", arguments: { activity_id: task.id } }}
+          />
+        </>
       }
       more={more}
     />
@@ -262,14 +274,40 @@ function AnswerBar({
   return <NextBar />;
 }
 
-// The due date of what the move says is owed. It is the promise the move may already have
-// settled, else the first task or claim its evidence names.
+// What the move says is owed, in the order both readers below take it: the
+// promise it may already have settled, then its evidence.
+function owedRecords(moment: ContactMoment): { id: string; task: boolean }[] {
+  const promise = moment.may_be_done;
+  return [
+    ...(promise
+      ? [{ id: promise.promise_id, task: promise.promise_type === "task" }]
+      : []),
+    ...moment.evidence.flatMap((item) =>
+      item.id ? [{ id: item.id, task: item.type === "task" }] : [],
+    ),
+  ];
+}
+
+// The first listed task the move is about.
+function momentTask(
+  moment: ContactMoment,
+  view: Contact360,
+): Activity | undefined {
+  const tasks = view.next_steps?.data ?? [];
+  for (const record of owedRecords(moment)) {
+    const task = record.task
+      ? tasks.find((row) => row.id === record.id)
+      : undefined;
+    if (task) {
+      return task;
+    }
+  }
+  return undefined;
+}
+
+// The due date of what the move says is owed: a claim's or a listed task's.
 function owedDue(moment: ContactMoment, view: Contact360): string | undefined {
-  const ids = [
-    moment.may_be_done?.promise_id,
-    ...moment.evidence.map((item) => item.id),
-  ].filter((id): id is string => Boolean(id));
-  for (const id of ids) {
+  for (const { id } of owedRecords(moment)) {
     const due =
       view.claims?.find((claim) => claim.id === id)?.due_at ??
       view.next_steps?.data.find((task) => task.id === id)?.due_at;

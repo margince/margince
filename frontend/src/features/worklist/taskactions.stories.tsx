@@ -82,14 +82,42 @@ const TRANSCRIPT = Array.from({ length: 40 }, (_, turn) =>
     : "Mira: I will send the paperwork once the discount is signed off.",
 ).join("\n");
 
+function sourceOf({
+  emailRequest,
+  meetingSource,
+  contactTask,
+}: Readonly<{
+  emailRequest: boolean;
+  meetingSource: boolean;
+  contactTask?: "call" | "typed";
+}>) {
+  if (emailRequest) return "email-1";
+  if (meetingSource) return "m-1";
+  return contactTask === "call" ? "call-1" : null;
+}
+
+// The account first on the wire; the panel names the deal first.
+function linksOf(filed: boolean, contactTask?: "call" | "typed") {
+  if (filed) {
+    return [
+      { entity_type: "company", entity_id: "o-1" },
+      { entity_type: "deal", entity_id: "d-1" },
+    ];
+  }
+  return contactTask ? [{ entity_type: "contact", entity_id: "c-1" }] : [];
+}
+
 function DetailModal({
   emailRequest = false,
   meetingSource = false,
   filed = false,
+  contactTask,
 }: Readonly<{
   emailRequest?: boolean;
   meetingSource?: boolean;
   filed?: boolean;
+  /** A task owed to one contact, read out of a call or typed by hand. */
+  contactTask?: "call" | "typed";
 }>) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }),
@@ -151,22 +179,31 @@ function DetailModal({
         body: emailRequest
           ? null
           : "Draft went to legal on Tuesday; needs Dana's sign-off.",
-        source_activity_id: emailRequest
-          ? "email-1"
-          : meetingSource
-            ? "m-1"
-            : null,
+        source_activity_id: sourceOf({
+          emailRequest,
+          meetingSource,
+          contactTask,
+        }),
         due_at: emailRequest ? null : "2026-08-01T09:00:00Z",
         occurred_at: "2026-07-28T09:00:00Z",
         is_done: false,
         assignee_id: "u-1",
-        // The account first on the wire; the panel names the deal first.
-        links: filed
-          ? [
-              { entity_type: "company", entity_id: "o-1" },
-              { entity_type: "deal", entity_id: "d-1" },
-            ]
-          : [],
+        links: linksOf(filed, contactTask),
+      }),
+    "GET /activities/call-1": () =>
+      jsonResponse({
+        id: "call-1",
+        kind: "call",
+        subject: "Voicemail for Dana",
+        occurred_at: "2026-07-27T14:00:00Z",
+        content_state: "available",
+      }),
+    "GET /contacts/c-1": () =>
+      jsonResponse({
+        id: "c-1",
+        full_name: "Dana Brandt",
+        primary_email: "dana@brandt.example",
+        phones: [{ id: "ph-1", phone: "+491517654321", is_primary: true }],
       }),
     "GET /deals/d-1": () =>
       jsonResponse({ id: "d-1", name: "Brandt renewal 2027" }),
@@ -202,6 +239,24 @@ export const DetailOpen: Story = { render: () => <DetailModal /> };
 // Filed under a deal and its account: the deal, the more specific, leads.
 export const FiledUnderDeal: Story = {
   render: () => <DetailModal filed />,
+};
+
+// A task read out of a call: Call, Email and Open contact above its own verbs.
+export const DetailFromCall: Story = {
+  render: () => <DetailModal contactTask="call" />,
+  play: async () => {
+    const body = within(document.body);
+    await body.findByRole("link", { name: en["record.verb.call"] });
+  },
+};
+
+// The same contact on a task typed by hand: no Call, since nothing says it is one.
+export const DetailTypedByHand: Story = {
+  render: () => <DetailModal contactTask="typed" />,
+  play: async () => {
+    const body = within(document.body);
+    await body.findByRole("link", { name: en["task.next.openContact"] });
+  },
 };
 
 export const CapturedEmailRequest: Story = {

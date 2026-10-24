@@ -13,11 +13,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
+// A meeting with a generated video call carries no location, so the guest
+// gets one meeting link and not the stored address beside it.
 func invitationAppointment(profile crmcontracts.SchedulingProfile, in crmcontracts.MeetingInvitationRequest) connector.CalendarAppointment {
+	videoCall := videoCallFor(profile, in.VideoCall)
+	location := in.Location
+	if videoCall {
+		location = ""
+	}
 	return connector.CalendarAppointment{
 		ContactID: ids.UUID(in.ContactId), CalendarID: profile.CalendarId, Subject: in.Subject, Description: in.Description,
-		Location: in.Location, Start: in.Start, End: in.End, Attendees: []string{string(in.AttendeeEmail)},
-		VideoCall: videoCallFor(profile, in.VideoCall), EmailReminder: profile.EmailReminder != nil && *profile.EmailReminder,
+		Location: location, Start: in.Start, End: in.End, Attendees: []string{string(in.AttendeeEmail)},
+		VideoCall: videoCall, EmailReminder: profile.EmailReminder != nil && *profile.EmailReminder,
 	}
 }
 

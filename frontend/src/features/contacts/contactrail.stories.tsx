@@ -58,6 +58,7 @@ const contact: components["schemas"]["Contact"] = {
   title: "Head of Fleet",
   social: { linkedin: "https://linkedin.com/in/danabuyer" },
   address: { city: "Munich", country: "DE" },
+  primary_email: "dana@brandt.example",
   emails: [
     {
       id: "pe-1",

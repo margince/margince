@@ -141,6 +141,10 @@ where can I see what the AI changed
 
 # everyday list, edit and follow-up work
 how do I log a phone call with a client
+what does the Call icon on a contact do
+how do I call a customer back from a logged call
+how do I email or call the contact on a task
+why is there no Call button on my task
 set a reminder to follow up with a customer
 how can I see all deals I own
 change the owner of a deal

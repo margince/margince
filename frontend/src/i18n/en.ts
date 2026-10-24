@@ -68,6 +68,8 @@ export const en = {
     "The source cannot be checked with your current access.",
   "homeRepair.reason.historical":
     "Historical source without a current deadline.",
+  "homeRepair.reason.lateProposed":
+    "Logged by a colleague after the 30-day window; it stays proposed for the promiser.",
   "homeRepair.reason.baseline":
     "The source predates the mailbox history baseline.",
   "homeRepair.reason.cancelled": "The source meeting was canceled.",
@@ -1128,7 +1130,6 @@ export const en = {
   "scheduling.videoDefaultHelp":
     "Created with each calendar invite, including bookings from your link. You can switch it off for a single meeting when you book.",
   "scheduling.videoTeamsHelp": "Needs a work or school Microsoft 365 account.",
-  "scheduling.locationFallback": "Used for meetings without a video call.",
   "scheduling.unsaved": "You have unsaved changes",
   "scheduling.discard": "Discard",
   "scheduling.brand": "Company name and logo",
@@ -1345,7 +1346,6 @@ export const en = {
   "contact.meetings.inDays_one": "In {days} day",
   "contact.meetings.inDays_other": "In {days} days",
   "contact.meetings.waitingOn": "Waiting on {name}",
-  "contact.meetings.waitingOnReply": "Waiting on reply",
   "contact.meetings.personalLink": "Personal link",
   "contact.meetings.offeredTimes": "Offered times",
   "contact.meetings.sentExpires": "Sent {sent} · expires {expires}",
@@ -4429,8 +4429,8 @@ export const en = {
   "lead.signalSuperseded": "Previously {value}, replaced by {source}",
   "lead.signalAutomaticSource": "an automatic source",
   "lead.signalReason": "Evidence",
-  "lead.signalReasonHint": "Optional. Stored with the score.",
-  "lead.signalReasonUnstated": "No evidence given. Entered manually.",
+  "lead.signalReasonHint": "Required. Say how you know. Stored with the score.",
+  "lead.signalNoEvidence": "No evidence recorded",
   "lead.signalSave": "Add to score",
   "lead.signal.web_traffic": "Web traffic",
   "lead.signal.employees": "Employees",
@@ -5631,6 +5631,8 @@ export const en = {
     "This section did not load. The rest of the page is unaffected.",
   "today.quiet": "Nothing needs attention right now.",
   "task.untitled": "Untitled task",
+  "task.next.openContact": "Open contact",
+  "task.next.noAddress": "No email address on this contact.",
   "today.withheld": "Not included: {sections}. You do not have access to them.",
   "today.source.moments": "Margince findings",
   "today.source.nextSteps": "open tasks",
@@ -9164,12 +9166,13 @@ export const en = {
   "connectors.historyBaseline.clear": "Clear date",
   "hold.sectionTitle": "Private correspondence",
   "hold.notHeld": "Mail with this contact follows your mailbox setting.",
+  "hold.notHeldCompany": "Mail with this company follows your mailbox setting.",
   "hold.heldByAddress":
     "Mail with this address is visible only to the people on it.",
   "hold.heldByDomain":
     "Mail with {domain} is visible only to the people on it.",
-  "hold.holdAddress": "Keep private",
-  "hold.holdDomain": "Keep all of {domain} private",
+  "hold.holdAddress": "Keep private with this address",
+  "hold.holdDomain": "Keep private with everyone at {domain}",
   "hold.lift": "Lift",
   "hold.liftingWidensNothing":
     "Lifting applies to new mail. Mail already held stays held.",
@@ -14340,6 +14343,7 @@ export const en = {
   // way to reach them, and consent that says not to.
   "contact.action.noTransport": "No address and no thread to reply to.",
   "contact.action.call": "Call",
+  "contact.action.noPhone": "No phone number on this contact.",
   "contact.action.meetings": "Meetings",
   "contact.action.workAsLead": "Work as a lead",
   "contact.action.openLead": "Open the lead",
@@ -16701,7 +16705,6 @@ export const en = {
   "scheduling.video.own": "Your own link or address",
   "scheduling.video.ownHelp":
     "A Zoom room, a phone number or an office address. The same for every booking.",
-  "scheduling.video.ownSaved": "Saved address: {location}",
   "scheduling.video.none": "No location",
   "scheduling.video.noneHelp": "Agree on the details with your guest by email.",
   "scheduling.locationLabel": "Link or address",

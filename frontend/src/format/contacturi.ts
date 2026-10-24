@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../api/schema";
+
+type ContactPhone = components["schemas"]["ContactPhone"];
+
 // The one place that decides whether an address may be written to or a number
 // may become a `tel:` link.
 //
@@ -38,4 +42,12 @@ export function mailbox(address: string): string | null {
 export function telUri(number: string): string | null {
   const digits = number.trim().replace(NUMBER_PUNCTUATION, "");
   return /^\+?\d{3,}$/.test(digits) ? `tel:${digits}` : null;
+}
+
+// Declared mirror of contactaddress.ReachablePhoneOrder: is_primary DESC, then the server's order.
+export function primaryPhone(
+  phones: readonly ContactPhone[] | undefined,
+): ContactPhone | undefined {
+  const live = (phones ?? []).filter((row) => row.phone !== "");
+  return live.find((row) => row.is_primary) ?? live[0];
 }

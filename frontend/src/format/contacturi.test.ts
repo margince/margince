@@ -2,7 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { mailbox, telUri } from "./contacturi";
+import type { components } from "../api/schema";
+import { mailbox, primaryPhone, telUri } from "./contacturi";
+
+type ContactPhone = components["schemas"]["ContactPhone"];
 
 describe("mailbox", () => {
   it("admits an ordinary address, trimmed", () => {
@@ -43,5 +46,43 @@ describe("telUri", () => {
     for (const bad of ["ask reception", "12", "+", "555-CALL", ""]) {
       expect(telUri(bad), bad).toBeNull();
     }
+  });
+});
+
+describe("primaryPhone", () => {
+  const row = (
+    id: string,
+    phone: string,
+    isPrimary: boolean,
+  ): ContactPhone => ({
+    id,
+    phone,
+    phone_type: "work",
+    is_primary: isPrimary,
+    position: 0,
+    source: "manual",
+    captured_by: "human:u-1",
+  });
+
+  it("takes the primary number over the first", () => {
+    const phones = [
+      row("a", "+49 30 1111", false),
+      row("b", "+49 30 2222", true),
+    ];
+    expect(primaryPhone(phones)?.phone).toBe("+49 30 2222");
+  });
+
+  it("skips a primary row with no number and falls back to the first live one", () => {
+    const phones = [
+      row("a", "", true),
+      row("b", "+49 30 1111", false),
+      row("c", "+49 30 2222", false),
+    ];
+    expect(primaryPhone(phones)?.phone).toBe("+49 30 1111");
+  });
+
+  it("finds nothing in no rows", () => {
+    expect(primaryPhone(undefined)).toBeUndefined();
+    expect(primaryPhone([])).toBeUndefined();
   });
 });

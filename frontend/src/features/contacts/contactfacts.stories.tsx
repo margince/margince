@@ -24,6 +24,7 @@ const live: typeof archivedContact = {
   ...archivedContact,
   archived_at: null,
   writable: true,
+  primary_email: "dana@brandt.example",
   emails: [
     {
       id: "pe-1",

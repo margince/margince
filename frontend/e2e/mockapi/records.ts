@@ -40,6 +40,13 @@ export const patchDeal: Handler = ({ route, path, json }, { dealPatches }) => {
   return json({ ...base, ...dealPatches[id] });
 };
 
+// The server's choice: the primary address, else the first one.
+function primaryEmailOf(
+  emails: readonly { email: string; is_primary?: boolean }[],
+): string | null {
+  return (emails.find((row) => row.is_primary) ?? emails[0])?.email ?? null;
+}
+
 export const createContact: Handler = ({ route, json }) => {
   const body = route.request().postDataJSON();
   return json(
@@ -49,6 +56,7 @@ export const createContact: Handler = ({ route, json }) => {
       full_name: String(body.full_name),
       title: body.title ?? null,
       emails: body.emails ?? [],
+      primary_email: primaryEmailOf(body.emails ?? []),
       captured_by: "human:u1",
       source: "manual",
     },
@@ -66,6 +74,7 @@ export const jonas = {
   full_name: "Jonas Weiß",
   title: "Fleet manager",
   emails: [],
+  primary_email: null,
 };
 
 export const createCompany: Handler = ({ route, json }) => {
@@ -104,6 +113,7 @@ export const importedContact = {
   id: "p-imported",
   full_name: "Mara Lindqvist",
   emails: [],
+  primary_email: null,
   captured_by: "human:u1",
   source: "mirror:csv:pipedrive-export:contact:p-9",
 };

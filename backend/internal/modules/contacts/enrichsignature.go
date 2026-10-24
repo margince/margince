@@ -56,6 +56,10 @@ type SignatureField struct {
 	// module that owns the ledger can compute one. Empty means the caller
 	// cannot see the ledger, and the apply then runs on plain recency.
 	ClaimKey string
+	// Display is the full name as the signature prints it, set on the first_name
+	// and last_name entries. When both land, it replaces a display name that
+	// capture only guessed.
+	Display string
 }
 
 // SignatureApplyResult counts what one apply did — honest numbers for the
@@ -305,6 +309,9 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 		if outcome == observedConfirmed {
 			confirmed = append(confirmed, f.Name)
 		}
+	}
+	if err := followSignatureDisplay(ctx, tx, contactID, fields, appliedFields); err != nil {
+		return nil, nil, err
 	}
 	landed, err := applySignatureNumbers(ctx, tx, contactID, sourceRef, observedAt, numbers)
 	if err != nil {

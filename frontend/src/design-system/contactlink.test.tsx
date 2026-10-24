@@ -112,3 +112,71 @@ describe("ContactLink", () => {
     );
   });
 });
+
+describe("ContactLink's labelled email verb", () => {
+  it("opens the composer on the record with the address", () => {
+    const writeTo = vi.fn();
+    render(
+      <WriteToProvider writeTo={writeTo}>
+        <ContactLink
+          kind="email"
+          appearance="button"
+          label="Email"
+          address=" dana@brandt.example "
+          record={dana}
+        />
+      </WriteToProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Email" }));
+    expect(writeTo).toHaveBeenCalledWith({
+      entityType: "contact",
+      entityId: "p-1",
+      address: "dana@brandt.example",
+    });
+  });
+
+  it("hands the address to the reader's own client with no composer host", () => {
+    render(
+      <ContactLink
+        kind="email"
+        appearance="button"
+        label="Email"
+        address="dana@brandt.example"
+        record={dana}
+      />,
+    );
+    const link = screen.getByRole("link", { name: "Email" });
+    expect(link.getAttribute("href")).toBe("mailto:dana@brandt.example");
+    expect(link.className).toBe("btn btn-ghost");
+  });
+
+  it("draws nothing for a refused address, no address or a read-only record", () => {
+    const { container } = render(
+      <WriteToProvider writeTo={vi.fn()}>
+        <ContactLink
+          kind="email"
+          appearance="button"
+          label="Email"
+          address="dana@brandt.example?bcc=x"
+          record={dana}
+        />
+        <ContactLink
+          kind="email"
+          appearance="button"
+          label="Email"
+          address={undefined}
+          record={dana}
+        />
+        <ContactLink
+          kind="email"
+          appearance="button"
+          label="Email"
+          address="dana@brandt.example"
+          record={dana}
+          readOnly
+        />
+      </WriteToProvider>,
+    );
+    expect(container.childElementCount).toBe(0);
+  });
+});

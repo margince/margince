@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Mail, Phone } from "lucide-react";
 import { WriteToProvider } from "../lib/writeto";
+import { CallAction } from "./callaction";
 import { ContactLink } from "./contactlink";
 
 // An address or a number the reader can act on. The stories document the one
@@ -75,4 +76,20 @@ export const EmailDark: Story = {
 export const RefusedValueDark: Story = {
   ...RefusedValue,
   globals: { theme: "dark" },
+};
+
+// The labelled verb beside other verbs, parallel to `CallAction`'s button.
+export const EmailVerb: Story = {
+  render: () => (
+    <div style={{ display: "flex", gap: "var(--space-2)" }}>
+      <ContactLink
+        kind="email"
+        appearance="button"
+        label="Email"
+        address="dana@brandt.example"
+        record={dana}
+      />
+      <CallAction appearance="button" number="+33 6 12 44 08 91" label="Call" />
+    </div>
+  ),
 };

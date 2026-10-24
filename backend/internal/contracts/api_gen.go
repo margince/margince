@@ -16933,27 +16933,6 @@ func (e SetBlockedDomainRequestAdmission) Valid() bool {
 	}
 }
 
-// Defines values for SetLeadManualSignalRequestFactor.
-const (
-	SetLeadManualSignalRequestFactorBudgetHint SetLeadManualSignalRequestFactor = "budget_hint"
-	SetLeadManualSignalRequestFactorEmployees  SetLeadManualSignalRequestFactor = "employees"
-	SetLeadManualSignalRequestFactorWebTraffic SetLeadManualSignalRequestFactor = "web_traffic"
-)
-
-// Valid indicates whether the value is a known member of the SetLeadManualSignalRequestFactor enum.
-func (e SetLeadManualSignalRequestFactor) Valid() bool {
-	switch e {
-	case SetLeadManualSignalRequestFactorBudgetHint:
-		return true
-	case SetLeadManualSignalRequestFactorEmployees:
-		return true
-	case SetLeadManualSignalRequestFactorWebTraffic:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SetMailPostureRequestPosture.
 const (
 	SetMailPostureRequestPostureClassified SetMailPostureRequestPosture = "classified"
@@ -41630,9 +41609,11 @@ type LeadListResponse struct {
 // by enrichment (ADR-0105 §4).
 type LeadManualSignal struct {
 	// Band The band picked for this factor; validated per factor.
-	Band       string                 `json:"band"`
-	Confidence *float32               `json:"confidence,omitempty"`
-	Factor     LeadManualSignalFactor `json:"factor"`
+	Band       string   `json:"band"`
+	Confidence *float32 `json:"confidence,omitempty"`
+
+	// Factor The factors a human may supply. Served, with their bands, by `getLeadSignalCatalog`.
+	Factor LeadManualSignalFactor `json:"factor"`
 
 	// Points The band→points mapping. May be negative.
 	Points int                `json:"points"`
@@ -41650,7 +41631,7 @@ type LeadManualSignal struct {
 	SupersededBy *string `json:"superseded_by,omitempty"`
 }
 
-// LeadManualSignalFactor defines model for LeadManualSignal.Factor.
+// LeadManualSignalFactor The factors a human may supply. Served, with their bands, by `getLeadSignalCatalog`.
 type LeadManualSignalFactor string
 
 // LeadManualSignalKind `fact` — the rep knows this. `assumption` — a working estimate.
@@ -41781,6 +41762,39 @@ type LeadSettings struct {
 	// work the queue — suspended, archived, an agent, a read seat — because a desk nobody
 	// reads is the same silence as none.
 	UnassignedEscalationUserId *openapi_types.UUID `json:"unassigned_escalation_user_id,omitempty"`
+}
+
+// LeadSignalBand defines model for LeadSignalBand.
+type LeadSignalBand struct {
+	// CompanySizeBands The company `size_band` values that map onto this band; empty when the factor is not company-derived.
+	CompanySizeBands []string `json:"company_size_bands"`
+	Id               string   `json:"id"`
+
+	// Max Inclusive upper bound, null when open-ended or without a numeric range.
+	Max *int `json:"max"`
+
+	// Min Inclusive lower bound, null when the band has no numeric range.
+	Min *int `json:"min"`
+
+	// Points What the band adds to the score. May be negative.
+	Points int `json:"points"`
+}
+
+// LeadSignalCatalog defines model for LeadSignalCatalog.
+type LeadSignalCatalog struct {
+	// Factors In the order the lead form asks them. Carries no prose; labels live in the client's messages.
+	Factors []LeadSignalCatalogFactor `json:"factors"`
+}
+
+// LeadSignalCatalogFactor defines model for LeadSignalCatalogFactor.
+type LeadSignalCatalogFactor struct {
+	Bands []LeadSignalBand `json:"bands"`
+
+	// CompanyField The company field the factor can be read from, null when only a rep supplies it.
+	CompanyField *string `json:"company_field"`
+
+	// Factor The factors a human may supply. Served, with their bands, by `getLeadSignalCatalog`.
+	Factor LeadManualSignalFactor `json:"factor"`
 }
 
 // LeadSource One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.
@@ -42382,7 +42396,10 @@ type ListClauseVerdict struct {
 	// Hidden The value is not shown to this caller.
 	Hidden *bool                  `json:"hidden,omitempty"`
 	Join   *ListClauseVerdictJoin `json:"join,omitempty"`
-	Op     *string                `json:"op,omitempty"`
+
+	// Linked For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none.
+	Linked *[]ListLinkedValue `json:"linked,omitempty"`
+	Op     *string            `json:"op,omitempty"`
 
 	// Operand The clause's value as the filter states it.
 	Operand interface{} `json:"operand,omitempty"`
@@ -42432,6 +42449,9 @@ type ListFieldValue struct {
 
 	// Label For a reference to a company or project this caller may open, its name.
 	Label *string `json:"label,omitempty"`
+
+	// Linked For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then.
+	Linked *[]ListLinkedValue `json:"linked,omitempty"`
 
 	// Value The value as text, as the explanation states it; null when the record holds none.
 	Value *string `json:"value,omitempty"`
@@ -42492,6 +42512,18 @@ type ListHistoryEntryReason string
 type ListHistoryResponse struct {
 	Data []ListHistoryEntry `json:"data"`
 	Page PageInfo           `json:"page"`
+}
+
+// ListLinkedValue defines model for ListLinkedValue.
+type ListLinkedValue struct {
+	// Hidden The value names a row this caller may not open.
+	Hidden bool `json:"hidden"`
+
+	// Label The name of the linked row, when this caller may open it.
+	Label *string `json:"label,omitempty"`
+
+	// Value The linked row's id, or the value itself where the field has no row. Empty when hidden.
+	Value string `json:"value"`
 }
 
 // ListListResponse defines model for ListListResponse.
@@ -49232,9 +49264,11 @@ type SetFxRateRequest struct {
 
 // SetLeadManualSignalRequest defines model for SetLeadManualSignalRequest.
 type SetLeadManualSignalRequest struct {
-	Band       string                           `json:"band"`
-	Confidence *float32                         `json:"confidence,omitempty"`
-	Factor     SetLeadManualSignalRequestFactor `json:"factor"`
+	Band       string   `json:"band"`
+	Confidence *float32 `json:"confidence,omitempty"`
+
+	// Factor The factors a human may supply. Served, with their bands, by `getLeadSignalCatalog`.
+	Factor LeadManualSignalFactor `json:"factor"`
 
 	// Reason Required and non-empty — a scoring input nobody can account for is the thing this feature exists to end.
 	Reason string `json:"reason"`
@@ -49244,9 +49278,6 @@ type SetLeadManualSignalRequest struct {
 	// blended into an auto-captured signal (AC-S7a).
 	SignalKind LeadManualSignalKind `json:"signal_kind"`
 }
-
-// SetLeadManualSignalRequestFactor defines model for SetLeadManualSignalRequest.Factor.
-type SetLeadManualSignalRequestFactor string
 
 // SetMailHistoryBaselineRequest The date one mailbox's automatic commitment suggestions start from.
 type SetMailHistoryBaselineRequest struct {
@@ -75223,6 +75254,9 @@ type ServerInterface interface {
 	// Rename, reorder or (de)activate a disqualification reason.
 	// (PATCH /lead-disqualify-reasons/{id})
 	UpdateLeadDisqualifyReason(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadDisqualifyReasonParams)
+	// The factors and bands a rep may use as lead scoring input.
+	// (GET /lead-signal-catalog)
+	GetLeadSignalCatalog(w http.ResponseWriter, r *http.Request)
 	// List lead sources, active and inactive, in display order.
 	// (GET /lead-sources)
 	ListLeadSources(w http.ResponseWriter, r *http.Request)
@@ -75273,7 +75307,7 @@ type ServerInterface interface {
 	SetLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id)
 	// Withdraw a human-provided scoring factor.
 	// (DELETE /leads/{id}/manual-signals/{factor})
-	ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id, factor string)
+	ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id, factor LeadManualSignalFactor)
 	// Promote a lead to a contact on genuine engagement (non-lossy merge).
 	// (POST /leads/{id}/promote)
 	PromoteLead(w http.ResponseWriter, r *http.Request, id Id, params PromoteLeadParams)
@@ -79558,6 +79592,12 @@ func (_ Unimplemented) UpdateLeadDisqualifyReason(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The factors and bands a rep may use as lead scoring input.
+// (GET /lead-signal-catalog)
+func (_ Unimplemented) GetLeadSignalCatalog(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List lead sources, active and inactive, in display order.
 // (GET /lead-sources)
 func (_ Unimplemented) ListLeadSources(w http.ResponseWriter, r *http.Request) {
@@ -79656,7 +79696,7 @@ func (_ Unimplemented) SetLeadManualSignal(w http.ResponseWriter, r *http.Reques
 
 // Withdraw a human-provided scoring factor.
 // (DELETE /leads/{id}/manual-signals/{factor})
-func (_ Unimplemented) ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id, factor string) {
+func (_ Unimplemented) ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id, factor LeadManualSignalFactor) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -104370,6 +104410,26 @@ func (siw *ServerInterfaceWrapper) UpdateLeadDisqualifyReason(w http.ResponseWri
 	handler.ServeHTTP(w, r)
 }
 
+// GetLeadSignalCatalog operation middleware
+func (siw *ServerInterfaceWrapper) GetLeadSignalCatalog(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLeadSignalCatalog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLeadSources operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadSources(w http.ResponseWriter, r *http.Request) {
 
@@ -105215,7 +105275,7 @@ func (siw *ServerInterfaceWrapper) ClearLeadManualSignal(w http.ResponseWriter, 
 	}
 
 	// ------------- Path parameter "factor" -------------
-	var factor string
+	var factor LeadManualSignalFactor
 
 	err = runtime.BindStyledParameterWithOptions("simple", "factor", chi.URLParam(r, "factor"), &factor, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -121270,6 +121330,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/lead-disqualify-reasons/{id}", wrapper.UpdateLeadDisqualifyReason)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/lead-signal-catalog", wrapper.GetLeadSignalCatalog)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lead-sources", wrapper.ListLeadSources)

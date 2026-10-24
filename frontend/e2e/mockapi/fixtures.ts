@@ -203,6 +203,7 @@ export const anna = {
   full_name: "Anna Weber",
   title: "Head of Procurement",
   emails: [{ id: "e1", email: "anna.weber@brandt.example", is_primary: true }],
+  primary_email: "anna.weber@brandt.example",
   writable: true,
   captured_by: "connector:gmail",
   source: "gmail",

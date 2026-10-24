@@ -10,6 +10,7 @@ import { Popover } from "../../design-system/popover";
 import { provenanceOf } from "../../design-system/provenanceof";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { ProvenanceTag } from "../../design-system/trust";
+import { primaryPhone } from "../../format/contacturi";
 import { formatDateAbbrev } from "../../format/format";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
@@ -46,8 +47,8 @@ export function ContactFacts({
   const { locale } = useLocale();
   const zone = useRecordZone();
   const ownerName = useMemberName(contact.owner_id);
-  const email = contact.emails?.[0]?.email;
-  const phone = contact.phones?.[0]?.phone;
+  const email = contact.primary_email;
+  const phone = primaryPhone(contact.phones)?.phone;
   return (
     <RecordFacts>
       {email && (

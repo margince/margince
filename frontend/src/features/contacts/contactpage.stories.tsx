@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en } from "../../i18n/en";
 import type { ContactTab } from "../../lib/contacttab";
 import { ContactDealsTab } from "./contactdeals";
 import { ContactMeetingsTab } from "./contactmeetings";
@@ -337,7 +338,7 @@ const mailAndChat: View = {
 // record is history, not a way to reach anybody.
 const unreachable: View = {
   ...populated,
-  contact: { ...populated.contact, emails: [] },
+  contact: { ...populated.contact, emails: [], primary_email: null },
 };
 
 function Page({
@@ -612,6 +613,109 @@ export const LeadMomentPromised: Story = {
         </div>
       </StoryProviders>
     );
+  },
+};
+
+// The next task came out of a call, so its bar offers Call beside Open task.
+const calledBack: View = {
+  ...populated,
+  next_steps: {
+    data: [
+      {
+        id: "a-7",
+        kind: "task",
+        subject: "Call Dana back about the depot retrofit",
+        occurred_at: "2026-08-10T09:00:00Z",
+        due_at: "2026-08-12T09:00:00Z",
+        is_done: false,
+        source_activity_id: "call-7",
+        links: [{ entity_type: "contact", entity_id: "p-1" }],
+        source: "manual",
+        captured_by: "human:u1",
+        created_at: "2026-08-10T09:00:00Z",
+        updated_at: "2026-08-10T09:00:00Z",
+      },
+    ],
+    page,
+  },
+};
+
+export const LeadNextTaskFromCall: Story = {
+  name: "Lead moment · next task from a call",
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read", "update"] }),
+      "GET /activities/call-7": () =>
+        jsonResponse({
+          id: "call-7",
+          kind: "call",
+          content_state: "available",
+          occurred_at: "2026-08-09T15:00:00Z",
+        }),
+    });
+    return (
+      <StoryProviders>
+        <div style={{ maxWidth: 720 }}>
+          <ContactToday
+            view={calledBack}
+            moment={nothingNeededMoment}
+            onAction={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await screen.findByRole("link", { name: en["record.verb.call"] });
+  },
+};
+
+// The move is about that same task, so its bar offers Call beside the reply.
+const owedCallMoment: components["schemas"]["ContactMoment"] = {
+  ...openPromiseMoment,
+  claim_key: "open_promise:p-1:a-7",
+  headline: "You owe them: Call Dana back about the depot retrofit",
+  evidence: [
+    {
+      type: "task",
+      id: "a-7",
+      label: "Call Dana back about the depot retrofit",
+    },
+  ],
+  recommended_action: {
+    kind: "draft_reply",
+    label: "Write to them",
+    state: "available",
+  },
+};
+
+export const LeadMomentFromCall: Story = {
+  name: "Lead moment · owed a call back",
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read", "update"] }),
+      "GET /activities/call-7": () =>
+        jsonResponse({
+          id: "call-7",
+          kind: "call",
+          content_state: "available",
+          occurred_at: "2026-08-09T15:00:00Z",
+        }),
+    });
+    return (
+      <StoryProviders>
+        <div style={{ maxWidth: 720 }}>
+          <ContactToday
+            view={calledBack}
+            moment={owedCallMoment}
+            onAction={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await screen.findByRole("link", { name: en["record.verb.call"] });
   },
 };
 

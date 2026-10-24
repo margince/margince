@@ -7452,6 +7452,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/lead-signal-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The factors and bands a rep may use as lead scoring input.
+         * @description The single definition of the manual scoring vocabulary: each factor, its bands, the
+         *     points and numeric range of each band, and the company size bands that map onto it.
+         *     The score, the validation of `setLeadManualSignal` and the lead form all read this one
+         *     catalog.
+         */
+        get: operations["getLeadSignalCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads/{id}/manual-signals/{factor}": {
         parameters: {
             query?: never;
@@ -7459,7 +7482,7 @@ export interface paths {
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
-                factor: "web_traffic" | "employees" | "budget_hint";
+                factor: components["schemas"]["LeadManualSignalFactor"];
             };
             cookie?: never;
         };
@@ -36342,13 +36365,38 @@ export interface components {
             page?: components["schemas"]["PageInfo"];
         };
         /**
+         * @description The factors a human may supply. Served, with their bands, by `getLeadSignalCatalog`.
+         * @enum {string}
+         */
+        LeadManualSignalFactor: "web_traffic" | "employees" | "budget_hint";
+        LeadSignalBand: {
+            id: string;
+            /** @description What the band adds to the score. May be negative. */
+            points: number;
+            /** @description Inclusive lower bound, null when the band has no numeric range. */
+            min: number | null;
+            /** @description Inclusive upper bound, null when open-ended or without a numeric range. */
+            max: number | null;
+            /** @description The company `size_band` values that map onto this band; empty when the factor is not company-derived. */
+            company_size_bands: string[];
+        };
+        LeadSignalCatalogFactor: {
+            factor: components["schemas"]["LeadManualSignalFactor"];
+            /** @description The company field the factor can be read from, null when only a rep supplies it. */
+            company_field: string | null;
+            bands: components["schemas"]["LeadSignalBand"][];
+        };
+        LeadSignalCatalog: {
+            /** @description In the order the lead form asks them. Carries no prose; labels live in the client's messages. */
+            factors: components["schemas"]["LeadSignalCatalogFactor"][];
+        };
+        /**
          * @description A human-provided scoring factor (S-E13.6). A row whose `superseded_at` is set was
          *     replaced by an auto-fetched value and is RETAINED for the rep to see, never deleted
          *     by enrichment (ADR-0105 §4).
          */
         LeadManualSignal: {
-            /** @enum {string} */
-            factor: "web_traffic" | "employees" | "budget_hint";
+            factor: components["schemas"]["LeadManualSignalFactor"];
             /** @description The band picked for this factor; validated per factor. */
             band: string;
             /** @description The band→points mapping. May be negative. */
@@ -36369,8 +36417,7 @@ export interface components {
             data: components["schemas"]["LeadManualSignal"][];
         };
         SetLeadManualSignalRequest: {
-            /** @enum {string} */
-            factor: "web_traffic" | "employees" | "budget_hint";
+            factor: components["schemas"]["LeadManualSignalFactor"];
             band: string;
             signal_kind: components["schemas"]["LeadManualSignalKind"];
             confidence?: number | null;
@@ -36861,6 +36908,16 @@ export interface components {
             hidden: boolean;
             /** @description For a reference to a company or project this caller may open, its name. */
             label?: string | null;
+            /** @description For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then. */
+            linked?: components["schemas"]["ListLinkedValue"][];
+        };
+        ListLinkedValue: {
+            /** @description The linked row's id, or the value itself where the field has no row. Empty when hidden. */
+            value: string;
+            /** @description The name of the linked row, when this caller may open it. */
+            label?: string | null;
+            /** @description The value names a row this caller may not open. */
+            hidden: boolean;
         };
         CreateListRequest: {
             name: string;
@@ -36940,6 +36997,8 @@ export interface components {
             hidden?: boolean;
             /** @description For a reference to a company or project this caller may open, its name. */
             value_label?: string | null;
+            /** @description For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. */
+            linked?: components["schemas"]["ListLinkedValue"][];
         };
         ListMemberExplanation: {
             /** Format: uuid */
@@ -61578,6 +61637,27 @@ export interface operations {
             };
         };
     };
+    getLeadSignalCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The catalog. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadSignalCatalog"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
     clearLeadManualSignal: {
         parameters: {
             query?: never;
@@ -61585,7 +61665,7 @@ export interface operations {
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
-                factor: "web_traffic" | "employees" | "budget_hint";
+                factor: components["schemas"]["LeadManualSignalFactor"];
             };
             cookie?: never;
         };

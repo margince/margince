@@ -19,8 +19,9 @@ import type { Lead } from "./leads";
 import { type PromotionRecord, promotionSummary } from "./leads.promotion";
 import { usePromotePreview } from "./leads.qualify";
 import {
+  evidenceText,
   LeadManualSignals,
-  SIGNAL_FACTORS,
+  useLeadSignalCatalog,
   useManualSignals,
 } from "./leadsignals";
 
@@ -182,7 +183,7 @@ function KnowRow({
       title={label(factor)}
       sub={
         live
-          ? [band, live.reason].filter(Boolean).join(" · ")
+          ? [band, evidenceText(live.reason, t)].filter(Boolean).join(" · ")
           : t("lead.signal.notAsked")
       }
       right={live ? <SetBy userId={live.set_by} /> : undefined}
@@ -204,6 +205,8 @@ export function LeadKnowCard({
   const titleId = useId();
   const [adding, setAdding] = useState(false);
   const signals = useManualSignals(id);
+  const catalog = useLeadSignalCatalog();
+  const factors = catalog.data ?? [];
   return (
     <OverviewCard
       title={t("lead.card.know")}
@@ -217,13 +220,15 @@ export function LeadKnowCard({
         </Button>
       }
     >
-      {signals.isPending && (
+      {(signals.isPending || catalog.isPending) && (
         <OverviewText>{t("lead.scoreLoading")}</OverviewText>
       )}
-      {signals.isError && <ErrorLine error={signals.error} />}
-      {signals.isSuccess && (
+      {(signals.isError || catalog.isError) && (
+        <ErrorLine error={signals.error ?? catalog.error} />
+      )}
+      {signals.isSuccess && catalog.isSuccess && (
         <OverviewList>
-          {SIGNAL_FACTORS.map((factor) => (
+          {factors.map(({ factor }) => (
             <KnowRow
               key={factor}
               factor={factor}

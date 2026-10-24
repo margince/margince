@@ -2,6 +2,7 @@ import type { useInteractionLabel } from "../../components/interactionchrome";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import type { ReadingTone } from "../../design-system/readingtone";
 import { groupChronology } from "../../design-system/timelinegroups";
+import { primaryPhone } from "../../format/contacturi";
 import { formatDayMonth } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -13,7 +14,8 @@ type Entry = NonNullable<Contact360["conversation_memory"]>[number];
 type Status = Entry["status"];
 
 /** One conversation as a card row, with the email it opens, if any. */
-export type MemoryRow = OverviewRow & Readonly<{ emailId: string | null }>;
+export type MemoryRow = OverviewRow &
+  Readonly<{ kind: Activity["kind"]; emailId: string | null }>;
 
 type Said = Readonly<{
   key: string;
@@ -51,8 +53,19 @@ export function memoryRows(
       .filter(Boolean)
       .join(" · "),
     pill: statusPill(row.status, t),
+    kind: row.kind,
     emailId: row.emailId,
   }));
+}
+
+export function callBackNumber(
+  kind: Activity["kind"],
+  contact: Contact360["contact"] | undefined,
+): string | undefined {
+  if (kind !== "call" || !contact || contact.archived_at) {
+    return undefined;
+  }
+  return primaryPhone(contact.phones)?.phone;
 }
 
 function fromEntry(entry: Entry): Said {

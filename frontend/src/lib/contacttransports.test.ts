@@ -149,6 +149,7 @@ function contact(
     sections_omitted: [],
     contact: {
       ...SUBJECT,
+      primary_email: options.email ? "dana@brandt.example" : null,
       emails: options.email
         ? [
             {
@@ -183,6 +184,16 @@ describe("transportsFor", () => {
   it("offers mail alone for a contact with an address and no channel", () => {
     const got = transportsFor(contact({ email: true }), nameProvider, say);
     expect(got.map((t) => t.id)).toEqual(["email"]);
+  });
+
+  it("offers no mail when the server names no address, whatever rows remain", () => {
+    const rows = contact({ email: true });
+    const got = transportsFor(
+      { ...rows, contact: { ...rows.contact, primary_email: null } },
+      nameProvider,
+      say,
+    );
+    expect(got).toEqual([]);
   });
 
   // Mail leads because it is the one transport that can OPEN a conversation:

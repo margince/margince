@@ -97,7 +97,12 @@ const chatMessage: components["schemas"]["Activity"] = {
 // A contact captured over a chat channel: no address, one conversation.
 const chatOnly: Contact360 = {
   ...view,
-  contact: { ...view.contact, emails: [], reachability: reachableOnZalo },
+  contact: {
+    ...view.contact,
+    emails: [],
+    primary_email: null,
+    reachability: reachableOnZalo,
+  },
   activities: { data: [chatMessage], page: { has_more: false } },
 };
 
@@ -115,7 +120,7 @@ const mailAndChat: Contact360 = {
 // mail thread on the record is not a way to reach them; an address is.
 const unreachable: Contact360 = {
   ...view,
-  contact: { ...view.contact, emails: [] },
+  contact: { ...view.contact, emails: [], primary_email: null },
 };
 
 // A guard that refuses mail. Consent is decided per purpose, so this is one
@@ -156,16 +161,26 @@ describe("the contact record's tabs", () => {
     },
   );
 
-  it("sends the header's Call verb to the tab that holds the conversation", async () => {
+  it("sends the header's Full history to the tab that holds the conversation", async () => {
     // The tab ids are URL segments and `navigate` takes them as a bare string,
     // so a rename can leave a verb pointing at an id nothing serves — the
     // router then falls back to Overview and says nothing about it.
     const user = userEvent.setup();
     mount("overview");
-    // The header's verb, not the rail's: the rail offers its own Call, and
-    // the two land in different places on purpose.
     const header = await recordHeader();
-    await user.click(within(header).getByRole("button", { name: "Call" }));
+    const more = within(header).getByRole("button", {
+      name: en["record.moreActions"],
+    });
+    await user.click(more);
+    const menu = document.getElementById(
+      more.getAttribute("aria-controls") ?? "",
+    );
+    if (menu === null) throw new Error("More opened no panel");
+    await user.click(
+      within(menu).getByRole("button", {
+        name: en["record.fullHistory"],
+      }),
+    );
     expect(window.location.hash).toBe("#/contacts/p-1/timeline");
   });
 });

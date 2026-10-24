@@ -315,7 +315,7 @@ describe("the timeline", () => {
     );
     expect(events.map((event) => [event.title, event.kind])).toEqual([
       ["Commitment due", "late"],
-      ["Dana wrote", "last"],
+      ["Dana Buyer wrote", "last"],
       ["Walkthrough", "ahead"],
     ]);
   });

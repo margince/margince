@@ -20,32 +20,47 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commitment) (activities.CommitmentAdmissionReason, error) {
+// commitmentRead is the admission verdict together with who supplied the evidence.
+type commitmentRead struct {
+	Reason       activities.CommitmentAdmissionReason
+	LoggedByHand bool
+}
+
+// proposeLate is true when the horizon stopped a promise whose evidence a
+// colleague logged by hand. Such a promise is put to its promiser instead of
+// being filed as history.
+func (read commitmentRead) proposeLate() bool {
+	return read.Reason == activities.CommitmentHistorical && read.LoggedByHand
+}
+
+// proposeLate adds the promise's own conditions to the evidence's: ours, from
+// the original source, not private mail, and not withheld on its meaning.
+func (c Commitment) proposeLate(read commitmentRead) bool {
+	return read.proposeLate() && c.Theirs == nil && c.PrivateTo == nil && c.AdmissionSourceID == nil && c.Meaning.withheldOutcome() == ""
+}
+
+func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commitment) (commitmentRead, error) {
 	var due *time.Time
 	if c.DueDate != "" {
 		at, err := commitmentDueInstant(ctx, tx, c.DueDate, c.DueZone)
 		if err != nil {
-			return "", err
+			return commitmentRead{}, err
 		}
 		due = &at
 	}
-	return commitmentAdmissionForDue(ctx, tx, c, due)
+	return readCommitmentEvidence(ctx, tx, c, due, true)
 }
 
-func commitmentAdmissionForDue(ctx context.Context, tx pgx.Tx, c Commitment, due *time.Time) (activities.CommitmentAdmissionReason, error) {
-	return readCommitmentAdmission(ctx, tx, c, due, true)
-}
-
-func readCommitmentAdmission(ctx context.Context, tx pgx.Tx, c Commitment, due *time.Time, forDecision bool) (activities.CommitmentAdmissionReason, error) {
+func readCommitmentEvidence(ctx context.Context, tx pgx.Tx, c Commitment, due *time.Time, forDecision bool) (commitmentRead, error) {
 	sourceID := c.SourceActivityID
 	if c.AdmissionSourceID != nil {
 		if _, err := activities.CommitmentAdmissionEvidenceTx(ctx, tx, activities.CommitmentAdmissionInput{
 			SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages, Preview: !forDecision,
 		}); err != nil {
 			if errors.Is(err, apperrors.ErrNotFound) {
-				return activities.CommitmentSourceUnavailable, nil
+				return commitmentRead{Reason: activities.CommitmentSourceUnavailable}, nil
 			}
-			return "", err
+			return commitmentRead{}, err
 		}
 		sourceID = *c.AdmissionSourceID
 	}
@@ -53,19 +68,20 @@ func readCommitmentAdmission(ctx context.Context, tx pgx.Tx, c Commitment, due *
 		SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages, Preview: !forDecision,
 	})
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return activities.CommitmentSourceUnavailable, nil
+		return commitmentRead{Reason: activities.CommitmentSourceUnavailable}, nil
 	}
 	if err != nil {
-		return "", err
+		return commitmentRead{}, err
 	}
 	if evidence.OccurredAt, err = commitmentSaidAt(ctx, tx, evidence); err != nil {
-		return "", err
+		return commitmentRead{}, err
 	}
-	reason := activities.AdmitAutomaticCommitment(evidence, c.AsOf, due)
-	if reason != activities.CommitmentCurrent || !evidence.CapturedMail {
-		return reason, nil
+	read := commitmentRead{Reason: activities.AdmitAutomaticCommitment(evidence, c.AsOf, due), LoggedByHand: evidence.LoggedByHand}
+	if read.Reason != activities.CommitmentCurrent || !evidence.CapturedMail {
+		return read, nil
 	}
-	return mailboxBaselineAdmission(ctx, tx, c, sourceID, evidence.RawCaptureID)
+	read.Reason, err = mailboxBaselineAdmission(ctx, tx, c, sourceID, evidence.RawCaptureID)
+	return read, err
 }
 
 // commitmentSaidAt is when the source was said: captured mail's own stated
@@ -230,7 +246,7 @@ func (d *CommitmentDispatcher) renewTask(ctx context.Context, tx pgx.Tx, c Commi
 }
 
 func (outcome CommitmentOutcome) wroteWork() bool {
-	return outcome == CommitmentWatched || outcome == CommitmentTaskWritten || outcome == CommitmentProposed
+	return outcome == CommitmentWatched || outcome == CommitmentTaskWritten || outcome == CommitmentProposed || outcome == CommitmentHistoricalProposed
 }
 
 func (outcome CommitmentOutcome) withheld() bool {

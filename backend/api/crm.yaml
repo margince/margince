@@ -11140,13 +11140,33 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /lead-signal-catalog:
+    get:
+      tags: [Leads]
+      operationId: getLeadSignalCatalog
+      security: [ { cookieAuth: [] } ]   # human session only, like the manual-signal endpoints (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: The factors and bands a rep may use as lead scoring input.
+      description: |
+        The single definition of the manual scoring vocabulary: each factor, its bands, the
+        points and numeric range of each band, and the company size bands that map onto it.
+        The score, the validation of `setLeadManualSignal` and the lead form all read this one
+        catalog.
+      responses:
+        '200':
+          description: The catalog.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LeadSignalCatalog' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /leads/{id}/manual-signals/{factor}:
     parameters:
       - $ref: '#/components/parameters/Id'
       - name: factor
         in: path
         required: true
-        schema: { type: string, enum: [web_traffic, employees, budget_hint] }
+        schema: { $ref: '#/components/schemas/LeadManualSignalFactor' }
     delete:
       tags: [Leads]
       operationId: clearLeadManualSignal
@@ -49455,6 +49475,43 @@ components:
           description: Present only when `history=true`.
         page: { $ref: '#/components/schemas/PageInfo' }
 
+    LeadManualSignalFactor:
+      type: string
+      enum: [web_traffic, employees, budget_hint]
+      description: The factors a human may supply. Served, with their bands, by `getLeadSignalCatalog`.
+
+    LeadSignalBand:
+      type: object
+      required: [id, points, min, max, company_size_bands]
+      properties:
+        id: { type: string }
+        points: { type: integer, description: 'What the band adds to the score. May be negative.' }
+        min: { type: [integer, 'null'], description: 'Inclusive lower bound, null when the band has no numeric range.' }
+        max: { type: [integer, 'null'], description: 'Inclusive upper bound, null when open-ended or without a numeric range.' }
+        company_size_bands:
+          type: array
+          description: The company `size_band` values that map onto this band; empty when the factor is not company-derived.
+          items: { type: string }
+
+    LeadSignalCatalogFactor:
+      type: object
+      required: [factor, company_field, bands]
+      properties:
+        factor: { $ref: '#/components/schemas/LeadManualSignalFactor' }
+        company_field: { type: [string, 'null'], description: 'The company field the factor can be read from, null when only a rep supplies it.' }
+        bands:
+          type: array
+          items: { $ref: '#/components/schemas/LeadSignalBand' }
+
+    LeadSignalCatalog:
+      type: object
+      required: [factors]
+      properties:
+        factors:
+          type: array
+          description: In the order the lead form asks them. Carries no prose; labels live in the client's messages.
+          items: { $ref: '#/components/schemas/LeadSignalCatalogFactor' }
+
     LeadManualSignal:
       type: object
       description: |
@@ -49463,7 +49520,7 @@ components:
         by enrichment (ADR-0105 §4).
       required: [factor, band, points, signal_kind, reason, set_by, set_at]
       properties:
-        factor: { type: string, enum: [web_traffic, employees, budget_hint] }
+        factor: { $ref: '#/components/schemas/LeadManualSignalFactor' }
         band: { type: string, description: 'The band picked for this factor; validated per factor.' }
         points: { type: integer, description: 'The band→points mapping. May be negative.' }
         signal_kind: { $ref: '#/components/schemas/LeadManualSignalKind' }
@@ -49484,7 +49541,7 @@ components:
       type: object
       required: [factor, band, signal_kind, reason]
       properties:
-        factor: { type: string, enum: [web_traffic, employees, budget_hint] }
+        factor: { $ref: '#/components/schemas/LeadManualSignalFactor' }
         band: { type: string, minLength: 1 }
         signal_kind: { $ref: '#/components/schemas/LeadManualSignalKind' }
         confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
@@ -49967,6 +50024,19 @@ components:
         value: { type: [string, 'null'], description: 'The value as text, as the explanation states it; null when the record holds none.' }
         hidden: { type: boolean, description: 'The value is not shown to this caller.' }
         label: { type: [string, 'null'], description: 'For a reference to a company or project this caller may open, its name.' }
+        linked:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/ListLinkedValue' }
+          description: 'For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then.'
+
+    ListLinkedValue:
+      type: object
+      required: [value, hidden]
+      properties:
+        value: { type: string, description: 'The linked row''s id, or the value itself where the field has no row. Empty when hidden.' }
+        label: { type: [string, 'null'], description: 'The name of the linked row, when this caller may open it.' }
+        hidden: { type: boolean, description: 'The value names a row this caller may not open.' }
 
     CreateListRequest:
       type: object
@@ -50032,6 +50102,11 @@ components:
         value: { type: [string, 'null'], description: 'The record''s current value of the field, as text.' }
         hidden: { type: boolean, description: 'The value is not shown to this caller.' }
         value_label: { type: [string, 'null'], description: 'For a reference to a company or project this caller may open, its name.' }
+        linked:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/ListLinkedValue' }
+          description: 'For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none.'
 
     ListMemberExplanation:
       type: object

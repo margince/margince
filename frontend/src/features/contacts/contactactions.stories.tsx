@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent } from "storybook/test";
+import { expect, screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import {
@@ -33,9 +33,8 @@ const CAPTURED = {
   updated_at: "2026-07-01T08:00:00Z",
 } as const;
 
-// With an address on file, so the lead verb is the mail one — the row reads
-// differently for a contact with nowhere to write to, and that refusal is its
-// own story below.
+// With an address and a number on file, so the lead verb is the mail one and
+// Call dials. Each missing way to reach them is its own story below.
 const VIEW: Contact360 = {
   as_of: "2026-08-13T09:00:00Z",
   contact: {
@@ -44,12 +43,24 @@ const VIEW: Contact360 = {
     title: "Head of Procurement",
     writable: true,
     version: 3,
+    primary_email: "anna.weber@brandt.example",
     emails: [
       {
         id: "e-1",
         contact_id: "p-1",
         email: "anna.weber@brandt.example",
         email_type: "work",
+        is_primary: true,
+        position: 0,
+        ...CAPTURED,
+      },
+    ],
+    phones: [
+      {
+        id: "ph-1",
+        contact_id: "p-1",
+        phone: "+49 30 1234 5678",
+        phone_type: "work",
         is_primary: true,
         position: 0,
         ...CAPTURED,
@@ -166,9 +177,69 @@ export const NoTransport: Story = {
     installFetchStub(ROUTES);
     return (
       <StoryProviders>
-        <Header view={{ ...VIEW, contact: { ...VIEW.contact, emails: [] } }} />
+        <Header
+          view={{
+            ...VIEW,
+            contact: { ...VIEW.contact, emails: [], primary_email: null },
+          }}
+        />
       </StoryProviders>
     );
+  },
+};
+
+// No number on file: Call stays in the row and says why it cannot dial.
+export const NoPhone: Story = {
+  render: () => {
+    installFetchStub(ROUTES);
+    return (
+      <StoryProviders>
+        <Header view={{ ...VIEW, contact: { ...VIEW.contact, phones: [] } }} />
+      </StoryProviders>
+    );
+  },
+};
+
+// The second number is the primary one, so Call dials it.
+export const SecondPhonePrimary: Story = {
+  render: () => {
+    installFetchStub(ROUTES);
+    return (
+      <StoryProviders>
+        <Header
+          view={{
+            ...VIEW,
+            contact: {
+              ...VIEW.contact,
+              phones: [
+                {
+                  id: "ph-0",
+                  contact_id: "p-1",
+                  phone: "+49 30 9999 0000",
+                  phone_type: "work",
+                  is_primary: false,
+                  position: 0,
+                  ...CAPTURED,
+                },
+                {
+                  id: "ph-1",
+                  contact_id: "p-1",
+                  phone: "+49 170 333 4444",
+                  phone_type: "mobile",
+                  is_primary: true,
+                  position: 1,
+                  ...CAPTURED,
+                },
+              ],
+            },
+          }}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    const call = await screen.findByRole("link", { name: "Call" });
+    await expect(call.getAttribute("href")).toBe("tel:+491703334444");
   },
 };
 

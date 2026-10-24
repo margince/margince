@@ -68,8 +68,9 @@ export function OverviewList({ children }: Readonly<{ children: ReactNode }>) {
 
 /**
  * One row: an optional `lead` (a tick box), the `title` over its `sub`, and
- * a `right` slot for a `Badge` or a short value. `figure` draws the value in
- * ink with tabular digits, for an amount; otherwise it is quiet.
+ * a `right` slot for a `Badge` or a short value, or a pill beside one verb.
+ * `figure` draws the value in ink with tabular digits, for an amount;
+ * otherwise it is quiet.
  */
 export function OverviewRow({
   lead,

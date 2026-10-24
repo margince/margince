@@ -1,10 +1,18 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page, test } from "@playwright/test";
-import { SETTINGS_PAGES } from "../src/lib/settingscatalog";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import { en, type MessageKey } from "../src/i18n/en";
+import { SETTINGS_PAGES } from "../src/lib/settingscatalog";
 import { meFixture } from "../src/testing/mefixture";
 import { copy } from "./copy";
+import {
+  CALLED_CONTACT,
+  loggedCall,
+  loggedNote,
+  PRIMARY_PHONE,
+  taskFromCall,
+  typedTask,
+} from "./mockapi/calls";
 import { anna, mockApi } from "./seed";
 import { openedAt, pageOverflow, textsOf } from "./waits";
 
@@ -3372,4 +3380,147 @@ test.describe("an archived contact opens read-only", () => {
       );
     });
   }
+});
+
+test.describe("calling a contact", () => {
+  const tel = `tel:${PRIMARY_PHONE}`;
+  const callVerb = (scope: Page | Locator) =>
+    scope.getByRole("link", { name: de["record.verb.call"], exact: true });
+
+  test("the header Call dials the primary of two numbers", async ({ page }) => {
+    await page.goto(`/#/contacts/${CALLED_CONTACT}`);
+    await expectShellRendered(page);
+    await expect(
+      page.getByRole("link", { name: de["contact.action.call"], exact: true }),
+    ).toHaveAttribute("href", tel);
+  });
+
+  test("the header Call on a contact with no number is refused and says why", async ({
+    page,
+  }) => {
+    await page.goto("/#/contacts/p-anna");
+    await expectShellRendered(page);
+    const call = page.getByRole("button", {
+      name: de["contact.action.call"],
+      exact: true,
+    });
+    await expect(call).toBeDisabled();
+    await expect(call).toHaveAccessibleDescription(
+      de["contact.action.noPhone"],
+    );
+    await expect(
+      page.getByRole("link", { name: de["contact.action.call"] }),
+    ).toHaveCount(0);
+  });
+
+  test("on the Overview a logged call offers Call back and a note does not", async ({
+    page,
+  }) => {
+    await page.goto(`/#/contacts/${CALLED_CONTACT}`);
+    await expectShellRendered(page);
+    const call = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedCall.subject });
+    const note = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedNote.subject });
+    await expect(callVerb(call)).toHaveAttribute("href", tel);
+    await expect(note).toBeVisible();
+    await expect(callVerb(note)).toHaveCount(0);
+    await settleAnimations(page);
+    await expectNoAaViolations(page, `contacts/${CALLED_CONTACT}`);
+  });
+
+  test("on History a logged call offers Call back and a note does not", async ({
+    page,
+  }) => {
+    await page.goto(`/#/contacts/${CALLED_CONTACT}/timeline`);
+    await expectShellRendered(page);
+    const call = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedCall.subject });
+    const note = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedNote.subject });
+    await expect(callVerb(call)).toHaveAttribute("href", tel);
+    await expect(note).toBeVisible();
+    await expect(callVerb(note)).toHaveCount(0);
+    await settleAnimations(page);
+    await expectNoAaViolations(page, `contacts/${CALLED_CONTACT}/timeline`);
+  });
+
+  test.describe("a task on the contact, opened from Home", () => {
+    test.beforeEach(async ({ page }) => {
+      await mockApi(page, { callTasks: true });
+    });
+
+    async function openTask(page: Page, subject: string) {
+      await page.goto("/#/home");
+      await expectShellRendered(page);
+      await page
+        .getByRole("button", { name: new RegExp(`^${de["brief.queue.show"]}`) })
+        .click();
+      const opener = page.getByRole("button", { name: subject, exact: true });
+      await opener.click();
+      const dialog = page.getByRole("dialog", { name: subject });
+      await expect(dialog).toBeVisible();
+      return { opener, dialog };
+    }
+
+    test("a task from a call offers Call, Email and Open contact, in tab order", async ({
+      page,
+    }) => {
+      const { opener, dialog } = await openTask(page, taskFromCall.subject);
+      const call = callVerb(dialog);
+      const email = dialog.getByRole("button", {
+        name: de["record.verb.email"],
+        exact: true,
+      });
+      const open = dialog.getByRole("link", {
+        name: de["task.next.openContact"],
+        exact: true,
+      });
+      await expect(call).toHaveAttribute("href", tel);
+      await expect(email).toBeVisible();
+      await expect(open).toHaveAttribute(
+        "href",
+        `#/contacts/${CALLED_CONTACT}`,
+      );
+      await settleAnimations(page);
+      await expectNoAaViolations(page, "home (task from a call open)");
+
+      await dialog.locator("a[href], button:not([disabled])").first().focus();
+      for (let press = 0; press < 12; press += 1) {
+        if (await call.evaluate((node) => node === document.activeElement)) {
+          break;
+        }
+        await page.keyboard.press("Tab");
+      }
+      await expect(call).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(email).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(open).toBeFocused();
+
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect(opener).toBeFocused();
+    });
+
+    test("a task typed by hand offers Email and Open contact but no Call", async ({
+      page,
+    }) => {
+      const { dialog } = await openTask(page, typedTask.subject);
+      await expect(
+        dialog.getByRole("link", { name: de["task.next.openContact"] }),
+      ).toBeVisible();
+      await expect(
+        dialog.getByRole("button", {
+          name: de["record.verb.email"],
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(callVerb(dialog)).toHaveCount(0);
+    });
+  });
 });

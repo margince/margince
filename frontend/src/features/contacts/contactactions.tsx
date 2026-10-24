@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CalendarDays, CheckSquare, FileText, Phone } from "lucide-react";
+import { CalendarDays, CheckSquare, FileText } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId } from "react";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { Button, OverflowMenu } from "../../design-system/atoms";
+import { CallAction } from "../../design-system/callaction";
 import { IconAction, VerbWord } from "../../design-system/iconaction";
+import { primaryPhone } from "../../format/contacturi";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import type { Transport, TransportSource } from "../../lib/contacttransports";
@@ -150,12 +152,13 @@ export function ContactActions({
           that reads as a toolbar, with the one action the page is FOR no more
           prominent than the rest of them. `IconAction` owes each one its name
           on hover as well as to a screen reader. */}
-      <IconAction
+      <CallAction
+        appearance="icon"
+        number={primaryPhone(view.contact.phones)?.phone}
         label={t("contact.action.call")}
         word={t("record.verb.call")}
-        icon={<Phone aria-hidden="true" />}
+        reason={t("contact.action.noPhone")}
         reasonId={archived}
-        onClick={() => openContactTab(contactId, "timeline")}
       />
       <IconAction
         label={t("contact.action.meetings")}

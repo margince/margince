@@ -70,6 +70,8 @@ export const de = {
   "homeRepair.reason.unavailable":
     "Die Quelle kann mit deinem aktuellen Zugriff nicht geprüft werden.",
   "homeRepair.reason.historical": "Historische Quelle ohne aktuelle Frist.",
+  "homeRepair.reason.lateProposed":
+    "Von einem Teammitglied nach Ablauf der 30 Tage erfasst; der Vorschlag bleibt beim Zusagenden.",
   "homeRepair.reason.baseline":
     "Die Quelle liegt vor dem gewählten Beginn des Postfachverlaufs.",
   "homeRepair.reason.cancelled": "Der zugrunde liegende Termin wurde abgesagt.",
@@ -1164,7 +1166,6 @@ export const de = {
     "Wird mit jeder Kalendereinladung erstellt, auch bei Buchungen über deinen Link. Beim Buchen kannst du den Link für einen einzelnen Termin deaktivieren.",
   "scheduling.videoTeamsHelp":
     "Benötigt ein Microsoft-365-Geschäfts- oder Schulkonto.",
-  "scheduling.locationFallback": "Gilt für Termine ohne Videocall.",
   "scheduling.unsaved": "Du hast ungespeicherte Änderungen",
   "scheduling.discard": "Verwerfen",
   "scheduling.brand": "Unternehmensname und Logo",
@@ -1389,7 +1390,6 @@ export const de = {
   "contact.meetings.inDays_one": "In {days} Tag",
   "contact.meetings.inDays_other": "In {days} Tagen",
   "contact.meetings.waitingOn": "Wartet auf {name}",
-  "contact.meetings.waitingOnReply": "Wartet auf Antwort",
   "contact.meetings.personalLink": "Persönlicher Link",
   "contact.meetings.offeredTimes": "Vorgeschlagene Zeiten",
   "contact.meetings.sentExpires": "Gesendet am {sent} · gültig bis {expires}",
@@ -4437,8 +4437,9 @@ export const de = {
   "lead.signalSuperseded": "Zuvor {value}, ersetzt durch {source}",
   "lead.signalAutomaticSource": "eine automatisierte Quelle",
   "lead.signalReason": "Beleg",
-  "lead.signalReasonHint": "Optional. Wird mit dem Score gespeichert.",
-  "lead.signalReasonUnstated": "Kein Beleg angegeben. Manuell erfasst.",
+  "lead.signalReasonHint":
+    "Pflichtfeld. Sag, woher du das weißt. Wird mit dem Score gespeichert.",
+  "lead.signalNoEvidence": "Kein Beleg erfasst",
   "lead.signalSave": "Zum Score hinzufügen",
   "lead.signal.web_traffic": "Website-Traffic",
   "lead.signal.employees": "Beschäftigtenzahl",
@@ -5561,6 +5562,8 @@ export const de = {
     "Dieser Abschnitt konnte nicht geladen werden. Der Rest der Seite ist nicht betroffen.",
   "today.quiet": "Gerade besteht kein Handlungsbedarf.",
   "task.untitled": "Aufgabe ohne Titel",
+  "task.next.openContact": "Kontakt öffnen",
+  "task.next.noAddress": "Dieser Kontakt hat keine E-Mail-Adresse.",
   "today.withheld":
     "Nicht enthalten: {sections}. Du hast keinen Zugriff darauf.",
   "today.source.moments": "Erkenntnisse von Margince",
@@ -9108,12 +9111,14 @@ export const de = {
   "hold.sectionTitle": "Private Korrespondenz",
   "hold.notHeld":
     "E-Mails mit diesem Kontakt folgen der Einstellung deines Postfachs.",
+  "hold.notHeldCompany":
+    "E-Mails mit diesem Unternehmen folgen der Einstellung deines Postfachs.",
   "hold.heldByAddress":
     "E-Mails mit dieser Adresse sind nur für die Beteiligten sichtbar.",
   "hold.heldByDomain":
     "E-Mails mit {domain} sind nur für die Beteiligten sichtbar.",
-  "hold.holdAddress": "Privat halten",
-  "hold.holdDomain": "Alles von {domain} privat halten",
+  "hold.holdAddress": "Mit dieser Adresse privat halten",
+  "hold.holdDomain": "Mit allen bei {domain} privat halten",
   "hold.lift": "Aufheben",
   "hold.liftingWidensNothing":
     "Das Aufheben gilt für neue E-Mails. Bereits privat gehaltene E-Mails bleiben privat.",
@@ -14383,6 +14388,7 @@ export const de = {
   "contact.action.noTransport":
     "Keine Adresse und kein Thread, auf den geantwortet werden kann.",
   "contact.action.call": "Anrufen",
+  "contact.action.noPhone": "Dieser Kontakt hat keine Telefonnummer.",
   "contact.action.meetings": "Termine",
   "contact.action.workAsLead": "Als Lead bearbeiten",
   "contact.action.openLead": "Lead öffnen",
@@ -16769,7 +16775,6 @@ export const de = {
   "scheduling.video.own": "Eigener Link oder eigene Adresse",
   "scheduling.video.ownHelp":
     "Ein Zoom-Raum, eine Telefonnummer oder eine Büroadresse. Für jede Buchung gleich.",
-  "scheduling.video.ownSaved": "Gespeicherte Adresse: {location}",
   "scheduling.video.none": "Kein Ort",
   "scheduling.video.noneHelp":
     "Stimme die Details per E-Mail mit deinem Gast ab.",

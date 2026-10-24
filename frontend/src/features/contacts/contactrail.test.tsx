@@ -747,6 +747,7 @@ describe("the consent rail's transport row", () => {
     ...granted,
     contact: {
       ...contact,
+      primary_email: "dana@brandt.example",
       emails: [
         {
           id: "pe-1",

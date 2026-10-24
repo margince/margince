@@ -124,6 +124,11 @@ const (
 	CommitmentTaskWritten CommitmentOutcome = "task_written"
 	// CommitmentProposed is staged for a human to accept.
 	CommitmentProposed CommitmentOutcome = "proposed"
+	// CommitmentHistoricalProposed is a promise the 30-day horizon stopped on
+	// evidence a colleague logged by hand: staged for its promiser to accept.
+	// Like any pending proposal its decision stays open, because the card
+	// rests on it; no task exists until the promiser accepts.
+	CommitmentHistoricalProposed CommitmentOutcome = "historical_proposed"
 	// CommitmentPromiserUnassignable is a promise nobody may be asked about. Its
 	// maker is unknown, has left, or does not own the private mail it is in. It
 	// is recorded on its source as a finding, and no work is created for anyone.
@@ -193,20 +198,21 @@ func (d *CommitmentDispatcher) DispatchTx(
 
 func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
 	filing := extractorContext(ctx, c.Extractor)
-	reason, err := d.admission(ctx, tx, c)
+	read, err := d.admission(ctx, tx, c)
 	if err != nil {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
+	reason, late := read.Reason, c.proposeLate(read)
 	if reason == activities.CommitmentSourceUnavailable {
 		return CommitmentOutcome(reason), ids.UUID{}, nil
 	}
-	if reason == activities.CommitmentCurrent {
+	if reason == activities.CommitmentCurrent || late {
 		offered, err := d.offeredBefore(ctx, tx, c)
 		if err != nil {
 			return CommitmentRemembered, ids.Nil, err
 		}
 		if offered != nil {
-			return d.reconcilePendingRecipients(ctx, tx, c, *offered, bundleID)
+			return d.reconcilePendingRecipients(ctx, tx, c, *offered, bundleID, late)
 		}
 	}
 	if c.Theirs == nil {
@@ -243,6 +249,14 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 	if outcome := c.Meaning.withheldOutcome(); outcome != "" {
 		return outcome, ids.UUID{}, nil
 	}
+	if late {
+		c.NeedsConfirmation = true
+		outcome, id, err := d.createOurCommitment(ctx, tx, c, bundleID, true)
+		if outcome == CommitmentProposed {
+			outcome = CommitmentHistoricalProposed
+		}
+		return outcome, id, err
+	}
 	if reason != activities.CommitmentCurrent {
 		return d.retainWithheld(ctx, tx, c, reason, recorded)
 	}
@@ -250,10 +264,12 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 		return d.watchCommitment(filing, tx, c, reason)
 	}
 
-	return d.createOurCommitment(ctx, tx, c, bundleID)
+	return d.createOurCommitment(ctx, tx, c, bundleID, false)
 }
 
-func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
+// createOurCommitment writes or proposes one of our colleagues' promises. A
+// late one is read late, so it waits the whole horizon for its promiser.
+func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.Tx, c Commitment, bundleID ids.UUID, late bool) (CommitmentOutcome, ids.UUID, error) {
 	filing := extractorContext(ctx, c.Extractor)
 
 	claimIDs, open, err := d.fileRecipientClaims(filing, tx, c, activities.CommitmentCurrent, false)
@@ -289,14 +305,15 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 		SeatID: &asked, PromiserSeatID: &asked, DueDate: c.DueDate, DueZone: c.DueZone, Links: c.Links, Quote: c.Quote,
 		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo,
 	}
-	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state))
+	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state, late))
 }
 
 // commitmentWindow is how long a proposal waits for its promiser. An invited
 // colleague finds the card when they first sign in, which may be weeks away,
-// and the default 72 hours would expire it unseen.
-func commitmentWindow(state activities.SeatWorkState) *time.Duration {
-	if state != activities.SeatInvited {
+// and the default 72 hours would expire it unseen. A promise from a late
+// report is as old as the horizon already, so it gets the same wait.
+func commitmentWindow(state activities.SeatWorkState, late bool) *time.Duration {
+	if state != activities.SeatInvited && !late {
 		return nil
 	}
 	return new(time.Duration(provenance.CommitmentHorizonDays) * 24 * time.Hour)

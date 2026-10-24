@@ -2,8 +2,9 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { RecordDetails } from "../../design-system/recorddetails";
 import { en } from "../../i18n/en";
 import { view } from "../../testing/contactpage.testkit";
 import {
@@ -12,7 +13,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ContactDetails } from "./contactdetails";
+import { ContactDetails, useContactAboutSections } from "./contactdetails";
 
 afterEach(cleanup);
 const contact = { ...view.contact, version: 3, title: "Director" };
@@ -204,4 +205,63 @@ it("adds the first phone from Details without changing email", async () => {
       },
     ]),
   );
+});
+
+describe("the address in the About group", () => {
+  function About({ page }: Readonly<{ page: typeof view }>) {
+    return <RecordDetails sections={useContactAboutSections(page)} />;
+  }
+  const address = (
+    id: string,
+    email: string,
+    position: number,
+  ): components["schemas"]["ContactEmail"] => ({
+    id,
+    email,
+    email_type: "work",
+    is_primary: position === 1,
+    position,
+    source: "manual",
+    captured_by: "human:u-1",
+  });
+  const front = address("pe-1", "dana@brandt.example", 0);
+  const second = address("pe-2", "dana.private@brandt.example", 1);
+
+  function show(primaryEmail: string | null) {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read"] }, { seat: "full" }),
+    });
+    render(
+      <StoryProviders>
+        <About
+          page={{
+            ...view,
+            contact: {
+              ...view.contact,
+              emails: [front, second],
+              primary_email: primaryEmail,
+            },
+          }}
+        />
+      </StoryProviders>,
+    );
+  }
+
+  it("is the server's address, not the first row", async () => {
+    show("dana.private@brandt.example");
+    expect(
+      await screen.findByText("dana.private@brandt.example"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("dana@brandt.example")).toBeNull();
+  });
+
+  it("is empty when the server names none", async () => {
+    const user = userEvent.setup();
+    show(null);
+    await user.click(
+      await screen.findByRole("button", { name: /^Show \d+ empty field/ }),
+    );
+    expect(screen.getByText(en["create.email"])).toBeInTheDocument();
+    expect(screen.queryByText(/@brandt\.example/)).toBeNull();
+  });
 });

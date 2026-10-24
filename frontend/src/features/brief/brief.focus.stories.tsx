@@ -14,6 +14,7 @@ import {
 } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
+  jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -149,6 +150,72 @@ export const LongTaskInHand: Story = {
     ),
     taskRow("one", "Call the buyer"),
   ]),
+};
+
+const callBack: WorklistItem = {
+  ...taskRow("call-back", "Call back Alice about the renewal"),
+  contact: { id: "c-alice", label: "Alice Brandt" },
+};
+
+function callBackPanel(primaryEmail: string | null) {
+  return () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
+      "GET /activities/call-back": () =>
+        jsonResponse({
+          id: "call-back",
+          kind: "task",
+          subject: callBack.title,
+          occurred_at: "2026-09-08T09:00:00Z",
+          is_done: false,
+          source_activity_id: "call-1",
+          links: [{ entity_type: "contact", entity_id: "c-alice" }],
+        }),
+      "GET /activities/call-1": () =>
+        jsonResponse({
+          id: "call-1",
+          kind: "call",
+          content_state: "available",
+          occurred_at: "2026-09-08T08:00:00Z",
+        }),
+      "GET /contacts/c-alice": () =>
+        jsonResponse({
+          id: "c-alice",
+          full_name: "Alice Brandt",
+          primary_email: primaryEmail,
+          phones: [{ id: "ph-1", phone: "+491517654321", is_primary: true }],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <Chosen rows={[callBack, taskRow("one", "Call the buyer")]} start={0} />
+      </StoryProviders>
+    );
+  };
+}
+
+/** A task read out of a call, in hand: Call and Email beside Show details,
+    and the contact linked once, in the card's head. */
+export const TaskFromCallInHand: Story = {
+  render: callBackPanel("alice@brandt.example"),
+  play: async ({ canvasElement }) => {
+    const card = within(within(canvasElement).getByRole("article"));
+    await card.findByRole("link", { name: en["record.verb.call"] });
+    await expect(
+      card.getByRole("link", { name: en["record.verb.email"] }),
+    ).toBeTruthy();
+  },
+};
+
+/** The same task to a contact with no address: Email refused, and the reason
+    one line under every verb on the card. */
+export const TaskFromCallNoAddressInHand: Story = {
+  render: callBackPanel(null),
+  play: async ({ canvasElement }) => {
+    const card = within(within(canvasElement).getByRole("article"));
+    await card.findByRole("link", { name: en["record.verb.call"] });
+    await expect(card.getByText(en["task.next.noAddress"])).toBeTruthy();
+  },
 };
 
 /** The last row of a short day: the one before it is listed under the card. */

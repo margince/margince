@@ -14,6 +14,7 @@ import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { LeadScreen } from "./leads";
+import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
 // Explicit outreach controls remain available without inventing work.
 
@@ -134,6 +135,9 @@ function stubLead(
           first_response_enabled: true,
           first_response_target_minutes: 240,
         });
+      }
+      if (request.url.endsWith("/lead-signal-catalog")) {
+        return jsonResponse(SIGNAL_CATALOG);
       }
       if (request.method === "GET" && request.url.includes("/manual-signals")) {
         return jsonResponse({ data: [] });

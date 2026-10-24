@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Badge, Button } from "./atoms";
+import { CallAction } from "./callaction";
 import { Checkbox } from "./field";
 import {
   OverviewCard,
@@ -123,6 +124,39 @@ export const LongGermanRows: Story = {
           sub="Angebot · Abschluss am 30. November · ins Stocken geraten"
           right="95.000 €"
           figure
+        />
+      </OverviewList>
+    </OverviewCard>
+  ),
+};
+
+/** A pill and a verb share the right slot, and wrap rather than overflow on
+ *  a phone. */
+export const PillAndVerbPhone: Story = {
+  name: "pill and verb — on a phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <OverviewCard title="What was said" action={link("Full history")}>
+      <OverviewList>
+        <OverviewRow
+          title="Call about the second depot and the revised rollout dates"
+          sub="Anna Weber · 12 Aug"
+          right={
+            <>
+              <Badge>Call</Badge>
+              <CallAction
+                appearance="button"
+                number="+49 30 1234 5678"
+                label="Call"
+              />
+            </>
+          }
+        />
+        <OverviewRow
+          title="Note"
+          sub="Dana Buyer · 10 Aug"
+          right={<Badge>Note</Badge>}
         />
       </OverviewList>
     </OverviewCard>

@@ -160,14 +160,14 @@ function ContactRailWithLists({
 // the first one.
 export function ContactHoldSection({ view }: Readonly<{ view: Contact360 }>) {
   const t = useT();
-  const email = view.contact?.emails?.[0]?.email;
+  const email = view.contact?.primary_email;
   if (!email) {
     return null;
   }
   return (
     <Panel title={t("hold.sectionTitle")}>
       <PanelBody>
-        <CounterpartyHoldRow email={email} />
+        <CounterpartyHoldRow scope={{ address: email }} />
       </PanelBody>
     </Panel>
   );

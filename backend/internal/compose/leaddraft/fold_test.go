@@ -56,11 +56,11 @@ func TestTheLeadIsTheRecipient(t *testing.T) {
 	if in.Recipient.Name != "Dung Ly Nguyen" {
 		t.Errorf("name = %q, want the lead's own", in.Recipient.Name)
 	}
-	if in.Recipient.FirstName != "Dung" {
-		t.Errorf("first name = %q, want the greeting name", in.Recipient.FirstName)
+	if in.Recipient.FirstName != "Dung Ly Nguyen" {
+		t.Errorf("first name = %q, want the whole display name, because three words do not say which is the given name", in.Recipient.FirstName)
 	}
-	if in.Recipient.LastName != "Nguyen" {
-		t.Errorf("last name = %q, want the formal name", in.Recipient.LastName)
+	if in.Recipient.LastName != "" {
+		t.Errorf("last name = %q, want none", in.Recipient.LastName)
 	}
 	if in.Recipient.Email != "dung.ly@newsky.example" {
 		t.Errorf("email = %q, want the lead's address", in.Recipient.Email)
@@ -206,5 +206,18 @@ func TestALeadNobodyHasWrittenToIsAFirstTouch(t *testing.T) {
 	t.Parallel()
 	if got := leaddraft.ConversationState(nil, when); got != convstate.Classify(when, time.Time{}, time.Time{}) {
 		t.Errorf("state = %v on a lead with no history", got)
+	}
+}
+
+// Two words keep the documented positional split.
+func TestATwoWordNameSplitsByPosition(t *testing.T) {
+	t.Parallel()
+	in := leaddraft.FromLead(lead(func(l *crmcontracts.Lead) {
+		name := "Dung Nguyen"
+		l.FullName = &name
+	}), nil, "", draftfloor.Envelope{})
+
+	if in.Recipient.FirstName != "Dung" || in.Recipient.LastName != "Nguyen" {
+		t.Errorf("names = %q / %q, want Dung / Nguyen", in.Recipient.FirstName, in.Recipient.LastName)
 	}
 }

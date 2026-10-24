@@ -162,9 +162,10 @@ func TestASignatureNamingSomebodyElseIsNotReadAsTheirs(t *testing.T) {
 	for name, block := range map[string]string{
 		// The substring trap: "joanne" contains "ann", so a match that is not
 		// word-bounded reads Joanne's title onto Ann.
-		"a longer name containing theirs": "Viele Grüße\nJoanne Brown\nCEO",
-		"a different contact entirely":    "Best\nMarcus Greven\nPartner Manager",
-		"no signature":                    "",
+		"a longer name containing theirs":      "Viele Grüße\nJoanne Brown\nCEO",
+		"a different contact entirely":         "Best\nMarcus Greven\nPartner Manager",
+		"no signature":                         "",
+		"a colleague sharing only the surname": "Best\nAnn Jones\nCEO",
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

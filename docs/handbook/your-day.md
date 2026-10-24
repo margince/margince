@@ -116,6 +116,9 @@ list of next steps.
 **Snooze 1 day** adds a day to the task's own due date, so a task with no date does not show it. If
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
+### What can I do from a task?
+A task linked to one contact offers **Email** and **Open contact**. It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Email** is refused with a reason when the contact has no email address or is archived. An archived contact gets no **Call**, and **Open contact** stays. The **First** card on **Home** offers **Call** and **Email** the same way, with no **Open contact**.
+
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
 **This week’s commitments**.
@@ -215,10 +218,9 @@ When Margince reads old mail, it checks newer messages before it creates work. W
 A request alone does not mean someone agreed to do it. **Commitment review** on the source shows why no task was made.
 Words such as "next week" set no due day; "this week" sets the last day the promiser works that week.
 
-An old promise without a current deadline stays in the source, rather than becoming a new overdue task.
 A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task.
 
-Open the source and open **Commitment review** to see why a reading created no task. Check the quoted words and any later replies before adding a follow-up from the linked record.
+Check the quoted words and any later replies before adding a follow-up from the linked record.
 A reply alone does not show that a promise was kept. Tasks you edited, reopened or pinned remain yours.
 When you later write to that contact on the promise's thread, the card asks **You may have done this** with **Done** and **Not yet**.
 
@@ -325,8 +327,6 @@ already judged.
 Each says what it did ("Back on your list tomorrow.", "Back on your list when they reply.") and each
 offers **Undo**. The undo reaches as far as the choice did. Clearing your own snooze never lets back
 in a thread a colleague ruled out for the whole company.
-
-A reply that came in *before* you snoozed does not end the snooze.
 
 ### "List changed"
 

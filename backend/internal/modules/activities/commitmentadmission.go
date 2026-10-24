@@ -66,6 +66,9 @@ type CommitmentAdmissionEvidence struct {
 	ContextAssessed  bool
 	CancelledMeeting bool
 	Meeting          bool
+	// LoggedByHand is evidence a colleague typed in (any kind), as opposed to
+	// capture or an agent. Someone logging it today says it still matters.
+	LoggedByHand bool
 }
 
 // AdmitAutomaticCommitment does not change existing work or assert that a promise was fulfilled.
@@ -118,6 +121,7 @@ func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in Commitment
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	query := fmt.Sprintf(`SELECT a.occurred_at, a.raw_capture_id, a.kind = 'email' AND a.source <> 'manual', a.kind = 'meeting', coalesce(a.meeting_status = 'canceled', false),
+  a.source = 'manual',
   (SELECT min(ci.source_occurred_at) FROM capture_import ci WHERE ci.activity_id = a.id),
   (SELECT min(ci.provider_received_at) FROM capture_import ci WHERE ci.activity_id = a.id),
   a.kind = 'email' AND EXISTS (SELECT 1 FROM activity later
@@ -137,7 +141,7 @@ func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in Commitment
 		query += " FOR UPDATE OF a"
 	}
 	var evidence CommitmentAdmissionEvidence
-	if err := tx.QueryRow(ctx, query, args...).Scan(&evidence.OccurredAt, &evidence.RawCaptureID, &evidence.CapturedMail, &evidence.Meeting, &evidence.CancelledMeeting, &evidence.SourceOccurredAt, &evidence.ProviderReceivedAt, &evidence.UnreadLater, &evidence.SourceIncomplete, &evidence.SourceUnassessed, &evidence.LaterUnassessed); err != nil {
+	if err := tx.QueryRow(ctx, query, args...).Scan(&evidence.OccurredAt, &evidence.RawCaptureID, &evidence.CapturedMail, &evidence.Meeting, &evidence.CancelledMeeting, &evidence.LoggedByHand, &evidence.SourceOccurredAt, &evidence.ProviderReceivedAt, &evidence.UnreadLater, &evidence.SourceIncomplete, &evidence.SourceUnassessed, &evidence.LaterUnassessed); err != nil {
 		return CommitmentAdmissionEvidence{}, fmt.Errorf("activities: reading commitment admission evidence: %w", err)
 	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, in.SourceID.UUID); err != nil {

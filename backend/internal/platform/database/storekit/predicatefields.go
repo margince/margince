@@ -61,6 +61,9 @@ type Field struct {
 	// join), and a link row is present or absent where a column is null
 	// or not. Empty for every base-table field.
 	Link string
+	// ReadsLink says the values behind Link may be read back to a reader, so an
+	// explanation names them. A Link field without it reads as hidden.
+	ReadsLink bool
 	// References names the record type this field's ids point at, for a
 	// surface that has to offer the record rather than ask for its uuid.
 	//

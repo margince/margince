@@ -72,6 +72,7 @@ const boughtFixture: components["schemas"]["Contact"] = {
   ...fixture,
   title: "Head of Revenue",
   social: { linkedin: "https://www.linkedin.com/in/dana" },
+  primary_email: "dana@bought.example",
   emails: [
     {
       id: "e-bought",
@@ -144,6 +145,7 @@ const longAddress = (local: string) =>
 const manual = { source: "manual", captured_by: "human:u1" };
 const longFixture: components["schemas"]["Contact"] = {
   ...fixture,
+  primary_email: longAddress("alexandra.konstantinopoulou"),
   emails: [
     {
       ...manual,
