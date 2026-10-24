@@ -425,7 +425,9 @@ func TestARequestCannotDodgeTheNoticeHold(t *testing.T) {
 	leadID := l.websiteLead(t)
 	admin := e.Admin()
 	relabel := "manual"
-	_, _ = e.Contacts.UpdateLead(admin, leadID, contacts.UpdateLeadInput{Source: &relabel})
+	if _, err := e.Contacts.UpdateLead(admin, leadID, contacts.UpdateLeadInput{Source: &relabel}); err == nil {
+		t.Fatal("a request relabelled the website lead's source")
+	}
 	if _, err := e.Contacts.ClaimRecord(e.As(e.Rep1, nil, integration.AdminPerms), "lead", leadID.UUID, nil); !errors.Is(err, contacts.ErrWebsiteLeadNotYetTold) {
 		t.Fatalf("claiming after relabelling the source = %v, want the pending refusal", err)
 	}

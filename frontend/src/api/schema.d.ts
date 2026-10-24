@@ -35944,7 +35944,7 @@ export interface components {
             status?: "new" | "contacted" | "engaged";
             /**
              * @deprecated
-             * @description Deprecated. How the row was written; it is no longer checked against the lead_source list and no longer moves the score. Set `origin` to say where the lead came from.
+             * @description Deprecated and read-only. How the row reached Margince, which Margince writes. Sending the stored value is accepted; any other value is 422 on `source`. Set `origin` to say where the lead came from.
              */
             source?: string;
             /** @description Where the lead came from: an ACTIVE key from `/lead-origins`, or the key the lead already carries (a retired key is 422 only for a new value). Changing it recomputes the score. Null clears it, and the lead scores neutral. */

@@ -52166,7 +52166,7 @@ type UpdateLeadRequest struct {
 	// ScoreOverrideReason Written reason for the Commercial Judgement override (formulas §3.1). REQUIRED when `score` is set (422 otherwise); the override is sticky — it suppresses recompute until cleared.
 	ScoreOverrideReason *string `json:"score_override_reason,omitempty"`
 
-	// Source Deprecated. How the row was written; it is no longer checked against the lead_source list and no longer moves the score. Set `origin` to say where the lead came from.
+	// Source Deprecated and read-only. How the row reached Margince, which Margince writes. Sending the stored value is accepted; any other value is 422 on `source`. Set `origin` to say where the lead came from.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Source *string `json:"source,omitempty"`
 

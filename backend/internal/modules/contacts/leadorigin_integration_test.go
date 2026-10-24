@@ -131,8 +131,8 @@ func TestOnlyTheOriginScoresALead(t *testing.T) {
 
 	id := ids.From[ids.LeadKind](ids.UUID(eventLead.Id))
 	other := "crawl"
-	if got, err := e.store.UpdateLead(e.ctx, id, UpdateLeadInput{Source: &other}); err != nil || got.Score != eventLead.Score {
-		t.Errorf("correcting the source moved the score to %d, %v; want it unchanged", got.Score, err)
+	if _, err := e.store.UpdateLead(e.ctx, id, UpdateLeadInput{Source: &other}); !isSourceFieldError(err) {
+		t.Errorf("rewriting how the lead arrived = %v, want a source field error", err)
 	}
 	moved, err := e.store.UpdateLead(e.ctx, id, UpdateLeadInput{Origin: &referral})
 	if err != nil || moved.Score != scoreOf(SourceIntentHigh) {

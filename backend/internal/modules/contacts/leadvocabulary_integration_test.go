@@ -164,16 +164,15 @@ func TestLeadSourceListNoLongerGovernsWritesOrTheScore(t *testing.T) {
 
 	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
 	crawlKey := "crawl"
-	if _, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{Source: &crawlKey}); err != nil {
-		t.Errorf("correcting to an inactive source err = %v, want it accepted", err)
+	if _, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{Source: &crawlKey}); !isSourceFieldError(err) {
+		t.Errorf("rewriting how the lead arrived = %v, want a source field error", err)
 	}
-	referral := "referral"
-	corrected, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{Source: &referral})
+	labelled, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Source: "referral"})
 	if err != nil {
-		t.Fatalf("correct source: %v", err)
+		t.Fatalf("create with the referral source: %v", err)
 	}
-	if corrected.Score != 0 || corrected.SourceLabel == nil || *corrected.SourceLabel != "Referral" {
-		t.Errorf("corrected = score %d label %v, want 0 and \"Referral\": the source is relabelled and never rescores", corrected.Score, corrected.SourceLabel)
+	if labelled.Score != 0 || labelled.SourceLabel == nil || *labelled.SourceLabel != "Referral" {
+		t.Errorf("labelled = score %d label %v, want 0 and \"Referral\": the source is labelled and never scores", labelled.Score, labelled.SourceLabel)
 	}
 
 	// Adopting the connector family weights the leads that still carry it.
