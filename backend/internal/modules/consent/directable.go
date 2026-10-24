@@ -14,7 +14,7 @@ import (
 // DirectableBy reports whether the caller may direct this refused message past
 // every refusal on it.
 //
-// The one spelling of the exception's eligibility: DirectSend asks it before it
+// The exception's eligibility test: DirectSend asks it before it
 // records an instruction and the refusal's offered actions ask it before they
 // list "direct_send", so the offer and the door give one answer. It needs the
 // exception grant and, for each refusal, a declared remedy the caller may take:

@@ -195,14 +195,14 @@ resolve it in `commsauthz.RemediesFor`.
 
 - A reason that lists the plain exception can be sent past by any holder of the grant. Examples are
   no evidence and no marketing consent.
-- A reason that lists only the admin exception can be sent past only by an admin. These are a
-  contact's own objection, withdrawal, stop request or processing limit, plus a hard bounce, an
-  opt-in never confirmed, a frequency cap and a recipient that matches no single contact.
+- A reason that lists only the admin exception can be sent past only by an admin. Examples are a
+  contact's own objection, withdrawal or stop request. A hard bounce and a frequency cap are two
+  more.
 
 `Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
 
-A contact can be written to about a thread when they were To or Cc on a mail captured from it and
-one of our seats also took part. The rule reads the thread key and records its basis against that
+A contact can be written to about a thread. They must have been To or Cc on a mail captured from
+it, and one of our seats must also have taken part. The rule reads the thread key and records its basis against that
 thread. So it never becomes standing permission for the contact. It never supports a message the
 sender calls marketing.
 

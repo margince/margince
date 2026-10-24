@@ -173,7 +173,7 @@ func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, si
 
 // validateDealFollowup answers a follow-up on a deal the sender picked. It reads
 // the picked deal through liveDealInLinks, so "an open deal the recipient is a
-// stakeholder on" has one spelling for the links and for the picked evidence.
+// stakeholder on" is asked the same way for the links and for the picked evidence.
 func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	if req.Evidence.DealID == (ids.UUID{}) {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil

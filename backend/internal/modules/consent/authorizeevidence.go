@@ -256,7 +256,7 @@ const authorIsTheSubject = `(p.role = 'from' AND ` + participantIsTheSubject + `
 // participantIsTheSubject is the identity half of authorIsTheSubject, without
 // the role: the participant row p names this recipient, by record, by bare
 // address or by channel account. copiedOnThisMatter reads it with the
-// recipient roles, so "this row is the recipient" has one spelling. Same
+// recipient roles, so both roles read "this row is the recipient" from the same text. Same
 // placeholders as authorIsTheSubject.
 const participantIsTheSubject = `(
 			            ($1 = 'contact' AND p.contact_id = $2::uuid)

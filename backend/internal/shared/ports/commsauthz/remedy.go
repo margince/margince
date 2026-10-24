@@ -9,11 +9,11 @@ import "slices"
 type Remedy string
 
 const (
-	// RemedyAnswer: the sender states what the message is.
+	// RemedyAnswer means the sender states what the message is.
 	RemedyAnswer Remedy = "answer"
-	// RemedyFact: a recorded fact the sender knows first-hand supports it.
+	// RemedyFact means a recorded fact the sender knows first-hand supports it.
 	RemedyFact Remedy = "fact"
-	// RemedyException: any holder of the exception grant may send this one
+	// RemedyException means any holder of the exception grant may send this one
 	// message anyway, with the refusal left on the record.
 	RemedyException Remedy = "exception"
 	// RemedyAdminException is the same act, taken only by an admin.
