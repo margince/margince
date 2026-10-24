@@ -5787,6 +5787,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.newEmail": "Email mới",
   "compose.replyingTo": "Trả lời “{subject}” · {when}",
   "compose.followingUp": "Liên hệ lại sau email “{subject}” đã gửi · {when}",
+  "compose.aboutRow": "Về: {subject} · {when}",
   "compose.draftContextHint":
     "Mô tả mục đích. Margince dùng ngữ cảnh của hồ sơ.",
   "compose.draftEmail": "Soạn email",
@@ -5830,6 +5831,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.to": "Đến",
   "compose.cc": "Cc",
   "compose.subject": "Tiêu đề",
+  "compose.projectKeyInSubject": "Thêm mã dự án vào tiêu đề (giúp lưu đúng chỗ)",
   "compose.noGroundableRecipient":
     "Công ty này chưa có liên hệ nào. Tự viết tin nhắn, hoặc thêm liên hệ trước.",
   "compose.draftTo": "Soạn gửi",
@@ -5858,12 +5860,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.threadGone":
     "Không thể trả lời chuỗi thư đó nữa, nên đã mở email mới thay thế. Kiểm tra người nhận trước khi gửi.",
   "compose.colleagueMailbox_one":
-    "Tin nhắn này được gửi đến hộp thư của {names}. Câu trả lời sẽ gửi từ hộp thư của chính bạn, dưới tên bạn.",
+    "Email này về hộp thư của {names}. Thư trả lời sẽ gửi đến người nhận bên dưới, từ hộp thư của bạn và dưới tên bạn.",
   "compose.colleagueMailbox_other":
-    "Tin nhắn này được gửi đến hộp thư của {names}. Câu trả lời sẽ gửi từ hộp thư của chính bạn, dưới tên bạn.",
+    "Email này về hộp thư của {names}. Thư trả lời sẽ gửi đến người nhận bên dưới, từ hộp thư của bạn và dưới tên bạn.",
+  "compose.notOnThreadTitle": "Bạn không tham gia chuỗi thư này",
+  "compose.notOnThread": "Bạn không tham gia chuỗi thư này.",
+  "compose.dealOwner": "{owner} chịu trách nhiệm deal này.",
   "compose.colleagueUnnamed": "một đồng nghiệp",
   "compose.threadGoneTitle": "Không thể trả lời chuỗi thư",
-  "compose.colleagueMailboxTitle": "Thư đến hộp thư của đồng nghiệp",
+  "compose.colleagueMailboxTitle": "Email này nằm trong hộp thư của đồng nghiệp",
   "compose.deadRecipientsTitle": "Thư đến các địa chỉ này bị trả lại",
   "compose.attach": "Đính kèm",
   "compose.filesOnRecord": "Đính kèm từ hồ sơ này",
@@ -5964,8 +5969,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhiều hồ sơ dùng chung địa chỉ này nên không thể xác định người nhận. Gộp các hồ sơ để xử lý.",
   "sendPermission.reason.unconfirmed":
     "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
-  "sendPermission.reason.other":
-    "Không thể gửi tin nhắn này và không tài khoản nào ở đây có thể bỏ qua hạn chế đó.",
+  "sendPermission.reason.noEvidence":
+    "Không có dữ liệu nào cho thấy lý do liên hệ người nhận này. Nếu có lý do, ghi lại lý do đó dưới tên bạn.",
+  "sendPermission.reason.noMarketingConsent":
+    "Tin tiếp thị cần sự đồng ý của người nhận, nhưng chưa có sự đồng ý nào được ghi nhận. Nếu đây không phải tin tiếp thị, chọn lý do liên hệ phù hợp.",
+  "sendPermission.reason.legacyPurpose":
+    "Tin nhắn này dùng một mục đích kiểu cũ mà không dữ liệu nào xác nhận. Chọn lý do liên hệ để Margince kiểm tra được.",
+  "sendPermission.reason.unknownPurpose":
+    "Tin nhắn này nêu một mục đích mà Margince không nhận ra. Chọn lý do liên hệ trong danh sách.",
+  "sendPermission.reason.claimContradicts":
+    "Lý do liên hệ bạn chọn không khớp với chuỗi thư này. Chọn lý do khác, hoặc để trống để Margince tự xác định từ chuỗi thư.",
+  "sendPermission.reason.other": "Không thể gửi tin nhắn này ở dạng hiện tại.",
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email",
   "compose.threadLeave": "Email mới",

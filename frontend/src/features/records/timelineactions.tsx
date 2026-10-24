@@ -49,13 +49,10 @@ type AudienceMember = components["schemas"]["AudienceMember"];
 // The per-row action cluster the 360 timelines mount in each entry's action
 // slot.
 //
-// Reply, because a send anchored to something that was never mail carries no
-// RFC822 identity to thread against and simply starts a conversation — which is
-// how the backend already reads it. Gating the composer on an email row instead
-// makes a fresh workspace, whose only rows are logged notes, unable to send at
-// all. A `message` row carries the opposite gate: it is withheld, not always
-// offered, when the contact behind it cannot be reached on the transport that
-// carried it (see useChannelReachable).
+// rowAnswer picks Reply for mail and Write email for a call, note or meeting.
+// A send anchored to a row that was never mail starts a new conversation. So a
+// workspace whose only rows are logged notes can still send. useAnswerReachable
+// withholds the verb where the contact cannot be reached.
 //
 // Relink, because an activity shown on a 360 timeline is by construction already
 // linked to the entity whose timeline renders it, so re-associating it to the

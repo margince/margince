@@ -111,6 +111,48 @@ describe("DealHistoryTab", () => {
     expect(screen.queryByLabelText("Activity kind")).toBeNull();
   });
 
+  // Mail is answered and a call or a meeting is written about. A task opens
+  // instead, and a system task offers no email either.
+  it("offers Reply only on mail, Write email on a call or a meeting, and neither on a task", async () => {
+    const rows = [
+      CALL_ACTIVITY,
+      { ...CALL_ACTIVITY, id: "a-2", kind: "meeting", subject: "Site visit" },
+      {
+        ...CALL_ACTIVITY,
+        id: "a-3",
+        kind: "task",
+        subject: "1 forecast input needs attention",
+        is_done: false,
+        captured_by: "system",
+        automatic_kind: "product",
+      },
+      {
+        ...CALL_ACTIVITY,
+        id: "a-4",
+        kind: "email",
+        subject: "Revised quote",
+        direction: "inbound",
+      },
+    ];
+    stubWithSession(
+      {
+        "GET /activities": () =>
+          jsonResponse({ data: rows, page: { has_more: false } }),
+      },
+      {},
+    );
+    withProviders(<DealHistoryTab deal={DEAL} onOpenEmail={() => {}} />);
+
+    await screen.findByText("1 forecast input needs attention");
+    expect(screen.getAllByRole("button", { name: "Write email" })).toHaveLength(
+      2,
+    );
+    expect(screen.getAllByRole("button", { name: "Reply" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Open task" })).toHaveLength(
+      1,
+    );
+  });
+
   it("says there is nothing yet rather than drawing an empty list silently", async () => {
     stubWithSession({}, {});
     withProviders(<DealHistoryTab deal={DEAL} onOpenEmail={() => {}} />);

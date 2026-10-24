@@ -5942,6 +5942,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newEmail": "Neue E-Mail",
   "compose.replyingTo": "Antwort auf „{subject}“ · {when}",
   "compose.followingUp": "Follow-up zu deiner E-Mail „{subject}“ · {when}",
+  "compose.aboutRow": "Bezug: {subject} · {when}",
   "compose.draftContextHint":
     "Beschreibe den Zweck. Margince nutzt den Kontext des Datensatzes.",
   "compose.draftEmail": "E-Mail entwerfen",
@@ -5986,6 +5987,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.to": "An",
   "compose.cc": "Cc",
   "compose.subject": "Betreff",
+  "compose.projectKeyInSubject":
+    "Projektschlüssel in den Betreff einfügen (hilft beim Ablegen)",
   "compose.noGroundableRecipient":
     "Noch keine Kontakte bei diesem Unternehmen. Schreibe die Nachricht selbst oder erstelle zuerst einen Kontakt.",
   "compose.draftTo": "Entwurf an",
@@ -6016,12 +6019,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.threadGone":
     "Stattdessen wurde eine neue E-Mail geöffnet, da dieser Thread nicht mehr beantwortet werden kann. Prüfe die Empfangsadresse vor dem Senden.",
   "compose.colleagueMailbox_one":
-    "Diese Nachricht wurde an das Postfach von {names} zugestellt. Deine Antwort wird aus deinem eigenen Postfach unter deinem Namen gesendet.",
+    "Diese E-Mail ist im Postfach von {names} eingegangen. Deine Antwort geht an die Empfangsadressen unten, aus deinem eigenen Postfach und unter deinem Namen.",
   "compose.colleagueMailbox_other":
-    "Diese Nachricht wurde an die Postfächer von {names} zugestellt. Deine Antwort wird aus deinem eigenen Postfach unter deinem Namen gesendet.",
-  "compose.colleagueUnnamed": "ein Teammitglied",
+    "Diese E-Mail ist in den Postfächern von {names} eingegangen. Deine Antwort geht an die Empfangsadressen unten, aus deinem eigenen Postfach und unter deinem Namen.",
+  "compose.notOnThreadTitle": "Du bist nicht an diesem Thread beteiligt",
+  "compose.notOnThread": "Du bist nicht an diesem Thread beteiligt.",
+  "compose.dealOwner": "{owner} ist für diesen Deal verantwortlich.",
+  "compose.colleagueUnnamed": "einem Teammitglied",
   "compose.threadGoneTitle": "Thread kann nicht beantwortet werden",
-  "compose.colleagueMailboxTitle": "An ein Teammitglied zugestellt",
+  "compose.colleagueMailboxTitle":
+    "Diese E-Mail liegt im Postfach eines Teammitglieds",
   "compose.deadRecipientsTitle": "E-Mails an diese Adressen kommen nicht an",
   "compose.attach": "Anhängen",
   "compose.filesOnRecord": "Aus diesem Datensatz anhängen",
@@ -6126,8 +6133,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es lässt sich nicht feststellen, wer die Nachricht erhält, da mehrere Datensätze diese Adresse teilen. Führe die Datensätze zusammen, um das zu lösen.",
   "sendPermission.reason.unconfirmed":
     "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
+  "sendPermission.reason.noEvidence":
+    "Nichts im Datensatz belegt einen Kontaktgrund für diese Empfangsadresse. Wenn es einen Grund gibt, erfasse ihn unter deinem Namen.",
+  "sendPermission.reason.noMarketingConsent":
+    "Marketing braucht die Einwilligung der empfangenden Person, und keine ist erfasst. Wenn diese Nachricht kein Marketing ist, wähle den passenden Kontaktgrund.",
+  "sendPermission.reason.legacyPurpose":
+    "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt. Wähle einen Kontaktgrund, damit Margince sie prüfen kann.",
+  "sendPermission.reason.unknownPurpose":
+    "Diese Nachricht nennt einen Zweck, den Margince nicht kennt. Wähle einen Kontaktgrund aus der Liste.",
+  "sendPermission.reason.claimContradicts":
+    "Der gewählte Kontaktgrund passt nicht zu diesem Thread. Wähle einen anderen Grund oder lass das Feld leer, damit Margince ihn aus dem Thread liest.",
   "sendPermission.reason.other":
-    "Diese Nachricht kann nicht gesendet werden, und niemand hier kann das übergehen.",
+    "Diese Nachricht kann so nicht gesendet werden.",
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "E-Mail senden",
   "compose.threadLeave": "Neue E-Mail",

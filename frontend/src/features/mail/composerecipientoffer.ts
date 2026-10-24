@@ -41,7 +41,7 @@ export function useRecipientOffer({
 }>) {
   // A channel reply resolves its recipient on the server and asks nothing.
   const asksAddress = open && !isChannelReply;
-  const { address: replyRecipient, mailboxes } = useReplyRecipient(
+  const { address: replyRecipient } = useReplyRecipient(
     asksAddress ? answering : undefined,
   );
   // The thread wins over the record: the address on the answered message is
@@ -96,7 +96,6 @@ export function useRecipientOffer({
   }, [threadRecipient, answering]);
 
   return {
-    mailboxes,
     // Read at render, as the conversation switch parks it.
     standing: {
       offeredAddress: offeredAddress.current,

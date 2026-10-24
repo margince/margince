@@ -65,30 +65,6 @@
   box-shadow: none;
 }
 
-/* The subject and the project whose tag it carries, on one ruled line. The
-   subject is a bare line of text, named by its placeholder. */
-.compose-subject {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
-  border-bottom: 1px solid var(--borderSubtle);
-}
-.compose-subject > :first-child {
-  flex: 1;
-  min-inline-size: 0;
-}
-.compose-subject > :last-child:not(:first-child) {
-  flex: none;
-  inline-size: 11.875rem;
-}
-.compose-subject-field .input {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-  font-weight: var(--fontWeightMedium);
-}
-
 .compose-band-body {
   display: flex;
   flex-direction: column;

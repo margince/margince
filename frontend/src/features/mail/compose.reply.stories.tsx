@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
+import { expect, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -13,6 +14,8 @@ import { ChannelReplyAction } from "./compose.reply";
 //  - on a MAIL row it is always offered, and its word is "Reply";
 //  - on a CHANNEL row it is offered only where the contact is reachable on the
 //    transport that carried the conversation, and withheld where they are not;
+//  - on a call, note or meeting row its word is "Write email", offered only
+//    where the contact has an address, because a call cannot be replied to;
 //  - where the row's content is withheld it keeps working but changes its WORD
 //    to "Write email", because writing to a contact is not answering a message
 //    nobody may read;
@@ -39,7 +42,7 @@ type Story = StoryObj<typeof ChannelReplyAction>;
 
 // Whether this contact can be reached on one transport. The shape is the
 // record read's own, because that read is what the gate consults — see
-// useChannelReachable, which matches the row's provider against this list.
+// useAnswerReachable, which matches the row's provider against this list.
 function contactReachable(provider: string, reachable: boolean) {
   return () =>
     jsonResponse({
@@ -143,6 +146,73 @@ export const WithheldWritesEmail: Story = {
         </Row>
       </StoryProviders>
     );
+  },
+};
+
+function contactWithAddress(address: string | null) {
+  return () =>
+    jsonResponse({
+      id: "p-1",
+      full_name: "Jane Doe",
+      primary_email: address,
+      reachability: [],
+      version: 1,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    });
+}
+
+/** A logged call: the verb writes a new email about it, never a reply to it. */
+export const CallWritesEmail: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /contacts/p-1": contactWithAddress("jane@example.test"),
+    });
+    return (
+      <StoryProviders>
+        <Row
+          when="24 August, 11:15"
+          said="Voicemail. Rang twice, then voicemail."
+        >
+          <ChannelReplyAction
+            activityId="a-6"
+            kind="call"
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+          />
+        </Row>
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", { name: "Write email" });
+  },
+};
+
+/** A note on a contact with no address: there is nowhere to write, so nothing
+ *  is offered. */
+export const NoteWithoutAddressOffersNothing: Story = {
+  render: () => {
+    installFetchStub({ "GET /contacts/p-1": contactWithAddress(null) });
+    return (
+      <StoryProviders>
+        <Row when="24 August, 11:20" said="Asked for the revised annex.">
+          <ChannelReplyAction
+            activityId="a-7"
+            kind="note"
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+          />
+        </Row>
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Asked for the revised annex.");
+    await expect(canvas.queryByRole("button")).toBeNull();
   },
 };
 

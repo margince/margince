@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { LocaleProvider } from "../i18n";
+import { LocaleProvider, translate } from "../i18n";
 import { decidingRecipient, SendPermission } from "./sendpermission";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
@@ -246,6 +246,30 @@ describe("what a rep is shown", () => {
     );
     expect(screen.queryByText(/frequency_cap_reached/)).toBeNull();
     expect(screen.getByText(/clears automatically/i)).toBeInTheDocument();
+  });
+
+  // The rep can fix this one in the same dialog, so the generic refusal would
+  // send them looking for a cause that is not there.
+  it("says the picked reason contradicts the thread, and how to fix it", () => {
+    draw(
+      preview(
+        answer({
+          reason_code: "claim_contradicts_resolution",
+          decided_by: "machine",
+          would_refuse: true,
+          can_be_overruled: false,
+        }),
+      ),
+    );
+    expect(
+      screen.getByText(
+        translate("en", "sendPermission.reason.claimContradicts"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/does not match this conversation/)).toBeVisible();
+    expect(
+      screen.queryByText(translate("en", "sendPermission.reason.other")),
+    ).toBeNull();
   });
 });
 

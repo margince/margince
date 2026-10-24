@@ -24,6 +24,7 @@ import { keptTag } from "./composedraftcall";
 import type { RelinkKind } from "./composerelink";
 import { useRecentConversations, useThreadMessages } from "./composethread";
 import { replySubject } from "./replysubject";
+import { rowAnswer } from "./rowanswer";
 
 type Activity = components["schemas"]["Activity"];
 type ThreadProject = ReturnType<typeof useThreadProject>;
@@ -114,6 +115,7 @@ export function colleagueMailboxesOf(
 function answeringLineOf(
   answering: string | undefined,
   anchorRead: ThreadProject,
+  replying: boolean,
   t: ReturnType<typeof useT>,
   locale: Locale,
 ): string {
@@ -126,14 +128,18 @@ function answeringLineOf(
       anchorRead.failed ? "compose.threadFailed" : "compose.threadPending",
     );
   }
+  const named = {
+    subject: anchor.subject || t("email.noSubject"),
+    when: formatDateTime(anchor.occurred_at, locale, viewerZone()),
+  };
+  if (!replying) {
+    return t("compose.aboutRow", named);
+  }
   return t(
     anchor.direction === "outbound"
       ? "compose.followingUp"
       : "compose.replyingTo",
-    {
-      subject: anchor.subject || t("email.noSubject"),
-      when: formatDateTime(anchor.occurred_at, locale, viewerZone()),
-    },
+    named,
   );
 }
 
@@ -152,7 +158,7 @@ function conversationShown(
     return false;
   }
   const kind = read.anchorRead.activity?.kind;
-  const correspondence = kind === "email" || kind === "message";
+  const correspondence = kind !== undefined && rowAnswer(kind) === "reply";
   const { conversation } = read;
   const threadVisible =
     conversation.messages.length > 0 ||
@@ -197,6 +203,7 @@ function useReplySubject(
 export function useComposeThread({
   open,
   answering,
+  rowKind,
   isChannelReply,
   entityType,
   entityId,
@@ -205,6 +212,8 @@ export function useComposeThread({
 }: Readonly<{
   open: boolean;
   answering: string | undefined;
+  /** The kind of the row that opened the composer, until its anchor is read. */
+  rowKind?: Activity["kind"];
   isChannelReply: boolean;
   entityType: RelinkKind;
   entityId: string;
@@ -215,6 +224,9 @@ export function useComposeThread({
   const { locale } = useLocale();
   const anchorRead = useThreadProject(answering, open);
   const anchorActivity = anchorRead.activity;
+  const replying =
+    Boolean(answering) &&
+    rowAnswer(anchorActivity?.kind ?? rowKind) === "reply";
   const conversation = useThreadMessages(open ? anchorActivity : undefined);
   // Named but not yet read: the column holds its place. A failed read is not
   // still arriving, so the pane lets go of it.
@@ -266,7 +278,8 @@ export function useComposeThread({
     listed: searched ? found : recent,
     search,
     setSearch,
-    answeringLine: answeringLineOf(answering, anchorRead, t, locale),
+    replying,
+    answeringLine: answeringLineOf(answering, anchorRead, replying, t, locale),
     splitColumns: showConversation || offered,
   };
 }

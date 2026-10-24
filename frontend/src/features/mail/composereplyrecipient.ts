@@ -21,6 +21,8 @@ import { unwrap } from "../../lib/problem";
 export function useReplyRecipient(anchor: string | undefined): {
   address: string | undefined;
   mailboxes: string[] | undefined;
+  onThread: boolean | undefined;
+  dealOwnerId: string | undefined;
 } {
   const query = useQuery({
     queryKey: ["compose-reply-recipient", anchor],
@@ -45,5 +47,9 @@ export function useReplyRecipient(anchor: string | undefined): {
     // matters: undefined means "not answered yet", which is a different fact
     // from an empty list, and only the empty list says nobody's mailbox.
     mailboxes: answer?.mailbox_user_ids,
+    // Undefined from a server that predates the field, which says nothing
+    // about the reader rather than that they are off the thread.
+    onThread: answer?.viewer_on_conversation,
+    dealOwnerId: answer?.deal_owner_user_id ?? undefined,
   };
 }

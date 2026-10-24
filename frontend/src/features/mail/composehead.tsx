@@ -270,6 +270,7 @@ export function SubjectRow({
   need,
   disabled,
   aside,
+  under,
 }: Readonly<{
   subject: string;
   onChange: (next: string) => void;
@@ -278,6 +279,8 @@ export function SubjectRow({
   disabled?: boolean;
   /** A control on the subject's own line (the project whose tag it carries). */
   aside?: ReactNode;
+  /** A line under the subject, about what the subject carries. */
+  under?: ReactNode;
 }>) {
   const t = useT();
   return (
@@ -299,6 +302,7 @@ export function SubjectRow({
         )}
       </Field>
       {aside}
+      {under && <div className="compose-subject-under">{under}</div>}
     </div>
   );
 }

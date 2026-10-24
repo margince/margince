@@ -87,8 +87,9 @@ function useAnchorProject(
  * it. A suggestion is adopted once, so a rep who picks None is not overruled
  * later.
  *
- * The tag stays in the subject while a project is chosen, and returns whenever
- * a draft or a retype replaces the subject. The picker removes it.
+ * The tag stays in the subject while a project is chosen and the switch is on.
+ * It returns whenever a draft or a retype replaces the subject. The switch
+ * turned off keeps it out the same way; picking None removes it.
  */
 function useProjectFiling(input: {
   activityId?: string;
@@ -101,7 +102,7 @@ function useProjectFiling(input: {
   setSubject: (next: string) => void;
   /** Whether the composer is showing; a shut one reads nothing. */
   open: boolean;
-}): { projectId: string; setProjectId: (next: string) => void } {
+}) {
   const thread = useThreadProject(input.activityId, input.open);
   // An empty string is a real answer ("None"), so unanswered is undefined.
   const filingKey = input.activityId ?? "";
@@ -138,7 +139,23 @@ function useProjectFiling(input: {
     input.projects.some((project) => project.project_id === chosen);
   const projectId = offered ? chosen : "";
   const { project } = useProjectRecord(projectId || undefined, input.open);
-  const tag = subjectTag(project);
+  const ownTag = subjectTag(project);
+  // Off holds for one message and is never stored. The tag files the client's
+  // answer, so the next message carries it again.
+  const [untagged, setUntagged] = useState<ReadonlySet<string>>(new Set());
+  const tagged = !untagged.has(filingKey);
+  const setTagged = useCallback(
+    (next: boolean) => {
+      setUntagged((current) => {
+        const kept = new Set(current);
+        if (next) kept.delete(filingKey);
+        else kept.add(filingKey);
+        return kept;
+      });
+    },
+    [filingKey],
+  );
+  const tag = tagged ? ownTag : "";
   const setSubject = input.setSubject;
   const subject = input.subject;
   const open = input.open;
@@ -150,12 +167,21 @@ function useProjectFiling(input: {
     const priorTag = previousTag.current;
     previousTag.current = tag;
     const withoutOld = priorTag ? stripSubjectTag(subject, priorTag) : subject;
-    const wanted = tag ? withSubjectTag(withoutOld, tag) : withoutOld;
+    const wanted = tag
+      ? withSubjectTag(withoutOld, tag)
+      : stripSubjectTag(withoutOld, ownTag);
     if (wanted !== subject) {
       setSubject(wanted);
     }
-  }, [open, tag, subject, setSubject]);
-  return { projectId, setProjectId: setPicked };
+  }, [open, tag, ownTag, subject, setSubject]);
+  return {
+    projectId,
+    setProjectId: setPicked,
+    /** Empty when the chosen project has no tag to offer. */
+    ownTag,
+    tagged,
+    setTagged,
+  };
 }
 
 /**

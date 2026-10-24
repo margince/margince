@@ -4,8 +4,9 @@ import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { ComposeModal } from "./compose";
-import { useChannelReachable } from "./composereachability";
+import { useAnswerReachable } from "./composereachability";
 import type { RelinkKind } from "./composerelink";
+import { rowAnswer } from "./rowanswer";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -72,12 +73,9 @@ export function ChannelReplyAction({
   const [reply, setReply] = useState<{ seq: number; open: boolean } | null>(
     null,
   );
-  const reachable = useChannelReachable(
-    kind === "message",
-    contactId,
-    channelProvider,
-  );
-  if (!reachable) {
+  const reachable = useAnswerReachable(kind, contactId, channelProvider);
+  const answer = rowAnswer(kind);
+  if (!reachable || answer === null) {
     return null;
   }
   // WITHHELD CONTENT IS NOT A PREPARED REPLY. `Write email` is an
@@ -95,7 +93,11 @@ export function ChannelReplyAction({
       >
         {proposed && <Sparkles aria-hidden="true" />}
         {proposed?.label ??
-          (contentWithheld ? t("compose.writeEmail") : t("compose.reply"))}
+          t(
+            contentWithheld || answer === "about"
+              ? "compose.writeEmail"
+              : "compose.reply",
+          )}
       </Button>
       {reply !== null && (
         <ComposeModal

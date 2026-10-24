@@ -1,17 +1,19 @@
 import type { ReactNode } from "react";
 import { Callout } from "../../design-system/callout";
 import { ProjectPicker } from "../../design-system/projectpicker";
+import { Switch } from "../../design-system/switch";
 import type { TokenSuggestion } from "../../design-system/tokeninput";
 import { INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
 import { useProjectRecord } from "../projects/projectrecord";
 import { StaleThreadNotice } from "./compose.notices";
-import { useThreadProject } from "./composeanchor";
+import { colleagueMailboxesOf, useThreadProject } from "./composeanchor";
 import { AccountDraftContext } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { ComposeRecords } from "./composefiling";
 import { AddressBlock, SubjectRow, TransportRow } from "./composehead";
+import { useReplyRecipient } from "./composereplyrecipient";
 import { SavedDraftNotices, type useSavedDraft } from "./composesaveddraft";
 import type { MissingField } from "./composesend";
 import type { useTransportDial } from "./composetarget";
@@ -19,11 +21,6 @@ import type { useTransportDial } from "./composetarget";
 /**
  * The one control that says which project a message belongs to, beside the
  * subject it tags. A reply and a message started from an account share it.
- *
- * It carries no explanation of its own. The tag it puts in the Subject field
- * shows there, and a rep who does not want it deletes it like any other text.
- * Nothing renders when the record reaches no live project, because a list whose
- * only entry is None asks a question with one answer.
  */
 export function ProjectFiling({
   records,
@@ -75,6 +72,23 @@ function ChannelReplyFiling({ activityId }: Readonly<{ activityId?: string }>) {
   );
 }
 
+// The key reaches the client's inbox, so it is a choice the rep sees. On by
+// default, because it is what files the client's answer under the project.
+export function SubjectTagSwitch({
+  filing,
+  disabled,
+}: Readonly<{ filing: ComposeRecords["projectFiling"]; disabled: boolean }>) {
+  const t = useT();
+  return (
+    <Switch
+      label={t("compose.projectKeyInSubject")}
+      checked={filing.tagged}
+      onChange={filing.setTagged}
+      disabled={disabled}
+    />
+  );
+}
+
 // The mail-only half of the head: who the message is to and what it is about.
 // A channel request has no room for recipient and subject inputs, so a channel
 // reply renders none of this and inherits none of its branching.
@@ -95,6 +109,7 @@ function MailOnlyFields({
   flagged,
   deadRecipients,
   filing,
+  tagging,
 }: Readonly<{
   to: string[];
   onToChange: (next: string[]) => void;
@@ -118,6 +133,7 @@ function MailOnlyFields({
   deadRecipients: readonly string[];
   /** Which project the message files under, beside the subject it tags. */
   filing: ReactNode;
+  tagging: ReactNode;
 }>) {
   const t = useT();
   return (
@@ -145,40 +161,81 @@ function MailOnlyFields({
         need={t("compose.missingSubject")}
         disabled={rejectionInFlight}
         aside={filing}
+        under={tagging}
       />
     </>
   );
 }
 
-// Whose conversation this is, when colleagues' mailboxes took it. Covering
-// for a colleague is ordinary work, so it states the fact without a warning
-// or a live region.
-function ColleagueMailboxNotice({
+// Covering for a colleague is ordinary work, so this states the fact without a
+// warning or a live region, and never holds the send.
+export function ReplyStandingNotice({
   seats,
+  offThread,
+  owner,
   nameOf,
 }: Readonly<{
   seats: readonly string[];
+  offThread: boolean;
+  /** The deal owner's name, absent when the roster cannot name the seat. */
+  owner: string | undefined;
   nameOf: (linkType: string, linkId: string) => string | undefined;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  if (seats.length === 0) {
-    return null;
+  const ownerLine = owner ? t("compose.dealOwner", { owner }) : undefined;
+  const offThreadLine = ownerLine
+    ? `${t("compose.notOnThread")} ${ownerLine}`
+    : t("compose.notOnThread");
+  if (seats.length > 0) {
+    return (
+      <Callout kind="standing" title={t("compose.colleagueMailboxTitle")}>
+        <p>
+          {plural("compose.colleagueMailbox", seats.length, {
+            names: new Intl.ListFormat(INTL_LOCALE[locale], {
+              style: "long",
+              type: "conjunction",
+            }).format(
+              seats.map(
+                (seat) => nameOf("user", seat) ?? t("compose.colleagueUnnamed"),
+              ),
+            ),
+          })}
+        </p>
+        {offThread && <p>{offThreadLine}</p>}
+      </Callout>
+    );
   }
+  if (offThread) {
+    return (
+      <Callout kind="standing" title={t("compose.notOnThreadTitle")}>
+        {ownerLine}
+      </Callout>
+    );
+  }
+  return null;
+}
+
+// Read off the reply recipient the To field is offered from, so the notice and
+// the address it explains come from one answer.
+function ReplyStanding({
+  answering,
+  viewerId,
+  nameOf,
+}: Readonly<{
+  answering: string | undefined;
+  viewerId: string | undefined;
+  nameOf: (linkType: string, linkId: string) => string | undefined;
+}>) {
+  const standing = useReplyRecipient(answering);
   return (
-    <Callout kind="standing" title={t("compose.colleagueMailboxTitle")}>
-      {plural("compose.colleagueMailbox", seats.length, {
-        names: new Intl.ListFormat(INTL_LOCALE[locale], {
-          style: "long",
-          type: "conjunction",
-        }).format(
-          seats.map(
-            (seat) => nameOf("user", seat) ?? t("compose.colleagueUnnamed"),
-          ),
-        ),
-      })}
-    </Callout>
+    <ReplyStandingNotice
+      seats={colleagueMailboxesOf(standing.mailboxes, viewerId)}
+      offThread={standing.onThread === false}
+      owner={standing.dealOwnerId && nameOf("user", standing.dealOwnerId)}
+      nameOf={nameOf}
+    />
   );
 }
 
@@ -191,7 +248,8 @@ export function ComposeHead({
   transports,
   onTransportChange,
   staleThread,
-  colleagueSeats,
+  answering,
+  viewerId,
   nameOf,
   activityId,
   records,
@@ -206,7 +264,9 @@ export function ComposeHead({
   transports: readonly Transport[];
   onTransportChange: (next: string) => void;
   staleThread: boolean;
-  colleagueSeats: readonly string[];
+  /** The message a mail reply answers. */
+  answering: string | undefined;
+  viewerId: string | undefined;
   nameOf: (linkType: string, linkId: string) => string | undefined;
   activityId?: string;
   records: ComposeRecords;
@@ -230,7 +290,11 @@ export function ComposeHead({
         onChange={onTransportChange}
       />
       <StaleThreadNotice stale={staleThread} />
-      <ColleagueMailboxNotice seats={colleagueSeats} nameOf={nameOf} />
+      <ReplyStanding
+        answering={dial.isChannelReply ? undefined : answering}
+        viewerId={viewerId}
+        nameOf={nameOf}
+      />
       {/* Mail chooses where it files in the head. A channel send carries no
           filing field, so it is told what the conversation inherits. */}
       {dial.isChannelReply && <ChannelReplyFiling activityId={activityId} />}
@@ -263,6 +327,14 @@ export function ComposeHead({
           rejectionInFlight={rejectionInFlight}
           deadRecipients={records.deadRecipients}
           filing={<ProjectFiling records={records} />}
+          tagging={
+            records.projectFiling.ownTag && (
+              <SubjectTagSwitch
+                filing={records.projectFiling}
+                disabled={rejectionInFlight}
+              />
+            )
+          }
         />
       )}
     </>

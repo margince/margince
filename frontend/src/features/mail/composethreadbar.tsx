@@ -146,7 +146,7 @@ export function ThreadBar({
         disabled={disabled}
         label={
           <>
-            {answering ? (
+            {thread.replying ? (
               <Reply aria-hidden="true" />
             ) : (
               <SquarePen aria-hidden="true" />

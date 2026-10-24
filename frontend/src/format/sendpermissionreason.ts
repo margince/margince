@@ -17,6 +17,16 @@ export function sendPermissionReasonKey(reason: string | undefined) {
       return "sendPermission.reason.ambiguous" as const;
     case "unconfirmed_double_opt_in":
       return "sendPermission.reason.unconfirmed" as const;
+    case "no_compatible_evidence":
+      return "sendPermission.reason.noEvidence" as const;
+    case "no_marketing_consent":
+      return "sendPermission.reason.noMarketingConsent" as const;
+    case "legacy_transactional_unevidenced":
+      return "sendPermission.reason.legacyPurpose" as const;
+    case "unknown_purpose":
+      return "sendPermission.reason.unknownPurpose" as const;
+    case "claim_contradicts_resolution":
+      return "sendPermission.reason.claimContradicts" as const;
     default:
       return "sendPermission.reason.other" as const;
   }

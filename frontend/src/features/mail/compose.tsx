@@ -12,11 +12,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Transport } from "../../lib/contacttransports";
 import { useVoiceProfile } from "../../lib/voice-profile";
-import {
-  colleagueMailboxesOf,
-  useComposeThread,
-  useConversationNames,
-} from "./composeanchor";
+import { useComposeThread, useConversationNames } from "./composeanchor";
 import {
   AttachAction,
   AttachedFiles,
@@ -86,7 +82,7 @@ function windowTitle(
   input: Readonly<{
     isChannelReply: boolean;
     wordingTitle: string;
-    answering: string | undefined;
+    replying: boolean;
     anchorSubject: string | null | undefined;
     subject: string;
     recordName: string | undefined;
@@ -96,7 +92,7 @@ function windowTitle(
   const { t } = input;
   if (input.isChannelReply) return input.wordingTitle;
   if (input.subject.trim()) return input.subject.trim();
-  if (input.answering) {
+  if (input.replying) {
     return replySubject(input.anchorSubject?.trim() || t("email.noSubject"));
   }
   return input.recordName
@@ -263,6 +259,7 @@ export function ComposeWindow({
   const thread = useComposeThread({
     open,
     answering,
+    rowKind: answering === activityId ? kind : undefined,
     isChannelReply,
     entityType,
     entityId,
@@ -370,7 +367,7 @@ export function ComposeWindow({
   const title = windowTitle({
     isChannelReply,
     wordingTitle: t(wording.title),
-    answering,
+    replying: thread.replying,
     anchorSubject: thread.anchorActivity?.subject,
     subject: fields.subject,
     recordName: records.recordName,
@@ -412,10 +409,8 @@ export function ComposeWindow({
                 transports={transports}
                 onTransportChange={changeTransport}
                 staleThread={staleThread}
-                colleagueSeats={colleagueMailboxesOf(
-                  offer.mailboxes,
-                  names.viewerId,
-                )}
+                answering={answering}
+                viewerId={names.viewerId}
                 nameOf={names.nameOf}
                 activityId={activityId}
                 records={records}
@@ -428,7 +423,7 @@ export function ComposeWindow({
                 bodyId={bodyId}
                 fields={fields}
                 mail={!isChannelReply}
-                replying={Boolean(answering)}
+                replying={thread.replying}
                 earlier={
                   answering && (
                     <EarlierMessages messages={thread.conversation.messages} />

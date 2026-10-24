@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
+import { mailbox } from "../../format/contacturi";
 import { contactQuery } from "../../lib/contact.queries";
+import { rowAnswer } from "./rowanswer";
 
+type Activity = components["schemas"]["Activity"];
 type Contact360 = components["schemas"]["Contact360"];
 
 // Which addresses a message would not arrive at, and whether a channel reply
@@ -63,13 +66,24 @@ export function deadRecipientsAmong(
 // (e.g. a deal timeline, which has no single contact to check) gets the
 // pre-existing behaviour of always offering the reply — this only ever turns
 // the action OFF, never on, for a row it cannot verify.
-export function useChannelReachable(
-  isChannel: boolean,
+export function useAnswerReachable(
+  kind: Activity["kind"],
   contactId: string | undefined,
   provider: string | undefined,
 ) {
-  const contact = useQuery({ ...contactQuery(contactId), enabled: isChannel });
-  if (!isChannel || contactId == null) return true;
+  const isChannel = kind === "message";
+  const writesEmail = rowAnswer(kind) === "about";
+  const contact = useQuery({
+    ...contactQuery(contactId),
+    enabled: isChannel || writesEmail,
+  });
+  if (contactId == null) return true;
+  // A new email about a call or a note fills To with this address. Without one
+  // the rep would get an empty To field, so nothing is offered.
+  if (writesEmail) {
+    return mailbox(contact.data?.primary_email ?? "") !== null;
+  }
+  if (!isChannel) return true;
   // Matched against the row's OWN transport. A hardcoded "telegram" here would
   // withhold the reply on every other transport's rows and offer it on a
   // Telegram-reachable contact's rows whatever carried the conversation — the

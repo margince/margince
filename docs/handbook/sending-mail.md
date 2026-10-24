@@ -25,9 +25,11 @@ To start an email in Margince, use any of these:
 - **Write email** or **Draft reply** in a record's **Email** panel
 - **Send email** on a deal
 - **New email** or **Write email** on Home
-- **Reply** on any message in a timeline.
+- **Reply** on any message in a timeline
+- **Write email** on a call, note or meeting in a timeline, when the contact has an email address.
 
 Every one of these opens the same composer, so the fields, checks and send times are the same from each.
+From a call, note or meeting, it opens a new email that names the entry as "About: {subject}", not a reply.
 A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first."
 Also called: compose, new message, reply to an email.
 
@@ -45,8 +47,8 @@ The thread you picked is marked. The line above the recipients reads "Replying t
 Rest the mouse on **Preview** to see a message's text, and press **Read full email** to read the one you answer. Press **New email** or **Start new instead** to leave the thread for a new message. Each message you pick keeps its own draft while the composer is open. Also called: answer an older email, reply to a specific message.
 
 ### How do I file an email I send under a project?
-To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER-1]`, at the start of the **Subject**.
-Choosing **No project** takes the key out; deleting it from the text does not.
+To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER-1]`, at the start of the **Subject**, so the client's answer is filed under the project too.
+The switch **Add project key to subject (helps filing)** under the subject is on. Turn it off to send this email without the key; the next email starts with it on. Choosing **No project** also takes the key out; deleting it from the text does not.
 
 The list starts on the thread's own project. If there is none, it starts on the deal's, and then on the company's only live project. Writing from a project page files under that project. With no live project to offer, the list shows **No project** and cannot be changed. Also called: tag an email with a project, project key in the subject.
 
@@ -218,8 +220,9 @@ fix it.
 last mail to that address came back, and none has gone through after it. Send it
 all the same, or use another address.
 
-**A colleague's mailbox** gets a note, and you can still send: your reply goes
-out from your own mailbox, under your name.
+**A colleague's mailbox** gets a note, and you can still send. Your reply goes
+to the recipients in **To**, from your own mailbox and under your name. When
+you are not on the thread, the note says so and names the deal owner.
 
 **A mailbox that cannot send** is refused, with the fix. The mailbox is
 connected only to read mail, without permission to send. Reconnect it and allow

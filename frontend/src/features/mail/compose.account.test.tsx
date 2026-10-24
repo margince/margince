@@ -270,8 +270,10 @@ describe("ComposeModal started from an account", () => {
   const replyBackend = (
     links: { entity_type: string; entity_id: string }[],
     projects: { project_id: string; name: string; key: string }[],
+    routes: Record<string, () => Response> = {},
   ) =>
     stubRoutes({
+      ...routes,
       "GET /activities/act-1": () =>
         jsonResponse({
           id: "act-1",
@@ -459,6 +461,77 @@ describe("ComposeModal started from an account", () => {
     // The way to have no tag is to choose No project.
     await pickOption(user, screen.getByLabelText("Project"), "No project");
     await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
+  });
+
+  // The key reaches the client's inbox, so whether it goes is a switch the rep
+  // sees beside the subject. It is on by default, because it files the answer.
+  const KEY_SWITCH = { name: "Add project key to subject (helps filing)" };
+
+  it("shows the key switch on while a project is chosen, and none without one", async () => {
+    const user = userEvent.setup();
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
+    );
+    const subject = await openReply();
+
+    const key = await screen.findByRole("switch", KEY_SWITCH);
+    expect(key.getAttribute("aria-checked")).toBe("true");
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+
+    await pickOption(user, screen.getByLabelText("Project"), "No project");
+    await waitFor(() =>
+      expect(screen.queryByRole("switch", KEY_SWITCH)).toBeNull(),
+    );
+  });
+
+  it("keeps the tag out once turned off, through a draft and a retype", async () => {
+    const user = userEvent.setup();
+    const sent = replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
+      {
+        "POST /activities/act-1/draft-email": () =>
+          jsonResponse({ subject: "[N2P-1] Re: Angebot", body: "Hallo" }),
+      },
+    );
+    const subject = await openReply();
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+
+    await user.click(await screen.findByRole("switch", KEY_SWITCH));
+    await waitFor(() => expect(subject().value).toBe(""));
+
+    await user.click(draftButton());
+    await waitFor(() =>
+      expect(
+        sent.some((s) => s.key === "POST /activities/act-1/draft-email"),
+      ).toBe(true),
+    );
+    await waitFor(() => expect(subject().value).toBe("Re: Angebot"));
+
+    await user.clear(subject());
+    await user.type(subject(), "Re: ohne Tag");
+    await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
+    expect(
+      screen.getByRole("switch", KEY_SWITCH).getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
+  it("puts the tag back when the switch is turned on again", async () => {
+    const user = userEvent.setup();
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
+    );
+    const subject = await openReply();
+    await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
+    await user.click(await screen.findByRole("switch", KEY_SWITCH));
+    await user.type(subject(), "Re: ohne Tag");
+    await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
+
+    // Turned on again, the tag comes back in front of what the rep wrote.
+    await user.click(screen.getByRole("switch", KEY_SWITCH));
+    await waitFor(() => expect(subject().value).toBe("[N2P-1] Re: ohne Tag"));
   });
 });
 
