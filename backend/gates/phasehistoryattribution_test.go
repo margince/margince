@@ -8,8 +8,8 @@ package gates
 // A history table that links its audit row names who acted through that row.
 //
 // A table with both `changed_by` (a flat principal id) and `audit_log_id` has
-// the audit row that holds the actor type, the represented human, the passport
-// and the client. A statement that joins `app_user` on `changed_by` guesses
+// an audit row. That row holds the actor type, the represented human, the
+// passport and the client. A statement that joins `app_user` on `changed_by` guesses
 // from the `human:` prefix. An agent's move then reads as nobody or as the
 // system. The name comes from privacy.AuditAttributionsTx instead.
 //
