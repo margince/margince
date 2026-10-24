@@ -9247,6 +9247,24 @@ func (e DecideCommissionRequestDecision) Valid() bool {
 	}
 }
 
+// Defines values for DeclaredExtensionSettingKind.
+const (
+	DeclaredExtensionSettingKindSwitch DeclaredExtensionSettingKind = "switch"
+	DeclaredExtensionSettingKindText   DeclaredExtensionSettingKind = "text"
+)
+
+// Valid indicates whether the value is a known member of the DeclaredExtensionSettingKind enum.
+func (e DeclaredExtensionSettingKind) Valid() bool {
+	switch e {
+	case DeclaredExtensionSettingKindSwitch:
+		return true
+	case DeclaredExtensionSettingKindText:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DedupeCandidateEntityType.
 const (
 	DedupeCandidateEntityTypeCompany DedupeCandidateEntityType = "company"
@@ -36891,6 +36909,27 @@ type DecideLegalReviewRequest struct {
 	Outcome  LegalReviewOutcome `json:"outcome"`
 }
 
+// DeclaredExtensionSetting One setting a unit declares, drawn by the core.
+type DeclaredExtensionSetting struct {
+	// Hint One line saying what the setting does.
+	Hint *string `json:"hint,omitempty"`
+
+	// Key The setting's name inside the unit.
+	Key string `json:"key"`
+
+	// Kind The control the core draws.
+	Kind *DeclaredExtensionSettingKind `json:"kind,omitempty"`
+
+	// Label The name shown to the admin, as the unit wrote it.
+	Label *string `json:"label,omitempty"`
+
+	// Value The saved value. A switch holds `true` or `false`; a text setting holds one short line.
+	Value string `json:"value"`
+}
+
+// DeclaredExtensionSettingKind The control the core draws.
+type DeclaredExtensionSettingKind string
+
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
 	// CanDecide Whether THIS caller could dispose of the pair — merge it, dismiss it,
@@ -37761,6 +37800,9 @@ type ExtensionIngestRefusalRefusal string
 
 // ExtensionSettings The governance settings of one composed extension unit.
 type ExtensionSettings struct {
+	// Declared The settings the unit declares as data, with their saved values. Only an admin gets them back, so the list is absent for anyone else. On a write, send the `key` and `value` of each setting to change; a setting left out keeps its value.
+	Declared *[]DeclaredExtensionSetting `json:"declared,omitempty"`
+
 	// OverwritesEditedFields True when the unit's feed may overwrite a company or deal field that a user last edited. False, the default, makes the feed leave such a field as it is and name it in `Result.Withheld`.
 	OverwritesEditedFields bool `json:"overwrites_edited_fields"`
 }

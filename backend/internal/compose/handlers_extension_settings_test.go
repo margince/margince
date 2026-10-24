@@ -5,13 +5,52 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/pkg/extension"
 )
+
+func visitsUnit() extension.Extension {
+	return extension.Extension{Name: "visits", Settings: []extension.Setting{
+		{Key: "live", Label: "Live", Kind: extension.SettingSwitch},
+		{Key: "region", Label: "Region", Hint: "Where visits happen", Kind: extension.SettingText},
+	}}
+}
+
+func TestDeclaredChangesRefuseAKeyTheUnitNeverDeclaredAndAValueItsKindCannotHold(t *testing.T) {
+	changes, err := declaredChanges(visitsUnit(), []crmcontracts.DeclaredExtensionSetting{
+		{Key: "live", Value: "true"}, {Key: "region", Value: "eu-west"},
+	})
+	if err != nil || changes["live"] != "true" || changes["region"] != "eu-west" {
+		t.Fatalf("changes = %v, err = %v, want both saved", changes, err)
+	}
+	for name, sent := range map[string]crmcontracts.DeclaredExtensionSetting{
+		"an undeclared key":    {Key: "other", Value: "x"},
+		"a switch set to text": {Key: "live", Value: "maybe"},
+		"a multi-line text":    {Key: "region", Value: "a\nb"},
+	} {
+		if _, err := declaredChanges(visitsUnit(), []crmcontracts.DeclaredExtensionSetting{{Key: "live", Value: "true"}, sent}); !errors.Is(err, apperrors.ErrInvalidArgument) {
+			t.Errorf("%s: err = %v, want ErrInvalidArgument for the whole write", name, err)
+		}
+	}
+}
+
+func TestDeclaredViewShowsTheSavedValueOrTheDefault(t *testing.T) {
+	view := declaredView(visitsUnit(), map[string]string{"visits/region": "eu-west", "other/region": "elsewhere"})
+	if len(view) != 2 || view[0].Key != "live" || view[0].Value != "false" || view[1].Value != "eu-west" {
+		t.Fatalf("view = %+v, want live at its default and region as saved", view)
+	}
+	if *view[1].Hint != "Where visits happen" || *view[0].Kind != crmcontracts.DeclaredExtensionSettingKind("switch") {
+		t.Errorf("view does not carry the declared hint and kind: %+v", view)
+	}
+}
 
 func TestExtensionSettingsRefuseWhatTheCallerMayNotDoAndAnUnknownUnit(t *testing.T) {
 	t.Cleanup(func() { setComposedExtensions(nil) })

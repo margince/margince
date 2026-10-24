@@ -17,7 +17,7 @@ An extension is a separate unit under `extensions/` that adds to Margince. This 
 | 8. Keep the outside value beside the typed one | The core keeps the last value each extension offered for a company's `legal_name`, `industry` and `description`, even when a user's edit kept the record's own value. `GET /v1/companies/{id}/offered-values` reads them, for a signed-in user who may read the company. Erasing a contact deletes the offered values of the companies they worked for. Deals are not covered, and the record page does not show the values. | [land-companies-and-deals-from-an-extension.md](../how-to/land-companies-and-deals-from-an-extension.md#see-what-a-unit-offered) | done |
 | 9. `Bulk load that can resume` | Hand over up to 200 records of one source in a batch, with a place the core saves once every record is answered. A restarted job reads the place and carries on. A record that the core refuses with an error ends the batch and leaves the place where it was, so a record that always fails stops the load until the unit drops it. A record the core skips or cannot store as given does not end the batch. Only an unattended run may load a batch. | [land-companies-and-deals-from-an-extension.md](../how-to/land-companies-and-deals-from-an-extension.md#load-a-large-source-in-batches) | done |
 | 10. `Extra display marks on core records` | Add a small fixed note to a contact, company or deal page. It shows only to a reader who may read the extension's data, and it carries no record data. | [add-an-extension.md](../how-to/add-an-extension.md#offer-an-entry-on-a-core-screen) | done |
-| 11. Per-extension settings page | Not yet. Each extension will have its own settings page. | | planned |
+| 11. Per-extension settings page | Declare settings as data, a switch or one line of text. The core shows them on the unit's card under Settings, Extensions, to admins only, lets only an admin change them and audits each change. The unit's own code cannot read them yet. | [add-an-extension.md](../how-to/add-an-extension.md#declare-settings-an-admin-can-change) | done |
 
 ## How the features connect
 
@@ -32,8 +32,8 @@ flowchart LR
     F3 --> F5[5. Lifecycle events]
     F4 --> F7[7. Skip edited fields]
     F5 --> F6[6. Notices]
+    F7 --> F11[11. Settings page]
     F10[10. Display marks]
-    F11[11. Settings page]
 ```
 
 ## How to read this page

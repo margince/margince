@@ -112,6 +112,22 @@ func preflightEntries(e extension.Extension) error {
 	return nil
 }
 
+// preflightSettings validates one unit's settings through the published
+// Setting.Validate the generator runs, and refuses one key declared twice.
+func preflightSettings(e extension.Extension) error {
+	seen := make(map[string]bool, len(e.Settings))
+	for _, s := range e.Settings {
+		if err := s.Validate(); err != nil {
+			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+		}
+		if seen[s.Key] {
+			return fmt.Errorf("compose: extension %q declares setting %q twice", e.Name, s.Key)
+		}
+		seen[s.Key] = true
+	}
+	return nil
+}
+
 // preflightEntryObjects refuses an entry whose object none of its unit's
 // operations gates on. No grant of such an object lets a reader use the unit.
 func preflightEntryObjects(exts []extension.Extension, verbs []extension.Verb) error {

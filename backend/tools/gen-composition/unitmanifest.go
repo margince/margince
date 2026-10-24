@@ -98,6 +98,10 @@ type unitManifest struct {
 	// Entries are the places on core screens that offer a way into the unit.
 	Entries []declaredEntry `json:"entries,omitempty"`
 
+	// Settings are the values an admin can change for the unit, drawn by the
+	// core on the unit's card of the Extensions page.
+	Settings []declaredSetting `json:"settings,omitempty"`
+
 	// OAuthApps are the vendors whose consent flow the core runs for the unit
 	// (see extension.OAuthApp). Each names where an admin is sent, what the
 	// consent asks for, and the endpoint that receives the client secret.

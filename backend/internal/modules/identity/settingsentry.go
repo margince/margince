@@ -242,19 +242,71 @@ func SetExtensionOverwritesEditedFields(ctx context.Context, store *settings.Sto
 		return err
 	}
 	return store.WriteTx(ctx, func(tx pgx.Tx) error {
-		if err := settings.LockForWrite(ctx, tx, ExtensionOverwritesEditedFields.Key()); err != nil {
+		return setOverwritesTx(ctx, store, tx, unit, on)
+	})
+}
+
+func setOverwritesTx(ctx context.Context, store *settings.Store, tx pgx.Tx, unit string, on bool) error {
+	if err := settings.LockForWrite(ctx, tx, ExtensionOverwritesEditedFields.Key()); err != nil {
+		return err
+	}
+	perUnit, err := settings.ApplyTx(ctx, tx, ExtensionOverwritesEditedFields)
+	if err != nil {
+		return err
+	}
+	next := maps.Clone(perUnit)
+	if next == nil {
+		next = map[string]bool{}
+	}
+	next[unit] = on
+	return settings.SetTx(ctx, store, tx, ExtensionOverwritesEditedFields, next)
+}
+
+// ExtensionSettingValues holds the values an admin gave the settings the
+// composed units declare, keyed "<unit>/<setting key>". A setting absent from
+// the map reads as its declared default. The read gate is the installation
+// settings object, so only an admin sees them: no unit or feed reads them.
+var ExtensionSettingValues = settings.Define[map[string]string](
+	"identity.extension_setting_values", installationSettingsObject, installationAuditVerb, map[string]string{}, nil,
+)
+
+// ExtensionSettingValuesOf reads every stored unit setting value, through the
+// settings read gate.
+func ExtensionSettingValuesOf(ctx context.Context, store *settings.Store) (map[string]string, error) {
+	return settings.Get(ctx, store, ExtensionSettingValues)
+}
+
+// SetExtensionSettings saves one unit's governance switch and the given values
+// of its declared settings in one transaction, so a form is saved whole or not
+// at all. Every other unit's and setting's value stays as it was. An admin's
+// act alone. Each map is read under its write lock so two admins changing two
+// settings cannot lose one change.
+func SetExtensionSettings(ctx context.Context, store *settings.Store, unit string, overwrites bool, changes map[string]string) error {
+	if err := auth.RequireAdmin(ctx); err != nil {
+		return err
+	}
+	return store.WriteTx(ctx, func(tx pgx.Tx) error {
+		if err := setOverwritesTx(ctx, store, tx, unit, overwrites); err != nil {
 			return err
 		}
-		perUnit, err := settings.ApplyTx(ctx, tx, ExtensionOverwritesEditedFields)
+		if len(changes) == 0 {
+			return nil
+		}
+		if err := settings.LockForWrite(ctx, tx, ExtensionSettingValues.Key()); err != nil {
+			return err
+		}
+		stored, err := settings.GetTx(ctx, tx, ExtensionSettingValues)
 		if err != nil {
 			return err
 		}
-		next := maps.Clone(perUnit)
+		next := maps.Clone(stored)
 		if next == nil {
-			next = map[string]bool{}
+			next = map[string]string{}
 		}
-		next[unit] = on
-		return settings.SetTx(ctx, store, tx, ExtensionOverwritesEditedFields, next)
+		for key, value := range changes {
+			next[unit+"/"+key] = value
+		}
+		return settings.SetTx(ctx, store, tx, ExtensionSettingValues, next)
 	})
 }
 
@@ -263,7 +315,7 @@ func SetExtensionOverwritesEditedFields(ctx context.Context, store *settings.Sto
 func Definitions() []settings.Definition {
 	return []settings.Definition{
 		Timezone, BaseCurrency, AgentWindowNextHours, AgentWindowNextFrom, SMTPPasswordRef, LicenseTokenRef,
-		ExtensionOverwritesEditedFields,
+		ExtensionOverwritesEditedFields, ExtensionSettingValues,
 	}
 }
 

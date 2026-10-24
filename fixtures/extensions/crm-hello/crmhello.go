@@ -32,6 +32,9 @@ func New() extension.Extension {
 			{Name: "note_deal_change", Events: []string{"deal.updated"}, Handle: noteDealChange},
 		},
 		SystemReads: []extension.SystemRead{extension.SystemReadDeals},
+		Settings: []extension.Setting{
+			{Key: "greeting", Label: "Greeting", Hint: "A line the smoke fixture keeps.", Kind: extension.SettingText},
+		},
 	}
 }
 

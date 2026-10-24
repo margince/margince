@@ -56,8 +56,9 @@ An admin decides this for each extension. The default is to leave edited fields 
 |---|---|
 | Where | Settings, Extensions, the unit's card, "Overwrite fields a user edited" |
 | Read | `GET /v1/extensions/{name}/settings`, needs the `extension_access` read grant |
-| Change | `PUT /v1/extensions/{name}/settings` with `{"overwrites_edited_fields": true}`; admin only, a signed-in user only |
+| Change | `PUT /v1/extensions/{name}/settings` with `{"overwrites_edited_fields": true}`; admin only, a signed-in user only. Always send `overwrites_edited_fields`: the call saves it every time, so a body without it turns the switch off. |
 | Unknown unit name | 404 |
+| Settings a unit declares | The same two calls carry them in `declared`, for an admin only. See [add-an-extension.md](add-an-extension.md#declare-settings-an-admin-can-change). The switch and the declared values save in one transaction, so a refused value saves nothing. |
 | Stored as | one setting, `identity.extension_overwrites_edited_fields`, a map from unit name to true or false; a unit not in the map reads false |
 | Audit | each change writes an `update` entry on `installation_settings` with the old and new map |
 

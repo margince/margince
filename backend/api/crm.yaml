@@ -23813,7 +23813,9 @@ paths:
       x-agent-access: human-only
       summary: Set what the core does with a unit's feed. Admin only.
       description: |
-        Saves the governance settings of one composed unit. `overwrites_edited_fields` says
+        Saves the settings of one composed unit. `declared` changes the settings the unit
+        declares as data; a key the unit did not declare, or a value its kind cannot hold, is
+        a 422. `overwrites_edited_fields` says
         whether the unit's feed may overwrite a field of a company or deal that a user last
         edited. It is off until an admin turns it on, so the feed leaves such a field as it is
         and names it in `Result.Withheld`. The change is audited like any installation setting.
@@ -53604,6 +53606,31 @@ components:
             True when the unit's feed may overwrite a company or deal field that a user last
             edited. False, the default, makes the feed leave such a field as it is and name it
             in `Result.Withheld`.
+        declared:
+          type: array
+          description: >-
+            The settings the unit declares as data, with their saved values. Only an admin gets
+            them back, so the list is absent for anyone else. On a write, send the `key` and
+            `value` of each setting to change; a setting left out keeps its value.
+          items: { $ref: '#/components/schemas/DeclaredExtensionSetting' }
+
+    DeclaredExtensionSetting:
+      type: object
+      additionalProperties: false
+      required: [key, value]
+      description: One setting a unit declares, drawn by the core.
+      properties:
+        key: { type: string, description: "The setting's name inside the unit." }
+        label: { type: string, readOnly: true, description: "The name shown to the admin, as the unit wrote it." }
+        hint: { type: string, readOnly: true, description: "One line saying what the setting does." }
+        kind:
+          type: string
+          readOnly: true
+          enum: [switch, text]
+          description: The control the core draws.
+        value:
+          type: string
+          description: The saved value. A switch holds `true` or `false`; a text setting holds one short line.
 
     ComposedExtensionRoute:
       type: object

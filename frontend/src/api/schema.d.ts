@@ -1988,6 +1988,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/{id}/offered-values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What each source last offered for the company's fields, to show beside the value on the record.
+         * @description One entry per source and field, for the fields a source offered through its feed. The
+         *     offered value is kept whether the record took it or kept a user's edit, so the two
+         *     can be compared. Needs read on companies and row visibility of the company. An archived
+         *     company answers 404.
+         */
+        get: operations["listCompanyOfferedValues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}/logo": {
         parameters: {
             query?: never;
@@ -16200,7 +16226,9 @@ export interface paths {
         get: operations["getExtensionSettings"];
         /**
          * Set what the core does with a unit's feed. Admin only.
-         * @description Saves the governance settings of one composed unit. `overwrites_edited_fields` says
+         * @description Saves the settings of one composed unit. `declared` changes the settings the unit
+         *     declares as data; a key the unit did not declare, or a value its kind cannot hold, is
+         *     a 422. `overwrites_edited_fields` says
          *     whether the unit's feed may overwrite a field of a company or deal that a user last
          *     edited. It is off until an admin turns it on, so the feed leaves such a field as it is
          *     and names it in `Result.Withheld`. The change is audited like any installation setting.
@@ -27247,6 +27275,16 @@ export interface components {
         CompanyListResponse: {
             data: components["schemas"]["Company"][];
             page: components["schemas"]["PageInfo"];
+        };
+        /** @description The value one source last offered for one company field. */
+        CompanyOfferedValue: {
+            /** @description The source that offered it, as named in the company's outside id. */
+            source_system: string;
+            /** @enum {string} */
+            field: "legal_name" | "industry" | "description";
+            value: string;
+            /** Format: date-time */
+            offered_at: string;
         };
         /**
          * @description The account-tree roll-up over company.parent_company_id. A server read only,
@@ -39018,6 +39056,24 @@ export interface components {
         ExtensionSettings: {
             /** @description True when the unit's feed may overwrite a company or deal field that a user last edited. False, the default, makes the feed leave such a field as it is and name it in `Result.Withheld`. */
             overwrites_edited_fields: boolean;
+            /** @description The settings the unit declares as data, with their saved values. Only an admin gets them back, so the list is absent for anyone else. On a write, send the `key` and `value` of each setting to change; a setting left out keeps its value. */
+            declared?: components["schemas"]["DeclaredExtensionSetting"][];
+        };
+        /** @description One setting a unit declares, drawn by the core. */
+        DeclaredExtensionSetting: {
+            /** @description The setting's name inside the unit. */
+            key: string;
+            /** @description The name shown to the admin, as the unit wrote it. */
+            readonly label?: string;
+            /** @description One line saying what the setting does. */
+            readonly hint?: string;
+            /**
+             * @description The control the core draws.
+             * @enum {string}
+             */
+            readonly kind?: "switch" | "text";
+            /** @description The saved value. A switch holds `true` or `false`; a text setting holds one short line. */
+            value: string;
         };
         /** @description One published extension operation. */
         ComposedExtensionRoute: {
@@ -52018,6 +52074,32 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listCompanyOfferedValues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The offered values, ordered by source and field; empty when no source offered any. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyOfferedValue"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getCompanyLogo: {

@@ -431,6 +431,10 @@ type Extension struct {
 	// Entries are the unit's ways into its own screen from core screens: the
 	// Log activity form and the contact, company and deal headers. See Entry.
 	Entries []Entry
+
+	// Settings are the values an admin can change for the unit, drawn by the
+	// core on the unit's card of the Extensions page. See Setting.
+	Settings []Setting
 }
 
 // MigrationsDir is the one spelling of the subdirectory a unit's

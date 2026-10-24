@@ -34,6 +34,7 @@ var settingsDefineExceptions = map[string]string{
 	"capture.unit_apps":     keyedByUnit,
 
 	"identity.extension_overwrites_edited_fields": keyedByUnit,
+	"identity.extension_setting_values":           keyedByUnit,
 
 	"ai.price_sync_last_run":         productState,
 	"privacy.retention_floor_carry":  productState,
