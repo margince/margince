@@ -130,7 +130,7 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 		//
 		// Any share lifts a members-only hold. That hold only stops automatic
 		// promotion of colleagues' mail. An owner pressing Share is the
-		// person's own decision it waits for.
+		// human decision it waits for.
 		if share {
 			activityIDs := asActivityIDs(messages)
 			if err := activities.ClearMembersOnlyHoldTx(ctx, tx, activityIDs); err != nil {

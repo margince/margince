@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -32,10 +33,10 @@ type colleagueMailFixture struct {
 	crowdOfOutsiders, corrupt            ids.UUID
 }
 
-func colleagueMessage(key, from, to, cc string) []byte {
+func colleagueMessage(at time.Time, key, from, to, cc string) []byte {
 	return []byte(strings.Join([]string{
 		"From: " + from, "To: " + to, "Cc: " + cc, "Subject: " + key,
-		"Date: " + time.Now().UTC().AddDate(0, 0, -3).Format(time.RFC1123Z),
+		"Date: " + at.AddDate(0, 0, -3).Format(time.RFC1123Z),
 		"Message-ID: <" + key + "@members-task.test>",
 		"Content-Type: text/plain; charset=utf-8", "", "About " + key + ".", "",
 	}, "\r\n"))
@@ -72,7 +73,7 @@ func newColleagueMailFixture(t *testing.T) colleagueMailFixture {
 		"manual": {colleague, ""}, "outside": {"dana@client.test", ""},
 		"crowd": {colleague, team}, "corrupt": {colleague, ""}, "crowd-unstored": {colleague, team}, "crowd-of-outsiders": {colleague, crowd},
 	} {
-		captureMailVia(t, e, e.Rep1, "gmail", colleagueMessage(key, self, to[0], to[1]))
+		captureMailVia(t, e, e.Rep1, "gmail", colleagueMessage(clocktest.Now(t), key, self, to[0], to[1]))
 	}
 	f.colleagues, f.unstored = activityBySubject(t, e, "colleagues"), activityBySubject(t, e, "unstored")
 	f.shared, f.manual = activityBySubject(t, e, "shared"), activityBySubject(t, e, "manual")
@@ -156,7 +157,7 @@ func (f colleagueMailFixture) audienceWrites(t *testing.T, id ids.UUID) (audits,
 	return audits, events
 }
 
-func TestTheMembersOnlyTaskHoldsColleaguesMailOnceAndLeavesPeoplesDecisions(t *testing.T) {
+func TestTheMembersOnlyTaskHoldsColleaguesMailOnceAndLeavesHumanDecisions(t *testing.T) {
 	f := newColleagueMailFixture(t)
 	outsideBefore, _ := f.audience(t, f.outside)
 	type writes struct{ audits, events int }

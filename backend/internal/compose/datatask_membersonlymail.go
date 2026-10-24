@@ -48,13 +48,14 @@ func membersOnlyMailDataTask() datatask.Task {
 }
 
 // membersOnlyMailFrom is the open captured mail the hold may reach, joined to
-// its stored original the way the recipient-restore task reads one.
+// its stored original the way the recipient-restore task reads one. A row under
+// a statutory hold is never read; MembersOnlyHoldable repeats that under lock.
 const membersOnlyMailFrom = `FROM activity a
   LEFT JOIN LATERAL (
        SELECT rc.payload FROM raw_capture rc
         WHERE ` + storedMailOriginal + `
         LIMIT 1) original ON ` + storedMailProvider + `
- WHERE ` + activities.MembersOnlyHoldable
+ WHERE a.restricted_at IS NULL AND ` + activities.MembersOnlyHoldable
 
 type membersOnlyCandidate struct {
 	ID      ids.UUID
@@ -107,8 +108,8 @@ func holdMembersOnlyMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	return datatask.AdvanceUUID(in, scanned, held)
 }
 
-// originalParties is every address the original's headers name, Bcc
-// included, and false when the original cannot be read.
+// originalParties lists the addresses the original's headers name, Bcc
+// included, and answers false when the original cannot be read.
 func originalParties(payload []byte) ([]string, bool) {
 	raw, err := capture.DecodeStoredOriginal(payload)
 	if err != nil {

@@ -48,7 +48,7 @@ const (
 	// ReasonMembersOnly: every party to the mail is a member of the workspace.
 	// Colleagues writing to each other are not the workspace's to read, so no
 	// verdict clears it. The mailbox owner sharing the thread does: that is a
-	// person's own decision, not an automatic promotion.
+	// human decision, not an automatic promotion.
 	ReasonMembersOnly = "members_only"
 	// ReasonNoRecord: the message is filed under no record because something
 	// JUDGED its sender — a suppression rule, a settled verdict, a thread the

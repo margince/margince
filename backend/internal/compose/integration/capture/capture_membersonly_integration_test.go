@@ -6,7 +6,7 @@
 package capture
 
 // Mail between colleagues, through the production sink: whichever addresses
-// they used, the workspace does not read it unless a person shares it.
+// they used, the workspace does not read it unless a member shares it.
 
 import (
 	"context"
@@ -185,12 +185,23 @@ func TestAColleaguesReplyOnAReopenedThreadStaysHeldOnceItClears(t *testing.T) {
 	}
 }
 
-func TestAnOwnDomainAddressCountsAsAMemberAndAnArchivedSeatDoesNot(t *testing.T) {
+func TestAnOwnDomainAndADepartedSeatCountAsMembersAndAnArchivedSeatDoesNot(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	sharedBox := sentToColleague(env, t, colleagueLogin, "sales@myco.example", "members-ownbox@myco.example")
 	if _, reason := audienceOf(t, e, sharedBox); reason != activities.ReasonMembersOnly {
 		t.Fatalf("mail copied to an address on the workspace's own domain reads %q, want members_only", reason)
+	}
+
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep3)
+		return err
+	}); err != nil {
+		t.Fatalf("deactivating the colleague: %v", err)
+	}
+	departed := sentToColleague(env, t, colleagueLogin, "", "members-departed@myco.example")
+	if _, reason := audienceOf(t, e, departed); reason != activities.ReasonMembersOnly {
+		t.Fatalf("mail to a departed colleague's login reads %q, want members_only: it is still a company address", reason)
 	}
 
 	archiveSeat(t, e, e.Rep3)

@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// MemberAddresses is every address proven to belong to one of the workspace's
+// MemberAddresses holds the addresses proven to belong to the workspace's
 // members, read across all seats. Only proven addresses count. A declared
 // identity or a typed IMAP label is a claim. One seat claiming an outsider
 // would silently hold every colleague's mail with that outsider.

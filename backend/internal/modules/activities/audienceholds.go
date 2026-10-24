@@ -102,7 +102,7 @@ func ClearConfidentialityVerdictHoldTx(
 
 // ClearMembersOnlyHoldTx lifts the members-only hold from the messages a
 // mailbox owner just shared. The hold stops automatic promotion only; a
-// person sharing their own thread is the decision it waits for. Another
+// member sharing their own thread is the decision it waits for. Another
 // importing seat that still holds the message keeps it held through its own
 // import row, which the recompute after this reads.
 func ClearMembersOnlyHoldTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.ActivityID) error {

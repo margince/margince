@@ -157,18 +157,35 @@ const gmailAuthServer = "mx.google.com"
 // owner's provider attested as sent, the owner typed that address. So the
 // colleague whose exact login it is gets bound, as StampFurtherParticipants
 // binds a Cc on such a mail. They may then read their copy even when a
-// members_only hold keeps the workspace out. Idempotent, like insertParticipant.
+// members_only hold keeps the workspace out.
 func insertCounterpartyParticipant(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role, kind string,
 	counterparty connector.Counterparty, address, channelUserID string, owner ids.UUID,
 ) error {
-	attested := kind == kindEmail && counterparty.SentByOwner() && address != ""
-	_, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role)
-		SELECT $1, (SELECT u.id FROM app_user u
-		             WHERE $5 AND lower(u.email) = $2 AND u.id <> $6 AND u.archived_at IS NULL),
-		       NULL, NULLIF($2, ''), NULLIF($3, ''), $4
-		ON CONFLICT DO NOTHING`,
-		activityID, address, channelUserID, role, attested, owner)
-	return err
+	var bound *ids.UUID
+	if kind == kindEmail && counterparty.SentByOwner() && address != "" {
+		seat, err := recipientColleagueTx(ctx, tx, address, owner)
+		if err != nil {
+			return err
+		}
+		if !seat.IsZero() {
+			bound = &seat
+		}
+	}
+	return insertParticipant(ctx, tx, activityID, role, bound, nil, address, channelUserID)
+}
+
+// recipientColleagueTx is the seat, other than the owner, whose login is
+// address; zero when there is none. An archived seat does not count.
+func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner ids.UUID) (ids.UUID, error) {
+	var seat ids.UUID
+	err := tx.QueryRow(ctx, `SELECT id FROM app_user WHERE lower(email) = $1 AND id <> $2 AND archived_at IS NULL`,
+		address, owner).Scan(&seat)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.Nil, nil
+	}
+	if err != nil {
+		return ids.Nil, fmt.Errorf("capture: reading whether a recipient is a colleague: %w", err)
+	}
+	return seat, nil
 }
