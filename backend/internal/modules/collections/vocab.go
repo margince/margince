@@ -109,6 +109,9 @@ const domainFilterField = "domain"
 // function returning a constant. It reads colOwnerID for the same reason the
 // base-table owner leaf does: one spelling of the owner column.
 //
+// An archived team keeps its memberships but names nobody, the same rule
+// storekit.OwnershipClause applies to the `owner_team_id` parameter.
+//
 // The dial has a third position the vocabulary needs no leaf for: unassigned is
 // `owner_id` with `exists: false`. A reader looking for it here should not
 // conclude it is missing.
@@ -132,8 +135,9 @@ var ownerTeamField = storekit.Field{
 	Type:       storekit.FieldID,
 	References: storekit.RefTeam,
 	ReadsLink:  true,
-	Link: "EXISTS (SELECT 1 FROM team_membership tm WHERE tm.user_id = " + colOwnerID +
-		" AND %s)",
+	Link: "EXISTS (SELECT 1 FROM team_membership tm" +
+		" JOIN team tt ON tt.id = tm.team_id AND tt.archived_at IS NULL" +
+		" WHERE tm.user_id = " + colOwnerID + " AND %s)",
 }
 
 // customerLink is the EXISTS template a deal's filter reaches its customer
