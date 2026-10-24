@@ -22,7 +22,8 @@ export function mapLeadBody(values: Record<string, string>): CreateLeadRequest {
         ? undefined
         : values.owner_id?.trim() || undefined,
     status: "new",
-    source: values.source?.trim() || "manual",
+    origin: values.origin?.trim() || undefined,
+    origin_detail: values.origin_detail?.trim() || undefined,
   };
 }
 

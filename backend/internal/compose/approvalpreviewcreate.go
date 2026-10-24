@@ -83,7 +83,7 @@ func leadCreationRequest(approval crmcontracts.Approval) (contacts.CreateLeadInp
 		return contacts.CreateLeadInput{}, err
 	}
 	if tool {
-		req.Source = agents.ToolSource
+		req.Source = new(agents.ToolSource)
 	}
 	return contacts.LeadCreationInput(req)
 }
@@ -140,6 +140,7 @@ func (r approvalPreviewReader) leadCreationDetails(ctx context.Context, plan con
 		companyNameField: in.CompanyName, "candidate_company_key": in.CandidateCompanyKey, "linkedin_url": in.LinkedInURL,
 		previewFieldStatus: in.Status, bulkParamOwner: in.OwnerID, refColProject: in.ProjectID, companionContactField: in.FromContactID,
 		previewFieldSourceSystem: in.SourceSystem, "source_id": in.SourceID, fieldSource: in.Source, "score": plan.Score,
+		"origin": in.Origin, "origin_detail": in.OriginDetail,
 		previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID,
 	}
 	maps.Copy(fields, plan.CustomFields)

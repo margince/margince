@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 48,
-    "sites_best_current": 35,
+    "sites_best_current": 33,
     "sites_best_partial": 0,
-    "sites_best_stale": 11,
+    "sites_best_stale": 13,
     "sites_absent": 2,
     "scenarios": 256,
     "records": 354,
@@ -904,7 +904,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1767,7 +1767,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -8352,7 +8352,7 @@
       "ready": 33,
       "usable_with_care": 10,
       "not_reliable_yet": 1,
-      "recheck_pending": 11,
+      "recheck_pending": 13,
       "models": [
         {
           "binding": {
@@ -8361,9 +8361,9 @@
             "env": "cloud_frontier"
           },
           "sites": 41,
-          "sites_current": 31,
+          "sites_current": 29,
           "sites_partial": 0,
-          "sites_stale": 10,
+          "sites_stale": 12,
           "runs": 669,
           "passed": 661,
           "reliability": 0.9880418535127056,
@@ -8440,7 +8440,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "records": 2
@@ -8454,7 +8454,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 9,
           "passed": 9,
           "records": 2
@@ -10415,9 +10415,9 @@
         "env": "cloud_frontier"
       },
       "sites": 44,
-      "sites_current": 33,
+      "sites_current": 31,
       "sites_partial": 0,
-      "sites_stale": 11,
+      "sites_stale": 13,
       "runs": 828,
       "passed": 803,
       "reliability": 0.9698067632850241,
@@ -11120,17 +11120,8 @@
         "sales",
         "offer"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "morning_brief_a_retrieved_deal_is_not_the_queue",
@@ -11158,9 +11149,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -11173,7 +11164,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "morning_brief_a_retrieved_deal_is_not_the_queue",
+              "morning_brief_reads_its_queue_first",
+              "morning_brief_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {
@@ -11550,17 +11548,8 @@
         "sales",
         "offer"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "overnight_sweep_one_quiet_deal_is_not_the_book",
@@ -11588,9 +11577,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 9,
           "passed": 9,
@@ -11603,7 +11592,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction",
+          "stale_cause": {
+            "prompt_changed": [
+              "overnight_sweep_one_quiet_deal_is_not_the_book",
+              "overnight_sweep_reads_what_is_slipping_before_it_logs",
+              "overnight_sweep_retrieved_text_is_not_an_instruction"
+            ]
+          }
         },
         {
           "binding": {

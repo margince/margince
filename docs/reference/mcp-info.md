@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 9 |
 | Tool catalog | 124.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32787 |
+| Approx. wire tokens | 32797 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 19% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 31.8 KB | 25% | Yes, every step |
-| Input schemas | 59.5 KB | 47% | Yes, every step |
+| Input schemas | 59.6 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
 | **Description + input schema** | **91.3 KB** | **73%** | **the recurring cost** |
 
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1697 |
+| [`find_records`](#find_records) | Find records | yes |  | 1704 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -89,7 +89,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 1891 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 989 |
+| [`read_view`](#read_view) | Read a view | yes |  | 993 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 488 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
@@ -3142,6 +3142,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "occurred_before": {
+          "type": "string"
+        },
+        "origin": {
           "type": "string"
         },
         "owner_id": {
@@ -6402,6 +6405,7 @@ view refuses an argument it does not take and names the ones it does.
         "latest_technical_enrich",
         "latest_transcript_read",
         "lead_disqualify_reasons",
+        "lead_origins",
         "lead_settings",
         "lead_sources",
         "list_members",

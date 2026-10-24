@@ -186,7 +186,7 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 		" — the second UPDATE settles the attendees the invitation did not name, so an absent name is told apart from one never looked for",
 	"internal/modules/capture:activity_participant:participant.go:RecordAttendeeNames:UPDATE activity_participant ap …": "settles display_name on the rows StampFurtherParticipants above wrote, from the same decoded invitation — and it is here on that pairing rather than on the stamp's own evidence. The name and the row it belongs to are one fact the calendar connector read, so the alternative is a second spelling of this column set in the compose pass that calls it, which is exactly where the two would drift. Strictly additive: the predicate is display_name IS NULL, so a name already settled is never rewritten, and the only other value written is the empty string recording that this invitation named nobody" +
 		" — the UPDATE fills in the display name an invitation gave, where none was recorded",
-	"internal/modules/capture:lead:sinklead.go:Sink.upsertLead:INSERT INTO lead (full_name, email, company_name, title, source_system, source_id, source, captured_by, owner_id) …": "the connector sink materializes inbound leads in the same transaction as their raw_capture original",
+	"internal/modules/capture:lead:sinklead.go:Sink.upsertLead:INSERT INTO lead (full_name, email, company_name, title, source_system, source_id, source, captured_by, owner_id, …": "the connector sink materializes inbound leads in the same transaction as their raw_capture original",
 	// deals' archive purges the archived deal's collection memberships in
 	// the same transaction — a dangling list/tag row would resurrect the
 	// deal in segment queries.

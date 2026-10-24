@@ -10,7 +10,7 @@
 import { dealStatusLabel } from "../../components/dealdials";
 import { isMessageKey, type useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { sourceKeyLabel } from "../../lib/leadsources";
+import { writtenByLabel } from "../../lib/leadorigins";
 import { LEAD_STATUS_FILTER_OPTIONS } from "../leads/leadpresentation";
 import { isProjectPhase, PHASE_LABEL } from "../projects/projects.form";
 
@@ -84,9 +84,16 @@ export function valueLabel(
   field: string,
   value: string,
 ): string | null {
-  if (field === "source" && LEAD_ENTITIES.has(entity)) {
-    return sourceKeyLabel(value, undefined, t);
+  if (LEAD_ENTITIES.has(entity)) {
+    if (field === "source") return writtenByLabel(value, t);
+    if (field === "origin") return spoken(value);
   }
   const key = valueKey(entity, field, value);
   return key ? t(key) : null;
+}
+
+// A lead origin key as words: the report holds the key, not the list's label.
+function spoken(key: string): string {
+  const words = key.replace(/[_-]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }

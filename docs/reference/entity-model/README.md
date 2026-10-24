@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 323 |
-| Columns | 3817 |
+| Columns | 3822 |
 | Foreign keys | 530 |
 | Owning areas | 36 |
 
@@ -43,8 +43,8 @@ Ranked by how many foreign keys point at them.
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 43 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 65 | 38 |
-| [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 26 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 38 | 17 |
+| [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 25 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 40 | 17 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 10 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
@@ -103,12 +103,12 @@ erDiagram
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 43 |
 | [consent](consent.md) | 19 |
-| [contacts](contacts.md) | 43 |
+| [contacts](contacts.md) | 44 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
 | [customfields](customfields.md) | 1 |
 | [dealrooms](dealrooms.md) | 8 |
-| [deals](deals.md) | 23 |
+| [deals](deals.md) | 22 |
 | [finance](finance.md) | 5 |
 | [forecasting](forecasting.md) | 4 |
 | [identity](identity.md) | 22 |
@@ -262,11 +262,10 @@ erDiagram
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
 | [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
-| [`deal`](deals.md#deal) | deals | 43 | 26 |
+| [`deal`](deals.md#deal) | deals | 43 | 25 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 9 | 1 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 18 | 0 |
 | [`deal_document_hide`](activities.md#deal_document_hide) | activities | 4 | 0 |
-| [`deal_forecast_history`](deals.md#deal_forecast_history) | deals | 7 | 0 |
 | [`deal_move_dismissal`](compose.md#deal_move_dismissal) | compose | 4 | 0 |
 | [`deal_risk_day`](deals.md#deal_risk_day) | deals | 7 | 1 |
 | [`deal_risk_verdict`](deals.md#deal_risk_verdict) | deals | 2 | 0 |
@@ -314,9 +313,10 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
-| [`lead`](contacts.md#lead) | contacts | 38 | 17 |
+| [`lead`](contacts.md#lead) | contacts | 40 | 17 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 8 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
+| [`lead_origin`](contacts.md#lead_origin) | contacts | 10 | 1 |
 | [`lead_privacy_notice`](consent.md#lead_privacy_notice) | consent | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
 | [`lead_source`](contacts.md#lead_source) | contacts | 10 | 0 |

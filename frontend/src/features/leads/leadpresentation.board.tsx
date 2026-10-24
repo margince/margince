@@ -23,7 +23,6 @@ import {
   leadTerminalKey,
   leadWriteKeys,
 } from "../../lib/leadkeys";
-import { sourceLabelFor } from "../../lib/leadsources";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { openTaskCountLabel } from "./leadopentasks";
@@ -178,7 +177,7 @@ function LeadCard({
         {lead.title && <span>{lead.title}</span>}
       </span>
       <span>
-        <span>{sourceLabelFor(lead, undefined, t)}</span>
+        <span>{lead.origin_label ?? t("lead.originUnset")}</span>
         <span>
           {lead.next_task_subject ?? t("lead.noNextTask")}
           {lead.open_task_count

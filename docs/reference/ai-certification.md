@@ -47,14 +47,14 @@ A family rated **Yes** is ready for every feature we tested. One rated **Mostly*
 A [preset](../../config/presets/README.md) picks which AI model runs each feature, so the same
 feature can be ready under one preset and not under another.
 
-80 of the 224 grades below were measured on an older version of the product and
+82 of the 224 grades below were measured on an older version of the product and
 are waiting to be re-checked; each is marked below.
 
 | Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
 |---|---|---:|---:|---:|---:|---|
 | [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 17 | 4 | 8 | 2 | 17 of 31 features ready (11 re-checks pending) |
-| [`gemini_cloud`](#gemini_cloud) | global cloud | 21 | 7 | 0 | 3 | 21 of 31 features ready (6 re-checks pending) |
-| [`gemini_vertex_eu`](#gemini_vertex_eu) | EU-hosted cloud | 20 | 7 | 0 | 4 | 20 of 31 features ready (6 re-checks pending) |
+| [`gemini_cloud`](#gemini_cloud) | global cloud | 21 | 7 | 0 | 3 | 21 of 31 features ready (7 re-checks pending) |
+| [`gemini_vertex_eu`](#gemini_vertex_eu) | EU-hosted cloud | 20 | 7 | 0 | 4 | 20 of 31 features ready (7 re-checks pending) |
 | [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 8 | 5 | 15 | 3 | 8 of 31 features ready (12 re-checks pending) |
 | [`openrouter_cloud`](#openrouter_cloud) | global cloud | 14 | 7 | 7 | 3 | 14 of 31 features ready (10 re-checks pending) |
 | [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 12 | 2 | 14 | 3 | 12 of 31 features ready (10 re-checks pending) |
@@ -169,11 +169,11 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `gemini_cloud`
 
-Your data goes to: global cloud. 21 of 31 features ready (6 re-checks pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
+Your data goes to: global cloud. 21 of 31 features ready (7 re-checks pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready · re-check pending</sub> | Right every time (18 of 18) |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready · re-check pending</sub> | Right every time (18 of 18) · re-check pending |
 | Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (12 of 12) |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (30 of 30) |
@@ -221,7 +221,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
-| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending |
 | `brief_ranking` | `premium` | `gemini-3.6-flash` | ✅ Ready | current |
 | `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
@@ -256,11 +256,11 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### `gemini_vertex_eu`
 
-Your data goes to: EU-hosted cloud. 20 of 31 features ready (6 re-checks pending). Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
+Your data goes to: EU-hosted cloud. 20 of 31 features ready (7 re-checks pending). Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready · re-check pending, measured on `gemini`</sub> | Right every time (18 of 18) |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready · re-check pending, measured on `gemini`</sub> | Right every time (18 of 18) · re-check pending |
 | Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.6-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.6-flash · premium → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12) |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (30 of 30) |
@@ -308,7 +308,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
-| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
+| `agent_loop` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | re-check pending; measured on `gemini` |
 | `brief_ranking` | `premium` | `gemini-3.6-flash` | ✅ Ready | current; measured on `gemini` |
 | `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
@@ -1013,7 +1013,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 🟡 Mostly: Ready for 33 of the 44 features we tested; 10 more work if someone looks over the result; 1 not reliable yet.
 
-11 of these results were measured on an older version of the product and are re-check pending.
+13 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -1027,8 +1027,8 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | Feature | Best model in the family | Grade | Right in |
 |---|---|---|---|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 12 of 12 tries |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
 | [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 21 of 21 tries |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 42 of 42 tries |
@@ -1210,9 +1210,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | | |
 |---|---:|
 | Shipped invocation sites | 48 |
-| … best state `current` | 35 |
+| … best state `current` | 33 |
 | … best state `partial` | 0 |
-| … best state `stale` | 11 |
+| … best state `stale` | 13 |
 | … `absent` on every binding | 2 |
 | Scenarios in the corpus | 256 |
 | Committed records | 354 |
@@ -1220,12 +1220,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 #### Why the stale records went stale
 
-Counted per record (one task and binding pair) over the 132 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 220 `stale_cause` entries are these 132 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
+Counted per record (one task and binding pair) over the 133 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 222 `stale_cause` entries are these 133 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
 | the case | 12 | The test case changed. Re-certify: the old result measured a different case. |
-| **the prompt this build sends** | 132 | The product changed. The band measured the old prompt, so it says nothing about the new one. Re-certify: a drop then is the cost of that change and not the model. |
+| **the prompt this build sends** | 133 | The product changed. The band measured the old prompt, so it says nothing about the new one. Re-certify: a drop then is the cost of that change and not the model. |
 | how a run is graded | 99 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
@@ -1285,8 +1285,8 @@ Which model to run each site on, and what that choice rests on.
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 13 |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | - | - | - | `stale` | 3 | 13 |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | - | - | - | `stale` | 3 | 13 |
 | [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 14 |
 | [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 10 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 14 | 8 |
@@ -1358,7 +1358,7 @@ record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 44 | 33 | 0 | 11 | 828 | 803 | 0.97 | 24754ms | 25 | 16 | 3 |
+| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 44 | 31 | 0 | 13 | 828 | 803 | 0.97 | 24754ms | 25 | 16 | 3 |
 | `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 1 | 0 | 5 | 216 | 207 | 0.96 | 14416ms | 3 | 3 | 0 |
 | `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 40 | 24 | 0 | 16 | 468 | 468 | 1.00 | 16000ms | 31 | 8 | 1 |
 | `gemini` | `gemini-3.5-flash-lite` | `cloud_frontier` | 40 | 26 | 0 | 14 | 684 | 661 | 0.97 | 4403ms | 22 | 14 | 4 |
@@ -1400,6 +1400,7 @@ model, real network).
 
 | Site | Binding | Why it is stale |
 |---|---|---|
+| `agent_loop/morning_brief` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
@@ -1412,6 +1413,7 @@ model, real network).
 | `agent_loop/morning_brief` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
 | `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
 | `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
 | `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
@@ -1694,7 +1696,7 @@ Records (13):
 Certified without the company context production prepends (`identity`, `positioning`, `sales`, `offer`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>agent_loop/morning_brief</code>: 3 scenario(s), 13 record(s), best state current</summary>
+<summary><code>agent_loop/morning_brief</code>: 3 scenario(s), 13 record(s), best state stale</summary>
 
 ##### `agent_loop/morning_brief`
 
@@ -1712,7 +1714,7 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1280ms | 1552ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1280ms | 1552ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1167ms | 2194ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1885ms | 2807ms | 9 | 0 | 0 | 0 |
@@ -1729,7 +1731,7 @@ Records (13):
 </details>
 
 <details>
-<summary><code>agent_loop/overnight_at_risk_sweep</code>: 3 scenario(s), 13 record(s), best state current</summary>
+<summary><code>agent_loop/overnight_at_risk_sweep</code>: 3 scenario(s), 13 record(s), best state stale</summary>
 
 ##### `agent_loop/overnight_at_risk_sweep`
 
@@ -1747,7 +1749,7 @@ Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1280ms | 1552ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1280ms | 1552ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1167ms | 2194ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1885ms | 2807ms | 9 | 0 | 0 | 0 |

@@ -264,7 +264,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
-		req.Source = in.Source
+		req.Source = &in.Source
 		mapped, err := LeadCreationInput(req)
 		if err != nil {
 			return datasource.EntityRef{}, err

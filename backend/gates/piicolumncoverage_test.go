@@ -225,6 +225,9 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"lead": {
 		"captured_by",
+		// A key of the closed lead_origin list, which names no one. The note
+		// beside it, origin_detail, is free text and the redaction clears it.
+		"origin",
 		"source",
 		"source_id",
 		"source_system",

@@ -48,7 +48,7 @@ Things for the whole company in Margince each have one settings page.
 ### Which settings page do I need for sales and data?
 Sales and data settings in Margince each have one page.
 - Change deal stages: **Pipelines**.
-- Lead sources, reasons to drop a lead, and the first-reply target: **Lead handling**.
+- Lead origins, reasons to drop a lead, and the first-reply target: **Lead handling**.
 - Where a deal came from: **Acquisition sources**.
 - Won and lost questions: **Outcome reviews**.
 - Add a custom field: **Fields**. Rename a tag on every record: **Tags**.
@@ -200,10 +200,10 @@ The Sales group in Settings has one page per subject. There are the fields a rec
 - **Stage automation**: the record of how each stage move has gone, before
   Margince moves deals by itself. See
   [The pipeline](the-pipeline.md#stage-automation-the-evidence-before-trusting-a-move).
-- **Lead handling**: lead sources, reasons to drop a lead, and the first-reply
-  target, which is off by default.
+- **Lead handling**: lead origins, reasons to drop a lead, and the first-reply
+  target, which is off by default. Origins add or take away score points.
 - **Acquisition sources**: the business channels a deal can come from. Lead
-  sources, which record how a record came into Margince, are separate.
+  origins, which record where a lead came from, are separate.
 - **Outcome reviews**: questions a seller answers when a deal is won or lost.
   There is one set for won and one for lost.
 - **Responsibility roles**: what a colleague or team looks after on a

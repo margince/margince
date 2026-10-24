@@ -37,7 +37,14 @@ type CreateLeadInput struct {
 	ProjectID           *ids.ProjectID
 	SourceSystem        *string
 	SourceID            *string
-	Source              string
+	// Source is how the row reached Margince; it never scores.
+	Source string
+	// Origin is where the lead came from: a lead_origin key. OriginHint is
+	// the raw wording only an importer sets; it resolves to a key, or stays in
+	// OriginDetail with Origin left nil (admitLeadOrigin).
+	Origin       *string
+	OriginDetail *string
+	OriginHint   string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
@@ -159,13 +166,20 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	if err := admitLeadCreate(ctx, tx, in); err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
+	in, err = admitLeadOrigin(ctx, tx, in)
+	if err != nil {
+		return crmcontracts.Lead{}, false, err
+	}
 	id, err := insertLeadRow(ctx, tx, in, active, by)
 	if err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
 
 	auditID, err := storekit.Audit(ctx, tx, "create", "lead", id.UUID, nil,
-		map[string]any{leadEmailColumn: in.Email, leadPhoneColumn: in.Phone, leadCompanyColumn: in.CompanyName})
+		map[string]any{
+			leadEmailColumn: in.Email, leadPhoneColumn: in.Phone, leadCompanyColumn: in.CompanyName,
+			leadOriginField: in.Origin, leadOriginDetailField: in.OriginDetail,
+		})
 	if err != nil {
 		return crmcontracts.Lead{}, false, fmt.Errorf("audit lead create: %w", err)
 	}
@@ -181,9 +195,6 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 
 // insertLeadRow writes the lead row itself and answers with its id.
 func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []fieldcatalog.Column, by string) (ids.LeadID, error) {
-	if err := ensureHumanSourceAllowed(ctx, tx, in.Source); err != nil {
-		return ids.LeadID{}, err
-	}
 	fit, err := initialLeadScore(ctx, tx, in)
 	if err != nil {
 		return ids.LeadID{}, err
@@ -195,7 +206,7 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
 		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
-		in.FromContactID, in.Phone,
+		in.FromContactID, in.Phone, in.Origin, in.OriginDetail,
 	})
 	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
 	if err != nil {
@@ -204,8 +215,8 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
-		                   from_contact_id, phone`+authorCols+cfCols+`)
-		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17`+authorHolders+cfHolders+`)`,
+		                   from_contact_id, phone, origin, origin_detail`+authorCols+cfCols+`)
+		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19`+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Race behind the pre-checks: the constraint name tells an
@@ -404,9 +415,11 @@ type ListLeadsInput struct {
 	// behind them — and reports the shortfall as "none owed" rather than as a
 	// page that was cut.
 	OwedAReply *bool
-	// Source narrows to one capture source (inbound, webform, referral,
-	// import, crawl, manual, ...): the exact stored value, no prefix match.
+	// Source narrows to how the row was written (import, crawl, manual,
+	// `connector:<name>`).
 	Source *string
+	// Origin narrows to one origin key, or `unset` for the unclassified.
+	Origin *string
 	// TagIDs narrows to the leads carrying these tags, combined by TagMode.
 	TagIDs  []ids.UUID
 	TagMode storekit.TagMode

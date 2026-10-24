@@ -132,7 +132,6 @@ internal/compose/integration/daily_flows_bench_test.go 4
 internal/compose/integration/daily_seats_bench_test.go 1
 internal/compose/integration/daily_seed_bench_test.go 2
 internal/compose/integration/dealfigures_integration_test.go 2
-internal/compose/integration/dealforecasthistory_integration_test.go 1
 internal/compose/integration/dealstatus_facts_integration_test.go 1
 internal/compose/integration/dealsuggestion_http_integration_test.go 1
 internal/compose/integration/decaylane_integration_test.go 4

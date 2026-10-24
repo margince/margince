@@ -126,6 +126,13 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 				return s
 			},
 		},
+		{
+			ruleType: TypeStageExitUnmet,
+			fires:    func(s Subject) Subject { s.UnmetExitCriteria = 1; return s },
+			// A stage nobody wrote criteria for has none to miss, and that is
+			// every stage until an installation configures one.
+			quiet: func(s Subject) Subject { s.UnmetExitCriteria = 0; return s },
+		},
 	} {
 		t.Run(tc.ruleType, func(t *testing.T) {
 			t.Parallel()

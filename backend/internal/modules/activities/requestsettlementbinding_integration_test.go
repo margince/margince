@@ -7,11 +7,14 @@ package activities
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -218,27 +221,95 @@ func TestALaterVerdictNeverReopensHumanOrAgedWork(t *testing.T) {
 	}
 }
 
-// awaitLockWait returns once some session waits on a row lock.
-func awaitLockWait(t *testing.T, e *loadEnv) {
+// holdOpen runs write in a transaction kept open until release, and returns
+// once write ran, with that transaction's backend. Cleanup releases it too.
+func holdOpen(t *testing.T, e *loadEnv, as func(*loadEnv) context.Context, write func(context.Context, pgx.Tx) error) (holder int32, release func() error) {
 	t.Helper()
-	awaitLockWaiters(t, e, 1)
+	ctx := as(e)
+	held, let, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+	go func() {
+		done <- storeKnowing(e).tx(ctx, func(tx pgx.Tx) error {
+			if err := write(ctx, tx); err != nil {
+				return err
+			}
+			if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holder); err != nil {
+				return err
+			}
+			close(held)
+			<-let
+			return nil
+		})
+	}()
+	select {
+	case <-held:
+	case err := <-done:
+		t.Fatalf("the held transaction ended before it held anything: %v", err)
+	}
+	var once sync.Once
+	var result error
+	release = func() error {
+		once.Do(func() {
+			close(let)
+			result = <-done
+		})
+		return result
+	}
+	t.Cleanup(func() {
+		if err := release(); err != nil {
+			t.Logf("the held transaction ended with %v", err)
+		}
+	})
+	return holder, release
 }
 
-// awaitLockWaiters returns once at least n sessions wait on a lock.
-func awaitLockWaiters(t *testing.T, e *loadEnv, n int) {
+// startRacer runs write on its own goroutine, to queue behind a held
+// transaction. Cleanup releases the hold before it waits, so a failure leaks nothing.
+func startRacer(t *testing.T, release func() error, write func() error) (result <-chan error, returned <-chan struct{}) {
 	t.Helper()
-	// Bounded by tries, each a short database-side pause, not by the wall clock.
-	for range 400 {
-		var waiting int
-		if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM pg_stat_activity, pg_sleep(0.05)
-			WHERE wait_event_type = 'Lock' AND datname = current_database()`).Scan(&waiting); err != nil {
-			t.Fatal(err)
+	out, done := make(chan error, 1), make(chan struct{})
+	go func() {
+		defer close(done)
+		out <- write()
+	}()
+	t.Cleanup(func() {
+		if err := release(); err != nil {
+			t.Logf("the held transaction ended with %v", err)
 		}
-		if waiting >= n {
-			return
-		}
+		<-done
+	})
+	return out, done
+}
+
+// verdictBehind starts the verdict until one is seen queued behind holder. A
+// verdict gives up as busy after settlementLockWait, so a missed one starts again.
+func verdictBehind(t *testing.T, e *loadEnv, holder int32, release func() error, n int, in RequestSettlementInput) <-chan error {
+	t.Helper()
+	var result <-chan error
+	var returned <-chan struct{}
+	start := func() {
+		result, returned = startRacer(t, release, func() error { return storeKnowing(e).SettleRequest(asSettler(e), in) })
 	}
-	t.Fatalf("fewer than %d sessions ever waited on a lock", n)
+	start()
+	// No racer channel: look restarts a verdict that returned, which is no failure.
+	testdb.WaitForContention(t, nil, "",
+		fmt.Sprintf("no verdict waited behind the held transaction within %s", testdb.ProbeBudget),
+		func(ctx context.Context) (bool, error) {
+			select {
+			case <-returned:
+				if err := <-result; err != nil {
+					return false, err
+				}
+				if settlementRows(t, e, in.Request.RequestID) != 0 {
+					t.Fatal("a verdict committed without waiting behind the held transaction")
+				}
+				start()
+				return false, nil
+			default:
+			}
+			queued, err := testdb.QueuedBehind(ctx, e.owner, holder)
+			return queued >= n, err
+		})
+	return result
 }
 
 // An answer edit still uncommitted at the verdict's final check makes the
@@ -251,30 +322,17 @@ func TestAVerdictWaitsForAnAnswerEditInFlightAndDropsItself(t *testing.T) {
 			replyTo(t, e, request, "Here is the report.", requestInstant.Add(time.Hour))
 			candidate := repliedIDs(t, e, bindingReadAt)[request]
 			answer := newestReplyID(t, e, request)
-			held, release, edited := make(chan struct{}), make(chan struct{}), make(chan error, 1)
-			go func() {
-				edited <- storeKnowing(e).tx(asEditor(e), func(tx pgx.Tx) error {
-					body := "Edited: the report is not attached."
-					if _, err := updateActivityInTx(asEditor(e), tx, ids.From[ids.ActivityKind](answer), UpdateActivityInput{Body: &body}); err != nil {
-						return err
-					}
-					close(held)
-					<-release
-					return nil
-				})
-			}()
-			<-held
-			settled := make(chan error, 1)
-			go func() {
-				in := RequestSettlementInput{Request: candidate, Verdict: verdict, Confidence: 0.9, DecidedBy: "test-model"}
-				if verdict == RequestStillOwed {
-					in.Remaining = "Attach the report"
-				}
-				settled <- storeKnowing(e).SettleRequest(asSettler(e), in)
-			}()
-			awaitLockWait(t, e)
-			close(release)
-			if err := <-edited; err != nil {
+			holder, release := holdOpen(t, e, asEditor, func(ctx context.Context, tx pgx.Tx) error {
+				body := "Edited: the report is not attached."
+				_, err := updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](answer), UpdateActivityInput{Body: &body})
+				return err
+			})
+			in := RequestSettlementInput{Request: candidate, Verdict: verdict, Confidence: 0.9, DecidedBy: "test-model"}
+			if verdict == RequestStillOwed {
+				in.Remaining = "Attach the report"
+			}
+			settled := verdictBehind(t, e, holder, release, 1, in)
+			if err := release(); err != nil {
 				t.Fatal(err)
 			}
 			if err := <-settled; err != nil {
@@ -332,33 +390,20 @@ func TestAVerdictWaitsForAReplyBeingWrittenAndDropsItself(t *testing.T) {
 			if err := e.owner.QueryRow(e.as(), `SELECT thread_key FROM activity WHERE id = $1`, request).Scan(&key); err != nil {
 				t.Fatal(err)
 			}
-			held, release, written := make(chan struct{}), make(chan struct{}), make(chan error, 1)
-			go func() {
-				written <- storeKnowing(e).tx(asClassifier(e), func(tx pgx.Tx) error {
-					subject, direction, body, at := "Re: request", "outbound", "One more part.", requestInstant.Add(2*time.Hour)
-					if _, _, err := storeKnowing(e).LogActivityTx(asClassifier(e), tx, LogActivityInput{
-						Kind: "email", Subject: &subject, Body: &body, Direction: &direction, ThreadKey: key, Source: "test",
-						OccurredAt: &at, CounterpartyEmail: requestCounterparty, CounterpartyOutboundAttested: true,
-					}); err != nil {
-						return err
-					}
-					close(held)
-					<-release
-					return nil
+			holder, release := holdOpen(t, e, asClassifier, func(ctx context.Context, tx pgx.Tx) error {
+				subject, direction, body, at := "Re: request", "outbound", "One more part.", requestInstant.Add(2*time.Hour)
+				_, _, err := storeKnowing(e).LogActivityTx(ctx, tx, LogActivityInput{
+					Kind: "email", Subject: &subject, Body: &body, Direction: &direction, ThreadKey: key, Source: "test",
+					OccurredAt: &at, CounterpartyEmail: requestCounterparty, CounterpartyOutboundAttested: true,
 				})
-			}()
-			<-held
-			settled := make(chan error, 1)
-			go func() {
-				in := RequestSettlementInput{Request: candidate, Verdict: verdict, Confidence: 0.9, DecidedBy: "test-model"}
-				if verdict == RequestStillOwed {
-					in.Remaining = "Send the rest"
-				}
-				settled <- storeKnowing(e).SettleRequest(asSettler(e), in)
-			}()
-			awaitLockWait(t, e)
-			close(release)
-			if err := <-written; err != nil {
+				return err
+			})
+			in := RequestSettlementInput{Request: candidate, Verdict: verdict, Confidence: 0.9, DecidedBy: "test-model"}
+			if verdict == RequestStillOwed {
+				in.Remaining = "Send the rest"
+			}
+			settled := verdictBehind(t, e, holder, release, 1, in)
+			if err := release(); err != nil {
 				t.Fatal(err)
 			}
 			if err := <-settled; err != nil {
@@ -377,39 +422,21 @@ func TestAReplyWrittenAfterTheFinalCheckWaitsForTheVerdict(t *testing.T) {
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Reply after the check", "commitment", OwedVerdictAsksUs)
 	replyTo(t, e, request, "Here is the report.", requestInstant.Add(time.Hour))
-	held, release, checked := make(chan struct{}), make(chan struct{}), make(chan error, 1)
-	go func() {
-		checked <- storeKnowing(e).tx(asSettler(e), func(tx pgx.Tx) error {
-			if _, err := holdSettlementEvidenceTx(asSettler(e), tx, RepliedRequest{RequestID: request, AsOf: bindingReadAt}); err != nil {
-				return err
-			}
-			close(held)
-			<-release
-			return nil
-		})
-	}()
-	<-held
+	holder, release := holdVerdict(t, e, request)
 	var key string
 	if err := e.owner.QueryRow(e.as(), `SELECT thread_key FROM activity WHERE id = $1`, request).Scan(&key); err != nil {
 		t.Fatal(err)
 	}
-	written := make(chan error, 1)
-	go func() {
+	written, returned := startRacer(t, release, func() error {
 		subject, direction, body, at := "Re: request", "outbound", "One more part.", requestInstant.Add(2*time.Hour)
 		_, _, err := storeKnowing(e).LogActivity(asClassifier(e), LogActivityInput{
 			Kind: "email", Subject: &subject, Body: &body, Direction: &direction, ThreadKey: key, Source: "test",
 			OccurredAt: &at, CounterpartyEmail: requestCounterparty, CounterpartyOutboundAttested: true,
 		})
-		written <- err
-	}()
-	awaitLockWait(t, e)
-	select {
-	case <-written:
-		t.Fatal("the reply was written while the verdict held its evidence")
-	default:
-	}
-	close(release)
-	if err := <-checked; err != nil {
+		return err
+	})
+	testdb.AwaitQueuedBehind(t, e.owner, holder, 1, returned, "the write")
+	if err := release(); err != nil {
 		t.Fatal(err)
 	}
 	if err := <-written; err != nil {

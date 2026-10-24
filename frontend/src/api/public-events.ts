@@ -787,7 +787,7 @@ export interface components {
         };
         /** @description Payload for lead.disqualified — a lead was disqualified. Carries no data. */
         PublicEventLeadDisqualified: Record<string, never>;
-        /** @description Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale. */
+        /** @description Deprecated: the lead source list no longer feeds the score, and a separate breaking change retires it. Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale. */
         PublicEventLeadSourceChanged: {
             /** Format: uuid */
             source_id: string;

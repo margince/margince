@@ -47,6 +47,16 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 		        4200000, 'EUR', now()::date + 30, true, 'commit')`,
 		pipeline, open, e.Rep1)
 
+	// A required criterion the stage declares and nothing has shown met, which
+	// is what UnmetExitCriteria counts. Unmet by ABSENCE of evidence here; the
+	// refuted and not-met cases are asserted in the rule's own suite.
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO stage_exit_criterion (stage_id, key, label, kind, "position")
+		VALUES ($1, 'buyer_confirmed', 'The buyer confirmed', 'buyer_confirmed', 0)`,
+		open); err != nil {
+		t.Fatalf("seeding a stage exit criterion: %v", err)
+	}
+
 	inbound := integration.SeedIDRow(t, owner, `
 		INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
 		VALUES ($1, 'email', 'they wrote', now() - interval '2 days', 'inbound', 'manual', 'test')`)

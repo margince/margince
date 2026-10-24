@@ -80,6 +80,7 @@ var tableOwners = map[string]string{
 	"lead_score_history":     "internal/modules/contacts",
 	"lead_manual_signal":     "internal/modules/contacts",
 	"lead_source":            "internal/modules/contacts",
+	"lead_origin":            "internal/modules/contacts",
 	"lead_disqualify_reason": "internal/modules/contacts",
 	// A prospect passed from an SDR to an account executive: the row carrying
 	// its current state, the append-only transitions behind it, and the
@@ -145,7 +146,6 @@ var tableOwners = map[string]string{
 	"deal_room_engagement":  "internal/modules/dealrooms",
 	// Kept apart from deal_stage_history rather than folded into it: readers
 	// outside this module count that table's rows as stage movements.
-	"deal_forecast_history": "internal/modules/deals",
 	// The nightly close-date pass and the eligible set it froze at the start of
 	// one. Deals-owned rather than folded into assurance's run tables: a module
 	// never writes a sibling's, and the two sweeps answer to different rules.

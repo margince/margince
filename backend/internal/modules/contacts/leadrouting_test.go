@@ -86,24 +86,24 @@ func TestChooseOwnerRuleOutranksRoundRobinButNeverTheCap(t *testing.T) {
 	cfg := RoutingConfig{
 		Owners:      owners,
 		CapPerOwner: 1,
-		Rules:       []RoutingRule{{Field: "source", Equals: "webinar", OwnerID: ruleOwner}},
+		Rules:       []RoutingRule{{Field: "origin", Equals: "webinar", OwnerID: ruleOwner}},
 	}
 
 	// The matching rule wins over the emptier pool (match is
 	// case-insensitive: sources are free text).
-	chosen, reason, ok := chooseOwner(cfg, leadRoutingFacts{Source: "Webinar"}, map[ids.UserID]int{}, active)
-	if !ok || chosen != ruleOwner || reason != "rule:0:source" {
-		t.Fatalf("webinar lead routed to %v via %q, want the rule owner via rule:0:source", chosen, reason)
+	chosen, reason, ok := chooseOwner(cfg, leadRoutingFacts{Origin: "Webinar"}, map[ids.UserID]int{}, active)
+	if !ok || chosen != ruleOwner || reason != "rule:0:origin" {
+		t.Fatalf("webinar lead routed to %v via %q, want the rule owner via rule:0:origin", chosen, reason)
 	}
 
 	// A non-matching lead ignores the rule.
-	chosen, reason, ok = chooseOwner(cfg, leadRoutingFacts{Source: "cold_outbound"}, map[ids.UserID]int{}, active)
+	chosen, reason, ok = chooseOwner(cfg, leadRoutingFacts{Origin: "cold_outbound"}, map[ids.UserID]int{}, active)
 	if !ok || chosen != owners[0] || reason != "round_robin" {
 		t.Fatalf("non-matching lead routed to %v via %q, want pool[0] via round_robin", chosen, reason)
 	}
 
 	// The rule owner at cap: the cap wins, the lead falls to the pool.
-	chosen, reason, ok = chooseOwner(cfg, leadRoutingFacts{Source: "webinar"}, map[ids.UserID]int{ruleOwner: 1}, active)
+	chosen, reason, ok = chooseOwner(cfg, leadRoutingFacts{Origin: "webinar"}, map[ids.UserID]int{ruleOwner: 1}, active)
 	if !ok || chosen != owners[0] || reason != "round_robin" {
 		t.Fatalf("capped rule owner must fall through to the pool; got %v via %q", chosen, reason)
 	}
@@ -180,7 +180,7 @@ func TestParseRoutingConfigRoundTripsAndRejectsMalformedParams(t *testing.T) {
 	params, err := json.Marshal(map[string]any{
 		"owners":        []string{owner.String()},
 		"cap_per_owner": 3,
-		"rules":         []map[string]any{{"field": "source", "equals": "webinar", "owner_id": owner.String()}},
+		"rules":         []map[string]any{{"field": "origin", "equals": "webinar", "owner_id": owner.String()}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -210,7 +210,7 @@ func TestParseRoutingConfigRoundTripsAndRejectsMalformedParams(t *testing.T) {
 // accessor handles but the set omits would let a config through that the
 // editor 422s. This binds the switch to the declared vocabulary.
 func TestFieldResolvesExactlyRoutableLeadFields(t *testing.T) {
-	facts := leadRoutingFacts{Source: "s", CompanyName: "c", CandidateCompanyKey: "k"}
+	facts := leadRoutingFacts{Origin: "o", CompanyName: "c", CandidateCompanyKey: "k"}
 	for _, name := range RoutableLeadFields {
 		if facts.field(name) == "" {
 			t.Errorf("routable field %q is not resolved by leadRoutingFacts.field", name)
