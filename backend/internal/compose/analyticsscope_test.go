@@ -261,14 +261,30 @@ func TestAssertingAboutAPopulationKeepsTheTierRules(t *testing.T) {
 		resolved  ResolvedScope
 		wantErr   error
 	}{
-		{"a rep may not assert about the workspace", actorWithScope(principal.RowScopeOwn),
-			RequestedScope{Kind: ScopeKindWorkspace}, ResolvedScope{Kind: ScopeKindWorkspace}, apperrors.ErrPermissionDenied},
-		{"a rep may not assert about a team", actorWithScope(principal.RowScopeOwn),
-			RequestedScope{Kind: ScopeKindTeam, ID: &foreign}, ResolvedScope{Kind: ScopeKindTeam, ID: &foreign}, apperrors.ErrNotFound},
-		{"a manager may not assert about the workspace", actorWithScope(principal.RowScopeTeam, ids.NewV7()),
-			RequestedScope{Kind: ScopeKindWorkspace}, ResolvedScope{Kind: ScopeKindWorkspace}, apperrors.ErrPermissionDenied},
-		{"a manager may not assert about a team they do not hold", actorWithScope(principal.RowScopeTeam, ids.NewV7()),
-			RequestedScope{Kind: ScopeKindTeam, ID: &foreign}, ResolvedScope{Kind: ScopeKindTeam, ID: &foreign}, apperrors.ErrNotFound},
+		{
+			"a rep may not assert about the workspace", actorWithScope(principal.RowScopeOwn),
+			RequestedScope{Kind: ScopeKindWorkspace},
+			ResolvedScope{Kind: ScopeKindWorkspace},
+			apperrors.ErrPermissionDenied,
+		},
+		{
+			"a rep may not assert about a team", actorWithScope(principal.RowScopeOwn),
+			RequestedScope{Kind: ScopeKindTeam, ID: &foreign},
+			ResolvedScope{Kind: ScopeKindTeam, ID: &foreign},
+			apperrors.ErrNotFound,
+		},
+		{
+			"a manager may not assert about the workspace", actorWithScope(principal.RowScopeTeam, ids.NewV7()),
+			RequestedScope{Kind: ScopeKindWorkspace},
+			ResolvedScope{Kind: ScopeKindWorkspace},
+			apperrors.ErrPermissionDenied,
+		},
+		{
+			"a manager may not assert about a team they do not hold", actorWithScope(principal.RowScopeTeam, ids.NewV7()),
+			RequestedScope{Kind: ScopeKindTeam, ID: &foreign},
+			ResolvedScope{Kind: ScopeKindTeam, ID: &foreign},
+			apperrors.ErrNotFound,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

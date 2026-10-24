@@ -155,10 +155,12 @@ func allowedScopesFor(
 	out := []crmcontracts.AnalyticsScope{}
 	if lens == principal.RowScopeTeam && len(p.TeamIDs) > 0 {
 		out = append(out, crmcontracts.AnalyticsScope{
-			Kind: crmcontracts.AnalyticsScopeKindManagedTeams, Label: managedTeamsLabel})
+			Kind: crmcontracts.AnalyticsScopeKindManagedTeams, Label: managedTeamsLabel,
+		})
 	}
 	out = append(out, crmcontracts.AnalyticsScope{
-		Kind: crmcontracts.AnalyticsScopeKindWorkspace, Label: workspaceLabel})
+		Kind: crmcontracts.AnalyticsScopeKindWorkspace, Label: workspaceLabel,
+	})
 	teams, err := liveTeamsOf(ctx, tx, nil)
 	if err != nil {
 		return nil, err

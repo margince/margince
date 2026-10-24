@@ -171,7 +171,7 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 // about deals.
 func reportScopeHoldsDeals(ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope) (*bool, error) {
 	if spec.entity != datasource.EntityDeal {
-		return nil, nil
+		return nil, nil //nolint:nilnil // nil says the report is not about deals, which has no population to hold any
 	}
 	if spec.population == measureEveryReadableRow && requested.Kind == "" {
 		requested = RequestedScope{Kind: ScopeKindWorkspace}
