@@ -29,7 +29,8 @@ type UncapturedSeat struct {
 //
 // A seat counts when a participant row names it by user_id (calendar
 // attendees, own sent mail) or, for an unattested To/Cc list, by an address
-// equal to its login email. Only counted, workspace-audience, unarchived
+// equal to its login email, on a To or Cc line only, for a seat that existed
+// when the activity was captured. Only counted, workspace-audience, unarchived
 // activities qualify, the same terms the interaction graph folds, so a limited
 // message discloses nothing here. Invited seats are included because they may
 // receive mail before they sign in.
@@ -53,12 +54,13 @@ func SeatsWithoutMailbox(
 		  JOIN activity_participant ps ON ps.activity_id = a.id AND ps.id <> pc.id
 		  JOIN app_user u ON u.is_agent = false AND `+workforce.ActivatableMemberSQL("u")+`
 		   AND (ps.user_id = u.id
-		        OR (ps.user_id IS NULL AND lower(ps.address) = lower(u.email)))
+		        OR (ps.user_id IS NULL AND ps.contact_id IS NULL AND ps.role IN ('to','cc')
+		            AND u.created_at <= a.created_at AND lower(ps.address) = lower(u.email)))
 		 WHERE pc.contact_id = $1 AND pc.role IN `+relstrength.InteractionRolesSQL+`
 		   AND NOT EXISTS (
 		       SELECT 1 FROM capture_connection cc
-		        WHERE cc.user_id = u.id AND cc.status = 'connected'
-		          AND cc.archived_at IS NULL AND cc.provider = ANY($2))
+		        WHERE cc.user_id = u.id AND `+liveConnection("cc")+`
+		          AND cc.provider = ANY($2))
 		 GROUP BY u.id, u.display_name, u.status
 		 ORDER BY max(a.occurred_at) DESC, u.id
 		 LIMIT $3`, contactID, mailProviders, limit)

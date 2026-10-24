@@ -30,6 +30,7 @@ type seatThread struct {
 	attested  bool
 	archived  bool
 	seatEmail string
+	role      string
 }
 
 // seedSeat inserts a colleague with the given status and a unique login.
@@ -80,8 +81,12 @@ func seedThread(ctx context.Context, t *testing.T, tx pgx.Tx, th seatThread) ids
 		VALUES ($1, $2, 'from')`, activityID, contactID); err != nil {
 		t.Fatalf("seeding contact participant: %v", err)
 	}
+	role := th.role
+	if role == "" {
+		role = "to"
+	}
 	if err := StampFurtherParticipants(ctx, tx, activityID, th.kind, "", th.attested,
-		[]connector.MessageParticipant{{Email: th.seatEmail, Role: "to"}}); err != nil {
+		[]connector.MessageParticipant{{Email: th.seatEmail, Role: role}}); err != nil {
 		t.Fatalf("stamping participants: %v", err)
 	}
 	return contactID
@@ -103,6 +108,7 @@ func TestSeatCoverage(t *testing.T) {
 		thread     seatThread
 		connect    string
 		deactivate bool
+		seatLater  bool
 		wantSeat   bool
 		wantInvite bool
 	}{
@@ -120,6 +126,10 @@ func TestSeatCoverage(t *testing.T) {
 			thread: seatThread{kind: "email", audience: "participants"}},
 		{name: "an archived activity discloses nothing", status: "active",
 			thread: seatThread{kind: "email", audience: "workspace", archived: true}},
+		{name: "an address on a Bcc line is not matched to a seat", status: "active",
+			thread: seatThread{kind: "email", audience: "workspace", role: "bcc"}},
+		{name: "a seat invited after the thread was captured is not on it", status: "active", seatLater: true,
+			thread: seatThread{kind: "email", audience: "workspace"}},
 		{name: "a deactivated seat is not noticed", status: "active", deactivate: true,
 			thread: seatThread{kind: "email", audience: "workspace"}},
 	}
@@ -133,6 +143,11 @@ func TestSeatCoverage(t *testing.T) {
 				}
 				if tc.deactivate {
 					if _, err := tx.Exec(ctx, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, seat); err != nil {
+						return err
+					}
+				}
+				if tc.seatLater {
+					if _, err := tx.Exec(ctx, `UPDATE app_user SET created_at = now() + interval '1 hour' WHERE id = $1`, seat); err != nil {
 						return err
 					}
 				}
