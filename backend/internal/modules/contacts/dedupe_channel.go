@@ -59,8 +59,8 @@ func exactContactByChannelIdentity(ctx context.Context, tx pgx.Tx, identities []
 // candidate side is normalized here so the comparison is like for like;
 // a number that cannot be normalized is dropped rather than compared,
 // because it can never equal a stored E.164 value and refusing the whole
-// resolution over one malformed provider field would drop the message. A
-// re-check excludes the contact it scores, which holds its own numbers.
+// resolution over one malformed provider field would drop the message.
+// A re-check excludes the contact it scores, which holds its own numbers.
 func exactContactByPhone(ctx context.Context, tx pgx.Tx, phones []string, exclude *ids.ContactID) ([]ids.ContactID, error) {
 	if len(phones) == 0 {
 		return nil, nil

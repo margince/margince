@@ -139,7 +139,7 @@ func readContactSubject(ctx context.Context, tx pgx.Tx, id ids.ContactID) (conta
 }
 
 // fileDuplicates runs the review lanes and the phone lane for an existing
-// contact, files every pair they name, and answers how many are new on the
+// contact and files every pair they name. It answers how many are new on the
 // queue. A nil matcher is the shipped consumer-mail list.
 func (s contactSubject) fileDuplicates(ctx context.Context, tx pgx.Tx, consumerMail *freemail.Matcher, source, by string) (int, error) {
 	employer, _, err := readCurrentEmployer(ctx, tx, s.id.UUID)

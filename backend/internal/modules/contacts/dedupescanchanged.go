@@ -3,20 +3,16 @@
 
 package contacts
 
-// The nightly duplicate scan: the records changed since the last pass, run
-// through the same re-checks the data task runs (dedupescan.go).
-//
-// It reads five tables, each from its own watermark in dedupe_scan_state. The
-// record tables say a name changed. The identifier tables say an address, a
-// number or a domain was added or moved, which a merge does without touching
-// the record row. Every insert and update stamps updated_at, so no writer has
-// to remember to tell the scan.
-//
+// The nightly duplicate scan runs the records changed since the last pass
+// through the re-checks the data task runs (dedupescan.go). It reads five
+// tables from their own watermarks. The identifier tables catch an address, a
+// number or a domain a merge moved without touching the record row. Every
+// insert and update stamps updated_at, so no writer has to tell the scan.
+
 // updated_at is the writing transaction's start time, so a write can commit
-// behind a watermark that has already passed it. Once a pass has caught up it
-// sets the watermark dedupeScanOverlap back, and the next pass reads that
-// window again. Filing is a no-op for a pair the queue holds, so the overlap
-// costs reads only.
+// behind a watermark that has passed it. A caught-up pass therefore sets its
+// watermark dedupeScanOverlap back, and the next pass reads that window again.
+// Filing a pair the queue holds is a no-op, so the overlap costs reads only.
 
 import (
 	"context"
@@ -48,22 +44,30 @@ const dedupeScanOverlap = 24 * time.Hour
 // dedupeScanStream is one table the nightly pass reads, and the column that
 // names the record a changed row belongs to.
 type dedupeScanStream struct {
-	table   string
-	subject string
-	entity  DedupeScanEntity
-	// liveOnly reads only rows that are not archived. A record row that is
-	// archived has nothing left to pair; an identifier row is read archived or
-	// not, because its record may still be live.
+	table  string
+	entity DedupeScanEntity
+	// liveOnly reads only rows that are not archived. An archived record has
+	// nothing left to pair. An identifier row is read either way, because its
+	// record may still be live.
 	liveOnly bool
+}
+
+// subject is the column naming the record a row belongs to: the record table's
+// own id, or the identifier table's company_id or contact_id.
+func (stream dedupeScanStream) subject() string {
+	if stream.table == string(stream.entity) {
+		return "id"
+	}
+	return string(stream.entity) + "_id"
 }
 
 // dedupeScanStreams are the tables whose changes can make a new pair.
 var dedupeScanStreams = []dedupeScanStream{
-	{table: "company", subject: "id", entity: DedupeScanCompanies, liveOnly: true},
-	{table: "company_domain", subject: "company_id", entity: DedupeScanCompanies},
-	{table: "contact", subject: "id", entity: DedupeScanContacts, liveOnly: true},
-	{table: "contact_email", subject: "contact_id", entity: DedupeScanContacts},
-	{table: "contact_phone", subject: "contact_id", entity: DedupeScanContacts},
+	{table: entityCompany, entity: DedupeScanCompanies, liveOnly: true},
+	{table: tableCompanyDomain, entity: DedupeScanCompanies},
+	{table: entityContact, entity: DedupeScanContacts, liveOnly: true},
+	{table: tableContactEmail, entity: DedupeScanContacts},
+	{table: tableContactPhone, entity: DedupeScanContacts},
 }
 
 // DedupeScanResult counts one nightly pass: the records it ran through the
@@ -190,7 +194,7 @@ func (stream dedupeScanStream) changedSince(ctx context.Context, tx pgx.Tx, mark
 		live = "archived_at IS NULL AND "
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT updated_at, id, `+stream.subject+` FROM `+stream.table+`
+		SELECT updated_at, id, `+stream.subject()+` FROM `+stream.table+`
 		 WHERE `+live+`updated_at >= $1 AND (updated_at, id) > ($1, $2) AND updated_at < $3
 		 ORDER BY updated_at, id
 		 LIMIT `+strconv.Itoa(dedupeScanBatch), mark.at, mark.id, cutoff)

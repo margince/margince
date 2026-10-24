@@ -27,9 +27,9 @@ const (
 	dedupeCompanyDomainWeight = 0.45
 )
 
-// The bounds on one record's check. A name many records share would otherwise
-// file a pair against each of them, under the company-name lock, and a scan of
-// N such records would read N² rows. dedupeRivalLimit is how many rivals the
+// The bounds on one record's check. Without them a name many records share
+// files a pair against each of them, under the company-name lock. A scan of N
+// such records would also read N² rows. dedupeRivalLimit is how many rivals the
 // ladder names, best first. dedupeCandidateRows is how many rows one candidate
 // query reads for scoring, most similar name first.
 const (

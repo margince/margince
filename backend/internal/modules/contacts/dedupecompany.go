@@ -129,12 +129,6 @@ func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyM
 	return keepBestRivals(rankNameDomainClaimantFirst(match, append(claimants, subdomains...))), nil
 }
 
-// keepBestRivals cuts the ranked rivals to dedupeRivalLimit, best first.
-func keepBestRivals(match CompanyMatch) CompanyMatch {
-	match.Ranked = match.Ranked[:min(len(match.Ranked), dedupeRivalLimit)]
-	return match
-}
-
 // DedupeCompanyForCreate is PO-F-2 for a path that is about to MINT a
 // row, which needs one thing the read alone cannot give: serialization.
 //
