@@ -66,7 +66,7 @@ func (a *assembly) readPhaseHistory() error {
 			linked = append(linked, *t.AuditLogID)
 		}
 	}
-	who, err := privacy.AuditAttributionsTx(a.ctx, a.tx, linked)
+	who, err := privacy.AuditAttributionsTx(a.ctx, a.tx, "project", a.projectID.UUID, linked)
 	if err != nil {
 		return err
 	}

@@ -41,10 +41,12 @@ func attributionOf(row recordAuditRow) AuditAttribution {
 }
 
 // AuditAttributionsTx resolves the attribution of the given audit rows in one
-// query, through the projection the record History uses. An id with no audit
-// row is absent from the result; the caller reads that as unknown, not as the
-// system.
-func AuditAttributionsTx(ctx context.Context, tx pgx.Tx, auditIDs []ids.UUID) (map[ids.UUID]AuditAttribution, error) {
+// query, through the projection the record History uses. Only rows written for
+// the named entity count: the stored link has no foreign key, so a link to
+// another record's audit row must read as unknown. An id with no matching
+// audit row is absent from the result; the caller reads that as unknown, not
+// as the system.
+func AuditAttributionsTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, auditIDs []ids.UUID) (map[ids.UUID]AuditAttribution, error) {
 	out := make(map[ids.UUID]AuditAttribution, len(auditIDs))
 	if len(auditIDs) == 0 {
 		return out, nil
@@ -52,7 +54,7 @@ func AuditAttributionsTx(ctx context.Context, tx pgx.Tx, auditIDs []ids.UUID) (m
 	rows, err := tx.Query(ctx, `
 		SELECT `+recordAuditColumns+`
 		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
-		WHERE a.id = ANY($1)`, auditIDs)
+		WHERE a.id = ANY($1) AND a.entity_type = $2 AND a.entity_id = $3`, auditIDs, entityType, entityID)
 	if err != nil {
 		return nil, fmt.Errorf("privacy: reading audit attributions: %w", err)
 	}

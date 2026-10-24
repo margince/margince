@@ -116,6 +116,28 @@ func TestPhaseHistoryNamesAHumanAndNeverInventsASystemMove(t *testing.T) {
 	}
 }
 
+func TestPhaseHistoryIgnoresALinkToAnotherProjectsAuditRow(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Crossed GmbH", nil)
+	a := seedProject(e.Admin(), t, e, "Project A", company, &e.Rep1)
+	b := seedProject(e.Admin(), t, e, "Project B", company, &e.Rep1)
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), b.ID, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhasePursuing}); err != nil {
+		t.Fatal(err)
+	}
+	conn := OwnerConn(t)
+	if _, err := conn.Exec(context.Background(),
+		`UPDATE project_phase_history SET audit_log_id = (
+		   SELECT h.audit_log_id FROM project_phase_history h WHERE h.project_id = $2 AND h.from_phase IS NOT NULL)
+		 WHERE project_id = $1 AND from_phase IS NULL`, a.ID, b.ID); err != nil {
+		t.Fatal(err)
+	}
+	for i, row := range phaseHistoryOf(t, e, a.ID) {
+		if row.ChangedBy != nil {
+			t.Errorf("row %d changed_by = %+v, want absent for a link to another project's audit row", i, row.ChangedBy)
+		}
+	}
+}
+
 func TestPhaseHistoryNamesTheSystemOnlyForTheSystemPrincipal(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "System GmbH", nil)

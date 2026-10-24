@@ -41,7 +41,7 @@ func TestAuditAttributionsMatchTheRecordHistoryForEveryActorShape(t *testing.T) 
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		got, err = privacy.AuditAttributionsTx(ctx, tx, auditIDs)
+		got, err = privacy.AuditAttributionsTx(ctx, tx, "contact", contact, auditIDs)
 		return err
 	}); err != nil {
 		t.Fatal(err)
