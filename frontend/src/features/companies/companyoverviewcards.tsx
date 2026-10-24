@@ -32,7 +32,7 @@ import {
   type WorkRow,
   workInFlight,
 } from "./companyoverviewrows";
-import type { CompanyTab } from "./companytab";
+import type { CompanyTab } from "../../lib/companytab";
 import "./company360.css";
 
 type Company360 = components["schemas"]["Company360"];

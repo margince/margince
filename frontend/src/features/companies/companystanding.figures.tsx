@@ -9,7 +9,7 @@ import { MoneyStat } from "./company360.money";
 import { PipelineCard, StripWithheld } from "./company360.strip";
 import { LastTouchStat } from "./company360lasttouch";
 import { NextMeetingStat } from "./companynextmeeting";
-import type { CompanyTab } from "./companytab";
+import type { CompanyTab } from "../../lib/companytab";
 
 /**
  * The figures at the foot of How it stands, in the design's order. They are

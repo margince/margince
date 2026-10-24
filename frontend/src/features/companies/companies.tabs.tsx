@@ -19,7 +19,7 @@ import {
 import { NewDealAction } from "./companyactions";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyProjectsPanel } from "./companyprojects";
-import type { CompanyTab } from "./companytab";
+import type { CompanyTab } from "../../lib/companytab";
 import { CompanyTasksFinds } from "./companytasksfinds";
 import { CompanyTaskTable } from "./companytaskstable";
 import "./company360.css";

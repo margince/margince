@@ -17,7 +17,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { recordNamesIn } from "./company360";
 import { latestExchanges } from "./companyoverviewrows";
 import { activityHeadline } from "./companyrecent";
-import type { CompanyTab } from "./companytab";
+import type { CompanyTab } from "../../lib/companytab";
 import "./company360.css";
 
 type Company360 = components["schemas"]["Company360"];

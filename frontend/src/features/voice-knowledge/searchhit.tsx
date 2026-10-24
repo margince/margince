@@ -16,7 +16,7 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY } from "../../lib/entity";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate, routeHash } from "../../lib/router";
-import { companyTabRoute } from "../companies/companytab";
+import { companyTabRoute } from "../../lib/companytab";
 import type { OpenHit } from "./searchpanels";
 
 type SearchResult = components["schemas"]["SearchResult"];

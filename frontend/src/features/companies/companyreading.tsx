@@ -6,7 +6,7 @@ import type { useTaskUpdate } from "../../components/taskactions";
 import { CompanyHowItStands } from "./companyhowitstands";
 import { CompanyNextBar, nextBarTask } from "./companynextbar";
 import { CompanyOverviewCards } from "./companyoverviewcards";
-import type { CompanyTab } from "./companytab";
+import type { CompanyTab } from "../../lib/companytab";
 
 type Company = components["schemas"]["Company"];
 type Company360View = components["schemas"]["Company360"];

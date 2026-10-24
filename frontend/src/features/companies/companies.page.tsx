@@ -29,7 +29,7 @@ import {
 import { CompanyHeadLines } from "./companyheaderfacts";
 import { CompanyMarks } from "./companymarks";
 import { CompanyRail } from "./companyrail";
-import type { CompanyTab } from "./companytab";
+import type { CompanyTab } from "../../lib/companytab";
 
 // openTaskId is scoped to the account being read, like the tab. The route
 // swaps one company for another without unmounting this component, so a

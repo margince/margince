@@ -471,7 +471,6 @@ reach features/voice-knowledge/activitydrawer.tsx features/records/activityfollo
 reach features/voice-knowledge/activitydrawer.tsx features/worklist/worklist.queries.ts
 reach features/voice-knowledge/documentextraction.tsx app/ai-activity.ts
 reach features/voice-knowledge/search.tsx app/searchkinds.ts
-reach features/voice-knowledge/search.tsx features/companies/companytab.ts
 reach features/voice-knowledge/searchpanels.tsx app/searchkinds.ts
 reach features/voice-knowledge/searchpanels.tsx features/mail/openemaildrawer.tsx
 reach features/worklist/taskdetailmodal.tsx features/voice-knowledge/activitydrawer.tsx

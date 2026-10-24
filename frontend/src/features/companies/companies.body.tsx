@@ -25,7 +25,7 @@ import { CompanyContractsCard } from "./companycontracts";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
-import type { CompanyTab } from "./companytab";
+import type { CompanyTab } from "../../lib/companytab";
 import "./company360.css";
 import "./companytabs.css";
 

@@ -8,7 +8,7 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { RecordZoneProvider } from "../../lib/recordzone";
 import { StandingFigures } from "./companystanding.figures";
-import type { CompanyTab } from "./companytab";
+import type { CompanyTab } from "../../lib/companytab";
 
 // The four figures under How it stands. Each draws even when it has no
 // reading. A card that returned null would leave the row one short and the

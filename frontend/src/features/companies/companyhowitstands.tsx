@@ -34,7 +34,7 @@ import {
 import { companyTimeline } from "./companystanding.events";
 import { StandingFigures } from "./companystanding.figures";
 import { contactsInTouch, openDeals } from "./companystanding.peeks";
-import type { CompanyTab } from "./companytab";
+import type { CompanyTab } from "../../lib/companytab";
 
 type Company360 = components["schemas"]["Company360"];
 
