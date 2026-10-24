@@ -73,10 +73,12 @@ func LoadOriginIntents(ctx context.Context, tx pgx.Tx) (OriginIntents, error) {
 }
 
 // ResolveOrigin maps the free text a source system used onto an active catalog
-// key: the key itself, else the label, both after the key derivation. No match
-// answers false and never a guessed key. The importer then keeps the wording
-// instead of misfiling the lead.
+// key: the key itself, spelled exactly, else the one label whose key derivation
+// equals the text's. No match, or two labels that derive alike, answers false
+// and never a guessed key. The importer then keeps the wording instead of
+// misfiling the lead.
 func ResolveOrigin(ctx context.Context, tx pgx.Tx, text string) (string, bool, error) {
+	exact := strings.TrimSpace(text)
 	wanted := deriveSourceKey(text)
 	if wanted == "" {
 		return "", false, nil
@@ -86,20 +88,26 @@ func ResolveOrigin(ctx context.Context, tx pgx.Tx, text string) (string, bool, e
 		return "", false, fmt.Errorf("resolve lead origin: %w", err)
 	}
 	defer rows.Close()
-	labelMatch := ""
+	var labelMatches []string
 	for rows.Next() {
 		var key, label string
 		if err := rows.Scan(&key, &label); err != nil {
 			return "", false, err
 		}
-		if key == wanted {
+		if key == exact {
 			return key, true, nil
 		}
-		if labelMatch == "" && deriveSourceKey(label) == wanted {
-			labelMatch = key
+		if deriveSourceKey(label) == wanted {
+			labelMatches = append(labelMatches, key)
 		}
 	}
-	return labelMatch, labelMatch != "", rows.Err()
+	if err := rows.Err(); err != nil {
+		return "", false, err
+	}
+	if len(labelMatches) != 1 {
+		return "", false, nil
+	}
+	return labelMatches[0], true, nil
 }
 
 // UnknownLeadOriginError refuses a key the catalog does not hold.

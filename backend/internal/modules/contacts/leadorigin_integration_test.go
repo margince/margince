@@ -221,6 +221,11 @@ func TestAnImportedOriginResolvesOrStaysAsANote(t *testing.T) {
 	if unmatched.Origin != nil || unmatched.OriginDetail == nil || *unmatched.OriginDetail != "Trade fair, hall 3" {
 		t.Errorf("an unmatched hint = origin %v detail %v, want no origin and the wording as the note", unmatched.Origin, unmatched.OriginDetail)
 	}
+	note := "Hall 3"
+	both := newLead(t, e, CreateLeadInput{OriginHint: "Trade fair", OriginDetail: &note})
+	if both.Origin != nil || both.OriginDetail == nil || *both.OriginDetail != "Trade fair: Hall 3" {
+		t.Errorf("an unmatched hint with a note = origin %v detail %v, want both wordings kept in the note", both.Origin, both.OriginDetail)
+	}
 	if unmatched.Score != scoreOf(SourceIntentNeutral) {
 		t.Errorf("an unmatched hint scores %d, want neutral", unmatched.Score)
 	}

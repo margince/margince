@@ -30,6 +30,16 @@ func cleanOriginDetail(detail string, bound bool) string {
 	return detail
 }
 
+// noteWithHint keeps unresolved importer wording in the note, in front of a
+// note the same row supplied, so neither is lost. An importer's wording
+// is cut to the bound rather than refusing the row.
+func noteWithHint(hint string, detail *string) string {
+	if detail == nil || strings.TrimSpace(*detail) == "" {
+		return cleanOriginDetail(hint, true)
+	}
+	return cleanOriginDetail(hint+": "+strings.TrimSpace(*detail), true)
+}
+
 // admitLeadOrigin settles a new lead's origin and detail before the score is
 // derived from them. A key a human, agent or connector named must be an active
 // catalog key. An importer's free text goes through ResolveOrigin, and when it
@@ -51,8 +61,8 @@ func admitLeadOrigin(ctx context.Context, tx pgx.Tx, in CreateLeadInput) (Create
 		}
 		if ok {
 			in.Origin = &key
-		} else if in.OriginDetail == nil {
-			detail := cleanOriginDetail(hint, true)
+		} else {
+			detail := noteWithHint(hint, in.OriginDetail)
 			in.OriginDetail = &detail
 		}
 	}
@@ -109,8 +119,8 @@ func settleOriginHint(ctx context.Context, tx pgx.Tx, current crmcontracts.Lead,
 	switch {
 	case ok:
 		in.Origin = &key
-	case current.OriginDetail == nil && in.OriginDetail == nil:
-		detail := cleanOriginDetail(hint, true)
+	case current.OriginDetail == nil:
+		detail := noteWithHint(hint, in.OriginDetail)
 		in.OriginDetail = &detail
 	}
 	return in, nil

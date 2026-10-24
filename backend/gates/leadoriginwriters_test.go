@@ -61,7 +61,11 @@ func TestEveryLeadInsertNamesTheOrigin(t *testing.T) {
 				return true
 			}
 			statements++
-			if !namesOrigin.MatchString(text[at[0]:]) {
+			columns := text[at[1]:]
+			if end := strings.Index(columns, ")"); end >= 0 {
+				columns = columns[:end]
+			}
+			if !namesOrigin.MatchString(columns) {
 				t.Errorf("%s inserts a lead without naming `origin`. Give the column a value, even NULL, so the "+
 					"lead's classification is a decision of the writer and not an omission", fset.Position(lit.Pos()))
 			}
