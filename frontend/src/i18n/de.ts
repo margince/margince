@@ -4438,7 +4438,7 @@ export const de = {
   "lead.signalAutomaticSource": "eine automatisierte Quelle",
   "lead.signalReason": "Beleg",
   "lead.signalReasonHint":
-    "Pflichtfeld. Sagen Sie, woher Sie das wissen. Wird mit dem Score gespeichert.",
+    "Pflichtfeld. Sag, woher du das weißt. Wird mit dem Score gespeichert.",
   "lead.signalNoEvidence": "Kein Beleg erfasst",
   "lead.signalSave": "Zum Score hinzufügen",
   "lead.signal.web_traffic": "Website-Traffic",

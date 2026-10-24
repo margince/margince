@@ -22,6 +22,12 @@ type LeadSignalFactor struct {
 	Bands        []LeadSignalBand
 }
 
+const (
+	sizeBandTiny  = "1-10"
+	sizeBandSmall = "11-50"
+	sizeBandMid   = "51-200"
+)
+
 // LeadSignalCatalog defines the manual scoring vocabulary. The validation,
 // the HTTP catalog and the lead form all read it.
 // It is a list so a later admin-chosen set can load it from a stored setting
@@ -33,10 +39,10 @@ func LeadSignalCatalog() []LeadSignalFactor {
 			{ID: "medium", Points: 4, Min: new(10_000), Max: new(100_000)},
 			{ID: "high", Points: 8, Min: new(100_001)},
 		}},
-		{ID: "employees", CompanyField: "size_band", Bands: []LeadSignalBand{
-			{ID: "1-10", Points: 0, Min: new(1), Max: new(10), CompanySizeBands: []string{"1-10"}},
-			{ID: "11-50", Points: 4, Min: new(11), Max: new(50), CompanySizeBands: []string{"11-50"}},
-			{ID: "51-200", Points: 8, Min: new(51), Max: new(200), CompanySizeBands: []string{"51-200"}},
+		{ID: "employees", CompanyField: filterSizeBand, Bands: []LeadSignalBand{
+			{ID: sizeBandTiny, Points: 0, Min: new(1), Max: new(10), CompanySizeBands: []string{sizeBandTiny}},
+			{ID: sizeBandSmall, Points: 4, Min: new(11), Max: new(50), CompanySizeBands: []string{sizeBandSmall}},
+			{ID: sizeBandMid, Points: 8, Min: new(51), Max: new(200), CompanySizeBands: []string{sizeBandMid}},
 			{ID: "201+", Points: 10, Min: new(201), CompanySizeBands: []string{"201-500", "501-1000", "1001-5000", "5000+"}},
 		}},
 		{ID: "budget_hint", Bands: []LeadSignalBand{
