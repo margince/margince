@@ -6,9 +6,9 @@
 package contacts
 
 // The duplicate scan over records that are already stored. Every fixture is
-// written through the real create path, and the pairs those creates filed are
-// then removed: that is the state of records written before a lane existed,
-// or written together by an import.
+// written through the real create path, and then the pairs those creates
+// filed are removed. That is the state of records written before a lane
+// existed, or written together by an import.
 
 import (
 	"context"
@@ -65,7 +65,7 @@ func (e *dedupeEnv) forgetFiledPairs(ctx context.Context, t *testing.T) {
 }
 
 // scanEverything runs the data task's batches for both record types from a
-// nil cursor, limit records at a time, and answers the pairs filed and the
+// nil cursor, limit records at a time. It answers the pairs filed and the
 // batches it took.
 func (e *dedupeEnv) scanEverything(t *testing.T, limit int) (filed, batches int) {
 	t.Helper()
@@ -95,8 +95,8 @@ func (e *dedupeEnv) scanEverything(t *testing.T, limit int) (filed, batches int)
 	return filed, batches
 }
 
-// queuedPairs answers the pairs on the queue in any disposition, each as its
-// two ids in stored order, and the number of audit rows the queue holds.
+// queuedPairs answers the pairs on the queue in any disposition, keyed by
+// their two ids in stored order. It also answers the queue's audit row count.
 func (e *dedupeEnv) queuedPairs(ctx context.Context, t *testing.T) (map[[2]ids.UUID]string, int) {
 	t.Helper()
 	pairs := map[[2]ids.UUID]string{}

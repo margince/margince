@@ -53,15 +53,12 @@ func recheckCompanyNameForDuplicates(ctx context.Context, tx pgx.Tx, companyID i
 	return err
 }
 
-// recheckCompanyForDuplicates scores an existing company against the rest of
-// the workspace with its names and its live domains, files every pair the
-// ladder ranks, and answers how many are new on the queue. A rename and the
-// duplicate scan (dedupescan.go) both ask it.
-//
-// The company excludes itself from every tier: it holds its own domains
-// and its own name, so without that it matches itself perfectly and hides
-// every real rival behind the self-score. Its domains cannot reach the exact
-// tier, because a live domain belongs to one company (uq_company_domain).
+// recheckCompanyForDuplicates scores an existing company, with its names and
+// live domains, against the rest of the workspace. It files every pair the
+// ladder ranks and answers how many are new. Renames and the duplicate scan
+// ask it. The company excludes itself from every tier, or a self-match would
+// hide every real rival. Its domains never reach the exact tier, because a
+// live domain belongs to one company (uq_company_domain).
 func recheckCompanyForDuplicates(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, source, by string) (int, error) {
 	var display, legal string
 	var anchor bool

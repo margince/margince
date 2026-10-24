@@ -4,8 +4,8 @@
 package contacts
 
 // The duplicate scan runs the re-checks a rename runs (renamerecheck.go,
-// contactrenamerecheck.go) over records that already exist, so a pair the
-// filing rule names reaches the queue whenever its two records were written.
+// contactrenamerecheck.go) over records that already exist. So a pair the
+// filing rule names reaches the queue, whenever its two records were written.
 // The data task walks every record once; the nightly pass walks the records
 // changed since its watermark. A pair the queue already holds, decided or not,
 // meets its own row on uq_dedupe_candidate_pair, and nothing is filed again.
@@ -37,8 +37,8 @@ const (
 	DedupeScanContacts  DedupeScanEntity = entityContact
 )
 
-// subjectsSQL is the FROM and WHERE that select the records of this type the
-// scan may file a pair for. The anchor company is no subject, for the reason
+// subjectsSQL is the table and filter that select the records of this type
+// the scan may file a pair for. The anchor company is no subject, for the reason
 // recheckCompanyForDuplicates gives.
 func (e DedupeScanEntity) subjectsSQL() (string, error) {
 	switch e {
@@ -50,8 +50,8 @@ func (e DedupeScanEntity) subjectsSQL() (string, error) {
 	return "", fmt.Errorf("contacts: the duplicate scan has no record type %q", string(e))
 }
 
-// DedupeScanPage is one batch of the scan: the records it inspected, in the
-// order it read them, and how many pairs are new on the queue.
+// DedupeScanPage is one batch of the scan. Scanned holds the records it read,
+// in order, and Filed counts the pairs new on the queue.
 type DedupeScanPage struct {
 	Scanned []ids.UUID
 	Filed   int
@@ -88,10 +88,10 @@ func newDedupeScanner(ctx context.Context, tx pgx.Tx, entity DedupeScanEntity, c
 // file runs one record through its re-check.
 //
 // The contact half takes no lane lock. Those locks stop a create and an edit
-// from both reading before the other committed; the scan writes no name and no
-// address, so a create running beside it reads the scanned record as it was
-// committed and files the pair itself. Locking lanes for many records in one
-// transaction would only add lock orders a create can deadlock against.
+// from both reading before the other committed. The scan writes no name and no
+// address, so a create beside it reads the scanned record and files the pair
+// itself. Lane locks for many records in one transaction would only add lock
+// orders a create can deadlock against.
 func (s dedupeScanner) file(ctx context.Context, tx pgx.Tx, id ids.UUID) (int, error) {
 	if s.entity == DedupeScanCompanies {
 		return recheckCompanyForDuplicates(ctx, tx, ids.From[ids.CompanyKind](id), dedupeScanSource, s.by)
@@ -162,19 +162,17 @@ func CountDedupeScanSubjects(ctx context.Context, q interface {
 	return count, nil
 }
 
-// The nightly pass's bounds. A batch is one transaction, so the company-name
-// lock the company re-check takes is held for one batch at a time. A run stops
-// after dedupeScanPerRun records of each type and goes on from its watermark
-// the next night.
+// The nightly pass's bounds. A batch is one transaction, so the company re-check
+// holds the company-name lock for one batch at a time. A run stops after
+// dedupeScanPerRun records of each type, and the next night goes on from there.
 const (
 	dedupeScanBatch  = 200
 	dedupeScanPerRun = 5000
 )
 
 // dedupeScanSettle keeps the newest changes for the next pass. updated_at is
-// stamped when a write's transaction starts, so a write still open when the
-// pass reads could commit behind the watermark; one that started before the
-// settle window has had that long to commit.
+// stamped when a write's transaction starts. A write still open when the pass
+// reads could commit behind the watermark, and the window gives it time.
 const dedupeScanSettle = 10 * time.Minute
 
 // dedupeScanFirstLookback is how far back a pass with no watermark starts. The

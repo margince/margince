@@ -338,10 +338,9 @@ func (m CompanyMatch) recordIfReview(ctx context.Context, tx pgx.Tx, createdID i
 	return count, nil
 }
 
-// record files one ranked rival. The evidence names the axis the score
-// actually came from: two records can collide on their registered names while
-// their display names differ, and rendering that as a display-name collision
-// would show a reviewer a comparison nobody made.
+// record files one ranked rival. The evidence names the axis the score came
+// from. Two records can collide on their registered names while their display
+// names differ, and a reviewer must see the comparison that was made.
 func (r CompanyCandidateScore) record(ctx context.Context, tx pgx.Tx, createdID ids.CompanyID, source, by string) (bool, error) {
 	evidence := nearMatchEvidence(r.MatchedField, r.CandidateValue, r.IncumbentValue, r.Confidence)
 	if r.Confidence == 0 {

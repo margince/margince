@@ -19,8 +19,8 @@ import (
 )
 
 // DedupeRecheckArgs identifies the fleet-wide pass that closes open duplicate
-// pairs the filing rule no longer files, then files the pairs the records
-// changed since the last pass make.
+// pairs the filing rule no longer files. It then files the pairs of the
+// records changed since the last pass.
 type DedupeRecheckArgs struct{}
 
 // Kind is the stable job identifier River persists in river_job.

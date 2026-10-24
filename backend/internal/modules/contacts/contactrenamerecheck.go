@@ -85,13 +85,11 @@ func lockEditedContactLanes(ctx context.Context, tx pgx.Tx, id ids.ContactID, cu
 }
 
 // recheckContactForDuplicates scores an edited contact against the rest of the
-// workspace and files the pairs the review lanes name (reviewContact). It takes
-// the address-base and name locks in the create's order. So an edit and a
-// create converging on one human cannot both read no incumbent.
+// workspace and files the pairs the review lanes name. It takes the lane locks
+// in the create's order, so an edit and a create cannot both miss each other.
 //
 // The contact's current primary employer counts as evidence. That lets an edge
 // write find a same-name twin at that employer (fileEmployerTwins).
-//
 // The exact lanes are skipped: the contact holds its own addresses and phones,
 // so they would name itself. A claimed address cannot arrive by an edit at all,
 // because contact_email is unique on the address.

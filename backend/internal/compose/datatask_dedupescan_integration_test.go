@@ -22,8 +22,8 @@ import (
 )
 
 // seedPreRuleDuplicates writes one company pair and one contact pair through
-// the create path, then removes the pairs those creates filed: the state of
-// records written before the rule that files them.
+// the create path, then removes the pairs those creates filed. That is the
+// state of records written before the rule that files them.
 func seedPreRuleDuplicates(t *testing.T, e *integration.Env) {
 	t.Helper()
 	for _, name := range []string{"Example Consulting GmbH", "Example Consulting", "Northwind Traders"} {
