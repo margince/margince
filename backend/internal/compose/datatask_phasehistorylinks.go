@@ -20,8 +20,8 @@ import (
 // reads as unknown.
 func phaseHistoryLinksDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1792800500_phase_history_audit_links", Version: 1,
-		Title: "Linking project phase moves to the record of who made them", Requires: []string{"core/1792800500"},
+		ID: "core/1792842001_phase_history_audit_links", Version: 1,
+		Title: "Linking project phase moves to the record of who made them", Requires: []string{"core/1792842001"},
 		Steps: []datatask.Step{{
 			Name: "link_phase_history", Limit: 500, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{Reason: "projects.recordPhaseTransition stamps the same link in the transaction that writes the move, without a separate audit row"},
