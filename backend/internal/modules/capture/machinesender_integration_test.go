@@ -6,6 +6,7 @@
 package capture_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -26,6 +27,7 @@ func TestCaptureMarksMailASendingSystemSent(t *testing.T) {
 		want                  bool
 	}{
 		{"a file-share notice", "drive-shares-dm-noreply@google.com", connector.DirectionInbound, true},
+		{"a document comment reply address", "d+" + strings.Repeat("aorgB9", 34) + "@docs.google.com", connector.DirectionInbound, true},
 		{"a delivery report", "mailer-daemon@googlemail.com", connector.DirectionInbound, true},
 		{"a human's mail", "pat@client.io", connector.DirectionInbound, false},
 		{"a human whose name holds a marker", "anna.notify.weber@client.io", connector.DirectionInbound, false},

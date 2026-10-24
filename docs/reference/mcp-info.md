@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 124.6 KB |
+| Tool catalog | 124.9 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32797 |
+| Approx. wire tokens | 32873 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 19% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 31.8 KB | 25% | Yes, every step |
+| Descriptions (incl. governance clause) | 32.1 KB | 25% | Yes, every step |
 | Input schemas | 59.6 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
-| **Description + input schema** | **91.3 KB** | **73%** | **the recurring cost** |
+| **Description + input schema** | **91.6 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -69,7 +69,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_tags`](#change_tags) | Change tags |  |  | 553 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 672 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 748 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
@@ -2392,13 +2392,16 @@ CONTACT created here is visible to everyone in the workspace, the same as one a 
 occurred_at means now; for a past day with no time, ask. Search first when the record might already
 exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to
 undo. A record that shares only a name, with a different email, phone or employer, is not proof of a
-duplicate: create it — the create files the pair for review, and you report the pair as filed,
-unresolved until the reviewer decides. Several contacts, companies or leads at once — a pasted
-list, a CSV — go through preview_import, which checks every row and writes nothing; creating them
-one by one skips that check. The new record's id comes back in the result; keep it for anything that
-links to it. When the user says where they met the contact, pass that word as offer_tag: it only
-offers the tag, and change_tags still needs their yes. (Runs immediately; requires passport scope
-"write".)
+duplicate. When the search finds a contact with the same name at the same employer, ask the human
+whether it is the same contact before you link anything to it; two colleagues can share a name.
+Giving a contact its employer by creating an employment relationship files any same-name contact at
+that employer for review: the result carries it as duplicate_candidates, and you report the pair as
+filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a
+pasted list, a CSV — go through preview_import, which checks every row and writes nothing;
+creating them one by one skips that check. The new record's id comes back in the result; keep it for
+anything that links to it. When the user says where they met the contact, pass that word as
+offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately;
+requires passport scope "write".)
 ```
 
 Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.

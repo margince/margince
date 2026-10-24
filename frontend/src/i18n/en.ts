@@ -7761,6 +7761,8 @@ export const en = {
     "You cannot make this user an owner, so you become the owner of their rows.",
   "import.reason.owner_unknown":
     "No user has this email, so you become the owner; a lead stays unassigned. Rows naming it: {rows}.",
+  "import.reason.address_not_split":
+    "Address could not be split into street, postal code and city, so it stays in the first address line.",
   "import.reason.phone_needs_country":
     "“{value}” needs its country code, like +49 30 1234567.",
   "import.reason.record_archived":
@@ -11315,6 +11317,8 @@ export const en = {
   "companyTriage.checkedAt": "checked {when}",
   "pipeline.reason.no_named_reader":
     "this thread has no reader a finding could be addressed to",
+  "pipeline.reason.from_sending_systems":
+    "this thread holds only mail from sending systems, such as notifications, which is not read",
   "pipeline.reason.transport_not_read":
     "this step reads email only, and the message arrived by another channel",
   "pipeline.reason.sender_undecided":
@@ -14163,6 +14167,11 @@ export const en = {
     "You correspond with {through} at the same company.",
   "contact.graph.noRoute":
     "No one in the company corresponds with this contact or their company yet.",
+  "contact.network.captureGap_one":
+    "{names} is on this contact’s threads and has not connected a mailbox, so later mail may be missing here.",
+  "contact.network.captureGap_other":
+    "{names} are on this contact’s threads and have not connected a mailbox, so later mail may be missing here.",
+  "contact.network.captureGapInvited": "{name} (has not signed in yet)",
   "contact.graph.noDirect":
     "No one in the company has corresponded with this contact.",
   // Names the column beside the graph, for a reader who lands in it from the

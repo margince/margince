@@ -92,7 +92,17 @@ type CSVSource struct {
 
 	// observe hears where each page of Rows ended; nil hears nothing.
 	observe RowsRead
+	// shape rewrites each row's mapped cells before any reader sees them; nil
+	// keeps the cells as the file wrote them.
+	shape RowShape
 }
+
+// RowShape rewrites one row's mapped cells in place, keyed by target.
+type RowShape func(fields map[string]any)
+
+// ShapeRows sets what rewrites each row's cells, so every reader of the row
+// (the dry run, the review, the commit) sees one spelling of it.
+func (s *CSVSource) ShapeRows(shape RowShape) { s.shape = shape }
 
 // RowsRead hears that a source has delivered its object's rows up to the
 // given position. An error it answers ends the read with that error.
@@ -257,6 +267,9 @@ func (s *CSVSource) rowFrom(line int, record []string, index map[string]int) (Ro
 		if value := strings.TrimSpace(record[at]); value != "" {
 			fields[target] = value
 		}
+	}
+	if s.shape != nil {
+		s.shape(fields)
 	}
 
 	at, ok := index[s.sourceKey]

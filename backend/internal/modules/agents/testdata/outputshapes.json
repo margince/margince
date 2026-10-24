@@ -13120,6 +13120,34 @@
       "data": {
         "type": "object",
         "properties": {
+          "capture_gaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "display_name": {
+                  "type": "string"
+                },
+                "invited": {
+                  "type": "boolean"
+                },
+                "last_on_thread_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "display_name",
+                "invited",
+                "last_on_thread_at",
+                "user_id"
+              ]
+            }
+          },
           "colleagues": {
             "type": "array",
             "items": {
@@ -13159,6 +13187,7 @@
           }
         },
         "required": [
+          "capture_gaps",
           "colleagues",
           "contact_id"
         ]

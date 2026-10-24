@@ -43,6 +43,7 @@ const (
 	ReasonFieldInactive              ReasonCode = "field_inactive"
 	ReasonValueUnreadable            ReasonCode = "value_unreadable"
 	ReasonPhoneNeedsCountry          ReasonCode = "phone_needs_country"
+	ReasonAddressNotSplit            ReasonCode = "address_not_split"
 	ReasonValueRefused               ReasonCode = "value_refused"
 	ReasonOptionNotAllowed           ReasonCode = "option_not_allowed"
 	ReasonOptionNotInList            ReasonCode = "option_not_in_list"
@@ -264,6 +265,11 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.English:    "“{value}” cannot be read.",
 		textlang.German:     "{value:q} kann nicht gelesen werden.",
 		textlang.Vietnamese: "Không đọc được {value:q}.",
+	}},
+	ReasonAddressNotSplit: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "Address could not be split into street, postal code and city, so it stays in the first address line.",
+		textlang.German:     "Die Adresse ließ sich nicht in Straße, Postleitzahl und Ort aufteilen, daher bleibt sie in der ersten Adresszeile.",
+		textlang.Vietnamese: "Không tách được địa chỉ thành đường, mã bưu chính và thành phố nên địa chỉ vẫn nằm ở dòng địa chỉ đầu tiên.",
 	}},
 	ReasonPhoneNeedsCountry: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” needs its country code, like +49 30 1234567.",

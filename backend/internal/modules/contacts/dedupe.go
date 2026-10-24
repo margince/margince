@@ -27,6 +27,16 @@ const (
 	dedupeCompanyDomainWeight = 0.45
 )
 
+// The bounds on one record's check. Without them a name many records share
+// files a pair against each of them, under the company-name lock. A scan of N
+// such records would also read N² rows. dedupeRivalLimit is how many rivals the
+// ladder names, best first. dedupeCandidateRows is how many rows one candidate
+// query reads for scoring, most similar name first.
+const (
+	dedupeRivalLimit    = 5
+	dedupeCandidateRows = 50
+)
+
 // DedupeDecision is the closed outcome set of PO-F-1/PO-F-2. Fuzzy never
 // resolves itself: DEDUPE_FUZZY_AUTOMERGE is pinned *(never)*, so the
 // only automatic resolutions are exact-key ones.
@@ -233,8 +243,10 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
 		        OR ($2::uuid IS NOT NULL AND r.company_id = $2)
 		        OR `+exactNameKeySQL("p.full_name")+` = `+exactNameKeySQL("$1")+`
-		        OR `+exactDigraphNameKeySQL("p.full_name")+` = `+exactDigraphNameKeySQL("$1")+`)`,
-		c.FullName, c.CurrentPrimaryCompanyID, c.ExcludeID)
+		        OR `+exactDigraphNameKeySQL("p.full_name")+` = `+exactDigraphNameKeySQL("$1")+`)
+		 ORDER BY similarity(f_fold_apostrophes(lower(p.full_name)), f_fold_apostrophes(lower($1))) DESC, p.id
+		 LIMIT $4`,
+		c.FullName, c.CurrentPrimaryCompanyID, c.ExcludeID, dedupeCandidateRows)
 	if err != nil {
 		return ContactResolution{}, fmt.Errorf("dedupe contact candidate set: %w", err)
 	}

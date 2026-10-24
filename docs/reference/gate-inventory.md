@@ -275,6 +275,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `docslinktargets_test.go` | H3 | Every relative link under docs/ points at a file that exists. |
 | `docsnamedthings_test.go` | H2 | A page that tells the reader to run a make target, set an environment variable or follow a contribution rule is a claim about the tree. |
 | `docsreachability_test.go` | H3 | Every page under docs/ is reachable by following links from docs/README.md. |
+| `documentreaders_test.go` | H1 | Every list of attachments in internal/modules/activities answers "which files does this record hold" through activities.documentMembership. |
 | `doitokenexposure_test.go` | H2 | The plaintext confirm token goes into the mail body and nowhere else. |
 | `draftlanguageevidence_test.go` | H2 | Every draft route reads its language from the same evidence. |
 | `draftreplyreader_test.go` | H2 | A {subject, body} model reply has one reader. |
@@ -395,6 +396,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendcontext_test.go` | H2 | Every send says why it is being sent. |
 | `sendcontextvalidation_test.go` | H3 | Every door that builds a send input runs the claim through the shared validator. |
 | `sendinghumanreaders_test.go` | H2 | principal.SendingHuman has one reader, and it answers one question. |
+| `sendingsystemmail_test.go` | H2 | A query that reads captured mail through the company reach set must leave out mail from a sending system. |
 | `settingreaders_test.go` | H2 | `setting` carries neither row-level security nor a row-scope clause. |
 | `settingscatalog_test.go` | H3 | Every registered setting key is unique, well-formed and governed, names the module that declares it, and does not also exist in margince.yaml's runtime surface. |
 | `singleliteralcheck_test.go` | H2 | A CHECK that admits one value and no other is a discriminator or it is nothing. |

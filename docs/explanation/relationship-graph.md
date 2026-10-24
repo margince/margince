@@ -219,6 +219,11 @@ They show up, ranked at their real level, and do not drop out.
   origin `system_notice` or `system_remediation` is the product writing. The same rule moves the
   contact and company last-touch dates and contact strength, and the read contract names it as
   `automatic_kind`.
+
+  The email reader (`signal_extract`) uses the same stamp. It skips a thread in which every message comes
+  from a sending system, so it makes no model call and saves no signal. Such a message also reaches no
+  company, so a notice never puts a finding on the sending tool's company. Such mail does not end a quiet
+  reminder either.
 - **An archived activity.** The fold joins `activity … AND a.archived_at IS NULL`, and the prune step
   removes a pair that has lost all its evidence.
 - **A seat on a deal.** A stakeholder row is a statement about *who should take part*. Only a recorded

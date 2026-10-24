@@ -75,8 +75,9 @@ func (s *Store) recordLeadNearMatch(ctx context.Context, tx pgx.Tx, lead crmcont
 	if !match.found {
 		return nil
 	}
-	return recordNearMatch(ctx, tx, entityLead, ids.UUID(lead.Id), match.id.UUID, match.confidence,
+	_, err = recordNearMatch(ctx, tx, entityLead, ids.UUID(lead.Id), match.id.UUID, match.confidence,
 		nearMatchEvidence(fieldFullName, deref(lead.FullName), match.incumbent, match.confidence), lead.Source, by)
+	return err
 }
 
 // fuzzyLead is the lead-internal PO-F-1 analogue: name similarity carries the

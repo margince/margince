@@ -96,6 +96,18 @@ func InteractionCountsSQL(alias string) string {
 		" AND " + WrittenByHumanSQL(alias)
 }
 
+// InteractionRolesSQL lists the participant roles that make a party part of an
+// exchange. The graph fold and the seats-without-mailbox notice both read it,
+// so a role added for one cannot be missed by the other.
+const InteractionRolesSQL = `('from','to','cc','bcc','attendee','organizer')`
+
+// WorkspaceAudienceSQL admits only an activity every member may read. A limited
+// message (audience participants|selected) is content, so anything derived for
+// all readers from its participants or timing would disclose who talked to whom.
+func WorkspaceAudienceSQL(alias string) string {
+	return alias + ".audience = 'workspace'"
+}
+
 // How an account's contact stands, by what made it so.
 const (
 	InTouchWrote  = "wrote"  // they wrote to us inside InTouchDays

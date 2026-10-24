@@ -274,8 +274,9 @@ func ValidateVCardContacts(entry VCardEntry) error {
 
 func contactFromVCard(entry VCardEntry) CreateContactInput {
 	contact := CreateContactInput{
-		FullName: strings.TrimSpace(entry.FullName),
-		Source:   vcardSource,
+		FullName:      strings.TrimSpace(entry.FullName),
+		Source:        vcardSource,
+		auditEvidence: map[string]any{auditKeySource: vcardSource},
 	}
 	if title := strings.TrimSpace(entry.Title); title != "" {
 		contact.Title = &title
@@ -295,12 +296,9 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 			contact.Social = map[string]any{profileURLField: normalized}
 		}
 	}
-	// The card's postal address, as the one line it was reduced to. Parsing a
-	// field and then dropping it is the quieter defect: a reader who sees an
-	// address on the card they just imported expects to find it on the record.
-	if street := strings.TrimSpace(entry.Address); street != "" {
-		contact.Address = &crmcontracts.Address{Line1: &street}
-	}
+	// Parsing a field and then dropping it is the quieter defect. A reader who
+	// sees an address on the card expects to find it on the record.
+	contact.Address = vcardRecordAddress(entry)
 	for i, email := range entry.Emails {
 		contact.Emails = append(contact.Emails, ContactEmailInput{
 			Email:     strings.ToLower(strings.TrimSpace(email.Value)),

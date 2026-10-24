@@ -88,9 +88,9 @@ var Columns = withActivityColumns(map[string]Column{
 		Vi: "Thẻ, phân cách bằng dấu chấm phẩy. Thẻ chưa có sẽ được tạo, và bản xem trước lần nhập liệt kê các thẻ này.",
 	}, Example: same("Partner; DACH")},
 	"address.line1": {Description: langcopy.Phrase{
-		En: "Street and house number.",
-		De: "Straße und Hausnummer.",
-		Vi: "Số nhà và tên đường.",
+		En: "Street and house number. A whole address here, with no other address column, is split into its parts.",
+		De: "Straße und Hausnummer. Eine ganze Adresse hier, ohne weitere Adressspalte, wird in ihre Teile aufgeteilt.",
+		Vi: "Số nhà và tên đường. Một địa chỉ đầy đủ ở đây, khi không có cột địa chỉ nào khác, được tách thành các phần.",
 	}, Example: same("Hauptstraße 5")},
 	"address.line2": {Description: langcopy.Phrase{
 		En: "A second address line: building, floor or suite.",
