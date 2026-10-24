@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { DateInput } from "./dateinput";
-import { refuseUnreadableField } from "./formvalidity";
+import { firstRefusedControl, refuseUnreadableField } from "./formvalidity";
 
 afterEach(() => {
   cleanup();
@@ -129,4 +129,28 @@ it("throws when no form, dialog or marked box holds the save", () => {
   expect(() =>
     refuseUnreadableField(screen.getByRole("button", { name: "Save" })),
   ).toThrow(/data-date-scope/);
+});
+
+it("names the form's first refused control in the order the form holds them", () => {
+  render(
+    <form aria-label="Order">
+      <input aria-label="Plain" />
+      <input type="hidden" />
+      <input aria-label="Count" type="number" min={5} defaultValue="1" />
+      <textarea aria-label="Note" required />
+    </form>,
+  );
+  const form = screen.getByRole<HTMLFormElement>("form", { name: "Order" });
+  const count = screen.getByRole<HTMLInputElement>("spinbutton", {
+    name: "Count",
+  });
+  const note = screen.getByRole<HTMLTextAreaElement>("textbox", {
+    name: "Note",
+  });
+
+  expect(firstRefusedControl(form)).toBe(count);
+  count.value = "6";
+  expect(firstRefusedControl(form)).toBe(note);
+  note.value = "said";
+  expect(firstRefusedControl(form)).toBeUndefined();
 });

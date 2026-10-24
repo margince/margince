@@ -18,8 +18,23 @@ export function refuseUnreadableField(from: Element): boolean {
   if (unread === undefined) {
     return false;
   }
-  // The invalid event draws the field's refusal. DateInput cancels it, so the browser moves no focus.
+  // checkValidity fires the invalid event that draws the field's refusal;
+  // reportValidity would add a bubble.
   unread.checkValidity();
   unread.focus();
   return true;
+}
+
+// The control a native submit of `form` reports and focuses.
+export function firstRefusedControl(
+  form: HTMLFormElement,
+): Element | undefined {
+  return Array.from(form.elements).find(
+    (control) =>
+      (control instanceof HTMLInputElement ||
+        control instanceof HTMLSelectElement ||
+        control instanceof HTMLTextAreaElement) &&
+      control.willValidate &&
+      !control.validity.valid,
+  );
 }

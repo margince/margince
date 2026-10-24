@@ -62,10 +62,6 @@ export function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
             />
           )}
         </Field>
-        {/* The submit row, not two buttons loose in the body: `.panel-body` is
-          padding and nothing else, so bare siblings sat against each other on
-          the line under the last field with no gap and no alignment of their
-          own. */}
         {add.isError && (
           <Callout
             tone="danger"

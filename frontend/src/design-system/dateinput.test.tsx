@@ -331,7 +331,11 @@ describe("a form around a day it cannot read", () => {
 
 // The day between two other fields, so Enter in one of them submits the form.
 function DayAmongFields(
-  props: Readonly<{ titleRequired?: boolean; onPost: () => void }>,
+  props: Readonly<{
+    titleRequired?: boolean;
+    onPost: () => void;
+    onInvalid: (cancelled: boolean) => void;
+  }>,
 ) {
   const [day, setDay] = useState<ISODate | "">("2026-05-06");
   return (
@@ -353,6 +357,7 @@ function DayAmongFields(
               today={TODAY}
               value={day}
               onChange={(event) => setDay(event.target.value)}
+              onInvalid={(event) => props.onInvalid(event.defaultPrevented)}
             />
           )}
         </Field>
@@ -366,32 +371,37 @@ function DayAmongFields(
   );
 }
 
+// happy-dom moves no focus on a refused submit. These read what the box leaves
+// to the browser, which focuses only an uncancelled invalid event.
 describe("a submit the browser refuses over a day it cannot read", () => {
-  it("takes focus to that day, as the browser does for its own refusals", async () => {
+  it("leaves the day to the browser when it is the form's first refusal", async () => {
     const user = userEvent.setup();
     const post = vi.fn();
-    render(<DayAmongFields onPost={post} />);
+    const invalid = vi.fn();
+    render(<DayAmongFields onPost={post} onInvalid={invalid} />);
 
     await user.tripleClick(box());
     await user.keyboard("31/02/2026");
     await user.type(screen.getByRole("textbox", { name: "Note" }), "x{Enter}");
 
     expect(post).not.toHaveBeenCalled();
-    expect(document.activeElement).toBe(box());
+    expect(invalid.mock.calls).toEqual([[false]]);
     expect(screen.getAllByRole("alert")).toHaveLength(1);
   });
 
-  it("leaves an earlier field the browser refuses to the browser", async () => {
+  it("cancels its bubble when an earlier field is the form's first refusal", async () => {
     const user = userEvent.setup();
     const post = vi.fn();
-    render(<DayAmongFields titleRequired onPost={post} />);
+    const invalid = vi.fn();
+    render(<DayAmongFields titleRequired onPost={post} onInvalid={invalid} />);
 
     await user.tripleClick(box());
     await user.keyboard("31/02/2026");
     await user.type(screen.getByRole("textbox", { name: "Note" }), "x{Enter}");
 
     expect(post).not.toHaveBeenCalled();
-    expect(document.activeElement).not.toBe(box());
+    expect(invalid.mock.calls).toEqual([[true]]);
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
   });
 });
 

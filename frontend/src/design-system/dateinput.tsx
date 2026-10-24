@@ -30,6 +30,7 @@ import { Calendar, dateOf, isoDay } from "./calendar";
 import { describedByIds } from "./describedby";
 import { useDialogFocus } from "./dialogfocus";
 import { ErrorLine } from "./errorline";
+import { firstRefusedControl } from "./formvalidity";
 import { IconAction } from "./iconaction";
 import "./dateinput.css";
 
@@ -116,6 +117,8 @@ export function DateInput({
     input.current?.setCustomValidity(problem ?? "");
   }, [problem]);
 
+  const unsettled = draft !== null && draft.text !== shown(current, pattern);
+
   const report = (next: ISODate | "") => {
     if (value === undefined) {
       setOwn(next);
@@ -183,13 +186,22 @@ export function DateInput({
             if (event.key === "Enter") {
               settleTyped();
             }
+            // The first Escape takes back typed text, as InlineText's does.
+            // Marked handled, so a dialog around it hears only the next one.
+            if (event.key === "Escape" && openedOn === null && unsettled) {
+              event.preventDefault();
+              setDraft(null);
+            }
             onKeyDown?.(event);
           }}
           onInvalid={(event) => {
             if (problem !== undefined) {
-              // Its ErrorLine says it, so the browser draws no bubble on top.
-              event.preventDefault();
-              pointAtFirstRefusal(event.currentTarget);
+              // Its ErrorLine says it, so the bubble is cancelled. The form's first
+              // refusal keeps it: only an uncancelled one gets the browser's focus.
+              const box = event.currentTarget;
+              if (!box.form || firstRefusedControl(box.form) !== box) {
+                event.preventDefault();
+              }
               setDraft((held) =>
                 held && held.refused === undefined
                   ? { ...held, refused: problem }
@@ -328,27 +340,6 @@ function DatePopup({
       </div>
     </div>,
     document.body,
-  );
-}
-
-// A cancelled invalid event loses the browser's own focus and scroll, so the
-// box takes them when it is the first control its form refuses.
-function pointAtFirstRefusal(box: HTMLInputElement) {
-  const first = box.form && firstRefusedControl(box.form);
-  if (first === box) {
-    box.focus();
-    box.scrollIntoView({ block: "nearest" });
-  }
-}
-
-function firstRefusedControl(form: HTMLFormElement): Element | undefined {
-  return Array.from(form.elements).find(
-    (control) =>
-      (control instanceof HTMLInputElement ||
-        control instanceof HTMLSelectElement ||
-        control instanceof HTMLTextAreaElement) &&
-      control.willValidate &&
-      !control.validity.valid,
   );
 }
 

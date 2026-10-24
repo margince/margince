@@ -77,6 +77,32 @@ it("saves the chosen date in the reader's own zone", async () => {
   );
 });
 
+it("sends nothing while the box holds text it cannot read", async () => {
+  const sent = captureBaselineWrites();
+  const user = userEvent.setup();
+  render(
+    <HistoryBaselineRow
+      conn={connection({
+        history_baseline: {
+          date: "2026-03-01",
+          timezone: "Europe/Berlin",
+          set_at: "2026-03-02T09:00:00Z",
+        },
+      })}
+    />,
+  );
+  const box = screen.getByLabelText(en["connectors.historyBaseline.label"]);
+
+  await user.clear(box);
+  await user.type(box, "99/99/9999");
+  await user.click(
+    screen.getByRole("button", { name: en["connectors.historyBaseline.save"] }),
+  );
+
+  expect(await screen.findByText("Enter a date as DD/MM/YYYY.")).toBeTruthy();
+  expect(sent).toEqual([]);
+});
+
 it("states the stored date and zone, and clears it as null", async () => {
   const sent = captureBaselineWrites();
   const user = userEvent.setup();

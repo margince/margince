@@ -377,6 +377,27 @@ describe("a provider's sheet", () => {
     expect(posts).toHaveLength(0);
   });
 
+  it("files no price while the date box holds text it cannot read", async () => {
+    const user = userEvent.setup();
+    const { posts } = mount();
+    const sheet = await open(user, "gemini");
+    await user.click(
+      await within(sheet).findByRole("button", { name: "Add price" }),
+    );
+    await user.type(within(sheet).getByLabelText("Model"), "gemini-4-pro");
+    await user.type(within(sheet).getByLabelText("Input $/M"), "2");
+    await user.type(within(sheet).getByLabelText("Output $/M"), "12");
+    const effective = within(sheet).getByLabelText("Effective");
+    await user.clear(effective);
+    await user.type(effective, "99/99/9999");
+    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+
+    expect(
+      await within(sheet).findByText("Enter a date as DD/MM/YYYY."),
+    ).toBeTruthy();
+    expect(posts).toHaveLength(0);
+  });
+
   it("removes a model's entry after the reader confirms, naming its provider, model and lane", async () => {
     const user = userEvent.setup();
     const { deletes } = mount();

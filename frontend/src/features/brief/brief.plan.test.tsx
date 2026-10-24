@@ -465,4 +465,35 @@ describe("the week ahead", () => {
       due_on: null,
     });
   });
+
+  it("sends nothing while the date box holds text it cannot read", async () => {
+    const calls = stubApi({
+      ...KEEPS_A_PLAN,
+      "GET /weekly-plans/current": () =>
+        jsonResponse(plan({ commitments: [] })),
+      "POST /weekly-plans/commitments": () => jsonResponse(commitment(), 201),
+    });
+    render(<PlanSection />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["plan.add"] }),
+    );
+    await userEvent.type(
+      screen.getByLabelText(`${en["plan.new.label"]} *`),
+      "Book the Weber demo",
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: en["plan.new.due"] }),
+      "99/99/9999",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: en["plan.new.save"] }),
+    );
+
+    expect(await screen.findByText("Enter a date as DD/MM/YYYY.")).toBeTruthy();
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: en["plan.new.due"] }),
+    );
+    expect(writes(calls)).toHaveLength(0);
+  });
 });
