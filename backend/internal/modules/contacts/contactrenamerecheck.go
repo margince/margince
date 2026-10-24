@@ -88,8 +88,6 @@ func lockEditedContactLanes(ctx context.Context, tx pgx.Tx, id ids.ContactID, cu
 // workspace and files the pairs the review lanes name. It takes the lane locks
 // in the create's order, so an edit and a create cannot both miss each other.
 //
-// The contact's current primary employer counts as evidence. That lets an edge
-// write find a same-name twin at that employer (fileEmployerTwins).
 // The exact lanes are skipped: the contact holds its own addresses and phones,
 // so they would name itself. A claimed address cannot arrive by an edit at all,
 // because contact_email is unique on the address.
@@ -140,7 +138,9 @@ func readContactSubject(ctx context.Context, tx pgx.Tx, id ids.ContactID) (conta
 
 // fileDuplicates runs the review lanes and the phone lane for an existing
 // contact and files every pair they name. It answers how many are new on the
-// queue. A nil matcher is the shipped consumer-mail list.
+// queue. A nil matcher is the shipped consumer-mail list. The contact's current
+// primary employer counts as evidence, so an edge write finds a same-name twin
+// at that employer (fileEmployerTwins).
 func (s contactSubject) fileDuplicates(ctx context.Context, tx pgx.Tx, consumerMail *freemail.Matcher, source, by string) (int, error) {
 	employer, _, err := readCurrentEmployer(ctx, tx, s.id.UUID)
 	if err != nil {
