@@ -25,6 +25,10 @@ const CardPhotoUploadBytes = imagenorm.MaxReadImageBytes + cardPhotoFramingBytes
 // boundary lines and part headers, which a browser keeps under a kilobyte.
 const cardPhotoFramingBytes = 64 << 10
 
+// cardPhotoField is the multipart part that carries the photo, and the field a
+// refusal of it names.
+const cardPhotoField = "file"
+
 // CardPhotoReader turns a photo into the cards a model read off it, each marked
 // ModelRead. It is injected because the model lane lives in a sibling module.
 type CardPhotoReader func(ctx context.Context, photo []byte) ([]VCardEntry, error)
@@ -38,7 +42,7 @@ func (e *CardPhotoRefusal) Error() string { return e.Message }
 // FieldFault carries the refusal to every surface, as the module's other
 // refusals do.
 func (e *CardPhotoRefusal) FieldFault() (field, code, message string) {
-	return "file", e.Code, e.Message
+	return cardPhotoField, e.Code, e.Message
 }
 
 // WithCardPhotoReader wires the model reading behind POST /contacts/card-photos.
@@ -100,9 +104,9 @@ func readCardPhotoUpload(w http.ResponseWriter, r *http.Request) ([]byte, bool) 
 		httperr.WriteMultipartRefusal(w, r, err, CardPhotoUploadBytes)
 		return nil, false
 	}
-	file, _, err := r.FormFile("file")
+	file, _, err := r.FormFile(cardPhotoField)
 	if err != nil {
-		httperr.Write(w, r, httperr.Validation("file", "missing", "Attach the photo to read as `file`."))
+		httperr.Write(w, r, httperr.Validation(cardPhotoField, "missing", "Attach the photo to read as `file`."))
 		return nil, false
 	}
 	defer func(ctx context.Context) {
@@ -112,7 +116,7 @@ func readCardPhotoUpload(w http.ResponseWriter, r *http.Request) ([]byte, bool) 
 	}(r.Context())
 	photo, err := io.ReadAll(io.LimitReader(file, imagenorm.MaxReadImageBytes+1))
 	if err != nil {
-		httperr.Write(w, r, httperr.Validation("file", "unreadable", "The photo could not be read; send it again."))
+		httperr.Write(w, r, httperr.Validation(cardPhotoField, "unreadable", "The photo could not be read; send it again."))
 		return nil, false
 	}
 	if len(photo) > imagenorm.MaxReadImageBytes {

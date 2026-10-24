@@ -103,8 +103,10 @@ func (c *cardPhotoCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	slices.Sort(got)
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
-		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer,
-			Detail: fmt.Sprintf("the reading offers %q where the photo shows %q", got, want)}
+		return aitasks.Outcome{
+			Result: aitasks.OutcomeWrongAnswer,
+			Detail: fmt.Sprintf("the reading offers %q where the photo shows %q", got, want),
+		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
 }

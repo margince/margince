@@ -14,6 +14,7 @@ func WithCardPhotoReader(lane documentCompleter) Option {
 		if lane == nil {
 			return
 		}
+		//nolint:staticcheck // QF1008: the embedded name shows the copy assigned back is the contacts handlers'
 		s.contactsHandlers = s.contactsHandlers.WithCardPhotoReader(cardPhotoReader(lane))
 	}
 }

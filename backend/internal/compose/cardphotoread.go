@@ -65,23 +65,17 @@ type cardPhotoPayload struct {
 }
 
 func cardPhotoSchema() json.RawMessage {
-	return schema.Must(schema.Object(
-		map[string]schema.Node{
-			"cards": schema.Array(schema.Object(
-				map[string]schema.Node{
-					"full_name":  schema.String(),
-					"title":      schema.String(),
-					"company":    schema.String(),
-					"emails":     schema.Array(schema.String()),
-					"phones":     schema.Array(schema.String()),
-					"url":        schema.String(),
-					"address":    schema.String(),
-					"confidence": schema.Number(),
-				},
-				"full_name", "title", "company", "emails", "phones", "url", "address", "confidence",
-			)),
-		},
-		"cards",
+	return schema.Must(schema.Record(
+		schema.Field("cards", schema.Array(schema.Record(
+			schema.Field("full_name", schema.String()),
+			schema.Field("title", schema.String()),
+			schema.Field("company", schema.String()),
+			schema.Field("emails", schema.Array(schema.String())),
+			schema.Field("phones", schema.Array(schema.String())),
+			schema.Field("url", schema.String()),
+			schema.Field("address", schema.String()),
+			schema.Field("confidence", schema.Number()),
+		))),
 	))
 }
 
@@ -191,24 +185,34 @@ func cardPhotoReader(lane ai.ImageLane) contacts.CardPhotoReader {
 	return func(ctx context.Context, photo []byte) ([]contacts.VCardEntry, error) {
 		mime, ok := ai.SniffImage(photo)
 		if !ok {
-			return nil, &contacts.CardPhotoRefusal{Code: "unsupported_type",
-				Message: "Send a JPEG, PNG, GIF, WebP, HEIC or HEIF photo."}
+			return nil, &contacts.CardPhotoRefusal{
+				Code:    "unsupported_type",
+				Message: "Send a JPEG, PNG, GIF, WebP, HEIC or HEIF photo.",
+			}
 		}
 		cards, dropped, err := readCardPhoto(ctx, lane, photo, mime)
 		var notCarried *ai.ImageNotCarriedError
 		switch {
 		case errors.Is(err, ai.ErrImageTooLarge):
-			return nil, &contacts.CardPhotoRefusal{Code: "too_large",
-				Message: "The photo is too large to read. Send a smaller photo."}
+			return nil, &contacts.CardPhotoRefusal{
+				Code:    "too_large",
+				Message: "The photo is too large to read. Send a smaller photo.",
+			}
 		case errors.As(err, &notCarried):
-			return nil, &contacts.CardPhotoRefusal{Code: "not_readable",
-				Message: "The configured model cannot read " + notCarried.MIME + " photos. Ask an administrator to configure a model that reads images."}
+			return nil, &contacts.CardPhotoRefusal{
+				Code:    "not_readable",
+				Message: "The configured model cannot read " + notCarried.MIME + " photos. Ask an administrator to configure a model that reads images.",
+			}
 		case errors.Is(err, ai.ErrReadRefused):
-			return nil, &contacts.CardPhotoRefusal{Code: "not_readable",
-				Message: "This photo could not be read. Try a sharper photo of the cards."}
+			return nil, &contacts.CardPhotoRefusal{
+				Code:    "not_readable",
+				Message: "This photo could not be read. Try a sharper photo of the cards.",
+			}
 		case errors.Is(err, errTooManyCards):
-			return nil, &contacts.CardPhotoRefusal{Code: "too_many_cards",
-				Message: fmt.Sprintf("The photo shows more than %d cards. Photograph fewer cards at a time.", contacts.CardPhotoMaxCards)}
+			return nil, &contacts.CardPhotoRefusal{
+				Code:    "too_many_cards",
+				Message: fmt.Sprintf("The photo shows more than %d cards. Photograph fewer cards at a time.", contacts.CardPhotoMaxCards),
+			}
 		case err != nil:
 			return nil, err
 		case len(cards) == 0:

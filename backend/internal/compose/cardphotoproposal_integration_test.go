@@ -23,10 +23,14 @@ import (
 
 func photoCards() []contacts.VCardEntry {
 	return []contacts.VCardEntry{
-		{FullName: "Hanna Fotograf", Company: "Blende GmbH", ModelRead: true,
-			Emails: []contacts.VCardChannel{{Value: "hanna@blende.example", Kind: "work"}}},
-		{FullName: "Paul Objektiv", Company: "Blende GmbH", ModelRead: true,
-			Emails: []contacts.VCardChannel{{Value: "paul@blende.example", Kind: "work"}}},
+		{
+			FullName: "Hanna Fotograf", Company: "Blende GmbH", ModelRead: true,
+			Emails: []contacts.VCardChannel{{Value: "hanna@blende.example", Kind: "work"}},
+		},
+		{
+			FullName: "Paul Objektiv", Company: "Blende GmbH", ModelRead: true,
+			Emails: []contacts.VCardChannel{{Value: "paul@blende.example", Kind: "work"}},
+		},
 	}
 }
 
@@ -113,8 +117,10 @@ func stagePhotoCard(ctx context.Context, t *testing.T, e *integration.Env, entry
 func TestPhotoCardsShowTheNameTheApprovalWrites(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	row := stagePhotoCard(ctx, t, e, contacts.VCardEntry{FullName: "  Hanna FOTOGRAF ", Company: "Blende GmbH", ModelRead: true,
-		Emails: []contacts.VCardChannel{{Value: "hanna@blende.example", Kind: "work"}}})
+	row := stagePhotoCard(ctx, t, e, contacts.VCardEntry{
+		FullName: "  Hanna FOTOGRAF ", Company: "Blende GmbH", ModelRead: true,
+		Emails: []contacts.VCardChannel{{Value: "hanna@blende.example", Kind: "work"}},
+	})
 
 	shown, _ := (*row.ProposedChange)["name"].(string)
 	if shown != "Hanna FOTOGRAF" {
@@ -141,8 +147,10 @@ func TestPhotoCardsApprovedAfterTheAddressWasTakenCreateNothing(t *testing.T) {
 	row := stagePhotoCard(ctx, t, e, photoCards()[0])
 
 	colleague := e.As(e.Rep1, nil, integration.AdminPerms)
-	if _, err := e.Contacts.CreateContact(colleague, contacts.CreateContactInput{FullName: "Hanna Fotograf", Source: "manual",
-		Emails: []contacts.ContactEmailInput{{Email: "hanna@blende.example", EmailType: "work", IsPrimary: true}}}); err != nil {
+	if _, err := e.Contacts.CreateContact(colleague, contacts.CreateContactInput{
+		FullName: "Hanna Fotograf", Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: "hanna@blende.example", EmailType: "work", IsPrimary: true}},
+	}); err != nil {
 		t.Fatalf("the colleague's contact: %v", err)
 	}
 
