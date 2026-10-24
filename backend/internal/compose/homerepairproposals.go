@@ -64,7 +64,9 @@ func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal app
 	if asked, named := approvalsubject.CommitmentAskedOf(proposal.Change); named {
 		seat = &asked
 	}
-	action, reason, err := homeRepairCommitmentAdmissionTx(ctx, tx, Commitment{SourceActivityID: staged.SourceActivityID, Seat: seat, AsOf: asOf, PrivateTo: staged.PrivateTo}, due, repairWithdrawProposal, forDecision)
+	// Only an open promise was ever staged, so the meaning check of the late rule holds by construction.
+	held := Commitment{SourceActivityID: staged.SourceActivityID, Seat: seat, AsOf: asOf, PrivateTo: staged.PrivateTo, Meaning: &commitmentMeaning{State: commitmentStateOpen}}
+	action, reason, err := homeRepairCommitmentAdmissionTx(ctx, tx, held, due, repairWithdrawProposal, forDecision)
 	if err != nil {
 		return item, err
 	}
