@@ -38,7 +38,7 @@ const (
 
 // contactShareRequests is the approvals queue behind contacts' share
 // requests.
-func contactShareRequests(pool *pgxpool.Pool) contacts.ShareRequests {
+func contactShareRequests(pool *pgxpool.Pool) contactShareQueue {
 	return contactShareQueue{pool: pool}
 }
 

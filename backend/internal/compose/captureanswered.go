@@ -52,9 +52,9 @@ func publishAnsweredTx(
 	return capture.ClearWithheldFromWorkspaceTx(ctx, tx, email)
 }
 
-// PublishAnsweredContactsWorkspace publishes the next page of contacts in the
-// workspace whose address has answered, one transaction per contact, then
-// stores where the next pass goes on from.
+// PublishAnsweredContactsWorkspace publishes the next page of contacts whose
+// address has answered, one transaction per contact. Then it stores where the
+// next pass goes on from.
 //
 // A contact that fails is skipped and counted, and the position moves past it.
 // It is offered again once the pass wraps, so a failing run of contacts never

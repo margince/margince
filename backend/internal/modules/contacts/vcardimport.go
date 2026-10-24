@@ -221,20 +221,15 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 	if errors.Is(err, errCardSourceNarrowed) {
 		return result, nil
 	}
-	// A colleague's contact holds the card's address. They are asked to share
-	// it, and the card is skipped with the refusal's own words.
-	err = s.AskHolderToShare(ctx, err)
-	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
-		return VCardResult{Index: index, FullName: result.FullName, Outcome: VCardSkipped, Reason: held.Error()}, nil
-	}
 	if err != nil {
-		return VCardResult{}, fmt.Errorf("contacts: importing card %d: %w", index+1, err)
+		skipped, err := s.skipHeldCard(ctx, err, index, result.FullName)
+		if err != nil {
+			return VCardResult{}, fmt.Errorf("contacts: importing card %d: %w", index+1, err)
+		}
+		return skipped, nil
 	}
-	// After the card's transaction, and a failure does not undo the card or
-	// stop the file: the card is committed by here, and this function's caller
-	// aborts the whole run on an error — a file of forty cards with one
-	// unraisable review would import nothing, against the per-card design
-	// ImportVCards states. raiseCardSplit carries the rest of the reasoning.
+	// After the card's transaction, and a failure undoes neither the card nor
+	// the file. raiseCardSplit carries the reasoning.
 	if split != nil {
 		s.raiseCardSplit(ctx, *split)
 	}

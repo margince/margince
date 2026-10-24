@@ -347,7 +347,7 @@ func TestOneFailingContactDoesNotStopTheVerdictPass(t *testing.T) {
 	requireNarrowed(t, e, stuck, contacts.NarrowedOutboundNoAnswer)
 }
 
-// A run of contacts that keep failing does not hide the ones after it: the
+// A run of contacts that keep failing does not hide the ones after it. The
 // pass moves past them and reaches the rest, more than a page later.
 func TestFailingContactsDoNotStarveTheContactsBehindThem(t *testing.T) {
 	e := setupWithOwnMailbox(t)

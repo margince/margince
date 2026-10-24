@@ -181,8 +181,8 @@ const shareRequestLock = "contact_share"
 // under the lock an owner change takes before it withdraws requests. The
 // change either commits first and is the owner read here, or waits and then
 // withdraws the request this files (ShareRequests.FollowOwnerTx). A contact
-// with no owner refuses and nobody is asked; an owner who left is refused by
-// the approvals queue, which asks only a member who may still decide.
+// with no owner refuses and nobody is asked. The approvals queue refuses an
+// owner who left, because it asks only a member who may still decide.
 func lockHolder(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (ids.UUID, bool, error) {
 	if err := storekit.LockWriteIdentity(ctx, tx, shareRequestLock, contactID.String()); err != nil {
 		return ids.Nil, false, err

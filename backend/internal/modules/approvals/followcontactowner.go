@@ -7,7 +7,7 @@ package approvals
 //
 // contact_share is decided by the owner its payload names, read live when it
 // was staged. Once the contact changes hands, or its owner leaves, that member
-// may no longer share it, so the request is withdrawn on the writer's own
+// may no longer share it. So the request is withdrawn on the writer's own
 // transaction. Withdrawn is not declined: the colleague's next create asks the
 // new owner.
 

@@ -146,3 +146,14 @@ func vcardRecordAddress(entry VCardEntry) *crmcontracts.Address {
 	}
 	return &crmcontracts.Address{Line1: &line}
 }
+
+// skipHeldCard answers a card whose address a colleague's contact holds. The
+// colleague is asked to share it, and the card is skipped with the refusal's
+// own words. Any other error passes through.
+func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name string) (VCardResult, error) {
+	err = s.AskHolderToShare(ctx, err)
+	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
+		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: held.Error()}, nil
+	}
+	return VCardResult{}, err
+}

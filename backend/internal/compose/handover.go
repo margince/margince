@@ -190,7 +190,7 @@ func (s handoverSeam) handOverInTx(
 		return crmcontracts.UserHandoverResult{}, err
 	}
 	moved.Project = projectsMoved
-	// Whoever now owns the contacts decides who may see them; a share request
+	// Whoever now owns the contacts decides who may see them. A share request
 	// put to the member who handed them over is withdrawn with the handover.
 	if _, err := approvals.WithdrawSharesDecidedByInTx(ctx, tx, member); err != nil {
 		return crmcontracts.UserHandoverResult{}, err

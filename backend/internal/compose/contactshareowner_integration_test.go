@@ -39,11 +39,11 @@ func reassignAsRep1(t *testing.T, e *integration.Env, held ids.ContactID, to ids
 	}
 }
 
-func requestsFor(t *testing.T, e *integration.Env, held ids.ContactID, owner ids.UUID, status string) int {
+func pendingRequestsFor(t *testing.T, e *integration.Env, held ids.ContactID, owner ids.UUID) int {
 	t.Helper()
 	return countIn(t, e, `SELECT count(*) FROM approval
-		WHERE kind = 'contact_share' AND target_entity_id = $1 AND status = $2
-		  AND proposed_change->>'owner_id' = $3`, held, status, owner.String())
+		WHERE kind = 'contact_share' AND target_entity_id = $1 AND status = 'pending'
+		  AND proposed_change->>'owner_id' = $2`, held, owner.String())
 }
 
 func TestARequestIsPutToTheOwnerTheContactHasWhenItIsFiled(t *testing.T) {
@@ -53,10 +53,10 @@ func TestARequestIsPutToTheOwnerTheContactHasWhenItIsFiled(t *testing.T) {
 	status, problem := createAsRep2(t, e)
 
 	requireHeldAnswer(t, e, held, status, problem, true)
-	if n := requestsFor(t, e, held, e.Rep3, "pending"); n != 1 {
+	if n := pendingRequestsFor(t, e, held, e.Rep3); n != 1 {
 		t.Errorf("%d requests put to the new owner, want 1", n)
 	}
-	if n := requestsFor(t, e, held, e.Rep1, "pending"); n != 0 {
+	if n := pendingRequestsFor(t, e, held, e.Rep1); n != 0 {
 		t.Errorf("%d requests put to the previous owner, want none", n)
 	}
 }
@@ -67,12 +67,12 @@ func TestReassigningAContactWithdrawsTheRequestPutToItsPreviousOwner(t *testing.
 
 	reassignAsRep1(t, e, held, e.Rep3)
 
-	if n := requestsFor(t, e, held, e.Rep1, "pending"); n != 0 {
+	if n := pendingRequestsFor(t, e, held, e.Rep1); n != 0 {
 		t.Errorf("%d requests still wait for the previous owner", n)
 	}
 	status, problem := createAsRep2(t, e)
 	requireHeldAnswer(t, e, held, status, problem, true)
-	if n := requestsFor(t, e, held, e.Rep3, "pending"); n != 1 {
+	if n := pendingRequestsFor(t, e, held, e.Rep3); n != 1 {
 		t.Errorf("the next attempt put %d requests to the new owner, want 1", n)
 	}
 }
@@ -98,7 +98,7 @@ func TestAHandoverWithdrawsTheRequestsPutToTheMemberWhoLeft(t *testing.T) {
 		t.Fatalf("handing over: %v", err)
 	}
 
-	if n := requestsFor(t, e, held, e.Rep1, "pending"); n != 0 {
+	if n := pendingRequestsFor(t, e, held, e.Rep1); n != 0 {
 		t.Errorf("%d requests still wait for the member who left", n)
 	}
 	if owner := ownerOf(t, e, "contact", held.UUID); owner != e.Rep3 {

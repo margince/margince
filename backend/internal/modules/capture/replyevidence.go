@@ -26,9 +26,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// addressAnswered is the evidence, with $1 the folded address: an exchange
-// (answeredExchange) whose reply is not held and was not captured into a
-// mailbox that holds its mail.
+// addressAnswered is the evidence, with $1 the folded address. It is an
+// exchange (answeredExchange) whose reply is not held, and was not captured
+// into a mailbox that holds its mail.
 //
 // A held mailbox promises that nothing it imports is shared, so its replies
 // publish nobody, the owner's included. A classified mailbox's reply waits for
@@ -114,7 +114,7 @@ func AnsweredContactsTx(ctx context.Context, tx pgx.Tx, reason string, limit int
 }
 
 // AdvanceAnsweredSweepTx stores where the pass goes on from. A page shorter
-// than the pass asked for reached the end, and the next pass starts over, so a
+// than the pass asked for reached the end, and the next pass starts over. So a
 // contact skipped for a failure is offered again on the next round.
 func AdvanceAnsweredSweepTx(ctx context.Context, tx pgx.Tx, page []AnsweredContact, limit int) error {
 	var after *ids.UUID

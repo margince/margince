@@ -273,9 +273,9 @@ func wroteBack() string {
 		   AND ` + auth.ActivityAvailableClause("inbound") + `)`
 }
 
-// answeredExchange is an exchange: the message at alias is an inbound,
-// non-bulk reply from address, on a thread where this workspace sent attested
-// mail of the same kind to the same address. wroteBack and the publication
+// answeredExchange is an exchange. The message at alias is an inbound, non-bulk
+// reply from address. Its thread holds attested mail of the same kind that
+// this workspace sent to the same address. wroteBack and the publication
 // evidence (addressAnswered) both start from it; only the second adds the
 // holds. address is a placeholder or column, never request text.
 //
