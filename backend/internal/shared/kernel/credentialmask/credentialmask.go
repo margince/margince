@@ -16,7 +16,7 @@ import (
 // Kinds a finding reports; the AI stripper writes them into its marker.
 const (
 	kindAPIKey               = "api_key"
-	kindCredentialAssignment = "credential_assignment"
+	kindCredentialAssignment = "credential_assignment" //nolint:gosec // G101: the name of a finding kind, not a credential
 )
 
 // Lane is the form of the text a scan reads.

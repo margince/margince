@@ -93,14 +93,14 @@ func TestACapturedMailStoresItsCredentialsMasked(t *testing.T) {
 }
 
 func passwordMail(msgID, cc, password string) []byte {
-	to := captureOwner
-	return plainMail("anna@acme.example", to, cc, msgID, "Passwort: "+password)
+	return plainMail("anna@acme.example", cc, msgID, "Passwort: "+password)
 }
 
-func plainMail(from, to, cc, msgID, text string) []byte {
+// plainMail is addressed to the capturing seat, captureOwner.
+func plainMail(from, cc, msgID, text string) []byte {
 	return []byte(strings.Join([]string{
 		"From: " + from,
-		"To: " + to,
+		"To: " + captureOwner,
 		"Cc: " + cc,
 		"Subject: Portal access",
 		"Date: Wed, 04 Jun 2026 08:00:00 +0000",
@@ -112,13 +112,12 @@ func plainMail(from, to, cc, msgID, text string) []byte {
 	}, "\r\n"))
 }
 
-// passwordMailWithFile is passwordMail carrying one file whose bytes are file.
-func passwordMailWithFile(msgID, cc, file string) []byte {
-	to := captureOwner
+// passwordMailWithFile is a mail to both seats carrying one file whose bytes are file.
+func passwordMailWithFile(msgID, file string) []byte {
 	return []byte(strings.Join([]string{
 		"From: anna@acme.example",
-		"To: " + to,
-		"Cc: " + cc,
+		"To: " + captureOwner,
+		"Cc: " + secondSeatAddress,
 		"Subject: Portal access",
 		"Date: Wed, 04 Jun 2026 08:00:00 +0000",
 		"Message-ID: <" + msgID + ">",
@@ -200,15 +199,15 @@ func TestAMaskedReplayNeedsAnAttestedRecipient(t *testing.T) {
 		t.Error("a self-declared alias on the Cc line proved a masked replay")
 	}
 
-	sent := plainMail(secondSeatAddress, captureOwner, "anna@acme.example", "pw-sent@myco.example", "Passwort: AlphaSecret")
+	sent := plainMail(secondSeatAddress, "anna@acme.example", "pw-sent@myco.example", "Passwort: AlphaSecret")
 	sync(t, sent)
 	syncOther(t, sent)
 	if importedBy(t, e, activityIDOf(t, e, "pw-sent@myco.example"), e.Rep3) {
 		t.Error("the seat that sent a masked mail became an importer of the recipient's row")
 	}
 
-	sync(t, plainMail("anna@acme.example", captureOwner, secondSeatAddress, "literal@acme.example", "hello"))
-	syncOther(t, plainMail("anna@acme.example", captureOwner, secondSeatAddress, "literal@acme.example", "hello [masked]"))
+	sync(t, plainMail("anna@acme.example", secondSeatAddress, "literal@acme.example", "hello"))
+	syncOther(t, plainMail("anna@acme.example", secondSeatAddress, "literal@acme.example", "hello [masked]"))
 	if importedBy(t, e, activityIDOf(t, e, "literal@acme.example"), e.Rep3) {
 		t.Error("a typed [masked] with nothing masked skipped the equality proof and joined another text")
 	}
@@ -224,14 +223,14 @@ func TestAMaskedReplayNeedsTheSameFiles(t *testing.T) {
 	sync := mailboxFor(t, e, e.Rep1, captureOwner, cfg)
 	syncOther := mailboxFor(t, e, e.Rep3, secondSeatAddress, cfg)
 
-	sync(t, passwordMailWithFile("pw-file@acme.example", secondSeatAddress, "the original file"))
-	syncOther(t, passwordMailWithFile("pw-file@acme.example", secondSeatAddress, "another file"))
+	sync(t, passwordMailWithFile("pw-file@acme.example", "the original file"))
+	syncOther(t, passwordMailWithFile("pw-file@acme.example", "another file"))
 	if importedBy(t, e, activityIDOf(t, e, "pw-file@acme.example"), e.Rep3) {
 		t.Error("a masked copy carrying another file joined the row")
 	}
 
-	sync(t, passwordMailWithFile("pw-same-file@acme.example", secondSeatAddress, "the original file"))
-	syncOther(t, passwordMailWithFile("pw-same-file@acme.example", secondSeatAddress, "the original file"))
+	sync(t, passwordMailWithFile("pw-same-file@acme.example", "the original file"))
+	syncOther(t, passwordMailWithFile("pw-same-file@acme.example", "the original file"))
 	if !importedBy(t, e, activityIDOf(t, e, "pw-same-file@acme.example"), e.Rep3) {
 		t.Error("a recipient's masked copy carrying the same file did not join the row")
 	}
