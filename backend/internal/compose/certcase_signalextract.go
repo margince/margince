@@ -53,6 +53,9 @@ type signalExtractMessage struct {
 	// Sent is the day the message went, YYYY-MM-DD. A relative deadline is
 	// resolved against it, so a scenario that dates a promise names its day.
 	Sent string `json:"sent,omitempty"`
+	// Focus marks a message the second reading of a pass is for. A fixture with
+	// none is the ordinary reading.
+	Focus bool `json:"focus,omitempty"`
 }
 
 // certSentDefault dates a message whose scenario does not, so every prompt
@@ -131,14 +134,22 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 			return nil, fmt.Errorf("signal_extract/thread_events: message %d is sent on %q, which is not a day: %w",
 				i+1, sent, err)
 		}
+		id := ids.NewV7()
+		if message.Focus {
+			thread.Focus = append(thread.Focus, id)
+		}
 		thread.Messages = append(thread.Messages, threadMessage{
-			ID:        ids.NewV7(),
+			ID:        id,
 			Parties:   parties,
 			Direction: message.Direction,
 			Subject:   message.Subject,
 			Body:      message.Body,
 			At:        at,
 		})
+	}
+	if len(thread.Focus) > 0 {
+		// A second reading only happens after a first one reported something.
+		thread.EventCap = extractMaxEvents - 1
 	}
 	for i := range want {
 		due := ""

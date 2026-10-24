@@ -1,0 +1,43 @@
+name: a_focused_reading_does_not_reopen_a_kept_promise
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - direction: outbound
+    subject: 'Podcast recording'
+    sent: '2026-09-07'
+    focus: true
+    body: |
+      Hi Mira,
+
+      thanks for joining the session. I will send you the edited recording
+      once it is ready.
+
+      Best,
+      Lars
+  - direction: inbound
+    subject: 'Re: Podcast recording'
+    sent: '2026-09-08'
+    body: |
+      Thanks Lars. By the way, we would like to join the beta of your new
+      product. Who should we talk to about getting access?
+
+      Mira
+  - direction: outbound
+    subject: 'Re: Podcast recording'
+    sent: '2026-09-09'
+    focus: true
+    body: |
+      The edited recording is ready, here is the download link:
+      https://example.com/recording
+
+      Lars
+expect:
+  outcome: accepted
+  answer: []
+  judge: none
+  judge_none_reason: >
+    The promise in message 1 is kept by message 3, so the right answer is no
+    event, and the check fails any event the reply reports. The rubric only
+    ranked the ways of reporting one.

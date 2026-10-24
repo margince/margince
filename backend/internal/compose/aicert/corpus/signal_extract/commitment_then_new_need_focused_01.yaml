@@ -1,0 +1,50 @@
+name: a_focused_reading_reports_the_promise_the_first_left_out
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - direction: outbound
+    subject: 'Podcast recording'
+    sent: '2026-09-07'
+    focus: true
+    body: |
+      Hi Mira,
+
+      thanks for joining the session. I will send you the edited recording
+      once it is ready.
+
+      Best,
+      Lars
+  - direction: inbound
+    subject: 'Re: Podcast recording'
+    sent: '2026-09-08'
+    body: |
+      Thanks Lars. By the way, we would like to join the beta of your new
+      product. Who should we talk to about getting access?
+
+      Mira
+  - direction: outbound
+    subject: 'Re: Podcast recording'
+    sent: '2026-09-08'
+    focus: true
+    body: |
+      Happy to help, I will ask our product team to get in touch.
+
+      Lars
+expect:
+  outcome: accepted
+  answer:
+    - kind: commitment_made
+      message: 1
+  rubric: >
+    The request names messages 1 and 3 as the only ones to report on; message 2
+    is context whose new_opportunity an earlier reading already filed. The
+    promise to send the edited recording, cited on message 1, is the event.
+    Reporting the new_opportunity on message 2 is outside the focus and
+    refused by the validator. Then score the summary as one plain sentence a
+    colleague could act on, and the confidence as a real judgement.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

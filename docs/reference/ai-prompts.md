@@ -4793,7 +4793,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `signal_extract` / `thread_events`
 
-`system 4,781 B (~1,195 tok)`: rules 4,509 B · boundary 272 B · after boundary 0 B · **cacheable 94%**
+`system 4,944 B (~1,236 tok)`: rules 4,672 B · boundary 272 B · after boundary 0 B · **cacheable 94%**
 
 <details><summary>system prompt</summary>
 
@@ -4843,6 +4843,8 @@ can identify that participant as the buyer; their presence in Cc alone cannot.
 Use supplier, partner or provider only when the source establishes that specific relationship.
 Merely relaying an unidentified company’s need does not establish a partnership: use unknown.
 A meeting invitation alone establishes no buying intent.
+A conversation can state several events in different messages. Report each one. An event in a later
+message does not replace an unrelated event in an earlier one.
 Reporting nothing is the correct answer for most conversations.
 LANGUAGE
 Write every human-readable sentence of your output in English.

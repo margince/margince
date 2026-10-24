@@ -346,3 +346,75 @@ func TestAQuoteIsKnownByTheSentenceItSitsIn(t *testing.T) {
 		t.Errorf("a decimal in another script ended the sentence: %q", a)
 	}
 }
+
+func TestExtractRequestNamesTheFocusAndLowersTheCap(t *testing.T) {
+	first, second := ids.NewV7(), ids.NewV7()
+	thread := settledThread{Messages: []threadMessage{
+		{ID: first, Direction: "outbound", Subject: "Recording", Body: "I will send the recording."},
+		{ID: second, Direction: "inbound", Subject: "Re: Recording", Body: "Thanks."},
+	}}
+	plain := extractRequest(thread, string(textlang.English)).Messages[0].Content
+	if strings.Contains(plain, "Report only events stated in") || !strings.Contains(plain, "at most 3") {
+		t.Fatalf("an ordinary reading must not carry a focus or a lowered cap:\n%s", plain)
+	}
+
+	thread.Focus, thread.EventCap = []ids.UUID{first}, 2
+	focused := extractRequest(thread, string(textlang.English)).Messages[0].Content
+	if !strings.Contains(focused, "Report only events stated in these messages: "+first.String()+".") {
+		t.Errorf("the focus is not named:\n%s", focused)
+	}
+	if strings.Contains(focused, "messages: "+first.String()+", "+second.String()) || !strings.Contains(focused, "at most 2") {
+		t.Errorf("the focused request names more than the focus or keeps the full cap:\n%s", focused)
+	}
+}
+
+func TestAFocusedReplyMustCiteAFocusMessageAndStayInTheRemainingCap(t *testing.T) {
+	focus, background := ids.NewV7(), ids.NewV7()
+	thread := settledThread{
+		Messages: []threadMessage{{ID: focus}, {ID: background}},
+		Focus:    []ids.UUID{focus}, EventCap: 1,
+	}
+	event := func(message, restated ids.UUID) extractedEvent {
+		restatedID := ""
+		if !restated.IsZero() {
+			restatedID = restated.String()
+		}
+		return extractedEvent{Kind: "commitment_made", MessageID: message.String(), RestatedMessageID: restatedID, Summary: "s", Confidence: 0.9}
+	}
+	for name, tc := range map[string]struct {
+		events []extractedEvent
+		refuse bool
+	}{
+		"cites the focus":                  {[]extractedEvent{event(focus, ids.UUID{})}, false},
+		"renews from the focus":            {[]extractedEvent{event(background, focus)}, false},
+		"cites only context":               {[]extractedEvent{event(background, ids.UUID{})}, true},
+		"passes the cap left by the first": {[]extractedEvent{event(focus, ids.UUID{}), event(focus, ids.UUID{})}, true},
+	} {
+		msg := validateExtractEnvelope(extractPayload{Events: &tc.events}, thread)
+		if (msg != "") != tc.refuse {
+			t.Errorf("%s: refusal %q, want refusal=%v", name, msg, tc.refuse)
+		}
+	}
+}
+
+func TestUnjudgedMessagesAreTheOnesThisPassReadsFirstAndNoEventCites(t *testing.T) {
+	day := func(d int) time.Time { return time.Date(2026, 6, d, 9, 0, 0, 0, time.UTC) }
+	cited, restated, plain, fresh := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	messages := []threadMessage{
+		{ID: cited, At: day(1)}, {ID: restated, At: day(2)}, {ID: plain, At: day(3)}, {ID: fresh, At: day(5)},
+	}
+	events := []extractedEvent{{MessageID: cited.String(), RestatedMessageID: restated.String()}}
+
+	thread := settledThread{Messages: messages}
+	if got := unjudgedMessages(thread, events); len(got) != 2 || got[0] != plain || got[1] != fresh {
+		t.Errorf("a never-read thread: got %v, want the two uncited messages", got)
+	}
+	readTo := day(3)
+	thread.ReadTo = &readTo
+	if got := unjudgedMessages(thread, events); len(got) != 1 || got[0] != fresh {
+		t.Errorf("a message an earlier pass judged was read again: %v", got)
+	}
+	if got := unjudgedMessages(thread, nil); len(got) != 1 || got[0] != fresh {
+		t.Errorf("an earlier pass's messages must stay out of the focus even uncited: %v", got)
+	}
+}

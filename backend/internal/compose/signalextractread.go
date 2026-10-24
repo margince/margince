@@ -131,6 +131,36 @@ type settledThread struct {
 	// disclose exactly what the private contact protects.
 	PrivateTo ids.UUID
 	Messages  []threadMessage
+	// Focus is set on the second reading of one pass: the only messages whose
+	// events it may report. The rest of Messages is context. Empty is the
+	// ordinary reading.
+	Focus []ids.UUID
+	// EventCap is how many events this reading may report; zero is
+	// extractMaxEvents. The second reading gets what the first left.
+	EventCap int
+}
+
+func (t settledThread) eventCap() int {
+	if t.EventCap > 0 {
+		return t.EventCap
+	}
+	return extractMaxEvents
+}
+
+// firstReadHere reports whether this pass is the first to read the message:
+// newer than the last read reached, or older than where it started. Both ends,
+// as in threadMessages, because a conversation grows at both.
+func (t settledThread) firstReadHere(m threadMessage) bool {
+	if t.ReadTo == nil {
+		return true
+	}
+	if m.At.After(*t.ReadTo) {
+		return true
+	}
+	if t.ReadFrom == nil || t.ReadFromID == nil {
+		return false
+	}
+	return m.At.Before(*t.ReadFrom) || (m.At.Equal(*t.ReadFrom) && m.ID.String() < t.ReadFromID.String())
 }
 
 // dueThreads lists the conversations that have settled and have moved since
