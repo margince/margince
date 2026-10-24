@@ -11,6 +11,8 @@ package credentialmask
 import (
 	"bytes"
 	"regexp"
+	"slices"
+	"strings"
 )
 
 // Kinds a finding reports; the AI stripper writes them into its marker.
@@ -137,6 +139,8 @@ type rule struct {
 	accept func(value []byte) bool
 	// cues are read off re at start-up (cues.go).
 	cues [][]byte
+	// witnesses are texts the rule must mask (witnesses.go).
+	witnesses []string
 }
 
 func (r rule) runsIn(lane Lane) bool {
@@ -186,55 +190,94 @@ func nextLine(labels string) *regexp.Regexp {
 
 var rules = withCues([]rule{
 	// (?s) spans lines; in JSON the line breaks are \n escapes, which .*? crosses too.
-	{kind: "private_key", re: regexp.MustCompile(`(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----`)},
-	{kind: kindAPIKey, re: regexp.MustCompile(`\bsk-[A-Za-z0-9_-]{16,}`)},
+	{
+		kind: "private_key", re: regexp.MustCompile(`(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----`),
+		witnesses: []string{"-----BEGIN " + "PRIVATE KEY-----\nMIIEow\n-----END PRIVATE KEY-----"},
+	},
+	{kind: kindAPIKey, re: regexp.MustCompile(`\bsk-[A-Za-z0-9_-]{16,}`), witnesses: vendorKeys([]string{"sk"}, "-", 10)},
 	// Stripe's underscore keys, a shape the hyphen anchor of sk- never reaches.
-	{kind: kindAPIKey, re: regexp.MustCompile(`\b[srp]k_(?:live|test)_[0-9A-Za-z]{16,}`)},
-	{kind: kindAPIKey, re: regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{20,}`)},
-	{kind: kindAPIKey, re: regexp.MustCompile(`\bxox[baprs]-[A-Za-z0-9-]{10,}`)},
-	{kind: kindAPIKey, re: regexp.MustCompile(`\bAIza[0-9A-Za-z_-]{30,}`)},
-	{kind: "aws_access_key", re: regexp.MustCompile(`\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`)},
+	{
+		kind: kindAPIKey, re: regexp.MustCompile(`\b[srp]k_(?:live|test)_[0-9A-Za-z]{16,}`),
+		witnesses: append(vendorKeys([]string{"sk_", "rk_", "pk_"}, "live_", 9), vendorKeys([]string{"sk_"}, "test_", 9)...),
+	},
+	{kind: kindAPIKey, re: regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{20,}`), witnesses: vendorKeys([]string{"ghp", "gho", "ghu", "ghs", "ghr"}, "_", 11)},
+	{kind: kindAPIKey, re: regexp.MustCompile(`\bxox[baprs]-[A-Za-z0-9-]{10,}`), witnesses: vendorKeys([]string{"xoxb", "xoxa", "xoxp", "xoxr", "xoxs"}, "-", 6)},
+	{kind: kindAPIKey, re: regexp.MustCompile(`\bAIza[0-9A-Za-z_-]{30,}`), witnesses: vendorKeys([]string{"AI"}, "za", 18)},
+	{
+		kind: "aws_access_key", re: regexp.MustCompile(`\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`),
+		witnesses: []string{"AK" + "IA" + "IOSFODNN7EXAMPLE", "AS" + "IA" + "IOSFODNN7EXAMPLE"},
+	},
 	// The 40-character AWS secret has no prefix of its own. Its key name is one
 	// underscore-joined word, so the assignment rule's \b never fires in it.
 	{
 		kind: "aws_secret_key", keepPrefix: true,
-		re: regexp.MustCompile(`(?i)\b((?:aws[_-]?)?secret[_-]?access[_-]?key["']?\s*[:=]\s*["']?)([A-Za-z0-9/+]{40})`),
+		re:        regexp.MustCompile(`(?i)\b((?:aws[_-]?)?secret[_-]?access[_-]?key["']?\s*[:=]\s*["']?)([A-Za-z0-9/+]{40})`),
+		witnesses: []string{"aws_secret_access_key = " + strings.Repeat("wJalrXUtnF", 4), "secret-access-key: " + strings.Repeat("K7MDENGbPx", 4)},
 	},
 	// scheme://user:PASSWORD@host. The closing @ is kept, so host:port after it
 	// is never read as user:password.
 	{
 		kind: "url_credential", keepPrefix: true, keepSuffix: true,
-		re: regexp.MustCompile(`(://[^/\s:@"'\\]+:)([^/\s@"'\\]{2,})(@)`),
+		re:        regexp.MustCompile(`(://[^/\s:@"'\\]+:)([^/\s@"'\\]{2,})(@)`),
+		witnesses: []string{"postgres://svc:S3cr3tPass@db.internal:5432/prod"},
 	},
 	// Before the bearer rule, so the kind names what was caught.
-	{kind: "jwt", re: regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}`)},
-	{kind: "bearer_token", re: regexp.MustCompile(`(?i)\bbearer[ \t]+[A-Za-z0-9._~+/=-]{16,}`)},
+	{
+		kind: "jwt", re: regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}`),
+		witnesses: []string{"ey" + "JhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N"},
+	},
+	{kind: "bearer_token", re: regexp.MustCompile(`(?i)\bbearer[ \t]+[A-Za-z0-9._~+/=-]{16,}`), witnesses: vendorKeys([]string{"Bearer"}, " ", 10)},
 	// The value stops at whitespace, quotes and separators, so only the secret goes.
 	{
 		kind: kindCredentialAssignment, keepPrefix: true, lane: jsonOnly,
-		re: regexp.MustCompile(`(?i)\b((?:` + jsonLabels + `)["']?\s*[:=]\s*["']?)([^\s"'\\,;&]{4,})`),
+		re:        regexp.MustCompile(`(?i)\b((?:` + jsonLabels + `)["']?\s*[:=]\s*["']?)([^\s"'\\,;&]{4,})`),
+		witnesses: witnessesOf(jsonWords, `"%s": "hunter2x"`),
 	},
 	// A quoted passphrase is masked through its closing quote. An unquoted one, or
 	// one whose quote never closes on its line, is masked to the end of the line.
-	{kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly, re: regexp.MustCompile(labelled(passwordLabels) + `")([^"\r\n]+)(")`)},
-	{kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly, re: regexp.MustCompile(labelled(passwordLabels) + `')([^'\r\n]+)(')`)},
-	{kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, `"`, `[^"\r\n]+?`)},
-	{kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, `'`, `[^'\r\n]+?`)},
-	{kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, ``, `[^\s"'][^\r\n]*?`)},
+	{
+		kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly,
+		re: regexp.MustCompile(labelled(passwordLabels) + `")([^"\r\n]+)(")`), witnesses: witnessesOf(passwordWords, `%s: "correct horse" ok`),
+	},
+	{
+		kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly,
+		re: regexp.MustCompile(labelled(passwordLabels) + `')([^'\r\n]+)(')`), witnesses: witnessesOf(passwordWords, `%s: 'correct horse' ok`),
+	},
+	{
+		kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly,
+		re: toLineEnd(passwordLabels, `"`, `[^"\r\n]+?`), witnesses: witnessesOf(passwordWords, "%s: \"open quote\nnext"),
+	},
+	{
+		kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly,
+		re: toLineEnd(passwordLabels, `'`, `[^'\r\n]+?`), witnesses: witnessesOf(passwordWords, "%s: 'open quote\nnext"),
+	},
+	{
+		kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly,
+		re: toLineEnd(passwordLabels, ``, `[^\s"'][^\r\n]*?`), witnesses: witnessesOf(passwordWords, "%s: Quokka7-x9!"),
+	},
 	{
 		kind: kindCredentialAssignment, keepPrefix: true, lane: textOnly,
-		re: regexp.MustCompile(labelled(strongLabels) + `["']?)([^\s"'\\,;&]{4,})`),
+		re:        regexp.MustCompile(labelled(strongLabels) + `["']?)([^\s"'\\,;&]{4,})`),
+		witnesses: witnessesOf(strongWords, "%s: abcd1234efgh"),
 	},
 	{
 		kind: kindCredentialAssignment, keepPrefix: true, lane: textOnly, accept: looksLikeCredential,
-		re: regexp.MustCompile(labelled(ambiguousLabels) + `["']?)([^\s"'\\,;&]+)`),
+		re:        regexp.MustCompile(labelled(ambiguousLabels) + `["']?)([^\s"'\\,;&]+)`),
+		witnesses: witnessesOf(ambiguousWords, "%s: abcd1234efgh"),
 	},
-	{kind: "credential_next_line", keepPrefix: true, keepSuffix: true, lane: textOnly, re: nextLine(passwordLabels + `|` + strongLabels)},
-	{kind: "credential_next_line", keepPrefix: true, keepSuffix: true, lane: textOnly, accept: looksLikeCredential, re: nextLine(ambiguousLabels)},
+	{
+		kind: "credential_next_line", keepPrefix: true, keepSuffix: true, lane: textOnly,
+		re: nextLine(passwordLabels + `|` + strongLabels), witnesses: witnessesOf(append(slices.Clone(passwordWords), strongWords...), "%s:\nQuokka7x9"),
+	},
+	{
+		kind: "credential_next_line", keepPrefix: true, keepSuffix: true, lane: textOnly, accept: looksLikeCredential,
+		re: nextLine(ambiguousLabels), witnesses: witnessesOf(ambiguousWords, "%s:\nabcd1234efgh"),
+	},
 	// The login on the line above a password line: the pair is the credential.
 	{
 		kind: "login_name", keepPrefix: true, keepSuffix: true, lane: textOnly,
-		re: regexp.MustCompile(`(?im)^([ \t]*(?:` + loginLabels + `)[ \t]*[:=][ \t]*)([^\s]{2,})([ \t]*\r?\n[ \t]*(?:` + passwordLabels + `)\b)`),
+		re:        regexp.MustCompile(`(?im)^([ \t]*(?:` + loginLabels + `)[ \t]*[:=][ \t]*)([^\s]{2,})([ \t]*\r?\n[ \t]*(?:` + passwordLabels + `)\b)`),
+		witnesses: loginWitnesses(),
 	},
 })
 

@@ -4,9 +4,13 @@
 package credentialmask
 
 import (
+	"encoding/json"
+	"regexp"
 	"regexp/syntax"
+	"slices"
 	"strings"
 	"testing"
+	"unicode"
 )
 
 // labelWords spells every word a label pattern matches. It walks the pattern
@@ -90,30 +94,113 @@ func TestTheCueCheckSkipsNoLabelARuleMatches(t *testing.T) {
 
 // A rule with no cues runs on every text, which is safe and gives up the
 // speed the check is for.
-func TestEveryRuleHasCues(t *testing.T) {
+func TestEveryRuleHasCuesAndWitnesses(t *testing.T) {
 	for i, r := range rules {
 		if len(r.cues) == 0 {
 			t.Errorf("rule %d (%s) has no cues: %s", i, r.kind, r.re)
 		}
+		if len(r.witnesses) == 0 {
+			t.Errorf("rule %d (%s) has no witnesses: %s", i, r.kind, r.re)
+		}
 	}
 }
 
-func TestTheCueCheckAgreesOnEveryMaskedShape(t *testing.T) {
-	texts := []string{
-		"use " + stripeSecret + " now", "ghp_16C7e42F292c6912E7710c838347Ae178B4a",
-		"id AKIAIOSFODNN7EXAMPLE here", "postgres://svc:S3cr3tPass@db.internal:5432/prod",
-		"Authorization: Bearer abcdefghijklmnop1234", "key:\n-----BEGIN PRIVATE KEY-----\nMIIEow\n-----END PRIVATE KEY-----",
-		"aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "Spin: 4711",
-		"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U",
-		"xoxb-1234567890-abcdefghij", "AIza" + strings.Repeat("b", 35),
+// witnessForms are the ways a witness reaches the masker: alone, inside prose,
+// in another case, and for the JSON lane as a string inside a JSON document.
+func witnessForms(t *testing.T, witness string, lane Lane) []string {
+	t.Helper()
+	cased := []string{witness, strings.ToUpper(witness), strings.ToLower(witness), mixedCase(witness)}
+	var forms []string
+	for _, text := range cased {
+		forms = append(forms, text, "Hello team,\n"+text+"\nthanks, Anna")
 	}
-	for _, text := range texts {
-		cued, _ := replaceCued([]byte(text), Text, func(kind string) string { return "[SECRET-REMOVED:" + kind + "]" }, true)
-		full, _ := replaceCued([]byte(text), Text, func(kind string) string { return "[SECRET-REMOVED:" + kind + "]" }, false)
-		if string(cued) != string(full) {
-			t.Errorf("%q: with cues %q, without %q", text, cued, full)
+	if lane == Text {
+		return forms
+	}
+	jsonForms := slices.Clone(cased)
+	for _, text := range forms {
+		encoded, err := json.Marshal(text)
+		if err != nil {
+			t.Fatal(err)
+		}
+		jsonForms = append(jsonForms, `{"content": `+string(encoded)+`}`)
+	}
+	return jsonForms
+}
+
+func mixedCase(s string) string {
+	runes := []rune(s)
+	for i := range runes {
+		if i%2 == 1 {
+			runes[i] = unicode.ToUpper(runes[i])
+		} else {
+			runes[i] = unicode.ToLower(runes[i])
 		}
 	}
+	return string(runes)
+}
+
+// Every rule of the table, through every witness it declares: the witness is
+// a match, every form of it the rule matches holds one of the rule's cues, and
+// the masker answers the same with the cue check as without it.
+func TestEveryWitnessHoldsItsRulesCues(t *testing.T) {
+	mark := func(kind string) string { return "<" + kind + ">" }
+	for i, r := range rules {
+		for _, witness := range r.witnesses {
+			if !r.re.MatchString(witness) {
+				t.Errorf("rule %d (%s): witness %q is no match of %s", i, r.kind, witness, r.re)
+			}
+			for _, lane := range []Lane{Text, JSON} {
+				if !r.runsIn(lane) {
+					continue
+				}
+				for _, form := range witnessForms(t, witness, lane) {
+					if r.re.MatchString(form) && !newCueScan([]byte(form)).mayMatch(r.cues) {
+						t.Errorf("rule %d (%s): %q matches and holds none of its cues", i, r.kind, form)
+					}
+					cued, _ := replaceCued([]byte(form), lane, mark, true)
+					full, _ := replaceCued([]byte(form), lane, mark, false)
+					if string(cued) != string(full) {
+						t.Errorf("rule %d (%s), lane %d, %q: with cues %q, without %q", i, r.kind, lane, form, cued, full)
+					}
+				}
+			}
+		}
+	}
+}
+
+// A witness set that leaves an alternation branch untaken leaves that branch's
+// cue unchecked. Each branch is pinned in turn and some witness must match the
+// pinned pattern.
+func TestTheWitnessesTakeEveryAlternationBranch(t *testing.T) {
+	for i, r := range rules {
+		root, err := syntax.Parse(r.re.String(), syntax.Perl)
+		if err != nil {
+			t.Fatalf("rule %d: %v", i, err)
+		}
+		for _, alternation := range alternations(root) {
+			whole := *alternation
+			for b, branch := range whole.Sub {
+				*alternation = *branch
+				pinned := regexp.MustCompile(root.String())
+				*alternation = whole
+				if !slices.ContainsFunc(r.witnesses, pinned.MatchString) {
+					t.Errorf("rule %d (%s): no witness takes branch %d %q of %s", i, r.kind, b, branch, &whole)
+				}
+			}
+		}
+	}
+}
+
+func alternations(re *syntax.Regexp) []*syntax.Regexp {
+	var found []*syntax.Regexp
+	if re.Op == syntax.OpAlternate {
+		found = append(found, re)
+	}
+	for _, sub := range re.Sub {
+		found = append(found, alternations(sub)...)
+	}
+	return found
 }
 
 func BenchmarkMaskTextOnMailWithNoCredential(b *testing.B) {
