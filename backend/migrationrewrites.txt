@@ -18,5 +18,5 @@
 1792779054_a_vendor_verdict_waits_for_a_colleague.down.sql | company_domain_disposition | only the open vendor questions this migration created are moved back, the same handful of rows
 1792779055_a_vendor_verdict_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1792781565_a_settlement_names_the_evidence_it_read.up.sql | * | the procedural bodies are trigger functions that take advisory locks and write no row; the migration adds two empty columns and changes no existing row
-1792813871_an_introduction_can_be_recorded_after_the_fact.down.sql | intro_request | only recorded introductions are deleted, each typed by hand by a colleague, so the set is a handful of rows per contact
-1792813872_a_recorded_introduction_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792842045_an_introduction_can_be_recorded_after_the_fact.down.sql | intro_request | only recorded introductions are deleted, each typed by hand by a colleague, so the set is a handful of rows per contact
+1792842046_a_recorded_introduction_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
