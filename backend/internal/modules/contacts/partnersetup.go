@@ -70,9 +70,9 @@ func requirePartnerWriteGrants(ctx context.Context) error {
 }
 
 // asFreshProgram makes a set-up start from the column defaults even when it
-// revives an archived row: no margin tier, no gate metrics, no served
-// segments, certification "applied". Terms the caller sent stay; the rest must
-// not carry over from a program a human once approved.
+// revives an archived row. That means no margin tier, no gate metrics, no
+// served segments and certification "applied". Terms the caller sent stay.
+// The rest must not carry over from a program a human once approved.
 func asFreshProgram(in UpsertPartnerInput) UpsertPartnerInput {
 	cleared := slices.Clone(in.Cleared)
 	cleared = append(cleared, partnerFieldMarginTier)
