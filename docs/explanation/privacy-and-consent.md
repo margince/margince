@@ -189,6 +189,23 @@ rules. This decides who may act against the answer those rules gave about one co
 installation that handed over the first has not handed over the second with it. The check is
 `auth.RequireHuman` plus the grant, so a passport that holds an admin's grants cannot make one.
 
+Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. The grant
+alone does not say which refusals a seat may send past. Each refusal reason declares what can
+resolve it in `commsauthz.RemediesFor`.
+
+- A reason that lists the plain exception can be sent past by any holder of the grant. Examples are
+  no evidence and no marketing consent.
+- A reason that lists only the admin exception can be sent past only by an admin. These are a
+  contact's own objection, withdrawal, stop request or processing limit, plus a hard bounce, an
+  opt-in never confirmed, a frequency cap and a recipient that matches no single contact.
+
+`Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
+
+A contact can be written to about a thread when they were To or Cc on a mail captured from it and
+one of our seats also took part. The rule reads the thread key and records its basis against that
+thread. So it never becomes standing permission for the contact. It never supports a message the
+sender calls marketing.
+
 ## Reaching the subject without the message that carried the link
 
 Three records exist so a subject's own acts do not rest on a mailbox, a session or a token that has

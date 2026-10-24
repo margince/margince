@@ -6206,13 +6206,13 @@ export const en = {
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
-    "The recipient objected to marketing. No one here can lift this, including an administrator.",
+    "The recipient objected to marketing. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.withdrawn":
-    "The recipient withdrew consent. No one here can lift this, including an administrator.",
+    "The recipient withdrew consent. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.restricted":
-    "The recipient’s data is under a processing restriction. No one here can lift this, including an administrator.",
+    "The recipient’s data is under a processing restriction. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.askedUsToStop":
-    "The recipient asked not to be contacted. No one here can lift this, including an administrator.",
+    "The recipient asked not to be contacted. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.tooMany":

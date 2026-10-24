@@ -505,9 +505,9 @@
         "update": true
       },
       "communication_exception": {
-        "create": false,
+        "create": true,
         "delete": false,
-        "read": false,
+        "read": true,
         "update": false
       },
       "company": {
@@ -930,9 +930,9 @@
         "update": true
       },
       "communication_exception": {
-        "create": false,
+        "create": true,
         "delete": false,
-        "read": false,
+        "read": true,
         "update": false
       },
       "company": {
@@ -2205,9 +2205,9 @@
         "update": false
       },
       "communication_exception": {
-        "create": false,
+        "create": true,
         "delete": false,
-        "read": false,
+        "read": true,
         "update": false
       },
       "company": {

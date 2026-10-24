@@ -117,6 +117,24 @@ func contradictsClaim(claimed, resolved commsauthz.Category) bool {
 	return claimed != "" && claimed != resolved
 }
 
+// claimYieldsToEvidence reports whether a claim that the record's evidence
+// contradicts gives way to that evidence. Every claim does except marketing: a
+// rep who picked "requested follow-up" while writing from the recipient's own
+// open deal is sent as the deal follow-up, and the claim stays in Requested. A
+// marketing claim never yields, because the objection to marketing binds the
+// category the sender named and was never put to the evidence's category.
+func claimYieldsToEvidence(claimed commsauthz.Category) bool {
+	return claimed != commsauthz.CategoryMarketing
+}
+
+// unsupportedClaimAwaitsAnswer reports whether an unsupported claim is a
+// question for the sender rather than a purpose nothing defines: the claim is in
+// the vocabulary and the caller named no legacy purpose key to fall back on.
+// Both subject arms ask it, so a lead and a contact get the same answer.
+func unsupportedClaimAwaitsAnswer(claimed commsauthz.Category, purposeKey string) bool {
+	return purposeKey == "" && claimed != "" && claimed.Valid()
+}
+
 // denyContradiction is the refusal both paths give, with Resolved carrying the
 // RECORD's reading rather than the claim. An unproven claim must never reach
 // that column: it selects the rollout mode and decides whether the advertising
@@ -175,9 +193,12 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 		// never be put to a message its own sender called marketing.
 		if contradictsClaim(req.Context, res.Category) {
 			d.Requested = req.Context
-			// An evidence-borne category, not a purpose key: nothing here ever
-			// named one, so a narrow suppression cannot be about this send.
-			return denyContradiction(d, res.Category), nil, nil
+			if !claimYieldsToEvidence(req.Context) {
+				// An evidence-borne category, not a purpose key: nothing here
+				// ever named one, so a narrow suppression cannot be about this
+				// send.
+				return denyContradiction(d, res.Category), nil, nil
+			}
 		}
 		// The record bears the category out — and the subject may still have
 		// said stop. The evidence arms never read contact_consent, so this is
@@ -234,6 +255,11 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // purpose from one that binds some OTHER marketing purpose, which
 // suppressionBinds cannot do from the category alone.
 func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
+	if unsupportedClaimAwaitsAnswer(claimed, purposeKey) {
+		d.Verdict = commsauthz.VerdictReview
+		d.ReasonCode = res.Reason
+		return d, nil, nil
+	}
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err

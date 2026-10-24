@@ -208,6 +208,11 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		return allowOn(d, res), nil, nil
 	}
 
+	if unsupportedClaimAwaitsAnswer(req.Context, purposeKey) {
+		d.Verdict = commsauthz.VerdictReview
+		d.ReasonCode = res.Reason
+		return d, nil, nil
+	}
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
