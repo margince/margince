@@ -3482,7 +3482,7 @@ export const en = {
     "Source could not be loaded. The record is unchanged.",
   "co.evidence.producedBy": "recorded by {who}",
   "co.evidence.retrievedAt": "Read {when}",
-  "co.evidence.verifiedAt": "Confirmed by a human {when}",
+  "co.evidence.verifiedAt": "Confirmed by a person {when}",
   "co.evidence.confidence": "Model confidence {percent}%",
   "co.evidence.gaps": "Not recorded: {fields}.",
   "co.evidence.kind.site_read": "Read from company website",
@@ -5755,7 +5755,7 @@ export const en = {
   "evidence.saving": "Saving…",
   "evidence.cancel": "Cancel",
   "evidence.correctedValue": "Corrected value",
-  "evidence.confirmedAt": "Confirmed by a human {when}",
+  "evidence.confirmedAt": "Confirmed by a person {when}",
   "evidence.humanSet": "Set by a person",
   "evidence.agentSet": "Set by an agent",
   "acctCoverage.open": "Compare coverage",
@@ -9455,7 +9455,7 @@ export const en = {
 
   "blockedDomains.title": "Refused domains",
   "blockedDomains.sub":
-    "Domains refused as companies, and whether a model, a heuristic or a human decided. Allowing a domain reopens the question.",
+    "Domains refused as companies, and whether a model, a heuristic or a person decided. Allowing a domain reopens the question.",
   "blockedDomains.listTitle": "Recorded decisions",
   "blockedDomains.record": "Record a decision",
   "blockedDomains.recordOpen": "Record a decision",
@@ -10517,7 +10517,7 @@ export const en = {
   "confirm.receipt.rectify": "Correction requested",
   "confirm.receipt.erasure": "Removal requested",
   "confirm.done.body":
-    "Your answer is recorded. Any changes go to a human here to apply, and this link is now used up.",
+    "Your answer is recorded. Any changes go to a person here to apply, and this link is now used up.",
   "confirm.invalidLink":
     "This link is no longer valid. It may have been used or may have expired.",
   "prefs.lockedWhy": "Needed for something you requested, so it stays on.",
@@ -13176,7 +13176,7 @@ export const en = {
     "Each new company created from captured mail gets an automatic web profile built from its site. Runs within a daily limit.",
   "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
-    "Reads the title, phone, address or company a human states in their own signature or business card. Nothing is inferred. A mailbox’s own setting wins.",
+    "Reads the title, phone, address or company a person states in their own signature or business card. Nothing is inferred. A mailbox’s own setting wins.",
   "captureSettings.addFailed": "Exclusion not added",
   "captureSettings.adminOnly":
     "Only an administrator or operations user can change this.",
@@ -16245,7 +16245,7 @@ export const en = {
   "ob.digest.changed_other": "{count} unsaved line changes",
   "ob.digest.pickFacts": "Choose facts to keep",
   "ob.digest.referenceNote":
-    "A later re-read may propose changes to this record. It never overwrites a line a human has edited.",
+    "A later re-read may propose changes to this record. It never overwrites a line a person has edited.",
   "ob.digest.sidebarLabel": "Facts about the company",
   "ob.digest.sidebar.legalName": "Legal name",
   "ob.digest.sidebar.founded": "Founded",
@@ -16596,7 +16596,7 @@ export const en = {
   "stageAutomation.resumeBody":
     "Margince suspended it (reason: {reason}). Resuming does not skip the threshold: the transition must meet the record above before it moves deals automatically.",
   "stageAutomation.noRules":
-    "No transition on this pipeline has a rule yet, so every move is proposed for a human to review.",
+    "No transition on this pipeline has a rule yet, so every move is proposed for a person to review.",
   "stageAutomation.undoWindow": "Undo for {hours} h",
   "stageAutomation.rulesLoading": "Loading transition rules…",
   "stageAutomation.saveFailed": "Change not saved",
