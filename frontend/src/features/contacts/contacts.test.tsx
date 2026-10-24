@@ -510,7 +510,7 @@ describe("ContactsScreen — a colleague holds the contact", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          "A colleague already has this contact. We asked them to share it with you.",
+          "A colleague already has this contact. Margince asked them to share it with you.",
         ),
       ).toBeTruthy(),
     );

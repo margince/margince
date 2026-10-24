@@ -2578,10 +2578,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Datensatz wurde geändert, nachdem du ihn geöffnet hast. Lade ihn neu, um die Änderung zu sehen, und nimm deine dann erneut vor.",
   "common.duplicate.email":
     "Die E-Mail-Adresse wurde hier nicht gespeichert, da ein anderer Kontakt oder Lead sie schon hat.",
-  "common.heldByColleague":
-    "Eine Kollegin oder ein Kollege hat diesen Kontakt schon.",
+  "common.heldByColleague": "Ein anderes Mitglied hat diesen Kontakt schon.",
   "common.heldByColleague.asked":
-    "Eine Kollegin oder ein Kollege hat diesen Kontakt schon. Wir haben sie gebeten, ihn mit dir zu teilen.",
+    "Ein anderes Mitglied hat diesen Kontakt schon. Margince hat es gebeten, ihn mit dir zu teilen.",
   "common.duplicate.domain":
     "Die Domain wurde hier nicht gespeichert, da ein anderes Unternehmen sie schon hat.",
   "common.duplicate.linkedinUrl":

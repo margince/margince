@@ -2506,7 +2506,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.heldByColleague":
     "Một đồng nghiệp đã có liên hệ này.",
   "common.heldByColleague.asked":
-    "Một đồng nghiệp đã có liên hệ này. Chúng tôi đã đề nghị họ chia sẻ liên hệ với bạn.",
+    "Một đồng nghiệp đã có liên hệ này. Margince đã đề nghị họ chia sẻ liên hệ với bạn.",
   "common.duplicate.domain":
     "Một công ty khác đã có tên miền này, nên tên miền chưa được lưu ở đây.",
   "common.duplicate.linkedinUrl":

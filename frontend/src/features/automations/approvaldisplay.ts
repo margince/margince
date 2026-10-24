@@ -120,6 +120,9 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       { field: "email", label: "approval.field.email", as: "text" },
       { field: "domain", label: "approval.field.domain", as: "text" },
     ],
+    // A colleague asks the owner to share a contact. The summary names who
+    // asked; the payload holds only the ids the accept writes the share with.
+    contact_share: [],
     // Two records that look like one contact. The names are the comparison; the
     // position and the title beside them are what "Use as job title" weighs.
     linkedin_match: [

@@ -2538,7 +2538,7 @@ export const en = {
     "Another contact or lead already has this email address, so it was not saved here.",
   "common.heldByColleague": "A colleague already has this contact.",
   "common.heldByColleague.asked":
-    "A colleague already has this contact. We asked them to share it with you.",
+    "A colleague already has this contact. Margince asked them to share it with you.",
   "common.duplicate.domain":
     "Another company already has this domain, so it was not saved here.",
   "common.duplicate.linkedinUrl":
