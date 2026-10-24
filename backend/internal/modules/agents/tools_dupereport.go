@@ -145,7 +145,7 @@ type createdRecord struct {
 // is reported against its contact. The edge gives the contact its employer,
 // and the pair it filed names the contact.
 func (t createRecord) reportCreateDuplicates(ctx context.Context, recordType string, fields json.RawMessage, id ids.UUID) []DuplicateCandidate {
-	if recordType != "relationship" {
+	if recordType != string(datasource.EntityRelationship) {
 		return t.reportDuplicates(ctx, recordType, id)
 	}
 	var edge struct {

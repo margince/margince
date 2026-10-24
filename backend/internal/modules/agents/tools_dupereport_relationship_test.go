@@ -22,10 +22,15 @@ func TestEmploymentRelationshipCreateReportsTheContactsPairs(t *testing.T) {
 		wantType   string
 		wantID     ids.UUID
 	}{
-		{"employment edge reports its contact", "relationship",
-			`{"kind":"employment","contact_id":"` + contact.String() + `"}`, "contact", contact},
-		{"other edge kinds report nothing", "relationship",
-			`{"kind":"works_with","contact_id":"` + contact.String() + `"}`, "", ids.UUID{}},
+		{
+			"employment edge reports its contact", "relationship",
+			`{"kind":"employment","contact_id":"` + contact.String() + `"}`, "contact", contact,
+		},
+		{
+			"other edge kinds report nothing", "relationship",
+			`{"kind":"works_with","contact_id":"` + contact.String() + `"}`, "",
+			ids.UUID{},
+		},
 		{"a contact create reports itself", "contact", `{"full_name":"A"}`, "contact", edge},
 	}
 	for _, tc := range cases {
