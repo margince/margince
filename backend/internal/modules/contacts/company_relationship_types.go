@@ -157,11 +157,6 @@ func partnerRowExistsMessage() string {
 		"A partner program ends only when the company is archived."
 }
 
-// partnerRowExistsConflictMessage is the answer to a set-up on a live program.
-func partnerRowExistsConflictMessage() string {
-	return "this company already has a partner program. A human changes it on the company's Partner tab."
-}
-
 // hasPartnerRow reports whether the company carries the partner program
 // extension — the other half of the invariant this file guards.
 func hasPartnerRow(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (bool, error) {

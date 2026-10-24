@@ -10,6 +10,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -30,7 +31,8 @@ type PartnerSetUpFields struct {
 type PartnerSetUp interface {
 	// Check answers what SetUp would refuse for the caller and this company now.
 	Check(ctx context.Context, companyID ids.UUID) error
-	SetUp(ctx context.Context, companyID ids.UUID, fields PartnerSetUpFields) error
+	// SetUp returns the written partner as JSON, already masked for the caller.
+	SetUp(ctx context.Context, companyID ids.UUID, fields PartnerSetUpFields) (json.RawMessage, error)
 }
 
 var setUpPartnerCopy = toolCopy{
@@ -136,10 +138,16 @@ func (t setUpPartner) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		}
 		fields.NextStepDueAt = &due
 	}
-	if err := t.partners.SetUp(ctx, args.CompanyID, fields); err != nil {
+	written, err := t.partners.SetUp(ctx, args.CompanyID, fields)
+	if err != nil {
 		return nil, err
 	}
+	// The write is committed. A caller holding the update grants but not the
+	// read grants gets the store's own masked result and no evidence record.
 	rec, err := t.p.Read(ctx, datasource.EntityRef{Type: datasource.EntityPartner, ID: args.CompanyID})
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		return written, nil
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -210,8 +210,8 @@ func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (jso
 
 func (seamProbeLifecycle) Check(context.Context, ids.UUID) error { return errSeamReached }
 
-func (seamProbeLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) error {
-	return errSeamReached
+func (seamProbeLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) (json.RawMessage, error) {
+	return nil, errSeamReached
 }
 
 func (seamProbeLifecycle) DemoteLead(context.Context, ids.UUID, string, *int64) (json.RawMessage, error) {

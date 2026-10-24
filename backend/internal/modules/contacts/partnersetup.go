@@ -23,7 +23,7 @@ import (
 // is live. It answers 409 with the code partner_row_exists.
 type PartnerAlreadySetUpError struct{}
 
-func (e *PartnerAlreadySetUpError) Error() string { return partnerRowExistsConflictMessage() }
+func (e *PartnerAlreadySetUpError) Error() string { return partnerRowExistsMessage() }
 
 func (e *PartnerAlreadySetUpError) Unwrap() error { return apperrors.ErrConflict }
 

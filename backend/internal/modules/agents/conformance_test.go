@@ -279,7 +279,9 @@ func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.Ra
 
 func (inertLifecycle) Check(context.Context, ids.UUID) error { return nil }
 
-func (inertLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) error { return nil }
+func (inertLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) (json.RawMessage, error) {
+	return nil, nil
+}
 
 func (inertLifecycle) DemoteLead(context.Context, ids.UUID, string, *int64) (json.RawMessage, error) {
 	return nil, nil

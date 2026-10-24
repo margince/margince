@@ -23,9 +23,9 @@ type recordingPartnerSetUp struct {
 
 func (p *recordingPartnerSetUp) Check(context.Context, ids.UUID) error { return p.checkErr }
 
-func (p *recordingPartnerSetUp) SetUp(_ context.Context, _ ids.UUID, f PartnerSetUpFields) error {
+func (p *recordingPartnerSetUp) SetUp(_ context.Context, _ ids.UUID, f PartnerSetUpFields) (json.RawMessage, error) {
 	p.setUps = append(p.setUps, f)
-	return nil
+	return json.RawMessage(`{}`), nil
 }
 
 func setUpPartnerTool(partners PartnerSetUp, companyID ids.UUID) setUpPartner {
