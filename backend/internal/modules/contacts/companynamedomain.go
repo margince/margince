@@ -99,7 +99,7 @@ func fileNameDomainTwins(ctx context.Context, tx pgx.Tx, claimant ids.CompanyID,
 		if named, ok := displayNameDomain(candidate.name); !ok || named != domain {
 			continue
 		}
-		if err := recordNearMatch(ctx, tx, entityCompany, claimant.UUID, candidate.id.UUID,
+		if _, err := recordNearMatch(ctx, tx, entityCompany, claimant.UUID, candidate.id.UUID,
 			identityConflictConfidence,
 			nearMatchEvidence(laneDomain, domain, candidate.name, identityConflictConfidence),
 			source, by); err != nil {

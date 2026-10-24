@@ -209,7 +209,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactCreated{FullName: in.FullName}); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("emit contact.created: %w", err)
 	}
-	if err := match.recordIfReview(ctx, tx, id, in.FullName, in.Source, by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, id, in.FullName, in.Source, by); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 	// Somebody typing in a contact who is already a lead has qualified them.

@@ -5,10 +5,12 @@ package compose
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -17,7 +19,8 @@ import (
 )
 
 // DedupeRecheckArgs identifies the fleet-wide pass that closes open duplicate
-// pairs the filing rule no longer files.
+// pairs the filing rule no longer files, then files the pairs the records
+// changed since the last pass make.
 type DedupeRecheckArgs struct{}
 
 // Kind is the stable job identifier River persists in river_job.
@@ -26,20 +29,29 @@ func (DedupeRecheckArgs) Kind() string { return "dedupe_recheck" }
 // FleetWide makes workspace fan-out explicit to the job binder.
 func (DedupeRecheckArgs) FleetWide() {}
 
-type dedupeRecheckWorker struct{ pool *pgxpool.Pool }
+type dedupeRecheckWorker struct {
+	pool *pgxpool.Pool
+	now  func() time.Time
+}
 
 func (w *dedupeRecheckWorker) Work(ctx context.Context, _ *river.Job[DedupeRecheckArgs]) error {
 	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.recheckWorkspace))
 }
 
+// recheckWorkspace closes before it scans, so a pair closed tonight is not
+// filed again by the same run.
 func (w *dedupeRecheckWorker) recheckWorkspace(ctx context.Context, workspace ids.UUID) error {
-	store := contacts.NewStore(database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace)))
+	store := contacts.NewStore(database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace))).
+		WithConsumerMail(capture.MatcherTx).WithClock(w.now)
 	actor := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "dedupe_recheck")
-	_, err := store.RecheckOpenDedupeCandidates(actor)
+	if _, err := store.RecheckOpenDedupeCandidates(actor); err != nil {
+		return err
+	}
+	_, err := store.ScanChangedForDuplicates(actor)
 	return err
 }
 
 func addDedupeRecheckJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig) []*river.PeriodicJob {
-	addDeclaredWorker[DedupeRecheckArgs](reg, &dedupeRecheckWorker{pool: pool})
+	addDeclaredWorker[DedupeRecheckArgs](reg, &dedupeRecheckWorker{pool: pool, now: time.Now})
 	return periodicFor(cfg, DedupeRecheckArgs{})
 }

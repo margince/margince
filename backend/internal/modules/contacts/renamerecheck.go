@@ -47,27 +47,38 @@ import (
 // questions about how the duplicate got in.
 const companyRenameRecheckSource = "company_rename_recheck"
 
-// recheckCompanyNameForDuplicates scores a company against the rest of the
-// workspace after its name changed, and files the best pair the queue has not
-// already been asked about.
-//
-// The company excludes itself from both tiers: it holds its own domains
-// and its own name, so without that it matches itself perfectly and hides
-// every real rival behind the self-score.
+// recheckCompanyNameForDuplicates files the pairs a renamed company now makes.
 func recheckCompanyNameForDuplicates(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, by string) error {
+	_, err := recheckCompanyForDuplicates(ctx, tx, companyID, companyRenameRecheckSource, by)
+	return err
+}
+
+// recheckCompanyForDuplicates scores an existing company against the rest of
+// the workspace with its names and its live domains, files every pair the
+// ladder ranks, and answers how many are new on the queue. A rename and the
+// duplicate scan (dedupescan.go) both ask it.
+//
+// The company excludes itself from every tier: it holds its own domains
+// and its own name, so without that it matches itself perfectly and hides
+// every real rival behind the self-score. Its domains cannot reach the exact
+// tier, because a live domain belongs to one company (uq_company_domain).
+func recheckCompanyForDuplicates(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, source, by string) (int, error) {
 	var display, legal string
 	var anchor bool
+	var domains []string
 	err := tx.QueryRow(ctx, `
-		SELECT display_name, coalesce(legal_name, ''), is_anchor
-		  FROM company
-		 WHERE id = $1 AND archived_at IS NULL`, companyID).Scan(&display, &legal, &anchor)
+		SELECT c.display_name, coalesce(c.legal_name, ''), c.is_anchor,
+		       coalesce((SELECT array_agg(d.domain ORDER BY d.domain) FROM company_domain d
+		                  WHERE d.company_id = c.id AND d.archived_at IS NULL), '{}')
+		  FROM company c
+		 WHERE c.id = $1 AND c.archived_at IS NULL`, companyID).Scan(&display, &legal, &anchor, &domains)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			// Archived or erased between the rename and here: there is no
+			// Archived or erased between the write and here: there is no
 			// record left to find a twin for, and that is not a fault.
-			return nil
+			return 0, nil
 		}
-		return fmt.Errorf("contacts: reading the renamed company: %w", err)
+		return 0, fmt.Errorf("contacts: reading the company to re-check: %w", err)
 	}
 	// The installation's own company is filed as neither side of a duplicate
 	// pair. A dedupe proposal exists to be disposed by a merge, and the anchor
@@ -76,7 +87,7 @@ func recheckCompanyNameForDuplicates(ctx context.Context, tx pgx.Tx, companyID i
 	// nobody can answer (ADR-0082/A127). The candidate set already leaves it
 	// out as a rival (dedupecompany.go); this is the same rule for the subject.
 	if anchor {
-		return nil
+		return 0, nil
 	}
 
 	// Two companies converging on names that score against each other would,
@@ -84,40 +95,19 @@ func recheckCompanyNameForDuplicates(ctx context.Context, tx pgx.Tx, companyID i
 	// nothing, and both land with no pair filed — the duplicate this whole path
 	// exists to catch, missed by a race.
 	if err := lockCompanyNameWrites(ctx, tx); err != nil {
-		return err
+		return 0, err
 	}
 
 	match, err := DedupeCompany(ctx, tx, CompanyCandidate{
 		DisplayName: display,
 		LegalName:   legal,
+		Domains:     domains,
 		ExcludeID:   &companyID,
 	})
 	if err != nil {
-		return err
+		return 0, err
 	}
-	if match.Decision != DecisionFuzzyReview {
-		return nil
-	}
-
-	// Walk the ranked rivals rather than taking only the winner. A pair the
-	// queue has already seen — merged, or dismissed as not-a-duplicate — is
-	// answered, and `ON CONFLICT DO NOTHING` would silently drop this filing
-	// against it. Left as the winner alone, one dismissal would mask every
-	// genuine duplicate behind it for good.
-	for _, rival := range match.Ranked {
-		filed, err := companyPairAlreadyFiled(ctx, tx, companyID, rival.CompanyID)
-		if err != nil {
-			return err
-		}
-		if filed {
-			continue
-		}
-		return recordNearMatch(ctx, tx, entityCompany, companyID.UUID, rival.CompanyID.UUID,
-			rival.Confidence,
-			nearMatchEvidence(rival.MatchedField, rival.CandidateValue, rival.IncumbentValue, rival.Confidence),
-			companyRenameRecheckSource, by)
-	}
-	return nil
+	return match.recordIfReview(ctx, tx, companyID, source, by)
 }
 
 // companyNameWriteIdentity is the ONE key every company-name writer takes, for
@@ -186,23 +176,4 @@ func renamesACompany(in UpdateCompanyInput) bool {
 // costs a path that already holds it nothing.
 func lockCompanyNameWrites(ctx context.Context, tx pgx.Tx) error {
 	return storekit.LockWriteIdentity(ctx, tx, "company_name", companyNameWriteIdentity)
-}
-
-// companyPairAlreadyFiled reports whether the queue already holds this pair, in
-// any disposition. The pair is stored canonically (lower id left, DH-DDL-1),
-// so the lookup orders the two ids the same way the insert does.
-func companyPairAlreadyFiled(ctx context.Context, tx pgx.Tx, a, b ids.CompanyID) (bool, error) {
-	left, right := a.UUID, b.UUID
-	if right.String() < left.String() {
-		left, right = right, left
-	}
-	var exists bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM dedupe_candidate
-		   WHERE entity_type = $1 AND left_company_id = $2 AND right_company_id = $3)`,
-		entityCompany, left, right).Scan(&exists); err != nil {
-		return false, fmt.Errorf("contacts: reading the dedupe queue for this pair: %w", err)
-	}
-	return exists, nil
 }

@@ -20,12 +20,14 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -83,7 +85,7 @@ func lockEditedContactLanes(ctx context.Context, tx pgx.Tx, id ids.ContactID, cu
 }
 
 // recheckContactForDuplicates scores an edited contact against the rest of the
-// workspace and files the pair the review lanes name (reviewContact). It takes
+// workspace and files the pairs the review lanes name (reviewContact). It takes
 // the address-base and name locks in the create's order. So an edit and a
 // create converging on one human cannot both read no incumbent.
 //
@@ -94,30 +96,60 @@ func lockEditedContactLanes(ctx context.Context, tx pgx.Tx, id ids.ContactID, cu
 // so they would name itself. A claimed address cannot arrive by an edit at all,
 // because contact_email is unique on the address.
 func recheckContactForDuplicates(ctx context.Context, tx pgx.Tx, id ids.ContactID, source, by string) error {
-	var name string
-	var emails []string
+	subject, found, err := readContactSubject(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return fmt.Errorf("contacts: reading the edited contact: %w", pgx.ErrNoRows)
+	}
+	if err := lockContactLanes(ctx, tx, subject.emails, subject.name); err != nil {
+		return err
+	}
+	_, err = subject.fileDuplicates(ctx, tx, nil, source, by)
+	return err
+}
+
+// contactSubject is what the review lanes read about an existing contact.
+type contactSubject struct {
+	id     ids.ContactID
+	name   string
+	emails []string
+}
+
+// readContactSubject reads a live contact's name and live addresses, and
+// reports whether the contact is still live.
+func readContactSubject(ctx context.Context, tx pgx.Tx, id ids.ContactID) (contactSubject, bool, error) {
+	subject := contactSubject{id: id}
 	err := tx.QueryRow(ctx, `
 		SELECT p.full_name,
-		       coalesce((SELECT array_agg(e.email) FROM contact_email e
+		       coalesce((SELECT array_agg(e.email ORDER BY e.email) FROM contact_email e
 		                  WHERE e.contact_id = p.id AND e.archived_at IS NULL), '{}')
 		  FROM contact p
-		 WHERE p.id = $1 AND p.archived_at IS NULL`, id).Scan(&name, &emails)
-	if err != nil {
-		return fmt.Errorf("contacts: reading the edited contact: %w", err)
+		 WHERE p.id = $1 AND p.archived_at IS NULL`, id).Scan(&subject.name, &subject.emails)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return contactSubject{}, false, nil
 	}
-	if err := lockContactLanes(ctx, tx, emails, name); err != nil {
-		return err
-	}
-	employer, _, err := readCurrentEmployer(ctx, tx, id.UUID)
 	if err != nil {
-		return err
+		return contactSubject{}, false, fmt.Errorf("contacts: reading the contact to re-check: %w", err)
+	}
+	return subject, true, nil
+}
+
+// fileDuplicates runs the review lanes for an existing contact, files every
+// pair they name, and answers how many are new on the queue. A nil matcher is
+// the shipped consumer-mail list.
+func (s contactSubject) fileDuplicates(ctx context.Context, tx pgx.Tx, consumerMail *freemail.Matcher, source, by string) (int, error) {
+	employer, _, err := readCurrentEmployer(ctx, tx, s.id.UUID)
+	if err != nil {
+		return 0, err
 	}
 	match, err := reviewContact(ctx, tx, ContactCandidate{
-		FullName: name, Emails: emails, QueueNameCollisions: true, ExcludeID: &id,
+		FullName: s.name, Emails: s.emails, ConsumerMail: consumerMail, QueueNameCollisions: true, ExcludeID: &s.id,
 		CurrentPrimaryCompanyID: employer,
 	})
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return match.recordIfReview(ctx, tx, id, name, source, by)
+	return match.recordIfReview(ctx, tx, s.id, s.name, source, by)
 }

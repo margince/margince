@@ -117,7 +117,8 @@ var tableOwners = map[string]string{
 	"company_domain_question_reader": "internal/modules/contacts",
 	"site_read":                      "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
-	"dedupe_candidate": "internal/modules/contacts",
+	"dedupe_candidate":  "internal/modules/contacts",
+	"dedupe_scan_state": "internal/modules/contacts",
 	// deals (incl. the E03 offer engine: rate-card + versioned offers)
 	"commission_entry":          "internal/modules/commissions",
 	"contract":                  "internal/modules/contracts",

@@ -339,7 +339,7 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 	if err != nil {
 		return ids.ContactID{}, nil, err
 	}
-	if err := match.recordIfReview(ctx, tx, id, name, lead.Source, by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, id, name, lead.Source, by); err != nil {
 		return ids.ContactID{}, nil, err
 	}
 	return id, nil, nil

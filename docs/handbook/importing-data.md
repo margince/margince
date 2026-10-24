@@ -191,6 +191,11 @@ Margince checks the open duplicate list every night, and each time it starts. It
 A pair someone has dismissed or reopened is never closed this way. A closed pair keeps its history, and it comes back by itself if the two records start to match again.
 Also called: duplicate gone, shorter duplicate list, fewer duplicates.
 
+### Does Margince find duplicates that were already there before?
+Yes. Every night Margince compares the companies and contacts that changed since the night before with all the others, and lists each new pair it finds on the duplicate list. An upgrade compares every record once. So two companies that one import wrote at the same time are listed, and so are records written before a matching rule existed.
+A pair someone has dismissed or merged is never listed again. Margince never merges a pair by itself.
+Also called: old duplicates, duplicates from before, duplicates not found, existing duplicates.
+
 ### How do I correct companies with a spreadsheet?
 To correct companies in Margince from a CSV, give each row the company's ID and map that column to **id**.
 1. Use **Export CSV** from **Filters and views**; its **id** column holds each ID.
