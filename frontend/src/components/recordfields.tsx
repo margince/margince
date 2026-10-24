@@ -36,7 +36,7 @@ import {
 } from "./create";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
 import { useDetailsFieldTarget } from "./pageaside";
-import { groupValue, selectOptions } from "./recordfieldvalues";
+import { dateDisplay, groupValue, selectOptions } from "./recordfieldvalues";
 import { useUnsavedGuard } from "./unsaved";
 
 export type FieldRecord = Record<string, unknown> & {
@@ -362,6 +362,9 @@ function RecordScalarField({
   onSave: (value: string) => Promise<void>;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const stored = values[field.key] ?? "";
+  const shown = display ?? dateDisplay(field, stored, locale);
   return (
     <FieldRow valueRef={valueRef} label={label}>
       {field.type === "select" ? (
@@ -389,8 +392,8 @@ function RecordScalarField({
           {(editable || !rendered) && (
             <InlineText
               label={label}
-              value={values[field.key] ?? ""}
-              display={display}
+              value={stored}
+              display={shown}
               verb={Boolean(rendered)}
               placeholder={t("field.unset")}
               multiline={field.type === "textarea"}

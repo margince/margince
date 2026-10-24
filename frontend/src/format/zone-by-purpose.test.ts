@@ -142,6 +142,10 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/analytics/analytics.reports.stories.tsx",
+    why: "The frame line names the installation zone as Intl's long name plus offset, and only a fixed zone makes that expected text independent of the machine.",
+  },
+  {
     file: "features/capture/connectors.historybaseline.stories.tsx",
     why: "A mailbox history baseline stores the zone its owner picked the date in; the fixture carries that stored zone.",
   },

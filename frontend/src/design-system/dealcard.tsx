@@ -3,9 +3,9 @@
 
 import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
 import { type ReactNode, type RefObject, useRef } from "react";
-import { calendarDay, middayInstant } from "../format/calendarday";
+import { calendarDay } from "../format/calendarday";
 import {
-  formatDayMonth,
+  formatDayMonthNearYear,
   formatDuration,
   formatMoneyCompact,
   MONEY_ABSENT,
@@ -201,7 +201,7 @@ function DealCloses({
   return (
     <span className={classes}>
       {t("deal.closes", {
-        date: formatDayMonth(middayInstant(day, zone), locale, zone),
+        date: formatDayMonthNearYear(day, locale, zone, new Date()),
       })}
       {provisional && (
         <span className="sr-only"> · {t("deal.closesProvisional")}</span>

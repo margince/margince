@@ -9,8 +9,10 @@ import { Button } from "../../design-system/atoms";
 import { DateInput, isISODate } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { SettingRow } from "../../design-system/settingrow";
+import { middayInstant } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { INTL_LOCALE } from "../../format/intllocale";
+import { viewerZone, zoneNameAndOffset } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 
@@ -35,7 +37,11 @@ export function HistoryBaselineRow({
         baseline
           ? `${t("connectors.historyBaseline.current", {
               date: formatDate(baseline.date, locale, baseline.timezone),
-              zone: baseline.timezone,
+              zone: zoneNameAndOffset(
+                INTL_LOCALE[locale],
+                new Date(middayInstant(baseline.date, baseline.timezone)),
+                baseline.timezone,
+              ),
             })} ${help}`
           : help
       }

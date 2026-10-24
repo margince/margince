@@ -8,6 +8,8 @@ import {
   formatMoneyCompact,
   MONEY_ABSENT,
 } from "../../format/format";
+import { LocaleProvider } from "../../i18n";
+import { vi as viCatalog } from "../../i18n/vi";
 import { AnalyticsScreen, buildStageAggregates } from "./analytics";
 import { SECTION_REPORTS } from "./analytics.reports";
 import {
@@ -500,8 +502,28 @@ describe("the report frame", () => {
     // A section holding two reports could be showing two results computed
     // moments apart. A single caption over both would claim they share an
     // instant they do not.
-    const captions = await screen.findAllByText(/Europe\/Berlin/);
+    const captions = await screen.findAllByText(
+      /Central European .* Time · UTC\+[12]/,
+    );
     expect(captions).toHaveLength(SECTION_REPORT_COUNT_PIPELINE);
+  });
+
+  it("writes the zone as its long name and an offset, never the IANA id", async () => {
+    vi.stubGlobal("fetch", reportsStub());
+    render(
+      <LocaleProvider initial="vi">
+        <AnalyticsScreen />
+      </LocaleProvider>,
+    );
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: viCatalog["reporting.pipeline"],
+      }),
+    );
+    expect(
+      (await screen.findAllByText(/Giờ .* Trung Âu · UTC\+[12]/)).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(/Europe\/Berlin/)).toBeNull();
   });
 
   // And it names no currency, because the blocks under the frame do not share
@@ -517,7 +539,9 @@ describe("the report frame", () => {
     // The stage table is converted into the base currency, while the forecast
     // strip and the company table are still per-currency native sums. A code in
     // the frame would be the denomination of only one of the three.
-    const captions = await screen.findAllByText(/Europe\/Berlin/);
+    const captions = await screen.findAllByText(
+      /Central European .* Time · UTC\+[12]/,
+    );
     for (const caption of captions) {
       expect(caption.textContent).not.toMatch(/\b(EUR|USD|VND)\b/);
     }
