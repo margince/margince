@@ -18,6 +18,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// deliveryReportsAfter is the core migration this task waits for.
+const deliveryReportsAfter = "core/1792799323"
+
 // deliveryReportsDataTask archives the delivery reports an import filed as
 // received mail before the write door refused them. It then re-derives the lead
 // status, score and first-response stamp they caused from the remaining
@@ -25,7 +28,7 @@ import (
 func deliveryReportsDataTask(pool *pgxpool.Pool, now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1792823163_imported_delivery_reports", Version: 1,
-		Title: "Archiving delivery reports filed as received mail", Requires: []string{"core/1792799323"},
+		Title: "Archiving delivery reports filed as received mail", Requires: []string{deliveryReportsAfter},
 		Steps: []datatask.Step{{
 			Name: "imported_received_mail", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

@@ -12,9 +12,8 @@ import (
 	"testing"
 	"time"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
