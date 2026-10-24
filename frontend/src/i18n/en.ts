@@ -1978,6 +1978,7 @@ export const en = {
   "history.field.fx_rate_date": "FX rate date",
   "history.field.fx_rate_to_base": "FX rate",
   "history.field.industry": "Industry",
+  "history.field.assess_against_entity_id": "Rated against",
   "history.field.is_done": "Done",
   "history.field.last_name": "Last name",
   "history.field.legal_name": "Legal name",

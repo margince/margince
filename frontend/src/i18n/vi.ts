@@ -1983,6 +1983,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.fx_rate_date": "Ngày tỷ giá",
   "history.field.fx_rate_to_base": "Tỷ giá",
   "history.field.industry": "Ngành",
+  "history.field.assess_against_entity_id": "Đánh giá theo",
   "history.field.is_done": "Xong",
   "history.field.last_name": "Họ",
   "history.field.legal_name": "Tên pháp lý",

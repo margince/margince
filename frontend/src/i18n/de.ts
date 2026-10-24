@@ -2051,6 +2051,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.fx_rate_date": "Datum des Wechselkurses",
   "history.field.fx_rate_to_base": "Wechselkurs",
   "history.field.industry": "Branche",
+  "history.field.assess_against_entity_id": "Bewertet gegen",
   "history.field.is_done": "Erledigt",
   "history.field.last_name": "Nachname",
   "history.field.legal_name": "Rechtlicher Name",
