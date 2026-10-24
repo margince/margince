@@ -237,8 +237,8 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 	e := integration.Setup(t)
 	// Two due candidates, so a pass that kept walking after a deferral asks
 	// twice and a stop asks once.
-	seedEnrichContact(t, e, "flaky@acme.example", "Thanks,\nFlaky Contact\nCOO\n+49 30 1111111")
-	seedEnrichContact(t, e, "flakier@acme.example", "Thanks,\nFlakier Contact\nCFO\n+49 30 2222222")
+	seedEnrichContact(t, e, "flaky@acme.example", "Thanks,\nBob Contact\nCOO\n+49 30 1111111")
+	seedEnrichContact(t, e, "flakier@acme.example", "Thanks,\nBob Contact\nCFO\n+49 30 2222222")
 
 	t.Run("garbage output fails the candidate, not the pass", func(t *testing.T) {
 		brain := &faultyEnrichBrain{garbage: true}
