@@ -75,7 +75,7 @@ export const PartialCoverage: Story = {
           { marks: new Map(), unreadable: new Set() },
         )}
         cardHref={(deal) => `#/deals/${deal.id}`}
-        zone="Asia/Ho_Chi_Minh"
+        zone={UTC_ZONE}
       />
     </LocaleProvider>
   ),
