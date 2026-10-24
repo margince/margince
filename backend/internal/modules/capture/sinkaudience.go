@@ -130,9 +130,9 @@ const (
 
 const audienceWorkspace = "workspace"
 
-// verdictProofReasons are the holds a thread verdict never lifts: each is a
-// fact about the workspace, the correspondent or the message, not a question a
-// classifier answers. activities' rowCarriedHold keeps the same four.
+// verdictProofReasons are the holds a thread verdict never lifts. Each is a
+// fact about the workspace, the correspondent or the message. None is a
+// question a classifier answers. activities' rowCarriedHold keeps the same four.
 var verdictProofReasons = []string{
 	audienceReasonWorkspaceFloor, audienceReasonCounterparty,
 	audienceReasonConfidentialMarker, audienceReasonMembersOnly,

@@ -5,9 +5,9 @@ package activities
 
 // Letting go of a hold this module put on an activity's audience.
 //
-// Each is scoped by the reason VALUE and not by id alone: `audience_reason`
-// has several writers and each may clear only its own, which is why these are
-// separate writers rather than one un-hold.
+// Each is scoped by the reason value and not by id alone. `audience_reason`
+// has several writers and each may clear only its own. So these are separate
+// writers rather than one un-hold.
 
 import (
 	"context"

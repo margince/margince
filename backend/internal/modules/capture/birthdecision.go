@@ -89,10 +89,10 @@ func (d birthDecision) hold(reason string) birthDecision {
 // Steps 1 to 4 can only hold. Step 5 is the only one that can open a message,
 // and it runs last, so nothing above it can be overturned by it.
 //
-// EVERY step is evaluated even after one of them matches, because the row
-// records every reason it was held while the audience follows only the first. A
-// message held for two reasons and a message held for one look identical from a
-// single reason, and telling them apart is what makes a hold liftable.
+// Every step is evaluated even after one of them matches. The row records
+// every reason it was held, while the audience follows only the first. From a
+// single reason, a message held twice looks like one held once. Telling them
+// apart is what makes a hold liftable.
 //
 // Steps 4 and 5 matter as much as 1 to 3 here, and it would be easy to think
 // otherwise. An inherited verdict is NOT opening-only — inheritedVerdictTx
@@ -161,34 +161,9 @@ func decideBirthTx(
 		return birthDecision{}, nil
 	}
 
-	sharing, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSharing)
-	if err != nil {
-		return birthDecision{}, fmt.Errorf("capture: reading the mail-sharing posture: %w", err)
-	}
-	// Every holding rule is evaluated, not just up to the first match. The
-	// DECISION is unchanged — `hold` keeps the first rule's answer — but the row
-	// now records that a message was held for two reasons when it was.
-	var decision birthDecision
-	if !sharing {
-		decision = decision.hold(audienceReasonWorkspaceFloor)
-	}
-
-	held, err := heldCounterpartyTx(ctx, tx, rec)
+	decision, err := standingHoldsTx(ctx, tx, rec, fields)
 	if err != nil {
 		return birthDecision{}, err
-	}
-	if held {
-		decision = decision.hold(audienceReasonCounterparty)
-	}
-
-	if fields.Kind == kindEmail {
-		members, err := MemberAddressesTx(ctx, tx)
-		if err != nil {
-			return birthDecision{}, err
-		}
-		if members.CoverEveryParty(rec.Addresses) {
-			decision = decision.hold(audienceReasonMembersOnly)
-		}
 	}
 
 	if explicitlyConfidential(fields.Subject) {
@@ -271,6 +246,42 @@ func decideBirthTx(
 		return decision, nil
 	}
 	return birthDecision{posture: posture}, nil
+}
+
+// standingHoldsTx is steps 1 and 2: the holds that stand on the workspace and
+// the correspondent rather than on this message.
+//
+// Every holding rule is evaluated, not just up to the first match. The
+// decision is unchanged, because `hold` keeps the first rule's answer. The row
+// records that a message was held for two reasons when it was.
+func standingHoldsTx(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
+) (birthDecision, error) {
+	sharing, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSharing)
+	if err != nil {
+		return birthDecision{}, fmt.Errorf("capture: reading the mail-sharing posture: %w", err)
+	}
+	var decision birthDecision
+	if !sharing {
+		decision = decision.hold(audienceReasonWorkspaceFloor)
+	}
+	held, err := heldCounterpartyTx(ctx, tx, rec)
+	if err != nil {
+		return birthDecision{}, err
+	}
+	if held {
+		decision = decision.hold(audienceReasonCounterparty)
+	}
+	if fields.Kind == kindEmail {
+		members, err := MemberAddressesTx(ctx, tx)
+		if err != nil {
+			return birthDecision{}, err
+		}
+		if members.CoverEveryParty(rec.Addresses) {
+			decision = decision.hold(audienceReasonMembersOnly)
+		}
+	}
+	return decision, nil
 }
 
 // holdingVerdict answers whether an inherited thread verdict keeps a message
@@ -411,8 +422,8 @@ func (d birthDecision) bornAudience() (audience, reason string) {
 		// that holds a message here must hold it there, or an audience depends on
 		// which of the two last looked at the row.
 		if holdsItsMessages(d.verdictStatus) {
-			// A verdict-proof hold names the row instead: the recompute keeps only
-			// those, so a row reading pending_verdict would open once the verdict
+			// A verdict-proof hold names the row instead. The recompute keeps only
+			// those. A row reading pending_verdict would open once the verdict
 			// cleared, whatever else held it.
 			if verdictProofHold(d.reason) {
 				return audienceParticipants, d.reason

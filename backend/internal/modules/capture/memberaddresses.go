@@ -14,8 +14,8 @@ import (
 )
 
 // MemberAddresses is every address proven to belong to one of the workspace's
-// members, read across all seats. Only proven addresses count: a declared
-// identity or a typed IMAP label is a claim, and one seat claiming an outsider
+// members, read across all seats. Only proven addresses count. A declared
+// identity or a typed IMAP label is a claim. One seat claiming an outsider
 // would silently hold every colleague's mail with that outsider.
 type MemberAddresses struct{ known SelfSet }
 
@@ -62,9 +62,9 @@ func MemberAddressesTx(ctx context.Context, tx pgx.Tx) (MemberAddresses, error) 
 	return MemberAddresses{known: NewSelfSet(addresses, own.Domains())}, nil
 }
 
-// CoverEveryParty answers whether every party to a message is a member: the
-// one test behind the members_only hold, asked at capture and by the repair
-// of stored mail. A message naming nobody is not members-only, for the reason
+// CoverEveryParty answers whether every party to a message is a member. It is
+// the one test behind the members_only hold, asked at capture and by the
+// repair of stored mail. A message naming nobody is not members-only, for the reason
 // internalOnlyTx gives: an empty list means the parties could not be read.
 func (m MemberAddresses) CoverEveryParty(parties []string) bool {
 	named := false

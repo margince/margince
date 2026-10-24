@@ -22,12 +22,12 @@ import (
 // opened to the workspace before it placed the members_only hold. It asks the
 // test capture asks (capture.MemberAddresses), against today's members.
 //
-// Only the stored original names every party. The participant rows do not:
-// capture records no sign that the cap dropped a crowded list, and mail
-// stamped before Cc rows existed has none. So mail without a readable original
+// Only the stored original names every party. The participant rows do not.
+// Capture records no sign that the cap dropped a crowded list. Mail stamped
+// before Cc rows existed has none. So mail without a readable original
 // is never held. The second step counts the mail with no original. A row whose
-// original does not parse is logged by id and stays in the first step's
-// unchanged count; only Go can tell that it does not parse.
+// original does not parse is logged by id. It stays in the first step's
+// unchanged count, since only Go can tell that it does not parse.
 func membersOnlyMailDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792838024_members_only_mail", Version: 1,

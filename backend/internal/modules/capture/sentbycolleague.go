@@ -154,8 +154,8 @@ func senderIsMachine(rec connector.NormalizedRecord, fields ActivityFields) bool
 const gmailAuthServer = "mx.google.com"
 
 // insertCounterpartyParticipant stamps the other end of a message. On mail the
-// owner's provider attested as sent, the owner typed that address, so a
-// colleague whose exact login it is gets bound, the way StampFurtherParticipants
+// owner's provider attested as sent, the owner typed that address. So the
+// colleague whose exact login it is gets bound, as StampFurtherParticipants
 // binds a Cc on such a mail. They may then read their copy even when a
 // members_only hold keeps the workspace out. Idempotent, like insertParticipant.
 func insertCounterpartyParticipant(

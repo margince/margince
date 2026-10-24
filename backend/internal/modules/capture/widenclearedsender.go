@@ -16,8 +16,8 @@ package capture
 // are widening in a derivation that is otherwise tighten-only, and both must
 // prove they release only what they are entitled to.
 //
-// No hold-clearing seam here, unlike widenhistory.go: 'posture' is not one of the
-// reasons activities' rowCarriedHold keeps on the row itself, so rewriting the
+// No hold-clearing seam here, unlike widenhistory.go. 'posture' is not one of
+// the reasons activities' rowCarriedHold keeps on the row itself. Rewriting the
 // import rows is enough for the recompute to reach a new answer.
 
 import (

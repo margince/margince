@@ -15,9 +15,9 @@ import (
 )
 
 // MembersOnlyHoldable is the condition, on the activity aliased a, for stored
-// mail the members_only repair may hold: captured, open, under no statutory
-// hold, and governed by no person's decision. A row a human set, and one a
-// mailbox owner shared, record exactly the decision the hold leaves alone.
+// mail the members_only repair may hold. The row is captured, open and under
+// no statutory hold, and no person decided its audience. A row a human set,
+// and one a mailbox owner shared, record the decision the hold leaves alone.
 const MembersOnlyHoldable = `a.kind = 'email' AND a.audience = 'workspace' AND a.restricted_at IS NULL
    AND a.audience_reason IS DISTINCT FROM 'manual'
    AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id)

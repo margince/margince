@@ -82,7 +82,7 @@ const mailRecipientOriginalScope = `FROM activity a JOIN raw_capture rc ON ` + s
  WHERE a.kind = 'email' AND a.archived_at IS NULL AND ` + storedMailProvider
 
 // storedMailOriginal matches raw_capture rc to the activity a it is the
-// original of, and storedMailProvider limits a to the mail connectors whose
+// original of. storedMailProvider limits a to the mail connectors whose
 // original is the message's own RFC 822 bytes.
 const (
 	storedMailOriginal = `(rc.id = a.raw_capture_id

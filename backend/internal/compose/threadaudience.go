@@ -128,8 +128,8 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 		// counterparty hold, the workspace floor — are not a recipient's to
 		// lift. ClearConfidentialityVerdictHoldTx enumerates them.
 		//
-		// A members-only hold is lifted by any share: it holds colleagues' mail
-		// back from automatic promotion, and an owner pressing Share is the
+		// Any share lifts a members-only hold. That hold only stops automatic
+		// promotion of colleagues' mail. An owner pressing Share is the
 		// person's own decision it waits for.
 		if share {
 			activityIDs := asActivityIDs(messages)

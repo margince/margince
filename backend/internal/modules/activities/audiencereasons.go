@@ -68,7 +68,7 @@ const (
 // EveryReason is every word this column can carry, for the readers that must
 // handle all of them rather than the ones somebody remembered.
 //
-// It exists because the browser once held five of the nine and drew NOTHING for
+// It exists because the browser once held five of the nine and drew nothing for
 // the rest. `explicitly_confidential` is what a confidentiality verdict stamps,
 // so an ordinary business mail narrowed to its participants told the reader
 // only that it was not shared with them — never why, and a verdict nobody can
