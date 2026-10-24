@@ -59,6 +59,10 @@ type Authority interface {
 	Members(context.Context, pgx.Tx) ([]ids.UUID, error)
 	ValidateFramework(context.Context, pgx.Tx, crmcontracts.ReportingFrameworkInput) error
 	Scope(context.Context, pgx.Tx, crmcontracts.ReportingScope, bool) (crmcontracts.ReportingScope, error)
+	// AssertedScope resolves the scope a report revision records. A revision is
+	// published about its population, so it needs the strict tier rule that a
+	// read of the totals does not.
+	AssertedScope(context.Context, pgx.Tx, crmcontracts.ReportingScope) (crmcontracts.ReportingScope, error)
 	Visible(context.Context, pgx.Tx, []Fact) ([]Fact, bool, error)
 }
 

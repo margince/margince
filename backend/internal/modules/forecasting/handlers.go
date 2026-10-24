@@ -140,7 +140,7 @@ func (h Handlers) GetForecast(
 		// Totals are readable more widely than a standing call is. The call,
 		// its author and its snapshots assert something about a population.
 		// Only a seat that may assert about it sees them.
-		mayAssert, err := h.mayAssertAbout(ctx, tx, scope)
+		mayAssert, err := MayAssertAbout(ctx, tx, h.resolve, scope)
 		if err != nil {
 			return err
 		}
@@ -183,14 +183,15 @@ func (h Handlers) GetForecast(
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// mayAssertAbout asks the write authority whether this seat may see the
-// standing call of a resolved population. A refusal hides the call; any other
-// failure is real.
-func (h Handlers) mayAssertAbout(ctx context.Context, tx pgx.Tx, scope Scope) (bool, error) {
+// MayAssertAbout asks the write authority whether this seat may see the
+// standing call and the snapshots of a resolved population. A refusal hides
+// them; any other failure is real. The forecast endpoint and the forecast_readings
+// tool both ask it.
+func MayAssertAbout(ctx context.Context, tx pgx.Tx, resolve ResolveScopeFunc, scope Scope) (bool, error) {
 	if scope.Kind == ScopeManagedTeams {
 		return true, nil
 	}
-	_, err := h.resolve(ctx, tx, scope)
+	_, err := resolve(ctx, tx, scope)
 	switch {
 	case err == nil:
 		return true, nil
