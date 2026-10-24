@@ -27190,7 +27190,7 @@ export interface components {
             version?: components["schemas"]["RowVersion"];
             /**
              * Format: date-time
-             * @description When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
+             * @description When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
              */
             readonly last_activity_at?: string | null;
             /** Format: date-time */
@@ -27561,7 +27561,7 @@ export interface components {
             version?: components["schemas"]["RowVersion"];
             /**
              * Format: date-time
-             * @description When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
+             * @description When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
              *     A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
@@ -32197,7 +32197,7 @@ export interface components {
             closed_at?: string | null;
             /**
              * Format: date-time
-             * @description The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
+             * @description The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
              */
             last_activity_at?: string | null;
             /** @description Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off. */
@@ -32791,7 +32791,7 @@ export interface components {
             ended_at?: string | null;
             /**
              * Format: date-time
-             * @description The newest workspace-audience activity filed under the project, maintained from the timeline on link write; a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
+             * @description The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
             source: string;
@@ -33051,7 +33051,7 @@ export interface components {
             open_commitments: number;
             /**
              * Format: date-time
-             * @description The newest WORKSPACE-AUDIENCE activity filed under the project; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
+             * @description The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
              */
             last_activity_at: string | null;
             /** @description Every live activity filed under the project. */
@@ -35997,7 +35997,7 @@ export interface components {
             readonly sla_state?: "within_target" | "at_risk" | "breached" | null;
             /**
              * Format: date-time
-             * @description Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
+             * @description Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). A task never counts, whoever filed it. Derived from activity_link, not stored on the lead.
              */
             readonly last_activity_at?: string | null;
             /** @description Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118). */

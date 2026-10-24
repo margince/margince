@@ -147,7 +147,7 @@ An `activities.csv` row is one note, call, meeting or email, put on the timeline
 | `direction` | `inbound` or `outbound`. Written only when the row creates the activity. |
 | `owner_email` | The Margince user the activity is attributed to. If none has this email, you are. |
 
-A contact's last activity becomes the newest imported date when it is newer. A `no_show` or `canceled` meeting does not count.
+A contact's last activity becomes the newest imported date when it is newer. A task does not count, and neither does a `no_show` or `canceled` meeting.
 Imported activities start no automation and sit on no follow-up reminder.
 
 A row is skipped, with its reason, in these cases:

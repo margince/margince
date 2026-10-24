@@ -5033,7 +5033,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
+       AND (a.kind IN ('email','message','meeting','call','note') AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
      WHERE l.company_id = cid
     UNION ALL
     -- Filed against one of its deals.
@@ -5043,7 +5043,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
+       AND (a.kind IN ('email','message','meeting','call','note') AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
      WHERE d.company_id = cid
     UNION ALL
     -- Filed against a contact it currently employs, sent while they worked there.
@@ -5053,7 +5053,7 @@ public.last_activity_of_company(cid uuid) secdef=false cfg=- acl=-
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
+       AND (a.kind IN ('email','message','meeting','call','note') AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
      WHERE r.company_id = cid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
        AND coalesce(r.started_at::timestamp AT TIME ZONE 'UTC', r.first_observed_at, a.occurred_at) <= a.occurred_at
@@ -5065,7 +5065,7 @@ public.last_activity_of_contact(cid uuid) secdef=false cfg=- acl=-
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
-     AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
+     AND (a.kind IN ('email','message','meeting','call','note') AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
    WHERE l.contact_id = cid
 
 public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=- 
@@ -5074,7 +5074,7 @@ public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=-
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
-     AND ((a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
+     AND (a.kind IN ('email','message','meeting','call','note') AND (a.kind <> 'meeting' OR (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))) AND a.occurred_at <= now())
    WHERE l.deal_id = did
 
 public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=- 
@@ -5083,6 +5083,7 @@ public.last_activity_of_project(pid uuid) secdef=false cfg=- acl=-
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
+     AND a.kind IN ('email','message','meeting','call','note')
    WHERE l.project_id = pid
 
 public.last_activity_reach(contact_ids uuid[], deal_ids uuid[], company_ids uuid[]) secdef=false cfg=- acl=- 

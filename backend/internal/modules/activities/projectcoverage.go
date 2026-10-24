@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // ProjectActivityFacts is the timeline's answer about one project, counted
@@ -35,8 +36,8 @@ type ProjectActivityFacts struct {
 	// project link — not this project's, not another's. An activity filed
 	// under a sibling engagement is somebody's, and is not debt here.
 	UnattributedNearby int
-	// LastActivityAt is the newest attributed activity's instant; nil when
-	// nothing is filed under the project yet.
+	// LastActivityAt is the newest attributed activity's instant, never a
+	// task's; nil when nothing that counts is filed under the project yet.
 	LastActivityAt *time.Time
 	// OpenCommitments is every open task filed under the project — the
 	// whole set, where the commitments section carries a page of it.
@@ -102,12 +103,13 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 			WHERE l.project_id = $%[1]d OR d.project_id = $%[1]d OR r.project_id = $%[1]d
 		)
 		SELECT count(*) FILTER (WHERE f.filed_here),
-		       -- Recency excludes the system's own origins, matching
+		       -- Recency excludes the system's own origins and every task, matching
 		       -- last_activity_of_project. The counts do not: a review task filed
 		       -- here IS attributed work, it just is not the other side engaging.
 		       -- TRUE carries the fragment's leading AND, so the one spelling in
 		       -- auth.OriginIsEngagement serves a FILTER as well as a WHERE.
-		       max(a.occurred_at) FILTER (WHERE f.filed_here AND TRUE`+auth.OriginIsEngagement("a")+`),
+		       max(a.occurred_at) FILTER (WHERE f.filed_here AND TRUE`+auth.OriginIsEngagement("a")+
+		` AND `+relstrength.LastActivityKindSQL("a")+`),
 		       count(*) FILTER (WHERE NOT f.filed_anywhere),
 		       count(*) FILTER (WHERE f.filed_here AND a.kind = 'task' AND NOT a.is_done AND %[5]s)
 		FROM activity a

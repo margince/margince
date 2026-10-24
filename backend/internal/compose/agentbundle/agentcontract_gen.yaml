@@ -9598,7 +9598,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable.
+            When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
@@ -9886,7 +9886,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
+            When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
@@ -13311,7 +13311,7 @@ components:
         close_date_provisional: {type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date.'}
         wait_until: {type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag."}
         closed_at: {type: [string, 'null'], format: date-time}
-        last_activity_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.'}
+        last_activity_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.'}
         stalled: {type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.'}
         last_email:
           allOf: [{$ref: '#/components/schemas/DealLastEmail'}]
@@ -13688,7 +13688,7 @@ components:
           type: [string, 'null']
           format: date-time
           readOnly: true
-          description: 'The newest workspace-audience activity filed under the project, maintained from the timeline on link write; a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
+          description: 'The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         author:
@@ -13943,7 +13943,7 @@ components:
         last_activity_at:
           type: [string, 'null']
           format: date-time
-          description: 'The newest WORKSPACE-AUDIENCE activity filed under the project; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.'
+          description: 'The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.'
         activity_count: {type: integer, minimum: 0, description: Every live activity filed under the project.}
     CreateProjectRequest:
       type: object
@@ -15760,7 +15760,7 @@ components:
           enum: [within_target, at_risk, breached]
           readOnly: true
           description: 'Derived from sla_deadline_at and first_response_at; null once responded or on a terminal lead. Orders the work queue above score.'
-        last_activity_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows.'}
+        last_activity_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows. A task never counts, whoever filed it.'}
         open_task_count: {type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them.'}
         next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.'}
         next_task_due_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.'}
