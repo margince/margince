@@ -7511,7 +7511,11 @@ export interface paths {
         };
         /**
          * List lead sources, active and inactive, in display order.
-         * @description `data` is the administered list. `discovered` names source values that
+         * @deprecated
+         * @description Deprecated: the list says how a row reached Margince, which nothing scores any more.
+         *     Use `/lead-origins` for where a lead came from.
+         *
+         *     `data` is the administered list. `discovered` names source values that
          *     live on leads but are not in the list — connector-written keys such as
          *     `connector:apollo:…` grouped by their connector prefix, seed values,
          *     imports — with how many live leads carry each. Adding one as a source
@@ -7519,7 +7523,10 @@ export interface paths {
          */
         get: operations["listLeadSources"];
         put?: never;
-        /** Add a lead source. */
+        /**
+         * Add a lead source.
+         * @deprecated
+         */
         post: operations["createLeadSource"];
         delete?: never;
         options?: never;
@@ -7542,6 +7549,7 @@ export interface paths {
         post?: never;
         /**
          * Remove a lead source nothing uses.
+         * @deprecated
          * @description 409 when the source is built-in or any live lead still carries it —
          *     deactivate it instead, which hides it from the create form and the
          *     filter while every existing lead keeps its value.
@@ -7551,11 +7559,65 @@ export interface paths {
         head?: never;
         /**
          * Rename, reorder, re-weight or (de)activate a lead source.
+         * @deprecated
          * @description Changing `intent` does not rescore existing leads; each lead picks the
          *     new weight up on its next recompute. A built-in (`system`) source
          *     accepts every field here — it only refuses deletion.
          */
         patch: operations["updateLeadSource"];
+        trace?: never;
+    };
+    "/lead-origins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List lead origins, active and retired, in display order.
+         * @description The administered list of where a lead came from. A retired origin stays
+         *     listed so the leads carrying it still render their label.
+         */
+        get: operations["listLeadOrigins"];
+        put?: never;
+        /** Add a lead origin. */
+        post: operations["createLeadOrigin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lead-origins/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a lead origin nothing uses.
+         * @description 409 when the origin is built-in or any lead, archived ones included, still carries it.
+         *     Retire it instead, which hides it from the create form and the filter while every
+         *     existing lead keeps its value.
+         */
+        delete: operations["deleteLeadOrigin"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename, reorder, re-weight or retire a lead origin.
+         * @description Changing `intent` does not rescore existing leads; each lead picks the new weight up on
+         *     its next recompute. A built-in (`system`) origin accepts every field here and only
+         *     refuses deletion.
+         */
+        patch: operations["updateLeadOrigin"];
         trace?: never;
     };
     "/acquisition-sources": {
@@ -35759,10 +35821,16 @@ export interface components {
             readonly next_task_due_at?: string | null;
             /** @description The highest-impact factor in the retained current score explanation, for a compact queue reason. */
             readonly score_reason?: string | null;
-            /** @description The stored source key. For a human-created lead this is a lead_source key; connectors and imports write their own values (`connector:<name>:<id>`). */
+            /** @description How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from. The `lead_source` list that administered it is deprecated. */
             source: string;
-            /** @description The administered label for `source`, when the key is in the lead_source list; null for connector, seed and other free values. */
+            /** @description The label the deprecated lead_source list gives `source`; null for connector, seed and other free values. */
             readonly source_label?: string | null;
+            /** @description Where the lead came from, a key from `/lead-origins`. Null when nobody has classified the lead; such a lead scores neutral. Set by a human, an importer or capture, and the only lead fact the score and the origin filter read. */
+            origin?: string | null;
+            /** @description The label `/lead-origins` gives `origin`; null when `origin` is null. */
+            readonly origin_label?: string | null;
+            /** @description A short free-text note beside `origin`: the wording the source system used when it did not match a catalog key, or what a human adds ("Berlin summit, booth 4"). */
+            origin_detail?: string | null;
             /**
              * Format: uuid
              * @description Set by DELETE /leads/{id} with a reason; null on an open lead.
@@ -35839,7 +35907,12 @@ export interface components {
             /** @description The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat. */
             source_author_name?: string | null;
             source_id?: string | null;
-            source: string;
+            /** @description How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from. */
+            source?: string;
+            /** @description Where the lead came from: an ACTIVE key from `/lead-origins` (422 `unknown_lead_origin` or `inactive_lead_origin` otherwise). Omit for an unclassified lead, which scores neutral. */
+            origin?: string | null;
+            /** @description A short note beside `origin`. */
+            origin_detail?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -35869,8 +35942,15 @@ export interface components {
              * @enum {string}
              */
             status?: "new" | "contacted" | "engaged";
-            /** @description Correct the source. A human may set any ACTIVE lead_source key or keep a free value it already carries; an inactive administered key is 422. Changing it recomputes the score (the source weight is part of it). */
+            /**
+             * @deprecated
+             * @description Deprecated. How the row was written; it is no longer checked against the lead_source list and no longer moves the score. Set `origin` to say where the lead came from.
+             */
             source?: string;
+            /** @description Where the lead came from: an ACTIVE key from `/lead-origins`, or the key the lead already carries (a retired key is 422 only for a new value). Changing it recomputes the score. Null clears it, and the lead scores neutral. */
+            origin?: string | null;
+            /** @description A short note beside `origin`. Null clears it. */
+            origin_detail?: string | null;
             /** @description Manual human score override (formulas §3.1, AC-S1). Omit to keep the computed lead-local score. Setting it REQUIRES `score_override_reason`; passing null clears the override and resumes recompute. */
             score?: number | null;
             /** @description Written reason for the Commercial Judgement override (formulas §3.1). REQUIRED when `score` is set (422 otherwise); the override is sticky — it suppresses recompute until cleared. */
@@ -35994,7 +36074,7 @@ export interface components {
             page: components["schemas"]["PageInfo"];
         };
         /**
-         * @description What the scorer makes of a lead from this source: high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither (formulas §3.1).
+         * @description What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
          * @enum {string}
          */
         LeadSourceIntent: "high" | "neutral" | "low";
@@ -36253,7 +36333,47 @@ export interface components {
             /** Format: uuid */
             role_id?: string;
         };
-        /** @description One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees. */
+        /** @description One administered lead origin. `key` is the value stored on `lead.origin`; `label` is what a user sees. */
+        LeadOrigin: {
+            /** Format: uuid */
+            id: string;
+            /** @description Lowercase stable key, the stored value. Never changes after creation. */
+            key: string;
+            label: string;
+            intent: components["schemas"]["LeadSourceIntent"];
+            sort_order: number;
+            /** @description A retired origin leaves the create form and is refused for a new assignment; leads carrying it keep the value. */
+            active: boolean;
+            /** @description Built-in. Can be renamed, re-weighted and retired, never deleted. */
+            readonly system: boolean;
+            /** @description Live leads carrying this key that the caller may see. */
+            readonly lead_count: number;
+            version: components["schemas"]["RowVersion"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        LeadOriginListResponse: {
+            data: components["schemas"]["LeadOrigin"][];
+        };
+        CreateLeadOriginRequest: {
+            label: string;
+            /** @description Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique. */
+            key?: string;
+            intent?: components["schemas"]["LeadSourceIntent"];
+            sort_order?: number;
+        };
+        UpdateLeadOriginRequest: {
+            label?: string;
+            intent?: components["schemas"]["LeadSourceIntent"];
+            sort_order?: number;
+            active?: boolean;
+        };
+        /**
+         * @deprecated
+         * @description Deprecated: how a row reached Margince is no longer scored. One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.
+         */
         LeadSource: {
             /** Format: uuid */
             id: string;
@@ -60867,8 +60987,10 @@ export interface operations {
                  *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
                  */
                 unassigned?: boolean;
-                /** @description Filter by capture source (inbound, webform, referral, import, crawl, manual, ...). */
+                /** @description Filter by how the row was written (import, crawl, manual, `connector:<name>`, ...). Not the origin; use `origin` to filter by where the lead came from. */
                 source?: string;
+                /** @description Filter by origin, an exact key from `/lead-origins`. Matched literally; `unset` names the leads with no origin. */
+                origin?: string;
                 /** @description Triage by first-response SLA state (formulas §18.1). `breached` is the overdue queue. */
                 sla_state?: "within_target" | "at_risk" | "breached";
                 /** @description Triage by score. */
@@ -61893,6 +62015,155 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeadSource"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLeadOrigins: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The lead origin list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadOriginListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createLeadOrigin: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLeadOriginRequest"];
+            };
+        };
+        responses: {
+            /** @description Created lead origin. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadOrigin"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteLeadOrigin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateLeadOrigin: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLeadOriginRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated lead origin. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadOrigin"];
                 };
             };
             403: components["responses"]["Forbidden"];

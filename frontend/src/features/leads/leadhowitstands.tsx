@@ -11,7 +11,7 @@ import { formatDayMonth } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { sourceLabelFor, useLeadSources } from "../../lib/leadsources";
+import { addedViaFor } from "../../lib/leadorigins";
 import { navigate } from "../../lib/router";
 import { activityMarks } from "../../lib/standingmarks";
 import { useLeadStatusChanges } from "./leadhistory";
@@ -60,7 +60,6 @@ export function LeadHowItStands({
   const ctx: ReadingContext = { t, locale, zone, asOf };
   const changes = useLeadStatusChanges(lead);
   const explain = useLeadScore(lead);
-  const sources = useLeadSources();
   const verdict = leadStanding(lead, t, locale, zone);
   const factors =
     explain.isSuccess && explain.data.explained
@@ -70,7 +69,7 @@ export function LeadHowItStands({
   const timeline = leadTimeline(
     lead,
     thread.activities,
-    sourceLabelFor(lead, sources.data?.data, t),
+    addedViaFor(lead, t),
     ctx,
   );
   return (

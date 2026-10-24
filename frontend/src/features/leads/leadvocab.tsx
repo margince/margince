@@ -15,10 +15,10 @@ import { useT } from "../../i18n";
 import { useLeadSettings, useUpdateLeadSettings } from "../../lib/leadsources";
 import { useVocabGrants } from "./leadvocab.rows";
 
+export { LeadOriginsCard } from "./leadvocab.origins";
 // Every role reads these cards and only the custom_field write verbs change
 // them, so a control disables rather than hide.
 export { LeadDisqualifyReasonsCard } from "./leadvocab.reasons";
-export { LeadSourcesCard } from "./leadvocab.sources";
 
 // The first-response target's bounds (15 minutes to 7 days), checked here so a
 // refusal never leaves the page. backend/gates/settingbounds_test.go holds them

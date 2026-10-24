@@ -85,13 +85,22 @@ describe("the lead table's columns", () => {
     expect(screen.getByTestId("cell").textContent).toContain("Product A");
   });
 
-  it("name an imported lead's upload in the source column, never its stamp", () => {
-    renderCell("source", {
+  it("print the origin's label in the origin column and sort by it", () => {
+    const column = renderCell("origin", {
       ...lead,
+      origin: "referral",
+      origin_label: "Referral",
+    });
+    expect(column.sort).toBe("origin");
+    expect(screen.getByTestId("cell").textContent).toBe("Referral");
+  });
+
+  it("say an unclassified lead has no origin, whatever wrote the row", () => {
+    renderCell("origin", {
+      ...lead,
+      origin: null,
       source: "mirror:csv:pipedrive-export:lead:l-7",
     });
-    expect(screen.getByTestId("cell").textContent).toBe(
-      "Imported from pipedrive-export",
-    );
+    expect(screen.getByTestId("cell").textContent).toBe("Not set");
   });
 });

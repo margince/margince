@@ -65,7 +65,7 @@ const CARDS_THE_REGISTER_REACHED = [
   "CustomFieldsAdmin",
   "TagVocabularyCard",
   "PipelinesCard",
-  "LeadSourcesCard",
+  "LeadOriginsCard",
   "LeadDisqualifyReasonsCard",
   "LeadHandlingCard",
   "ProductsAdmin",

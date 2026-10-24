@@ -28,11 +28,11 @@ import { useOwnToast } from "../../design-system/toast";
 import { leadIdentityName } from "../../format/leadname";
 import { useLocale, useT } from "../../i18n";
 import {
-  sourceFilterOptions,
-  sourcePickOptions,
-  useLeadSettings,
-  useLeadSources,
-} from "../../lib/leadsources";
+  originFilterOptions,
+  originPickOptions,
+  useLeadOrigins,
+} from "../../lib/leadorigins";
+import { useLeadSettings } from "../../lib/leadsources";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
@@ -196,7 +196,7 @@ function LeadsWorkbench({
     params.get(LEAD_VIEW_PARAM) === "board" ? "board" : "table";
   const setView = (next: "table" | "board") =>
     replaceDial(LEAD_VIEW_PARAM, next === "board" ? next : undefined);
-  const sources = useLeadSources();
+  const origins = useLeadOrigins();
   const ownerOptions = [
     { value: viewerId, label: t("lead.assignToMe") },
     { value: UNASSIGNED_OWNER, label: t("lead.unassigned") },
@@ -260,19 +260,22 @@ function LeadsWorkbench({
                 options: ownerOptions,
               },
               {
-                key: "source",
-                label: "lead.source",
+                key: "origin",
+                label: "lead.origin",
                 type: "select",
-                required: true,
-                // The active administered list, in the administrator's order;
-                // "Created manually" is the default because it is first.
-                options: sourcePickOptions(sources.data?.data, null, t),
+                // Not required: a lead nobody has classified scores neutral.
+                // The active administered list, in the administrator's order.
+                options: [
+                  { value: "", label: t("lead.originNone") },
+                  ...originPickOptions(origins.data, null),
+                ],
               },
+              { key: "origin_detail", label: "lead.originDetail" },
               ...cf.formFields,
             ]}
           />
         }
-        columns={leadColumns(t, locale, recordZone, sources.data?.data)}
+        columns={leadColumns(t, locale, recordZone, origins.data)}
         rowKey={(lead) => lead.id}
         selection={{
           selected: liveSelection,
@@ -364,10 +367,13 @@ function LeadsWorkbench({
               ]
             : []),
           {
-            key: "source",
-            label: "lead.filterSource",
-            allLabel: "lead.filterSourceAll",
-            options: sourceFilterOptions(sources.data, t),
+            key: "origin",
+            label: "lead.filterOrigin",
+            allLabel: "lead.filterOriginAll",
+            options: originFilterOptions(
+              origins.data,
+              t("lead.filterOriginRetired"),
+            ),
           },
         ]}
         // The one ownership dial every record list carries (DM-VOCAB-OWN-1):

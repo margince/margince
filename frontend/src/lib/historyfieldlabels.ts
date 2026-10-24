@@ -68,6 +68,8 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["size_band", "history.field.size_band"],
   ["social", "history.field.social"],
   ["source", "history.field.source"],
+  ["origin", "history.field.origin"],
+  ["origin_detail", "history.field.origin_detail"],
   ["started_at", "history.field.started_at"],
   ["status", "history.field.status"],
   ["subject", "history.field.subject"],
