@@ -287,60 +287,7 @@ func projectFact(project crmcontracts.Company360Project, view crmcontracts.Compa
 // because a project's target end has no time of day.
 const isoDate = "2006-01-02"
 
-func recipientOf(contact crmcontracts.Company360Contact) RecipientIn {
-	out := RecipientIn{
-		ID:        contact.ContactId.String(),
-		Name:      contact.FullName,
-		FirstName: firstName(contact.FullName),
-		LastName:  lastName(contact.FullName),
-	}
-	if contact.Title != nil {
-		out.Title = *contact.Title
-	}
-	if contact.PrimaryEmail != nil {
-		out.Email = *contact.PrimaryEmail
-	}
-	out.Bucket = string(contact.Strength.Bucket)
-	if contact.Strength.LastInteraction != nil {
-		out.LastInteraction = contact.Strength.LastInteraction.UTC().Format(rfc3339)
-	}
-	return out
-}
-
 const rfc3339 = "2006-01-02T15:04:05Z"
-
-// firstName is what the greeting uses. Everything before the first space, or
-// the whole name when it has none — a one-word name is a name, not a mistake.
-func firstName(full string) string {
-	if cut, _, found := strings.Cut(strings.TrimSpace(full), " "); found && cut != "" {
-		return cut
-	}
-	return strings.TrimSpace(full)
-}
-
-// lastName is what follows the FIRST space in the display name, which is the
-// surname for a two-word name and not always one otherwise: "Dr. Anne Weiss"
-// yields "Anne Weiss", a given name inside the result. No rule over display
-// names gets every name right, and this input carries no name columns to
-// consult — the 360 contact it folds has a full name and nothing else.
-//
-// A single-word name yields empty, which sends the greeting to the familiar
-// form rather than to a formal one addressed to a first name.
-//
-// contactdraft.surname answers the same question from a Contact record and
-// prefers that record's own last_name, which is the better answer where it
-// exists. The two are not shared because their INPUTS differ, not their
-// answer: unifying them would mean passing a Contact into a fold that has none.
-//
-// The prompt rule is what protects the output where this is wrong: a formal
-// greeting is used only where a surname was given, and the model is told never
-// to complete or invent one.
-func lastName(full string) string {
-	if _, rest, found := strings.Cut(strings.TrimSpace(full), " "); found {
-		return strings.TrimSpace(rest)
-	}
-	return ""
-}
 
 // foldCommitment takes the soonest open task. `next_steps.data` arrives
 // ordered overdue → due → undated, so the head is it and this makes no
@@ -431,27 +378,6 @@ func foldRecent(view crmcontracts.Company360) []ActIn {
 		out = append(out, item)
 	}
 	return out
-}
-
-// findContact resolves the named recipient WITHIN the caller's own 360, which
-// is what makes the lookup a permission check as well as a lookup: a contact
-// that caller cannot see is not in the view, and the refusal is the same
-// 422 as a contact id that names nobody. Deliberately not a separate contacts
-// read — that would find contacts the 360 deliberately withheld.
-func findContact(
-	view crmcontracts.Company360, contactID string,
-) (crmcontracts.Company360Contact, error) {
-	if view.Contacts == nil {
-		return crmcontracts.Company360Contact{}, fieldError("contact_id",
-			"the account's contacts are not readable by you, so there is nobody here to write to")
-	}
-	for _, contact := range view.Contacts.Data {
-		if contact.ContactId.String() == contactID {
-			return contact, nil
-		}
-	}
-	return crmcontracts.Company360Contact{}, fieldError("contact_id",
-		"that contact is not a contact you can see on this account")
 }
 
 // findDeal resolves the named deal the same way. The caller checks for an

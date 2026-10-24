@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -60,24 +62,6 @@ func TestAMorningMailRereadsTheWorkAfterItsSendIsReserved(t *testing.T) {
 	}
 }
 
-// awaitLockWait returns once some session waits on a row lock, the sign that
-// the reservation reached the row a concurrent writer holds.
-func awaitLockWait(t *testing.T) {
-	t.Helper()
-	// Bounded by tries, each a short database-side pause, not by the wall clock.
-	for range 400 {
-		var waiting int
-		if err := integration.OwnerConn(t).QueryRow(context.Background(),
-			`SELECT count(*) FROM pg_stat_activity, pg_sleep(0.05) WHERE wait_event_type = 'Lock' AND datname = current_database()`).Scan(&waiting); err != nil {
-			t.Fatal(err)
-		}
-		if waiting > 0 {
-			return
-		}
-	}
-	t.Fatal("the morning reservation never waited for the row a concurrent change held")
-}
-
 // A change committed while the reservation waits on its row is seen by the
 // reservation. It then reads the work again instead of mailing the old body.
 func TestAMorningReservationWaitsForAConcurrentChangeToItsWork(t *testing.T) {
@@ -98,10 +82,15 @@ func TestAMorningReservationWaitsForAConcurrentChangeToItsWork(t *testing.T) {
 		t.Fatalf("the morning was not ready to send: %v", err)
 	}
 	held, release := make(chan struct{}), make(chan struct{})
-	writer := make(chan error, 1)
+	writer, written := make(chan error, 1), make(chan struct{})
+	var holder int32
 	go func() {
+		defer close(written)
 		writer <- database.WithWorkspaceTx(b.Admin(), b.Pool, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(context.Background(), `UPDATE activity SET assignee_id = $2 WHERE id = $1`, ids.UUID(task.Id), b.Rep2); err != nil {
+				return err
+			}
+			if err := tx.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&holder); err != nil {
 				return err
 			}
 			close(held)
@@ -115,8 +104,14 @@ func TestAMorningReservationWaitsForAConcurrentChangeToItsWork(t *testing.T) {
 		b.worker.sendMorning(ctx, candidate, morning)
 		close(sent)
 	}()
-	awaitLockWait(t)
-	close(release)
+	var lift sync.Once
+	t.Cleanup(func() {
+		lift.Do(func() { close(release) })
+		<-written
+		<-sent
+	})
+	testdb.AwaitQueuedBehind(t, integration.OwnerConn(t), holder, 1, sent, "the morning reservation")
+	lift.Do(func() { close(release) })
 	if err := <-writer; err != nil {
 		t.Fatal(err)
 	}

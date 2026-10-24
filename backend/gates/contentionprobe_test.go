@@ -53,6 +53,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -92,22 +93,20 @@ type sqlCall struct {
 // pg_blocking_pids without a snapshot clear that can actually reach it.
 func TestEveryContentionProbeClearsTheStatsSnapshot(t *testing.T) {
 	t.Parallel()
-	var offenders []string
 	fset := gatekit.SourceFileSet()
-
-	for _, tree := range probeTrees {
-		if _, err := os.Stat(tree); err != nil {
-			// A tree the vanilla checkout does not ship is not an exemption for
-			// anything, because nothing in it can hold a probe.
-			continue
+	offenders := scanTrees(t, fset, func(path string, file *ast.File) []string {
+		var found []string
+		for _, decl := range file.Decls {
+			fn, isFunc := decl.(*ast.FuncDecl)
+			if !isFunc || fn.Body == nil {
+				continue
+			}
+			for _, reason := range unprotectedProbes(fset, fn) {
+				found = append(found, fmt.Sprintf("%s: %s — %s", path, fn.Name.Name, reason))
+			}
 		}
-		found, err := scanTree(tree, fset)
-		if err != nil {
-			t.Fatalf("scanning %s for contention probes: %v", tree, err)
-		}
-		offenders = append(offenders, found...)
-	}
-	sort.Strings(offenders)
+		return found
+	})
 
 	if len(offenders) > 0 {
 		t.Fatalf(`%d contention probe(s) are not protected by a %s() the probe can see:
@@ -129,9 +128,30 @@ issue both statements on it.`,
 	}
 }
 
-// scanTree parses every Go file under root and reports each unprotected probe.
-func scanTree(root string, fset *token.FileSet) ([]string, error) {
-	var offenders []string
+// scanTrees runs check over every Go file in probeTrees and returns its
+// findings sorted, so each census reads the same files.
+func scanTrees(t *testing.T, fset *token.FileSet, check func(path string, file *ast.File) []string) []string {
+	t.Helper()
+	var findings []string
+	for _, tree := range probeTrees {
+		if _, err := os.Stat(tree); err != nil {
+			// A tree the vanilla checkout does not ship is not an exemption for
+			// anything, because nothing in it can hold a probe.
+			continue
+		}
+		found, err := scanTree(tree, check)
+		if err != nil {
+			t.Fatalf("scanning %s: %v", tree, err)
+		}
+		findings = append(findings, found...)
+	}
+	sort.Strings(findings)
+	return findings
+}
+
+// scanTree parses every Go file under root and returns what check finds in each.
+func scanTree(root string, check func(path string, file *ast.File) []string) ([]string, error) {
+	var findings []string
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -157,18 +177,85 @@ func scanTree(root string, fset *token.FileSet) ([]string, error) {
 			// reports "no offenders" for a tree it never saw.
 			return fmt.Errorf("parsing %s: %w", path, parseErr)
 		}
-		for _, decl := range file.Decls {
-			fn, isFunc := decl.(*ast.FuncDecl)
-			if !isFunc || fn.Body == nil {
-				continue
-			}
-			for _, reason := range unprotectedProbes(fset, fn) {
-				offenders = append(offenders, fmt.Sprintf("%s: %s — %s", path, fn.Name.Name, reason))
-			}
-		}
+		findings = append(findings, check(path, file)...)
 		return nil
 	})
-	return offenders, err
+	return findings, err
+}
+
+// TestEveryPauseIsItsOwnStatement fails on a pg_sleep in a statement that also
+// reads rows or filters, where the planner may never run it.
+func TestEveryPauseIsItsOwnStatement(t *testing.T) {
+	t.Parallel()
+	fset := gatekit.SourceFileSet()
+	pauses := scanTrees(t, fset, func(path string, file *ast.File) []string {
+		var found []string
+		for _, line := range pausesInsideStatements(fset, file) {
+			found = append(found, fmt.Sprintf("%s:%d", path, line))
+		}
+		return found
+	})
+	if len(pauses) > 0 {
+		t.Fatalf(`%d pause(s) sit in a statement that also reads rows or filters:
+
+  %s
+
+The planner runs such a pause once per row that reaches it. EXPLAIN shows it
+"never executed" when the read is empty or the filter false, so a poll paced
+by it spins through its tries in well under a second. Issue the pause as its
+own statement, or pace the poll with testdb.WaitForContention.`,
+			len(pauses), strings.Join(pauses, "\n  "))
+	}
+}
+
+// pauseCall and pauseSkipper find a pause in a statement whose rows or filter
+// decide whether the pause runs at all.
+var (
+	pauseCall    = regexp.MustCompile(`(?i)\bpg_sleep(_for|_until)?\s*\(`)
+	pauseSkipper = regexp.MustCompile(`(?i)\b(from|where)\b`)
+)
+
+// pausesInsideStatements returns the line of each string in file that pauses
+// inside a statement reading rows or filtering.
+func pausesInsideStatements(fset *token.FileSet, file *ast.File) []int {
+	var lines []int
+	ast.Inspect(file, func(node ast.Node) bool {
+		expr, isExpr := node.(ast.Expr)
+		if !isExpr {
+			return true
+		}
+		text, isString := joinedString(expr)
+		if !isString {
+			return true
+		}
+		if pauseCall.MatchString(text) && pauseSkipper.MatchString(text) {
+			lines = append(lines, fset.Position(expr.Pos()).Line)
+		}
+		return false
+	})
+	return lines
+}
+
+// joinedString is a string literal's text, or the text of literals joined by
+// +, so a statement split over several lines is read whole.
+func joinedString(expr ast.Expr) (string, bool) {
+	switch e := expr.(type) {
+	case *ast.BasicLit:
+		return gatekit.LiteralText(e)
+	case *ast.ParenExpr:
+		return joinedString(e.X)
+	case *ast.BinaryExpr:
+		if e.Op != token.ADD {
+			return "", false
+		}
+		left, ok := joinedString(e.X)
+		if !ok {
+			return "", false
+		}
+		right, ok := joinedString(e.Y)
+		return left + right, ok
+	}
+	return "", false
 }
 
 // skipDir reports whether a directory holds no compiled call site.
@@ -265,4 +352,36 @@ func exprText(fset *token.FileSet, expr ast.Expr) string {
 		return fmt.Sprintf("<unprintable receiver at %d>", expr.Pos())
 	}
 	return out.String()
+}
+
+// TestAPauseThePlannerMaySkipIsRefused seeds each shape that skips its pause,
+// and pauses standing alone that must pass. PAUSE keeps this file's own
+// literals out of the census.
+func TestAPauseThePlannerMaySkipIsRefused(t *testing.T) {
+	t.Parallel()
+	cases := map[string]struct {
+		query   string
+		refused bool
+	}{
+		"joined to a row read":            {"`SELECT count(*) FROM pg_stat_activity, PAUSE(0.05) WHERE wait_event_type = 'Lock'`", true},
+		"pg_sleep_for joined to a read":   {"`SELECT 1 FROM pg_stat_activity, PAUSE_for('50ms')`", true},
+		"pg_sleep_until joined to a read": {"`SELECT 1 FROM pg_stat_activity, PAUSE_until(now())`", true},
+		"behind a filter":                 {"`SELECT PAUSE(1) WHERE $1`", true},
+		"split over a +":                  {`"SELECT count(*) FROM pg_stat_activity, " + "PAUSE(0.05)"`, true},
+		"standing alone":                  {"`SELECT PAUSE(3)`", false},
+		"pg_sleep_for standing alone":     {"`SELECT PAUSE_for('1 second')`", false},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			source := "package probe\nfunc poll() { query(" + strings.ReplaceAll(c.query, "PAUSE", "pg_sleep") + ") }\n"
+			fset := token.NewFileSet()
+			file, err := parser.ParseFile(fset, "probe.go", source, parser.SkipObjectResolution)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := len(pausesInsideStatements(fset, file)) == 1; got != c.refused {
+				t.Fatalf("refused = %v, want %v for %s", got, c.refused, c.query)
+			}
+		})
+	}
 }
