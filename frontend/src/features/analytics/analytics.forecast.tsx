@@ -48,10 +48,12 @@ export function ForecastView({
   selection,
   canSubmit,
   scopeControl,
+  emptyNotice,
 }: Readonly<{
   selection: AnalyticsSelection;
   canSubmit: boolean;
   scopeControl?: ReactNode;
+  emptyNotice?: (holdsDeals: boolean | undefined) => ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -115,6 +117,7 @@ export function ForecastView({
                 onClose={() => setEditing(false)}
               />
             ) : null}
+            {emptyNotice?.(data.scope_holds_deals)}
             <ForecastAnswer readings={data} locale={locale} />
             {period === "quarter" && (
               <ReportingForecastGraphs scope={selection.scope} />

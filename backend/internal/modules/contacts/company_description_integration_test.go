@@ -84,7 +84,7 @@ func TestCompanyDescriptionSurvivesAnUnrelatedEdit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	industry := "Building products"
+	industry := "Construction"
 	updated, err := e.store.UpdateCompany(ctx,
 		ids.From[ids.CompanyKind](ids.UUID(company.Id)),
 		UpdateCompanyInput{Industry: &industry})

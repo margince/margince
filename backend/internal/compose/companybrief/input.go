@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -40,7 +41,7 @@ import (
 // them.
 //
 // It covers ONLY the floor. The model prompt versions itself below.
-const floorVersion = "company-brief-floor-v6"
+const floorVersion = "company-brief-floor-v7"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so editing that wording bumps it whether or not anybody remembers
@@ -89,7 +90,16 @@ type Input struct {
 	// tell the writer a fact about the section it was told to stay silent on.
 	LostCount *int     `json:"lost_count,omitempty"`
 	OpenTasks []TaskIn `json:"open_tasks,omitempty"`
-	Recent    []ActIn  `json:"recent,omitempty"`
+	// OpenCommitments are promises read out of conversations. They are not
+	// tasks: nobody filed them, and the record carries no assignee.
+	OpenCommitments []CommitmentIn `json:"open_commitments,omitempty"`
+	// OpenWorkCapped says a page of deals, tasks or commitments was cut, and
+	// OpenWorkWithheld says the reader's scope hid some. Either way a list of
+	// open work is not the whole of it, and the answer must not read as if it
+	// were.
+	OpenWorkCapped   bool    `json:"open_work_capped,omitempty"`
+	OpenWorkWithheld bool    `json:"open_work_withheld,omitempty"`
+	Recent           []ActIn `json:"recent,omitempty"`
 	// LastContact is the activity the page's "Last contact" tile names, nil
 	// when it names none. Tasks and notes can push it out of Recent, so it
 	// rides the fingerprint on its own. Two readers who see different activity
@@ -146,6 +156,9 @@ type TaskIn struct {
 	// format is fixed so two due dates compare as strings the way the instants
 	// they name compare.
 	Due string `json:"due,omitempty"`
+	// Holder is the assignee's name, empty when the task has none or the name
+	// cannot be given.
+	Holder string `json:"holder,omitempty"`
 }
 
 // DealIn is one open deal as the brief reads it.
@@ -269,7 +282,7 @@ const briefInputActivities = 12
 func FromView(view crmcontracts.Company360) Input {
 	in := Input{ID: view.Company.Id.String(), Name: view.Company.DisplayName}
 	if view.Company.Industry != nil {
-		in.Industry = *view.Company.Industry
+		in.Industry = string(*view.Company.Industry)
 	}
 	if view.Company.SizeBand != nil {
 		in.SizeBand = string(*view.Company.SizeBand)
@@ -290,6 +303,8 @@ func FromView(view crmcontracts.Company360) Input {
 	}
 	foldDeals(view, &in)
 	foldTasks(view, &in)
+	foldCommitments(view, &in)
+	foldOpenWorkGaps(view, &in)
 	foldRecent(view, &in)
 	if view.Scope != nil {
 		in.Project = &ProjectIn{ID: view.Scope.ProjectId.String(), Name: view.Scope.Name}
@@ -332,6 +347,9 @@ func foldTasks(view crmcontracts.Company360, in *Input) {
 	}
 	for _, step := range view.NextSteps.Data {
 		task := TaskIn{ID: step.ActivityId.String(), Name: step.Subject}
+		if step.AssigneeName != nil {
+			task.Holder = *step.AssigneeName
+		}
 		if step.DueAt != nil {
 			task.Due = step.DueAt.UTC().Format(time.RFC3339)
 		}
@@ -470,4 +488,10 @@ func profileValue(raw string) string {
 	// rather than pushing past it. Without it the card shows an approved
 	// sentence that stops mid-thought, as though the author wrote it that way.
 	return textcut.Runes(value, briefProfileValueMax-1) + "…"
+}
+
+// WordedIn words the industry code in the language the brief is written in.
+func (in Input) WordedIn(lang string) Input {
+	in.Industry = contacts.IndustryWords(in.Industry, textlang.Lang(lang))
+	return in
 }

@@ -564,5 +564,10 @@ const (
 	// address under another plus tag. The ladder searches the whole workspace
 	// by design. The id becomes a review row, or a possible-duplicate answer
 	// that asks the caller's visibility before it names the contact.
-	modulesTierUnscopedCeiling = 135
+	//
+	// 136: activities.DeliveryReportsTx names the leads a delivery report is
+	// linked to, so the repair can re-derive each. It runs as the system actor
+	// over the whole workspace, and the id is only handed to
+	// contacts.ReDeriveLeadFromRemainingTouchesTx, which probes writability.
+	modulesTierUnscopedCeiling = 136
 )

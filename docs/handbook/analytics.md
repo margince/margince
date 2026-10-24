@@ -23,8 +23,9 @@ A manager records a call with **Update forecast**. Also called: sales forecast, 
 
 ### How do I see my team's pipeline?
 To see your team's pipeline in Margince, open **Analytics** and pick the team in the **Record scope** picker above the numbers.
-A seat whose scope is its teams, such as a team lead's, is offered **My teams**, each of those teams and its own records. If the seat is in no team, it is offered only its own records. A seat that sees everything is also offered **Whole company**.
-A rep who sees only their own records gets no picker, only "These numbers cover {scope}."
+Every seat is offered **Whole company**, every live team and its own records; a seat whose scope is its teams also gets **My teams** first.
+Totals are the same for everyone. You can read a team's totals without being in it, but only the owners you may measure show by name.
+A rep opens on their own records.
 Also called: team forecast, my team's deals, manager view, team report.
 
 ### How do I see my pipeline report?
@@ -98,18 +99,18 @@ Where you have more than one to choose from, it is a picker labelled **Record
 scope**. Where you have only one, which is the usual case for a rep, it is a
 plain sentence instead: **"These numbers cover {scope}."**
 
-- A seat that sees everything is offered **Whole company**, every live team,
-  and its own records.
-- A seat whose scope is its teams is offered **My teams**, each of its own live
-  teams, and its own records. If it is in no team, it is offered only its own
-  records.
-- Everyone else is offered their own records.
+Every seat is offered **Whole company**, every live team and its own records.
+Totals for won, pipeline, forecast and meetings are the same for everyone. A seat whose scope is its teams also gets **My teams** first. Archived teams are
+never offered. A rep still opens on their own records.
 
-Archived teams are never offered.
+A total counts the whole scope you picked. An owner chart, ranking or list shows
+only the owners you may measure, and the answer says so. A scope with no deals
+says so instead of showing zeros, and points you to **Whole company** if you
+own none.
 
 The scope picker rules Performance, Forecast, Pipeline and Custom reports, so
 these sections count the same records. Delivery does not follow the picker: it
-covers every project you can read.
+covers every project you can read, and says so on the page.
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Grouping one by owner counts only

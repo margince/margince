@@ -252,7 +252,8 @@ func seatDeliveredTx(
 // rewrote the identity, a mailbox echoing its own send.
 //
 // Otherwise only on evidence that the two mailboxes hold ONE message rather than
-// two that share a Message-ID: the same subject, body and files.
+// two that share a Message-ID: the same subject, body and files. Masked text is
+// no such evidence, so masked mail asks maskedReplayIsProvenTx instead.
 //
 // The address test below cannot answer that on its own. It reads the addresses
 // off the record being captured, and on a replay that record is whatever this
@@ -297,18 +298,23 @@ func replayClaimIsProvenTx(
 	if err != nil || held {
 		return held, err
 	}
+	masked, err := eitherSideMaskedTx(ctx, tx, id, fields)
+	if err != nil {
+		return false, err
+	}
+	if masked {
+		return maskedReplayIsProvenTx(ctx, tx, id, seat, carried)
+	}
 	var same bool
+	args := []any{id, fields.Subject, fields.Body, carried}
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM activity a
 			 WHERE a.id = $1
 			   AND a.subject IS NOT DISTINCT FROM NULLIF($2, '')
 			   AND a.body IS NOT DISTINCT FROM NULLIF($3, '')
-			   AND NOT EXISTS (
-			       SELECT 1 FROM attachment f
-			        WHERE f.activity_id = a.id
-			          AND (f.checksum IS NULL OR f.checksum <> ALL($4))))`,
-		id, fields.Subject, fields.Body, carried).Scan(&same); err != nil {
+			   AND `+storedFilesWereCarried(len(args))+`)`,
+		args...).Scan(&same); err != nil {
 		return false, fmt.Errorf("capture: comparing %s with the message it collided with: %w", id, err)
 	}
 	return same, nil

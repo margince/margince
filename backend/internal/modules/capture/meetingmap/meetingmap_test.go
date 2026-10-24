@@ -279,3 +279,26 @@ func TestAnEventTooLongToStoreCarriesNoDuration(t *testing.T) {
 		})
 	}
 }
+
+// A dial-in passcode and a key in an invitation are masked before the cut, so a
+// key the cut would split is found whole.
+func TestTheBodyIsStoredWithItsCredentialsMasked(t *testing.T) {
+	key := "-----BEGIN PRIVATE KEY-----\n" + strings.Repeat("KEYMATERIAL", 40) + "\n-----END PRIVATE KEY-----"
+	m := Classify(Event{
+		ID: "evt-5", Subject: "Dial-in",
+		Description: "Passcode: 993311\n" + strings.Repeat("a", MaxBodyLen-200) + key,
+		Organizer:   Actor{Email: owner},
+		Attendees:   []Actor{{Email: "client@acme.test"}},
+	}, owner)
+	fields := activityFields(t, m.ToRecord("graphcal", nil))
+	body := fields.Body
+	if !fields.CredentialsMasked {
+		t.Error("the record does not say masking changed its body")
+	}
+	if !strings.Contains(body, "Passcode: [masked]") || strings.Contains(body, "993311") {
+		t.Errorf("body = %.120q…, want the passcode masked behind its label", body)
+	}
+	if strings.Contains(body, "KEYMATERIAL") {
+		t.Errorf("the stored body keeps the half of the key the cut left: %q", body[len(body)-80:])
+	}
+}

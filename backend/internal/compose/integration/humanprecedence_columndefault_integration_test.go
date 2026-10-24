@@ -45,7 +45,7 @@ func TestAutomaticWorkIsRefusedAValueTypedAtCreate(t *testing.T) {
 		"source":       "manual",
 		"display_name": "Typed Industry GmbH", "industry": "Logistics",
 	})
-	if industry, held := agentPatchCompany(t, e, companyID, "industry", "Retail"); !held || industry != "Logistics" {
+	if industry, held := agentPatchCompany(t, e, companyID, "industry", "Retail"); !held || industry != "logistics_transport" {
 		t.Errorf("automatic work overwrote the industry the human typed at create → industry %q, held back %v", industry, held)
 	}
 }

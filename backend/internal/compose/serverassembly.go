@@ -246,7 +246,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.forecastHandlers = forecasting.NewHandlers(
 		newForecastStoreFor(pool),
 		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
-		ForecastConversionHistory, ForecastForwardMeasure,
+		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals,
 		func() time.Time { return time.Now().UTC() },
 	)
 	// The floor comes from the constant rather than a setting for now: one

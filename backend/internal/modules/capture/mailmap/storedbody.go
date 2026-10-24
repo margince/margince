@@ -7,18 +7,60 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // recordBody is the activity body capture stores for this message with text:
-// the From/To lines Margince adds, then the text, cut to limit. cut reports
-// that text was left out.
+// the From/To lines Margince adds, then the text, credentials masked, cut to
+// limit. cut reports that text was left out. The mask runs before the cut, so a
+// key the cut would split is still found whole.
 func (m Message) recordBody(text string, limit int) (body string, cut bool) {
-	body = fmt.Sprintf("From: %s\nTo: %s", orDash(m.from), orDash(m.to))
+	return cutBody(credentialmask.MaskText(m.unmaskedBody(text)), limit)
+}
+
+func (m Message) unmaskedBody(text string) string {
+	body := fmt.Sprintf("From: %s\nTo: %s", orDash(m.from), orDash(m.to))
 	if text != "" {
 		body += "\n\n" + text
 	}
+	return body
+}
+
+// masksCredentials says the stored subject or body differs from this message's
+// own text because credentials were masked.
+func (m Message) masksCredentials() bool {
+	full := m.unmaskedBody(m.body)
+	return credentialmask.MaskText(m.subject) != m.subject || credentialmask.MaskText(full) != full
+}
+
+func cutBody(body string, limit int) (string, bool) {
 	return textcut.BytesMarked(body, limit, "…"), len(body) > limit
+}
+
+// storedShape is one body capture has stored for a text at a limit.
+type storedShape struct {
+	body string
+	cut  bool
+}
+
+// storedShapes lists the bodies capture has stored for text at limit. That is
+// today's body, the body stored before credentials were masked, and that older
+// body as a later repair masked it in place.
+func (m Message) storedShapes(text string, limit int) []storedShape {
+	body, cut := m.recordBody(text, limit)
+	unmasked, unmaskedCut := cutBody(m.unmaskedBody(text), limit)
+	return []storedShape{{body, cut}, {unmasked, unmaskedCut}, {credentialmask.MaskText(unmasked), unmaskedCut}}
+}
+
+// heldShape is the shape among shapes that stored is, if any.
+func heldShape(shapes []storedShape, stored string) (storedShape, bool) {
+	for _, shape := range shapes {
+		if shape.body == stored {
+			return shape, true
+		}
+	}
+	return storedShape{}, false
 }
 
 // storedBody is the body capture stores and how much of the text it holds. That
@@ -44,20 +86,20 @@ func cutCompleteness(parsed capture.BodyCompleteness, cut bool) capture.BodyComp
 //   - Only the From/To lines of a mail with text: unreadable, because an older
 //     parser lost that text.
 //
-// ok is false for any other stored body. An edit or an older parser wrote it,
-// and nothing here can vouch for it.
+// Each counts in every shape storedShapes lists. ok is false for any other
+// stored body. An edit or an older parser wrote it, and nothing here can vouch
+// for it.
 func AssessStoredBody(raw []byte, stored string) (capture.BodyCompleteness, bool) {
 	msg, err := Parse(raw, "")
 	if err != nil {
 		return "", false
 	}
-	if current, completeness := msg.storedBody(); stored == current {
-		return completeness, true
+	for _, limit := range []int{maxBodyLen, legacyMaxBodyLen} {
+		if shape, ok := heldShape(msg.storedShapes(msg.body, limit), stored); ok {
+			return cutCompleteness(msg.bodyCompleteness, shape.cut), true
+		}
 	}
-	if legacy, cut := msg.recordBody(msg.body, legacyMaxBodyLen); stored == legacy {
-		return cutCompleteness(msg.bodyCompleteness, cut), true
-	}
-	if headerOnly, _ := msg.recordBody("", maxBodyLen); stored == headerOnly && msg.body != "" {
+	if _, ok := heldShape(msg.storedShapes("", maxBodyLen), stored); ok && msg.body != "" {
 		return capture.BodyUnreadable, true
 	}
 	return "", false
@@ -65,16 +107,16 @@ func AssessStoredBody(raw []byte, stored string) (capture.BodyCompleteness, bool
 
 // RecoverStoredBody re-derives the body capture stores now from raw. It is for a
 // stored body an older parser or the older cap left short. That is only the
-// From/To lines, or the text cut at legacyMaxBodyLen. ok is false for any other
-// stored body, and for an original that holds no more text than is stored.
+// From/To lines, or the text cut at legacyMaxBodyLen, in any shape storedShapes
+// lists. ok is false for any other stored body, and for an original that holds no more text than is stored.
 func RecoverStoredBody(raw []byte, stored string) (body string, completeness capture.BodyCompleteness, ok bool) {
 	msg, err := Parse(raw, "")
 	if err != nil || msg.body == "" {
 		return "", "", false
 	}
-	headerOnly, _ := msg.recordBody("", maxBodyLen)
-	legacy, cut := msg.recordBody(msg.body, legacyMaxBodyLen)
-	if stored != headerOnly && (stored != legacy || !cut) {
+	_, headerOnly := heldShape(msg.storedShapes("", maxBodyLen), stored)
+	legacy, isLegacy := heldShape(msg.storedShapes(msg.body, legacyMaxBodyLen), stored)
+	if !headerOnly && (!isLegacy || !legacy.cut) {
 		return "", "", false
 	}
 	body, completeness = msg.storedBody()

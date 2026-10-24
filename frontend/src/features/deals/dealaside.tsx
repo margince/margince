@@ -16,6 +16,7 @@ import {
 } from "../../design-system/recorddetails";
 import { COMPANY_LIFECYCLE_LABELS } from "../../format/companylifecycle";
 import { formatDateAbbrev, formatMoneyWhole } from "../../format/format";
+import { industryWords } from "../../format/industry";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
@@ -342,9 +343,11 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
     company?.lifecycle && company.lifecycle !== "unknown"
       ? t(COMPANY_LIFECYCLE_LABELS[company.lifecycle])
       : undefined;
-  const facts = [stage, company?.industry, company?.address?.city].filter(
-    (part): part is string => Boolean(part),
-  );
+  const facts = [
+    stage,
+    company?.industry ? industryWords(t, company.industry) : undefined,
+    company?.address?.city,
+  ].filter((part): part is string => Boolean(part));
   if (!name) {
     return <EntityRef kind="company" id={companyId} />;
   }

@@ -21,7 +21,7 @@ func TestCompanyReadPreviewMatchesAppliedFieldsAndPreservesHumanClaims(t *testin
 	}
 	id := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 	proposal := DeepReadProposal{CompanyID: id, SourceURL: "https://preview.example.test/about", Fields: []DeepReadField{
-		{Field: "industry", Value: "Architectural glass", EvidenceSnippet: "We supply architectural glass.", SourceURL: "https://preview.example.test/about", Confidence: 0.9},
+		{Field: "industry", Value: "Construction", EvidenceSnippet: "We supply architectural glass.", SourceURL: "https://preview.example.test/about", Confidence: 0.9},
 		{Field: "icp", Value: "Builders", EvidenceSnippet: "For builders.", SourceURL: "https://preview.example.test/about", Confidence: 0.9},
 	}, Facts: []DeepReadFact{{Category: companyEntity, Field: FactEmployeeRange, Value: "25 employees", EvidenceSnippet: "Our 25 employees.", SourceURL: "https://preview.example.test/about", Confidence: 0.9}}}
 	plan, err := e.store.PreviewCompanyRead(ctx, proposal)
@@ -45,7 +45,7 @@ func TestCompanyReadPreviewMatchesAppliedFieldsAndPreservesHumanClaims(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if applied.Industry == nil || *applied.Industry != "Architectural glass" || applied.SizeBand == nil || string(*applied.SizeBand) != "11-50" {
+	if applied.Industry == nil || *applied.Industry != "construction" || applied.SizeBand == nil || string(*applied.SizeBand) != "11-50" {
 		t.Fatalf("apply differs from preview: %+v", applied)
 	}
 	human := "Public building contractors"
@@ -86,7 +86,7 @@ func TestColdStartPreviewMatchesCreationAndSubsequentFill(t *testing.T) {
 		SourceURL: "https://glass-preview.example.test/about",
 		Fields: []ColdStartFieldInput{
 			{Field: "legal_name", Value: "Glass Preview Limited", EvidenceSnippet: "Glass Preview Limited", SourceURL: "https://glass-preview.example.test/about", Confidence: 0.9},
-			{Field: "industry", Value: "Architectural glass", EvidenceSnippet: "Architectural glass", SourceURL: "https://glass-preview.example.test/about", Confidence: 0.9},
+			{Field: "industry", Value: "Construction", EvidenceSnippet: "Architectural glass", SourceURL: "https://glass-preview.example.test/about", Confidence: 0.9},
 		},
 	}
 	plan, err := e.store.PreviewColdStart(ctx, input)
@@ -107,7 +107,7 @@ func TestColdStartPreviewMatchesCreationAndSubsequentFill(t *testing.T) {
 	if company.DisplayName != plan.Name || company.Domains == nil || len(*company.Domains) != 1 || (*company.Domains)[0].Domain != plan.Domain {
 		t.Fatalf("created company differs from preview: %+v", company)
 	}
-	input.Fields[1].Value = "Changed industry"
+	input.Fields[1].Value = "Software"
 	plan, err = e.store.PreviewColdStart(ctx, input)
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +125,7 @@ func TestColdStartPreviewMatchesCreationAndSubsequentFill(t *testing.T) {
 	}
 	for _, column := range plan.Read.Columns {
 		if column.Field == "industry" {
-			if applied.Industry == nil || *applied.Industry != column.After || !column.Retained {
+			if applied.Industry == nil || string(*applied.Industry) != column.After || !column.Retained {
 				t.Fatalf("retained industry differs from preview: %+v / %+v", column, applied)
 			}
 			return

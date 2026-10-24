@@ -57,7 +57,7 @@ func DossierRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:   dossierSystemFor(fence, lang),
-		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
+		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in, lang))}},
 		// Deliberately NOT set: the dossier describes the company, and our own
 		// context is only ever an input to a judgment about fit. A writer given
 		// it would start comparing, which is the other surface's job.

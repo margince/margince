@@ -31,7 +31,7 @@ const COMPANY: Company = {
   display_name: "Brandt Automotive GmbH",
   lifecycle: "customer",
   owner_id: "u-1",
-  industry: "Automotive",
+  industry: "automotive",
   captured_by: "human:u-author",
   source: "manual",
   version: 1,

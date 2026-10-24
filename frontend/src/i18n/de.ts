@@ -1,10 +1,12 @@
 import type { MessageKey } from "./en";
 
-// German catalog, the A24 default locale. `satisfies` forces exact key
-// parity with en at compile time; i18n.test.ts re-checks it at runtime so a
+// German catalog, the A24 default locale. The type annotation forces exact key
+// parity with en at compile time. i18n.test.ts re-checks it at runtime, so a
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
-export const de = {
+// Annotated, not inferred: the inferred literal type of a catalog this size is
+// past what tsc will serialize (TS7056).
+export const de: Readonly<Record<MessageKey, string>> = {
   "homeRepair.taskPermission":
     "Zum Archivieren geprüfter Aufgaben brauchst du die Berechtigung, Aktivitäten zu archivieren.",
   "homeRepair.classificationPermission":
@@ -3365,7 +3367,50 @@ export const de = {
   "co.growthFit.completeness": "{present} von {expected} Angaben erfasst",
   "co.growthFit.missing": "Fehlt noch",
   "co.growthFit.capped": "Zurückgehalten: {reason}.",
-  "co.growthFit.nextStep": "Als Nächstes: {step}.",
+  "industry.agriculture": "Landwirtschaft",
+  "industry.automotive": "Automobilindustrie",
+  "industry.aerospaceDefense": "Luft- und Raumfahrt, Verteidigung",
+  "industry.chemicalsMaterials": "Chemie und Werkstoffe",
+  "industry.construction": "Bauwesen",
+  "industry.consumerGoodsRetail": "Konsumgüter und Handel",
+  "industry.education": "Bildung",
+  "industry.energyUtilities": "Energie und Versorgung",
+  "industry.entertainmentMedia": "Unterhaltung und Medien",
+  "industry.financialServices": "Finanzdienstleistungen",
+  "industry.foodBeverage": "Lebensmittel und Getränke",
+  "industry.governmentPublicSector": "Öffentlicher Sektor",
+  "industry.healthcare": "Gesundheitswesen",
+  "industry.hospitalityTourism": "Gastgewerbe und Tourismus",
+  "industry.insurance": "Versicherung",
+  "industry.itServices": "IT-Dienstleistungen",
+  "industry.software": "Software",
+  "industry.legalProfessionalServices":
+    "Recht und professionelle Dienstleistungen",
+  "industry.logisticsTransport": "Logistik und Transport",
+  "industry.manufacturing": "Fertigung",
+  "industry.marketingAdvertising": "Marketing und Werbung",
+  "industry.miningMetals": "Bergbau und Metalle",
+  "industry.nonprofit": "Gemeinnützige Einrichtung",
+  "industry.pharmaBiotech": "Pharma und Biotechnologie",
+  "industry.realEstate": "Immobilien",
+  "industry.telecommunications": "Telekommunikation",
+  "co.growthFit.input.offerSummary": "was sie anbieten",
+  "co.growthFit.input.icp": "an wen sie verkaufen",
+  "co.growthFit.input.industry": "ihre Branche",
+  "co.growthFit.input.buyingCenter": "wer den Einkauf entscheidet",
+  "co.growthFit.input.buyingIntents": "wofür sie einkaufen",
+  "co.growthFit.input.employeeRange": "wie groß sie sind",
+  "co.growthFit.input.technology": "welche Technik sie einsetzen",
+  "co.growthFit.step.gatherInputs":
+    "Als Nächstes: herausfinden, {missing}, bevor sich die Passung beurteilen lässt.",
+  "co.growthFit.step.recordProfile":
+    "Als Nächstes: mehr vom Profil dieses Unternehmens erfassen, bevor sich die Passung beurteilen lässt.",
+  "co.growthFit.step.confirmOffering":
+    "Als Nächstes: das eigene Unternehmensprofil bestätigen, damit die Passung an dem gemessen wird, was du tatsächlich verkaufst, und nicht an einer Vermutung.",
+  "co.growthFit.step.configureModel":
+    "Als Nächstes: Alle nötigen Fakten sind erfasst, aber nichts ist zum Beurteilen eingerichtet. Bitte wende dich an die Systemadministration, damit das KI-Modell eingerichtet wird.",
+  "co.growthFit.step.retryLater":
+    "Als Nächstes: Alle nötigen Fakten sind erfasst, aber die Bewertung konnte diesmal nicht geschrieben werden. Versuche es in ein paar Minuten erneut.",
   "co.growthFit.positive": "Förderliche Faktoren",
   "co.growthFit.negative": "Hemmende Faktoren",
   "co.growthFit.whitespace": "Verkaufspotenzial",
@@ -6212,6 +6257,14 @@ export const de = {
   "analytics.firstRunBody":
     "Die Auswertungen füllen sich, sobald Deals erfasst werden, die du sehen kannst. Öffne Deals, um einen anzulegen oder deine Daten zu importieren.",
   "analytics.firstRunAction": "Deals öffnen",
+  "analytics.emptyOwnTitle": "Du hast keine Deals",
+  "analytics.emptyOwnBody":
+    "Diese Zahlen umfassen nur deine eigenen Deals, und du hast keine. Wähle Gesamtes Unternehmen, um die Zahlen des Unternehmens zu sehen.",
+  "analytics.emptyOwnAction": "Gesamtes Unternehmen zeigen",
+  "analytics.emptyTeamTitle": "{scope} hat keine Deals",
+  "analytics.emptyTeamBody": "Niemand in {scope} hat einen Deal.",
+  "analytics.deliveryCoversAll":
+    "Diese Zahlen umfassen jedes Projekt, das du lesen kannst.",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
   "analytics.attentionNoOwner": "Kein Verantwortlicher",
   "analytics.attentionAtStake": "{amount} betroffen",
@@ -17351,4 +17404,4 @@ export const de = {
   "project.standing.peek.started": "Arbeit begonnen",
   "project.standing.peek.today": "Heute",
   "project.standing.peek.documents": "Dateien dieses Projekts, neueste zuerst",
-} as const satisfies Record<MessageKey, string>;
+};

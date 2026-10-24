@@ -1,6 +1,6 @@
 import type { MessageKey } from "./en";
 
-// Vietnamese catalog. `satisfies` forces exact key parity with en.ts;
+// Vietnamese catalog. The type annotation forces exact key parity with en.ts.
 // i18n.test.ts proves every value differs from its English counterpart
 // except the allowlisted brand names, endonyms and other strings that are
 // correct in English on purpose.
@@ -13,7 +13,9 @@ import type { MessageKey } from "./en";
 //   - "tổ chức" is never the registered legal entity — that sense is
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
-export const vi = {
+// Annotated, not inferred: the inferred literal type of a catalog this size is
+// past what tsc will serialize (TS7056).
+export const vi: Readonly<Record<MessageKey, string>> = {
   "homeRepair.taskPermission":
     "Cần quyền lưu trữ hoạt động để lưu trữ các công việc đã xem xét.",
   "homeRepair.classificationPermission":
@@ -3275,7 +3277,44 @@ export const vi = {
     "Đã ghi nhận {present}/{expected} dữ liệu đầu vào",
   "co.growthFit.missing": "Còn thiếu",
   "co.growthFit.capped": "Bị giới hạn: {reason}.",
-  "co.growthFit.nextStep": "Tiếp theo: {step}.",
+  "industry.agriculture": "Nông nghiệp",
+  "industry.automotive": "Ô tô",
+  "industry.aerospaceDefense": "Hàng không vũ trụ và quốc phòng",
+  "industry.chemicalsMaterials": "Hóa chất và vật liệu",
+  "industry.construction": "Xây dựng",
+  "industry.consumerGoodsRetail": "Hàng tiêu dùng và bán lẻ",
+  "industry.education": "Giáo dục",
+  "industry.energyUtilities": "Năng lượng và tiện ích",
+  "industry.entertainmentMedia": "Giải trí và truyền thông",
+  "industry.financialServices": "Dịch vụ tài chính",
+  "industry.foodBeverage": "Thực phẩm và đồ uống",
+  "industry.governmentPublicSector": "Chính phủ và khu vực công",
+  "industry.healthcare": "Y tế",
+  "industry.hospitalityTourism": "Khách sạn và du lịch",
+  "industry.insurance": "Bảo hiểm",
+  "industry.itServices": "Dịch vụ CNTT",
+  "industry.software": "Phần mềm",
+  "industry.legalProfessionalServices": "Dịch vụ pháp lý và chuyên nghiệp",
+  "industry.logisticsTransport": "Logistics và vận tải",
+  "industry.manufacturing": "Sản xuất",
+  "industry.marketingAdvertising": "Tiếp thị và quảng cáo",
+  "industry.miningMetals": "Khai khoáng và kim loại",
+  "industry.nonprofit": "Phi lợi nhuận",
+  "industry.pharmaBiotech": "Dược phẩm và công nghệ sinh học",
+  "industry.realEstate": "Bất động sản",
+  "industry.telecommunications": "Viễn thông",
+  "co.growthFit.input.offerSummary": "họ cung cấp gì",
+  "co.growthFit.input.icp": "họ bán cho ai",
+  "co.growthFit.input.industry": "ngành nghề",
+  "co.growthFit.input.buyingCenter": "ai quyết định mua",
+  "co.growthFit.input.buyingIntents": "họ mua để làm gì",
+  "co.growthFit.input.employeeRange": "quy mô công ty",
+  "co.growthFit.input.technology": "công nghệ họ đang dùng",
+  "co.growthFit.step.gatherInputs": "Tiếp theo: tìm hiểu {missing}, rồi mới đánh giá được mức độ phù hợp.",
+  "co.growthFit.step.recordProfile": "Tiếp theo: ghi thêm hồ sơ của công ty này, rồi mới đánh giá được mức độ phù hợp.",
+  "co.growthFit.step.confirmOffering": "Tiếp theo: xác nhận hồ sơ công ty của bạn, để mức độ phù hợp được đo theo những gì bạn thực sự bán chứ không phải phỏng đoán.",
+  "co.growthFit.step.configureModel": "Tiếp theo: mọi dữ kiện cần thiết đã được ghi, nhưng chưa có mô hình nào được cấu hình để đánh giá. Liên hệ quản trị viên để cấu hình mô hình AI.",
+  "co.growthFit.step.retryLater": "Tiếp theo: mọi dữ kiện cần thiết đã được ghi, nhưng lần này chưa viết được bản đánh giá. Hãy thử lại sau vài phút.",
   "co.growthFit.positive": "Yếu tố thuận lợi",
   "co.growthFit.negative": "Yếu tố hạn chế",
   "co.growthFit.whitespace": "Tiềm năng bán hàng",
@@ -6054,6 +6093,13 @@ export const vi = {
   "analytics.firstRunBody":
     "Phân tích sẽ có dữ liệu khi các deal bạn xem được được ghi nhận. Mở Deal để tạo mới hoặc nhập dữ liệu.",
   "analytics.firstRunAction": "Mở Deal",
+  "analytics.emptyOwnTitle": "Bạn chưa sở hữu deal nào",
+  "analytics.emptyOwnBody":
+    "Các số liệu này chỉ gồm deal của riêng bạn, và bạn chưa có deal nào. Chọn Whole company để xem số liệu của công ty.",
+  "analytics.emptyOwnAction": "Xem Whole company",
+  "analytics.emptyTeamTitle": "{scope} chưa có deal nào",
+  "analytics.emptyTeamBody": "Không ai trong {scope} sở hữu deal nào.",
+  "analytics.deliveryCoversAll": "Các số liệu này bao gồm mọi dự án bạn đọc được.",
   "analytics.attention": "Cần chú ý",
   "analytics.attentionNoOwner": "Chưa giao",
   "analytics.attentionAtStake": "{amount} bị ảnh hưởng",
@@ -16901,4 +16947,4 @@ export const vi = {
   "project.standing.peek.started": "Bắt đầu làm việc",
   "project.standing.peek.today": "Hôm nay",
   "project.standing.peek.documents": "Tệp của dự án này, mới nhất trước",
-} as const satisfies Record<MessageKey, string>;
+};

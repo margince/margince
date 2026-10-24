@@ -4519,6 +4519,96 @@ func (e CommunicationReviewState) Valid() bool {
 	}
 }
 
+// Defines values for CompanyIndustry.
+const (
+	CompanyIndustryAerospaceDefense          CompanyIndustry = "aerospace_defense"
+	CompanyIndustryAgriculture               CompanyIndustry = "agriculture"
+	CompanyIndustryAutomotive                CompanyIndustry = "automotive"
+	CompanyIndustryChemicalsMaterials        CompanyIndustry = "chemicals_materials"
+	CompanyIndustryConstruction              CompanyIndustry = "construction"
+	CompanyIndustryConsumerGoodsRetail       CompanyIndustry = "consumer_goods_retail"
+	CompanyIndustryEducation                 CompanyIndustry = "education"
+	CompanyIndustryEnergyUtilities           CompanyIndustry = "energy_utilities"
+	CompanyIndustryEntertainmentMedia        CompanyIndustry = "entertainment_media"
+	CompanyIndustryFinancialServices         CompanyIndustry = "financial_services"
+	CompanyIndustryFoodBeverage              CompanyIndustry = "food_beverage"
+	CompanyIndustryGovernmentPublicSector    CompanyIndustry = "government_public_sector"
+	CompanyIndustryHealthcare                CompanyIndustry = "healthcare"
+	CompanyIndustryHospitalityTourism        CompanyIndustry = "hospitality_tourism"
+	CompanyIndustryInsurance                 CompanyIndustry = "insurance"
+	CompanyIndustryItServices                CompanyIndustry = "it_services"
+	CompanyIndustryLegalProfessionalServices CompanyIndustry = "legal_professional_services"
+	CompanyIndustryLogisticsTransport        CompanyIndustry = "logistics_transport"
+	CompanyIndustryManufacturing             CompanyIndustry = "manufacturing"
+	CompanyIndustryMarketingAdvertising      CompanyIndustry = "marketing_advertising"
+	CompanyIndustryMiningMetals              CompanyIndustry = "mining_metals"
+	CompanyIndustryNonprofit                 CompanyIndustry = "nonprofit"
+	CompanyIndustryPharmaBiotech             CompanyIndustry = "pharma_biotech"
+	CompanyIndustryRealEstate                CompanyIndustry = "real_estate"
+	CompanyIndustrySoftware                  CompanyIndustry = "software"
+	CompanyIndustryTelecommunications        CompanyIndustry = "telecommunications"
+)
+
+// Valid indicates whether the value is a known member of the CompanyIndustry enum.
+func (e CompanyIndustry) Valid() bool {
+	switch e {
+	case CompanyIndustryAerospaceDefense:
+		return true
+	case CompanyIndustryAgriculture:
+		return true
+	case CompanyIndustryAutomotive:
+		return true
+	case CompanyIndustryChemicalsMaterials:
+		return true
+	case CompanyIndustryConstruction:
+		return true
+	case CompanyIndustryConsumerGoodsRetail:
+		return true
+	case CompanyIndustryEducation:
+		return true
+	case CompanyIndustryEnergyUtilities:
+		return true
+	case CompanyIndustryEntertainmentMedia:
+		return true
+	case CompanyIndustryFinancialServices:
+		return true
+	case CompanyIndustryFoodBeverage:
+		return true
+	case CompanyIndustryGovernmentPublicSector:
+		return true
+	case CompanyIndustryHealthcare:
+		return true
+	case CompanyIndustryHospitalityTourism:
+		return true
+	case CompanyIndustryInsurance:
+		return true
+	case CompanyIndustryItServices:
+		return true
+	case CompanyIndustryLegalProfessionalServices:
+		return true
+	case CompanyIndustryLogisticsTransport:
+		return true
+	case CompanyIndustryManufacturing:
+		return true
+	case CompanyIndustryMarketingAdvertising:
+		return true
+	case CompanyIndustryMiningMetals:
+		return true
+	case CompanyIndustryNonprofit:
+		return true
+	case CompanyIndustryPharmaBiotech:
+		return true
+	case CompanyIndustryRealEstate:
+		return true
+	case CompanyIndustrySoftware:
+		return true
+	case CompanyIndustryTelecommunications:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CompanyLifecycle.
 const (
 	CompanyLifecycleCustomer       CompanyLifecycle = "customer"
@@ -4640,6 +4730,7 @@ func (e CompanyVisibility) Valid() bool {
 const (
 	Company360SectionsOmittedActivities       Company360SectionsOmitted = "activities"
 	Company360SectionsOmittedBillingContacts  Company360SectionsOmitted = "billing_contacts"
+	Company360SectionsOmittedCommitments      Company360SectionsOmitted = "commitments"
 	Company360SectionsOmittedContacts         Company360SectionsOmitted = "contacts"
 	Company360SectionsOmittedDeals            Company360SectionsOmitted = "deals"
 	Company360SectionsOmittedHealth           Company360SectionsOmitted = "health"
@@ -4663,6 +4754,8 @@ func (e Company360SectionsOmitted) Valid() bool {
 	case Company360SectionsOmittedActivities:
 		return true
 	case Company360SectionsOmittedBillingContacts:
+		return true
+	case Company360SectionsOmittedCommitments:
 		return true
 	case Company360SectionsOmittedContacts:
 		return true
@@ -4693,6 +4786,24 @@ func (e Company360SectionsOmitted) Valid() bool {
 	case Company360SectionsOmittedSuggestions:
 		return true
 	case Company360SectionsOmittedTags:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Company360CommitmentKind.
+const (
+	Company360CommitmentKindOurs   Company360CommitmentKind = "ours"
+	Company360CommitmentKindTheirs Company360CommitmentKind = "theirs"
+)
+
+// Valid indicates whether the value is a known member of the Company360CommitmentKind enum.
+func (e Company360CommitmentKind) Valid() bool {
+	switch e {
+	case Company360CommitmentKindOurs:
+		return true
+	case Company360CommitmentKindTheirs:
 		return true
 	default:
 		return false
@@ -10888,6 +10999,66 @@ func (e GrowthFitBand) Valid() bool {
 	case GrowthFitBandUnknown:
 		return true
 	case GrowthFitBandWeak:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GrowthFitInput.
+const (
+	GrowthFitInputBuyingCenter  GrowthFitInput = "buying_center"
+	GrowthFitInputBuyingIntents GrowthFitInput = "buying_intents"
+	GrowthFitInputEmployeeRange GrowthFitInput = "employee_range"
+	GrowthFitInputIcp           GrowthFitInput = "icp"
+	GrowthFitInputIndustry      GrowthFitInput = "industry"
+	GrowthFitInputOfferSummary  GrowthFitInput = "offer_summary"
+	GrowthFitInputTechnology    GrowthFitInput = "technology"
+)
+
+// Valid indicates whether the value is a known member of the GrowthFitInput enum.
+func (e GrowthFitInput) Valid() bool {
+	switch e {
+	case GrowthFitInputBuyingCenter:
+		return true
+	case GrowthFitInputBuyingIntents:
+		return true
+	case GrowthFitInputEmployeeRange:
+		return true
+	case GrowthFitInputIcp:
+		return true
+	case GrowthFitInputIndustry:
+		return true
+	case GrowthFitInputOfferSummary:
+		return true
+	case GrowthFitInputTechnology:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GrowthFitNextStep.
+const (
+	GrowthFitNextStepConfigureModel  GrowthFitNextStep = "configure_model"
+	GrowthFitNextStepConfirmOffering GrowthFitNextStep = "confirm_offering"
+	GrowthFitNextStepGatherInputs    GrowthFitNextStep = "gather_inputs"
+	GrowthFitNextStepRecordProfile   GrowthFitNextStep = "record_profile"
+	GrowthFitNextStepRetryLater      GrowthFitNextStep = "retry_later"
+)
+
+// Valid indicates whether the value is a known member of the GrowthFitNextStep enum.
+func (e GrowthFitNextStep) Valid() bool {
+	switch e {
+	case GrowthFitNextStepConfigureModel:
+		return true
+	case GrowthFitNextStepConfirmOffering:
+		return true
+	case GrowthFitNextStepGatherInputs:
+		return true
+	case GrowthFitNextStepRecordProfile:
+		return true
+	case GrowthFitNextStepRetryLater:
 		return true
 	default:
 		return false
@@ -22285,6 +22456,96 @@ func (e ListCompaniesParamsRelationshipType) Valid() bool {
 	}
 }
 
+// Defines values for ListCompaniesParamsIndustry.
+const (
+	ListCompaniesParamsIndustryAerospaceDefense          ListCompaniesParamsIndustry = "aerospace_defense"
+	ListCompaniesParamsIndustryAgriculture               ListCompaniesParamsIndustry = "agriculture"
+	ListCompaniesParamsIndustryAutomotive                ListCompaniesParamsIndustry = "automotive"
+	ListCompaniesParamsIndustryChemicalsMaterials        ListCompaniesParamsIndustry = "chemicals_materials"
+	ListCompaniesParamsIndustryConstruction              ListCompaniesParamsIndustry = "construction"
+	ListCompaniesParamsIndustryConsumerGoodsRetail       ListCompaniesParamsIndustry = "consumer_goods_retail"
+	ListCompaniesParamsIndustryEducation                 ListCompaniesParamsIndustry = "education"
+	ListCompaniesParamsIndustryEnergyUtilities           ListCompaniesParamsIndustry = "energy_utilities"
+	ListCompaniesParamsIndustryEntertainmentMedia        ListCompaniesParamsIndustry = "entertainment_media"
+	ListCompaniesParamsIndustryFinancialServices         ListCompaniesParamsIndustry = "financial_services"
+	ListCompaniesParamsIndustryFoodBeverage              ListCompaniesParamsIndustry = "food_beverage"
+	ListCompaniesParamsIndustryGovernmentPublicSector    ListCompaniesParamsIndustry = "government_public_sector"
+	ListCompaniesParamsIndustryHealthcare                ListCompaniesParamsIndustry = "healthcare"
+	ListCompaniesParamsIndustryHospitalityTourism        ListCompaniesParamsIndustry = "hospitality_tourism"
+	ListCompaniesParamsIndustryInsurance                 ListCompaniesParamsIndustry = "insurance"
+	ListCompaniesParamsIndustryItServices                ListCompaniesParamsIndustry = "it_services"
+	ListCompaniesParamsIndustryLegalProfessionalServices ListCompaniesParamsIndustry = "legal_professional_services"
+	ListCompaniesParamsIndustryLogisticsTransport        ListCompaniesParamsIndustry = "logistics_transport"
+	ListCompaniesParamsIndustryManufacturing             ListCompaniesParamsIndustry = "manufacturing"
+	ListCompaniesParamsIndustryMarketingAdvertising      ListCompaniesParamsIndustry = "marketing_advertising"
+	ListCompaniesParamsIndustryMiningMetals              ListCompaniesParamsIndustry = "mining_metals"
+	ListCompaniesParamsIndustryNonprofit                 ListCompaniesParamsIndustry = "nonprofit"
+	ListCompaniesParamsIndustryPharmaBiotech             ListCompaniesParamsIndustry = "pharma_biotech"
+	ListCompaniesParamsIndustryRealEstate                ListCompaniesParamsIndustry = "real_estate"
+	ListCompaniesParamsIndustrySoftware                  ListCompaniesParamsIndustry = "software"
+	ListCompaniesParamsIndustryTelecommunications        ListCompaniesParamsIndustry = "telecommunications"
+)
+
+// Valid indicates whether the value is a known member of the ListCompaniesParamsIndustry enum.
+func (e ListCompaniesParamsIndustry) Valid() bool {
+	switch e {
+	case ListCompaniesParamsIndustryAerospaceDefense:
+		return true
+	case ListCompaniesParamsIndustryAgriculture:
+		return true
+	case ListCompaniesParamsIndustryAutomotive:
+		return true
+	case ListCompaniesParamsIndustryChemicalsMaterials:
+		return true
+	case ListCompaniesParamsIndustryConstruction:
+		return true
+	case ListCompaniesParamsIndustryConsumerGoodsRetail:
+		return true
+	case ListCompaniesParamsIndustryEducation:
+		return true
+	case ListCompaniesParamsIndustryEnergyUtilities:
+		return true
+	case ListCompaniesParamsIndustryEntertainmentMedia:
+		return true
+	case ListCompaniesParamsIndustryFinancialServices:
+		return true
+	case ListCompaniesParamsIndustryFoodBeverage:
+		return true
+	case ListCompaniesParamsIndustryGovernmentPublicSector:
+		return true
+	case ListCompaniesParamsIndustryHealthcare:
+		return true
+	case ListCompaniesParamsIndustryHospitalityTourism:
+		return true
+	case ListCompaniesParamsIndustryInsurance:
+		return true
+	case ListCompaniesParamsIndustryItServices:
+		return true
+	case ListCompaniesParamsIndustryLegalProfessionalServices:
+		return true
+	case ListCompaniesParamsIndustryLogisticsTransport:
+		return true
+	case ListCompaniesParamsIndustryManufacturing:
+		return true
+	case ListCompaniesParamsIndustryMarketingAdvertising:
+		return true
+	case ListCompaniesParamsIndustryMiningMetals:
+		return true
+	case ListCompaniesParamsIndustryNonprofit:
+		return true
+	case ListCompaniesParamsIndustryPharmaBiotech:
+		return true
+	case ListCompaniesParamsIndustryRealEstate:
+		return true
+	case ListCompaniesParamsIndustrySoftware:
+		return true
+	case ListCompaniesParamsIndustryTelecommunications:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListCompaniesParamsSizeBand.
 const (
 	ListCompaniesParamsSizeBandN10015000 ListCompaniesParamsSizeBand = "1001-5000"
@@ -30900,7 +31161,9 @@ type Company struct {
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
-	Industry     *string `json:"industry,omitempty"`
+
+	// Industry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
+	Industry *CompanyIndustry `json:"industry,omitempty"`
 
 	// IsAnchor True only for this installation's own company.
 	// It is one ordinary company, reachable by id everywhere, but the surfaces that answer
@@ -30975,6 +31238,9 @@ type Company struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CompanyIndustry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
+type CompanyIndustry string
 
 // CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
 type CompanyLifecycle string
@@ -31062,6 +31328,16 @@ type Company360 struct {
 		Data []Company360NextStep `json:"data"`
 		Page PageInfo             `json:"page"`
 	} `json:"next_steps,omitempty"`
+
+	// OpenCommitments The promises read out of conversations that are still open, ours and theirs. Absent,
+	// with `commitments` named in `sections_omitted`, when the caller lacks the contact or
+	// activity grant. Never an empty list standing in for a refusal. Claims carry no
+	// project, so a project-narrowed page lists them account-wide. `attention_withheld` is
+	// set when the caller's row scope hid some.
+	OpenCommitments *struct {
+		Data []Company360Commitment `json:"data"`
+		Page PageInfo               `json:"page"`
+	} `json:"open_commitments,omitempty"`
 	PendingApprovals *struct {
 		Data []Approval `json:"data"`
 		Page PageInfo   `json:"page"`
@@ -31125,6 +31401,29 @@ type Company360 struct {
 
 // Company360SectionsOmitted defines model for Company360.SectionsOmitted.
 type Company360SectionsOmitted string
+
+// Company360Commitment One open promise read out of a conversation with a contact at this account, in the order
+// overdue, then dated, then undated.
+//
+// `kind` says whose promise it is. An `ours` commitment was made by our side and names no
+// owner: nothing on file says who holds it, so the reader says it is ours and nothing
+// more. A `theirs` commitment names the contact who made it.
+type Company360Commitment struct {
+	// ActivityId The message the promise was read from, which is what a citation opens.
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Body The promise, verbatim.
+	Body        string                   `json:"body"`
+	ClaimId     openapi_types.UUID       `json:"claim_id"`
+	ContactId   openapi_types.UUID       `json:"contact_id"`
+	ContactName string                   `json:"contact_name"`
+	DueAt       *time.Time               `json:"due_at,omitempty"`
+	Kind        Company360CommitmentKind `json:"kind"`
+	Overdue     bool                     `json:"overdue"`
+}
+
+// Company360CommitmentKind defines model for Company360Commitment.Kind.
+type Company360CommitmentKind string
 
 // Company360Contact One current employee of the account, as the company view shows them.
 type Company360Contact struct {
@@ -31332,8 +31631,13 @@ type Company360NextMeeting struct {
 
 // Company360NextStep One open task on the account, ordered overdue → due → undated.
 type Company360NextStep struct {
-	ActivityId      openapi_types.UUID  `json:"activity_id"`
-	AssigneeId      *openapi_types.UUID `json:"assignee_id,omitempty"`
+	ActivityId openapi_types.UUID  `json:"activity_id"`
+	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+
+	// AssigneeName The assignee's name while they are a live workspace member. Null when the task has no
+	// assignee or the name cannot be given, so a reader says nothing about who holds it
+	// instead of printing an id.
+	AssigneeName    *string             `json:"assignee_name,omitempty"`
 	DueAt           *time.Time          `json:"due_at,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
@@ -31684,7 +31988,8 @@ type CompanyAnswer struct {
 	// Question The prepared questions. Fixed, because each one names the records its answer is
 	// written from — which is what makes the answer citable.
 	//
-	// `whats_open` — the open deals and the open tasks. Deliberately not approvals: an
+	// `whats_open` — the open deals, the open tasks and the open commitments (promises
+	// read out of conversations, not tasks). Deliberately not approvals: an
 	// approval is not a citable record type here, and an answer that named one could
 	// not be checked the way every other sentence can.
 	// `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
@@ -32627,14 +32932,11 @@ type CompanyGrowthFit struct {
 	// NegativeFactors What argues against it.
 	NegativeFactors *[]CompanyBriefSentence `json:"negative_factors,omitempty"`
 
-	// NextStep The one named thing to do that would most improve this answer, or null when
-	// nothing is holding it back.
-	//
-	// When the band is `unknown` this is offered INSTEAD of a score and names the
-	// missing inputs to go and find. When the band was capped it names the other
-	// fix — confirming our own offering. Always a concrete action, never a
-	// restatement that data is missing.
-	NextStep *string `json:"next_step,omitempty"`
+	// NextStep The one thing to do that would most improve a growth-fit answer. The client words it.
+	// `gather_inputs` is to find the inputs in `data_completeness.missing`, `record_profile`
+	// is to record our own profile, `confirm_offering` is to confirm our own offering,
+	// `configure_model` is to set up a model and `retry_later` is to try the read again.
+	NextStep *GrowthFitNextStep `json:"next_step,omitempty"`
 
 	// Objections What this company is likely to push back with, each with its evidence.
 	Objections *[]CompanyBriefSentence `json:"objections,omitempty"`
@@ -32884,7 +33186,8 @@ type CompanyProfileInput struct {
 // CompanyQuestion The prepared questions. Fixed, because each one names the records its answer is
 // written from — which is what makes the answer citable.
 //
-// `whats_open` — the open deals and the open tasks. Deliberately not approvals: an
+// `whats_open` — the open deals, the open tasks and the open commitments (promises
+// read out of conversations, not tasks). Deliberately not approvals: an
 // approval is not a citable record type here, and an answer that named one could
 // not be checked the way every other sentence can.
 // `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
@@ -35312,7 +35615,7 @@ type CreateActivityRequest struct {
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
-	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox.
+	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. An inbound message whose `from` is the mail system itself (postmaster, mailer-daemon, a bounce address) is a delivery report and returns `422` on `participants.from`.
 	Participants *struct {
 		Cc   *[]string `json:"cc,omitempty"`
 		From *string   `json:"from,omitempty"`
@@ -35420,9 +35723,11 @@ type CreateCompanyRequest struct {
 	Address *Address `json:"address,omitempty"`
 
 	// Description One human-written line saying what the company does.
-	Description     *string                       `json:"description,omitempty"`
-	DisplayName     string                        `json:"display_name"`
-	Domains         *[]CompanyDomainInput         `json:"domains,omitempty"`
+	Description *string               `json:"description,omitempty"`
+	DisplayName string                `json:"display_name"`
+	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
+
+	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry        *string                       `json:"industry,omitempty"`
 	LegalName       *string                       `json:"legal_name,omitempty"`
 	OwnerId         *openapi_types.UUID           `json:"owner_id,omitempty"`
@@ -36382,9 +36687,9 @@ type DataCompleteness struct {
 	// proportion without its denominator is not a completeness figure.
 	Expected int `json:"expected"`
 
-	// Missing Which required inputs are missing, named in the reader's words. This is what
-	// the "next data-gathering step" is built from, so it is never an opaque code.
-	Missing *[]string `json:"missing,omitempty"`
+	// Missing Which required inputs are missing, as codes. The client words them in the
+	// reader's language, so the server sends no sentence here.
+	Missing *[]GrowthFitInput `json:"missing,omitempty"`
 
 	// Present Required inputs available and not stale.
 	Present int `json:"present"`
@@ -38956,8 +39261,11 @@ type ForecastReadings struct {
 	PeriodStart openapi_types.Date `json:"period_start"`
 
 	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
-	PricedCount int                 `json:"priced_count"`
-	ScopeId     *openapi_types.UUID `json:"scope_id,omitempty"`
+	PricedCount int `json:"priced_count"`
+
+	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
+	ScopeHoldsDeals *bool               `json:"scope_holds_deals,omitempty"`
+	ScopeId         *openapi_types.UUID `json:"scope_id,omitempty"`
 
 	// ScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 	ScopeKind ForecastReadingsScopeKind `json:"scope_kind"`
@@ -39096,6 +39404,15 @@ type FxRateListResponse struct {
 // next step. A reader must never have to guess whether `unknown` means "poor fit" or
 // "we could not tell" — those are opposite conclusions.
 type GrowthFitBand string
+
+// GrowthFitInput One input the growth-fit assessment needs about a company. The client words it.
+type GrowthFitInput string
+
+// GrowthFitNextStep The one thing to do that would most improve a growth-fit answer. The client words it.
+// `gather_inputs` is to find the inputs in `data_completeness.missing`, `record_profile`
+// is to record our own profile, `confirm_offering` is to confirm our own offering,
+// `configure_model` is to set up a model and `retry_later` is to try the read again.
+type GrowthFitNextStep string
 
 // GrowthFitSubScore One dimension of the growth-fit assessment, with the reason for its score.
 //
@@ -47255,6 +47572,9 @@ type ReportResult struct {
 	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
 	Rows []map[string]interface{} `json:"rows"`
 
+	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
+	ScopeHoldsDeals *bool `json:"scope_holds_deals,omitempty"`
+
 	// Timezone The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone.
 	Timezone string `json:"timezone"`
 
@@ -47431,11 +47751,14 @@ type ReportingContext struct {
 	PopulationFingerprint string               `json:"population_fingerprint"`
 
 	// ProseLanguage Base language used for generated explanations. Absent on legacy readings, which use English.
-	ProseLanguage  *string          `json:"prose_language,omitempty"`
-	Scope          ReportingScope   `json:"scope"`
-	StateAt        time.Time        `json:"state_at"`
-	TargetInterval *ReportingWindow `json:"target_interval,omitempty"`
-	Timezone       string           `json:"timezone"`
+	ProseLanguage *string        `json:"prose_language,omitempty"`
+	Scope         ReportingScope `json:"scope"`
+
+	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
+	ScopeHoldsDeals *bool            `json:"scope_holds_deals,omitempty"`
+	StateAt         time.Time        `json:"state_at"`
+	TargetInterval  *ReportingWindow `json:"target_interval,omitempty"`
+	Timezone        string           `json:"timezone"`
 }
 
 // ReportingCoverage defines model for ReportingCoverage.
@@ -51132,9 +51455,11 @@ type UpdateCompanyRequest struct {
 	DisplayName *string `json:"display_name,omitempty"`
 
 	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
-	Domains   *[]CompanyDomainInput `json:"domains,omitempty"`
-	Industry  *string               `json:"industry,omitempty"`
-	LegalName *string               `json:"legal_name,omitempty"`
+	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
+
+	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
+	Industry  *string `json:"industry,omitempty"`
+	LegalName *string `json:"legal_name,omitempty"`
 
 	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched.
 	Lifecycle *UpdateCompanyRequestLifecycle `json:"lifecycle,omitempty"`
@@ -56522,9 +56847,9 @@ type ListCompaniesParams struct {
 	// Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
 	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
 
-	// Industry Accounts in one industry, matched exactly (DM-VOCAB-2). The column is free text rather
-	// than an enum, so this is the value as it was written.
-	Industry *string `form:"industry,omitempty" json:"industry,omitempty"`
+	// Industry Accounts in one industry, matched exactly on the code (DM-VOCAB-2). A value outside the
+	// list is `422`.
+	Industry *ListCompaniesParamsIndustry `form:"industry,omitempty" json:"industry,omitempty"`
 
 	// SizeBand How many contacts work there (DM-VOCAB-2).
 	SizeBand *ListCompaniesParamsSizeBand `form:"size_band,omitempty" json:"size_band,omitempty"`
@@ -56558,6 +56883,9 @@ type ListCompaniesParamsLifecycle string
 
 // ListCompaniesParamsRelationshipType defines parameters for ListCompanies.
 type ListCompaniesParamsRelationshipType string
+
+// ListCompaniesParamsIndustry defines parameters for ListCompanies.
+type ListCompaniesParamsIndustry string
 
 // ListCompaniesParamsSizeBand defines parameters for ListCompanies.
 type ListCompaniesParamsSizeBand string
@@ -56660,7 +56988,8 @@ type AskAboutCompanyJSONBody struct {
 	// Question The prepared questions. Fixed, because each one names the records its answer is
 	// written from — which is what makes the answer citable.
 	//
-	// `whats_open` — the open deals and the open tasks. Deliberately not approvals: an
+	// `whats_open` — the open deals, the open tasks and the open commitments (promises
+	// read out of conversations, not tasks). Deliberately not approvals: an
 	// approval is not a citable record type here, and an answer that named one could
 	// not be checked the way every other sentence can.
 	// `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.

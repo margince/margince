@@ -67,7 +67,7 @@ func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params c
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned
-	in.Industry = params.Industry
+	in.Industry = enumArg(params.Industry)
 	in.SizeBand = enumArg(params.SizeBand)
 	if params.ListId != nil {
 		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId, companyEntity); err != nil {

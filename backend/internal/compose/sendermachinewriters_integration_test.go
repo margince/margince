@@ -38,6 +38,7 @@ func automaticKindOf(t *testing.T, e *integration.Env, seat ids.UUID, messageID 
 
 // Every writer of mail stamps a sending system's message by capture's rule.
 // That covers the importer's create door and a mailbox taking over an import.
+// A delivery report is not a case here: the importer's door refuses it.
 func TestEveryMailWriterMarksASendingSystemsMessage(t *testing.T) {
 	e := integration.Setup(t)
 	owner := e.Rep1
@@ -46,7 +47,6 @@ func TestEveryMailWriterMarksASendingSystemsMessage(t *testing.T) {
 		want                  bool
 	}{
 		{"a file-share notice", "notice@writers.test", "drive-shares-dm-noreply@google.com", true},
-		{"a delivery report", "bounce@writers.test", "mailer-daemon@googlemail.com", true},
 		{"a human's mail", "human@writers.test", "pat@counterparty.example", false},
 		{"an export that named the relay as its sender", "relayed@writers.test", "slides-relay@counterparty.example", false},
 	} {
