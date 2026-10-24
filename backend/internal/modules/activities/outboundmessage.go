@@ -13,6 +13,7 @@ package activities
 // both projections in one place is what keeps that difference deliberate.
 
 import (
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -84,7 +85,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		// nobody can read: it is a record that looks complete.
 		recorded += "\n\n[" + htmlAlternativeNote + "]"
 	}
-	return LogActivityInput{
+	return sentRecord(LogActivityInput{
 		Kind:         "email",
 		Subject:      &m.in.Subject,
 		Body:         &recorded,
@@ -102,7 +103,26 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		// correspondence-positive).
 		CounterpartyEmail:            primaryCounterparty(m.to, m.in.Recipients),
 		CounterpartyOutboundAttested: true,
+	})
+}
+
+// sentRecord is the timeline row a send stores, with the credentials in its
+// subject and body masked by the rules capture masks every copy it reads with.
+// The row is served to every seat that may read the mail, and the provider's
+// echo then joins a row that already reads as a captured copy would. Every send
+// builds its row here; the delivery keeps the text as typed.
+func sentRecord(in LogActivityInput) LogActivityInput {
+	in.Subject = maskedText(in.Subject)
+	in.Body = maskedText(in.Body)
+	return in
+}
+
+func maskedText(text *string) *string {
+	if text == nil {
+		return nil
 	}
+	masked := credentialmask.MaskText(*text)
+	return &masked
 }
 
 // delivery is the same message as the delivery machinery receives it.
