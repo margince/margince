@@ -42786,10 +42786,30 @@ components:
       description: |
         The colleagues who know this contact, warmest first. Ordering is the answer, not
         a presentation detail: it is who to ask.
-      required: [contact_id, colleagues]
+      required: [contact_id, colleagues, capture_gaps]
       properties:
         contact_id:  { type: string, format: uuid }
         colleagues: { type: array, items: { $ref: '#/components/schemas/ContactNetworkColleague' } }
+        capture_gaps:
+          type: array
+          description: |
+            Colleagues who are on this contact's threads and have no connected mailbox, so
+            later replies they alone receive may be missing here. Information only: a seat
+            listed here is not a route in, owns no work and may not send. An invited seat
+            appears here and never in `colleagues`.
+          items: { $ref: '#/components/schemas/ContactCaptureGap' }
+
+    ContactCaptureGap:
+      type: object
+      description: One colleague on a contact's threads whose mail is not captured.
+      required: [user_id, display_name, invited, last_on_thread_at]
+      properties:
+        user_id:      { type: string, format: uuid }
+        display_name: { type: string }
+        invited:
+          type: boolean
+          description: True when the colleague has not signed in yet.
+        last_on_thread_at: { type: string, format: date-time }
 
     DealCoverageSeat:
       type: object

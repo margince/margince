@@ -87,7 +87,7 @@ func (e InteractionEdge) StrengthOf(now time.Time) relstrength.Score {
 // colleague who is only ever copied has one-directional traffic, so the
 // reciprocity term floors them well below someone in a real exchange. They
 // appear, ranked where they belong, instead of vanishing.
-const interactionRoles = `('from','to','cc','bcc','attendee','organizer')`
+const interactionRoles = relstrength.InteractionRolesSQL
 
 // RecomputeEdgesForActivities re-folds every (user, contact) pair reachable
 // from the named activities, from the base tables.
@@ -228,7 +228,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 // readable by everyone would disclose who talked to whom and when. The
 // graph-edge consumer already refolds on activity.updated, which is the event
 // a Limit emits, so an edge whose last evidence is limited is re-folded away.
-const audienceWorkspaceOnly = ` AND a.audience = 'workspace'`
+var audienceWorkspaceOnly = " AND " + relstrength.WorkspaceAudienceSQL("a")
 
 // liveMemberJoin and laterMemberJoin join app_user on the shared definition of
 // "still works here". laterMemberJoin asks it of a SECOND edge in one

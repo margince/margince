@@ -30518,6 +30518,23 @@ export interface components {
             /** Format: uuid */
             contact_id: string;
             colleagues: components["schemas"]["ContactNetworkColleague"][];
+            /**
+             * @description Colleagues who are on this contact's threads and have no connected mailbox, so
+             *     later replies they alone receive may be missing here. Information only: a seat
+             *     listed here is not a route in, owns no work and may not send. An invited seat
+             *     appears here and never in `colleagues`.
+             */
+            capture_gaps: components["schemas"]["ContactCaptureGap"][];
+        };
+        /** @description One colleague on a contact's threads whose mail is not captured. */
+        ContactCaptureGap: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
+            /** @description True when the colleague has not signed in yet. */
+            invited: boolean;
+            /** Format: date-time */
+            last_on_thread_at: string;
         };
         /** @description One stakeholder seat, and whether it is a relationship or just a name. */
         DealCoverageSeat: {
