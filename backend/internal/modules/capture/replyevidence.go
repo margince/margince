@@ -23,29 +23,35 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// addressAnswered is the evidence, with $1 the folded address: an inbound,
-// non-bulk message from the address, answering a thread we wrote on, and not
-// held. The exchange is wroteBackTx's, with the hold added.
+// addressAnswered is the evidence, with $1 the folded address: an exchange
+// (answeredExchange) whose reply is not held and was not captured into a
+// mailbox that holds its mail.
+//
+// A held mailbox promises that nothing it imports is shared, so its replies
+// publish nobody, the owner's included. A classified mailbox's reply waits for
+// its verdict like any other and still counts.
 func addressAnswered() string {
 	return `EXISTS (
 		SELECT 1
 		  FROM activity reply
-		 WHERE reply.counterparty_email = $1
-		   AND reply.direction = 'inbound'
-		   AND NOT reply.bulk_mail_attested
-		   AND reply.thread_key <> ''
-		   AND EXISTS (
-		         SELECT 1 FROM activity ours
-		          WHERE ours.thread_key = reply.thread_key
-		            AND ours.counterparty_email = $1
-		            AND ours.kind = reply.kind
-		            AND ours.counterparty_outbound_attested
-		            AND ` + auth.ActivityAvailableClause("ours") + `)
-		   AND NOT ` + CounterpartyHeldOn("reply") + `)`
+		 WHERE ` + answeredExchange("reply", "$1") + `
+		   AND NOT ` + CounterpartyHeldOn("reply") + `
+		   AND NOT ` + importedIntoHeldMailbox("reply") + `)`
+}
+
+// importedIntoHeldMailbox is a message one of whose imports was made under the
+// held posture, or into a seat whose mailbox holds its mail now.
+func importedIntoHeldMailbox(alias string) string {
+	return fmt.Sprintf(`EXISTS (
+		SELECT 1 FROM capture_import held_import
+		 WHERE held_import.activity_id = %[1]s.id
+		   AND (held_import.posture_at_import = 'held' OR EXISTS (
+		         SELECT 1 FROM capture_connection held_mailbox
+		          WHERE held_mailbox.user_id = held_import.user_id
+		            AND held_mailbox.mail_posture = 'held')))`, alias)
 }
 
 // AddressAnsweredTx reports whether the address has answered the workspace in

@@ -117,6 +117,61 @@ func TestAVerdictDoesNotCountAReplyOnAHeldThread(t *testing.T) {
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 }
 
+// A held mailbox promises its mail is shared with nobody, so a reply captured
+// into it publishes nobody: not the owner's own contact.
+func TestAReplyInTheOwnersHeldMailboxDoesNotPublish(t *testing.T) {
+	e := integration.Setup(t)
+	connectSeatMailbox(t, e, e.Rep1, "a@authz.test", "held")
+	const email = "buyer@ownerheld.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-owner-held"))
+
+	captureInboundThroughRealSink(t, e, e.Rep1, "reply-owner-held", email, "thr-owner-held")
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// The same promise from a colleague's held mailbox.
+func TestAReplyInAColleaguesHeldMailboxDoesNotPublish(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	connectSeatMailbox(t, e, e.Rep2, "b@authz.test", "held")
+	const email = "buyer@colleagueheldbox.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-col-box"))
+	seedThreadedMail(t, e, email, "Our offer", "outbound", "thr-col-box-b")
+
+	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, e.Rep2), t, e, "b@authz.test",
+		"reply-col-box", email, "thr-col-box-b")
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// A reply imported under the held posture stays no evidence after the mailbox
+// is later opened: the import recorded the promise.
+func TestAReplyImportedWhileHeldStaysNoEvidenceOnceTheMailboxOpens(t *testing.T) {
+	e := integration.Setup(t)
+	connectSeatMailbox(t, e, e.Rep1, "a@authz.test", "held")
+	const email = "buyer@heldthenshared.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-held-then"))
+	captureInboundThroughRealSink(t, e, e.Rep1, "reply-held-then", email, "thr-held-then")
+
+	e.WsExec(t, `UPDATE capture_connection SET mail_posture = 'shared' WHERE user_id = $1`, e.Rep1)
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
+// A mailbox switched to held before the reconciling pass reaches its reply
+// publishes nothing from it either.
+func TestAReplyInAMailboxHeldSinceItsImportIsNoEvidence(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "buyer@sharedthenheld.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-shared-then"))
+	captureInboundThroughRealSinkAs(withoutContactUpdate(mailboxOwnerCtx(e, e.Rep1)), t, e, "a@authz.test",
+		"reply-shared-then", email, "thr-shared-then")
+
+	e.WsExec(t, `UPDATE capture_connection SET mail_posture = 'held' WHERE user_id = $1`, e.Rep1)
+
+	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+}
+
 // A colleague's reply ends only the reason that says nobody answered. An
 // advisor is the owner's whoever the address writes to.
 func TestAReplyToAColleagueDoesNotPublishAnAdvisor(t *testing.T) {
@@ -365,11 +420,17 @@ func setupWithOwnMailbox(t *testing.T) *integration.Env {
 func setupWithSecondMailbox(t *testing.T) *integration.Env {
 	t.Helper()
 	e := setupWithOwnMailbox(t)
+	connectSeatMailbox(t, e, e.Rep2, "b@authz.test", "shared")
+	return e
+}
+
+// connectSeatMailbox connects one seat's mailbox under the posture given.
+func connectSeatMailbox(t *testing.T, e *integration.Env, seat ids.UUID, address, posture string) {
+	t.Helper()
 	e.WsExec(t, `
 		INSERT INTO capture_connection
 		       (user_id, provider, status, credential_ref, mail_posture, account_label)
-		VALUES ($1, 'gmail', 'connected', 'vault:test', 'shared', 'b@authz.test')`, e.Rep2)
-	return e
+		VALUES ($1, 'gmail', 'connected', 'vault:test', $2, $3)`, seat, posture, address)
 }
 
 // publishAnswered runs the verdict worker's reconciling pass.
