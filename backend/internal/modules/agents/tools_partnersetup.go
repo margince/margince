@@ -64,9 +64,9 @@ func (t setUpPartner) Spec() mcp.ToolSpec {
 		Name: "set_up_partner", Title: "Set up a partner program", Version: toolVersionV1,
 		Description: setUpPartnerCopy.render(),
 		Instead:     setUpPartnerCopy.Instead,
-		// Waits for a human even when a passport acts as its user: the web app
-		// sets a program up directly, and an assistant naming a company a
-		// partner is a request for someone to look at, not a click.
+		// Waits for a human even when a passport acts as its user. The web app
+		// sets a program up directly. An assistant naming a company a partner is
+		// a request for someone to look at.
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, WaitsEvenForItsUser: true,
 		Unlisted:  true,
 		OpenAPIOp: "setUpPartner",

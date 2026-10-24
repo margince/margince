@@ -79,7 +79,7 @@ func TestTheAgentPartnerSetUpCannotCarryATier(t *testing.T) {
 		if strings.Contains(string(spec.InputSchema), `"`+field+`"`) {
 			t.Errorf("set_up_partner takes %q; a program set up by an agent starts with none of the commercial terms", field)
 		}
-		if reflectHasJSONField(crmcontracts.SetUpPartnerRequest{}, field) {
+		if reflectHasJSONField(reflect.TypeFor[crmcontracts.SetUpPartnerRequest](), field) {
 			t.Errorf("SetUpPartnerRequest declares %q", field)
 		}
 	}
@@ -89,8 +89,7 @@ func TestTheAgentPartnerSetUpCannotCarryATier(t *testing.T) {
 	}
 }
 
-func reflectHasJSONField(v any, name string) bool {
-	t := reflect.TypeOf(v)
+func reflectHasJSONField(t reflect.Type, name string) bool {
 	for i := range t.NumField() {
 		if strings.Split(t.Field(i).Tag.Get("json"), ",")[0] == name {
 			return true

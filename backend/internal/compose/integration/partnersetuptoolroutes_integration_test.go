@@ -5,10 +5,10 @@
 
 package integration
 
-// An assistant sets up a partner program through set_up_partner, a person
+// An assistant sets up a partner program through set_up_partner, a human
 // approves it, and the margin tier stays unset. Driven through the real
-// registry, store and approvals, because what is under test is the order of
-// the checks: before an approval is staged, and again under the company lock.
+// registry, store and approvals. The subject is the order of the checks:
+// before an approval is staged, and again under the company lock.
 
 import (
 	"context"

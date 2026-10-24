@@ -33,10 +33,9 @@ func (e *PartnerAlreadySetUpError) MessageFault() (code, message string) {
 }
 
 // CheckPartnerSetUp answers whether the caller could set up a partner program
-// on the company now. The agent path asks it before staging an approval, and
-// UpsertPartner asks the same question again under the company lock, so a
-// person who set the program up while the approval waited is refused at the
-// write.
+// on the company now. The agent path asks it before staging an approval.
+// UpsertPartner asks it again under the company lock. A program set up by a
+// human while the approval waited is then refused at the write.
 func (s *Store) CheckPartnerSetUp(ctx context.Context, companyID ids.CompanyID) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		return checkPartnerSetUp(ctx, tx, companyID)
@@ -71,7 +70,7 @@ func requirePartnerWriteGrants(ctx context.Context) error {
 }
 
 // withoutMarginTier appends the margin tier to the fields the write sets to
-// NULL, after the caller's mask has been applied, so a revived archived row
+// NULL, after the caller's mask has been applied. A revived archived row then
 // starts with no tier.
 func withoutMarginTier(cleared []string) []string {
 	if slices.Contains(cleared, partnerFieldMarginTier) {

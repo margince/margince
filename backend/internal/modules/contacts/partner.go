@@ -113,9 +113,9 @@ type UpsertPartnerInput struct {
 	// non-nil non-empty = the written reason for a human fit score.
 	FitOverrideReason *string
 	IfVersion         *int64
-	// MustCreate makes the write a set-up: it refuses a company whose program
-	// is live and starts the program with no margin tier, including a revived
-	// archived row that kept one.
+	// MustCreate makes the write a set-up. It refuses a company with a live
+	// program. It starts the program with no margin tier, even when it revives
+	// an archived row that kept one.
 	MustCreate bool
 }
 

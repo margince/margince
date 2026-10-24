@@ -22,9 +22,9 @@ type partnerSetUpPreviewRequest struct {
 }
 
 // partnerSetUpPreview shows the terms a program would start with. The margin
-// tier is listed as an effect, because it is the part left for a human. The
-// company's version does not move when a program is set up, so the preview asks
-// the store whether one exists now: a program a human set up while the
+// tier is listed as an effect, because it is the part left for a human.
+// The company's version does not move when a program is set up. So the preview
+// asks the store whether one exists now, and a program set up while the
 // approval waited makes it not ready.
 func (r approvalPreviewReader) partnerSetUpPreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
 	out.Version, out.State = 2, previewIncompleteState

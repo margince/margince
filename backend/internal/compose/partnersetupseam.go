@@ -12,7 +12,7 @@ import (
 )
 
 // partnerSetUpAdapter hands the agent tool the contacts store's own partner
-// set-up, so a program set up over MCP and one set up in the web app pass the
+// set-up. A program set up over MCP and one set up in the web app then pass the
 // same grants and write the same audit row. It never carries a margin tier.
 type partnerSetUpAdapter struct{ store *contacts.Store }
 
