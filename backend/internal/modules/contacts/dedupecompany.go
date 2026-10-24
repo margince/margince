@@ -94,11 +94,16 @@ type CompanyCandidateScore struct {
 	// different legal entities in the world; telling those apart is a human's
 	// call, which is the fuzzy tier's own rule.
 	ExactName bool
+	// SameBrand says the two names are one name once legal forms and market
+	// filler words are removed ("Fabrikam GmbH", "Fabrikam"). Such a pair is
+	// filed on the name alone; any other name pair needs a second shared fact
+	// (dedupecompanyevidence.go).
+	SameBrand bool
 }
 
 // DedupeCompany is PO-F-2 — the company half of the one dedupe
-// implementation. Domain is the exact key; name similarity alone is the
-// fuzzy tier, because without a domain there is nothing to anchor on.
+// implementation. Domain is the exact key; name similarity is the fuzzy tier,
+// and a similar name files only with the second fact keepCorroborated asks for.
 func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMatch, error) {
 	hits, err := exactCompanyByDomain(ctx, tx, c.Domains, c.ExcludeID)
 	if err != nil {
@@ -277,6 +282,9 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 	if err := rows.Err(); err != nil {
 		return CompanyMatch{}, fmt.Errorf("drain company candidates: %w", err)
 	}
+	if ranked, err = keepCorroborated(ctx, tx, c.ExcludeID, ranked); err != nil {
+		return CompanyMatch{}, err
+	}
 	if len(ranked) == 0 {
 		return CompanyMatch{Decision: DecisionNoMatch}, nil
 	}
@@ -447,7 +455,7 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 	}{{rowDisplay, fieldDisplayName}, {rowLegal, fieldLegalName}}
 
 	var best CompanyCandidateScore
-	var exact bool
+	var exact, sameBrand bool
 	for _, left := range []string{candidateDisplay, candidateLegal} {
 		for _, right := range sides {
 			normalizedLeft, normalizedRight := companyNameForMatching(left), companyNameForMatching(right.value)
@@ -467,6 +475,9 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 			if companyNamesAreTheSame(left, right.value) {
 				exact = true
 			}
+			if squashed := squashedCompanyName(left); squashed != "" && squashed == squashedCompanyName(right.value) {
+				sameBrand = true
+			}
 			score := nameSimilarity(normalizedLeft, normalizedRight)
 			if score > best.Confidence {
 				best = CompanyCandidateScore{
@@ -478,7 +489,7 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 			}
 		}
 	}
-	best.ExactName = exact
+	best.ExactName, best.SameBrand = exact, sameBrand
 	return best
 }
 

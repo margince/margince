@@ -45,9 +45,10 @@ func TestTheNineRefusedCompaniesNoLongerCollide(t *testing.T) {
 	}
 
 	// And the control: a real duplicate of a seeded name still meets, so the
-	// gate has not simply turned the fuzzy tier off.
+	// gate has not simply turned the fuzzy tier off. A create has no address,
+	// number or person to share yet, so the control is one brand under a legal form.
 	dup := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
-		DisplayName: "Centric Software Pty Ltd",
+		DisplayName: "Centric Software Ltd",
 	})
 	if dup.Decision != DecisionFuzzyReview {
 		t.Fatalf("a genuine duplicate scored %s (confidence %.4f), want fuzzy_review",

@@ -330,9 +330,8 @@ func readLeadSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (leadSide, bool, 
 }
 
 // companyPairStillFiled re-scores two companies with the name pairing the
-// filing path uses, and keeps a pair whose domains still nest (domainNests).
-// Companies carry no corroboration rule, so a pair closes here only when a
-// name or a domain changed since it was filed.
+// filing path uses, held to the same second fact (keepCorroborated), and keeps
+// a pair whose domains still nest (domainNests).
 func companyPairStillFiled(ctx context.Context, tx pgx.Tx, pair openPair) (bool, float64, error) {
 	var leftDisplay, leftLegal, rightDisplay, rightLegal string
 	err := tx.QueryRow(ctx, `
@@ -350,7 +349,12 @@ func companyPairStillFiled(ctx context.Context, tx pgx.Tx, pair openPair) (bool,
 	backward := bestCompanyNamePairing(rightDisplay, rightLegal, leftDisplay, leftLegal)
 	score := max(forward.Confidence, backward.Confidence)
 	if score >= dedupeReviewThreshold || forward.ExactName || backward.ExactName {
-		return true, score, nil
+		forward.CompanyID = ids.From[ids.CompanyKind](pair.right)
+		subject := ids.From[ids.CompanyKind](pair.left)
+		kept, err := keepCorroborated(ctx, tx, &subject, []CompanyCandidateScore{forward})
+		if err != nil || len(kept) > 0 {
+			return true, score, err
+		}
 	}
 	nests, err := companyDomainsNest(ctx, tx, pair.left, pair.right)
 	return nests, score, err
