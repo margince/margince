@@ -55,8 +55,7 @@ const fieldDomain = "domain"
 const fieldTitle = "title"
 
 // leadStatusNew is where an imported prospect starts: the unworked state a
-// human moves it out of, which is the whole point of landing machine-sourced
-// rows as leads rather than as contacts.
+// human moves it out of.
 const leadStatusNew = "new"
 
 // leadTargetStatus is the lead's status column. A file may place a lead only
@@ -65,9 +64,7 @@ const leadTargetStatus = "status"
 
 // The fields a CSV import may target, per object. Each one round-trips: the
 // writer can both create and update it. A create-only target would stop
-// honouring the file on the second upload.
-//
-// The caller picks `lead` or `contact` per run. Neither skips the identity ladder.
+// honouring the file on the second upload. The caller picks `lead` or `contact` per run.
 var csvTargets = map[string][]string{
 	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, leadTargetStatus, leadTargetOrigin, leadTargetOriginDetail, csvTargetAuthor, csvTargetOwner, csvTargetTags},
 	// `domain` is what actually identifies a company. Its absence is why a

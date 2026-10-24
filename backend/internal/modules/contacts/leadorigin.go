@@ -73,8 +73,8 @@ func LoadOriginIntents(ctx context.Context, tx pgx.Tx) (OriginIntents, error) {
 }
 
 // ResolveOrigin maps the free text a source system used onto an active catalog
-// key: the key itself, spelled exactly, else the one label whose key derivation
-// equals the text's. No match, or two labels that derive alike, answers false
+// key. The text may be the key itself, or it may derive to the same key as
+// one label. No match, or two labels that derive alike, answers false
 // and never a guessed key. The importer then keeps the wording instead of
 // misfiling the lead.
 func ResolveOrigin(ctx context.Context, tx pgx.Tx, text string) (string, bool, error) {
