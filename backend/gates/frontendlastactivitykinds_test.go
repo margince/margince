@@ -19,7 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-var frontendLastActivity = filepath.Join(repoRoot, "frontend", "src", "lib", "lastactivity.ts")
+var frontendLastActivity = filepath.Join(repoRoot, "frontend", "src", "features", "leads", "lastactivity.ts")
 
 func TestTheFrontendLastActivityKindsMatchTheGoOnes(t *testing.T) {
 	t.Parallel()

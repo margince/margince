@@ -16,7 +16,7 @@ import {
 } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import type { Locale, Translator } from "../../i18n";
-import { movesLastActivity } from "../../lib/lastactivity";
+import { movesLastActivity } from "./lastactivity";
 import { promoteEligible, scoreFactorLabel } from "./leadpresentation";
 import { scoreTone } from "./leadpresentation.board";
 import type { LadderOpenStep } from "./leads.stepper";

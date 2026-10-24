@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import type { components } from "../api/schema";
+import type { components } from "../../api/schema";
 import { movesLastActivity } from "./lastactivity";
 
 type Activity = components["schemas"]["Activity"];
