@@ -166,9 +166,12 @@ func (x *SignalExtractor) readThread(
 		if errors.Is(askErr, errRefusedReading) {
 			// The first answer stands, but the thread is not retired: the
 			// messages the second reading was for have still not been judged.
-			raised, commitErr := x.commitReading(ctx, wsID, thread, events, now, false)
+			raised, read, commitErr := x.commitReading(ctx, wsID, thread, events, now, false)
 			if commitErr != nil && !errors.Is(commitErr, errRefusedReading) {
 				return raised, commitErr
+			}
+			if !read {
+				return raised, nil
 			}
 			return raised, x.deferRefusedReading(ctx, wsID, thread, now, askErr)
 		}
@@ -177,7 +180,7 @@ func (x *SignalExtractor) readThread(
 		}
 		events = append(events, more...)
 	}
-	raised, err := x.commitReading(ctx, wsID, thread, events, now, true)
+	raised, _, err := x.commitReading(ctx, wsID, thread, events, now, true)
 	if errors.Is(err, errRefusedReading) {
 		return raised, x.deferRefusedReading(ctx, wsID, thread, now, err)
 	}
@@ -254,11 +257,12 @@ func (x *SignalExtractor) deferRefusedReading(
 // commitReading writes the signals this conversation stated and advances its
 // watermark in ONE transaction, and reports how many signals were raised.
 // Without retire the events are written and the watermark stays, for a reading
-// that is only partly answered.
+// that is only partly answered. It reports false when the rule no longer reads
+// the conversation, in which case nothing was written.
 func (x *SignalExtractor) commitReading(
 	ctx context.Context, wsID ids.WorkspaceID, thread settledThread, events []extractedEvent, now time.Time, retire bool,
-) (int, error) {
-	raised, complete := 0, true
+) (int, bool, error) {
+	raised, complete, read := 0, true, false
 	if err := database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
 		// The conversation can be made private, or reach another account,
 		// while the model reads it. Every event is filed against the audience
@@ -268,6 +272,11 @@ func (x *SignalExtractor) commitReading(
 		if err != nil || !offered {
 			return err
 		}
+		open, err := threadMessagesStillOpen(ctx, tx, thread)
+		if err != nil || !open {
+			return err
+		}
+		read = true
 		thread.CompanyID, thread.PrivateTo = company, privateTo
 		for _, event := range events {
 			if event.Confidence < extractConfidenceFloor {
@@ -290,12 +299,31 @@ func (x *SignalExtractor) commitReading(
 		}
 		return markThreadScanned(ctx, tx, thread, now)
 	}); err != nil {
-		return 0, err
+		return 0, false, err
 	}
 	if !complete {
-		return raised, errRefusedReading
+		return raised, read, errRefusedReading
 	}
-	return raised, nil
+	return raised, read, nil
+}
+
+// threadMessagesStillOpen reports whether every message this reading showed
+// the model is still within the automatic-content boundary. A message placed
+// under restriction while the model read the thread must not feed a signal.
+func threadMessagesStillOpen(ctx context.Context, tx pgx.Tx, thread settledThread) (bool, error) {
+	shown := make([]string, 0, len(thread.Messages))
+	for _, message := range thread.Messages {
+		shown = append(shown, message.ID.String())
+	}
+	var withheld bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM activity
+		                WHERE id = ANY($1::uuid[])
+		                  AND NOT (`+activities.AutomaticMailContent+`))`,
+		shown).Scan(&withheld); err != nil {
+		return false, fmt.Errorf("signal extract: re-checking the messages read: %w", err)
+	}
+	return !withheld, nil
 }
 
 // recordExtractedEvent raises one event as a signal against the account,
