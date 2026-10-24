@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -486,27 +485,4 @@ func accountStrengthToWire(account contacts.AccountStrength, now time.Time) *crm
 		out.ContributorContactId = &v
 	}
 	return &out
-}
-
-// installationBaseCurrency resolves the installation's reporting currency once
-// per assembly. The sections that label money each want the same answer, and
-// the 360's query budget counts every read.
-func (a *assembly) installationBaseCurrency() (string, error) {
-	if a.baseCurrencyRead {
-		return a.baseCurrency, nil
-	}
-	base, err := identity.BaseCurrencyOf(a.ctx, a.tx)
-	if err != nil {
-		return "", err
-	}
-	a.baseCurrency, a.baseCurrencyRead = base, true
-	return base, nil
-}
-
-// One assembly uses one language even if the setting changes during its reads.
-func (a *assembly) recordLanguage() textlang.Lang {
-	if a.baseLanguage == "" {
-		a.baseLanguage = identity.BaseLanguageForRecord(a.ctx, a.tx)
-	}
-	return a.baseLanguage
 }

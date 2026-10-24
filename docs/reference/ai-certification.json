@@ -23348,7 +23348,7 @@
           },
           "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 15,
           "passed": 14,
@@ -23361,12 +23361,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23380,7 +23382,7 @@
           },
           "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -23393,12 +23395,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23411,7 +23415,7 @@
           },
           "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 9,
@@ -23424,12 +23428,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23443,7 +23449,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 15,
           "passed": 12,
@@ -23456,12 +23462,14 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23474,7 +23482,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 10,
@@ -23487,12 +23495,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23505,7 +23515,7 @@
           },
           "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 11,
@@ -23518,12 +23528,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23536,7 +23548,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -23549,12 +23561,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23567,7 +23581,7 @@
           },
           "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -23580,12 +23594,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23598,7 +23614,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
@@ -23611,12 +23627,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23629,7 +23647,7 @@
           },
           "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 15,
           "passed": 14,
@@ -23642,12 +23660,14 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23660,7 +23680,7 @@
           },
           "state": "stale",
           "band": "certified",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -23673,12 +23693,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23691,7 +23713,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 16,
@@ -23704,12 +23726,14 @@
             "invalid": 0,
             "abstained": 2
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }
@@ -23722,7 +23746,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -23735,12 +23759,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario ask_whats_open_answers_the_pipeline_not_the_history since the record scored it",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): ask_meeting_prep_stays_silent_about_a_withheld_section, ask_whats_open_answers_the_pipeline_not_the_history",
           "stale_cause": {
             "prompt_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ],
             "grader_changed": [
+              "ask_meeting_prep_stays_silent_about_a_withheld_section",
               "ask_whats_open_answers_the_pipeline_not_the_history"
             ]
           }

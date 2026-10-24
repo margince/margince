@@ -153,8 +153,8 @@ func openTaskPromises(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, n
 
 // hiddenNextStepsExist reports whether an open task of the account lies outside
 // the caller's activity row scope. The section's statement filters on that
-// scope, so without this a hidden task reads as no task and "what is open"
-// would answer from a list that looks whole.
+// scope. Without this check a hidden task reads as no task. Then "what is
+// open" would answer from a list that looks whole.
 func hiddenNextStepsExist(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions) (bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
