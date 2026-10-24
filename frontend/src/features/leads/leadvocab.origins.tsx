@@ -13,20 +13,14 @@ import {
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { describedByIds } from "../../design-system/describedby";
 import { Heading } from "../../design-system/heading";
-import { KeyCode, KeyedName } from "../../design-system/keyedname";
+import { KeyCode } from "../../design-system/keyedname";
 import {
   NameDialog,
   nameRefusal,
   useRefusedName,
 } from "../../design-system/namedialog";
-import {
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-} from "../../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
 import { useSinglePress } from "../../design-system/presslatch";
 import { QueryStates } from "../../design-system/querystates";
@@ -44,14 +38,12 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
 import {
-  type DiscoveredLeadSource,
-  type LeadSource,
-  type LeadSourceIntent,
-  type SourcePatch,
-  sourceKeyLabel,
-  useLeadSources,
-  useSourceMutations,
-} from "../../lib/leadsources";
+  type LeadOrigin,
+  type LeadOriginIntent,
+  type OriginPatch,
+  useLeadOrigins,
+  useOriginMutations,
+} from "../../lib/leadorigins";
 import { isOption } from "../../lib/options";
 import { problemMessageOf } from "../../lib/problem";
 import {
@@ -63,7 +55,7 @@ import {
 
 const INTENTS = ["high", "neutral", "low"] as const;
 
-const intentLabel: Record<LeadSourceIntent, MessageKey> = {
+const intentLabel: Record<LeadOriginIntent, MessageKey> = {
   high: "leadSources.intent.high",
   neutral: "leadSources.intent.neutral",
   low: "leadSources.intent.low",
@@ -73,29 +65,29 @@ function intentOptions(t: Translator) {
   return INTENTS.map((value) => ({ value, label: t(intentLabel[value]) }));
 }
 
-// Mounted only while open, so a half-typed source never waits under an intent
+// Mounted only while open, so a half-typed origin never waits under an intent
 // nobody re-chose.
-function AddSourceDialog({
+function AddOriginDialog({
   create,
   onClose,
 }: Readonly<{
-  create: ReturnType<typeof useSourceMutations>["create"];
+  create: ReturnType<typeof useOriginMutations>["create"];
   onClose: () => void;
 }>) {
   const t = useT();
   const titleId = useId();
   const formId = useId();
   const [label, setLabel] = useState("");
-  const [intent, setIntent] = useState<LeadSourceIntent>("neutral");
+  const [intent, setIntent] = useState<LeadOriginIntent>("neutral");
   const name = label.trim();
-  const refused = nameRefusal(create.error, t, "leadSources.duplicate");
+  const refused = nameRefusal(create.error, t, "leadOrigins.duplicate");
   const { refusedName, markSent } = useRefusedName(name, refused.nameProblem);
   const ready = name !== "" && !refusedName;
   const singlePress = useSinglePress(create.isPending);
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="form">
       <Heading size="large" className="t-h2 modal-title" id={titleId}>
-        {t("leadSources.newLabel")}
+        {t("leadOrigins.newLabel")}
       </Heading>
       <form
         id={formId}
@@ -111,7 +103,7 @@ function AddSourceDialog({
           <Callout
             kind="outcome"
             tone="danger"
-            title={t("leadSources.notAdded")}
+            title={t("leadOrigins.notAdded")}
           >
             {refused.problem}
           </Callout>
@@ -120,8 +112,8 @@ function AddSourceDialog({
           {(control) => (
             <TextInput
               {...control}
-              data-testid="lead-source-new-label"
-              placeholder={t("leadSources.newPlaceholder")}
+              data-testid="lead-origin-new-label"
+              placeholder={t("leadOrigins.newPlaceholder")}
               value={label}
               onChange={(e) => setLabel(e.target.value)}
             />
@@ -155,14 +147,14 @@ function AddSourceDialog({
           disabled={!create.isPending && !ready}
           pending={create.isPending}
         >
-          {t("leadSources.add")}
+          {t("leadOrigins.add")}
         </Button>
       </div>
     </Modal>
   );
 }
 
-function sourceColumns({
+function originColumns({
   t,
   plural,
   locale,
@@ -177,19 +169,19 @@ function sourceColumns({
   locale: Locale;
   grants: Readonly<{ canEdit: boolean; canRemove: boolean }>;
   refusedFor: (
-    source: LeadSource,
+    origin: LeadOrigin,
     field: "intent" | "active",
   ) => string | undefined;
-  onUpdate: (patch: SourcePatch) => void;
-  onRename: (source: LeadSource) => void;
-  onRemove: (source: LeadSource) => void;
-}>): DataTableColumn<LeadSource>[] {
+  onUpdate: (patch: OriginPatch) => void;
+  onRename: (origin: LeadOrigin) => void;
+  onRemove: (origin: LeadOrigin) => void;
+}>): DataTableColumn<LeadOrigin>[] {
   const { canEdit } = grants;
-  const refusal = (source: LeadSource) => {
-    const count = source.lead_count ?? 0;
-    if (source.system === true) return t("leadSources.builtInKept");
+  const refusal = (origin: LeadOrigin) => {
+    const count = origin.lead_count ?? 0;
+    if (origin.system === true) return t("leadOrigins.builtInKept");
     if (count > 0) {
-      return plural("leadSources.inUse", count, {
+      return plural("leadOrigins.inUse", count, {
         count: formatNumber(count, locale),
       });
     }
@@ -198,24 +190,24 @@ function sourceColumns({
   return [
     {
       key: "name",
-      header: t("leadSources.colSource"),
+      header: t("leadOrigins.colOrigin"),
       grow: true,
-      render: (source) => source.label,
+      render: (origin) => origin.label,
     },
-    leadsColumn({ t, plural, locale }, (source) => source.lead_count ?? 0),
+    leadsColumn({ t, plural, locale }, (origin) => origin.lead_count ?? 0),
     {
       key: "intent",
       header: t("leadSources.intent"),
-      render: (source) => (
+      render: (origin) => (
         <span className="lead-vocab-intent">
           <Select
-            aria-label={t("leadSources.intentFor", { label: source.label })}
-            aria-describedby={refusedFor(source, "intent")}
-            value={source.intent}
+            aria-label={t("leadSources.intentFor", { label: origin.label })}
+            aria-describedby={refusedFor(origin, "intent")}
+            value={origin.intent}
             disabled={!canEdit}
             onChange={(value) => {
-              if (isOption(value, INTENTS) && value !== source.intent) {
-                onUpdate({ id: source.id, intent: value });
+              if (isOption(value, INTENTS) && value !== origin.intent) {
+                onUpdate({ id: origin.id, intent: value });
               }
             }}
             options={intentOptions(t)}
@@ -227,127 +219,49 @@ function sourceColumns({
       key: "active",
       header: t("leadSources.colActive"),
       fold: "end",
-      render: (source) => (
+      render: (origin) => (
         <Switch
-          describedBy={refusedFor(source, "active")}
-          label={t("leadSources.activeFor", { label: source.label })}
+          describedBy={refusedFor(origin, "active")}
+          label={t("leadSources.activeFor", { label: origin.label })}
           labelHidden
-          checked={source.active}
+          checked={origin.active}
           disabled={!canEdit}
-          onChange={(next) => onUpdate({ id: source.id, active: next })}
+          onChange={(next) => onUpdate({ id: origin.id, active: next })}
         />
       ),
     },
-    ...vocabMenuColumn(t, grants, (source: LeadSource) => ({
-      label: source.label,
-      refusal: refusal(source),
-      onRename: () => onRename(source),
-      onRemove: () => onRemove(source),
+    ...vocabMenuColumn(t, grants, (origin: LeadOrigin) => ({
+      label: origin.label,
+      refusal: refusal(origin),
+      onRename: () => onRename(origin),
+      onRemove: () => onRemove(origin),
     })),
   ];
 }
 
-// Values a lead carries that the list does not name yet, one verb each.
-function DiscoveredSources({
-  discovered,
-  administered,
-  canCreate,
-  refusedFor,
-  onAdopt,
-}: Readonly<{
-  discovered: readonly DiscoveredLeadSource[];
-  administered: readonly LeadSource[];
-  canCreate: boolean;
-  refusedFor: (found: DiscoveredLeadSource) => string | undefined;
-  onAdopt: (found: DiscoveredLeadSource, label: string) => void;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const tableId = useId();
-  // By position: a discovered key is whatever a lead carried, spaces included.
-  const nameId = (found: DiscoveredLeadSource) =>
-    `${tableId}-${discovered.indexOf(found)}`;
-  const columns: DataTableColumn<DiscoveredLeadSource>[] = [
-    {
-      key: "name",
-      header: t("leadSources.colSource"),
-      grow: true,
-      render: (found) => (
-        <span id={nameId(found)}>
-          <KeyedName
-            name={sourceKeyLabel(found.key, administered, t)}
-            code={found.key}
-          />
-        </span>
-      ),
-    },
-    leadsColumn({ t, plural, locale }, (found) => found.lead_count),
-  ];
-  if (canCreate) {
-    columns.push({
-      key: "adopt",
-      header: t("leadSources.colActions"),
-      headerHidden: true,
-      fold: "end",
-      render: (found) => (
-        <Button
-          aria-describedby={describedByIds(nameId(found), refusedFor(found))}
-          onClick={() =>
-            onAdopt(found, sourceKeyLabel(found.key, administered, t))
-          }
-        >
-          {t("leadSources.adopt")}
-        </Button>
-      ),
-    });
-  }
-  return (
-    <>
-      <PanelGroupHead title={t("leadSources.discovered")} level="h3" />
-      <PanelBody>
-        <PanelIntro>{t("leadSources.discoveredSub")}</PanelIntro>
-      </PanelBody>
-      <DataTable
-        bleed
-        fold
-        label={t("leadSources.discovered")}
-        columns={columns}
-        rows={[...discovered]}
-        rowKey={(found) => found.key}
-        rowTestId={(found) => `lead-source-discovered-${found.key}`}
-      />
-    </>
-  );
-}
-
-export function LeadSourcesCard() {
+export function LeadOriginsCard() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const { canCreate, canEdit, canRemove, refusal } = useVocabGrants("leads");
-  const query = useLeadSources();
-  const { create, adopt, update, rename, remove } = useSourceMutations();
+  const query = useLeadOrigins();
+  const { create, update, rename, remove } = useOriginMutations();
   const [adding, setAdding] = useState(false);
-  const [renaming, setRenaming] = useState<LeadSource | null>(null);
-  const [removing, setRemoving] = useState<LeadSource | null>(null);
+  const [renaming, setRenaming] = useState<LeadOrigin | null>(null);
+  const [removing, setRemoving] = useState<LeadOrigin | null>(null);
   const removal = useRemovalFocus();
-  const failure = [adopt, update]
-    .filter((m) => m.isError)
-    .sort((a, b) => b.submittedAt - a.submittedAt)[0];
+  const failure = update.isError ? update : undefined;
   const toast = useToast();
   const refusalId = useId();
-  const refusedPatch = failure === update ? update.variables : undefined;
-  const refusedAdopt = failure === adopt ? adopt.variables?.key : undefined;
-  const administered = rowsOf(query.data?.data);
-  const discovered = rowsOf(query.data?.discovered);
-  const columns = sourceColumns({
+  const refusedPatch = failure ? update.variables : undefined;
+  const administered = rowsOf(query.data);
+  const columns = originColumns({
     t,
     plural,
     locale,
     grants: { canEdit, canRemove },
-    refusedFor: (source, field) =>
-      refusedPatch?.id === source.id && refusedPatch[field] !== undefined
+    refusedFor: (origin, field) =>
+      refusedPatch?.id === origin.id && refusedPatch[field] !== undefined
         ? refusalId
         : undefined,
     // A row's controls write the moment they change, so each write confirms itself.
@@ -355,62 +269,49 @@ export function LeadSourcesCard() {
       update.mutate(patch, {
         onSuccess: () => toast.show(t("settings.saved")),
       }),
-    onRename: (source) => {
+    onRename: (origin) => {
       rename.reset();
-      setRenaming(source);
+      setRenaming(origin);
     },
-    onRemove: (source) => {
+    onRemove: (origin) => {
       removal.opened();
-      setRemoving(source);
+      setRemoving(origin);
     },
   });
   return (
     <Panel
       title={
         <span id={removal.titleId} tabIndex={-1}>
-          {t("leadSources.title")}
+          {t("leadOrigins.title")}
         </span>
       }
       titleAction={
         canCreate && (
           <Button ref={removal.addVerb} onClick={() => setAdding(true)}>
-            {t("leadSources.addOpen")}
+            {t("leadOrigins.addOpen")}
           </Button>
         )
       }
     >
       <PanelBody>
-        <PanelIntro>{t("leadSources.sub")}</PanelIntro>
+        <PanelIntro>{t("leadOrigins.sub")}</PanelIntro>
       </PanelBody>
       {query.isSuccess && administered.length > 0 ? (
         <DataTable
           bleed
           fold
-          label={t("leadSources.title")}
+          label={t("leadOrigins.title")}
           columns={columns}
           rows={[...administered]}
-          rowKey={(source) => source.id}
-          rowTestId={(source) => `lead-source-${source.key}`}
+          rowKey={(origin) => origin.id}
+          rowTestId={(origin) => `lead-origin-${origin.key}`}
         />
       ) : (
         <PanelBody>
-          <QueryStates query={query} pendingLabel={t("leadSources.title")}>
+          <QueryStates query={query} pendingLabel={t("leadOrigins.title")}>
             <EmptyState>{t("common.empty")}</EmptyState>
           </QueryStates>
         </PanelBody>
-      )}
-      {discovered.length > 0 && (
-        <DiscoveredSources
-          discovered={discovered}
-          administered={administered}
-          canCreate={canCreate}
-          refusedFor={(found) =>
-            refusedAdopt === found.key ? refusalId : undefined
-          }
-          onAdopt={(found, label) =>
-            adopt.mutate({ key: found.key, label, intent: "neutral" })
-          }
-        />
       )}
       <PanelNotices
         readOnly={refusal && t(refusal)}
@@ -423,7 +324,7 @@ export function LeadSourcesCard() {
         }
       />
       {adding && (
-        <AddSourceDialog
+        <AddOriginDialog
           create={create}
           onClose={() => {
             create.reset();
@@ -435,7 +336,7 @@ export function LeadSourcesCard() {
       <NameDialog
         open={renaming !== null}
         onClose={() => setRenaming(null)}
-        title={t("leadSources.renameTitle")}
+        title={t("leadOrigins.renameTitle")}
         label={t("leadSources.labelField")}
         initial={renaming?.label ?? ""}
         hint={renaming && <KeyCode code={renaming.key} />}
@@ -458,7 +359,7 @@ export function LeadSourcesCard() {
           setRemoving(null);
         }}
         returnFocusTo={removal.returnFocusTo}
-        title={t("leadSources.removeTitle")}
+        title={t("leadOrigins.removeTitle")}
         confirmLabel={t("leadSources.remove")}
         confirmVariant="danger"
         pending={remove.isPending}
@@ -474,7 +375,7 @@ export function LeadSourcesCard() {
           }
         }}
       >
-        <p>{t("leadSources.removeBody", { label: removing?.label ?? "" })}</p>
+        <p>{t("leadOrigins.removeBody", { label: removing?.label ?? "" })}</p>
       </ConfirmModal>
     </Panel>
   );

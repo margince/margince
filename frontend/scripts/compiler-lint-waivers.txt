@@ -90,7 +90,7 @@
 1 react-hooks/set-state-in-effect src/features/leads/leads.actions.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leads.score.tsx
 1 react-hooks/refs src/features/leads/leadvocab.reasons.tsx
-1 react-hooks/refs src/features/leads/leadvocab.sources.tsx
+1 react-hooks/refs src/features/leads/leadvocab.origins.tsx
 3 react-hooks/refs src/features/lists/listlibrary.tsx
 5 react-hooks/refs src/features/lists/listpage.tsx
 2 react-hooks/refs src/features/onboarding/onboarding-conversation/company-act-state.ts

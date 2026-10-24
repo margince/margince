@@ -55,8 +55,7 @@ const fieldDomain = "domain"
 const fieldTitle = "title"
 
 // leadStatusNew is where an imported prospect starts: the unworked state a
-// human moves it out of, which is the whole point of landing machine-sourced
-// rows as leads rather than as contacts.
+// human moves it out of.
 const leadStatusNew = "new"
 
 // leadTargetStatus is the lead's status column. A file may place a lead only
@@ -65,11 +64,9 @@ const leadTargetStatus = "status"
 
 // The fields a CSV import may target, per object. Each one round-trips: the
 // writer can both create and update it. A create-only target would stop
-// honouring the file on the second upload.
-//
-// The caller picks `lead` or `contact` per run. Neither skips the identity ladder.
+// honouring the file on the second upload. The caller picks `lead` or `contact` per run.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, leadTargetStatus, csvTargetAuthor, csvTargetOwner, csvTargetTags},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, leadTargetStatus, leadTargetOrigin, leadTargetOriginDetail, csvTargetAuthor, csvTargetOwner, csvTargetTags},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
@@ -247,6 +244,9 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 		if field == leadTargetStatus && incoming == "" {
 			continue
 		}
+		if leadOriginKeptOnReimport(current, field, incoming) {
+			continue
+		}
 		want := canonicalFor(field, incoming)
 		value, checked := typed[field]
 		if field == csvTargetOwner && !checked {
@@ -379,6 +379,7 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 	in.LinkedInURL = checkedString(fields, typed, fieldLinkedIn)
 	in.Title = importString(fields, fieldTitle)
 	in.CompanyName = importString(fields, "company_name")
+	in.OriginHint, in.OriginDetail = originFrom(fields)
 	in.CustomFields = customFieldsFrom(fields, typed)
 	return in
 }
@@ -386,6 +387,7 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 // leadUpdateFrom builds the patch for the fields that actually differ.
 func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.UpdateLeadInput {
 	var status *string
+	originHint, originNote := originFrom(changed)
 	if text, ok := typed[leadTargetStatus].(string); ok {
 		if _, given := changed[leadTargetStatus]; given {
 			status = &text
@@ -399,6 +401,8 @@ func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.Up
 		LinkedInURL:  checkedString(changed, typed, fieldLinkedIn),
 		Title:        importString(changed, fieldTitle),
 		CompanyName:  importString(changed, "company_name"),
+		OriginHint:   originHint,
+		OriginDetail: originNote,
 		OwnerID:      ownerFrom(changed, typed),
 		CustomFields: customFieldsFrom(changed, typed),
 	}

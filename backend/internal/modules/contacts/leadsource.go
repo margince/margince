@@ -3,11 +3,12 @@
 
 package contacts
 
-// Lead sources are an administered vocabulary (lead_source): the keys a
-// human may pick when creating a lead, the labels the UI shows, and the
-// intent the scorer reads. Connectors, imports and seeds still write their
-// own source values; those appear in the list as "discovered" so an
-// administrator can adopt them, and they score neutral until adopted.
+// Lead sources are the deprecated administered list (lead_source) of how a row
+// reached Margince. The score no longer reads it: the lead's origin
+// (leadorigin.go) is the one fact that says where the lead came from. The
+// list, its endpoints and lead_source.changed stay until a separate breaking
+// change retires them. Connectors, imports and seeds still write their own
+// source values; those appear in the list as "discovered".
 
 import (
 	"context"
@@ -34,7 +35,7 @@ import (
 // behaves exactly like one already there.
 const leadVocabularyObject = "custom_field"
 
-// SourceIntent is what the scorer makes of a source (formulas §3.1).
+// SourceIntent is what the scorer makes of a lead's origin.
 type SourceIntent string
 
 const (
@@ -50,25 +51,6 @@ func ParseSourceIntent(raw string) (SourceIntent, error) {
 		return s, nil
 	}
 	return "", &values.ParseError{Field: "intent", Code: "invalid_intent", Message: "intent is one of high, neutral, low"}
-}
-
-// SourceIntents maps a stored source key to its intent. A key the table
-// does not carry scores neutral; a connector value (`connector:<name>:<id>`)
-// resolves through its `connector:<name>` family so adopting the family once
-// weights every lead the connector ever wrote.
-type SourceIntents map[string]SourceIntent
-
-// Of answers the intent for one stored source value.
-func (m SourceIntents) Of(source string) SourceIntent {
-	if intent, ok := m[source]; ok {
-		return intent
-	}
-	if family, ok := connectorFamily(source); ok {
-		if intent, ok := m[family]; ok {
-			return intent
-		}
-	}
-	return SourceIntentNeutral
 }
 
 // leadSourceClause renders the list's source filter. A connector family
@@ -94,76 +76,6 @@ func connectorFamily(source string) (string, bool) {
 		return parts[0] + ":" + parts[1], true
 	}
 	return "", false
-}
-
-// defaultSourceIntents is the seeded weighting — the same keys the migrations
-// insert — kept here so the unit scorer has a fixture and so the parity test
-// can prove the seed and the code agree.
-var defaultSourceIntents = SourceIntents{
-	"manual": SourceIntentNeutral, "inbound": SourceIntentHigh, "webform": SourceIntentHigh,
-	"referral": SourceIntentHigh, "import": SourceIntentLow, "crawl": SourceIntentLow,
-	// A name published on a company's own website, read by the deep-read pass.
-	// Low for crawl's reason: nobody asked us for anything.
-	"siteread": SourceIntentLow,
-}
-
-// loadSourceIntents reads the installation's weighting inside the caller's
-// transaction, for the scorer. Inactive sources still weight: a lead keeps
-// its value when its source is retired, and so keeps its score.
-func loadSourceIntents(ctx context.Context, tx pgx.Tx) (SourceIntents, error) {
-	rows, err := tx.Query(ctx, `SELECT key, intent FROM lead_source`)
-	if err != nil {
-		return nil, fmt.Errorf("load lead source intents: %w", err)
-	}
-	defer rows.Close()
-	out := SourceIntents{}
-	for rows.Next() {
-		var key, intent string
-		if err := rows.Scan(&key, &intent); err != nil {
-			return nil, err
-		}
-		out[key] = SourceIntent(intent)
-	}
-	return out, rows.Err()
-}
-
-// InactiveLeadSourceError refuses a human's choice of a retired source: the
-// list hides it, and the API agrees with the list.
-type InactiveLeadSourceError struct{ Key string }
-
-func (e *InactiveLeadSourceError) Error() string {
-	return "lead source " + e.Key + " is inactive; pick an active source or reactivate it in Settings › Data model"
-}
-
-// FieldFault names the source as the invalid input.
-func (e *InactiveLeadSourceError) FieldFault() (field, code, message string) {
-	return "source", "inactive_source", e.Error()
-}
-
-// ensureHumanSourceAllowed refuses an administered-but-inactive key on a
-// human's write. Anything the table does not know (a connector family, an
-// import value, a seed) passes: the vocabulary governs the pick list, not
-// what capture may record.
-func ensureHumanSourceAllowed(ctx context.Context, tx pgx.Tx, source string) error {
-	actor, err := storekit.Actor(ctx)
-	if err != nil {
-		return err
-	}
-	if actor.Type != principal.PrincipalHuman {
-		return nil
-	}
-	var active bool
-	err = tx.QueryRow(ctx, `SELECT active FROM lead_source WHERE key = $1`, source).Scan(&active)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("check lead source %q: %w", source, err)
-	}
-	if !active {
-		return &InactiveLeadSourceError{Key: source}
-	}
-	return nil
 }
 
 // CreateLeadSourceInput is one new administered source.

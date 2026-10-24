@@ -2203,6 +2203,22 @@ func (stubs) UpdateLeadDisqualifyReason(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "UpdateLeadDisqualifyReason")
 }
 
+func (stubs) ListLeadOrigins(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListLeadOrigins")
+}
+
+func (stubs) CreateLeadOrigin(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateLeadOriginParams) {
+	httperr.NotImplemented(w, r, "CreateLeadOrigin")
+}
+
+func (stubs) DeleteLeadOrigin(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DeleteLeadOrigin")
+}
+
+func (stubs) UpdateLeadOrigin(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateLeadOriginParams) {
+	httperr.NotImplemented(w, r, "UpdateLeadOrigin")
+}
+
 func (stubs) GetLeadSignalCatalog(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetLeadSignalCatalog")
 }

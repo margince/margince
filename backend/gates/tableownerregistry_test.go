@@ -80,6 +80,7 @@ var tableOwners = map[string]string{
 	"lead_score_history":     "internal/modules/contacts",
 	"lead_manual_signal":     "internal/modules/contacts",
 	"lead_source":            "internal/modules/contacts",
+	"lead_origin":            "internal/modules/contacts",
 	"lead_disqualify_reason": "internal/modules/contacts",
 	// A prospect passed from an SDR to an account executive: the row carrying
 	// its current state, the append-only transitions behind it, and the

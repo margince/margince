@@ -128,7 +128,7 @@ export const SETTINGS_SECTIONS = {
   ],
   stageautomation: ["stageAutomation.record"],
   leads: [
-    "leadSources.title",
+    "leadOrigins.title",
     "leadReasons.title",
     "leadHandling.title",
     "leadHandling.firstResponse",

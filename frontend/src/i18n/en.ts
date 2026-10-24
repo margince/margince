@@ -2027,6 +2027,8 @@ export const en = {
   "history.field.size_band": "Size",
   "history.field.social": "Social profiles",
   "history.field.source": "Source",
+  "history.field.origin": "Origin",
+  "history.field.origin_detail": "Origin note",
   "history.field.started_at": "Started",
   "history.field.status": "Status",
   "history.field.subject": "Subject",
@@ -4248,11 +4250,37 @@ export const en = {
   "lead.openTaskCount_other": "{count} open tasks",
   "lead.noNextTask": "No next step",
   "lead.scoreNoSignals": "No signals",
-  "lead.source": "Source",
+  "lead.origin": "Origin",
+  "lead.originDetail": "Origin note",
+  "lead.addedVia": "Added via",
+  "lead.originUnset": "Not set",
+  "lead.filterOrigin": "Origin",
+  "lead.filterOriginAll": "All origins",
+  "lead.filterOriginRetired": "(retired)",
+  "lead.originNone": "No origin",
+  "leadOrigins.title": "Lead origins",
+  "leadOrigins.sub":
+    "Where the lead came from. Used in the New lead form, in filters and in scoring.",
+  "leadOrigins.notAdded": "Origin was not added",
+  "leadOrigins.duplicate":
+    "An origin with this name or key already exists. Choose another name.",
+  "leadOrigins.builtInKept":
+    "Built-in origins can be renamed or deactivated, not removed.",
+  "leadOrigins.inUse_one":
+    "{count} lead uses this origin. Deactivate it instead.",
+  "leadOrigins.inUse_other":
+    "{count} leads use this origin. Deactivate it instead.",
+  "leadOrigins.removeTitle": "Remove this origin?",
+  "leadOrigins.removeBody":
+    "“{label}” is not used by any lead and is removed from the list.",
+  "leadOrigins.newLabel": "New origin",
+  "leadOrigins.addOpen": "New origin",
+  "leadOrigins.add": "Add origin",
+  "leadOrigins.newPlaceholder": "Trade show",
+  "leadOrigins.colOrigin": "Origin",
+  "leadOrigins.renameTitle": "Rename origin",
   "lead.project": "Project",
 
-  "lead.filterSource": "Source",
-  "lead.filterSourceAll": "All sources",
   "lead.source.manual": "Created manually",
   "lead.source.inbound": "Inbound",
   "lead.source.webform": "Web form",
@@ -4260,18 +4288,10 @@ export const en = {
   "lead.source.import": "Import",
   "lead.source.crawl": "Web research",
   "lead.source.unknown": "Unknown source",
-  "lead.sourceFromConnector":
-    "Written by a connector, which keeps its own source.",
-  "leadSources.title": "Lead sources",
-  "leadSources.sub":
-    "Where leads come from. Used in the New lead form, in filters and in scoring.",
   "leadSources.removeOnlyTitle":
     "Your role can remove entries but not add or change them",
   "leadSources.addOnlyTitle": "Your role can add entries but not change them",
   "leadSources.notSaved": "Change was not saved",
-  "leadSources.notAdded": "Source was not added",
-  "leadSources.duplicate":
-    "A source with this name or key already exists. Choose another name.",
   "leadSources.intentFor": "Intent of {label}",
   "leadSources.intent": "Intent",
   "leadSources.intent.high": "High intent",
@@ -4279,34 +4299,15 @@ export const en = {
   "leadSources.intent.low": "Low intent",
   "leadSources.intentHint":
     "High adds points to the score and Low subtracts them. Changes apply at each lead’s next rescore.",
-  "leadSources.builtInKept":
-    "Built-in sources can be renamed or deactivated, not removed.",
-  "leadSources.inUse_one":
-    "{count} lead uses this source. Deactivate it instead.",
-  "leadSources.inUse_other":
-    "{count} leads use this source. Deactivate it instead.",
   "leadSources.activeFor": "{label} is active",
   "leadSources.remove": "Remove",
-  "leadSources.removeTitle": "Remove this source?",
-  "leadSources.removeBody":
-    "“{label}” is not used by any lead and is removed from the list.",
-  "leadSources.newLabel": "New source",
   "leadSources.labelField": "Label",
-  "leadSources.addOpen": "New source",
-  "leadSources.discovered": "Discovered values",
-  "leadSources.newPlaceholder": "Trade show",
-  "leadSources.add": "Add source",
-  "leadSources.discoveredSub":
-    "Values on leads from connectors and imports that are not in the list yet. Add one to give it a label and weight.",
-  "leadSources.adopt": "Add to list",
-  "leadSources.colSource": "Source",
   "leadSources.colLeads": "Leads",
   "leadSources.colActive": "Active",
   "leadSources.colActions": "Actions",
   "leadSources.leads_one": "{count} lead",
   "leadSources.leads_other": "{count} leads",
   "leadSources.rename": "Rename",
-  "leadSources.renameTitle": "Rename source",
   "leadSources.renameSave": "Save name",
   "leadReasons.title": "Disqualification reasons",
   "leadReasons.sub":
@@ -4441,20 +4442,21 @@ export const en = {
   "lead.shortfall.engagementMoves":
     "A reply or a meeting raises the score most.",
   "lead.shortfall.noSource": "No source on record.",
-  "lead.shortfall.sourcePenalised": "Source “{source}” lowers the score.",
+  "lead.shortfall.noOrigin": "No origin on record.",
+  "lead.shortfall.originPenalised": "Origin “{origin}” lowers the score.",
+  "lead.shortfall.originNoIntent":
+    "Origin “{origin}” does not indicate buying intent on its own.",
+  "lead.factor.high_intent_source": "High-intent origin",
+  "lead.factor.low_intent_source": "Low-intent origin",
   "lead.shortfall.noTitle": "No job title on record.",
   "lead.shortfall.titleNotSenior":
     "“{title}” is not a senior title the model recognizes.",
-  "lead.shortfall.sourceNoIntent":
-    "Source “{source}” does not indicate buying intent on its own.",
   "lead.scoreNotStoredYet":
     "The breakdown for this score is not stored yet. The next update shows it.",
   "lead.scoreLoading": "Loading score factors…",
   "lead.scoreNoFactors": "No factors counted toward this score yet.",
   "lead.scoreSources": "{count} activities",
   "lead.factor.decision_maker_title": "Decision-maker title",
-  "lead.factor.high_intent_source": "High-intent source",
-  "lead.factor.low_intent_source": "Low-intent source",
   "lead.factor.reply": "Lead replied",
   "lead.factor.meeting_held": "Meeting held",
   "lead.factor.meeting_booked": "Meeting booked",
@@ -6361,6 +6363,7 @@ export const en = {
   "analytics.field.quiet_since": "Quiet since",
   "analytics.field.size_band": "Company size",
   "analytics.field.source": "Source",
+  "analytics.field.origin": "Origin",
   "analytics.field.stage_id": "Stage",
   "analytics.field.stalled": "Stalled",
   "analytics.field.status": "Status",

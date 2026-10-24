@@ -1744,8 +1744,9 @@ components:
       x-entity-type: lead_source
       x-version: 1
       description: >-
-        Payload for lead_source.changed. A lead source was added, edited or
-        removed (contacts/leadsource.go). It rides the lead stream because
+        Deprecated: the lead source list no longer feeds the score, and a
+        separate breaking change retires it. Payload for lead_source.changed.
+        A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because
         every lead carries a source value. A subscriber that renders or groups
         by source re-reads the catalog on this event. The payload carries
         `key` and not `label`. The key is what leads carry and what a

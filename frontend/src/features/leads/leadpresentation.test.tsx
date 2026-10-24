@@ -63,6 +63,8 @@ const lead: Lead = {
   score_reason: "manual:employees",
   sla_state: "breached",
   source: "webform",
+  origin: "website",
+  origin_label: "Website",
   next_task_subject: "Call about the pilot",
   open_task_count: 1,
   captured_by: "human:user-1",
@@ -94,25 +96,32 @@ describe("lead work-board presentation", () => {
     expect(screen.getByText("1 leads")).toBeTruthy();
     expect(screen.queryByText(/deals/i)).toBeNull();
     expect(screen.getByText("Overdue")).toBeTruthy();
-    expect(screen.getByText("Web form")).toBeTruthy();
+    expect(screen.getByText("Website")).toBeTruthy();
     expect(
       screen.getByText(/Call about the pilot · 1 open task$/),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /next page/i })).toBeNull();
   });
 
-  it("names an imported lead's upload on its card, never the stamp", () => {
+  it("says where an unclassified lead came from as not set, and never prints how the row was written", () => {
     renderBoard(
       <LeadBoard
-        rows={[{ ...lead, source: "mirror:csv:pipedrive-export:lead:l-7" }]}
+        rows={[
+          {
+            ...lead,
+            origin: null,
+            origin_label: null,
+            source: "mirror:csv:pipedrive-export:lead:l-7",
+          },
+        ]}
         onMoved={() => undefined}
         hasMore={false}
         loadMore={() => undefined}
       />,
     );
 
-    expect(screen.getByText("Imported from pipedrive-export")).toBeTruthy();
-    expect(screen.queryByText(/mirror/i)).toBeNull();
+    expect(screen.getByText("Not set")).toBeTruthy();
+    expect(screen.queryByText(/mirror|pipedrive|imported/i)).toBeNull();
   });
 
   // Dragging a card WRITES the lead. The board reads `["leads", query]`; the

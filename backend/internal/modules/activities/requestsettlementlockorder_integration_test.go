@@ -8,12 +8,12 @@ package activities
 import (
 	"context"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,37 +28,13 @@ func senderOn(t *testing.T, e *loadEnv, request ids.UUID, address string) ids.UU
 }
 
 // holdVerdict takes the verdict's locks on the request and keeps them until
-// release is called, which a failing test does on its way out too. It returns
-// once they are held.
-func holdVerdict(t *testing.T, e *loadEnv, request ids.UUID) (release func() error) {
+// release, and returns the backend that holds them.
+func holdVerdict(t *testing.T, e *loadEnv, request ids.UUID) (holder int32, release func() error) {
 	t.Helper()
-	held, let, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
-	go func() {
-		done <- storeKnowing(e).tx(asSettler(e), func(tx pgx.Tx) error {
-			if _, err := holdSettlementEvidenceTx(asSettler(e), tx, RepliedRequest{RequestID: request, AsOf: bindingReadAt}); err != nil {
-				return err
-			}
-			close(held)
-			<-let
-			return nil
-		})
-	}()
-	<-held
-	var once sync.Once
-	var result error
-	release = func() error {
-		once.Do(func() {
-			close(let)
-			result = <-done
-		})
-		return result
-	}
-	t.Cleanup(func() {
-		if err := release(); err != nil {
-			t.Logf("the held verdict ended with %v", err)
-		}
+	return holdOpen(t, e, asSettler, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := holdSettlementEvidenceTx(ctx, tx, RepliedRequest{RequestID: request, AsOf: bindingReadAt})
+		return err
 	})
-	return release
 }
 
 // writeOutside runs one statement on its own transaction.
@@ -98,19 +74,13 @@ func TestRemovingOrMovingAnAnswersConversationWaitsForTheVerdict(t *testing.T) {
 				}
 				return []any{moved}
 			}
-			release := holdVerdict(t, e, request)
+			holder, release := holdVerdict(t, e, request)
 
 			if err := writeOutsideBounded(e, statement, args(unrelated)...); err != nil {
 				t.Fatalf("a write on an unrelated contact waited for the verdict: %v", err)
 			}
-			written := make(chan error, 1)
-			go func() { written <- writeOutside(e, statement, args(sender)...) }()
-			awaitLockWait(t, e)
-			select {
-			case err := <-written:
-				t.Fatalf("the write ran while the verdict held the conversation (err %v)", err)
-			default:
-			}
+			written, returned := startRacer(t, release, func() error { return writeOutside(e, statement, args(sender)...) })
+			testdb.AwaitQueuedBehind(t, e.owner, holder, 1, returned, "the write")
 			if err := release(); err != nil {
 				t.Fatal(err)
 			}
@@ -153,34 +123,18 @@ func TestAnEditHoldingItsAnswerAndAVerdictStartedThenBothFinish(t *testing.T) {
 		t.Fatal("the answered request was not offered")
 	}
 	answer := ids.From[ids.ActivityKind](newestReplyID(t, e, request))
-	locked, release, barrier := make(chan struct{}), make(chan struct{}), make(chan error, 1)
-	var lift sync.Once
-	t.Cleanup(func() { lift.Do(func() { close(release) }) })
-	go func() {
-		barrier <- storeKnowing(e).tx(asSettler(e), func(tx pgx.Tx) error {
-			if _, err := tx.Exec(context.Background(), `LOCK TABLE activity_audience_member IN ACCESS EXCLUSIVE MODE`); err != nil {
-				return err
-			}
-			close(locked)
-			<-release
-			return nil
-		})
-	}()
-	<-locked
-	edited := make(chan error, 1)
-	go func() {
+	holder, release := holdOpen(t, e, asSettler, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `LOCK TABLE activity_audience_member IN ACCESS EXCLUSIVE MODE`)
+		return err
+	})
+	edited, returned := startRacer(t, release, func() error {
 		body := "Edited: the report follows next week."
 		_, err := storeKnowing(e).UpdateActivity(asEditor(e), answer, UpdateActivityInput{Body: &body})
-		edited <- err
-	}()
-	awaitLockWaiters(t, e, 1)
-	settled := make(chan error, 1)
-	go func() {
-		settled <- storeKnowing(e).SettleRequest(asSettler(e), RequestSettlementInput{Request: candidate, Verdict: RequestSettled, Confidence: 0.9, DecidedBy: "test-model"})
-	}()
-	awaitLockWaiters(t, e, 2)
-	lift.Do(func() { close(release) })
-	if err := <-barrier; err != nil {
+		return err
+	})
+	testdb.AwaitQueuedBehind(t, e.owner, holder, 1, returned, "the write")
+	settled := verdictBehind(t, e, holder, release, 2, RequestSettlementInput{Request: candidate, Verdict: RequestSettled, Confidence: 0.9, DecidedBy: "test-model"})
+	if err := release(); err != nil {
 		t.Fatal(err)
 	}
 	if err := <-edited; err != nil {

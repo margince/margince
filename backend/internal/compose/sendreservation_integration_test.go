@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -363,10 +365,16 @@ func TestTakingTheRecipientOffATeamWaitsForTheReservation(t *testing.T) {
 	decision := stagePromisedDecision(t, a, a.e.Rep1, "Send the pricing")
 	reader := a.e.As(a.e.Rep1, []ids.UUID{a.e.Team1}, integration.AdminPerms)
 	basis := readBasis(reader, t, a.e, a.e.Rep1, sendRefs{approvals: []ids.UUID{decision.approval}}, clocktest.Now(t))
-	held, release, reserved := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+	held, release := make(chan struct{}), make(chan struct{})
+	reserved, ended := make(chan error, 1), make(chan struct{})
+	var holder int32
 	go func() {
+		defer close(ended)
 		reserved <- database.WithWorkspaceTx(reader, a.e.Pool, func(tx pgx.Tx) error {
 			if err := holdSendBasisTx(reader, tx, basis, func() time.Time { return clocktest.Now(t) }); err != nil {
+				return err
+			}
+			if err := tx.QueryRow(reader, `SELECT pg_backend_pid()`).Scan(&holder); err != nil {
 				return err
 			}
 			close(held)
@@ -374,19 +382,25 @@ func TestTakingTheRecipientOffATeamWaitsForTheReservation(t *testing.T) {
 			return nil
 		})
 	}()
-	<-held
-	removed := make(chan error, 1)
+	select {
+	case <-held:
+	case err := <-reserved:
+		t.Fatalf("the reservation ended before it held the memberships: %v", err)
+	}
+	removed, returned := make(chan error, 1), make(chan struct{})
 	go func() {
+		defer close(returned)
 		admin := identity.Identity{UserID: ids.UserID{UUID: a.e.AdminUser}, WorkspaceID: ids.WorkspaceID{UUID: a.e.WS}, Permissions: integration.AdminPerms, Roles: []string{"admin"}, SeatType: "full"}
 		removed <- identity.NewServiceFor(a.e.DB()).SetTeamMember(a.e.Admin(), admin, a.e.Team1, a.e.Rep1, false)
 	}()
-	awaitLockWait(t)
-	select {
-	case err := <-removed:
-		t.Fatalf("the membership changed while the reservation held it (err %v)", err)
-	default:
-	}
-	close(release)
+	var lift sync.Once
+	t.Cleanup(func() {
+		lift.Do(func() { close(release) })
+		<-ended
+		<-returned
+	})
+	testdb.AwaitQueuedBehind(t, integration.OwnerConn(t), holder, 1, returned, "the membership change")
+	lift.Do(func() { close(release) })
 	if err := <-reserved; err != nil {
 		t.Fatal(err)
 	}

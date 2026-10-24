@@ -105,6 +105,14 @@ A `leads.csv` row can carry a `status`: `new`, `contacted` or `engaged`. Case do
 A file cannot set a prospect to qualified or disqualified. Use **Qualify** or **Disqualify** on the prospect. A row with another word is skipped, and the problem lists the allowed values.
 Also called: import lead status, set the stage of a lead.
 
+### How do I map a lead source from my old system to Origin?
+A `leads.csv` file can map a column to **Origin** and another to **Origin note**. Origin says where the lead came from. It is not the source name above, which says which import wrote the row.
+
+Margince matches the value to an origin in Settings by its name, ignoring case. "Cold Outreach" and "cold_outreach" both file the lead under **Cold outreach**. A value that matches no origin is kept as the lead's origin note, and the origin stays empty. Margince never guesses one. An empty box leaves the origin empty.
+
+A later file never replaces an origin a lead already has, because you may have set it by hand. It only fills a lead that has none. A lead with no origin gets no points for it, so an import does not lower a score.
+Also called: import lead source, map lead origin.
+
 ### How do I import deals?
 A `deals.csv` row is one deal. Each row needs a `ref`. A new deal also needs a `name` and a `stage`.
 

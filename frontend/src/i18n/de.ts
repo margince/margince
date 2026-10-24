@@ -2101,6 +2101,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.size_band": "Größe",
   "history.field.social": "Social-Profile",
   "history.field.source": "Quelle",
+  "history.field.origin": "Herkunft",
+  "history.field.origin_detail": "Notiz zur Herkunft",
   "history.field.started_at": "Beginn",
   "history.field.status": "Status",
   "history.field.subject": "Betreff",
@@ -4254,11 +4256,37 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.openTaskCount_other": "{count} offene Aufgaben",
   "lead.noNextTask": "Kein nächster Schritt",
   "lead.scoreNoSignals": "Keine Signale",
-  "lead.source": "Quelle",
+  "lead.origin": "Herkunft",
+  "lead.originDetail": "Notiz zur Herkunft",
+  "lead.addedVia": "Hinzugefügt über",
+  "lead.originUnset": "Nicht gesetzt",
+  "lead.filterOrigin": "Herkunft",
+  "lead.filterOriginAll": "Alle Herkünfte",
+  "lead.filterOriginRetired": "(stillgelegt)",
+  "lead.originNone": "Keine Herkunft",
+  "leadOrigins.title": "Lead-Herkunft",
+  "leadOrigins.sub":
+    "Woher der Lead kam. Wird im Formular „Neuer Lead“, in Filtern und in der Bewertung verwendet.",
+  "leadOrigins.notAdded": "Herkunft nicht hinzugefügt",
+  "leadOrigins.duplicate":
+    "Eine Herkunft mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
+  "leadOrigins.builtInKept":
+    "Eingebaute Herkünfte lassen sich umbenennen oder deaktivieren, aber nicht entfernen.",
+  "leadOrigins.inUse_one":
+    "{count} Lead nutzt diese Herkunft. Deaktiviere sie stattdessen.",
+  "leadOrigins.inUse_other":
+    "{count} Leads nutzen diese Herkunft. Deaktiviere sie stattdessen.",
+  "leadOrigins.removeTitle": "Diese Herkunft entfernen?",
+  "leadOrigins.removeBody":
+    "„{label}“ wird von keinem Lead genutzt und wird aus der Liste entfernt.",
+  "leadOrigins.newLabel": "Neue Herkunft",
+  "leadOrigins.addOpen": "Neue Herkunft",
+  "leadOrigins.add": "Herkunft hinzufügen",
+  "leadOrigins.newPlaceholder": "Messe",
+  "leadOrigins.colOrigin": "Herkunft",
+  "leadOrigins.renameTitle": "Herkunft umbenennen",
   "lead.project": "Projekt",
 
-  "lead.filterSource": "Quelle",
-  "lead.filterSourceAll": "Alle Quellen",
   "lead.source.manual": "Manuell erstellt",
   "lead.source.inbound": "Eingehend",
   "lead.source.webform": "Webformular",
@@ -4266,19 +4294,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.source.import": "Import",
   "lead.source.crawl": "Webrecherche",
   "lead.source.unknown": "Unbekannte Quelle",
-  "lead.sourceFromConnector":
-    "Von einem Connector geschrieben, der seine eigene Quelle behält.",
-  "leadSources.title": "Lead-Quellen",
-  "leadSources.sub":
-    "Woher Leads kommen. Wird im Formular „Neuer Lead“, in Filtern und beim Scoring verwendet.",
   "leadSources.removeOnlyTitle":
     "Deine Rolle darf Einträge entfernen, aber nicht hinzufügen oder ändern",
   "leadSources.addOnlyTitle":
     "Deine Rolle darf Einträge hinzufügen, aber nicht ändern",
   "leadSources.notSaved": "Änderung nicht gespeichert",
-  "leadSources.notAdded": "Quelle nicht hinzugefügt",
-  "leadSources.duplicate":
-    "Eine Quelle mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
   "leadSources.intentFor": "Kaufinteresse von {label}",
   "leadSources.intent": "Kaufinteresse",
   "leadSources.intent.high": "Hohes Kaufinteresse",
@@ -4286,34 +4306,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "leadSources.intent.low": "Geringes Kaufinteresse",
   "leadSources.intentHint":
     "Hoch fügt dem Score Punkte hinzu, Gering zieht Punkte ab. Änderungen gelten ab der nächsten Neuberechnung jedes Leads.",
-  "leadSources.builtInKept":
-    "Vorgegebene Quellen lassen sich umbenennen oder deaktivieren, aber nicht entfernen.",
-  "leadSources.inUse_one":
-    "{count} Lead nutzt diese Quelle. Deaktiviere die Quelle stattdessen.",
-  "leadSources.inUse_other":
-    "{count} Leads nutzen diese Quelle. Deaktiviere die Quelle stattdessen.",
   "leadSources.activeFor": "{label} ist aktiv",
   "leadSources.remove": "Entfernen",
-  "leadSources.removeTitle": "Quelle entfernen?",
-  "leadSources.removeBody":
-    "„{label}“ wird von keinem Lead verwendet und wird aus der Liste entfernt.",
-  "leadSources.newLabel": "Neue Quelle",
   "leadSources.labelField": "Bezeichnung",
-  "leadSources.addOpen": "Neue Quelle",
-  "leadSources.discovered": "Gefundene Werte",
-  "leadSources.newPlaceholder": "Messe",
-  "leadSources.add": "Quelle hinzufügen",
-  "leadSources.discoveredSub":
-    "Werte auf Leads aus Connectors und Importen, die noch nicht in der Liste stehen. Füge einen Wert hinzu, um ihm eine Bezeichnung und eine Gewichtung zu geben.",
-  "leadSources.adopt": "Zur Liste hinzufügen",
-  "leadSources.colSource": "Quelle",
   "leadSources.colLeads": "Leads",
   "leadSources.colActive": "Aktiv",
   "leadSources.colActions": "Aktionen",
   "leadSources.leads_one": "{count} Lead",
   "leadSources.leads_other": "{count} Leads",
   "leadSources.rename": "Umbenennen",
-  "leadSources.renameTitle": "Quelle umbenennen",
   "leadSources.renameSave": "Namen speichern",
   "leadReasons.title": "Disqualifizierungsgründe",
   "leadReasons.sub":
@@ -4452,20 +4453,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.shortfall.engagementMoves":
     "Eine Antwort oder ein Termin hebt den Score am stärksten.",
   "lead.shortfall.noSource": "Keine Quelle hinterlegt.",
-  "lead.shortfall.sourcePenalised": "Die Quelle „{source}“ senkt den Score.",
+  "lead.shortfall.noOrigin": "Keine Herkunft hinterlegt.",
+  "lead.shortfall.originPenalised": "Die Herkunft „{origin}“ senkt den Score.",
+  "lead.shortfall.originNoIntent":
+    "Die Herkunft „{origin}“ zeigt für sich allein kein Kaufinteresse an.",
+  "lead.factor.high_intent_source": "Herkunft mit hohem Kaufinteresse",
+  "lead.factor.low_intent_source": "Herkunft mit geringem Kaufinteresse",
   "lead.shortfall.noTitle": "Kein Jobtitel hinterlegt.",
   "lead.shortfall.titleNotSenior":
     "„{title}“ ist kein Jobtitel einer Führungskraft, den das Modell erkennt.",
-  "lead.shortfall.sourceNoIntent":
-    "Die Quelle „{source}“ zeigt für sich allein kein Kaufinteresse an.",
   "lead.scoreNotStoredYet":
     "Die Aufschlüsselung dieses Scores ist noch nicht gespeichert. Die nächste Aktualisierung zeigt sie.",
   "lead.scoreLoading": "Score-Faktoren werden geladen…",
   "lead.scoreNoFactors": "Bisher fließen keine Faktoren in diesen Score ein.",
   "lead.scoreSources": "Aktivitäten: {count}",
   "lead.factor.decision_maker_title": "Titel des Entscheidungstragenden",
-  "lead.factor.high_intent_source": "Quelle mit hohem Kaufinteresse",
-  "lead.factor.low_intent_source": "Quelle mit geringem Kaufinteresse",
   "lead.factor.reply": "Lead hat geantwortet",
   "lead.factor.meeting_held": "Termin stattgefunden",
   "lead.factor.meeting_booked": "Termin gebucht",
@@ -6310,6 +6312,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.quiet_since": "Ruhig seit",
   "analytics.field.size_band": "Unternehmensgröße",
   "analytics.field.source": "Quelle",
+  "analytics.field.origin": "Herkunft",
   "analytics.field.stage_id": "Phase",
   "analytics.field.stalled": "Stockt",
   "analytics.field.status": "Status",

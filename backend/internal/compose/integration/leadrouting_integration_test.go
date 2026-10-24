@@ -50,11 +50,12 @@ func setupRouting(t *testing.T) *routingEnv {
 
 // routeNewLead seeds one unowned lead and dispatches its lead.created
 // through the engine, returning the resulting owner (nil = unassigned).
-func (e *routingEnv) routeNewLead(t *testing.T, source string) (ids.UUID, *ids.UUID) {
+func (e *routingEnv) routeNewLead(t *testing.T, origin string) (ids.UUID, *ids.UUID) {
 	t.Helper()
 	leadID := e.SeedID(t,
-		`INSERT INTO lead (id, full_name, source, captured_by) VALUES ($1, 'Routed Lead', $2, 'human:x')`,
-		source)
+		`INSERT INTO lead (id, full_name, source, origin, captured_by)
+		 VALUES ($1, 'Routed Lead', 'manual', NULLIF($2, ''), 'human:x')`,
+		origin)
 	if err := e.engine.HandleEvent(context.Background(), kevents.Envelope{
 		EventID: ids.NewV7(), Type: "lead.created",
 		OccurredAt: time.Now().UTC(),
@@ -86,7 +87,7 @@ func TestLeadRoutingRoundRobinIsFairAndCapsAreNeverExceeded(t *testing.T) {
 	// Six leads over three owners: pinned rotation in pool order, ±0 at
 	// the end of each full cycle.
 	for i := range 6 {
-		_, owner := e.routeNewLead(t, "manual")
+		_, owner := e.routeNewLead(t, "")
 		if owner == nil || *owner != pool[i%3] {
 			t.Fatalf("lead %d routed to %v, want pool[%d] — rotation order broke", i, owner, i%3)
 		}
@@ -95,7 +96,7 @@ func TestLeadRoutingRoundRobinIsFairAndCapsAreNeverExceeded(t *testing.T) {
 	// Everyone now holds cap (2): the seventh lead must stay unowned —
 	// never an over-cap assignment — and the refusal is itself an
 	// audited decision (AC-S5).
-	leadID, owner := e.routeNewLead(t, "manual")
+	leadID, owner := e.routeNewLead(t, "")
 	if owner != nil {
 		t.Fatalf("all-capped pool still assigned %v — the cap was exceeded", owner)
 	}
@@ -134,7 +135,7 @@ func TestLeadRoutingRoundRobinIsFairAndCapsAreNeverExceeded(t *testing.T) {
 		 WHERE id IN (SELECT id FROM lead WHERE owner_id = $1 LIMIT 1)`, e.Rep1, promoted); err != nil {
 		t.Fatal(err)
 	}
-	if _, owner := e.routeNewLead(t, "manual"); owner == nil || *owner != e.Rep1 {
+	if _, owner := e.routeNewLead(t, ""); owner == nil || *owner != e.Rep1 {
 		t.Fatalf("freed capacity routed to %v, want rep1", owner)
 	}
 }
@@ -145,23 +146,23 @@ func TestLeadRoutingRuleOutranksRotationButNeverTheCap(t *testing.T) {
 		"owners":        []string{e.Rep1.String(), e.Rep2.String()},
 		"cap_per_owner": 1,
 		"rules": []map[string]any{
-			{"field": "source", "equals": "webinar", "owner_id": e.Rep3.String()},
+			{"field": "origin", "equals": "event", "owner_id": e.Rep3.String()},
 		},
 	})
 
 	// The rule owner (rep3) is not in the rotation pool, yet the
 	// matching lead is theirs.
-	_, owner := e.routeNewLead(t, "webinar")
+	_, owner := e.routeNewLead(t, "event")
 	if owner == nil || *owner != e.Rep3 {
-		t.Fatalf("webinar lead routed to %v, want the rule owner rep3", owner)
+		t.Fatalf("event lead routed to %v, want the rule owner rep3", owner)
 	}
 	// A non-matching lead ignores the rule and follows the rotation.
-	if _, owner := e.routeNewLead(t, "manual"); owner == nil || *owner != e.Rep1 {
+	if _, owner := e.routeNewLead(t, ""); owner == nil || *owner != e.Rep1 {
 		t.Fatalf("non-matching lead routed to %v, want pool[0]", owner)
 	}
-	// rep3 is now at cap: the cap outranks the rule, the next webinar
+	// rep3 is now at cap: the cap outranks the rule, the next event
 	// lead falls through to the pool's next eligible owner.
-	if _, owner := e.routeNewLead(t, "webinar"); owner == nil || *owner != e.Rep2 {
+	if _, owner := e.routeNewLead(t, "event"); owner == nil || *owner != e.Rep2 {
 		t.Fatalf("capped rule owner: lead routed to %v, want the pool's rep2", owner)
 	}
 }
@@ -211,10 +212,10 @@ func TestAnUnroutableLeadRecordsWhyOnItsRun(t *testing.T) {
 	})
 
 	// The first lead takes the only seat's only slot.
-	if _, owner := e.routeNewLead(t, "manual"); owner == nil {
+	if _, owner := e.routeNewLead(t, ""); owner == nil {
 		t.Fatal("the first lead did not route, so the second proves nothing")
 	}
-	leadID, owner := e.routeNewLead(t, "manual")
+	leadID, owner := e.routeNewLead(t, "")
 	if owner != nil {
 		t.Fatalf("a lead routed to %v with the pool at capacity", owner)
 	}

@@ -3312,7 +3312,11 @@ paths:
         - name: source
           in: query
           schema: {type: string}
-          description: Filter by capture source (inbound, webform, referral, import, crawl, manual, ...).
+          description: Filter by how the row was written (import, crawl, manual, `connector:<name>`, ...). Not the origin; use `origin` to filter by where the lead came from.
+        - name: origin
+          in: query
+          schema: {type: string}
+          description: Filter by origin, an exact key from `/lead-origins`. Matched literally; `unset` names the leads with no origin.
         - name: sla_state
           in: query
           schema: {type: string, enum: [within_target, at_risk, breached]}
@@ -3653,19 +3657,32 @@ paths:
     get:
       tags: [Leads]
       operationId: listLeadSources
+      deprecated: true
       summary: List lead sources, active and inactive, in display order.
       description: |-
-        `data` is the administered list. `discovered` names source values that
-        live on leads but are not in the list — connector-written keys such as
-        `connector:apollo:…` grouped by their connector prefix, seed values,
-        imports — with how many live leads carry each. Adding one as a source
-        (POST with that key) makes it administrable.
+        Deprecated: the list says how a row reached Margince, which nothing scores any more.
+        Use `/lead-origins` for where a lead came from.
       responses:
         '200':
           description: The lead source list.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/LeadSourceListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /lead-origins:
+    get:
+      tags: [Leads]
+      operationId: listLeadOrigins
+      summary: List lead origins, active and retired, in display order.
+      description: |-
+        The administered list of where a lead came from. A retired origin stays
+        listed so the leads carrying it still render their label.
+      responses:
+        '200':
+          description: The lead origin list.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LeadOriginListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
   /acquisition-sources:
     get:
@@ -15707,8 +15724,11 @@ components:
         next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.'}
         next_task_due_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.'}
         score_reason: {type: [string, 'null'], readOnly: true, description: 'The highest-impact factor in the retained current score explanation, for a compact queue reason.'}
-        source: {type: string, description: 'The stored source key.'}
+        source: {type: string, description: 'How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from.'}
         source_label: {type: [string, 'null'], readOnly: true}
+        origin: {type: [string, 'null'], description: 'Where the lead came from, a key from `/lead-origins`. Null when nobody has classified the lead; such a lead scores neutral. Set by a human, an importer or capture, and the only lead fact the score and the origin filter read.'}
+        origin_label: {type: [string, 'null'], readOnly: true, description: 'The label `/lead-origins` gives `origin`; null when `origin` is null.'}
+        origin_detail: {type: [string, 'null'], maxLength: 500, description: 'A short free-text note beside `origin`: the wording the source system used when it did not match a catalog key, or what a human adds ("Berlin summit, booth 4").'}
         disqualify_reason_id: {type: [string, 'null'], format: uuid, readOnly: true, description: 'Set by DELETE /leads/{id} with a reason; null on an open lead.'}
         disqualify_reason: {type: [string, 'null'], readOnly: true, description: 'The label of disqualify_reason_id at read time.'}
         disqualify_note: {type: [string, 'null'], readOnly: true}
@@ -15740,7 +15760,6 @@ components:
       additionalProperties: true
     CreateLeadRequest:
       type: object
-      required: [source]
       properties:
         full_name: {type: [string, 'null']}
         email: {type: [string, 'null'], format: email}
@@ -15761,7 +15780,9 @@ components:
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
         source_id: {type: [string, 'null']}
-        source: {type: string}
+        source: {type: string, description: 'How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from.'}
+        origin: {type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins` (422 `unknown_lead_origin` or `inactive_lead_origin` otherwise). Omit for an unclassified lead, which scores neutral.'}
+        origin_detail: {type: [string, 'null'], maxLength: 500, description: 'A short note beside `origin`.'}
       additionalProperties: true
     UpdateLeadRequest:
       type: object
@@ -15779,7 +15800,9 @@ components:
         candidate_company_key: {type: [string, 'null'], description: 'Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK.'}
         project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; carries no same-company guard (a lead has no company).'}
         status: {type: string, enum: [new, contacted, engaged], description: 'A human may place an open lead on any open step, forwards or back; the system only ever moves forwards.'}
-        source: {type: string, minLength: 1, description: 'Correct the source. Changing it recomputes the score (the source weight is part of it).'}
+        source: {type: string, minLength: 1, deprecated: true, description: 'Deprecated and read-only. How the row reached Margince, which Margince writes. Sending the stored value is accepted; any other value is 422 on `source`. Set `origin` to say where the lead came from.'}
+        origin: {type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins`, or the key the lead already carries (a retired key is 422 only for a new value). Changing it recomputes the score. Null clears it, and the lead scores neutral.'}
+        origin_detail: {type: [string, 'null'], maxLength: 500, description: 'A short note beside `origin`. Null clears it.'}
         score: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Manual human score override. Omit to keep the computed lead-local score. Setting it REQUIRES `score_override_reason`; passing null clears the override and resumes recompute.'}
         score_override_reason: {type: [string, 'null'], minLength: 1, description: 'Written reason for the Commercial Judgement override. REQUIRED when `score` is set (422 otherwise); the override is sticky — it suppresses recompute until cleared.'}
         owner_id:
@@ -15882,7 +15905,7 @@ components:
     LeadSourceIntent:
       type: string
       enum: [high, neutral, low]
-      description: 'What the scorer makes of a lead from this source: high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.'
+      description: 'What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.'
     ReviewQuestion:
       type: object
       required: [key, label, type, required]
@@ -16056,9 +16079,31 @@ components:
       required: [data]
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/RecordAssignment'}}
+    LeadOrigin:
+      type: object
+      description: One administered lead origin. `key` is the value stored on `lead.origin`; `label` is what a user sees.
+      required: [id, key, label, intent, sort_order, active, system, lead_count, version, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string, description: 'Lowercase stable key, the stored value. Never changes after creation.'}
+        label: {type: string}
+        intent: {$ref: '#/components/schemas/LeadSourceIntent'}
+        sort_order: {type: integer}
+        active: {type: boolean, description: 'A retired origin leaves the create form and is refused for a new assignment; leads carrying it keep the value.'}
+        system: {type: boolean, readOnly: true, description: 'Built-in. Can be renamed, re-weighted and retired, never deleted.'}
+        lead_count: {type: integer, readOnly: true, description: 'Live leads carrying this key that the caller may see.'}
+        version: {$ref: '#/components/schemas/RowVersion'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    LeadOriginListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/LeadOrigin'}}
     LeadSource:
       type: object
-      description: One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.
+      deprecated: true
+      description: 'Deprecated: how a row reached Margince is no longer scored. One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.'
       required: [id, key, label, intent, sort_order, active, system, lead_count, version, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}

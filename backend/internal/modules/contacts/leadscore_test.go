@@ -22,7 +22,7 @@ func TestScoreLeadWorkedExample(t *testing.T) {
 		{Kind: "link_click", OccurredAt: now.AddDate(0, 0, -10), ActivityID: ids.New[ids.ActivityKind]()},
 		{Kind: "link_click", OccurredAt: now.AddDate(0, 0, -10), ActivityID: ids.New[ids.ActivityKind]()},
 	}
-	score, factors := scoreLeadBySource("VP Sales", "webform", signals, now)
+	score, factors := scoreLeadByOrigin("VP Sales", "website", signals, now)
 	if score != 51 {
 		t.Fatalf("worked example score = %d, want 51 (factors: %+v)", score, factors)
 	}
@@ -34,7 +34,7 @@ func TestScoreLeadWorkedExample(t *testing.T) {
 		t.Fatalf("breakdown sums to %.2f but score is %d — Explain This Score must reconcile", sum, score)
 	}
 	// Idempotent under the fixed clock.
-	again, _ := scoreLeadBySource("VP Sales", "webform", signals, now)
+	again, _ := scoreLeadByOrigin("VP Sales", "website", signals, now)
 	if again != score {
 		t.Fatalf("recompute drifted: %d → %d", score, again)
 	}
@@ -43,14 +43,14 @@ func TestScoreLeadWorkedExample(t *testing.T) {
 func TestScoreLeadEdges(t *testing.T) {
 	now := time.Date(2026, 6, 4, 0, 0, 0, 0, time.UTC)
 
-	if score, _ := scoreLeadBySource("Intern", "crawl", nil, now); score != 0 {
+	if score, _ := scoreLeadByOrigin("Intern", "cold_outreach", nil, now); score != 0 {
 		t.Errorf("negative fit must clamp at 0, got %d", score)
 	}
-	if score, _ := scoreLeadBySource("CEO", "referral", nil, now); score != 23 {
+	if score, _ := scoreLeadByOrigin("CEO", "referral", nil, now); score != 23 {
 		t.Errorf("pure-fit cold lead = %d, want 23", score)
 	}
 	// Unknown signal kinds contribute nothing (column-readiness rule).
-	score, factors := scoreLeadBySource("", "manual", []BehavioralSignal{
+	score, factors := scoreLeadByOrigin("", "", []BehavioralSignal{
 		{Kind: "engagement_event_not_yet_shipped", OccurredAt: now},
 	}, now)
 	if score != 0 || len(factors) != 0 {
@@ -61,7 +61,7 @@ func TestScoreLeadEdges(t *testing.T) {
 	for range 10 {
 		flood = append(flood, BehavioralSignal{Kind: "reply", OccurredAt: now})
 	}
-	if score, _ := scoreLeadBySource("CTO", "inbound", flood, now); score != 100 {
+	if score, _ := scoreLeadByOrigin("CTO", "website", flood, now); score != 100 {
 		t.Errorf("clamp ceiling: %d, want 100", score)
 	}
 }
@@ -174,36 +174,42 @@ func TestWithManualFoldsHumanInputIntoOneTotal(t *testing.T) {
 	}
 }
 
-// scoreLeadBySource is the test-side spelling of the old source-keyed
-// scorer: it resolves the seeded weighting the way production resolves the
-// installation's table, so the worked examples still read by source name.
-func scoreLeadBySource(title, source string, signals []BehavioralSignal, now time.Time) (int, []ScoreFactor) {
-	scored := ScoreLeadDetail(title, defaultSourceIntents.Of(source), signals, now)
+// seededOriginIntents is the weighting the migration seeds. The unit scorer
+// uses it as a fixture, and the integration test proves the seed and this table
+// agree.
+var seededOriginIntents = OriginIntents{
+	"event": SourceIntentNeutral, "linkedin": SourceIntentNeutral, "other": SourceIntentNeutral,
+	"referral": SourceIntentHigh, "partner": SourceIntentHigh, "website": SourceIntentHigh,
+	"cold_outreach": SourceIntentLow,
+}
+
+// scoreLeadByOrigin scores a lead the way production does: the installation's
+// weighting for its origin, with an empty origin meaning none recorded.
+func scoreLeadByOrigin(title, origin string, signals []BehavioralSignal, now time.Time) (int, []ScoreFactor) {
+	var key *string
+	if origin != "" {
+		key = &origin
+	}
+	scored := ScoreLeadDetail(title, seededOriginIntents.Of(key), signals, now)
 	return scored.Score, scored.Factors
 }
 
-func TestSourceIntentsResolveConnectorFamilies(t *testing.T) {
-	intents := SourceIntents{"connector:apollo": SourceIntentHigh, "import": SourceIntentLow}
+func TestOriginIntentsWeighOnlyAKnownOrigin(t *testing.T) {
+	t.Parallel()
+	intents := OriginIntents{"referral": SourceIntentHigh, "cold_outreach": SourceIntentLow}
 	cases := map[string]SourceIntent{
-		"connector:apollo:a-1": SourceIntentHigh,
-		"connector:apollo":     SourceIntentHigh,
-		"connector:other:x":    SourceIntentNeutral,
-		"import":               SourceIntentLow,
-		"seed":                 SourceIntentNeutral,
-		"":                     SourceIntentNeutral,
+		"referral":      SourceIntentHigh,
+		"cold_outreach": SourceIntentLow,
+		"retired_key":   SourceIntentNeutral,
+		"import":        SourceIntentNeutral,
+		"":              SourceIntentNeutral,
 	}
-	for source, want := range cases {
-		if got := intents.Of(source); got != want {
-			t.Errorf("Of(%q) = %q, want %q", source, got, want)
+	for origin, want := range cases {
+		if got := intents.Of(&origin); got != want {
+			t.Errorf("Of(%q) = %q, want %q", origin, got, want)
 		}
 	}
-}
-
-func TestDeriveSourceKey(t *testing.T) {
-	cases := map[string]string{"Trade show": "trade_show", "  Web-Form!! ": "web_form", "Ökologisch": "kologisch", "": ""}
-	for label, want := range cases {
-		if got := deriveSourceKey(label); got != want {
-			t.Errorf("deriveSourceKey(%q) = %q, want %q", label, got, want)
-		}
+	if got := intents.Of(nil); got != SourceIntentNeutral {
+		t.Errorf("Of(nil) = %q, want neutral: a lead nobody classified scores neutral", got)
 	}
 }
