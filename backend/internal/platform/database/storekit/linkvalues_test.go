@@ -25,8 +25,13 @@ func TestALinkReadingSharesTheLinkTemplateOfTheClause(t *testing.T) {
 }
 
 func TestALinkReadingAppliesTheFieldsLinkScope(t *testing.T) {
-	field := Field{Expr: "x.v", Link: "EXISTS (SELECT 1 FROM x WHERE x.id = t.id AND %s)",
-		LinkScope: func(arg func(any) int) (string, error) { return "x.owner = $1", nil }}
+	field := Field{
+		Expr: "x.v",
+		Link: "EXISTS (SELECT 1 FROM x WHERE x.id = t.id AND %s)",
+		LinkScope: func(arg func(any) int) (string, error) {
+			return "x.owner = $1", nil
+		},
+	}
 	sql, err := LinkValuesSQL(field, func(any) int { return 1 })
 	if err != nil || !strings.Contains(sql, "x.owner = $1") {
 		t.Fatalf("reading %q (%v) ignores the link scope", sql, err)
