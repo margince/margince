@@ -108,23 +108,27 @@ func recheckContactForDuplicates(ctx context.Context, tx pgx.Tx, id ids.ContactI
 	return err
 }
 
-// contactSubject is what the review lanes read about an existing contact.
+// contactSubject is what the review lanes and the phone lane read about an
+// existing contact.
 type contactSubject struct {
 	id     ids.ContactID
 	name   string
 	emails []string
+	phones []string
 }
 
-// readContactSubject reads a live contact's name and live addresses, and
-// reports whether the contact is still live.
+// readContactSubject reads a live contact's name, live addresses and live
+// numbers, and reports whether the contact is still live.
 func readContactSubject(ctx context.Context, tx pgx.Tx, id ids.ContactID) (contactSubject, bool, error) {
 	subject := contactSubject{id: id}
 	err := tx.QueryRow(ctx, `
 		SELECT p.full_name,
 		       coalesce((SELECT array_agg(e.email ORDER BY e.email) FROM contact_email e
-		                  WHERE e.contact_id = p.id AND e.archived_at IS NULL), '{}')
+		                  WHERE e.contact_id = p.id AND e.archived_at IS NULL), '{}'),
+		       coalesce((SELECT array_agg(n.phone ORDER BY n.phone) FROM contact_phone n
+		                  WHERE n.contact_id = p.id AND n.archived_at IS NULL), '{}')
 		  FROM contact p
-		 WHERE p.id = $1 AND p.archived_at IS NULL`, id).Scan(&subject.name, &subject.emails)
+		 WHERE p.id = $1 AND p.archived_at IS NULL`, id).Scan(&subject.name, &subject.emails, &subject.phones)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return contactSubject{}, false, nil
 	}
@@ -134,9 +138,9 @@ func readContactSubject(ctx context.Context, tx pgx.Tx, id ids.ContactID) (conta
 	return subject, true, nil
 }
 
-// fileDuplicates runs the review lanes for an existing contact, files every
-// pair they name, and answers how many are new on the queue. A nil matcher is
-// the shipped consumer-mail list.
+// fileDuplicates runs the review lanes and the phone lane for an existing
+// contact, files every pair they name, and answers how many are new on the
+// queue. A nil matcher is the shipped consumer-mail list.
 func (s contactSubject) fileDuplicates(ctx context.Context, tx pgx.Tx, consumerMail *freemail.Matcher, source, by string) (int, error) {
 	employer, _, err := readCurrentEmployer(ctx, tx, s.id.UUID)
 	if err != nil {
@@ -149,5 +153,21 @@ func (s contactSubject) fileDuplicates(ctx context.Context, tx pgx.Tx, consumerM
 	if err != nil {
 		return 0, err
 	}
-	return match.recordIfReview(ctx, tx, s.id, s.name, source, by)
+	filed, err := match.recordIfReview(ctx, tx, s.id, s.name, source, by)
+	if err != nil {
+		return filed, err
+	}
+	sharing, err := exactContactByPhone(ctx, tx, s.phones, &s.id)
+	if err != nil {
+		return filed, err
+	}
+	for _, holder := range sharing {
+		shared := ContactResolution{Decision: DecisionExactCollision, ContactID: holder, MatchedLane: lanePhone}
+		count, err := shared.recordIfReview(ctx, tx, s.id, s.name, source, by)
+		if err != nil {
+			return filed, err
+		}
+		filed += count
+	}
+	return filed, nil
 }

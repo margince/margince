@@ -116,7 +116,7 @@ func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyM
 		return CompanyMatch{}, err
 	}
 	if NormalizeCompanyName(c.DisplayName) == "" && NormalizeCompanyName(c.LegalName) == "" {
-		return rankNameDomainClaimantFirst(CompanyMatch{Decision: DecisionNoMatch}, subdomains), nil
+		return keepBestRivals(rankNameDomainClaimantFirst(CompanyMatch{Decision: DecisionNoMatch}, subdomains)), nil
 	}
 	claimants, err := nameDomainClaimant(ctx, tx, c)
 	if err != nil {
@@ -126,7 +126,13 @@ func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyM
 	if err != nil {
 		return CompanyMatch{}, err
 	}
-	return rankNameDomainClaimantFirst(match, append(claimants, subdomains...)), nil
+	return keepBestRivals(rankNameDomainClaimantFirst(match, append(claimants, subdomains...))), nil
+}
+
+// keepBestRivals cuts the ranked rivals to dedupeRivalLimit, best first.
+func keepBestRivals(match CompanyMatch) CompanyMatch {
+	match.Ranked = match.Ranked[:min(len(match.Ranked), dedupeRivalLimit)]
+	return match
 }
 
 // DedupeCompanyForCreate is PO-F-2 for a path that is about to MINT a
@@ -230,6 +236,12 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 	if len(arms) == 0 {
 		return CompanyMatch{Decision: DecisionNoMatch}, nil
 	}
+	ordering := c.DisplayName
+	if NormalizeCompanyName(ordering) == "" {
+		ordering = c.LegalName
+	}
+	args = append(args, ordering, dedupeCandidateRows)
+	order := "f_fold_apostrophes(lower($" + strconv.Itoa(len(args)-1) + "))"
 	// Tier 1 (exactCompanyByDomain, above) keeps the anchor deliberately: a domain
 	// hit landing a colleague on the own company is the employer inference that
 	// path exists for. This tier is name similarity, where the own company's
@@ -242,7 +254,13 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 		   -- workspace's identity (ADR-0082/A127).
 		   AND NOT is_anchor
 		   AND ($1::uuid IS NULL OR id <> $1)
-		   AND (`+strings.Join(arms, " OR ")+`)`, args...)
+		   AND (`+strings.Join(arms, " OR ")+`)
+		 ORDER BY greatest(
+		   similarity(f_fold_apostrophes(lower(display_name)), `+order+`),
+		   word_similarity(`+order+`, f_fold_apostrophes(lower(display_name))),
+		   similarity(f_fold_apostrophes(lower(legal_name)), `+order+`),
+		   word_similarity(`+order+`, f_fold_apostrophes(lower(legal_name)))) DESC, id
+		 LIMIT $`+strconv.Itoa(len(args)), args...)
 	if err != nil {
 		return CompanyMatch{}, fmt.Errorf("dedupe company candidate set: %w", err)
 	}

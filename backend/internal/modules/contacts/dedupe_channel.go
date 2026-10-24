@@ -59,8 +59,9 @@ func exactContactByChannelIdentity(ctx context.Context, tx pgx.Tx, identities []
 // candidate side is normalized here so the comparison is like for like;
 // a number that cannot be normalized is dropped rather than compared,
 // because it can never equal a stored E.164 value and refusing the whole
-// resolution over one malformed provider field would drop the message.
-func exactContactByPhone(ctx context.Context, tx pgx.Tx, phones []string) ([]ids.ContactID, error) {
+// resolution over one malformed provider field would drop the message. A
+// re-check excludes the contact it scores, which holds its own numbers.
+func exactContactByPhone(ctx context.Context, tx pgx.Tx, phones []string, exclude *ids.ContactID) ([]ids.ContactID, error) {
 	if len(phones) == 0 {
 		return nil, nil
 	}
@@ -78,6 +79,7 @@ func exactContactByPhone(ctx context.Context, tx pgx.Tx, phones []string) ([]ids
 	return exactContactIDs(ctx, tx, `
 		SELECT DISTINCT contact_id FROM contact_phone
 		WHERE phone = ANY($1) AND archived_at IS NULL
+		  AND ($2::uuid IS NULL OR contact_id <> $2)
 		ORDER BY contact_id
-		LIMIT 2`, normalized)
+		LIMIT 2`, normalized, exclude)
 }

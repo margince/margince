@@ -13,7 +13,6 @@ package contacts
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -255,73 +254,5 @@ func TestTheDuplicateScanSkipsArchivedRecordsAndTheAnchor(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("scan one %s: %v", entity, err)
 		}
-	}
-}
-
-// dbClockPlus answers the database's clock moved by d. The nightly pass
-// compares stored updated_at stamps, which the database writes, so the test
-// clock starts from the same source.
-func (e *dedupeEnv) dbClockPlus(ctx context.Context, t *testing.T, d time.Duration) time.Time {
-	t.Helper()
-	var now time.Time
-	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&now)
-	}); err != nil {
-		t.Fatalf("read the database clock: %v", err)
-	}
-	return now.Add(d)
-}
-
-func (e *dedupeEnv) scanChanged(t *testing.T) DedupeScanResult {
-	t.Helper()
-	result, err := e.store.ScanChangedForDuplicates(e.asScan())
-	if err != nil {
-		t.Fatalf("ScanChangedForDuplicates: %v", err)
-	}
-	return result
-}
-
-func TestTheNightlyScanRescansOnlyRecordsChangedSinceItsWatermark(t *testing.T) {
-	e := setupDedupe(t)
-	ctx := e.as()
-	seeded := e.seedPreRuleDuplicates(ctx, t)
-	later := e.dbClockPlus(ctx, t, time.Hour)
-	e.store.WithClock(func() time.Time { return later })
-
-	if got := e.scanChanged(t); got.Filed != 3 || got.Examined != 8 {
-		t.Fatalf("the first nightly pass = %+v, want 8 records examined and 3 pairs filed", got)
-	}
-	e.forgetFiledPairs(ctx, t)
-	if got := e.scanChanged(t); got.Examined != 0 || got.Filed != 0 {
-		t.Errorf("a pass with nothing changed = %+v, want nothing examined", got)
-	}
-
-	description := "Consulting for the example industry"
-	if _, err := e.store.UpdateCompany(ctx, seeded.consulting, UpdateCompanyInput{Description: &description}); err != nil {
-		t.Fatalf("edit the company: %v", err)
-	}
-	later = e.dbClockPlus(ctx, t, time.Hour)
-	if got := e.scanChanged(t); got.Examined != 1 || got.Filed != 1 {
-		t.Errorf("a pass after one company changed = %+v, want that company examined and its pair filed", got)
-	}
-	queued, _ := e.queuedPairs(ctx, t)
-	if _, ok := queued[storedPair(seeded.consultingGmbH.UUID, seeded.consulting.UUID)]; !ok || len(queued) != 1 {
-		t.Errorf("the queue after the edit = %v, want only the edited company's pair", queued)
-	}
-}
-
-func TestTheNightlyScanLeavesChangesInsideTheSettleWindowForTheNextPass(t *testing.T) {
-	e := setupDedupe(t)
-	ctx := e.as()
-	e.seedPreRuleDuplicates(ctx, t)
-	now := e.dbClockPlus(ctx, t, 0)
-	e.store.WithClock(func() time.Time { return now })
-
-	if got := e.scanChanged(t); got.Examined != 0 {
-		t.Errorf("a pass run as the records were written examined %d, want them left for the next pass", got.Examined)
-	}
-	now = now.Add(time.Hour)
-	if got := e.scanChanged(t); got.Filed != 3 {
-		t.Errorf("the next pass = %+v, want the 3 pairs filed", got)
 	}
 }

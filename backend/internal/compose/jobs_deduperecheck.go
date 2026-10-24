@@ -5,7 +5,6 @@ package compose
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -29,10 +28,7 @@ func (DedupeRecheckArgs) Kind() string { return "dedupe_recheck" }
 // FleetWide makes workspace fan-out explicit to the job binder.
 func (DedupeRecheckArgs) FleetWide() {}
 
-type dedupeRecheckWorker struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
-}
+type dedupeRecheckWorker struct{ pool *pgxpool.Pool }
 
 func (w *dedupeRecheckWorker) Work(ctx context.Context, _ *river.Job[DedupeRecheckArgs]) error {
 	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.recheckWorkspace))
@@ -42,7 +38,7 @@ func (w *dedupeRecheckWorker) Work(ctx context.Context, _ *river.Job[DedupeReche
 // filed again by the same run.
 func (w *dedupeRecheckWorker) recheckWorkspace(ctx context.Context, workspace ids.UUID) error {
 	store := contacts.NewStore(database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace))).
-		WithConsumerMail(capture.MatcherTx).WithClock(w.now)
+		WithConsumerMail(capture.MatcherTx)
 	actor := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "dedupe_recheck")
 	if _, err := store.RecheckOpenDedupeCandidates(actor); err != nil {
 		return err
@@ -52,6 +48,6 @@ func (w *dedupeRecheckWorker) recheckWorkspace(ctx context.Context, workspace id
 }
 
 func addDedupeRecheckJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig) []*river.PeriodicJob {
-	addDeclaredWorker[DedupeRecheckArgs](reg, &dedupeRecheckWorker{pool: pool, now: time.Now})
+	addDeclaredWorker[DedupeRecheckArgs](reg, &dedupeRecheckWorker{pool: pool})
 	return periodicFor(cfg, DedupeRecheckArgs{})
 }

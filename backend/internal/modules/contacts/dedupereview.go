@@ -65,7 +65,7 @@ func reviewContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactR
 			}
 		}
 	}
-	return resolutionOf(reviews), nil
+	return resolutionOf(reviews[:min(len(reviews), dedupeRivalLimit)]), nil
 }
 
 // resolutionOf names the first review match as the resolution's decision, so

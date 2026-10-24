@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -126,11 +125,7 @@ func TestTheDuplicateScanTaskRefusesAMalformedCursor(t *testing.T) {
 func TestTheNightlyDuplicateJobFilesThePairsOfChangedRecords(t *testing.T) {
 	e := integration.Setup(t)
 	seedPreRuleDuplicates(t, e)
-	later, err := time.Parse(time.RFC3339Nano, e.WsScalar(t, `SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC' + interval '1 hour', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	worker := &dedupeRecheckWorker{pool: e.Pool, now: func() time.Time { return later }}
+	worker := &dedupeRecheckWorker{pool: e.Pool}
 	if err := worker.recheckWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the nightly pass: %v", err)
 	}
