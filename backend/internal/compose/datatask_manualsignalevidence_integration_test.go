@@ -49,6 +49,8 @@ func TestTheStoreRefusesAManualSignalWithoutEvidenceAndWritesNothing(t *testing.
 	for name, reason := range map[string]string{
 		"empty": "", "whitespace": " \n\t ", "the marker": contacts.ManualSignalNoEvidence,
 		"the padded marker": "  " + contacts.ManualSignalNoEvidence + " ",
+		"stock en":          contacts.StockManualSignalReasons()[0], "stock de": contacts.StockManualSignalReasons()[1],
+		"stock vi": contacts.StockManualSignalReasons()[2],
 	} {
 		_, err := e.Contacts.SetLeadManualSignal(e.Admin(), lead, signalWith("employees", "51-200", reason))
 		var refused *contacts.ReasonRequiredError
@@ -58,7 +60,7 @@ func TestTheStoreRefusesAManualSignalWithoutEvidenceAndWritesNothing(t *testing.
 	}
 
 	if rows := e.WsCount(t, `SELECT count(*) FROM lead_manual_signal WHERE lead_id = $1`, lead.UUID); rows != 0 {
-		t.Errorf("%d signal rows after four refusals, want 0", rows)
+		t.Errorf("%d signal rows after the refusals, want 0", rows)
 	}
 	if audits, events := leadTrail(t, e, lead); audits != auditsBefore || events != eventsBefore {
 		t.Errorf("refusals left audit %d->%d and events %d->%d, want no change", auditsBefore, audits, eventsBefore, events)
