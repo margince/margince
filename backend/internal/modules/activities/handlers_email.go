@@ -140,17 +140,10 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 // offeredAddress is what the composer prefills. A written-about row offers its filed
 // contact, and only here: an automation stages unread and stays on ReplyAddressFor.
 func (h Handlers) offeredAddress(ctx context.Context, anchor ids.ActivityID, recipient ReplyRecipient) (string, error) {
-	if !recipient.WrittenAbout {
-		return h.replyAddress(ctx, anchor)
+	if recipient.WrittenAbout {
+		return recipient.FiledAddress, nil
 	}
-	if h.colleagues == nil || recipient.FiledAddress == "" {
-		return "", nil
-	}
-	covers, err := h.colleagues.Covers(ctx)
-	if err != nil || (covers != nil && covers(recipient.FiledAddress)) {
-		return "", err
-	}
-	return recipient.FiledAddress, nil
+	return h.replyAddress(ctx, anchor)
 }
 
 // replyAddress is the counterparty address for this anchor, empty when the

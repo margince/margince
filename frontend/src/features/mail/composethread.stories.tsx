@@ -16,6 +16,7 @@ const MESSAGES: components["schemas"]["Activity"][] = [
   "Delivery window",
   "Re: Pricing proposal",
 ].map((subject, index) => ({
+  offers_email: false,
   id: `message-${index}`,
   kind: "email",
   subject,

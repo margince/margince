@@ -568,6 +568,7 @@ const promised: View = {
   next_steps: {
     data: [
       {
+        offers_email: false,
         id: "a-9",
         kind: "task",
         subject: "Send the retrofit quote",
@@ -580,6 +581,7 @@ const promised: View = {
         updated_at: "2026-08-10T09:00:00Z",
       },
       {
+        offers_email: false,
         id: "a-8",
         kind: "task",
         subject: "Book the depot walkthrough",
@@ -624,6 +626,7 @@ const calledBack: View = {
   next_steps: {
     data: [
       {
+        offers_email: false,
         id: "a-7",
         kind: "task",
         subject: "Call Dana back about the depot retrofit",

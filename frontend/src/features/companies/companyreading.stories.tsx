@@ -117,6 +117,7 @@ const standing: components["schemas"]["Company360"] = {
   activities: {
     data: [
       {
+        offers_email: false,
         id: "a-kickoff",
         kind: "meeting",
         subject: "Kickoff call",
@@ -125,6 +126,7 @@ const standing: components["schemas"]["Company360"] = {
         ...written,
       },
       {
+        offers_email: false,
         id: "a-visit",
         kind: "note",
         subject: "Site visit",
@@ -133,6 +135,7 @@ const standing: components["schemas"]["Company360"] = {
         ...written,
       },
       {
+        offers_email: false,
         id: "a-wrote",
         kind: "email",
         direction: "inbound",

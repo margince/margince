@@ -378,6 +378,7 @@ describe("which activity carries a transcript", () => {
   it("recognises a call or a meeting logged as a transcript", () => {
     expect(
       isTranscriptActivity({
+        offers_email: false,
         ...base,
         kind: "call",
         source_system: "transcript",
@@ -385,6 +386,7 @@ describe("which activity carries a transcript", () => {
     ).toBe(true);
     expect(
       isTranscriptActivity({
+        offers_email: false,
         ...base,
         kind: "meeting",
         source_system: "transcript",
@@ -393,9 +395,12 @@ describe("which activity carries a transcript", () => {
   });
 
   it("leaves an ordinary meeting and a mail-sourced row alone", () => {
-    expect(isTranscriptActivity({ ...base, kind: "meeting" })).toBe(false);
+    expect(
+      isTranscriptActivity({ offers_email: false, ...base, kind: "meeting" }),
+    ).toBe(false);
     expect(
       isTranscriptActivity({
+        offers_email: false,
         ...base,
         kind: "email",
         source_system: "transcript",
@@ -405,8 +410,13 @@ describe("which activity carries a transcript", () => {
 
   it("attaches the reading card to the transcript row of a timeline, and only it", () => {
     const [transcript, note] = activityTimeline([
-      { ...base, kind: "call", source_system: "transcript" },
-      { ...base, id: "a-2", kind: "note" },
+      {
+        offers_email: false,
+        ...base,
+        kind: "call",
+        source_system: "transcript",
+      },
+      { offers_email: false, ...base, id: "a-2", kind: "note" },
     ]);
     expect(transcript.detail).toBeTruthy();
     expect(note.detail).toBeUndefined();

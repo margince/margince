@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -255,13 +254,6 @@ func TestAThreadUnderNoDealNamesNoOwner(t *testing.T) {
 	wantStanding(t, s.standing(s.replier(true), t, anchor), false, nil)
 }
 
-// buyerDomain is the own-domain reader compose wires, for an installation at @authz.test.
-type buyerDomain struct{}
-
-func (buyerDomain) Covers(context.Context) (func(string) bool, error) {
-	return func(address string) bool { return strings.HasSuffix(address, "@authz.test") }, nil
-}
-
 // writtenAbout logs a row of kind through the activity writer, filed on links.
 func (s *standingEnv) writtenAbout(t *testing.T, kind string, links ...activities.ActivityLinkInput) ids.UUID {
 	t.Helper()
@@ -288,7 +280,7 @@ func (s *standingEnv) offered(t *testing.T, row ids.UUID) string {
 	t.Helper()
 	ctx := s.As(s.Rep1, []ids.UUID{s.Team1}, activityLifecyclePerms)
 	rec := httptest.NewRecorder()
-	activities.NewHandlers(s.DB()).WithColleagues(buyerDomain{}).GetReplyRecipient(rec,
+	activities.NewHandlers(s.DB()).GetReplyRecipient(rec,
 		httptest.NewRequest(http.MethodGet, "/v1/activities/x/reply-recipient", nil).WithContext(ctx),
 		crmcontracts.Id(row))
 	if rec.Code != http.StatusOK {
@@ -328,9 +320,6 @@ func TestAWrittenAboutRowOffersItsOneLinkedContact(t *testing.T) {
 		}},
 		{"a task on a contact without an address", "", func(t *testing.T) ids.UUID {
 			return s.writtenAbout(t, "task", s.contactAt(t, "Hans Ost", ""))
-		}},
-		{"a task on a colleague's address", "", func(t *testing.T) ids.UUID {
-			return s.writtenAbout(t, "task", s.contactAt(t, "Ines Berg", "ines@authz.test"))
 		}},
 		{"a task on a deal alone", "", func(t *testing.T) ids.UUID {
 			return s.writtenAbout(t, "task", deal)

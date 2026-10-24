@@ -244,6 +244,7 @@ describe("ProjectScreen", () => {
         activities: {
           data: [
             {
+              offers_email: false,
               id: "act-1",
               kind: "email",
               subject: "Kickoff agenda",

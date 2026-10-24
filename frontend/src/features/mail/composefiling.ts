@@ -94,6 +94,59 @@ function useAnchorProject(
 // The rep's switch, or a restored subject still to be read against the key.
 type TagChoice = boolean | { saved: string };
 
+/**
+ * Whether the project's key goes in the subject. Off holds for one message and
+ * is never stored, because the tag files the client's answer.
+ *
+ * A restored subject is read against the project it came back under, so a
+ * foreign key stays the rep's text. A pick fixes that answer first, and from
+ * then on the switch alone decides.
+ */
+function useTagSwitch({
+  filingKey,
+  ownTag,
+  settled,
+  loading,
+}: Readonly<{
+  filingKey: string;
+  ownTag: string;
+  /** Whether the project the message files under is decided. */
+  settled: boolean;
+  /** Whether that project's record, and so its key, is still on its way. */
+  loading: boolean;
+}>) {
+  const readable = settled && !loading;
+  const [choices, setChoices] = useState<Record<string, TagChoice>>({});
+  const choice = choices[filingKey];
+  const restored = typeof choice === "object" ? choice : undefined;
+  const restoredAnswer =
+    restored !== undefined &&
+    (ownTag === "" || restored.saved.startsWith(ownTag));
+  // Stable, because the composer's restore callback lists it as a dependency.
+  const choose = useCallback(
+    (next: TagChoice) => {
+      setChoices((current) => ({ ...current, [filingKey]: next }));
+    },
+    [filingKey],
+  );
+  const setTagged = useCallback((next: boolean) => choose(next), [choose]);
+  const adoptSavedSubject = useCallback(
+    (saved: string) => choose({ saved }),
+    [choose],
+  );
+  return {
+    tagged: restored ? restoredAnswer : choice !== false,
+    // A restored subject is left as it stands until its project's key is
+    // known, neither stripped nor tagged early.
+    awaiting: restored !== undefined && !readable,
+    setTagged,
+    adoptSavedSubject,
+    settleRestored: () => {
+      if (restored && readable) choose(restoredAnswer);
+    },
+  };
+}
+
 function useProjectFiling(input: {
   activityId?: string;
   /** The deal the message is written from, when it is one. */
@@ -141,31 +194,23 @@ function useProjectFiling(input: {
     chosen === "" ||
     input.projects.some((project) => project.project_id === chosen);
   const projectId = offered ? chosen : "";
-  const { project } = useProjectRecord(projectId || undefined, input.open);
+  const { project, settled: projectRead } = useProjectRecord(
+    projectId || undefined,
+    input.open,
+  );
   const ownTag = subjectTag(project);
-  // Off holds for one message and is never stored. The tag files the client's
-  // answer, so the next message carries it again.
-  const [choices, setChoices] = useState<Record<string, TagChoice>>({});
-  const choice = choices[filingKey];
-  const setTagged = useCallback(
-    (next: boolean) => {
-      setChoices((current) => ({ ...current, [filingKey]: next }));
-    },
-    [filingKey],
-  );
-  const adoptSavedSubject = useCallback(
-    (saved: string) => {
-      setChoices((current) => ({ ...current, [filingKey]: { saved } }));
-    },
-    [filingKey],
-  );
-  // A restored subject is read against this project's own key, so a foreign
-  // key stays the rep's text. Until that key is known, nothing is decided.
-  const awaiting = typeof choice === "object" && !ownTag;
-  const tagged =
-    typeof choice === "object"
-      ? ownTag !== "" && choice.saved.startsWith(ownTag)
-      : choice !== false;
+  const switchState = useTagSwitch({
+    filingKey,
+    ownTag,
+    settled,
+    loading: projectId !== "" && !projectRead,
+  });
+  const { tagged, setTagged, adoptSavedSubject, settleRestored } = switchState;
+  const chooseProject = (next: string) => {
+    settleRestored();
+    setPicked(next);
+  };
+  const { awaiting } = switchState;
   const tag = tagged ? ownTag : "";
   const subject = input.subject;
   const setSubject = input.setSubject;
@@ -187,7 +232,7 @@ function useProjectFiling(input: {
   }, [open, awaiting, tag, ownTag, subject, setSubject]);
   return {
     projectId,
-    setProjectId: setPicked,
+    setProjectId: chooseProject,
     /** Empty when the chosen project has no tag to offer. */
     ownTag,
     tagged,

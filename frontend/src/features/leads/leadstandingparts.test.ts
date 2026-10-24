@@ -43,6 +43,7 @@ function lead(extra: Partial<Lead> = {}): Lead {
 
 function activity(extra: Partial<Activity>): Activity {
   return {
+    offers_email: false,
     id: "a1",
     kind: "email",
     occurred_at: "2026-08-09T09:00:00Z",

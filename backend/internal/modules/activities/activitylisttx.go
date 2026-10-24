@@ -80,6 +80,9 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if err := AttachLinks(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if err := WithOffersEmail(ctx, tx, activities); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	if err := WithCommitmentAdmissions(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}

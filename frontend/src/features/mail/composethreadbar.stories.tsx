@@ -43,6 +43,7 @@ const LONG: components["schemas"]["Activity"][] = Array.from(
     return {
       id,
       kind: "email",
+      offers_email: false,
       subject,
       body: "Agenda and notes for this week's call.",
       direction: "inbound",

@@ -244,6 +244,7 @@ describe("contactFigures", () => {
         activities: {
           data: [
             {
+              offers_email: false,
               id: "a-1",
               kind: "email",
               subject: "Re: retrofit timeline",

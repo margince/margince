@@ -169,6 +169,7 @@ export const OpenTask: Story = {
       next_steps: {
         data: [
           {
+            offers_email: false,
             id: "a-1",
             kind: "task",
             subject: "Send the pricing sheet Giacomo requested",

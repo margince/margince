@@ -47,7 +47,13 @@ const CAPTURED = {
 function activity(
   row: Pick<Activity, "id" | "subject" | "occurred_at"> & Partial<Activity>,
 ): Activity {
-  return { kind: "email", is_done: false, ...CAPTURED, ...row };
+  return {
+    offers_email: false,
+    kind: "email",
+    is_done: false,
+    ...CAPTURED,
+    ...row,
+  };
 }
 
 const NEWEST = activity({

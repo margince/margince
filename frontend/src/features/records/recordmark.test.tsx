@@ -179,6 +179,7 @@ type Activity = components["schemas"]["Activity"];
 // carries none, and the phrase is then all there is to key on.
 const thread = (sender: string, senderContactId?: string): Activity[] =>
   ["m-2", "m-1"].map((id, at) => ({
+    offers_email: false,
     id,
     kind: "email",
     subject: "Fleet renewal",

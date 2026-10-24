@@ -17,12 +17,10 @@ package activities
 import (
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
@@ -61,12 +59,6 @@ type ReplyRecipient struct {
 	FiledAddress string
 }
 
-// writtenAboutKinds are the kinds a rep writes about rather than replies to.
-var writtenAboutKinds = []crmcontracts.ActivityKind{
-	crmcontracts.ActivityKindCall, crmcontracts.ActivityKindMeeting,
-	crmcontracts.ActivityKindNote, crmcontracts.ActivityKindTask,
-}
-
 // ReplyRecipientFor names the contact a reply to this activity is written to.
 //
 // It carries the row-scope gate the same way every other read here does: the
@@ -103,9 +95,11 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 			return err
 		}
 		if written = slices.Contains(writtenAboutKinds, activity.Kind); written {
-			if filed, err = linkedContactAddress(ctx, tx, id); err != nil {
+			offered, err := offeredEmails(ctx, tx, []ids.UUID{id.UUID})
+			if err != nil {
 				return err
 			}
+			filed = offered[id.UUID]
 		}
 
 		// ONE statement: the row scope, the archived test and the name are
@@ -187,62 +181,6 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 	}
 	out.WrittenAbout, out.FiledAddress = written, filed
 	return out, nil
-}
-
-// linkedContactAddress is the address of the row's one readable, live linked contact.
-// Participants and other links do not count; several contacts, none, or no address answer empty.
-func linkedContactAddress(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (string, error) {
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return "", err
-	}
-	args := []any{id}
-	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", func(v any) int {
-		args = append(args, v)
-		return len(args)
-	})
-	if err != nil {
-		return "", err
-	}
-	q := `
-		SELECT p.full_name,
-		       coalesce((SELECT pe.email FROM contact_email pe
-		                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` + contactaddress.ReachableOrder + `
-		                  LIMIT 1), ''),
-		       count(*) OVER ()
-		  FROM contact p
-		 WHERE p.archived_at IS NULL
-		   AND p.id IN (SELECT l.contact_id FROM activity_link l WHERE l.activity_id = $1 AND l.contact_id IS NOT NULL)`
-	if scope != "" {
-		q += ` AND (` + scope + `)`
-	}
-	var name, address string
-	var linked int
-	err = tx.QueryRow(ctx, q+` LIMIT 1`, args...).Scan(&name, &address, &linked)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
-	}
-	if err != nil {
-		return "", fmt.Errorf("activities: reading the contact a row is filed on: %w", err)
-	}
-	if linked != 1 || address == "" || mailrole.GreetsNobody(name, address) {
-		return "", nil
-	}
-	return notASeat(ctx, tx, address)
-}
-
-// notASeat drops an address one of our own seats logs in with. A written-about row
-// has no participant carrying user_id, so the seat is known by its address.
-func notASeat(ctx context.Context, tx pgx.Tx, address string) (string, error) {
-	var seat bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM app_user WHERE lower(email) = lower($1))`,
-		address).Scan(&seat); err != nil {
-		return "", fmt.Errorf("activities: checking whether a filed address is a seat: %w", err)
-	}
-	if seat {
-		return "", nil
-	}
-	return address, nil
 }
 
 // GreetingName is the one name a floor draft greets by, or empty.

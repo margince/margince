@@ -78,6 +78,7 @@ afterEach(() => {
 
 describe("whose mailbox the composer is answering from", () => {
   const colleaguesMail: Activity = {
+    offers_email: false,
     id: "act-charlotte",
     kind: "email",
     subject: "ACTION REQUIRED: IMMEDIATE PAYMENT REQUIRED",

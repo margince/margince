@@ -14747,7 +14747,7 @@ components:
         **Custom fields**: the values of the workspace's activity custom fields arrive as extra
         top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
         `withheld`.
-      required: [id, kind, occurred_at, source, captured_by, created_at, updated_at]
+      required: [id, kind, occurred_at, source, captured_by, created_at, updated_at, offers_email]
       properties:
         commitment_admissions:
           type: array
@@ -14859,6 +14859,10 @@ components:
           description: >-
             Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
           items: {$ref: '#/components/schemas/ActivityLink'}
+        offers_email:
+          type: boolean
+          description: >-
+            Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
         imported_from:

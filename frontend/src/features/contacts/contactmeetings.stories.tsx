@@ -92,6 +92,7 @@ function meeting(
   more: Partial<Activity> = {},
 ): Activity {
   return {
+    offers_email: false,
     id,
     kind: "meeting",
     subject,

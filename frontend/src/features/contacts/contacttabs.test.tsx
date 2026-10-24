@@ -44,7 +44,7 @@ function activity(
   row: Pick<SectionActivity, "id" | "kind" | "occurred_at"> &
     Partial<SectionActivity>,
 ): SectionActivity {
-  return { is_done: false, ...CAPTURED, ...row };
+  return { offers_email: false, is_done: false, ...CAPTURED, ...row };
 }
 
 // The six tabs beside Overview were placeholders for a release, and the thing

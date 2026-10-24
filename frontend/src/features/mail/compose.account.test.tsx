@@ -576,6 +576,71 @@ describe("ComposeModal started from an account", () => {
     },
   );
 
+  // A pick after a restore keeps what the restore read. A key that was on
+  // follows the new project or leaves with None; one that was off stays off.
+  it.each([
+    ["[N2P-1] Re: Angebot", "No project", "Re: Angebot", null],
+    [
+      "[N2P-1] Re: Angebot",
+      "ERP-27 · ERP rollout Acme",
+      "[ERP-27] Re: Angebot",
+      "true",
+    ],
+    ["Re: Angebot", "ERP-27 · ERP rollout Acme", "Re: Angebot", "false"],
+  ])(
+    "restored %s, then %s picked, leaves %s",
+    async (saved, pick, after, on) => {
+      const user = userEvent.setup();
+      replyBackend(
+        [{ entity_type: "deal", entity_id: "d-1" }],
+        [
+          { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
+          { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
+        ],
+        { "GET /mail-drafts": () => jsonResponse(savedReply(saved)) },
+      );
+      const subject = await openReply();
+      await screen.findByText("Saved draft restored");
+      await screen.findByRole("switch", { name: KEY_SWITCH });
+
+      await pickOption(user, screen.getByLabelText("Project"), pick);
+
+      await waitFor(() => expect(subject().value).toBe(after));
+      expect(
+        screen
+          .queryByRole("switch", { name: KEY_SWITCH })
+          ?.getAttribute("aria-checked") ?? null,
+      ).toBe(on);
+    },
+  );
+
+  it("does not read a restored subject against a key still loading", async () => {
+    const user = userEvent.setup();
+    replyBackend(
+      [{ entity_type: "deal", entity_id: "d-1" }],
+      [
+        { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
+        { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
+      ],
+      {
+        "GET /mail-drafts": () => jsonResponse(savedReply("Re: Angebot")),
+        "GET /projects/pr-9": () => new Promise<Response>(() => {}),
+      },
+    );
+    const subject = await openReply();
+    await screen.findByText("Saved draft restored");
+
+    await pickOption(
+      user,
+      screen.getByLabelText("Project"),
+      "ERP-27 · ERP rollout Acme",
+    );
+
+    const key = await screen.findByRole("switch", { name: KEY_SWITCH });
+    expect(key.getAttribute("aria-checked")).toBe("false");
+    expect(subject().value).toBe("Re: Angebot");
+  });
+
   it("waits for the project before reading a restored subject", async () => {
     let release: (() => void) | undefined;
     const held = new Promise<void>((resolve) => {
@@ -636,6 +701,7 @@ describe("ComposeModal started from an account", () => {
 // which message they reply to either.
 describe("what the composer says it is answering", () => {
   const latestMail: Activity = {
+    offers_email: false,
     id: "act-latest",
     kind: "email",
     subject: "Rechnung GR-2026-0207",
