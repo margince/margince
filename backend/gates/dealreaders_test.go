@@ -236,21 +236,15 @@ func readsDealTable(filePath string, file *ast.File) bool {
 func TestEveryReaderOfTheDealTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 	t.Parallel()
 	files := dealReaderScope.Files(t)
-	gated := dealGate.gatedFunctionsByPackage(t, files)
+	walk := dealGate.walkPackages(t, files)
 	consts := constantTable{}
 
 	var satisfied int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
 		for _, site := range dealGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := parsed.Path
-			if site.function != "" {
-				subject += ":" + site.function
-			}
-			carriesGate := site.carriesGate(gated[pkg])
-			if site.function == "" {
-				carriesGate = site.holdsGate || dealGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
-			}
+			subject := site.subject(parsed.Path)
+			carriesGate := walk.carries(t, dealGate, parsed, site, consts.of(t, pkg))
 			verdict := verdictIn(t, subject, dealVerdicts)
 
 			switch {

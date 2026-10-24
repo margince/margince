@@ -614,32 +614,59 @@ describe("ComposeModal started from an account", () => {
     },
   );
 
-  it("does not read a restored subject against a key still loading", async () => {
-    const user = userEvent.setup();
-    replyBackend(
-      [{ entity_type: "deal", entity_id: "d-1" }],
-      [
-        { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
-        { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
-      ],
-      {
-        "GET /mail-drafts": () => jsonResponse(savedReply("Re: Angebot")),
-        "GET /projects/pr-9": () => new Promise<Response>(() => {}),
-      },
-    );
-    const subject = await openReply();
-    await screen.findByText("Saved draft restored");
-
-    await pickOption(
-      user,
-      screen.getByLabelText("Project"),
+  // A pick before the restored project's record arrives is read against that
+  // project's key once it does, and the subject waits for it.
+  it.each([
+    ["[N2P-1] Re: Angebot", "No project", "Re: Angebot", null],
+    [
+      "[N2P-1] Re: Angebot",
       "ERP-27 · ERP rollout Acme",
-    );
+      "[ERP-27] Re: Angebot",
+      "true",
+    ],
+    ["Re: Angebot", "ERP-27 · ERP rollout Acme", "Re: Angebot", "false"],
+  ])(
+    "restored %s, then %s picked before its project loads, leaves %s",
+    async (saved, pick, after, on) => {
+      const user = userEvent.setup();
+      let release: (() => void) | undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      replyBackend(
+        [{ entity_type: "deal", entity_id: "d-1" }],
+        [
+          { project_id: "pr-1", name: "ERP rollout Acme", key: "ERP-27" },
+          { project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" },
+        ],
+        {
+          "GET /mail-drafts": () => jsonResponse(savedReply(saved)),
+          "GET /projects/pr-9": async () => {
+            await held;
+            return jsonResponse({
+              id: "pr-9",
+              name: "Netcare 2 project",
+              key: "N2P-1",
+            });
+          },
+        },
+      );
+      const subject = await openReply();
+      await screen.findByText("Saved draft restored");
+      await pickOption(user, screen.getByLabelText("Project"), pick);
+      expect(subject().value).toBe(saved);
 
-    const key = await screen.findByRole("switch", { name: KEY_SWITCH });
-    expect(key.getAttribute("aria-checked")).toBe("false");
-    expect(subject().value).toBe("Re: Angebot");
-  });
+      release?.();
+      await waitFor(() => expect(subject().value).toBe(after));
+      await waitFor(() =>
+        expect(
+          screen
+            .queryByRole("switch", { name: KEY_SWITCH })
+            ?.getAttribute("aria-checked") ?? null,
+        ).toBe(on),
+      );
+    },
+  );
 
   it("waits for the project before reading a restored subject", async () => {
     let release: (() => void) | undefined;

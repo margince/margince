@@ -249,25 +249,19 @@ func readsRelationshipTable(filePath string, file *ast.File) bool {
 func TestEveryReaderOfTheRelationshipTableCarriesTheEdgeGateOrAVerdict(t *testing.T) {
 	t.Parallel()
 	files := edgeReaderScope.Files(t)
-	gated := relationshipGate.gatedFunctionsByPackage(t, files)
+	walk := relationshipGate.walkPackages(t, files)
 	consts := constantTable{}
 
 	var satisfied int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
 		for _, site := range relationshipGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := parsed.Path
-			if site.function != "" {
-				subject += ":" + site.function
-			}
+			subject := site.subject(parsed.Path)
 			// Its own body first, then the helpers IT CALLS — never its own
 			// name. A by-name lookup would let a gated Store.X vouch for an
 			// ungated Handlers.X, which is the vouching this gate is
 			// per-function precisely to prevent.
-			carriesGate := site.carriesGate(gated[pkg])
-			if site.function == "" {
-				carriesGate = site.holdsGate || relationshipGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
-			}
+			carriesGate := walk.carries(t, relationshipGate, parsed, site, consts.of(t, pkg))
 			verdict := verdictIn(t, subject, edgeVerdicts)
 
 			switch {

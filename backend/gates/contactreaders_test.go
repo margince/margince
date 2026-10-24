@@ -268,21 +268,15 @@ func readsContactTable(filePath string, file *ast.File) bool {
 func TestEveryReaderOfTheContactTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 	t.Parallel()
 	files := contactReaderScope.Files(t)
-	gated := contactGate.gatedFunctionsByPackage(t, files)
+	walk := contactGate.walkPackages(t, files)
 	consts := constantTable{}
 
 	var satisfied int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
 		for _, site := range contactGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := parsed.Path
-			if site.function != "" {
-				subject += ":" + site.function
-			}
-			carriesGate := site.carriesGate(gated[pkg])
-			if site.function == "" {
-				carriesGate = site.holdsGate || contactGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
-			}
+			subject := site.subject(parsed.Path)
+			carriesGate := walk.carries(t, contactGate, parsed, site, consts.of(t, pkg))
 			verdict := verdictIn(t, subject, contactVerdicts)
 
 			switch {
@@ -322,8 +316,8 @@ func TestEveryReaderOfTheContactTableCarriesTheObjectGateOrAVerdict(t *testing.T
 	deferredContactReads.AssertAllMatched(t)
 }
 
-// spentGateFixture is the shape completeOpenSystemTasksLinkedBy had: its own
-// contact read, plus a call chain that reaches a reader gating only itself.
+// spentGateFixture holds readers that gate only themselves: a contact read
+// whose call chain reaches one, and a read handed a statement the walk cannot see.
 const spentGateFixture = `package fixture
 
 func selfGated(ctx context.Context, tx pgx.Tx) {
@@ -352,32 +346,69 @@ func visibleClause(ctx context.Context) string {
 func scoped(ctx context.Context, tx pgx.Tx) {
 	tx.Query(ctx, "SELECT p.full_name FROM contact p WHERE "+visibleClause(ctx))
 }
+
+func runsGiven(ctx context.Context, tx pgx.Tx, statement string) {
+	if !auth.ReadGranted(ctx, "contact") {
+		return
+	}
+	tx.Query(ctx, statement)
+}
+
+func readsThenRunsGiven(ctx context.Context, tx pgx.Tx) {
+	tx.QueryRow(ctx, "SELECT p.title FROM contact p WHERE p.id = $1")
+	runsGiven(ctx, tx, "")
+}
+`
+
+// strayFragmentFixture is a file whose gated-looking functions each spend their
+// gate on a read of their own, beside a fragment none of them names.
+const strayFragmentFixture = `package fixture
+
+const straySQL = "SELECT p.full_name FROM contact p"
+
+func runsStray(ctx context.Context, tx pgx.Tx) { tx.Query(ctx, straySQL) }
+
+func scopedTitle(ctx context.Context, tx pgx.Tx) {
+	tx.Query(ctx, "SELECT p.title FROM contact p WHERE "+visibleClause(ctx))
+}
+
+func selfGatedEmail(ctx context.Context, tx pgx.Tx) {
+	if !auth.ReadGranted(ctx, "contact") {
+		return
+	}
+	tx.Query(ctx, "SELECT p.email FROM contact p")
+}
 `
 
 func TestAReaderGatingOnlyItselfVouchesForNoCaller(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	source := filepath.Join(dir, "fixture.go")
-	if err := os.WriteFile(source, []byte(spentGateFixture), 0o600); err != nil {
-		t.Fatalf("writing the fixture: %v", err)
+	var files []gatekit.ParsedFile
+	for name, source := range map[string]string{"spent.go": spentGateFixture, "stray.go": strayFragmentFixture} {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+			t.Fatalf("writing the fixture: %v", err)
+		}
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatalf("parsing the fixture: %v", err)
+		}
+		files = append(files, gatekit.ParsedFile{Path: filepath.ToSlash(path), File: file})
 	}
-	file, err := gatekit.ParseFile(source, 0)
-	if err != nil {
-		t.Fatalf("parsing the fixture: %v", err)
+	walk := contactGate.walkPackages(t, files)
+	want := map[string]bool{
+		"spent.go:offeredSQL": true, "spent.go:cutOff": false, "spent.go:scoped": true,
+		"spent.go:readsThenRunsGiven": false, "stray.go:straySQL": false,
+		"stray.go:scopedTitle": true, "stray.go:selfGatedEmail": true,
 	}
-	parsed := gatekit.ParsedFile{Path: filepath.ToSlash(source), File: file}
-	gated := contactGate.gatedFunctionsByPackage(t, []gatekit.ParsedFile{parsed})[pkgOf(parsed.Path)]
-	// The empty name is offeredSQL, a fragment judged by the file that runs it.
-	want := map[string]bool{"": true, "cutOff": false, "scoped": true}
 	got := map[string]bool{}
-	for _, read := range contactGate.readSites(parsed, map[string]string{}) {
-		got[read.function] = read.carriesGate(gated)
-		if read.function == "" {
-			got[""] = contactGate.fileHoldsAGatedFunction(t, parsed, gated, map[string]string{})
+	for _, parsed := range files {
+		for _, read := range contactGate.readSites(parsed, map[string]string{}) {
+			got[filepath.Base(read.subject(parsed.Path))] = walk.carries(t, contactGate, parsed, read, map[string]string{})
 		}
 	}
 	if !maps.Equal(got, want) {
-		t.Errorf("gated reads = %v, want %v: a caller's own read is behind a callee's gate only when "+
-			"that callee runs no read of the table itself", got, want)
+		t.Errorf("gated reads = %v, want %v: a callee's gate covers a caller only when the callee runs no "+
+			"read of its own, and a fragment only through a function that names it", got, want)
 	}
 }

@@ -144,6 +144,7 @@ var lifecycleCompanyReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X. rbacgate_test.go's header records being bitten by exactly that.
 var calleeGatedCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/addressrepair.go:unsplitCompanyAddress":            "one company's unsplit address, read by unsplitProposal to split it. Its one caller chain is repairUnsplitCompanyAddress ← RepairUnsplitCompanyAddressesTx, which asks auth.RequireSystem and auth.Require(ctx, entityCompany, read) first",
 	"internal/modules/contacts/unarchive.go":                                      "the un-archive shapes: the company's label and state under FOR UPDATE, and company liveness inside a relationship restore. Read only through RestoreCompanyTx and RestoreContactTx, which ask auth.Require for the delete grant and auth.EnsureWritable on the row first (ensureRestorable)",
 	"internal/compose/magic/undoversion.go":                                       "the version an undo on the magic receipt is sent with, for the restore route's If-Match; no other column. Reached only from magic.Service.Read and LineRecords, and only for a record their done lane already placed through doneForType, which asks auth.Require for the object grant and renders auth.ScopeClauseFor on the same row; the restore write re-asks everything under its own lock",
 	"internal/modules/contacts/company_read.go:readCompany":                       "the shared single-row company read, and the spine every company surface goes through — get, create, update, archive, restore, the merge survivor. Each of those entry points asks auth.Require for the company object and most take a row probe as well; the spine trusts them rather than re-asking inside one transaction. It stamps writability through auth.StampWritable, which is the row half spelled on the way out",
@@ -230,21 +231,15 @@ func readsCompanyTable(filePath string, file *ast.File) bool {
 func TestEveryReaderOfTheCompanyTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 	t.Parallel()
 	files := companyReaderScope.Files(t)
-	gated := companyGate.gatedFunctionsByPackage(t, files)
+	walk := companyGate.walkPackages(t, files)
 	consts := constantTable{}
 
 	var satisfied int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
 		for _, site := range companyGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := parsed.Path
-			if site.function != "" {
-				subject += ":" + site.function
-			}
-			carriesGate := site.carriesGate(gated[pkg])
-			if site.function == "" {
-				carriesGate = site.holdsGate || companyGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
-			}
+			subject := site.subject(parsed.Path)
+			carriesGate := walk.carries(t, companyGate, parsed, site, consts.of(t, pkg))
 			verdict := verdictIn(t, subject, companyVerdicts)
 
 			switch {

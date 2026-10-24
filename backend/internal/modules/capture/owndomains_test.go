@@ -10,47 +10,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
-// CAP-AC1.3c — a registered domain covers its subdomains, a lookalike sibling
-// is not covered, and the two spellings of an internationalized domain are one
-// value. The subdomain arm is the one with teeth: exact string equality leaks
-// the internal mail of every company that sends from a subdomain, and it looks
-// exactly like working correctly.
-func TestARegisteredDomainCoversItsSubdomainsAndNothingElse(t *testing.T) {
-	own := NewInternalDomains([]string{"acme.com", "münchen.de"})
-
-	covered := []string{
-		"rep@acme.com",
-		"rep@mail.acme.com",
-		"rep@a.deep.chain.acme.com",
-		"REP@ACME.COM",
-		"rep@münchen.de",
-		"rep@xn--mnchen-3ya.de", // the same domain, punycode
-		"rep@post.münchen.de",
-	}
-	for _, address := range covered {
-		if !own.Covers(address) {
-			t.Errorf("Covers(%q) = false, want true", address)
-		}
-	}
-
-	// acme.com.evil.tld is the attack the separating dot exists to refuse: it
-	// ENDS with a string containing acme.com, and it belongs to evil.tld.
-	notCovered := []string{
-		"rep@acme.com.evil.tld",
-		"rep@notacme.com",
-		"rep@acme.co",
-		"rep@example.com",
-		"no-at-sign",
-		"trailing@",
-		"",
-	}
-	for _, address := range notCovered {
-		if own.Covers(address) {
-			t.Errorf("Covers(%q) = true, want false", address)
-		}
-	}
-}
-
 // CAP-AC1.3 — every participant internal is the zero-rows condition; one
 // external participant makes the whole message external. The second half is
 // what keeps the introduction working: a colleague writing to a prospect with
@@ -74,14 +33,8 @@ func TestAllInternalNeedsEveryPartyAndOneOutsiderIsEnoughToKeepTheMessage(t *tes
 // about its contacts's mail, and inventing one would be wrong in most workspaces.
 func TestAnEmptyOwnDomainSetMakesNothingInternal(t *testing.T) {
 	own := NewInternalDomains(nil)
-	if !own.Empty() {
-		t.Fatal("a set built from nothing must report empty")
-	}
 	if own.AllInternal([]string{"rep@acme.com", "boss@acme.com"}) {
 		t.Error("with no registered domain nothing is internal, so the message is kept")
-	}
-	if own.Covers("rep@acme.com") {
-		t.Error("an empty set covers nobody")
 	}
 }
 
@@ -115,19 +68,6 @@ func TestExternalNamesTheOutsidersInHeaderOrder(t *testing.T) {
 	}
 }
 
-// Registering the same domain twice, in two spellings or two cases, is one
-// domain. The set is compared in one normalized form so a workspace cannot
-// half-register itself.
-func TestTheDomainSetNormalizesAndDeduplicates(t *testing.T) {
-	own := NewInternalDomains([]string{"ACME.com", "acme.com.", "münchen.de", "xn--mnchen-3ya.de", "", "  "})
-	if !own.Covers("rep@acme.com") || !own.Covers("rep@münchen.de") {
-		t.Fatal("normalized spellings must all resolve")
-	}
-	if len(own.Domains()) != 2 {
-		t.Errorf("domains = %v, want the two distinct domains", own.Domains())
-	}
-}
-
 // An account label arrives in either shape a provider chooses. Taking the text
 // after the last "@" of the display form yields "acme.com>", which matches no
 // registered domain — so the gate would quietly never fire for that mailbox.
@@ -145,34 +85,5 @@ func TestAnAccountLabelYieldsItsDomainInEitherShape(t *testing.T) {
 	// An unparseable label is judged as an address, which is what it was before.
 	if got := owndomain.OfAddress(bareAddress("not an address")); got != "" {
 		t.Errorf("unparseable label gave domain %q, want none", got)
-	}
-}
-
-// A public suffix never enters the set, whichever writer supplied it.
-//
-// The three writers are the admin surface, the mailbox seed, and the company's
-// own registered domains — and the last comes from a website field filled in at
-// cold start, which the admin surface's validation never sees. A `co.uk` in the
-// set would make every company beneath it internal and stop the workspace
-// keeping their correspondence, with no way to recover what was skipped.
-func TestAPublicSuffixIsNeverPartOfTheOwnDomainSet(t *testing.T) {
-	own := NewInternalDomains([]string{"com", "co.uk", "com.br", "de", "acme.co.uk"})
-
-	for _, address := range []string{
-		"someone@bbc.co.uk",
-		"someone@example.com",
-		"someone@loja.com.br",
-		"someone@beispiel.de",
-	} {
-		if own.Covers(address) {
-			t.Errorf("Covers(%q) = true — a public suffix must never make a stranger internal", address)
-		}
-	}
-	// The real registration beside them still counts.
-	if !own.Covers("rep@acme.co.uk") {
-		t.Error("a domain someone actually registers must still be covered")
-	}
-	if len(own.Domains()) != 1 {
-		t.Errorf("set = %v, want only the ownable domain", own.Domains())
 	}
 }

@@ -91,37 +91,41 @@ function useAnchorProject(
  * It returns whenever a draft or a retype replaces the subject. The switch
  * turned off keeps it out the same way; picking None removes it.
  */
-// The rep's switch, or a restored subject still to be read against the key.
-type TagChoice = boolean | { saved: string };
+// The rep's switch, or a restored subject. `under` is the project it came back
+// under, pinned once the rep picks another.
+type TagChoice = boolean | { saved: string; under?: string };
 
 /**
  * Whether the project's key goes in the subject. Off holds for one message and
  * is never stored, because the tag files the client's answer.
  *
- * A restored subject is read against the project it came back under, so a
- * foreign key stays the rep's text. A pick fixes that answer first, and from
- * then on the switch alone decides.
+ * A restored subject is read against the key of the project it came back
+ * under, so a foreign key stays the rep's text. A pick keeps that answer.
  */
 function useTagSwitch({
   filingKey,
-  ownTag,
+  projectId,
   settled,
-  loading,
+  open,
 }: Readonly<{
   filingKey: string;
-  ownTag: string;
+  projectId: string;
   /** Whether the project the message files under is decided. */
   settled: boolean;
-  /** Whether that project's record, and so its key, is still on its way. */
-  loading: boolean;
+  open: boolean;
 }>) {
-  const readable = settled && !loading;
   const [choices, setChoices] = useState<Record<string, TagChoice>>({});
   const choice = choices[filingKey];
   const restored = typeof choice === "object" ? choice : undefined;
+  const restoredUnder = restored ? (restored.under ?? projectId) : "";
+  // The same query the filing reads while the project has not moved.
+  const restoredRecord = useProjectRecord(restoredUnder || undefined, open);
+  const restoredTag = subjectTag(restoredRecord.project);
+  const readable = settled && (restoredUnder === "" || restoredRecord.settled);
   const restoredAnswer =
     restored !== undefined &&
-    (ownTag === "" || restored.saved.startsWith(ownTag));
+    readable &&
+    (restoredTag === "" || restored.saved.startsWith(restoredTag));
   // Stable, because the composer's restore callback lists it as a dependency.
   const choose = useCallback(
     (next: TagChoice) => {
@@ -136,13 +140,16 @@ function useTagSwitch({
   );
   return {
     tagged: restored ? restoredAnswer : choice !== false,
-    // A restored subject is left as it stands until its project's key is
-    // known, neither stripped nor tagged early.
+    // Left as it stands until the restored project's key is known.
     awaiting: restored !== undefined && !readable,
+    // The key a restored subject still carries, for the filing to replace.
+    carried: restoredAnswer ? restoredTag : undefined,
     setTagged,
     adoptSavedSubject,
-    settleRestored: () => {
-      if (restored && readable) choose(restoredAnswer);
+    pinRestored: () => {
+      if (restored && restored.under === undefined) {
+        choose({ ...restored, under: projectId });
+      }
     },
   };
 }
@@ -194,23 +201,20 @@ function useProjectFiling(input: {
     chosen === "" ||
     input.projects.some((project) => project.project_id === chosen);
   const projectId = offered ? chosen : "";
-  const { project, settled: projectRead } = useProjectRecord(
-    projectId || undefined,
-    input.open,
-  );
+  const { project } = useProjectRecord(projectId || undefined, input.open);
   const ownTag = subjectTag(project);
   const switchState = useTagSwitch({
     filingKey,
-    ownTag,
+    projectId,
     settled,
-    loading: projectId !== "" && !projectRead,
+    open: input.open,
   });
-  const { tagged, setTagged, adoptSavedSubject, settleRestored } = switchState;
+  const { tagged, setTagged, adoptSavedSubject, pinRestored } = switchState;
   const chooseProject = (next: string) => {
-    settleRestored();
+    pinRestored();
     setPicked(next);
   };
-  const { awaiting } = switchState;
+  const { awaiting, carried } = switchState;
   const tag = tagged ? ownTag : "";
   const subject = input.subject;
   const setSubject = input.setSubject;
@@ -220,7 +224,7 @@ function useProjectFiling(input: {
     // A shut composer reads no project, so this rule would strip the tag off
     // a draft nobody is looking at.
     if (!open || awaiting) return;
-    const priorTag = previousTag.current;
+    const priorTag = carried ?? previousTag.current;
     previousTag.current = tag;
     const withoutOld = priorTag ? stripSubjectTag(subject, priorTag) : subject;
     const wanted = tag
@@ -229,7 +233,7 @@ function useProjectFiling(input: {
     if (wanted !== subject) {
       setSubject(wanted);
     }
-  }, [open, awaiting, tag, ownTag, subject, setSubject]);
+  }, [open, awaiting, carried, tag, ownTag, subject, setSubject]);
   return {
     projectId,
     setProjectId: chooseProject,
