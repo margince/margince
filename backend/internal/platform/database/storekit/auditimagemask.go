@@ -12,7 +12,7 @@ import (
 )
 
 // textMaskedAuditTypes are the record types whose audit rows carry mail text or
-// text a person typed about a conversation. audit_log is append-only, so a
+// text a user typed about a conversation. audit_log is append-only, so a
 // credential written into it in clear could never be taken out again.
 var textMaskedAuditTypes = map[string]bool{"activity": true, "scheduled_send": true, "mail_draft": true}
 
@@ -26,7 +26,7 @@ func AuditedText(entityType, text string) string {
 }
 
 // HoldsMaskedText reports whether an audit value of entityType is text the
-// trail may store with a credential masked out. Text a person typed with the
+// trail may store with a credential masked out. Text a user typed with the
 // marker in it reads the same.
 func HoldsMaskedText(entityType, text string) bool {
 	return textMaskedAuditTypes[entityType] && strings.Contains(text, credentialmask.Marker)
