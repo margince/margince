@@ -13,7 +13,7 @@ package activities
 // viewer something about them, which is the disclosure the parent gate exists to
 // prevent (DOC-AC-2).
 //
-// `company_id` on the row is a READ PATH for uploads, not a second parent; it
+// `company_id` on the row is a read path for uploads, not a second parent; it
 // never decides who may see one. A mail's file carries no stamp: it is read
 // through the links of its mail as they are now (documentMembership).
 

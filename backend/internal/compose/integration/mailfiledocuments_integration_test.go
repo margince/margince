@@ -5,10 +5,10 @@
 
 package integration
 
-// The Documents lists of a deal, a contact and a company all hold the files of
-// the mails linked to them, read through the links as they are now. Every file
-// here is written by the real capture writer: a hand-inserted row would carry
-// whatever the test author expected, not what capture stamps.
+// The Documents lists of a deal, a contact and a company hold the files of
+// the mails linked to them. They read the links as they are now. Every file
+// here is written by the real capture writer. A hand-inserted row would carry
+// what the test author expected, not what capture stamps.
 
 import (
 	"context"

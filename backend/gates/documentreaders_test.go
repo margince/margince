@@ -6,9 +6,8 @@
 package gates
 
 // Every list of attachments in internal/modules/activities answers "which files
-// does this record hold" through activities.documentMembership, so a mail's file
-// shows on every record the mail is linked to and no reader keeps a stamp of its
-// own.
+// does this record hold" through activities.documentMembership. So a mail's file
+// shows on every record the mail is linked to, and no reader keeps a stamp of its own.
 //
 // What it sees: every function in that package that names attachmentColumns
 // and spells a LIMIT, which is a list read. It must call documentMembership
@@ -27,6 +26,9 @@ import (
 	"testing"
 )
 
+// gatekit:fixture the functions that list attachments without being a record's
+// Documents list, and why
+//
 // notADocumentList names the functions that read attachments with a LIMIT and
 // are not a record's Documents list.
 var notADocumentList = map[string]string{

@@ -365,7 +365,7 @@ func fileKeeper(pool *pgxpool.Pool, blob blobstore.Store) capture.FileKeeper {
 
 // A captured file carries no company stamp, whether its message is filed
 // against a company or against nobody. The company's library reads a mail's
-// files through the message's links as they are at read time, so a stamp
+// files through the message's links as they are at read time. A stamp
 // written here would only go stale (held by
 // TestAMailFileReachesEveryRecordTheMailIsLinkedTo).
 func TestACapturedFileCarriesNoCompanyStamp(t *testing.T) {
