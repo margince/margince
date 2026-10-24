@@ -19,6 +19,7 @@ import type { Lead } from "./leads";
 import { type PromotionRecord, promotionSummary } from "./leads.promotion";
 import { usePromotePreview } from "./leads.qualify";
 import {
+  evidenceText,
   LeadManualSignals,
   SIGNAL_FACTORS,
   useManualSignals,
@@ -182,7 +183,7 @@ function KnowRow({
       title={label(factor)}
       sub={
         live
-          ? [band, live.reason].filter(Boolean).join(" · ")
+          ? [band, evidenceText(live.reason, t)].filter(Boolean).join(" · ")
           : t("lead.signal.notAsked")
       }
       right={live ? <SetBy userId={live.set_by} /> : undefined}

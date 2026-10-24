@@ -9,7 +9,6 @@ package contacts
 
 import (
 	"net/http"
-	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -59,13 +58,6 @@ func (h Handlers) ListLeadManualSignals(w http.ResponseWriter, r *http.Request, 
 func (h Handlers) SetLeadManualSignal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var req crmcontracts.SetLeadManualSignalRequest
 	if !httperr.Decode(w, r, &req) {
-		return
-	}
-	// A reason is what separates a scoring input from a number somebody
-	// typed. The column enforces it too; refusing here names the field.
-	if strings.TrimSpace(req.Reason) == "" {
-		httperr.Write(w, r, httperr.Validation(fieldKeyReason, "reason_required",
-			"say why this value is right — a scoring input nobody can account for is worse than none"))
 		return
 	}
 	out, err := h.store.SetLeadManualSignal(r.Context(), pathID[ids.LeadKind](id), SetLeadManualSignalInput{

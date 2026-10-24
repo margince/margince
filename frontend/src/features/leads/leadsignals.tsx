@@ -62,6 +62,23 @@ const CONFIDENCE_LEVELS = ["0.5", "0.7", "0.9", "1"] as const;
 const DEFAULT_SIGNAL_KIND: SignalKind = "assumption";
 const CONFIDENCE_UNSTATED = "";
 
+/**
+ * What a stored signal holds once its stock sentence was taken away. The
+ * server writes it (contacts.ManualSignalNoEvidence) and refuses it as input,
+ * so the screen shows a translated label instead of the English constant.
+ */
+export const MANUAL_SIGNAL_NO_EVIDENCE = "No evidence recorded";
+
+/** The evidence line of a stored signal, with the marker translated. */
+export function evidenceText(
+  reason: string,
+  t: (key: MessageKey) => string,
+): string {
+  return reason === MANUAL_SIGNAL_NO_EVIDENCE
+    ? t("lead.signalNoEvidence")
+    : reason;
+}
+
 // One band per factor, "" for a question the rep left alone. Only answered
 // questions are written: filling these in from what is already stored would
 // re-stamp `set_by`/`set_at` on factors nobody touched.
@@ -179,12 +196,8 @@ export function LeadManualSignals({
   const answered = SIGNAL_FACTORS.filter((name) => answers[name] !== "");
   const label = (key: string) => t(`lead.signal.${key}` as MessageKey);
 
-  // "How do you know?" is optional on screen, while `reason` is required and
-  // non-empty on the wire — a scoring input nobody can account for is what
-  // this feature exists to end. A blank line therefore sends a sentence
-  // saying exactly that, never an invented justification, and it is
-  // translated because every other reason on this list is written in the
-  // language its author used.
+  // `reason` is what the rep typed and nothing else: the store refuses a
+  // blank one, so the form never invents a sentence to get past it.
   const writes = (): readonly SetSignalRequest[] =>
     answered.map((name) => ({
       factor: name,
@@ -192,7 +205,7 @@ export function LeadManualSignals({
       signal_kind: kind,
       confidence:
         confidence === CONFIDENCE_UNSTATED ? null : Number(confidence),
-      reason: note.trim() === "" ? t("lead.signalReasonUnstated") : note.trim(),
+      reason: note.trim(),
     }));
 
   return (
@@ -231,7 +244,9 @@ export function LeadManualSignals({
                         })}
                       </span>
                     )}
-                    <span className="t-caption">{live.reason}</span>
+                    <span className="t-caption">
+                      {evidenceText(live.reason, t)}
+                    </span>
                     <span className="t-caption">
                       <EntityRef kind="user" id={live.set_by} />
                     </span>
@@ -295,6 +310,7 @@ export function LeadManualSignals({
           <Field
             label={t("lead.signalReason")}
             hint={t("lead.signalReasonHint")}
+            required
           >
             {(control) => (
               <Textarea
@@ -364,7 +380,7 @@ export function LeadManualSignals({
           <div className="form-actions">
             <Button
               variant="primary"
-              disabled={!canEdit || answered.length === 0}
+              disabled={!canEdit || answered.length === 0 || note.trim() === ""}
               onClick={() => set.mutate(writes())}
             >
               {t("lead.signalSave")}

@@ -96,6 +96,13 @@ function save(): HTMLElement {
   return screen.getByRole("button", { name: "Add to score" });
 }
 
+async function evidence(
+  user: ReturnType<typeof userEvent.setup>,
+  text: string,
+) {
+  await user.type(screen.getByRole("textbox", { name: "Evidence" }), text);
+}
+
 /** The PUT bodies, in the order the screen sent them. */
 function sentSignals(writes: Write[]): unknown[] {
   return writes.filter((write) => write.method === "PUT").map((w) => w.body);
@@ -152,6 +159,7 @@ describe("LeadManualSignals", () => {
     await show(writes);
 
     await pickOption(user, question("Website traffic?"), "High");
+    await evidence(user, "Saw 40k visits in the analytics export.");
     await user.click(save());
 
     await waitFor(() => expect(sentSignals(writes).length).toBe(1));
@@ -162,7 +170,7 @@ describe("LeadManualSignals", () => {
       // the enum can say and claims no certainty at all.
       signal_kind: "assumption",
       confidence: null,
-      reason: "No evidence given. Entered manually.",
+      reason: "Saw 40k visits in the analytics export.",
     });
   });
 
@@ -178,6 +186,7 @@ describe("LeadManualSignals", () => {
     await pickOption(user, question("Evidence quality"), "Verified");
     await pickOption(user, question("Confidence"), "90% confidence");
     await pickOption(user, question("Budget?"), "Budget confirmed");
+    await evidence(user, "The CFO confirmed it in writing.");
     await user.click(save());
 
     await waitFor(() => expect(sentSignals(writes).length).toBe(1));
@@ -186,11 +195,11 @@ describe("LeadManualSignals", () => {
       band: "confirmed",
       signal_kind: "fact",
       confidence: 0.9,
-      reason: "No evidence given. Entered manually.",
+      reason: "The CFO confirmed it in writing.",
     });
   });
 
-  it("keeps the note optional and sends it verbatim when there is one", async () => {
+  it("sends the evidence the rep typed, trimmed and otherwise verbatim", async () => {
     const user = userEvent.setup();
     const writes: Write[] = [];
     await show(writes);
@@ -219,6 +228,7 @@ describe("LeadManualSignals", () => {
 
     await pickOption(user, question("Website traffic?"), "Medium");
     await pickOption(user, question("Budget?"), "Some budget");
+    await evidence(user, "Both from the discovery call.");
     await user.click(save());
 
     await waitFor(() => expect(sentSignals(writes).length).toBe(2));
@@ -232,12 +242,62 @@ describe("LeadManualSignals", () => {
     expect(save().hasAttribute("disabled")).toBe(true);
   });
 
+  it("cannot be saved without evidence, empty or whitespace, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const writes: Write[] = [];
+    await show(writes);
+
+    await pickOption(user, question("Website traffic?"), "High");
+    expect(save().hasAttribute("disabled")).toBe(true);
+    await evidence(user, "   ");
+    expect(save().hasAttribute("disabled")).toBe(true);
+    await user.click(save());
+
+    expect(sentSignals(writes)).toEqual([]);
+    expect(
+      (screen.getByRole("textbox", { name: "Evidence" }) as HTMLTextAreaElement)
+        .required,
+    ).toBe(true);
+  });
+
+  it("shows the repair marker as a translated label, not the stored constant", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          data: [
+            {
+              factor: "employees",
+              band: "51-200",
+              points: 8,
+              signal_kind: "assumption",
+              confidence: null,
+              reason: "No evidence recorded",
+              set_by: "11111111-1111-4111-8111-111111111111",
+              set_at: "2026-10-01T10:00:00Z",
+              superseded_at: null,
+              superseded_by: null,
+            },
+          ],
+        }),
+      ),
+    );
+    render(
+      <Providers>
+        <LeadManualSignals id="l-1" readOnlyReason="Closed." />
+      </Providers>,
+    );
+
+    expect(await screen.findByText("No evidence recorded")).toBeTruthy();
+  });
+
   it("says why a refused batch was refused and keeps the answers for a retry", async () => {
     const user = userEvent.setup();
     const writes: Write[] = [];
     await show(writes, (factor) => factor === "budget_hint");
 
     await pickOption(user, question("Budget?"), "Unknown");
+    await evidence(user, "Nobody mentioned a budget.");
     await user.click(save());
 
     expect(await screen.findByText(/Unprocessable/)).toBeTruthy();
@@ -264,6 +324,7 @@ describe("LeadManualSignals", () => {
 
     await pickOption(user, question("Website traffic?"), "Medium");
     await pickOption(user, question("Budget?"), "Some budget");
+    await evidence(user, "Both from the discovery call.");
     await user.click(save());
 
     expect(await screen.findByText(/Unprocessable/)).toBeTruthy();

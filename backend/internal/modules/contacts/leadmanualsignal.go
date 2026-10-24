@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -41,9 +42,10 @@ var leadManualFactorBands = map[string]map[string]int{
 // wire field they both describe.
 // Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
 const (
-	auditKeyManualSignal = "manual_signal"
-	fieldKeyFactor       = "factor"
-	fieldKeyReason       = "reason"
+	auditKeyManualSignal  = "manual_signal"
+	auditKeyManualSignals = "manual_signals"
+	fieldKeyFactor        = "factor"
+	fieldKeyReason        = "reason"
 )
 
 // SetLeadManualSignalInput is one human-supplied factor.
@@ -67,6 +69,12 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 	points, valid := bands[in.Band]
 	if !valid {
 		return crmcontracts.LeadManualSignal{}, &InvalidLeadBandError{Factor: in.Factor, Band: in.Band}
+	}
+	// The store owns the evidence rule so every caller, HTTP or not, meets it.
+	// The marker is refused too: only the repair task may write it.
+	in.Reason = strings.TrimSpace(in.Reason)
+	if in.Reason == "" || in.Reason == ManualSignalNoEvidence {
+		return crmcontracts.LeadManualSignal{}, &ReasonRequiredError{}
 	}
 	// set_by is stamped from the authenticated principal, never a request
 	// field: the whole value of a manual factor is knowing whose judgement

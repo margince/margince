@@ -291,6 +291,18 @@ func (e *UnknownLeadFactorError) FieldFault() (field, code, message string) {
 	return fieldKeyFactor, "unknown_factor", e.Error()
 }
 
+// ReasonRequiredError refuses a manual signal that carries no evidence.
+type ReasonRequiredError struct{}
+
+func (e *ReasonRequiredError) Error() string {
+	return "say why this value is right: a scoring input nobody can account for is worse than none"
+}
+
+// FieldFault names the reason as the input to fix.
+func (e *ReasonRequiredError) FieldFault() (field, code, message string) {
+	return fieldKeyReason, "reason_required", e.Error()
+}
+
 // InvalidLeadBandError refuses a band the named factor does not accept.
 type InvalidLeadBandError struct{ Factor, Band string }
 
