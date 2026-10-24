@@ -57,9 +57,13 @@ func loggedActivity(ctx context.Context, t *testing.T, e *sendEnv, kind, body st
 	t.Helper()
 	subject := noteSubject
 	request := crmcontracts.CreateActivityRequest{Kind: crmcontracts.CreateActivityRequestKind(kind), Subject: &subject, Body: &body, Source: "manual"}
-	if kind == string(crmcontracts.ActivityKindEmail) {
+	if kind == string(crmcontracts.ActivityKindEmail) || kind == string(crmcontracts.ActivityKindMessage) {
 		direction := crmcontracts.CreateActivityRequestDirectionInbound
 		request.Direction = &direction
+	}
+	if kind == string(crmcontracts.ActivityKindMessage) {
+		provider := "telegram"
+		request.ChannelProvider = &provider
 	}
 	in, err := LogActivityInputFrom(request)
 	if err != nil {
@@ -185,5 +189,27 @@ func TestEveryColumnOfAMailTextAuditRowIsStoredMasked(t *testing.T) {
 	}
 	if auditHoldsPlain(t, e) {
 		t.Error("an audit row holds the password in clear")
+	}
+}
+
+// A mail or a channel message logged by hand or imported is stored masked, as
+// capture stores it, and a later edit masks the same way. A note is not.
+func TestALoggedMailOrMessageStoresItsPasswordMasked(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	for kind, want := range map[string]string{
+		"email":   callNotes + "\n" + maskedLine,
+		"message": callNotes + "\n" + maskedLine,
+		"note":    callNotes + "\n" + maskableLine,
+	} {
+		id := loggedActivity(ctx, t, e, kind, callNotes+"\n"+maskableLine)
+		if _, body := storedSubjectAndBody(t, e, id); body != want {
+			t.Errorf("a logged %s stored body %q, want %q", kind, body, want)
+		}
+	}
+	message := loggedActivity(ctx, t, e, "message", callNotes)
+	editBody(ctx, t, e, message, maskableLine)
+	if _, body := storedSubjectAndBody(t, e, message); body != maskedLine {
+		t.Errorf("an edited message stored body %q, want %q", body, maskedLine)
 	}
 }
