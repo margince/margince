@@ -21,6 +21,7 @@ func TestAMessageIsMembersOnlyWhenEveryPartyIsAMember(t *testing.T) {
 		{"an outside party on a sibling of a member's address", []string{"b.private@home.example", "b@home.example"}, false},
 		{"no parties at all", nil, false},
 		{"only blank parties", []string{"", "  "}, false},
+		{"a member beside a blank entry", []string{"a@work.example", " "}, true},
 	}
 	for _, c := range cases {
 		if got := members.CoverEveryParty(c.parties); got != c.want {

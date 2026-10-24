@@ -126,25 +126,47 @@ func TestOneOutsidePartyKeepsTheMailAsBefore(t *testing.T) {
 	}
 }
 
-// A reply joining a thread whose question is still open inherits `pending`, and
-// the row must name the verdict-proof hold rather than the wait: the recompute
-// keeps only the former once the verdict clears.
-func TestAColleaguesReplyOnAnOpenQuestionStaysHeldOnceItClears(t *testing.T) {
+// A reply from a party a cleared thread's verdict never saw re-opens the
+// question and inherits `pending`. The row must name the verdict-proof hold
+// rather than the wait: the recompute keeps only the former once the verdict
+// clears again.
+func TestAColleaguesReplyOnAReopenedThreadStaysHeldOnceItClears(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	env.sync(t, customerMail("members-open@acme.example"))
-	if status := threadVerdictStatus(t, e, e.Rep1, "members-open@acme.example"); status != capturemod.VerdictPending {
-		t.Fatalf("the fixture needs an open question on the thread, got %q", status)
-	}
+	recordThreadVerdict(t, e, e.Rep1, activityIDOf(t, e, "members-open@acme.example"), capturemod.VerdictCleared, "")
 	env.syncSent(t, map[string]bool{"members-reply@myco.example": true},
 		email(captureOwner, "Owner", colleagueLogin, "members-reply@myco.example", "members-open@acme.example"))
+	if status := threadVerdictStatus(t, e, e.Rep1, "members-open@acme.example"); status != capturemod.VerdictPending {
+		t.Fatalf("the fixture needs the reply to re-open the thread, got %q", status)
+	}
 	reply := activityIDOf(t, e, "members-reply@myco.example")
 	if got, reason := audienceOf(t, e, reply); got != "participants" || reason != activities.ReasonMembersOnly {
-		t.Fatalf("a colleague's reply on an open question is %q / %q, want participants / members_only", got, reason)
+		t.Fatalf("a colleague's reply on a re-opened thread is %q / %q, want participants / members_only", got, reason)
 	}
 
 	recordThreadVerdict(t, e, e.Rep1, reply, capturemod.VerdictCleared, "")
 	if got, reason := audienceOf(t, e, reply); got != "participants" || reason != activities.ReasonMembersOnly {
 		t.Fatalf("the cleared verdict opened a colleague's reply: %q / %q", got, reason)
+	}
+}
+
+func TestAnOwnDomainAddressCountsAsAMemberAndAnArchivedSeatDoesNot(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	sharedBox := sentToColleague(env, t, colleagueLogin, "sales@myco.example", "members-ownbox@myco.example")
+	if _, reason := audienceOf(t, e, sharedBox); reason != activities.ReasonMembersOnly {
+		t.Fatalf("mail copied to an address on the workspace's own domain reads %q, want members_only", reason)
+	}
+
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE app_user SET archived_at = now() WHERE id = $1`, e.Rep3)
+		return err
+	}); err != nil {
+		t.Fatalf("archiving the colleague: %v", err)
+	}
+	archived := sentToColleague(env, t, colleagueLogin, "", "members-archived@myco.example")
+	if _, reason := audienceOf(t, e, archived); reason == activities.ReasonMembersOnly {
+		t.Fatal("mail to an archived seat's address was held as mail between colleagues")
 	}
 }
