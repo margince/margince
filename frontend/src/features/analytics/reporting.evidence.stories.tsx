@@ -9,6 +9,8 @@ import {
 } from "../../testing/story-utils";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {
+  reportingLeadsEvaluation,
+  reportingSectionRoutes,
   reportingStoryEvaluation,
   reportingStoryRoutes,
 } from "./reporting.story-fixtures";
@@ -94,5 +96,25 @@ export const StaleReading: Story = {
     // The drawer fades in from opacity 0, so visibility is waited for.
     await waitFor(() => expect(stale).toBeVisible());
     await expect(retry).toBeVisible();
+  },
+};
+
+// One lead origin's records, opened from its bar.
+export const LeadGroup: Story = {
+  render: () => {
+    installFetchStub(reportingSectionRoutes(reportingLeadsEvaluation));
+    return (
+      <StoryProviders>
+        <ReportingEvidenceDrawer
+          evaluation={reportingLeadsEvaluation}
+          reference={{
+            metric: "leads_created",
+            context_id: "interval",
+            group_key: "origin:web",
+          }}
+          onClose={() => {}}
+        />
+      </StoryProviders>
+    );
   },
 };

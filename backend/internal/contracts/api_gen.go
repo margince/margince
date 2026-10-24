@@ -15856,6 +15856,7 @@ func (e ReportScopeKind) Valid() bool {
 // Defines values for ReportingBlockKind.
 const (
 	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
+	ReportingBlockKindBreakdown         ReportingBlockKind = "breakdown"
 	ReportingBlockKindForecastSupport   ReportingBlockKind = "forecast_support"
 	ReportingBlockKindMetricReading     ReportingBlockKind = "metric_reading"
 	ReportingBlockKindOwnerAttainment   ReportingBlockKind = "owner_attainment"
@@ -15870,6 +15871,8 @@ const (
 func (e ReportingBlockKind) Valid() bool {
 	switch e {
 	case ReportingBlockKindBookingsTrend:
+		return true
+	case ReportingBlockKindBreakdown:
 		return true
 	case ReportingBlockKindForecastSupport:
 		return true
@@ -15913,6 +15916,7 @@ func (e ReportingCardWidth) Valid() bool {
 // Defines values for ReportingCardKind.
 const (
 	ReportingCardKindBookingsTrend     ReportingCardKind = "bookings_trend"
+	ReportingCardKindBreakdown         ReportingCardKind = "breakdown"
 	ReportingCardKindForecastSupport   ReportingCardKind = "forecast_support"
 	ReportingCardKindMetricReading     ReportingCardKind = "metric_reading"
 	ReportingCardKindOwnerAttainment   ReportingCardKind = "owner_attainment"
@@ -15928,6 +15932,8 @@ const (
 func (e ReportingCardKind) Valid() bool {
 	switch e {
 	case ReportingCardKindBookingsTrend:
+		return true
+	case ReportingCardKindBreakdown:
 		return true
 	case ReportingCardKindForecastSupport:
 		return true
@@ -16072,8 +16078,16 @@ const (
 	ReportingMetricIDBookingsWon              ReportingMetricID = "bookings_won"
 	ReportingMetricIDClosedWinRate            ReportingMetricID = "closed_win_rate"
 	ReportingMetricIDForecastLanding          ReportingMetricID = "forecast_landing"
+	ReportingMetricIDLeadFirstResponse        ReportingMetricID = "lead_first_response"
+	ReportingMetricIDLeadStatusMoves          ReportingMetricID = "lead_status_moves"
+	ReportingMetricIDLeadsCreated             ReportingMetricID = "leads_created"
+	ReportingMetricIDLeadsPromoted            ReportingMetricID = "leads_promoted"
 	ReportingMetricIDMeetingsHeld             ReportingMetricID = "meetings_held"
 	ReportingMetricIDOpenPipeline             ReportingMetricID = "open_pipeline"
+	ReportingMetricIDPartnerActivity          ReportingMetricID = "partner_activity"
+	ReportingMetricIDPartnerCommission        ReportingMetricID = "partner_commission"
+	ReportingMetricIDPartnerPipeline          ReportingMetricID = "partner_pipeline"
+	ReportingMetricIDPartnerWon               ReportingMetricID = "partner_won"
 	ReportingMetricIDQualifiedPipelineCreated ReportingMetricID = "qualified_pipeline_created"
 	ReportingMetricIDStageAge                 ReportingMetricID = "stage_age"
 )
@@ -16089,9 +16103,25 @@ func (e ReportingMetricID) Valid() bool {
 		return true
 	case ReportingMetricIDForecastLanding:
 		return true
+	case ReportingMetricIDLeadFirstResponse:
+		return true
+	case ReportingMetricIDLeadStatusMoves:
+		return true
+	case ReportingMetricIDLeadsCreated:
+		return true
+	case ReportingMetricIDLeadsPromoted:
+		return true
 	case ReportingMetricIDMeetingsHeld:
 		return true
 	case ReportingMetricIDOpenPipeline:
+		return true
+	case ReportingMetricIDPartnerActivity:
+		return true
+	case ReportingMetricIDPartnerCommission:
+		return true
+	case ReportingMetricIDPartnerPipeline:
+		return true
+	case ReportingMetricIDPartnerWon:
 		return true
 	case ReportingMetricIDQualifiedPipelineCreated:
 		return true
@@ -31246,7 +31276,7 @@ type Company struct {
 	// cannot be archived or merged. A caller that offers company actions should tell it apart.
 	IsAnchor *bool `json:"is_anchor,omitempty"`
 
-	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
+	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
@@ -34267,7 +34297,7 @@ type Contact struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
-	// LastActivityAt When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
+	// LastActivityAt When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 	LastName       *string    `json:"last_name,omitempty"`
 
@@ -35653,6 +35683,12 @@ type ConversationMemoryEntryDirection string
 // ConversationMemoryEntryStatus The state a reader acts on: `replied`, `unanswered`, `awaiting_them`, or null when the entry carries no such claim. Derived from direction and what followed it.
 type ConversationMemoryEntryStatus string
 
+// CorrectDealCloseDayRequest defines model for CorrectDealCloseDayRequest.
+type CorrectDealCloseDayRequest struct {
+	// ClosedOn The calendar day the deal closed, in the installation's zone. Not after today.
+	ClosedOn openapi_types.Date `json:"closed_on"`
+}
+
 // CreateAcquisitionSourceRequest defines model for CreateAcquisitionSourceRequest.
 type CreateAcquisitionSourceRequest struct {
 	// Key Derived from the label when omitted.
@@ -36960,7 +36996,7 @@ type Deal struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
-	// LastActivityAt The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
+	// LastActivityAt The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
@@ -41943,7 +41979,7 @@ type Lead struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
-	// LastActivityAt Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
+	// LastActivityAt Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). A task never counts, whoever filed it. Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
@@ -45825,7 +45861,7 @@ type Project struct {
 	// Key The short handle a human writes in a subject line. Letter-led and bounded so it can never be a bare number, which would match dates, amounts and order numbers. Unique among LIVE projects; archiving frees it.
 	Key *string `json:"key,omitempty"`
 
-	// LastActivityAt The newest workspace-audience activity filed under the project, maintained from the timeline on link write; a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
+	// LastActivityAt The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
@@ -46007,7 +46043,7 @@ type Project360Rollups struct {
 	// ActivityCount Every live activity filed under the project.
 	ActivityCount int `json:"activity_count"`
 
-	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
+	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
 	LastActivityAt *time.Time `json:"last_activity_at"`
 
 	// OpenCommitments Open tasks filed under the project, whole lifecycle.
@@ -47885,7 +47921,9 @@ type ReportVocabulary struct {
 	Vocabulary map[string]interface{} `json:"vocabulary"`
 }
 
-// ReportingBlockKind defines model for ReportingBlockKind.
+// ReportingBlockKind `breakdown` splits one metric's figure into named groups: a lead's origin,
+// the status a lead moved to, a partner and whether it sourced or influenced
+// the deal, or whether a partner is active.
 type ReportingBlockKind string
 
 // ReportingCaptureContext defines model for ReportingCaptureContext.
@@ -47965,15 +48003,19 @@ type ReportingChart struct {
 	ContextId            string                  `json:"context_id"`
 	Coverage             ReportingCoverage       `json:"coverage"`
 	Interval             *ReportingWindow        `json:"interval,omitempty"`
-	Kind                 ReportingBlockKind      `json:"kind"`
-	Marker               *float64                `json:"marker,omitempty"`
-	Metric               ReportingMetricID       `json:"metric"`
-	Opening              *float64                `json:"opening,omitempty"`
-	OpeningSnapshotId    *openapi_types.UUID     `json:"opening_snapshot_id,omitempty"`
-	Points               []ReportingPoint        `json:"points"`
-	SnapshotId           *openapi_types.UUID     `json:"snapshot_id,omitempty"`
-	StateAt              *time.Time              `json:"state_at,omitempty"`
-	Unit                 string                  `json:"unit"`
+
+	// Kind `breakdown` splits one metric's figure into named groups: a lead's origin,
+	// the status a lead moved to, a partner and whether it sourced or influenced
+	// the deal, or whether a partner is active.
+	Kind              ReportingBlockKind  `json:"kind"`
+	Marker            *float64            `json:"marker,omitempty"`
+	Metric            ReportingMetricID   `json:"metric"`
+	Opening           *float64            `json:"opening,omitempty"`
+	OpeningSnapshotId *openapi_types.UUID `json:"opening_snapshot_id,omitempty"`
+	Points            []ReportingPoint    `json:"points"`
+	SnapshotId        *openapi_types.UUID `json:"snapshot_id,omitempty"`
+	StateAt           *time.Time          `json:"state_at,omitempty"`
+	Unit              string              `json:"unit"`
 }
 
 // ReportingComparison defines model for ReportingComparison.
@@ -59050,6 +59092,16 @@ type AcceptAppliedDealChangeParams struct {
 	IfMatch string `json:"If-Match"`
 }
 
+// CorrectDealCloseDayParams defines parameters for CorrectDealCloseDay.
+type CorrectDealCloseDayParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // ListDealDocumentsParams defines parameters for ListDealDocuments.
 type ListDealDocumentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -63234,6 +63286,9 @@ type UpdateDealJSONRequestBody = UpdateDealRequest
 
 // AdvanceDealJSONRequestBody defines body for AdvanceDeal for application/json ContentType.
 type AdvanceDealJSONRequestBody = AdvanceDealRequest
+
+// CorrectDealCloseDayJSONRequestBody defines body for CorrectDealCloseDay for application/json ContentType.
+type CorrectDealCloseDayJSONRequestBody = CorrectDealCloseDayRequest
 
 // RequestLegalReviewJSONRequestBody defines body for RequestLegalReview for application/json ContentType.
 type RequestLegalReviewJSONRequestBody = RequestLegalReviewRequest
@@ -75712,6 +75767,9 @@ type ServerInterface interface {
 	// Accept a recorded automatic deal change.
 	// (POST /deals/{id}/applied-changes/{changeId}/accept)
 	AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request, id Id, changeId openapi_types.UUID, params AcceptAppliedDealChangeParams)
+	// Correct the day a won or lost deal closed.
+	// (POST /deals/{id}/close-day)
+	CorrectDealCloseDay(w http.ResponseWriter, r *http.Request, id Id, params CorrectDealCloseDayParams)
 	// What the customer committed to that this deal waits on.
 	// (GET /deals/{id}/commitments)
 	GetDealCommitments(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -79708,6 +79766,12 @@ func (_ Unimplemented) AdvanceDeal(w http.ResponseWriter, r *http.Request, id Id
 // Accept a recorded automatic deal change.
 // (POST /deals/{id}/applied-changes/{changeId}/accept)
 func (_ Unimplemented) AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request, id Id, changeId openapi_types.UUID, params AcceptAppliedDealChangeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Correct the day a won or lost deal closed.
+// (POST /deals/{id}/close-day)
+func (_ Unimplemented) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request, id Id, params CorrectDealCloseDayParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101224,6 +101288,62 @@ func (siw *ServerInterfaceWrapper) AcceptAppliedDealChange(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// CorrectDealCloseDay operation middleware
+func (siw *ServerInterfaceWrapper) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CorrectDealCloseDayParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CorrectDealCloseDay(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetDealCommitments operation middleware
 func (siw *ServerInterfaceWrapper) GetDealCommitments(w http.ResponseWriter, r *http.Request) {
 
@@ -122035,6 +122155,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/applied-changes/{changeId}/accept", wrapper.AcceptAppliedDealChange)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/close-day", wrapper.CorrectDealCloseDay)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/commitments", wrapper.GetDealCommitments)

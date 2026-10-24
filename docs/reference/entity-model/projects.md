@@ -16,7 +16,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `description` | `text` |  |  |
 | `ended_at` | `date` |  |  |
 | `key` | `text` |  | The short handle a human writes in a subject line. |
-| `last_activity_at` | `timestamp with time zone` |  | The newest workspace-audience activity filed under the project, maintained from the timeline on link write; a read accelerator that a rebuild must reproduce. |
+| `last_activity_at` | `timestamp with time zone` |  | The newest workspace-audience activity filed under the project, maintained from the timeline on link write. |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `phase` | `text`, default `'initiative'::text` | yes | Read-only here: transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction. |

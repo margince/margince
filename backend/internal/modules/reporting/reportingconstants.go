@@ -15,4 +15,5 @@ const (
 	reportingPending         = "pending"
 	reportingSuspended       = "suspended"
 	reportingTeam            = "team"
+	reportingManagedTeams    = "managed_teams"
 )

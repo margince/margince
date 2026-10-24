@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestReportingFailureKeepsItsWrittenLanguageAndRetryIntent(t *testing.T) {
@@ -31,8 +32,8 @@ func TestReportingFailureKeepsItsWrittenLanguageAndRetryIntent(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			expected := map[string]string{"en": "Won deals", "de": "gewonnenen Deals", "vi": "Các deal thắng"}[tc.language]
-			if len(catalog.Metrics) == 0 || !strings.Contains(catalog.Metrics[0].Definition, expected) {
+			expected := reportingDefinitionWords[reportingBookingsWon].In(textlang.Lang(tc.language))
+			if len(catalog.Metrics) == 0 || catalog.Metrics[0].Definition != expected {
 				t.Fatalf("%s catalog not localized: %+v", tc.language, catalog)
 			}
 			report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Failure language", Audience: "workspace", Selection: f.selection()})

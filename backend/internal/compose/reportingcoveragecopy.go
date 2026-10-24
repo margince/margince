@@ -5,7 +5,8 @@ package compose
 
 import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 
-var reportingCoverageWords = struct{ Qualification, AcceptancePipeline, MeetingPipeline, LegacyMeetings, LegacyHistory, QualificationHistory, ChoosePipeline, ForecastAccess, MovementScope, RestrictedMovement, SingleTeam, CalculationFailed langcopy.Phrase }{
+//nolint:dupl // a copy table has the shape of every other copy table, and no text in common
+var reportingCoverageWords = struct{ Qualification, AcceptancePipeline, MeetingPipeline, LegacyMeetings, LegacyHistory, QualificationHistory, ChoosePipeline, ForecastAccess, MovementScope, RestrictedMovement, SingleTeam, CalculationFailed, NoPipeline langcopy.Phrase }{
 	Qualification:        langcopy.Phrase{En: "Choose qualifying stages in Reporting setup", De: "Wähle in den Berichtseinstellungen die qualifizierenden Phasen aus.", Vi: "Chọn các giai đoạn đủ điều kiện trong phần thiết lập báo cáo."},
 	AcceptancePipeline:   langcopy.Phrase{En: "Acceptance credit has no historical pipeline dimension; choose all pipelines", De: "Die Anerkennung angenommener Verkaufschancen enthält keine historische Pipeline-Zuordnung. Wähle alle Pipelines aus.", Vi: "Ghi nhận cơ hội được chấp nhận không có dữ liệu phễu lịch sử; hãy chọn tất cả phễu."},
 	MeetingPipeline:      langcopy.Phrase{En: "Meetings have no pipeline dimension; choose all pipelines", De: "Besprechungen sind keiner Pipeline zugeordnet. Wähle alle Pipelines aus.", Vi: "Cuộc họp không được phân theo phễu; hãy chọn tất cả phễu."},
@@ -18,4 +19,5 @@ var reportingCoverageWords = struct{ Qualification, AcceptancePipeline, MeetingP
 	RestrictedMovement:   langcopy.Phrase{En: "Some captured contributions are restricted", De: "Einige erfasste Beiträge sind zugriffsbeschränkt.", Vi: "Một số khoản đóng góp đã ghi nhận bị hạn chế truy cập."},
 	SingleTeam:           langcopy.Phrase{En: "Choose a single team for its forecast", De: "Wähle ein einzelnes Team aus, um seine Prognose zu sehen.", Vi: "Chọn một nhóm để xem dự báo của nhóm đó."},
 	CalculationFailed:    langcopy.Phrase{En: "This figure could not be calculated just now. The other figures are not affected; reload to try again.", De: "Diese Zahl konnte gerade nicht berechnet werden. Die anderen Zahlen sind nicht betroffen. Lade die Seite neu, um es noch einmal zu versuchen.", Vi: "Không thể tính số liệu này lúc này. Các số liệu khác không bị ảnh hưởng; hãy tải lại để thử lại."},
+	NoPipeline:           langcopy.Phrase{En: "This figure is not split by pipeline; choose all pipelines", De: "Diese Zahl wird nicht nach Pipeline aufgeteilt. Wähle alle Pipelines aus.", Vi: "Số liệu này không chia theo pipeline; hãy chọn tất cả pipeline."},
 }

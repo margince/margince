@@ -95,6 +95,9 @@ Also called: contacts made from notification mail, automatic senders.
 
 ### How do I filter by date?
 The list screens in Margince have no date filter. To put a list in date order, sort it. **Contacts**, **Companies** and **Leads** sort by **Created** and **Last activity**; **Deals** by **Expected close** and **Last signal**; **Projects** by **Last activity**.
+
+Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, whoever made the task.
+
 On **Filters and views**, there are the date choices **is after**, **is on or after**, **is before** and **is on or before**. They show only for date custom fields your company has added. Created and expected close dates are not filter fields there.
 
 Also called: created this month, filter by created date, date range.

@@ -17,21 +17,23 @@ import (
 
 // Fact retains contribution provenance so frozen values can be safely projected later.
 type Fact struct {
-	StagePosition int                               `json:"stage_position,omitempty"`
-	Scope         *crmcontracts.ReportingScope      `json:"scope,omitempty"`
-	StageID       string                            `json:"stage_id,omitempty"`
-	StageLabel    string                            `json:"stage_label,omitempty"`
-	OwnerLabel    string                            `json:"owner_label,omitempty"`
-	Outcome       string                            `json:"outcome,omitempty"`
-	Money         *int64                            `json:"money,omitempty"`
-	Provenance    string                            `json:"provenance,omitempty"`
-	Metric        crmcontracts.ReportingMetricID    `json:"metric"`
-	ContextID     string                            `json:"context_id"`
-	GroupKey      string                            `json:"group_key"`
-	Row           crmcontracts.ReportingEvidenceRow `json:"row"`
-	SourceID      ids.UUID                          `json:"source_id"`
-	SourceType    string                            `json:"source_type"`
-	OwnerID       ids.UUID                          `json:"owner_id"`
+	StagePosition int                            `json:"stage_position,omitempty"`
+	Scope         *crmcontracts.ReportingScope   `json:"scope,omitempty"`
+	StageID       string                         `json:"stage_id,omitempty"`
+	StageLabel    string                         `json:"stage_label,omitempty"`
+	OwnerLabel    string                         `json:"owner_label,omitempty"`
+	Outcome       string                         `json:"outcome,omitempty"`
+	Money         *int64                         `json:"money,omitempty"`
+	Provenance    string                         `json:"provenance,omitempty"`
+	Metric        crmcontracts.ReportingMetricID `json:"metric"`
+	ContextID     string                         `json:"context_id"`
+	GroupKey      string                         `json:"group_key"`
+	// GroupLabel names GroupKey's group for a reader, in the base language.
+	GroupLabel string                            `json:"group_label,omitempty"`
+	Row        crmcontracts.ReportingEvidenceRow `json:"row"`
+	SourceID   ids.UUID                          `json:"source_id"`
+	SourceType string                            `json:"source_type"`
+	OwnerID    ids.UUID                          `json:"owner_id"`
 	// OwnerWithheld marks a fact whose owner the reader may not measure one by
 	// one. It still counts in totals; per-owner outputs skip it. Absent on
 	// stored contributions, which decode as false.
