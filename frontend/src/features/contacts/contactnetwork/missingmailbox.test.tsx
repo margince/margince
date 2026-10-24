@@ -21,6 +21,7 @@ describe("a colleague on the threads with no mailbox", () => {
     contact_id: CONTACT,
     nodes: [anchor],
     edges: [],
+    groups_omitted: [],
     routes: [],
     groups_omitted: [],
   };
