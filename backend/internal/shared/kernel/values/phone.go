@@ -29,15 +29,30 @@ var e164 = regexp.MustCompile(E164Pattern)
 // dependency-free kernel deliberately does not carry.
 type Phone struct{ s string }
 
-var phoneSeparators = strings.NewReplacer(" ", "", "(", "", ")", "", ".", "", "-", "", "/", "", "\t", "")
+// InternationalDialPrefix is the dialling spelling of "+". Exported, like
+// PhoneSeparators, so the gate can hold the browser mirror in contacturi.ts to it.
+const InternationalDialPrefix = "00"
+
+// PhoneSeparators are the characters ParsePhone drops as formatting.
+func PhoneSeparators() []string { return []string{" ", "\t", "(", ")", ".", "-", "/"} }
+
+var phoneSeparators = newSeparatorStripper()
+
+func newSeparatorStripper() *strings.Replacer {
+	pairs := make([]string, 0, 2*len(PhoneSeparators()))
+	for _, separator := range PhoneSeparators() {
+		pairs = append(pairs, separator, "")
+	}
+	return strings.NewReplacer(pairs...)
+}
 
 func ParsePhone(raw string) (Phone, error) {
 	cleaned := phoneSeparators.Replace(strings.TrimSpace(raw))
 	if cleaned == "" {
 		return Phone{}, &ParseError{Field: "phone", Code: "phone_empty", Message: "a phone number is required"}
 	}
-	if strings.HasPrefix(cleaned, "00") {
-		cleaned = "+" + cleaned[2:]
+	if strings.HasPrefix(cleaned, InternationalDialPrefix) {
+		cleaned = "+" + cleaned[len(InternationalDialPrefix):]
 	}
 	if !strings.HasPrefix(cleaned, "+") {
 		return Phone{}, &ParseError{Field: "phone", Code: "phone_needs_country_code",
