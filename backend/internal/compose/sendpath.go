@@ -185,7 +185,7 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// Unconditional for the same reason, and a sharper one: addressing a
 		// reply must skip a co-worker who has no seat, and a deployment that
 		// forgot to wire this would compose replies to its own staff.
-		WithColleagues(colleagueDomains{store: capture.NewOwnDomainStore(InstallationDB(pool))}).
+		WithColleagues(ColleagueDomainsFor(pool)).
 		WithSendAuthority(send.SendAuthority).
 		WithDraftOutcome(send.DraftOutcome)
 	decisions := s.approvalsHandlers
@@ -340,6 +340,12 @@ func newCommsAdapter(
 // question needs to know who is ours by DOMAIN rather than by seat — a
 // co-worker with no login is still not somebody to compose a reply to.
 type colleagueDomains struct{ store *capture.OwnDomainStore }
+
+// ColleagueDomainsFor is the own-domain reader the activities handlers address
+// a reply past.
+func ColleagueDomainsFor(pool *pgxpool.Pool) activities.ColleagueDomains {
+	return colleagueDomains{store: capture.NewOwnDomainStore(InstallationDB(pool))}
+}
 
 func (c colleagueDomains) Covers(ctx context.Context) (func(address string) bool, error) {
 	own, err := c.store.Colleagues(ctx)

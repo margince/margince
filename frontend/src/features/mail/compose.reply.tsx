@@ -4,7 +4,7 @@ import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { ComposeModal } from "./compose";
-import { useAnswerReachable } from "./composereachability";
+import { useChannelReachable } from "./composereachability";
 import type { RelinkKind } from "./composerelink";
 import { rowAnswer } from "./rowanswer";
 
@@ -26,7 +26,7 @@ type Activity = components["schemas"]["Activity"];
 export function ChannelReplyAction({
   activityId,
   kind,
-  links,
+  offersEmail = false,
   automaticKind,
   channelProvider,
   entityType,
@@ -38,8 +38,8 @@ export function ChannelReplyAction({
 }: Readonly<{
   activityId: string;
   kind: Activity["kind"];
-  /** Where the row is filed: a new email about it goes to its one contact. */
-  links?: Activity["links"];
+  /** The server can fill To for a new email about this row (`offers_email`). */
+  offersEmail?: boolean;
   automaticKind?: Activity["automatic_kind"];
   channelProvider?: string;
   entityType: RelinkKind;
@@ -80,19 +80,23 @@ export function ChannelReplyAction({
     open: boolean;
     from: HTMLElement;
   } | null>(null);
-  const reachable = useAnswerReachable(
-    { kind, links, automaticKind, provider: channelProvider },
+  const reachable = useChannelReachable(
+    kind === "message",
     contactId,
+    channelProvider,
   );
   const answer = rowAnswer(kind, automaticKind);
-  if (!reachable || answer === null) {
+  // A written-about row is withheld through `offers_email`, which the server
+  // answers false for it, so only mail reaches the withheld branch below.
+  if (!reachable || answer === null || (answer === "about" && !offersEmail)) {
     return null;
   }
+  const withheld = answer === "reply" && contentWithheld;
   // WITHHELD CONTENT IS NOT A PREPARED REPLY. `Write email` is an
   // account-started send with no prior message to answer, so a mark claiming a
   // rule read this thread and worked out an answer would claim exactly the
   // access the row has just been refused.
-  const proposed = contentWithheld ? undefined : prepared;
+  const proposed = withheld ? undefined : prepared;
   return (
     <>
       <Button
@@ -109,7 +113,7 @@ export function ChannelReplyAction({
         {proposed && <Sparkles aria-hidden="true" />}
         {proposed?.label ??
           t(
-            contentWithheld || answer === "about"
+            withheld || answer === "about"
               ? "compose.writeEmail"
               : "compose.reply",
           )}
@@ -125,7 +129,7 @@ export function ChannelReplyAction({
           // CONVERSATION` re-rendered the row the reader had just been told
           // was not theirs, above a To field useReplyRecipient could resolve
           // nobody into.
-          activityId={contentWithheld ? undefined : activityId}
+          activityId={withheld ? undefined : activityId}
           entityType={entityType}
           entityId={entityId}
           contactId={contactId}
@@ -139,7 +143,7 @@ export function ChannelReplyAction({
           // Email is not a fallback, it is what the button says. `Write
           // email` is an account-started send, the same shape the composer
           // uses when there is no prior message at all.
-          kind={contentWithheld ? "email" : kind}
+          kind={withheld ? "email" : kind}
           // WHY THIS ONE IS BEING ANSWERED, where the caller knows. The drawer
           // reads the thread for itself; what it cannot read is the judgement
           // that put this message in front of a rep, and that judgement is what

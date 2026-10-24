@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
 // foreignLinkTx reports whether any link leads to a site unrelated to the
@@ -32,7 +33,7 @@ func foreignLinkTx(ctx context.Context, tx pgx.Tx, sender string, envelope *Mail
 	if len(candidates) == 0 {
 		return false, nil
 	}
-	senderDomain := domainOfAddress(sender)
+	senderDomain := owndomain.OfAddress(sender)
 	siblings, err := companySiblingSitesTx(ctx, tx, senderDomain, siteOf(senderDomain))
 	if err != nil {
 		return false, err
@@ -48,7 +49,7 @@ func foreignLinkTx(ctx context.Context, tx pgx.Tx, sender string, envelope *Mail
 // unrelatedSites returns the sites of the link hosts outside the sender's own
 // site and outside our own domains.
 func unrelatedSites(sender string, hosts []string, own InternalDomains) []string {
-	senderSite := siteOf(domainOfAddress(sender))
+	senderSite := siteOf(owndomain.OfAddress(sender))
 	var sites []string
 	for _, host := range hosts {
 		site := siteOf(host)

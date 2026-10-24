@@ -247,7 +247,7 @@ func TestEveryReaderOfTheDealTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 			if site.function != "" {
 				subject += ":" + site.function
 			}
-			carriesGate := site.holdsGate || callsAGatedHelper(site.calls, gated[pkg])
+			carriesGate := site.carriesGate(gated[pkg])
 			if site.function == "" {
 				carriesGate = site.holdsGate || dealGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
 			}

@@ -24,23 +24,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function contactFixture(id: string, address: string | null) {
-  return {
-    id,
-    full_name: `Contact ${id}`,
-    primary_email: address,
-    reachability: [],
-    version: 1,
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-  };
-}
-
 const onContact = (id: string) => ({
   entity_type: "contact" as const,
   entity_id: id,
 });
 
+// A row the server can address unless the case says otherwise.
 function row(
   over: Partial<Activity> & Pick<Activity, "id" | "kind">,
 ): Activity {
@@ -48,15 +37,10 @@ function row(
     ...activity202,
     occurred_at: "2026-07-01T09:30:00Z",
     links: [onContact("p-1")],
+    offers_email: over.kind !== "email" && over.kind !== "message",
     ...over,
   };
 }
-
-// What the server answers for a row filed on one contact: that contact's address.
-const fillsTo = (id: string, address: string) => ({
-  [`GET /activities/${id}/reply-recipient`]: () =>
-    jsonResponse({ full_name: "Anna Weber", first_name: "Anna", address }),
-});
 
 async function toField(dialog: HTMLElement): Promise<HTMLElement> {
   const input = await within(dialog).findByLabelText("To");
@@ -76,11 +60,12 @@ function Verb({
     <ChannelReplyAction
       activityId={activity.id}
       kind={activity.kind}
-      links={activity.links}
+      offersEmail={activity.offers_email}
       automaticKind={activity.automatic_kind}
       entityType={page.type}
       entityId={page.id}
       contactId={page.contactId}
+      contentWithheld={activity.content_state === "withheld"}
     />
   );
 }
@@ -88,22 +73,32 @@ function Verb({
 const CONTACT_PAGE = { type: "contact", id: "p-1", contactId: "p-1" } as const;
 const DEAL_PAGE = { type: "deal", id: "d-1" } as const;
 const EMAIL = row({ id: "a-mail", kind: "email", subject: "Angebot" });
+const ADDRESSED_CALL = row({
+  id: "a-call",
+  kind: "call",
+  subject: "Voicemail",
+});
 
+// Each row's reply-recipient answers the address the server would fill To with.
 function draw(
   rows: Activity[],
   page: { type: RelinkKind; id: string; contactId?: string },
-  contacts = [contactFixture("p-1", "anna@example.test")],
   routes: Record<string, () => Response> = {},
 ) {
   stubRoutes({
     ...Object.fromEntries(
-      contacts.map((one) => [
-        `GET /contacts/${one.id}`,
-        () => jsonResponse(one),
+      rows.flatMap((one) => [
+        [`GET /activities/${one.id}`, () => jsonResponse(one)],
+        [
+          `GET /activities/${one.id}/reply-recipient`,
+          () =>
+            jsonResponse({
+              full_name: "Anna Weber",
+              first_name: "Anna",
+              address: "anna@example.test",
+            }),
+        ],
       ]),
-    ),
-    ...Object.fromEntries(
-      rows.map((one) => [`GET /activities/${one.id}`, () => jsonResponse(one)]),
     ),
     ...routes,
   });
@@ -116,30 +111,23 @@ function draw(
   );
 }
 
-// Absence is asserted only once the contact read has answered, so a gate that
-// always offers the verb cannot pass by being early.
-async function contactRead(
-  drawn: ReturnType<typeof draw>,
-  id: string,
-): Promise<void> {
-  await waitFor(() =>
-    expect(drawn.queryClient.getQueryState(["contact", id])?.status).toBe(
-      "success",
-    ),
-  );
-}
-
 describe("what a row offers to write", () => {
   it.each([
-    row({ id: "a-call", kind: "call", subject: "Voicemail" }),
-    row({ id: "a-note", kind: "note", subject: "Budget moved to Q4" }),
-    row({ id: "a-meet", kind: "meeting", subject: "Site visit" }),
-    row({ id: "a-task", kind: "task", subject: "Send the quote" }),
-  ])(
-    "opens a new email about a $kind row, never a reply to it",
-    async (activity) => {
+    [row({ id: "a-call", kind: "call", subject: "Voicemail" }), CONTACT_PAGE],
+    [row({ id: "a-note", kind: "note", subject: "Budget moved" }), DEAL_PAGE],
+    [
+      row({ id: "a-meet", kind: "meeting", subject: "Site visit" }),
+      CONTACT_PAGE,
+    ],
+    [
+      row({ id: "a-task", kind: "task", subject: "Send the quote" }),
+      CONTACT_PAGE,
+    ],
+  ] as const)(
+    "opens a new email about a %# row, addressed, never a reply to it",
+    async (activity, page) => {
       const user = userEvent.setup();
-      draw([activity], CONTACT_PAGE);
+      draw([activity], page);
 
       await user.click(
         await screen.findByRole("button", { name: "Write email" }),
@@ -151,8 +139,10 @@ describe("what a row offers to write", () => {
         await within(dialog).findByText(`About: ${activity.subject}`),
       ).toBeTruthy();
       expect(within(dialog).getByText(/^· .*2026/)).toBeTruthy();
+      expect(
+        await within(await toField(dialog)).findByText("anna@example.test"),
+      ).toBeTruthy();
       expect(within(dialog).queryByText(/Replying to/)).toBeNull();
-      expect(within(dialog).queryByText(/Following up on/)).toBeNull();
       expect(
         within(dialog).getByRole("button", { name: "Draft email" }),
       ).toBeTruthy();
@@ -179,121 +169,52 @@ describe("what a row offers to write", () => {
     ).toBeTruthy();
   });
 
-  it("offers nothing on a note when the contact has no address", async () => {
-    const drawn = draw(
-      [row({ id: "a-note", kind: "note", subject: "Called back" })],
-      CONTACT_PAGE,
-      [contactFixture("p-1", null)],
-    );
-
-    await contactRead(drawn, "p-1");
-    expect(screen.queryByRole("button", { name: "Write email" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Reply" })).toBeNull();
-  });
-
+  // The addressed call beside each row is the positive control in one render.
   it.each([
     [
-      "a deal-page note",
-      row({
-        id: "a-note",
-        kind: "note",
-        links: [
-          { entity_type: "deal" as const, entity_id: "d-1" },
-          onContact("p-1"),
-        ],
-      }),
-      DEAL_PAGE,
+      "a row the server cannot address",
+      row({ id: "n", kind: "note", offers_email: false }),
     ],
-    ["a contact-page task", row({ id: "a-task", kind: "task" }), CONTACT_PAGE],
-  ] as const)(
-    "writes to the one contact of %s, with To filled",
-    async (_, activity, page) => {
-      const user = userEvent.setup();
-      draw(
-        [activity],
-        page,
-        undefined,
-        fillsTo(activity.id, "anna@example.test"),
-      );
+    [
+      "a withheld note",
+      row({
+        id: "w",
+        kind: "note",
+        content_state: "withheld",
+        offers_email: false,
+      }),
+    ],
+    [
+      "a task the product filed",
+      row({ id: "t", kind: "task", automatic_kind: "product" }),
+    ],
+  ] as const)("offers nothing on %s", (_, activity) => {
+    draw([ADDRESSED_CALL, activity], DEAL_PAGE);
 
-      await user.click(
-        await screen.findByRole("button", { name: "Write email" }),
-      );
-      const dialog = await screen.findByRole("dialog", { name: /^New email/ });
-      expect(
-        await within(await toField(dialog)).findByText("anna@example.test"),
-      ).toBeTruthy();
-    },
-  );
-
-  it("offers nothing on a contact-page note filed on two contacts", async () => {
-    const shared = row({
-      id: "a-shared",
-      kind: "note",
-      links: [onContact("p-1"), onContact("p-2")],
-    });
-    const own = row({ id: "a-own", kind: "note", subject: "Called back" });
-    draw([own, shared], CONTACT_PAGE);
-
-    // The note filed on this contact alone is the positive control.
-    await screen.findByRole("button", { name: "Write email" });
-    expect(screen.getAllByRole("button", { name: "Write email" })).toHaveLength(
-      1,
-    );
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Write email" })).toBeTruthy();
   });
 
-  it("offers nothing on a deal note the row links to no contact", async () => {
+  // Withheld mail keeps its plain new email: no anchor, so nothing frames it.
+  it("opens a plain new email from a withheld email row", async () => {
+    const user = userEvent.setup();
     draw(
-      [
-        EMAIL,
-        row({
-          id: "a-note",
-          kind: "note",
-          links: [{ entity_type: "deal" as const, entity_id: "d-1" }],
-        }),
-      ],
-      DEAL_PAGE,
+      [row({ id: "m", kind: "email", content_state: "withheld" })],
+      CONTACT_PAGE,
     );
 
-    // The email row's Reply is the positive control in the same render.
-    expect(await screen.findByRole("button", { name: "Reply" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Write email" })).toBeNull();
-  });
-
-  it.each([
-    row({
-      id: "t-system",
-      kind: "task",
-      subject: "1 forecast input needs attention",
-      captured_by: "system",
-      automatic_kind: "product",
-    }),
-    row({
-      id: "t-two",
-      kind: "task",
-      subject: "Check the contract",
-      links: [onContact("p-1"), onContact("p-2")],
-    }),
-  ])("offers no email on a task: $subject", async (task) => {
-    const note = row({ id: "a-note", kind: "note", subject: "Called back" });
-    draw([note, task], DEAL_PAGE, [
-      contactFixture("p-1", "anna@example.test"),
-      contactFixture("p-2", "ben@example.test"),
-    ]);
-
-    // The note's verb waits on the same contact read the task would.
-    await screen.findByRole("button", { name: "Write email" });
-    expect(screen.getAllByRole("button", { name: "Write email" })).toHaveLength(
-      1,
+    await user.click(
+      await screen.findByRole("button", { name: "Write email" }),
     );
+    const dialog = await screen.findByRole("dialog", { name: /^New email/ });
+    expect(await within(dialog).findByLabelText("Subject")).toBeTruthy();
+    expect(within(dialog).queryByText(/^About: /)).toBeNull();
+    expect(within(dialog).queryByText(/Replying to/)).toBeNull();
   });
 
   it("hands focus back to the verb when the composer closes", async () => {
     const user = userEvent.setup();
-    draw(
-      [row({ id: "a-call", kind: "call", subject: "Voicemail" })],
-      CONTACT_PAGE,
-    );
+    draw([ADDRESSED_CALL], CONTACT_PAGE);
 
     const verb = await screen.findByRole("button", { name: "Write email" });
     await user.click(verb);
@@ -307,10 +228,7 @@ describe("what a row offers to write", () => {
   // Safari does not focus a button it clicks, so the press itself names the verb.
   it("hands focus back to a verb the click never focused", async () => {
     const user = userEvent.setup();
-    draw(
-      [row({ id: "a-call", kind: "call", subject: "Voicemail" })],
-      CONTACT_PAGE,
-    );
+    draw([ADDRESSED_CALL], CONTACT_PAGE);
 
     const verb = await screen.findByRole("button", { name: "Write email" });
     fireEvent.click(verb);
@@ -333,7 +251,7 @@ describe("what a row offers to write", () => {
         onContact("p-1"),
       ],
     });
-    draw([call], DEAL_PAGE, [contactFixture("p-1", "anna@example.test")], {
+    draw([call], DEAL_PAGE, {
       "GET /deals/d-1": () =>
         jsonResponse({
           id: "d-1",

@@ -15,19 +15,19 @@ export type TaskContact = Readonly<{
   fromCall: boolean;
 }>;
 
-// The page's contact when the activity links it, else its one contact link.
-// Links come sorted by id, so of several none is "the" contact.
-export function linkedContactId(
-  activity: Pick<Activity, "links"> | undefined,
-  pageContactId?: string,
+// The page's contact when the task links it, else its one contact link. Links
+// come sorted by id, so of several none is "the" contact.
+function taskContactId(
+  task: Activity | undefined,
+  pageContact?: Contact,
 ): string | undefined {
   const linked = new Set(
-    (activity?.links ?? [])
+    (task?.links ?? [])
       .filter((link) => link.entity_type === "contact")
       .map((link) => link.entity_id),
   );
-  if (pageContactId !== undefined) {
-    return linked.has(pageContactId) ? pageContactId : undefined;
+  if (pageContact) {
+    return linked.has(pageContact.id) ? pageContact.id : undefined;
   }
   return linked.size === 1 ? [...linked][0] : undefined;
 }
@@ -36,7 +36,7 @@ export function useTaskContact(
   task: Activity | undefined,
   pageContact?: Contact,
 ): TaskContact {
-  const contactId = linkedContactId(task, pageContact?.id);
+  const contactId = taskContactId(task, pageContact);
   const read = useQuery(contactQuery(pageContact ? undefined : contactId));
   // The source under `SourceEvidence`'s key, so the dialog asks for it once.
   const source = useActivity(

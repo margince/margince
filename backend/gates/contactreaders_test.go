@@ -29,7 +29,10 @@ package gates
 
 import (
 	"go/ast"
+	"maps"
+	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -65,54 +68,55 @@ var contactGate = objectGate{
 // grants do not cover â so a read projecting r.contact_id with the contact
 // joined for liveness and row scope has taken the grant its payload sits behind.
 var predicateContactReads = gatekit.Waive(map[string]string{
-	"internal/modules/capture/strangermail.go:senderWasStrangerTx":               "whether a mail's sender was already a live contact when it arrived, asked by the connector sink to stamp one boolean on the activity. The contact appears only inside EXISTS; nothing about the contact is selected, and the boolean only lowers the mail's rank",
-	"internal/modules/activities/messageidentity.go:copyEchoLinks":               "holds the contacts an absorbed echo is filed under FOR SHARE and skips an archived one; it selects a constant and returns no contact column, and removing the condition could only copy more links",
-	"internal/modules/collections/tagsuggestion.go:tagSuggestionStandsClause":    "whether a tag suggestion still stands: the contact appears only inside EXISTS, to ask that it is live and not yet tagged. Nothing is selected; composed into the system-only superseding pass and into the gated visible-suggestions read, where removing it could only show more suggestions",
-	"internal/modules/collections/taginterest.go:TagInterestContactsLiveClause":  "whether any contact a captured item is filed under is archived, so the tag pass neither reads nor stores an answer about an anonymized subject. The contact appears only inside NOT EXISTS; nothing is selected, and removing the condition could only store more answers",
-	"internal/modules/collections/taginterest.go:RecordTagInterestAnswersTx":     "the system-only answer writer locks the contacts an item is filed under FOR SHARE, so an anonymize either lands first and the answer is refused or waits for it. It selects ids into nothing and returns no contact column",
-	"internal/modules/contacts/leadfromcontact.go:ensureContactStillLive":        "whether the contact a lead is created from is still live, re-asked under the lock after CreateLead read it through GetContact; it selects one boolean",
-	"internal/modules/contacts/leadidentity.go:ensureContactNotWorked":           "locks the contact row a lead is worked from so racing creates, reopens and demotes queue on it; it selects a constant and returns no contact column",
-	"internal/modules/deals/dealunarchive.go":                                    "the relationship restore of a deal un-archive: `contact` appears only in a NOT EXISTS that keeps a link to an archived contact archived. Nothing is selected; removing the condition could only restore more links",
-	"internal/modules/contacts/providerboughtfields.go":                          "which of a contact's values a purchase still owns. `contact` appears only inside an EXISTS comparing the title with the ledger's copy, and the statement selects ledger columns (table, field, row id, provider, time). Reached only from readContact, whose callers ask the contact object gate",
-	"internal/modules/activities/quietmailbox.go:quietRecordOwner":               "the owner arm of the cold-queue selector: the contact's owner_id — a USER id, not contact content — decides whether that seat's mailbox is visible enough to call the contact quiet. Nothing of the contact is selected; its only effect is to WITHHOLD a queue entry, never to surface one",
-	"internal/compose/capturehealthread.go:captureMailboxHealth":                 "the capture health strip: how many contacts are waiting on a mailbox that has stopped delivering. Counts over the caller's own connector, never a contact column",
-	"internal/compose/contactbrief/service.go:save":                              "the liveness check the cache write is made through: `SELECT id` for the contact the caller already named, to take its row and refuse the write when an erasure has archived it. The id is the argument, so nothing of the contact is disclosed; the read's only effect is to WITHHOLD a cache row, never to surface one. The reader's own grant was asked by the assembly that produced the brief",
-	"internal/compose/network/companycoverage.go:countCompanyStakeholders":       "a count of distinct stakeholders at an account, under the edge admission CompanyCoverageFor takes. A number, and deliberately reported as a BOOLEAN incompleteness flag rather than an exact one — the type's own comment says why an exact count would be an oracle",
-	"internal/compose/network/companycoverage.go:visibleAccountStakeholders":     "the stakeholder ids and roles behind that same coverage, under auth.EdgeReadScope and the contact ROW scope. Reading an edge discloses its endpoints AS A PAIR, which is what relationship.read governs; no contact column beyond the id the edge already carries is selected",
-	"internal/compose/signalextractrule.go":                                      "the visibility roll-up inside the conversation fold the thread extraction reads: a contact's visibility and owner_id decide whether a thread counts as shared or as one owner's. No contact column is selected and the statement produces a thread key",
-	"internal/modules/activities/relinkparticipants.go:participantRelinkQuery":   "the shared relink plan uses contact rows only to scope existing activity participants; it selects no contact columns. The write changes participant edges, never contacts. The preview returns those same edges after the activity content gate and withholds blind-copy participants from anyone except the sender",
-	"internal/modules/activities/emailparties.go:readEmailParties":               "the parties on one email, `LEFT JOIN contact` so a party with no contact record still appears. The projection is the activity's own participant rows under the activity grant; the join adds liveness, not a column",
-	"internal/modules/activities/lasttouch.go:lastTouchEligibility":              "the contact arm of the cold-queue selector, the twin of the company, deal and lead arms the other censuses file the same way: the contact's liveness and age decide which QUEUE ENTRIES surface, and no contact column reaches the caller",
-	"internal/modules/activities/waitingsql.go":                                  "the contact arm of the waiting-thread worklist, off the gated link join. What reaches the caller is the thread their own activity scope already admits",
-	"internal/modules/consent/confirmcard.go:confirmCardFor":                     "the card a data subject is shown of THEIR OWN record, behind a confirm link, so they can see what the installation holds before confirming it. The caller is the subject holding a bearer token that proves their mailbox and no CRM grant at all, so a contact grant is not a question that can be asked of them; what bounds the read is that it resolves from the token's own contact",
-	"internal/modules/consent/confirmresolve.go:ResolveConfirmToken":             "resolves a confirm link to the subject it was minted for. Same public edge, same bearer token, and the token is the authority",
-	"internal/modules/consent/confirmtoken.go:spendConfirmTokenTx":               "consumes that token exactly once, so a replayed link cannot submit twice. An UPDATE on the token, with the contact joined for liveness",
-	"internal/modules/consent/confirmtoken.go:subjectOfConfirmTokenTx":           "names the subject a spent token acted for, inside the submit's own transaction",
-	"internal/modules/consent/gate.go:resolveContact":                            "resolves an address the CALLER ALREADY NAMED as a send recipient to the one live contact behind it, so a consent grant can be looked up against a subject. What leaves is authorized or not, and why",
-	"internal/modules/consent/suppress.go:survivingSubject":                      "`coalesce(merged_into_id, id)` — follows a merged-away contact to the record that survived, so a public stop request lands on the right subject. One id, on the public unsubscribe edge",
-	"internal/modules/consent/withdrawalmint.go:bindWithdrawalSubject":           "stamps the subject a one-click unsubscribe link acts for, resolved from the address the send is going TO. Ambiguity leaves the credential unbound rather than stamping one subject's id on another's opt-out link; nothing about the contact reaches the recipient",
-	"internal/modules/contacts/company_counts.go:countedEmploymentFrom":          "the employment count on an account card, with the contact joined for liveness and the caller's own row scope. A number, and its object half is asked by the counts assembler above it",
-	"internal/modules/contacts/companycommitments.go:countCompanyCommitments":    "the open commitments at an account — a count over activities, with the contact reached only to bound whose commitments they are",
-	"internal/modules/contacts/contactvisibility.go:refuseStaleVisibility":       "refuses a visibility change written against a stale version. Its only effect is a refusal",
-	"internal/modules/contacts/demote.go:isSharedByOthers":                       "asks whether another record still depends on a promoted contact, so a demote does not archive one something else needs. A boolean that only ever KEEPS a record",
-	"internal/modules/contacts/enrichcandidates.go":                              "the enrichment candidate fragment: which contacts are due a provider lookup. Ids on the enrichment pass",
-	"internal/modules/contacts/ensure.go:linkActivityToContact":                  "the link a capture plants between an activity and the contact it resolved, inside the ensure write",
-	"internal/modules/contacts/ensurechannel.go:recordChannelDedupeCandidate":    "records a channel-identity near-match for the review queue, inside the ensure write. What it produces is a review row",
-	"internal/modules/contacts/ensurechanneladopt.go:adoptEmailRoutedIncumbent":  "adopts an existing contact for a channel identity rather than minting a second, inside that same write",
-	"internal/modules/contacts/mergeface.go:readContactFaces":                    "the label and detail line a merge card shows for each side of a pair. Its only caller is DescribeForMerge, which asks auth.Require(entityType, read) — the object arrives as a PARAMETER — and narrows the ids through auth.VisibleSubset first",
-	"internal/modules/contacts/observednumbers.go:applyObservedPhone":            "applies a phone number observed in a signature or on a card, inside the observation write",
-	"internal/modules/contacts/observedcontact.go:seedFromColumn":                "seeds an observed value from the contact's own column so an enrichment does not overwrite what a human typed, inside that same write",
-	"internal/modules/contacts/projectstakeholder.go:contactNames":               "the names shown beside a project's stakeholders, bounded by the contact row scope, inside the stakeholder surface that asks the contact grant at its entry",
-	"internal/modules/contacts/relationshipchange.go:visibleContactNames":        "the names an edge-change audit line quotes, under the same row scope and the relationship write's own gate",
-	"internal/modules/contacts/sitecontactfields.go:matchSiteContact":            "matches a contact read off a company website to an existing record, so a site read fills a gap rather than minting a duplicate. Inside the site-read apply",
-	"internal/modules/deals/championcover.go:championSeats":                      "the champion seats on a set of deals: `r.deal_id` and an aggregate of `r.contact_id`, with the contact joined for liveness and row scope. Edge endpoints under the edge grant, and no contact column is selected",
-	"internal/modules/deals/championcover.go:withheldSeats":                      "the twin that answers whether any seat was withheld from this reader. A boolean per deal, for the reason CompanyCoverage gives about exact counts",
-	"internal/modules/deals/engagement.go:Stakeholders":                          "`r.contact_id, r.role` under the contact row scope — the edge's own endpoints, which relationship.read governs. The callers render names through surfaces that ask the contact grant themselves",
-	"internal/modules/integrations/backfillselect.go:backlogInTx":                "`count(*)` of subjects a provider backfill still owes, so the settings screen can show progress. A number about the job",
-	"internal/modules/integrations/backfillselect.go:uncoveredSubjects":          "`p.id::text` — which subjects the backfill sweep has yet to cover. Ids consumed by the sweep that runs under its own principal",
-	"internal/shared/kernel/retentionscope/retentionscope.go:HeldThroughAnyLink": "the legal-hold exclusion: it asks whether a linked contact holds the row and, if so, leaves it alone. Its only effect is to keep a row, never to disclose one It is also read by the undo of a project filing and the judgement of a filing about to be made (activities readFilingBlockers): there the arm's boolean becomes the legal_hold or qualifying-deal refusal, so the caller learns only that a hold exists or that another basis keeps the activity — which the refusal has to say to be actionable — and never a field of the record.",
-	"internal/modules/privacy/retentionselectors.go":                             "the retention selectors' contact arm, which only ever narrows what a sweep may delete",
-	"internal/platform/auth/signalscope.go:SignalScopeClause":                    "the signal row-scope clause itself, which resolves a signal about a contact to the contact's own visibility. A clause rather than a read: it only ever narrows the signals a caller is shown",
+	"internal/modules/capture/strangermail.go:senderWasStrangerTx":                    "whether a mail's sender was already a live contact when it arrived, asked by the connector sink to stamp one boolean on the activity. The contact appears only inside EXISTS; nothing about the contact is selected, and the boolean only lowers the mail's rank",
+	"internal/modules/activities/messageidentity.go:copyEchoLinks":                    "holds the contacts an absorbed echo is filed under FOR SHARE and skips an archived one; it selects a constant and returns no contact column, and removing the condition could only copy more links",
+	"internal/modules/collections/tagsuggestion.go:tagSuggestionStandsClause":         "whether a tag suggestion still stands: the contact appears only inside EXISTS, to ask that it is live and not yet tagged. Nothing is selected; composed into the system-only superseding pass and into the gated visible-suggestions read, where removing it could only show more suggestions",
+	"internal/modules/collections/taginterest.go:TagInterestContactsLiveClause":       "whether any contact a captured item is filed under is archived, so the tag pass neither reads nor stores an answer about an anonymized subject. The contact appears only inside NOT EXISTS; nothing is selected, and removing the condition could only store more answers",
+	"internal/modules/collections/taginterest.go:RecordTagInterestAnswersTx":          "the system-only answer writer locks the contacts an item is filed under FOR SHARE, so an anonymize either lands first and the answer is refused or waits for it. It selects ids into nothing and returns no contact column",
+	"internal/modules/contacts/leadfromcontact.go:ensureContactStillLive":             "whether the contact a lead is created from is still live, re-asked under the lock after CreateLead read it through GetContact; it selects one boolean",
+	"internal/modules/contacts/leadidentity.go:ensureContactNotWorked":                "locks the contact row a lead is worked from so racing creates, reopens and demotes queue on it; it selects a constant and returns no contact column",
+	"internal/modules/deals/dealunarchive.go":                                         "the relationship restore of a deal un-archive: `contact` appears only in a NOT EXISTS that keeps a link to an archived contact archived. Nothing is selected; removing the condition could only restore more links",
+	"internal/modules/contacts/providerboughtfields.go":                               "which of a contact's values a purchase still owns. `contact` appears only inside an EXISTS comparing the title with the ledger's copy, and the statement selects ledger columns (table, field, row id, provider, time). Reached only from readContact, whose callers ask the contact object gate",
+	"internal/modules/activities/quietmailbox.go:quietRecordOwner":                    "the owner arm of the cold-queue selector: the contact's owner_id — a USER id, not contact content — decides whether that seat's mailbox is visible enough to call the contact quiet. Nothing of the contact is selected; its only effect is to WITHHOLD a queue entry, never to surface one",
+	"internal/compose/capturehealthread.go:captureMailboxHealth":                      "the capture health strip: how many contacts are waiting on a mailbox that has stopped delivering. Counts over the caller's own connector, never a contact column",
+	"internal/compose/contactbrief/service.go:save":                                   "the liveness check the cache write is made through: `SELECT id` for the contact the caller already named, to take its row and refuse the write when an erasure has archived it. The id is the argument, so nothing of the contact is disclosed; the read's only effect is to WITHHOLD a cache row, never to surface one. The reader's own grant was asked by the assembly that produced the brief",
+	"internal/compose/network/companycoverage.go:countCompanyStakeholders":            "a count of distinct stakeholders at an account, under the edge admission CompanyCoverageFor takes. A number, and deliberately reported as a BOOLEAN incompleteness flag rather than an exact one — the type's own comment says why an exact count would be an oracle",
+	"internal/compose/network/companycoverage.go:visibleAccountStakeholders":          "the stakeholder ids and roles behind that same coverage, under auth.EdgeReadScope and the contact ROW scope. Reading an edge discloses its endpoints AS A PAIR, which is what relationship.read governs; no contact column beyond the id the edge already carries is selected",
+	"internal/compose/signalextractrule.go":                                           "the visibility roll-up inside the conversation fold the thread extraction reads: a contact's visibility and owner_id decide whether a thread counts as shared or as one owner's. No contact column is selected and the statement produces a thread key",
+	"internal/modules/activities/relinkparticipants.go:participantRelinkQuery":        "the shared relink plan uses contact rows only to scope existing activity participants; it selects no contact columns. The write changes participant edges, never contacts. The preview returns those same edges after the activity content gate and withholds blind-copy participants from anyone except the sender",
+	"internal/modules/activities/emailparties.go:readEmailParties":                    "the parties on one email, `LEFT JOIN contact` so a party with no contact record still appears. The projection is the activity's own participant rows under the activity grant; the join adds liveness, not a column",
+	"internal/modules/activities/followupcomplete.go:completeOpenSystemTasksLinkedBy": "`a.created_at <= (SELECT p.created_at FROM contact p WHERE p.id = $n)` — the cut-off that stops a follow-up task older than the contact being completed by it. A timestamp inside the completing write's own predicate, on the workflow pass off the outbox; nothing of the contact is selected. The grant it reaches through UpdateActivity guards a later read, not this one",
+	"internal/modules/activities/lasttouch.go:lastTouchEligibility":                   "the contact arm of the cold-queue selector, the twin of the company, deal and lead arms the other censuses file the same way: the contact's liveness and age decide which QUEUE ENTRIES surface, and no contact column reaches the caller",
+	"internal/modules/activities/waitingsql.go":                                       "the contact arm of the waiting-thread worklist, off the gated link join. What reaches the caller is the thread their own activity scope already admits",
+	"internal/modules/consent/confirmcard.go:confirmCardFor":                          "the card a data subject is shown of THEIR OWN record, behind a confirm link, so they can see what the installation holds before confirming it. The caller is the subject holding a bearer token that proves their mailbox and no CRM grant at all, so a contact grant is not a question that can be asked of them; what bounds the read is that it resolves from the token's own contact",
+	"internal/modules/consent/confirmresolve.go:ResolveConfirmToken":                  "resolves a confirm link to the subject it was minted for. Same public edge, same bearer token, and the token is the authority",
+	"internal/modules/consent/confirmtoken.go:spendConfirmTokenTx":                    "consumes that token exactly once, so a replayed link cannot submit twice. An UPDATE on the token, with the contact joined for liveness",
+	"internal/modules/consent/confirmtoken.go:subjectOfConfirmTokenTx":                "names the subject a spent token acted for, inside the submit's own transaction",
+	"internal/modules/consent/gate.go:resolveContact":                                 "resolves an address the CALLER ALREADY NAMED as a send recipient to the one live contact behind it, so a consent grant can be looked up against a subject. What leaves is authorized or not, and why",
+	"internal/modules/consent/suppress.go:survivingSubject":                           "`coalesce(merged_into_id, id)` — follows a merged-away contact to the record that survived, so a public stop request lands on the right subject. One id, on the public unsubscribe edge",
+	"internal/modules/consent/withdrawalmint.go:bindWithdrawalSubject":                "stamps the subject a one-click unsubscribe link acts for, resolved from the address the send is going TO. Ambiguity leaves the credential unbound rather than stamping one subject's id on another's opt-out link; nothing about the contact reaches the recipient",
+	"internal/modules/contacts/company_counts.go:countedEmploymentFrom":               "the employment count on an account card, with the contact joined for liveness and the caller's own row scope. A number, and its object half is asked by the counts assembler above it",
+	"internal/modules/contacts/companycommitments.go:countCompanyCommitments":         "the open commitments at an account — a count over activities, with the contact reached only to bound whose commitments they are",
+	"internal/modules/contacts/contactvisibility.go:refuseStaleVisibility":            "refuses a visibility change written against a stale version. Its only effect is a refusal",
+	"internal/modules/contacts/demote.go:isSharedByOthers":                            "asks whether another record still depends on a promoted contact, so a demote does not archive one something else needs. A boolean that only ever KEEPS a record",
+	"internal/modules/contacts/enrichcandidates.go":                                   "the enrichment candidate fragment: which contacts are due a provider lookup. Ids on the enrichment pass",
+	"internal/modules/contacts/ensure.go:linkActivityToContact":                       "the link a capture plants between an activity and the contact it resolved, inside the ensure write",
+	"internal/modules/contacts/ensurechannel.go:recordChannelDedupeCandidate":         "records a channel-identity near-match for the review queue, inside the ensure write. What it produces is a review row",
+	"internal/modules/contacts/ensurechanneladopt.go:adoptEmailRoutedIncumbent":       "adopts an existing contact for a channel identity rather than minting a second, inside that same write",
+	"internal/modules/contacts/mergeface.go:readContactFaces":                         "the label and detail line a merge card shows for each side of a pair. Its only caller is DescribeForMerge, which asks auth.Require(entityType, read) — the object arrives as a PARAMETER — and narrows the ids through auth.VisibleSubset first",
+	"internal/modules/contacts/observednumbers.go:applyObservedPhone":                 "applies a phone number observed in a signature or on a card, inside the observation write",
+	"internal/modules/contacts/observedcontact.go:seedFromColumn":                     "seeds an observed value from the contact's own column so an enrichment does not overwrite what a human typed, inside that same write",
+	"internal/modules/contacts/projectstakeholder.go:contactNames":                    "the names shown beside a project's stakeholders, bounded by the contact row scope, inside the stakeholder surface that asks the contact grant at its entry",
+	"internal/modules/contacts/relationshipchange.go:visibleContactNames":             "the names an edge-change audit line quotes, under the same row scope and the relationship write's own gate",
+	"internal/modules/contacts/sitecontactfields.go:matchSiteContact":                 "matches a contact read off a company website to an existing record, so a site read fills a gap rather than minting a duplicate. Inside the site-read apply",
+	"internal/modules/deals/championcover.go:championSeats":                           "the champion seats on a set of deals: `r.deal_id` and an aggregate of `r.contact_id`, with the contact joined for liveness and row scope. Edge endpoints under the edge grant, and no contact column is selected",
+	"internal/modules/deals/championcover.go:withheldSeats":                           "the twin that answers whether any seat was withheld from this reader. A boolean per deal, for the reason CompanyCoverage gives about exact counts",
+	"internal/modules/deals/engagement.go:Stakeholders":                               "`r.contact_id, r.role` under the contact row scope — the edge's own endpoints, which relationship.read governs. The callers render names through surfaces that ask the contact grant themselves",
+	"internal/modules/integrations/backfillselect.go:backlogInTx":                     "`count(*)` of subjects a provider backfill still owes, so the settings screen can show progress. A number about the job",
+	"internal/modules/integrations/backfillselect.go:uncoveredSubjects":               "`p.id::text` — which subjects the backfill sweep has yet to cover. Ids consumed by the sweep that runs under its own principal",
+	"internal/shared/kernel/retentionscope/retentionscope.go:HeldThroughAnyLink":      "the legal-hold exclusion: it asks whether a linked contact holds the row and, if so, leaves it alone. Its only effect is to keep a row, never to disclose one It is also read by the undo of a project filing and the judgement of a filing about to be made (activities readFilingBlockers): there the arm's boolean becomes the legal_hold or qualifying-deal refusal, so the caller learns only that a hold exists or that another basis keeps the activity — which the refusal has to say to be actionable — and never a field of the record.",
+	"internal/modules/privacy/retentionselectors.go":                                  "the retention selectors' contact arm, which only ever narrows what a sweep may delete",
+	"internal/platform/auth/signalscope.go:SignalScopeClause":                         "the signal row-scope clause itself, which resolves a signal about a contact to the contact's own visibility. A clause rather than a read: it only ever narrows the signals a caller is shown",
 })
 
 // lifecycleContactReads: capture, enrichment, cohort repair, erasure, retention
@@ -274,7 +278,7 @@ func TestEveryReaderOfTheContactTableCarriesTheObjectGateOrAVerdict(t *testing.T
 			if site.function != "" {
 				subject += ":" + site.function
 			}
-			carriesGate := site.holdsGate || callsAGatedHelper(site.calls, gated[pkg])
+			carriesGate := site.carriesGate(gated[pkg])
 			if site.function == "" {
 				carriesGate = site.holdsGate || contactGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
 			}
@@ -315,4 +319,64 @@ func TestEveryReaderOfTheContactTableCarriesTheObjectGateOrAVerdict(t *testing.T
 	notTheContactTable.AssertAllMatched(t)
 	ruledContactReads.AssertAllMatched(t)
 	deferredContactReads.AssertAllMatched(t)
+}
+
+// spentGateFixture is the shape completeOpenSystemTasksLinkedBy had: its own
+// contact read, plus a call chain that reaches a reader gating only itself.
+const spentGateFixture = `package fixture
+
+func selfGated(ctx context.Context, tx pgx.Tx) {
+	if !auth.ReadGranted(ctx, "contact") {
+		return
+	}
+	tx.Query(ctx, offeredSQL)
+}
+
+const offeredSQL = "SELECT p.full_name FROM contact p"
+
+func wrapper(ctx context.Context, tx pgx.Tx) { selfGated(ctx, tx) }
+
+func cutOff(ctx context.Context, tx pgx.Tx) {
+	tx.QueryRow(ctx, "SELECT p.created_at FROM contact p WHERE p.id = $1")
+	wrapper(ctx, tx)
+}
+
+func visibleClause(ctx context.Context) string {
+	if !auth.ReadGranted(ctx, "contact") {
+		return "false"
+	}
+	return "p.archived_at IS NULL"
+}
+
+func scoped(ctx context.Context, tx pgx.Tx) {
+	tx.Query(ctx, "SELECT p.full_name FROM contact p WHERE "+visibleClause(ctx))
+}
+`
+
+func TestAReaderGatingOnlyItselfVouchesForNoCaller(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	source := filepath.Join(dir, "fixture.go")
+	if err := os.WriteFile(source, []byte(spentGateFixture), 0o600); err != nil {
+		t.Fatalf("writing the fixture: %v", err)
+	}
+	file, err := gatekit.ParseFile(source, 0)
+	if err != nil {
+		t.Fatalf("parsing the fixture: %v", err)
+	}
+	parsed := gatekit.ParsedFile{Path: filepath.ToSlash(source), File: file}
+	gated := contactGate.gatedFunctionsByPackage(t, []gatekit.ParsedFile{parsed})[pkgOf(parsed.Path)]
+	// The empty name is offeredSQL, a fragment judged by the file that runs it.
+	want := map[string]bool{"": true, "cutOff": false, "scoped": true}
+	got := map[string]bool{}
+	for _, read := range contactGate.readSites(parsed, map[string]string{}) {
+		got[read.function] = read.carriesGate(gated)
+		if read.function == "" {
+			got[""] = contactGate.fileHoldsAGatedFunction(t, parsed, gated, map[string]string{})
+		}
+	}
+	if !maps.Equal(got, want) {
+		t.Errorf("gated reads = %v, want %v: a caller's own read is behind a callee's gate only when "+
+			"that callee runs no read of the table itself", got, want)
+	}
 }

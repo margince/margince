@@ -39,6 +39,7 @@ function draw(
   ui: Preview | undefined,
   onOverride?: () => void,
   unanswered = false,
+  picksReason = false,
 ) {
   return render(
     <LocaleProvider initial="en">
@@ -46,6 +47,7 @@ function draw(
         preview={ui}
         onOverride={onOverride}
         unanswered={unanswered}
+        picksReason={picksReason}
       />
     </LocaleProvider>,
   );
@@ -260,6 +262,9 @@ describe("what a rep is shown", () => {
           can_be_overruled: false,
         }),
       ),
+      undefined,
+      false,
+      true,
     );
     expect(
       screen.getByText(
@@ -301,6 +306,8 @@ describe("every refusal says what is wrong and what to do", () => {
         }),
       ),
       () => {},
+      false,
+      true,
     );
     expect(screen.getByText(translate("en", key))).toBeInTheDocument();
     expect(
@@ -326,6 +333,16 @@ describe("a read-only surface states the fact without the instruction", () => {
       "sendPermission.reason.legacyPurposeFact",
       "sendPermission.reason.legacyPurpose",
     ],
+    [
+      "unknown_purpose",
+      "sendPermission.reason.unknownPurposeFact",
+      "sendPermission.reason.unknownPurpose",
+    ],
+    [
+      "claim_contradicts_resolution",
+      "sendPermission.reason.claimContradictsFact",
+      "sendPermission.reason.claimContradicts",
+    ],
   ] as const)("%s", (code, fact, instruction) => {
     draw(
       preview(
@@ -333,7 +350,9 @@ describe("a read-only surface states the fact without the instruction", () => {
           reason_code: code,
           decided_by: "machine",
           would_refuse: true,
-          can_be_overruled: true,
+          can_be_overruled:
+            code !== "unknown_purpose" &&
+            code !== "claim_contradicts_resolution",
         }),
       ),
     );
@@ -341,6 +360,29 @@ describe("a read-only surface states the fact without the instruction", () => {
     expect(screen.queryByText(translate("en", instruction))).toBeNull();
     expect(screen.queryByText(/pick/i)).toBeNull();
   });
+});
+
+// A composer whose address matches no contact draws no reason to record. Its own
+// reason pick is still there, so the sentence still asks for it.
+it("asks for the reason pick where there is no reason to record", () => {
+  draw(
+    preview(
+      answer({
+        reason_code: "no_marketing_consent",
+        decided_by: "machine",
+        would_refuse: true,
+        can_be_overruled: true,
+      }),
+    ),
+    undefined,
+    false,
+    true,
+  );
+  expect(
+    screen.getByText(
+      translate("en", "sendPermission.reason.noMarketingConsent"),
+    ),
+  ).toBeInTheDocument();
 });
 
 describe("what the hint tells a rep to do", () => {

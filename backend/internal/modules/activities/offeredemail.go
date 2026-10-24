@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -13,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -23,8 +25,8 @@ var writtenAboutKinds = []crmcontracts.ActivityKind{
 	crmcontracts.ActivityKindNote, crmcontracts.ActivityKindTask,
 }
 
-// offeredEmailCandidatesSQL keeps a row with one readable live linked contact. Its
-// address must be neither a seat's login nor at one of our own domains.
+// offeredEmailCandidatesSQL keeps a row with one readable live linked contact
+// whose address is not a seat's login. offeredEmails drops our own domains.
 const offeredEmailCandidatesSQL = `
 	SELECT c.activity_id, c.full_name, c.address
 	  FROM (SELECT l.activity_id, p.full_name,
@@ -36,16 +38,14 @@ const offeredEmailCandidatesSQL = `
 	          JOIN activity_link l ON l.activity_id = a.id AND l.contact_id IS NOT NULL
 	          JOIN contact p ON p.id = l.contact_id AND p.archived_at IS NULL
 	         WHERE a.id = ANY($1) AND a.kind = ANY($2) %s) c
-	 CROSS JOIN LATERAL (SELECT lower(split_part(c.address, '@',
-	         length(c.address) - length(replace(c.address, '@', '')) + 1))) AS addressed(domain)
 	 WHERE c.linked = 1 AND c.address <> ''
-	   AND NOT EXISTS (SELECT 1 FROM app_user seat WHERE lower(seat.email) = lower(c.address))
-	   AND NOT EXISTS (SELECT 1 FROM (` + auth.TrustedOwnDomainsSQL + `) own(domain)
-	                    WHERE addressed.domain = lower(own.domain)
-	                       OR right(addressed.domain, length(own.domain) + 1) = '.' || lower(own.domain))`
+	   AND NOT EXISTS (SELECT 1 FROM app_user seat WHERE lower(seat.email) = lower(c.address))`
 
 // offeredEmails is the address Write email opens with, per written-about row. The
 // reply-recipient read and every activity read take their answer from it.
+//
+// Our own domains are judged by owndomain, the rule a reply's To also walks.
+// SQL cannot fold an IDNA domain the way that rule does.
 func offeredEmails(ctx context.Context, tx pgx.Tx, rows []ids.UUID) (map[ids.UUID]string, error) {
 	out := map[ids.UUID]string{}
 	if len(rows) == 0 || !auth.ReadGranted(ctx, "contact") {
@@ -81,7 +81,20 @@ func offeredEmails(ctx context.Context, tx pgx.Tx, rows []ids.UUID) (map[ids.UUI
 			out[row] = address
 		}
 	}
-	return out, found.Err()
+	if err := found.Err(); err != nil || len(out) == 0 {
+		return out, err
+	}
+	return withoutColleagues(ctx, tx, out)
+}
+
+// withoutColleagues drops the addresses at one of our own domains.
+func withoutColleagues(ctx context.Context, tx pgx.Tx, offered map[ids.UUID]string) (map[ids.UUID]string, error) {
+	own, err := owndomain.Read(ctx, tx, auth.TrustedOwnDomainsSQL)
+	if err != nil {
+		return nil, err
+	}
+	maps.DeleteFunc(offered, func(_ ids.UUID, address string) bool { return own.Covers(address) })
+	return offered, nil
 }
 
 // WithOffersEmail sets offers_email on a page of rows. A row whose content is

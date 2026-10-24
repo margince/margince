@@ -208,7 +208,7 @@ func TestEveryReaderOfTheLeadTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 			if site.function != "" {
 				subject += ":" + site.function
 			}
-			carriesGate := site.holdsGate || callsAGatedHelper(site.calls, gated[pkg])
+			carriesGate := site.carriesGate(gated[pkg])
 			if site.function == "" {
 				carriesGate = site.holdsGate || leadGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
 			}

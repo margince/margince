@@ -445,8 +445,12 @@ export function ComposeWindow({
               contactOf={records.contactOf}
               contactId={contactId}
               bodyKey={wording.body}
-              permission={(override) => (
-                <SendPermission {...send.permission} override={override} />
+              permission={(override, picksReason) => (
+                <SendPermission
+                  {...send.permission}
+                  override={override}
+                  picksReason={picksReason}
+                />
               )}
             />
           </div>

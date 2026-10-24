@@ -6,6 +6,8 @@ package capture
 import (
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
 // CAP-AC1.3c — a registered domain covers its subdomains, a lookalike sibling
@@ -72,7 +74,7 @@ func TestAllInternalNeedsEveryPartyAndOneOutsiderIsEnoughToKeepTheMessage(t *tes
 // about its contacts's mail, and inventing one would be wrong in most workspaces.
 func TestAnEmptyOwnDomainSetMakesNothingInternal(t *testing.T) {
 	own := NewInternalDomains(nil)
-	if !own.empty() {
+	if !own.Empty() {
 		t.Fatal("a set built from nothing must report empty")
 	}
 	if own.AllInternal([]string{"rep@acme.com", "boss@acme.com"}) {
@@ -121,8 +123,8 @@ func TestTheDomainSetNormalizesAndDeduplicates(t *testing.T) {
 	if !own.Covers("rep@acme.com") || !own.Covers("rep@münchen.de") {
 		t.Fatal("normalized spellings must all resolve")
 	}
-	if len(own.domains) != 2 {
-		t.Errorf("domains = %v, want the two distinct domains", own.domains)
+	if len(own.Domains()) != 2 {
+		t.Errorf("domains = %v, want the two distinct domains", own.Domains())
 	}
 }
 
@@ -136,12 +138,12 @@ func TestAnAccountLabelYieldsItsDomainInEitherShape(t *testing.T) {
 		"  Rep Example <rep@acme.com>  ",
 		`"Rep, Example" <rep@acme.com>`,
 	} {
-		if got := domainOfAddress(bareAddress(label)); got != "acme.com" {
+		if got := owndomain.OfAddress(bareAddress(label)); got != "acme.com" {
 			t.Errorf("label %q gave domain %q, want acme.com", label, got)
 		}
 	}
 	// An unparseable label is judged as an address, which is what it was before.
-	if got := domainOfAddress(bareAddress("not an address")); got != "" {
+	if got := owndomain.OfAddress(bareAddress("not an address")); got != "" {
 		t.Errorf("unparseable label gave domain %q, want none", got)
 	}
 }

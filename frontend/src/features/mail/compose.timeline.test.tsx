@@ -195,14 +195,7 @@ describe("TimelineActions", () => {
     id: "a2",
     kind: "note",
     links: [{ entity_type: "contact", entity_id: "c1" }],
-  };
-  const reachable = {
-    "GET /contacts/c1": () =>
-      jsonResponse({
-        id: "c1",
-        full_name: "Anna Weber",
-        primary_email: "anna@example.test",
-      }),
+    offers_email: true,
   };
 
   it("offers Reply on an email row and Relink alongside it", () => {
@@ -219,7 +212,7 @@ describe("TimelineActions", () => {
     // conversation, which the backend handles. Gating this on kind === "email"
     // is what made "log a note → compose → send" unreachable in a workspace
     // whose timeline holds nothing captured from mail.
-    stubRoutes(reachable);
+    stubRoutes();
     render(<TimelineActions activity={note} entityType="deal" entityId="d1" />);
     expect(
       await screen.findByRole("button", { name: "Write email" }),
@@ -230,7 +223,7 @@ describe("TimelineActions", () => {
   });
 
   it("opens the composer anchored to a note row", async () => {
-    stubRoutes(reachable);
+    stubRoutes();
     render(<TimelineActions activity={note} entityType="deal" entityId="d1" />);
     await userEvent.click(
       await screen.findByRole("button", { name: "Write email" }),
@@ -239,7 +232,7 @@ describe("TimelineActions", () => {
   });
 
   it("offers Write email beside Open task on a task with one contact", async () => {
-    stubRoutes(reachable);
+    stubRoutes();
     const task: Activity = { ...note, id: "t1", kind: "task" };
     render(<TimelineActions activity={task} entityType="deal" entityId="d1" />);
     expect(
@@ -249,7 +242,7 @@ describe("TimelineActions", () => {
   });
 
   it("offers Open task and no email on a task the product filed", async () => {
-    stubRoutes(reachable);
+    stubRoutes();
     const task: Activity = {
       ...note,
       id: "t2",

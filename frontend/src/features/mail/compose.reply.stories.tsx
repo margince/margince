@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { expect, within } from "storybook/test";
-import { contactQuery } from "../../lib/contact.queries";
 import {
   installFetchStub,
   jsonResponse,
@@ -16,11 +14,11 @@ import { ChannelReplyAction } from "./compose.reply";
 //  - on a MAIL row it is always offered, and its word is "Reply";
 //  - on a CHANNEL row it is offered only where the contact is reachable on the
 //    transport that carried the conversation, and withheld where they are not;
-//  - on a call, note or meeting row its word is "Write email", offered only
-//    where the contact has an address, because a call cannot be replied to;
-//  - where the row's content is withheld it keeps working but changes its WORD
-//    to "Write email", because writing to a contact is not answering a message
-//    nobody may read;
+//  - on a call, note, meeting or task row its word is "Write email", offered
+//    only where the server says it can fill To (`offers_email`);
+//  - where a mail or channel row's content is withheld it keeps working but
+//    changes its WORD to "Write email", because writing to a contact is not
+//    answering a message nobody may read;
 //  - where a rule PREPARED this reply it wears the agent's face and mark, and
 //    the caller's own word for the act.
 //
@@ -44,7 +42,7 @@ type Story = StoryObj<typeof ChannelReplyAction>;
 
 // Whether this contact can be reached on one transport. The shape is the
 // record read's own, because that read is what the gate consults — see
-// useAnswerReachable, which matches the row's provider against this list.
+// useChannelReachable, which matches the row's provider against this list.
 function contactReachable(provider: string, reachable: boolean) {
   return () =>
     jsonResponse({
@@ -151,38 +149,11 @@ export const WithheldWritesEmail: Story = {
   },
 };
 
-function contactWithAddress(address: string | null) {
-  return () =>
-    jsonResponse({
-      id: "p-1",
-      full_name: "Jane Doe",
-      primary_email: address,
-      reachability: [],
-      version: 1,
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-    });
-}
-
-const ON_JANE = [{ entity_type: "contact" as const, entity_id: "p-1" }];
-
-// The contact read the verb asks, drawn so a reader sees why nothing is offered.
-function AddressOnFile() {
-  const contact = useQuery(contactQuery("p-1"));
-  if (!contact.data) return null;
-  return (
-    <p className="t-caption">
-      {contact.data.primary_email ?? "No email address on file"}
-    </p>
-  );
-}
-
-/** A logged call: the verb writes a new email about it, never a reply to it. */
+/** A logged call the server can address: the verb writes a new email about it,
+ *  never a reply to it. */
 export const CallWritesEmail: Story = {
   render: () => {
-    installFetchStub({
-      "GET /contacts/p-1": contactWithAddress("jane@example.test"),
-    });
+    installFetchStub({});
     return (
       <StoryProviders>
         <Row
@@ -192,7 +163,7 @@ export const CallWritesEmail: Story = {
           <ChannelReplyAction
             activityId="a-6"
             kind="call"
-            links={ON_JANE}
+            offersEmail
             entityType="contact"
             entityId="p-1"
             contactId="p-1"
@@ -206,32 +177,40 @@ export const CallWritesEmail: Story = {
   },
 };
 
-/** A note on a contact with no address: there is nowhere to write, so nothing
- *  is offered. */
-export const NoteWithoutAddressOffersNothing: Story = {
+/** A note the server cannot address, beside a call it can: only the call
+ *  offers Write email. */
+export const NoteWithNobodyToWriteTo: Story = {
   render: () => {
-    installFetchStub({ "GET /contacts/p-1": contactWithAddress(null) });
+    installFetchStub({});
     return (
       <StoryProviders>
         <Row when="24 August, 11:20" said="Asked for the revised annex.">
           <ChannelReplyAction
             activityId="a-7"
             kind="note"
-            links={ON_JANE}
+            offersEmail={false}
             entityType="contact"
             entityId="p-1"
             contactId="p-1"
           />
         </Row>
-        <AddressOnFile />
+        <Row when="24 August, 11:15" said="Voicemail. Rang twice.">
+          <ChannelReplyAction
+            activityId="a-8"
+            kind="call"
+            offersEmail
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+          />
+        </Row>
       </StoryProviders>
     );
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    // The read the verb waits on has answered, so the absence is its answer.
-    await canvas.findByText("No email address on file");
-    await expect(canvas.queryByRole("button")).toBeNull();
+    await canvas.findByRole("button", { name: "Write email" });
+    await expect(canvas.getAllByRole("button")).toHaveLength(1);
   },
 };
 

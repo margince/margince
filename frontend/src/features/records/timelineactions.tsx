@@ -49,8 +49,8 @@ type AudienceMember = components["schemas"]["AudienceMember"];
 // The per-row action cluster the 360 timelines mount in each entry's action
 // slot.
 //
-// rowAnswer picks the verb: Reply on mail, Write email on any other row with a
-// contact to write to. useAnswerReachable withholds it where nobody can receive it.
+// rowAnswer picks the verb: Reply on mail, Write email on any other row the
+// server says it can address (`offers_email`).
 //
 // Relink, because a row on a 360 timeline is already linked to the entity whose
 // timeline renders it. Re-filing it to the right record always means something.
@@ -88,7 +88,7 @@ export function TimelineActions({
       <ChannelReplyAction
         activityId={activity.id}
         kind={activity.kind}
-        links={activity.links}
+        offersEmail={activity.offers_email}
         automaticKind={activity.automatic_kind}
         channelProvider={activity.channel_provider ?? undefined}
         entityType={entityType}

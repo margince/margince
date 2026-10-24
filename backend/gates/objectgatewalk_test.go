@@ -130,6 +130,12 @@ func (g objectGate) readSites(parsed gatekit.ParsedFile, consts map[string]strin
 	return sites
 }
 
+// carriesGate is whether a function site's read is behind the admission: its
+// own body asks, or it calls a helper that vouches for its caller.
+func (s site) carriesGate(gated map[string]bool) bool {
+	return s.holdsGate || callsAGatedHelper(s.calls, gated)
+}
+
 func callsAGatedHelper(calls map[string]bool, gated map[string]bool) bool {
 	for name := range calls {
 		if gated[name] {
@@ -156,10 +162,10 @@ func (g objectGate) gatedFunctionsByPackage(t *testing.T, files []gatekit.Parsed
 	// gates are in graphreads.go and contacts.go — so a resolution seeded from
 	// the subject files alone reports gated code as ungated, which costs the
 	// gate its credibility faster than a miss does.
-	bodies := map[string]map[string][]references{}
+	bodies := map[string]packageReferences{}
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
-		if bodies[pkg] != nil {
+		if bodies[pkg].funcs != nil {
 			continue
 		}
 		bodies[pkg] = packageFunctionReferences(t, pkg)
@@ -172,11 +178,11 @@ func (g objectGate) gatedFunctionsByPackage(t *testing.T, files []gatekit.Parsed
 	// been asked directly, so the optimism cannot excuse an ungated read whose
 	// same-named neighbour happens to be gated.
 	gated := map[string]map[string]bool{}
-	for pkg, funcs := range bodies {
+	for pkg, walked := range bodies {
 		gated[pkg] = map[string]bool{}
-		for name, decls := range funcs {
+		for name, decls := range walked.funcs {
 			for _, refs := range decls {
-				if g.holdsSeedGate(refs, pkg) {
+				if g.holdsSeedGate(refs, pkg) && !g.spendsItsGate(refs, walked.fragments) {
 					gated[pkg][name] = true
 					break
 				}
@@ -184,11 +190,14 @@ func (g objectGate) gatedFunctionsByPackage(t *testing.T, files []gatekit.Parsed
 		}
 		for grew := true; grew; {
 			grew = false
-			for name, decls := range funcs {
+			for name, decls := range walked.funcs {
 				if gated[pkg][name] {
 					continue
 				}
 				for _, refs := range decls {
+					if g.spendsItsGate(refs, walked.fragments) {
+						continue
+					}
 					for callee := range gated[pkg] {
 						if refs.calls[callee] {
 							gated[pkg][name] = true
@@ -204,6 +213,32 @@ func (g objectGate) gatedFunctionsByPackage(t *testing.T, files []gatekit.Parsed
 		}
 	}
 	return gated
+}
+
+// statementRunners are the calls that run SQL, so a body naming one runs its
+// own read rather than handing a fragment to its caller.
+var statementRunners = []string{"Query", "QueryRow", "Exec", "SendBatch"}
+
+// spendsItsGate is whether the body runs its own read of the table, in a literal
+// or a package-level fragment it names. Its admission covers that read only.
+//
+// Such a gate may only empty this body's answer, or run after a caller's read
+// already did, so it never vouches for the caller.
+func (g objectGate) spendsItsGate(refs references, fragments map[string][]string) bool {
+	if g.literal == nil || !slices.ContainsFunc(statementRunners, func(run string) bool { return refs.calls[run] }) {
+		return false
+	}
+	for text := range refs.literals {
+		if g.literal.MatchString(text) {
+			return true
+		}
+	}
+	for name := range refs.idents {
+		if slices.ContainsFunc(fragments[name], g.literal.MatchString) {
+			return true
+		}
+	}
+	return false
 }
 
 // holdsSeedGate reports whether a function body IS the admission: one of the
@@ -241,6 +276,9 @@ func (g objectGate) holdsSeedGate(refs references, pkg string) bool {
 type references struct {
 	calls    map[string]bool
 	literals map[string]bool
+	// idents are the names a body mentions, so a read through a package-level
+	// SQL fragment is seen as that body's own.
+	idents map[string]bool
 	// gatedObjects are the object names this body passes to a Require-shaped
 	// call. Resolved here rather than left as two facts a reader has to pair
 	// up, because pairing them at the body level is what let RequireHuman(ctx)
@@ -260,7 +298,7 @@ type references struct {
 // parser.ParseDir, which is deprecated for a reason that would bite here: it
 // does not consider build tags when grouping files into packages, and several
 // of the directories this walks hold tagged files.
-func packageFunctionReferences(t *testing.T, pkg string) map[string][]references {
+func packageFunctionReferences(t *testing.T, pkg string) packageReferences {
 	t.Helper()
 	// The path is relative to the module root, which is this test's working
 	// directory: package gates sits one below it and TestMain chdirs up.
@@ -276,13 +314,42 @@ func packageFunctionReferences(t *testing.T, pkg string) map[string][]references
 	// costs a gate its credibility faster than a miss does.
 	parsedFiles := parsePackage(t, pkg, entries, dir)
 	consts := gatekit.PackageStringConstants(t, dir)
-	refs := map[string][]references{}
+	out := packageReferences{funcs: map[string][]references{}, fragments: map[string][]string{}}
 	for _, file := range parsedFiles {
 		for fn, decls := range functionBodies(gatekit.ParsedFile{File: file}, consts) {
-			refs[fn] = append(refs[fn], decls...)
+			out.funcs[fn] = append(out.funcs[fn], decls...)
+		}
+		collectFragments(file, out.fragments)
+	}
+	return out
+}
+
+// packageReferences is one package's function bodies, plus the string literals
+// each package-level const or var holds.
+type packageReferences struct {
+	funcs     map[string][]references
+	fragments map[string][]string
+}
+
+func collectFragments(file *ast.File, into map[string][]string) {
+	for _, decl := range file.Decls {
+		general, isGeneral := decl.(*ast.GenDecl)
+		if !isGeneral {
+			continue
+		}
+		for _, spec := range general.Specs {
+			value, isValue := spec.(*ast.ValueSpec)
+			if !isValue {
+				continue
+			}
+			literals := referencesIn(value, nil).literals
+			for _, name := range value.Names {
+				for text := range literals {
+					into[name.Name] = append(into[name.Name], text)
+				}
+			}
 		}
 	}
-	return refs
 }
 
 func parsePackage(t *testing.T, pkg string, entries []os.DirEntry, dir string) []*ast.File {
@@ -315,7 +382,9 @@ func functionBodies(parsed gatekit.ParsedFile, consts map[string]string) map[str
 }
 
 func referencesIn(node ast.Node, consts map[string]string) references {
-	refs := references{calls: map[string]bool{}, literals: map[string]bool{}, gatedObjects: map[string]bool{}}
+	refs := references{
+		calls: map[string]bool{}, literals: map[string]bool{}, idents: map[string]bool{}, gatedObjects: map[string]bool{},
+	}
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch typed := n.(type) {
 		case *ast.CallExpr:
@@ -336,6 +405,8 @@ func referencesIn(node ast.Node, consts map[string]string) references {
 			if text, isString := gatekit.LiteralText(typed); isString {
 				refs.literals[text] = true
 			}
+		case *ast.Ident:
+			refs.idents[typed.Name] = true
 		}
 		return true
 	})
@@ -369,7 +440,7 @@ func (g objectGate) fileHoldsAGatedFunction(t *testing.T, parsed gatekit.ParsedF
 			return true
 		}
 		for _, refs := range decls {
-			if g.holdsSeedGate(refs, pkgOf(parsed.Path)) {
+			if g.holdsSeedGate(refs, pkgOf(parsed.Path)) || callsAGatedHelper(refs.calls, gated) {
 				return true
 			}
 		}

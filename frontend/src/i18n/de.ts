@@ -6179,8 +6179,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt.",
   "sendPermission.reason.unknownPurpose":
     "Diese Nachricht nennt einen Zweck, den Margince nicht kennt. Wähle einen Kontaktgrund aus der Liste.",
+  "sendPermission.reason.unknownPurposeFact":
+    "Diese Nachricht nennt einen Zweck, den Margince nicht kennt.",
   "sendPermission.reason.claimContradicts":
     "Der gewählte Kontaktgrund passt nicht zu diesem Thread. Wähle einen anderen Grund oder lass das Feld leer, damit Margince ihn aus dem Thread liest.",
+  "sendPermission.reason.claimContradictsFact":
+    "Der angegebene Kontaktgrund passt nicht zu diesem Thread.",
   "sendPermission.reason.other":
     "Diese Nachricht kann so nicht gesendet werden.",
   "compose.send": "Senden",

@@ -6228,8 +6228,12 @@ export const en = {
     "This message uses an old purpose that nothing on record supports.",
   "sendPermission.reason.unknownPurpose":
     "This message names a purpose Margince does not know. Pick a contact reason from the list.",
+  "sendPermission.reason.unknownPurposeFact":
+    "This message names a purpose Margince does not know.",
   "sendPermission.reason.claimContradicts":
     "The contact reason you picked does not match this conversation. Pick another reason, or leave it empty so Margince reads it from the thread.",
+  "sendPermission.reason.claimContradictsFact":
+    "The contact reason given does not match this conversation.",
   "sendPermission.reason.other": "This message cannot be sent as it stands.",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send email",

@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -49,7 +50,7 @@ type activityPage struct{ Data []crmcontracts.Activity }
 // failing when the two disagree, beside the To reply-recipient fills.
 func (s *standingEnv) offeredOnEveryRead(t *testing.T, row ids.UUID) (offers bool, to string) {
 	t.Helper()
-	ctx, h := s.reader(), activities.NewHandlers(s.DB())
+	ctx, h := s.reader(), s.replyHandlers()
 	code, body := serve(t, ctx, func(w http.ResponseWriter, r *http.Request) {
 		h.ListActivities(w, r, crmcontracts.ListActivitiesParams{})
 	})
@@ -74,20 +75,31 @@ func (s *standingEnv) offeredOnEveryRead(t *testing.T, row ids.UUID) (offers boo
 	if one.OffersEmail != listed {
 		t.Errorf("offers_email is %v on the list and %v on the single read", listed, one.OffersEmail)
 	}
-	// A withheld row answers 404 here: the composer cannot open on it, so To is empty.
-	var recipient crmcontracts.ReplyRecipient
-	code, body = serve(t, ctx, func(w http.ResponseWriter, r *http.Request) { h.GetReplyRecipient(w, r, crmcontracts.Id(row)) })
+	to = filledTo(t, ctx, h, row)
+	if listed != (to != "") {
+		t.Errorf("offers_email = %v while reply-recipient fills To with %q", listed, to)
+	}
+	return listed, to
+}
+
+// replyHandlers is the activities surface with the colleague reader compose wires.
+func (s *standingEnv) replyHandlers() activities.Handlers {
+	return activities.NewHandlers(s.DB()).WithColleagues(compose.ColleagueDomainsFor(s.Pool))
+}
+
+// filledTo is the To reply-recipient fills. A withheld row answers 404: the
+// composer cannot open on it, so To is empty.
+func filledTo(t *testing.T, ctx context.Context, h activities.Handlers, row ids.UUID) string {
+	t.Helper()
+	code, body := serve(t, ctx, func(w http.ResponseWriter, r *http.Request) { h.GetReplyRecipient(w, r, crmcontracts.Id(row)) })
 	switch code {
 	case http.StatusOK:
-		recipient = readBody[crmcontracts.ReplyRecipient](t, body)
+		return readBody[crmcontracts.ReplyRecipient](t, body).Address
 	case http.StatusNotFound:
-	default:
-		t.Fatalf("reply-recipient answered %d", code)
+		return ""
 	}
-	if listed != (recipient.Address != "") {
-		t.Errorf("offers_email = %v while reply-recipient fills To with %q", listed, recipient.Address)
-	}
-	return listed, recipient.Address
+	t.Fatalf("reply-recipient answered %d", code)
+	return ""
 }
 
 func (s *standingEnv) onContactPage(t *testing.T, contact, row ids.UUID) bool {
@@ -162,4 +174,32 @@ func TestOffersEmailAndTheFilledToAreOneAnswer(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Our domain registered in punycode, a colleague's address spelled in Unicode.
+// A written-about row and an email row fold it by the one own-domain rule.
+func TestAUnicodeAddressAtOurPunycodeDomainIsAColleagueOnEveryRow(t *testing.T) {
+	s := setupStanding(t)
+	s.WsExec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ($1, 'admin', true)`,
+		"xn--bcher-kva.example")
+	const colleague = "anna@bücher.example"
+
+	t.Run("a written-about row", func(t *testing.T) {
+		row := s.writtenAbout(t, "call", s.contactAt(t, "Anna Brandt", colleague))
+		if offers, to := s.offeredOnEveryRead(t, row); offers || to != "" {
+			t.Errorf("offers_email = %v, To = %q; want false and empty", offers, to)
+		}
+	})
+	t.Run("an email row", func(t *testing.T) {
+		ctx, h := s.replier(false), s.replyHandlers()
+		seat := threadParty{role: "to", address: colleagueAddress, seat: &s.Rep2}
+		client := s.message(t, "punycode-client", "workspace", threadParty{role: "from", address: clientAddress}, seat)
+		if to := filledTo(t, ctx, h, client); to != clientAddress {
+			t.Fatalf("a client's mail fills To with %q, want %s", to, clientAddress)
+		}
+		row := s.message(t, "punycode-colleague", "workspace", threadParty{role: "from", address: colleague}, seat)
+		if to := filledTo(t, ctx, h, row); to != "" {
+			t.Errorf("a colleague's mail fills To with %q, want empty", to)
+		}
+	})
 }

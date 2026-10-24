@@ -111,13 +111,18 @@ describe("DealHistoryTab", () => {
     expect(screen.queryByLabelText("Activity kind")).toBeNull();
   });
 
-  // Mail is answered. Any other row is written about when it links one contact
-  // with an address, and a task the product filed offers no email at all.
-  it("offers Reply on mail and Write email only where the row names someone to write to", async () => {
-    const anna = [{ entity_type: "contact", entity_id: "c-1" }];
+  // Mail is answered. Any other row is written about where the server can fill
+  // To, and a task the product filed offers no email at all.
+  it("offers Reply on mail and Write email only where the server can address the row", async () => {
     const rows = [
-      { ...CALL_ACTIVITY, links: anna },
-      { ...CALL_ACTIVITY, id: "a-2", kind: "meeting", subject: "Site visit" },
+      { ...CALL_ACTIVITY, offers_email: true },
+      {
+        ...CALL_ACTIVITY,
+        id: "a-2",
+        kind: "meeting",
+        subject: "Site visit",
+        offers_email: false,
+      },
       {
         ...CALL_ACTIVITY,
         id: "a-3",
@@ -126,7 +131,7 @@ describe("DealHistoryTab", () => {
         is_done: false,
         captured_by: "system",
         automatic_kind: "product",
-        links: anna,
+        offers_email: true,
       },
       {
         ...CALL_ACTIVITY,
@@ -134,7 +139,7 @@ describe("DealHistoryTab", () => {
         kind: "task",
         subject: "Send the revised quote",
         is_done: false,
-        links: anna,
+        offers_email: true,
       },
       {
         ...CALL_ACTIVITY,
@@ -148,21 +153,14 @@ describe("DealHistoryTab", () => {
       {
         "GET /activities": () =>
           jsonResponse({ data: rows, page: { has_more: false } }),
-        "GET /contacts/c-1": () =>
-          jsonResponse({
-            id: "c-1",
-            full_name: "Anna Weber",
-            primary_email: "anna@example.test",
-          }),
       },
       {},
     );
     withProviders(<DealHistoryTab deal={DEAL} onOpenEmail={() => {}} />);
 
-    await waitFor(() =>
-      expect(
-        screen.getAllByRole("button", { name: "Write email" }),
-      ).toHaveLength(2),
+    await screen.findByText("Send the revised quote");
+    expect(screen.getAllByRole("button", { name: "Write email" })).toHaveLength(
+      2,
     );
     expect(screen.getAllByRole("button", { name: "Reply" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Open task" })).toHaveLength(
