@@ -40,6 +40,7 @@ func uploadCeilings(limits UploadLimits) map[string]int64 {
 		// the CSV import's ceiling rather than earning an operator dial of its
 		// own — the two are the same kind of upload, a delimited address book.
 		"/v1/contacts/vcard-import":            limits.CSVImport,         // importVCards
+		"/v1/contacts/card-photos":             limits.Attachment,        // importCardPhoto
 		"/v1/knowledge/corpora/{id}/documents": limits.KnowledgeDocument, // uploadCorpusDocument
 		// A company mark, and the only ceiling here an operator cannot move.
 		// The others bound what a workspace ACCUMULATES — attachments, imports,

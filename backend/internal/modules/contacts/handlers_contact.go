@@ -202,7 +202,7 @@ func (h Handlers) stageVCardReviews(ctx context.Context, entries []VCardEntry, r
 		return
 	}
 	for i := range results {
-		if results[i].Outcome != VCardNeedsReview {
+		if !results[i].Outcome.AwaitsApproval() {
 			continue
 		}
 		if err := h.stageVCardReview(ctx, entries[results[i].Index], results[i].ContactID); err != nil {

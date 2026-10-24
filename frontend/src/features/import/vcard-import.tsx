@@ -14,6 +14,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { RecordBack } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import type { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
 import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
@@ -32,8 +33,34 @@ const OUTCOMES: Readonly<
   created: { label: "vcardImport.outcome.created" },
   updated: { label: "vcardImport.outcome.updated" },
   needs_review: { label: "vcardImport.outcome.needsReview", tone: "warning" },
+  proposed: { label: "vcardImport.outcome.proposed", tone: "warning" },
   skipped: { label: "vcardImport.outcome.skipped" },
 };
+
+/** The photo types a card reading takes: the attachment types that are pictures
+ * a model reads, without TIFF, which no binding carries. Each must stay one the
+ * attachment mirror accepts, which the unit test holds. */
+export const CARD_PHOTO_EXTENSIONS = [
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".heic",
+  ".heif",
+] as const satisfies readonly (typeof ACCEPTED_ATTACHMENT_EXTENSIONS)[number][];
+
+const ACCEPT_ATTR = [".vcf", "text/vcard", ...CARD_PHOTO_EXTENSIONS].join(",");
+
+/** isCardPhoto picks the endpoint from the file itself. A phone's HEIC often
+ * arrives with no content type, so the extension decides as well. */
+export function isCardPhoto(file: File): boolean {
+  const name = file.name.toLowerCase();
+  return (
+    file.type.startsWith("image/") ||
+    CARD_PHOTO_EXTENSIONS.some((extension) => name.endsWith(extension))
+  );
+}
 
 /** isReport reports whether a body carries the one thing the report renderer
  * needs. Narrow on purpose: this guards against a truncated or wrong answer,
@@ -53,9 +80,12 @@ function useImportVCards() {
     // belongs to the committed render, so what it hands over cannot be older
     // than the control that carried it.
     mutationFn: async (file: File): Promise<VCardReport> => {
-      const payload = await postMultipart("/v1/contacts/vcard-import", {
-        file,
-      });
+      const payload = await postMultipart(
+        isCardPhoto(file)
+          ? "/v1/contacts/card-photos"
+          : "/v1/contacts/vcard-import",
+        { file },
+      );
       // A 200 whose body is not a report is a transport fault, not an import
       // of nothing. Rendering it would say "that file held no cards" about a
       // file whose cards may well have been written.
@@ -131,7 +161,7 @@ export function VCardImportPage() {
                 label={t("vcardImport.fileLabel")}
                 hint={t("vcardImport.whichFile")}
                 emptyLabel={t("vcardImport.choose")}
-                accept=".vcf,text/vcard"
+                accept={ACCEPT_ATTR}
                 file={picked}
                 onPick={(file) => {
                   setPicked(file);

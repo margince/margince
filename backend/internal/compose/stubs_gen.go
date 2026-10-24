@@ -1323,6 +1323,10 @@ func (stubs) CreateContact(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "CreateContact")
 }
 
+func (stubs) ImportCardPhoto(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ImportCardPhoto")
+}
+
 func (stubs) DismissRelationshipNudges(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "DismissRelationshipNudges")
 }

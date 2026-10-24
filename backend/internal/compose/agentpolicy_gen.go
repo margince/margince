@@ -743,6 +743,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/connectors/{provider}/disconnect":                             {Op: "disconnectConnector", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/consent-purposes":                                             {Op: "createConsentPurpose", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts":                                                     {Op: "createContact", Access: "tool", Tool: "create_record", RecordType: "contact", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/contacts/card-photos":                                         {Op: "importCardPhoto", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/quick-capture":                                       {Op: "quickCaptureContact", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/vcard-import":                                        {Op: "importVCards", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/{id}/brief":                                          {Op: "regenerateContactBrief", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

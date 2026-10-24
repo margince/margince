@@ -5626,11 +5626,11 @@ export const en = {
   // what it says. The label names the ACT, not the source, because the same
   // form takes a conference badge and a business card.
   "vcardImport.action": "Import vCards",
-  "vcardImport.title": "Import vCards",
-  "vcardImport.fileLabel": "vCard file",
+  "vcardImport.title": "Import business cards",
+  "vcardImport.fileLabel": "vCard file or card photo",
   "vcardImport.whichFile":
-    "A .vcf file, the contact export format of phones and mail clients. A card comes from its owner, so imported cards skip approval.",
-  "vcardImport.choose": "Select .vcf file",
+    "A .vcf file, the contact export format of phones and mail clients, or a photo of one or more business cards. A vCard comes from its owner, so imported vCards skip approval. A photo is read by a model and can be wrong, so every card read from a photo waits for your approval.",
+  "vcardImport.choose": "Select file or photo",
   "vcardImport.working": "Reading cards…",
   "vcardImport.back": "Back to contacts",
   "vcardImport.noCards": "The file contains no cards.",
@@ -5638,6 +5638,7 @@ export const en = {
   "vcardImport.outcome.created": "Added",
   "vcardImport.outcome.updated": "Missing fields added",
   "vcardImport.outcome.needsReview": "Possible duplicate",
+  "vcardImport.outcome.proposed": "Waiting for approval",
   "vcardImport.outcome.skipped": "Skipped",
   "create.quickCapture": "Quick capture",
   "create.quickCaptureSaved": "{name} saved",

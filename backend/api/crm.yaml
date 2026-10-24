@@ -1589,6 +1589,53 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/card-photos:
+    post:
+      tags: [Contacts]
+      operationId: importCardPhoto
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      summary: Read a photo of business cards and propose the contacts it shows.
+      description: |
+        A model reads the photo and returns one card per business card it can see. Nothing is
+        written to a contact: every card that is not an exact match goes to the approval queue
+        as a `vcard_create` approval that only the importing member can see and decide.
+
+        Per card, in reading order: `proposed` — nobody matched, waiting on an approval.
+        `needs_review` — the card resembles a contact, waiting on an approval that names the
+        candidate. `skipped` — the card states no name, carries a sending system's address, or
+        its email already belongs to a contact; a card read from a photo never changes an
+        existing contact. A photo that shows more than 20 cards is refused whole.
+
+        JPEG, PNG, GIF, WebP, HEIC and HEIF are accepted. HEIC and HEIF are converted to JPEG on
+        the server before the model reads them, so every model binding can read them. The reading
+        runs inside the request. `422` with code `no_cards` means the photo shows no business card,
+        and `422` with `not_readable` means the configured model cannot read photos or the reply
+        could not be used. `501` means the installation has no model configured.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: "The photo. Its bytes must be the image type it claims to be." }
+      responses:
+        '200':
+          description: What became of each card in the photo.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VCardImportReport' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501':
+          description: The installation has no model configured to read photos.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /contacts/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -38568,7 +38615,7 @@ components:
         full_name: { type: string, description: "The name the card stated, so a reader can find the row it came from." }
         outcome:
           type: string
-          enum: [created, updated, needs_review, skipped]
+          enum: [created, updated, needs_review, proposed, skipped]
           # Pins the generated Go constant names. Unpinned, the generator names
           # these bare whenever nothing else in api_gen.go happens to claim the
           # word — and `Created` is already declared by publicevents_gen.go in
@@ -38579,12 +38626,14 @@ components:
               VCardImportResultOutcomeCreated,
               VCardImportResultOutcomeUpdated,
               VCardImportResultOutcomeNeedsReview,
+              VCardImportResultOutcomeProposed,
               VCardImportResultOutcomeSkipped,
             ]
           description: |
             `created` — nobody matched, so the card became a contact, their company and the edge
             between them. `updated` — an exact match, filled only where the record was empty.
             `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+            `proposed` — a card read from a photo that nobody matched, waiting on an approval.
             `skipped` — the card states no name, carries a sending system's address, or matches a
             contact the caller may not write; `reason` says which.
         contact_id:

@@ -66,8 +66,8 @@ Also called: create a contact, add someone to the CRM, new customer contact.
 To add a contact quickly in Margince, open **Contacts** and choose **Quick capture**. To add many from a card file, choose **Import vCards**.
 - **Quick capture** asks for **Full name** (required), **Title**, **Company**, **LinkedIn**, **Email** and **Phone**, and confirms with "{name} saved"; the form stays open.
 - The **Company** box in Quick capture lists the companies that match what you type: pick one to link it. A name you do not pick creates a new company.
-- **Import vCards** asks for a **vCard file**: choose **Select .vcf file**. Each card is reported as Added, Missing fields added, Possible duplicate or Skipped.
-Also called: import contacts, upload a .vcf.
+- **Import vCards** opens **Import business cards**: choose **Select file or photo** for a **vCard file or card photo**. Each card is Added, Missing fields added, Possible duplicate, Waiting for approval or Skipped. A model reads a photo of up to 20 cards, so every card from a photo waits for your approval. A photo card whose email is already a contact is Skipped.
+Also called: import contacts, upload a .vcf, scan a business card, import cards from a photo.
 
 ### How do I edit a contact?
 To edit a contact in Margince, open it and click the value to change in the **Details** panel next to the record. There is no Edit button: each field changes in place.

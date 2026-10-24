@@ -19718,6 +19718,7 @@ func (e UserStatus) Valid() bool {
 const (
 	VCardImportResultOutcomeVCardImportResultOutcomeCreated     VCardImportResultOutcome = "created"
 	VCardImportResultOutcomeVCardImportResultOutcomeNeedsReview VCardImportResultOutcome = "needs_review"
+	VCardImportResultOutcomeVCardImportResultOutcomeProposed    VCardImportResultOutcome = "proposed"
 	VCardImportResultOutcomeVCardImportResultOutcomeSkipped     VCardImportResultOutcome = "skipped"
 	VCardImportResultOutcomeVCardImportResultOutcomeUpdated     VCardImportResultOutcome = "updated"
 )
@@ -19728,6 +19729,8 @@ func (e VCardImportResultOutcome) Valid() bool {
 	case VCardImportResultOutcomeVCardImportResultOutcomeCreated:
 		return true
 	case VCardImportResultOutcomeVCardImportResultOutcomeNeedsReview:
+		return true
+	case VCardImportResultOutcomeVCardImportResultOutcomeProposed:
 		return true
 	case VCardImportResultOutcomeVCardImportResultOutcomeSkipped:
 		return true
@@ -53125,6 +53128,7 @@ type VCardImportResult struct {
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
 	// between them. `updated` — an exact match, filled only where the record was empty.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 	// `skipped` — the card states no name, carries a sending system's address, or matches a
 	// contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
@@ -53136,6 +53140,7 @@ type VCardImportResult struct {
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
 // between them. `updated` — an exact match, filled only where the record was empty.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 // `skipped` — the card states no name, carries a sending system's address, or matches a
 // contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
@@ -58315,6 +58320,12 @@ type CreateContactParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ImportCardPhotoMultipartBody defines parameters for ImportCardPhoto.
+type ImportCardPhotoMultipartBody struct {
+	// File The photo. Its bytes must be the image type it claims to be.
+	File openapi_types.File `json:"file"`
+}
+
 // QuickCaptureContactParams defines parameters for QuickCaptureContact.
 type QuickCaptureContactParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -63385,6 +63396,9 @@ type CreateConsentPurposeJSONRequestBody = CreateConsentPurposeRequest
 
 // CreateContactJSONRequestBody defines body for CreateContact for application/json ContentType.
 type CreateContactJSONRequestBody = CreateContactRequest
+
+// ImportCardPhotoMultipartRequestBody defines body for ImportCardPhoto for multipart/form-data ContentType.
+type ImportCardPhotoMultipartRequestBody ImportCardPhotoMultipartBody
 
 // DismissRelationshipNudgesJSONRequestBody defines body for DismissRelationshipNudges for application/json ContentType.
 type DismissRelationshipNudgesJSONRequestBody = DismissRelationshipNudgesRequest
@@ -75731,6 +75745,9 @@ type ServerInterface interface {
 	// Create a contact.
 	// (POST /contacts)
 	CreateContact(w http.ResponseWriter, r *http.Request, params CreateContactParams)
+	// Read a photo of business cards and propose the contacts it shows.
+	// (POST /contacts/card-photos)
+	ImportCardPhoto(w http.ResponseWriter, r *http.Request)
 	// Set several lapsed contacts aside at once — the Worklist's "Dismiss all".
 	// (PUT /contacts/nudge-dismissals)
 	DismissRelationshipNudges(w http.ResponseWriter, r *http.Request)
@@ -79427,6 +79444,12 @@ func (_ Unimplemented) ListContacts(w http.ResponseWriter, r *http.Request, para
 // Create a contact.
 // (POST /contacts)
 func (_ Unimplemented) CreateContact(w http.ResponseWriter, r *http.Request, params CreateContactParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read a photo of business cards and propose the contacts it shows.
+// (POST /contacts/card-photos)
+func (_ Unimplemented) ImportCardPhoto(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -96652,6 +96675,26 @@ func (siw *ServerInterfaceWrapper) CreateContact(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateContact(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ImportCardPhoto operation middleware
+func (siw *ServerInterfaceWrapper) ImportCardPhoto(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ImportCardPhoto(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -122218,6 +122261,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts", wrapper.CreateContact)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/card-photos", wrapper.ImportCardPhoto)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/contacts/nudge-dismissals", wrapper.DismissRelationshipNudges)

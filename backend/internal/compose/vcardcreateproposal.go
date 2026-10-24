@@ -161,7 +161,7 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry conta
 			ProposedChange: body,
 			DiffHash:       hex.EncodeToString(digest[:]),
 			Identity:       identity,
-			Summary:        vcardCreateSummary(approvalSummaryCopyOver(ctx, pool), entry.FullName),
+			Summary:        vcardCreateSummary(approvalSummaryCopyOver(ctx, pool), entry, candidate != nil),
 			JoinPending:    true,
 		})
 		return err
@@ -173,9 +173,11 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry conta
 // is the uploader's text, and a long one placed first would push "resembles
 // an existing contact" past the summary's truncation. Every language's
 // sentence keeps that order.
-func vcardCreateSummary(said approvalSummaryCopy, fullName string) string {
-	name := strings.TrimSpace(fullName)
-	name = textcut.RunesMarked(name, 80, "…")
+func vcardCreateSummary(said approvalSummaryCopy, entry contacts.VCardEntry, resemblesContact bool) string {
+	name := textcut.RunesMarked(strings.TrimSpace(entry.FullName), 80, "…")
+	if entry.ModelRead && !resemblesContact {
+		return fmt.Sprintf(said.vcardReadFromPhoto, name)
+	}
 	return fmt.Sprintf(said.vcardResemblesContact, name)
 }
 

@@ -51,6 +51,8 @@ type approvalSummaryCopy struct {
 	linkedInLooksLike string
 	// vcardResemblesContact: %s is the card's name, after the qualifier.
 	vcardResemblesContact string
+	// vcardReadFromPhoto: %s is the card's name, after the qualifier.
+	vcardReadFromPhoto string
 	// unnamedEmployer stands in for an employer the export left blank, inside
 	// linkedInLooksLike's second hole.
 	unnamedEmployer string
@@ -110,6 +112,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		linkedInLooksLike:        "%s at %s looks like %s",
 		unnamedEmployer:          "an unnamed employer",
 		vcardResemblesContact:    "This card resembles an existing contact. Create %s anyway?",
+		vcardReadFromPhoto:       "A model read this card from a photo. Create %s?",
 
 		heldNotSent:          "%q was not sent: %s",
 		heldConsentWithdrawn: "a recipient withdrew consent for this purpose after it was scheduled",
@@ -150,6 +153,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		linkedInLooksLike:        "%s bei %s scheint %s zu sein",
 		unnamedEmployer:          "einem nicht genannten Arbeitgeber",
 		vcardResemblesContact:    "Diese Visitenkarte ähnelt einem bestehenden Kontakt. %s trotzdem erstellen?",
+		vcardReadFromPhoto:       "Ein Modell hat diese Visitenkarte aus einem Foto gelesen. %s erstellen?",
 
 		heldNotSent:          "%q wurde nicht gesendet: %s",
 		heldConsentWithdrawn: "jemand unter den Empfangenden hat die Einwilligung für diesen Zweck nach der Planung widerrufen",
@@ -191,6 +195,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		linkedInLooksLike:        "%s tại %s có vẻ là %s",
 		unnamedEmployer:          "một nơi làm việc không rõ tên",
 		vcardResemblesContact:    "Danh thiếp này giống một liên hệ đã có. Vẫn tạo %s chứ?",
+		vcardReadFromPhoto:       "Một mô hình đã đọc danh thiếp này từ ảnh. Tạo %s chứ?",
 
 		heldNotSent:          "%q chưa được gửi: %s",
 		heldConsentWithdrawn: "một người nhận đã rút lại sự đồng ý cho mục đích này sau khi tin nhắn được lên lịch",

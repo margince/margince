@@ -212,6 +212,9 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// differs — this one is read by a customer — but the task is drafting,
 		// which is what the lane is.
 		compose.WithIntroNoteDraft(modelPath.DraftReply),
+		// A photo of business cards rides the document task. It has the same
+		// ladder and the same carriage declaration as an attached document.
+		compose.WithCardPhotoReader(modelPath.DocumentExtract),
 	}
 }
 

@@ -837,6 +837,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/card-photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read a photo of business cards and propose the contacts it shows.
+         * @description A model reads the photo and returns one card per business card it can see. Nothing is
+         *     written to a contact: every card that is not an exact match goes to the approval queue
+         *     as a `vcard_create` approval that only the importing member can see and decide.
+         *
+         *     Per card, in reading order: `proposed` — nobody matched, waiting on an approval.
+         *     `needs_review` — the card resembles a contact, waiting on an approval that names the
+         *     candidate. `skipped` — the card states no name, carries a sending system's address, or
+         *     its email already belongs to a contact; a card read from a photo never changes an
+         *     existing contact. A photo that shows more than 20 cards is refused whole.
+         *
+         *     JPEG, PNG, GIF, WebP, HEIC and HEIF are accepted. HEIC and HEIF are converted to JPEG on
+         *     the server before the model reads them, so every model binding can read them. The reading
+         *     runs inside the request. `422` with code `no_cards` means the photo shows no business card,
+         *     and `422` with `not_readable` means the configured model cannot read photos or the reply
+         *     could not be used. `501` means the installation has no model configured.
+         */
+        post: operations["importCardPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}": {
         parameters: {
             query?: never;
@@ -27348,11 +27382,12 @@ export interface components {
              * @description `created` — nobody matched, so the card became a contact, their company and the edge
              *     between them. `updated` — an exact match, filled only where the record was empty.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+             *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
              *     `skipped` — the card states no name, carries a sending system's address, or matches a
              *     contact the caller may not write; `reason` says which.
              * @enum {string}
              */
-            outcome: "created" | "updated" | "needs_review" | "skipped";
+            outcome: "created" | "updated" | "needs_review" | "proposed" | "skipped";
             /**
              * Format: uuid
              * @description The contact created or updated, or — for `needs_review` — the candidate the card resembles.
@@ -51313,6 +51348,48 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    importCardPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The photo. Its bytes must be the image type it claims to be.
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description What became of each card in the photo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VCardImportReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            /** @description The installation has no model configured to read photos. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getContact: {

@@ -37,6 +37,7 @@ var approvalSummaryHoles = map[string][]string{
 	"overwriteHumanEdited":         {"%s", "%s"},
 	"linkedInLooksLike":            {"%s", "%s", "%s"},
 	"vcardResemblesContact":        {"%s"},
+	"vcardReadFromPhoto":           {"%s"},
 	"unnamedEmployer":              nil,
 	"heldNotSent":                  {"%q", "%s"},
 	"heldConsentWithdrawn":         nil,
