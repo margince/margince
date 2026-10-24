@@ -154,6 +154,32 @@ func TestAnInboundEmailNamesItsSender(t *testing.T) {
 	}
 }
 
+func TestAReceivedEmailFromTheMailSystemIsRefusedOnItsSender(t *testing.T) {
+	for _, sender := range []string{"postmaster@example.test", "MAILER-DAEMON@example.test", "bounces-77@example.test"} {
+		req := emailRequest()
+		req.Direction = directionOf("inbound")
+		req.Participants = participantsOf(sender, []string{"us@example.test"}, nil)
+		if got := faultFieldOf(t, mustRefuse(t, req)); got != fieldParticipantOf {
+			t.Fatalf("%s: refused %q, want %q", sender, got, fieldParticipantOf)
+		}
+	}
+}
+
+func TestOnlyAReceivedEmailIsRefusedForAMailSystemSender(t *testing.T) {
+	outbound := emailRequest()
+	outbound.Direction = directionOf("outbound")
+	outbound.Participants = participantsOf("postmaster@example.test", []string{"them@example.test"}, nil)
+	if _, err := LogActivityInputFrom(outbound); err != nil {
+		t.Fatalf("an outbound row from the same address was refused: %v", err)
+	}
+	human := emailRequest()
+	human.Direction = directionOf("inbound")
+	human.Participants = participantsOf("anna@example.test", []string{"us@example.test"}, []string{"bounces@example.test"})
+	if _, err := LogActivityInputFrom(human); err != nil {
+		t.Fatalf("a reply from a person, with a mail-system address in Cc, was refused: %v", err)
+	}
+}
+
 func TestAddressesArriveFoldedAndInOneRoleEach(t *testing.T) {
 	req := emailRequest()
 	req.Direction = directionOf("inbound")
