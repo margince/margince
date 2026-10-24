@@ -64,7 +64,7 @@ func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal app
 	if asked, named := approvalsubject.CommitmentAskedOf(proposal.Change); named {
 		seat = &asked
 	}
-	action, reason, err := homeRepairCommitmentAdmissionTx(ctx, tx, Commitment{SourceActivityID: staged.SourceActivityID, Seat: seat, AsOf: asOf}, due, repairWithdrawProposal, forDecision)
+	action, reason, err := homeRepairCommitmentAdmissionTx(ctx, tx, Commitment{SourceActivityID: staged.SourceActivityID, Seat: seat, AsOf: asOf, PrivateTo: staged.PrivateTo}, due, repairWithdrawProposal, forDecision)
 	if err != nil {
 		return item, err
 	}
@@ -113,7 +113,7 @@ func homeRepairCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, commitment 
 	if err != nil {
 		return "", "", err
 	}
-	if retire == repairWithdrawProposal && read.proposeLate() {
+	if retire == repairWithdrawProposal && commitment.proposeLate(read) {
 		return repairLeaveCurrent, string(CommitmentHistoricalProposed), nil
 	}
 	switch reason {
