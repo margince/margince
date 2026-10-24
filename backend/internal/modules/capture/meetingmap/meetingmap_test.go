@@ -44,8 +44,8 @@ func TestAnEventWithNoOrganizerIsStillJudgedOnItsParties(t *testing.T) {
 		ID: "evt-standup", Subject: "Standup",
 		Attendees: []Actor{{Email: owner}, {Email: "peer@myco.com"}},
 	}, owner)
-	if reason, skip := internal.SkipReason(); !skip || reason != "no party outside the owner's domain" {
-		t.Fatalf("got (%q, skip=%v), want the owner-domain floor to drop it", reason, skip)
+	if got := internal.ToRecord("testcal", nil).OwnerDomainOnly; got != "myco.com" {
+		t.Fatalf("OwnerDomainOnly = %q, want the owner's domain stated for the writer", got)
 	}
 }
 
@@ -61,8 +61,8 @@ func TestABookedRoomIsNeitherAPartyNorAParticipant(t *testing.T) {
 			{Email: "boardroom@myco.com", Room: true},
 		},
 	}, owner)
-	if reason, skip := m.SkipReason(); !skip || reason != "no party outside the owner's domain" {
-		t.Fatalf("got (%q, skip=%v), want the room ignored and the meeting dropped as internal", reason, skip)
+	if got := m.ToRecord("testcal", nil).OwnerDomainOnly; got != "myco.com" {
+		t.Fatalf("OwnerDomainOnly = %q, want myco.com: the room is no outside guest", got)
 	}
 	for _, p := range m.Participants().Participants {
 		if strings.HasPrefix(p.Email, "boardroom@") {

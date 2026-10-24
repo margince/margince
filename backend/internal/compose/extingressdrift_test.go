@@ -55,6 +55,8 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"CrossDoorIdentity": "what a record is called to EVERY door, which is a CLAIM rather than a description: a record stating one asks to be bound to whatever row already holds it, and binding is what makes two rows' content reachable through each other. " +
 		"Deliberately unpublishable, for the reason participantsAreProviderAttested is. The values are provider-stated — an RFC Message-ID, an iCal UID — and a unit able to assert one could name an identity it never observed and reach the activity holding it. That is the same forgery the inbound-mail rule refuses for a Cc line, reached through a different field. " +
 		"The core fills it only from what a connector read out of the provider's own payload. A unit's record carries none, binds to nothing, and lands under its own natural key — which is what every record did before cross-door identity existed, so the absence costs a unit nothing it had",
+	"OwnerDomainOnly": "a calendar connector's statement that every party of a meeting is on the calendar owner's domain, which the sink may read as internal and drop. " +
+		"A unit imports no calendar meetings, and a unit able to state it could ask the sink to drop a record. The zero value claims nothing, so the record is judged on its addresses alone",
 	"SenderAuthentication": "a receiving server's verdict read from the raw message, which a unit does not hand over. " +
 		"A unit able to state it could vouch for a From it never saw authenticated, and capture would read a forged colleague's mail as ours. " +
 		"The zero value authenticates nobody, which is the safe answer",

@@ -126,6 +126,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	if err != nil {
 		return nil, err
 	}
+	meetingmap.CountListed(connectorName, len(events))
 
 	edge := c.now().Add(captureForwards)
 	for _, raw := range events {

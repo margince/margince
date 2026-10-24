@@ -289,6 +289,7 @@ type NormalizedRecord struct {
 	// because the key's spelling belongs to the module owning `activity_identity`
 	// and a connector may not import it.
 	CrossDoorIdentity CrossDoorIdentity
+	OwnerDomainOnly   string // the calendar owner's domain when every party is on it; the sink judges it
 
 	// The address the RECEIVING infrastructure recorded delivery to, empty when
 	// no such claim could be trusted. It is how a forwarding alias is

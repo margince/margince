@@ -78,17 +78,13 @@ func TestParseEventMapsMeetingActivity(t *testing.T) {
 	}
 }
 
-func TestAMeetingInsideTheOwnersDomainIsDroppedByTheFloor(t *testing.T) {
-	// The floor: what the owner's own domain alone proves internal is dropped
-	// here, without consulting any registry. The workspace's registered domains
-	// are wider and are applied by the writer, which can only widen this — an
-	// internal meeting stored while that set is empty would be readable by the
-	// whole workspace.
+// A meeting inside the owner's domain reaches the writer stating so. Only the
+// writer can read the workspace's own domains, so it decides.
+func TestAMeetingInsideTheOwnersDomainStatesItsDomain(t *testing.T) {
 	raw := eventJSON(t, "evt-3", "confirmed", "Standup", "2026-07-16T09:00:00Z",
 		gcalOwner, gcalOwner, "peer@myco.com", "boss@myco.com")
-	reason, skip := mustParse(t, raw).SkipReason()
-	if !skip || reason != "no party outside the owner's domain" {
-		t.Fatalf("got (%q, skip=%v), want the owner-domain floor to drop it", reason, skip)
+	if got := mustParse(t, raw).ToRecord(connectorName, raw).OwnerDomainOnly; got != "myco.com" {
+		t.Fatalf("OwnerDomainOnly = %q, want myco.com", got)
 	}
 }
 
@@ -306,9 +302,8 @@ func roomEventJSON(t *testing.T, id string, flagged bool, attendees ...string) [
 func TestABookedRoomDoesNotMakeAColleaguesOnlyMeetingExternal(t *testing.T) {
 	for _, flagged := range []bool{true, false} {
 		raw := roomEventJSON(t, "evt-room", flagged, gcalOwner, "peer@myco.com")
-		reason, skip := mustParse(t, raw).SkipReason()
-		if !skip || reason != "no party outside the owner's domain" {
-			t.Errorf("resource flag %v: got (%q, skip=%v), want the owner-domain floor to drop it", flagged, reason, skip)
+		if got := mustParse(t, raw).ToRecord(connectorName, raw).OwnerDomainOnly; got != "myco.com" {
+			t.Errorf("resource flag %v: OwnerDomainOnly = %q, want myco.com: the room is no outside guest", flagged, got)
 		}
 	}
 }

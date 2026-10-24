@@ -218,6 +218,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	if err != nil {
 		return nil, err
 	}
+	meetingmap.CountListed(connectorName, len(events))
 
 	for _, raw := range events {
 		if err := meetingmap.CaptureOne(ctx, raw, sink, owner, connectorName, decodeEvent); err != nil {

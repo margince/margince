@@ -92,6 +92,8 @@ type collector struct {
 	rateLimited map[requestKey]uint64
 	requestTime map[pair]*httpserver.Histogram
 	messages    map[pair]uint64
+	calendar    map[pair]uint64
+	listed      map[string]uint64
 	stages      map[pair]*httpserver.Histogram
 	pages       map[pair]uint64
 	snoozed     map[pair]float64
@@ -101,7 +103,7 @@ type collector struct {
 func newCollector() *collector {
 	return &collector{
 		requests: map[requestKey]uint64{}, rateLimited: map[requestKey]uint64{}, requestTime: map[pair]*httpserver.Histogram{},
-		messages: map[pair]uint64{}, stages: map[pair]*httpserver.Histogram{},
+		messages: map[pair]uint64{}, calendar: map[pair]uint64{}, listed: map[string]uint64{}, stages: map[pair]*httpserver.Histogram{},
 		pages: map[pair]uint64{}, snoozed: map[pair]float64{}, retryAfter: map[string]float64{},
 	}
 }
@@ -173,6 +175,31 @@ func (c *collector) observeMessage(provider, outcome string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.messages[pair{provider: provider, value: outcome}]++
+}
+
+// ObserveCalendarListed records how many events one provider list handed to a
+// calendar pull. Like ObserveCalendarEvent it counts every pull, not only a
+// backfill run.
+func ObserveCalendarListed(provider string, events int) {
+	if events <= 0 {
+		return
+	}
+	shared.mu.Lock()
+	defer shared.mu.Unlock()
+	shared.listed[provider] += uint64(events)
+}
+
+// ObserveCalendarEvent records what one attempted calendar event came to.
+// Unlike the backfill families it counts every pull, because a calendar has no
+// backfill run to carry.
+func ObserveCalendarEvent(provider, outcome string) {
+	shared.observeCalendarEvent(provider, outcome)
+}
+
+func (c *collector) observeCalendarEvent(provider, outcome string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.calendar[pair{provider: provider, value: outcome}]++
 }
 
 func (c *collector) observeStage(provider, stage string, elapsed time.Duration) {
