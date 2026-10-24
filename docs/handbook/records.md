@@ -144,9 +144,7 @@ To edit a company in Margince, open it and click the value to change in its **De
 2. Click a value, change it, and press Enter or pick from the list. `Esc` stops.
 
 
-The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the main domain.
-
-**Industry** is one of a fixed list. A file import or a website read that gives a text naming one of them fills it in. A text that names none leaves **Industry** empty, and the original words are added to the **Description** once.
+The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
 Also called: rename a company, update an account.
 
 ### How do I check a company's VAT number?

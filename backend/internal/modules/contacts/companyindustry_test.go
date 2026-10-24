@@ -15,8 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-func ptr(s string) *string { return &s }
-
 func TestTextThatNamesAnIndustryResolvesToItsCode(t *testing.T) {
 	for raw, want := range map[string]string{
 		"Healthcare":                "healthcare",
@@ -88,7 +86,7 @@ func TestAReaderSeesALabelForACodeAndTheStoredValueForAnythingElse(t *testing.T)
 }
 
 func TestTheIndustryNoteIsAppendedOnceAndKeepsTheTextBeforeIt(t *testing.T) {
-	description := ptr("Maker of industrial pumps")
+	description := new("Maker of industrial pumps")
 	next, changed := withIndustrySource(description, "pumps and valves")
 	if !changed || next != "Maker of industrial pumps Industry as written: pumps and valves" {
 		t.Fatalf("first call = %q, %v", next, changed)
@@ -135,16 +133,16 @@ func TestEveryColumnWriterBindsTheIndustryCode(t *testing.T) {
 
 func TestAPatchStoresTheCodeAndAnUnmappableTextOnlyAddsTheNote(t *testing.T) {
 	standing := crmcontracts.CompanyIndustryHealthcare
-	current := crmcontracts.Company{Industry: &standing, Description: ptr("Maker of pumps")}
+	current := crmcontracts.Company{Industry: &standing, Description: new("Maker of pumps")}
 
 	mapped := storekit.NewPatch()
-	setCompanyIndustry(mapped, current, UpdateCompanyInput{Industry: ptr("Software")})
+	setCompanyIndustry(mapped, current, UpdateCompanyInput{Industry: new("Software")})
 	if got := mapped.After()["industry"]; got != "software" {
 		t.Errorf("mapped text staged %v", got)
 	}
 
 	unmappable := storekit.NewPatch()
-	setCompanyIndustry(unmappable, current, UpdateCompanyInput{Industry: ptr("pumps and valves")})
+	setCompanyIndustry(unmappable, current, UpdateCompanyInput{Industry: new("pumps and valves")})
 	if _, staged := unmappable.After()["industry"]; staged {
 		t.Error("an unmappable cell touched a standing code")
 	}
@@ -153,13 +151,13 @@ func TestAPatchStoresTheCodeAndAnUnmappableTextOnlyAddsTheNote(t *testing.T) {
 	}
 
 	sent := storekit.NewPatch()
-	setCompanyIndustry(sent, current, UpdateCompanyInput{Industry: ptr("pumps"), Description: ptr("New words")})
+	setCompanyIndustry(sent, current, UpdateCompanyInput{Industry: new("pumps"), Description: new("New words")})
 	if got := sent.After()["description"]; got != "New words Industry as written: pumps" {
 		t.Errorf("note was folded into %v, want the description the caller sent", got)
 	}
 
 	cleared := storekit.NewPatch()
-	setCompanyIndustry(cleared, current, UpdateCompanyInput{Industry: ptr("")})
+	setCompanyIndustry(cleared, current, UpdateCompanyInput{Industry: new("")})
 	if got, staged := cleared.After()["industry"]; !staged || got != nil {
 		t.Errorf("a blank industry staged %v, %v, want NULL", got, staged)
 	}
@@ -172,7 +170,7 @@ func TestMergeGivesTheSurvivorTheCodeOrTheNote(t *testing.T) {
 		t.Errorf("legacy text merged as %v", got)
 	}
 	free := crmcontracts.CompanyIndustry("pumps and valves")
-	p = buildCompanySurvivorshipPatch(crmcontracts.Company{}, crmcontracts.Company{Industry: &free, Description: ptr("Pumps")})
+	p = buildCompanySurvivorshipPatch(crmcontracts.Company{}, crmcontracts.Company{Industry: &free, Description: new("Pumps")})
 	if _, staged := p.After()["industry"]; staged {
 		t.Error("unmappable text was merged as a code")
 	}
@@ -187,15 +185,15 @@ func TestMergeGivesTheSurvivorTheCodeOrTheNote(t *testing.T) {
 }
 
 func TestACreateStoresTheCodeOrKeepsTheTextInTheDescription(t *testing.T) {
-	industry, description := CompanyIndustryColumns(ptr("Healthcare"), ptr("Clinics"))
+	industry, description := CompanyIndustryColumns(new("Healthcare"), new("Clinics"))
 	if industry == nil || *industry != "healthcare" || *description != "Clinics" {
 		t.Errorf("mapped create = %v, %v", industry, description)
 	}
-	industry, description = CompanyIndustryColumns(ptr("pumps"), nil)
+	industry, description = CompanyIndustryColumns(new("pumps"), nil)
 	if industry != nil || description == nil || *description != "Industry as written: pumps" {
 		t.Errorf("unmapped create = %v, %v", industry, description)
 	}
-	industry, description = CompanyIndustryColumns(nil, ptr("Clinics"))
+	industry, description = CompanyIndustryColumns(nil, new("Clinics"))
 	if industry != nil || *description != "Clinics" {
 		t.Errorf("silent create = %v, %v", industry, description)
 	}
