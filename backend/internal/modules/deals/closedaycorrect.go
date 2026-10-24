@@ -84,6 +84,43 @@ func (s *Store) CorrectCloseDay(ctx context.Context, id ids.DealID, in CorrectCl
 func (s *Store) correctCloseDayInTx(ctx context.Context, tx pgx.Tx, id ids.DealID,
 	in CorrectCloseDayInput, active []fieldcatalog.Column,
 ) (crmcontracts.Deal, error) {
+	current, err := s.lockClosedDeal(ctx, tx, id)
+	if err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	zone, err := s.installationZoneIn(ctx, tx)
+	if err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	day := dateOnly(in.ClosedOn)
+	if err := s.refuseFutureDay(ctx, tx, day); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	if storekit.WorkspaceDay(*current.ClosedAt, zone).Equal(day) {
+		return readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+	}
+
+	closedAt := time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, zone).UTC()
+	p := storekit.NewPatch()
+	p.Set("closed_at", current.ClosedAt, closedAt)
+	if err := s.refreezeRate(ctx, tx, p, current, closedAt); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
+		return crmcontracts.Deal{}, fmt.Errorf("apply close day correction: %w", err)
+	}
+	if err := recordDealUpdate(ctx, tx, id, current, UpdateDealInput{}, p); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	return readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+}
+
+// lockClosedDeal locks the deal row and returns it, refusing a deal that is
+// not closed because it has no close day to correct.
+func (s *Store) lockClosedDeal(ctx context.Context, tx pgx.Tx, id ids.DealID) (crmcontracts.Deal, error) {
 	if _, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly); err != nil {
 		return crmcontracts.Deal{}, err
 	}
@@ -97,43 +134,39 @@ func (s *Store) correctCloseDayInTx(ctx context.Context, tx pgx.Tx, id ids.DealI
 	if string(current.Status) == string(DealOpen) || current.ClosedAt == nil {
 		return crmcontracts.Deal{}, &CloseDayOpenDealError{}
 	}
+	return current, nil
+}
+
+func (s *Store) installationZoneIn(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
 	tzName, err := s.installation.Timezone(ctx, tx)
 	if err != nil {
-		return crmcontracts.Deal{}, fmt.Errorf("resolve the installation's timezone: %w", err)
+		return nil, fmt.Errorf("resolve the installation's timezone: %w", err)
 	}
-	zone, err := installationZone(tzName)
-	if err != nil {
-		return crmcontracts.Deal{}, err
-	}
-	day := dateOnly(in.ClosedOn)
+	return installationZone(tzName)
+}
+
+func (s *Store) refuseFutureDay(ctx context.Context, tx pgx.Tx, day time.Time) error {
 	today, err := s.installationToday(ctx, tx)
 	if err != nil {
-		return crmcontracts.Deal{}, err
+		return err
 	}
 	if day.After(today) {
-		return crmcontracts.Deal{}, &CloseDayFutureError{}
+		return &CloseDayFutureError{}
 	}
-	if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
-		return crmcontracts.Deal{}, err
-	}
-	if storekit.WorkspaceDay(*current.ClosedAt, zone).Equal(day) {
-		return readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
-	}
+	return nil
+}
 
-	closedAt := time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, zone).UTC()
-	p := storekit.NewPatch()
-	p.Set("closed_at", current.ClosedAt, closedAt)
-	if current.AmountMinor != nil && current.Currency != nil {
-		if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*current.Currency),
-			*current.AmountMinor, closedAt); err != nil {
-			return crmcontracts.Deal{}, fmt.Errorf("re-freeze fx at the corrected close day: %w", err)
-		}
+// refreezeRate fixes the exchange rate again at the corrected close day; a
+// deal with no amount carries no rate.
+func (s *Store) refreezeRate(ctx context.Context, tx pgx.Tx, p *storekit.Patch,
+	current crmcontracts.Deal, closedAt time.Time,
+) error {
+	if current.AmountMinor == nil || current.Currency == nil {
+		return nil
 	}
-	if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
-		return crmcontracts.Deal{}, fmt.Errorf("apply close day correction: %w", err)
+	if err := s.freezeBaseRate(ctx, tx, p, current.Id, string(*current.Currency),
+		*current.AmountMinor, closedAt); err != nil {
+		return fmt.Errorf("re-freeze fx at the corrected close day: %w", err)
 	}
-	if err := recordDealUpdate(ctx, tx, id, current, UpdateDealInput{}, p); err != nil {
-		return crmcontracts.Deal{}, err
-	}
-	return readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+	return nil
 }

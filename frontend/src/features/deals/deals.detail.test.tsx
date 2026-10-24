@@ -1,11 +1,5 @@
 /** @vitest-environment happy-dom */
-import {
-  cleanup,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatDayMonth, formatMoney } from "../../format/format";
@@ -693,8 +687,9 @@ describe("DealScreen reopen", () => {
     await userEvent.click(screen.getByTestId("correct-close-day-open"));
     const dialog = within(await screen.findByRole("dialog"));
     const input = dialog.getByTestId("correct-close-day-input");
-    expect((input as HTMLInputElement).value).toBe("2026-08-20");
-    fireEvent.change(input, { target: { value: "2026-08-12" } });
+    expect((input as HTMLInputElement).value).toBe("20/08/2026");
+    await userEvent.clear(input);
+    await userEvent.type(input, "12/08/2026{Enter}");
     await userEvent.click(
       dialog.getByRole("button", { name: "Save close day" }),
     );
