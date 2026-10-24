@@ -24,7 +24,7 @@ import (
 func membersOnlyMailDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792838024_members_only_mail", Version: 1,
-		Title: "Holding mail between colleagues", Requires: []string{"core/1792799323"},
+		Title: "Holding mail between colleagues", Requires: []string{"core/1788316744"},
 		Steps: []datatask.Step{{
 			Name: "hold_members_only_mail", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
@@ -63,9 +63,9 @@ func holdMembersOnlyMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 		        WHERE rc.id = a.raw_capture_id
 		           OR (a.raw_capture_id IS NULL AND rc.source_system = a.source_system AND rc.source_id = a.source_id)
 		        LIMIT 1) original ON true
-		 WHERE `+activities.MembersOnlyHoldable+` AND a.id > @after
+		 WHERE `+activities.MembersOnlyHoldable+` AND a.id > @after_activity
 		 ORDER BY a.id LIMIT @batch_limit`,
-		pgx.NamedArgs{"after": after, "batch_limit": in.Limit})
+		pgx.NamedArgs{"after_activity": after, "batch_limit": in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -118,7 +118,7 @@ func estimateMembersOnlyCandidates(ctx context.Context, q datatask.Querier, maxi
 		return 0, false, err
 	}
 	var count int64
-	err := q.QueryRow(ctx, "SELECT count(*) FROM (SELECT a.id FROM activity a WHERE "+activities.MembersOnlyHoldable+" LIMIT @cap) candidates",
-		pgx.NamedArgs{"cap": maximum + 1}).Scan(&count)
+	err := q.QueryRow(ctx, "SELECT count(*) FROM (SELECT a.id FROM activity a WHERE "+activities.MembersOnlyHoldable+" LIMIT @estimate_cap) candidates",
+		pgx.NamedArgs{"estimate_cap": maximum + 1}).Scan(&count)
 	return min(count, maximum), count > maximum, err
 }
