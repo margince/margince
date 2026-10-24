@@ -124,7 +124,7 @@ func TestWorkspaceDayIsTheElapsedCalendarDay(t *testing.T) {
 		if err != nil {
 			t.Fatalf("load %s: %v", name, err)
 		}
-		for hour := 0; hour < 48; hour++ {
+		for hour := range 48 {
 			instant := time.Date(2026, 3, 8, 0, 0, 0, 0, time.UTC).Add(time.Duration(hour) * time.Hour)
 			if got, want := storekit.WorkspaceDay(instant, loc), elapsed.CalendarDay(instant, loc); !got.Equal(want) {
 				t.Fatalf("%s at %v: WorkspaceDay %v, CalendarDay %v", name, instant, got, want)

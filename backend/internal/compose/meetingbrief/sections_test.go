@@ -34,6 +34,7 @@ func fullInput() Input {
 		Subject:     "Q3 review",
 		StartsAt:    at(12),
 		Now:         at(10),
+		Zone:        time.UTC,
 		Company:     "Northwind",
 		LastTouchAt: &touched,
 		Deal: &DealIn{
