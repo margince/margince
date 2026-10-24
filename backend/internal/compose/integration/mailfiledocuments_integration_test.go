@@ -95,7 +95,7 @@ func linkMail(t *testing.T, e *Env, mail ids.UUID, column string, record ids.UUI
 
 // documentIDs reads the three lists as the caller and returns the attachment
 // ids each holds.
-func documentIDs(t *testing.T, e *Env, ctx context.Context, deal, contact, company ids.UUID) (dealDocs, contactDocs, companyDocs map[ids.UUID]bool) {
+func documentIDs(ctx context.Context, t *testing.T, e *Env, deal, contact, company ids.UUID) (dealDocs, contactDocs, companyDocs map[ids.UUID]bool) {
 	t.Helper()
 	store := activities.NewStore(e.DB())
 	dealDocs, contactDocs, companyDocs = map[ids.UUID]bool{}, map[ids.UUID]bool{}, map[ids.UUID]bool{}
@@ -135,25 +135,25 @@ func TestAMailFileReachesEveryRecordTheMailIsLinkedTo(t *testing.T) {
 	file := captureMailFile(t, e, mail, "contract.pdf", "application/pdf", []byte("%PDF-1.4"))
 	ctx := e.Admin()
 
-	_, byContact, byCompany := documentIDs(t, e, ctx, deal, contact, company)
+	_, byContact, byCompany := documentIDs(ctx, t, e, deal, contact, company)
 	if !byContact[file] {
 		t.Error("the contact the mail is linked to does not list its file")
 	}
 	if byCompany[file] {
 		t.Error("the company lists a mail file before any contact works there")
 	}
-	if _, otherDocs, _ := documentIDs(t, e, ctx, deal, other, company); otherDocs[file] {
+	if _, otherDocs, _ := documentIDs(ctx, t, e, deal, other, company); otherDocs[file] {
 		t.Error("a contact the mail is not linked to lists its file")
 	}
 
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:test')`, contact, company)
-	if _, _, byCompany = documentIDs(t, e, ctx, deal, contact, company); !byCompany[file] {
+	if _, _, byCompany = documentIDs(ctx, t, e, deal, contact, company); !byCompany[file] {
 		t.Error("the company does not list the file after the contact joined it")
 	}
 
 	linkMail(t, e, mail, "deal_id", deal)
-	byDeal, _, _ := documentIDs(t, e, ctx, deal, contact, company)
+	byDeal, _, _ := documentIDs(ctx, t, e, deal, contact, company)
 	if !byDeal[file] {
 		t.Error("the deal the mail is linked to does not list its file")
 	}
@@ -182,8 +182,8 @@ func TestAStaleCompanyStampDoesNotPlaceAMailFile(t *testing.T) {
 	file := captureMailFile(t, e, mail, "old.pdf", "application/pdf", []byte("%PDF-1.4"))
 	e.WsExec(t, `UPDATE attachment SET company_id = $2 WHERE id = $1`, file, stamped)
 
-	_, _, byReached := documentIDs(t, e, e.Admin(), deal, contact, reached)
-	_, _, byStamped := documentIDs(t, e, e.Admin(), deal, contact, stamped)
+	_, _, byReached := documentIDs(e.Admin(), t, e, deal, contact, reached)
+	_, _, byStamped := documentIDs(e.Admin(), t, e, deal, contact, stamped)
 	if !byReached[file] || byStamped[file] {
 		t.Errorf("reached lists it = %v, stamped lists it = %v; want true, false", byReached[file], byStamped[file])
 	}
@@ -202,7 +202,7 @@ func TestAMailFileLeavesEveryListWhenItIsNotLive(t *testing.T) {
 	logo := captureMailFile(t, e, mail, "logo.png", "image/png", []byte("png"))
 	held := withholdMailFile(t, e, mail, "held.pdf")
 
-	d, c, co := documentIDs(t, e, e.Admin(), deal, contact, company)
+	d, c, co := documentIDs(e.Admin(), t, e, deal, contact, company)
 	for name, got := range map[string]map[ids.UUID]bool{"deal": d, "contact": c} {
 		if !got[file] {
 			t.Errorf("%s list lost the live file", name)
@@ -219,7 +219,7 @@ func TestAMailFileLeavesEveryListWhenItIsNotLive(t *testing.T) {
 	}
 
 	e.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, mail)
-	d, c, co = documentIDs(t, e, e.Admin(), deal, contact, company)
+	d, c, co = documentIDs(e.Admin(), t, e, deal, contact, company)
 	if d[file] || c[file] || co[file] {
 		t.Errorf("an archived mail's file is listed: deal=%v contact=%v company=%v", d[file], c[file], co[file])
 	}
@@ -239,14 +239,14 @@ func TestALimitedAudienceMailFileStaysWithItsAudience(t *testing.T) {
 	file := captureMailFile(t, e, mail, "private.pdf", "application/pdf", []byte("%PDF-1.4"))
 
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
-	if _, c, co := documentIDs(t, e, owner, deal, contact, company); !c[file] || !co[file] {
+	if _, c, co := documentIDs(owner, t, e, deal, contact, company); !c[file] || !co[file] {
 		t.Errorf("the mailbox owner lost the file: contact=%v company=%v", c[file], co[file])
 	}
 	colleague := e.As(e.Rep2, []ids.UUID{e.Team1}, AccountRepPerms)
-	if _, c, co := documentIDs(t, e, colleague, deal, contact, company); c[file] || co[file] {
+	if _, c, co := documentIDs(colleague, t, e, deal, contact, company); c[file] || co[file] {
 		t.Errorf("a colleague outside the audience sees the file: contact=%v company=%v", c[file], co[file])
 	}
-	if _, c, co := documentIDs(t, e, e.Admin(), deal, contact, company); c[file] || co[file] {
+	if _, c, co := documentIDs(e.Admin(), t, e, deal, contact, company); c[file] || co[file] {
 		t.Errorf("an admin outside the audience sees the file: contact=%v company=%v", c[file], co[file])
 	}
 }
@@ -268,8 +268,8 @@ func TestACcdEmployeesEmployerDoesNotListTheMailFile(t *testing.T) {
 		VALUES ($1, $2, 'cc', $3, 'bob@example.com')`, ids.NewV7(), mail, cc)
 	file := captureMailFile(t, e, mail, "cc.pdf", "application/pdf", []byte("%PDF-1.4"))
 
-	_, _, bySubject := documentIDs(t, e, e.Admin(), deal, about, subject)
-	_, _, byEmployer := documentIDs(t, e, e.Admin(), deal, about, employer)
+	_, _, bySubject := documentIDs(e.Admin(), t, e, deal, about, subject)
+	_, _, byEmployer := documentIDs(e.Admin(), t, e, deal, about, employer)
 	if !bySubject[file] || byEmployer[file] {
 		t.Errorf("subject lists it = %v, Cc'd employer lists it = %v; want true, false", bySubject[file], byEmployer[file])
 	}
@@ -285,7 +285,7 @@ func TestAMailFileWithoutAContentTypeStaysOnTheDealList(t *testing.T) {
 	file := captureMailFile(t, e, mail, "untyped.bin", "application/pdf", []byte("%PDF-1.4"))
 	e.WsExec(t, `UPDATE attachment SET content_type = NULL, byte_size = NULL WHERE id = $1`, file)
 
-	if d, c, _ := documentIDs(t, e, e.Admin(), deal, contact, e.SeedCompany(t, "Acme", &e.Rep1)); !d[file] || !c[file] {
+	if d, c, _ := documentIDs(e.Admin(), t, e, deal, contact, e.SeedCompany(t, "Acme", &e.Rep1)); !d[file] || !c[file] {
 		t.Errorf("a file with no content type left a list: deal=%v contact=%v", d[file], c[file])
 	}
 }
