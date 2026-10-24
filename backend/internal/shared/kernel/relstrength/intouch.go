@@ -67,7 +67,7 @@ func NotCalledOffSQL(alias string) string {
 // lastActivityKinds are the kinds that move a record's last-activity clock. A
 // task is intent, not contact, whether a member or an agent filed it. A note
 // moves the clock but never scores, so this is not interactionKinds.
-var lastActivityKinds = []string{"email", "message", kindMeeting, kindCall, "note"}
+var lastActivityKinds = []string{kindEmail, kindMessage, kindMeeting, kindCall, "note"}
 
 // LastActivityKinds lists lastActivityKinds for the gate that holds the
 // frontend's copy of the set to this one.
@@ -76,7 +76,6 @@ func LastActivityKinds() []string {
 }
 
 // LastActivityKindSQL admits an activity row whose kind moves the clock.
-// last_activity_of_project carries its text rendered with "a".
 func LastActivityKindSQL(alias string) string {
 	return alias + ".kind IN (" + sqlList(lastActivityKinds) + ")"
 }

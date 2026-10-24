@@ -236,12 +236,12 @@ func (f taskClockFixture) assertNoTaskClocks(t *testing.T, why string) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), f.e.WS)
 	for _, table := range []storekit.ClockTable{storekit.ClockContacts, storekit.ClockCompanies, storekit.ClockDeals, storekit.ClockProjects} {
-		var count int64
+		var selected []ids.UUID
 		if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) (err error) {
-			count, err = storekit.CountTaskClocks(ctx, tx, table, 10)
+			_, selected, err = storekit.ClockPage(ctx, tx, table, storekit.ClockNotFolded, ids.Nil, 1000)
 			return err
-		}); err != nil || count != 0 {
-			t.Errorf("%s: %d clocks selected (%v), want none: %s", table, count, err, why)
+		}); err != nil || len(selected) != 0 {
+			t.Errorf("%s: %d clocks selected (%v), want none: %s", table, len(selected), err, why)
 		}
 	}
 }

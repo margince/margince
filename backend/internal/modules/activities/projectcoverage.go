@@ -36,8 +36,8 @@ type ProjectActivityFacts struct {
 	// project link — not this project's, not another's. An activity filed
 	// under a sibling engagement is somebody's, and is not debt here.
 	UnattributedNearby int
-	// LastActivityAt is the newest attributed activity's instant, never a
-	// task's; nil when nothing that counts is filed under the project yet.
+	// LastActivityAt is the newest attributed activity that counts as last
+	// activity by asOf; nil when nothing that counts is filed under the project.
 	LastActivityAt *time.Time
 	// OpenCommitments is every open task filed under the project — the
 	// whole set, where the commitments section carries a page of it.
@@ -89,6 +89,7 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 		return ProjectActivityFacts{}, err
 	}
 	current := CurrentTaskClause("a", asOf, identities, arg)
+	counts := relstrength.LastActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", arg(asOf)))
 	var facts ProjectActivityFacts
 	// The candidate set is every activity with ANY link into the project's
 	// neighbourhood; each is then classified once, so an activity linked to
@@ -103,13 +104,13 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 			WHERE l.project_id = $%[1]d OR d.project_id = $%[1]d OR r.project_id = $%[1]d
 		)
 		SELECT count(*) FILTER (WHERE f.filed_here),
-		       -- Recency excludes the system's own origins and every task, matching
-		       -- last_activity_of_project. The counts do not: a review task filed
+		       -- Recency excludes the system's own origins, every task and a
+		       -- called-off or future meeting, matching last_activity_of_project. The counts do not: a review task filed
 		       -- here IS attributed work, it just is not the other side engaging.
 		       -- TRUE carries the fragment's leading AND, so the one spelling in
 		       -- auth.OriginIsEngagement serves a FILTER as well as a WHERE.
 		       max(a.occurred_at) FILTER (WHERE f.filed_here AND TRUE`+auth.OriginIsEngagement("a")+
-		` AND `+relstrength.LastActivityKindSQL("a")+`),
+		` AND `+counts+`),
 		       count(*) FILTER (WHERE NOT f.filed_anywhere),
 		       count(*) FILTER (WHERE f.filed_here AND a.kind = 'task' AND NOT a.is_done AND %[5]s)
 		FROM activity a
