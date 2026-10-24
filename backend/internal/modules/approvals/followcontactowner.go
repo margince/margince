@@ -49,11 +49,12 @@ func withdrawContactShares(ctx context.Context, tx pgx.Tx, reason string, which 
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	kind := arg(approvalsubject.KindContactShare)
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	selects := fmt.Sprintf(`kind = $%d AND status = 'pending' AND %s`, kind, which(arg))
+	rows, err := tx.Query(ctx, `
 		SELECT id FROM approval
-		 WHERE kind = $%d AND status = 'pending' AND %s
-		 %s
-		 FOR UPDATE`, kind, which(arg), lockOrder), args...)
+		 WHERE `+selects+`
+		 `+lockOrder+`
+		 FOR UPDATE`, args...)
 	if err != nil {
 		return 0, fmt.Errorf("lock the share requests following a contact's owner: %w", err)
 	}
