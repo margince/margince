@@ -150,8 +150,10 @@ func (d attentionDecay) Lapsed(
 		return nil, false, apperrors.ErrPermissionDenied
 	}
 	now := d.now()
+	// One day looser than the rule. The derivation counts calendar days in the
+	// installation zone, so it can reach QuietDays before the instant does.
 	read := search.QuietRead{
-		QuietBefore:  now.AddDate(0, 0, -relstrength.QuietDays),
+		QuietBefore:  now.AddDate(0, 0, -(relstrength.QuietDays - 1)),
 		TouchedAfter: now.AddDate(0, 0, -quietSuggestionCeilingDays),
 		Limit:        decayCandidateCap,
 		// Contacts this reader set aside, and senders capture judged

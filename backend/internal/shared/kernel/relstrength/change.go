@@ -107,8 +107,7 @@ type ChangeInputs struct {
 	LatestInbound *time.Time
 	// LastTouch is the newest interaction of any direction, the moment a
 	// quiet relationship is counted from. The caller reads it from the same
-	// statement that names the sent and received dates a surface prints, so
-	// the count and those dates cannot come from two questions.
+	// statement that names the sent and received dates a surface prints.
 	LastTouch *time.Time
 	// Zone is the calendar every day count here is drawn in. Nil means UTC.
 	Zone *time.Location

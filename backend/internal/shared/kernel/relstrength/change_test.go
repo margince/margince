@@ -150,8 +150,7 @@ func TestChangesReportsCoolingWhenTheBandFell(t *testing.T) {
 }
 
 // The count starts from the owner's touch, not from the strength fold's last
-// interaction: a fold that saw a newer row the owner rejects must not shorten
-// the silence, and the reverse must not lengthen it.
+// interaction. A newer fold row the owner rejects must not shorten the silence.
 func TestWentQuietCountsFromTheLastTouchNotTheFold(t *testing.T) {
 	in := ChangeInputs{
 		Current:   Inputs{LastInteraction: daysAgo(5), Count90d: 1},

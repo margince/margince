@@ -712,18 +712,15 @@ func TestADismissalHoldsUntilTheEvidenceMoves(t *testing.T) {
 	}
 }
 
-// contactChanges runs the Tx-scoped derivation in a transaction of its own.
-// There is no pool-level variant, and adding one for a test would be an
-// entry point with no production caller.
+// contactChanges runs the Tx-scoped derivation in its own transaction; a pool variant would have no caller.
 func contactChanges(ctx context.Context, t *testing.T, e *Env, contactID ids.ContactID) ([]relstrength.Change, error) {
 	t.Helper()
 	var out []relstrength.Change
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		touches, zone, err := contactTouches(ctx, tx, contactID)
-		if err != nil {
-			return err
+		if err == nil {
+			out, err = e.Contacts.ContactRelationshipChangesTx(ctx, tx, contactID, roomFixedNow, nil, touches[contactID], zone)
 		}
-		out, err = e.Contacts.ContactRelationshipChangesTx(ctx, tx, contactID, roomFixedNow, nil, touches[contactID], zone)
 		return err
 	})
 	return out, err

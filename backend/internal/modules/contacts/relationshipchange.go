@@ -167,8 +167,8 @@ func visibleContactNames(ctx context.Context, tx pgx.Tx, contacts []ids.ContactI
 }
 
 // withTouch adds the moments the last-touch reader owns. The fold below holds
-// only the strength-window counts, so no second statement here can answer "when
-// did they last write" differently from the date a surface prints.
+// only the strength-window counts. No second statement here answers "when did
+// they last write" differently from the date a surface prints.
 func withTouch(in relstrength.ChangeInputs, touch relstrength.Touches, zone *time.Location) relstrength.ChangeInputs {
 	in.LastTouch = touch.LastTouch
 	in.LatestInbound = touch.LatestInbound

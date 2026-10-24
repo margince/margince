@@ -34,8 +34,8 @@ type LastTouch struct {
 	LiveInboundAt *time.Time
 	// ContactAt is the newest exchange of any direction, a meeting included:
 	// the moment "quiet for N days" counts from. It passes the same human and
-	// sender rules as the two clocks above, so a colleague's message on a
-	// shared thread cannot make a contact look recently heard from.
+	// sender rules as the two clocks above. A colleague's message on a shared
+	// thread cannot make a contact look recently heard from.
 	ContactAt *time.Time
 	// PrecedingContactAt is the newest exchange strictly before InboundAt,
 	// the far side of the silence a reply broke.
@@ -111,8 +111,8 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	humanClock := relstrength.LastActivityCountsSQL("a", "now()") + " AND " + relstrength.WrittenByHumanSQL("a")
 	sender := contacts.SenderPredicate("c.id", "a")
 	inbound := fmt.Sprintf(`a.direction = 'inbound' AND %s AND %s`, sender, humanClock)
-	exchange := fmt.Sprintf(`a.kind IN %s AND %s AND (a.direction IS DISTINCT FROM 'inbound' OR %s)`,
-		relstrength.InteractionKindSQLGroup(), humanClock, sender)
+	exchange := fmt.Sprintf(`%s AND %s AND (a.direction IS DISTINCT FROM 'inbound' OR %s)`,
+		relstrength.InteractionCountsSQL("a"), relstrength.LastActivityCountsSQL("a", "now()"), sender)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id,
 		       (SELECT max(a.occurred_at) %[1]s AND %[2]s),

@@ -48,8 +48,7 @@ func (s *Service) strengthSection(
 // and still lose the other to a section fault. Both fold the same §4 curve, so
 // they cannot disagree about the same window.
 //
-// The quiet count starts from the touch the last-touch section prints, read by
-// the same statement, and is counted in the installation zone.
+// The quiet count starts from the touch the last-touch section prints.
 func (s *Service) relationshipChangesSection(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	now time.Time, opts AssembleOptions, out *crmcontracts.Contact360,
