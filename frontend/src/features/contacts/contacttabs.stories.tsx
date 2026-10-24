@@ -138,9 +138,14 @@ export const WithCall: Story = {
 const LONG_SUBJECT =
   "Re: Retrofit schedule for the Hamburg depot, the October slot and the second workshop bay";
 
+const LONG_WORD =
+  "Flottenerneuerungsrahmenvertragsverhandlungsprotokollzusammenfassungsentwurfsüberarbeitungsfrist";
+const LONG_FILENAME =
+  "Rahmenvertrag_Flottenerneuerung_Hamburg_Depot_Werkstatt_2026_final_v3_unterschrieben_gegengezeichnet.pdf";
+
 /**
- * A long email beside a call and a task. Each row's verbs stay inside the row;
- * the subject and preview clip instead of pushing them out.
+ * Long words beside the verbs: an email subject, a call subject with no break
+ * in it and a note named for a file. Each row's verbs stay inside the row.
  */
 export const LongEmailBesideVerbs: Story = {
   render: tab({
@@ -169,6 +174,19 @@ export const LongEmailBesideVerbs: Story = {
           },
         }),
         call,
+        activity({
+          id: "a-6",
+          kind: "call",
+          subject: LONG_WORD,
+          direction: "outbound",
+          occurred_at: "2026-08-12T14:00:00Z",
+        }),
+        activity({
+          id: "a-7",
+          kind: "note",
+          subject: LONG_FILENAME,
+          occurred_at: "2026-08-12T13:00:00Z",
+        }),
         activity({
           id: "a-5",
           kind: "task",

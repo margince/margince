@@ -799,11 +799,16 @@
   grid-column: 1;
 }
 
-/* A kind line keeps its longest word or badge whole; the verbs wrap beside it.
-   Not on email rows: their nowrap subject would push the verbs off the row. */
+/* The kind line alone floors its column, keeping its status badge whole;
+   contained, a long word in the lines under it cannot push the verbs off. */
 @container chronology (width > 38rem) {
   .timeline .tl-body:has(> .tl-head:first-child):has(> .tl-actions) {
     grid-template-columns: minmax(min-content, 1fr) auto;
+  }
+  .timeline
+    .tl-body:has(> .tl-head:first-child):has(> .tl-actions)
+    > :not(.tl-head, .tl-actions) {
+    contain: inline-size;
   }
 }
 
