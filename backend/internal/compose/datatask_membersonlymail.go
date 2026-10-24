@@ -64,8 +64,8 @@ func holdMembersOnlyMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 		           OR (a.raw_capture_id IS NULL AND rc.source_system = a.source_system AND rc.source_id = a.source_id)
 		        LIMIT 1) original ON true
 		 WHERE `+activities.MembersOnlyHoldable+` AND a.id > @after_activity
-		 ORDER BY a.id LIMIT @batch_limit`,
-		pgx.NamedArgs{"after_activity": after, "batch_limit": in.Limit})
+		 ORDER BY a.id LIMIT @page_size`,
+		pgx.NamedArgs{"after_activity": after, "page_size": in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
