@@ -32,6 +32,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // historyCap bounds the scan. Two hundred conversations is more than a year of
@@ -77,6 +78,7 @@ const historyQuery = `
 	  AND a.id <> $%[4]d
 	  AND a.occurred_at < $%[5]d
 	  AND a.occurred_at >= $%[6]d
+	  AND %[10]s
 	  AND (a.kind <> 'meeting' OR a.meeting_status IS NULL OR a.meeting_status = 'held')
 	  AND (EXISTS (
 	         SELECT 1 FROM activity_participant ap
@@ -132,20 +134,20 @@ func (s *Service) readHistory(
 	}
 	dealPos := arg(dealArg)
 	roomPos := arg(room.ID)
-	// The ceiling is the earlier of "now" and the meeting's start: a brief read
-	// three weeks early must not fold in conversations that happen between the
-	// read and the room.
-	ceiling := now
-	if room.Opens.Before(ceiling) {
-		ceiling = room.Opens
+	// Before the room, and happened by now: a brief read weeks early must not fold
+	// in what comes before the room. A meeting counts once it took place, as in priormeetings.go.
+	opensPos := arg(room.Opens)
+	happened := occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
+	reach := now
+	if room.Opens.Before(reach) {
+		reach = room.Opens
 	}
-	ceilingPos := arg(ceiling)
-	floorPos := arg(ceiling.AddDate(0, -historyMonths, 0))
+	floorPos := arg(reach.AddDate(0, -historyMonths, 0))
 	attendeePos := arg(room.Room)
 	within := projectWithinPredicate("a", "hw", project, arg)
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(historyQuery,
-		scope, readable, dealPos, roomPos, ceilingPos, floorPos, attendeePos, within, historyCap,
+		scope, readable, dealPos, roomPos, opensPos, floorPos, attendeePos, within, historyCap, happened,
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the account history: %w", err)

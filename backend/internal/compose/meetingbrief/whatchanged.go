@@ -44,13 +44,10 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	mePos := arg(actor.UserID)
 	roomPos := arg(room.ID)
-	// Before the meeting AND before now: a brief read for a meeting already
+	// Before the meeting, and happened by now: a brief read for a meeting already
 	// held must not take a later conversation as "before we spoke".
-	ceiling := now
-	if room.Opens.Before(ceiling) {
-		ceiling = room.Opens
-	}
-	ceilingPos := arg(ceiling)
+	opensPos := arg(room.Opens)
+	happened := occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
 	contactsPos := arg(room.Room)
 	scope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
 	if err != nil {
@@ -77,12 +74,14 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 		SELECT a.occurred_at, a.occurred_precision = 'day'
 		  FROM activity a
 		  JOIN activity_participant ap ON ap.activity_id = a.id AND ap.user_id = $%d
-		 WHERE a.id <> $%d AND a.occurred_at < $%d AND a.archived_at IS NULL
+		 WHERE a.id <> $%d AND a.archived_at IS NULL
+		   AND a.occurred_at < $%d -- occurred_at raw: the room's start, the window's edge
+		   AND %s
 		   AND EXISTS (SELECT 1 FROM activity_link l
 		                WHERE l.activity_id = a.id AND l.entity_type = 'contact' AND l.contact_id = ANY($%d))
 		   AND %s AND %s
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT 1`, mePos, roomPos, ceilingPos, contactsPos, scope, within), args...).Scan(&last.At, &last.DateOnly)
+		 LIMIT 1`, mePos, roomPos, opensPos, happened, contactsPos, scope, within), args...).Scan(&last.At, &last.DateOnly)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Occurred{}, false, nil
 	}
