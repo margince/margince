@@ -85,11 +85,11 @@ type Change struct {
 // module cannot import the compose package that reads them.
 type Touches struct {
 	// LastTouch is the newest exchange of any direction.
-	LastTouch Dated
+	LastTouch *occurredday.Moment
 	// LatestInbound is when they last wrote.
-	LatestInbound Dated
+	LatestInbound *occurredday.Moment
 	// Preceding is the newest exchange strictly before LatestInbound.
-	Preceding Dated
+	Preceding *occurredday.Moment
 }
 
 // ChangeInputs are the counted facts the derivation needs. As with Inputs, the
@@ -103,19 +103,19 @@ type ChangeInputs struct {
 	// not the overall one, or the earlier score inherits today's recency and
 	// no band ever appears to move.
 	Previous Inputs
-	// LatestInbound is when they last wrote to us; no At if they never have.
-	LatestInbound Dated
+	// LatestInbound is when they last wrote to us; nil if they never have.
+	LatestInbound *occurredday.Moment
 	// LastTouch is the newest interaction of any direction, the moment a
 	// quiet relationship is counted from. The caller reads it from the same
 	// statement that names the sent and received dates a surface prints.
-	LastTouch Dated
+	LastTouch *occurredday.Moment
 	// Zone is the calendar every day count here is drawn in. Nil means UTC.
 	Zone *time.Location
 	// PrecedingInteraction is the last interaction of any direction strictly
 	// before LatestInbound — the far side of the silence that reply broke.
-	// No At when their reply is the first interaction on record, which is a
+	// Nil when their reply is the first interaction on record, which is a
 	// first contact rather than a return.
-	PrecedingInteraction Dated
+	PrecedingInteraction *occurredday.Moment
 }
 
 // Changes returns what has happened to this relationship, most consequential
@@ -147,25 +147,20 @@ func Changes(in ChangeInputs, now time.Time) []Change {
 // ago that ended a two-day lull is not news however old it is.
 func repliedAfterGap(in ChangeInputs, now time.Time) (Change, bool) {
 	inbound, preceding := in.LatestInbound, in.PrecedingInteraction
-	if inbound.At == nil || preceding.At == nil {
+	if inbound == nil || preceding == nil {
 		return Change{}, false
 	}
-	gap := occurredday.DaysBetween(preceding.moment(), inbound.moment(), in.Zone)
+	gap := occurredday.DaysBetween(*preceding, *inbound, in.Zone)
 	if gap < ReplyGapDays {
 		return Change{}, false
 	}
 	// A reply that itself went quiet afterwards is not the headline any more —
 	// the silence since is. Bounding it by the same window the score folds
 	// keeps the two telling one story.
-	if occurredday.DaysSince(*inbound.At, inbound.DateOnly, now, in.Zone) > WindowDays {
+	if occurredday.DaysSince(*inbound, now, in.Zone) > WindowDays {
 		return Change{}, false
 	}
-	return Change{Kind: ChangeRepliedAfterGap, At: *inbound.At, Days: gap}, true
-}
-
-// moment is d as occurredday counts it; the caller has checked At.
-func (d Dated) moment() occurredday.Moment {
-	return occurredday.Moment{At: *d.At, DateOnly: d.DateOnly}
+	return Change{Kind: ChangeRepliedAfterGap, At: inbound.At, Days: gap}, true
 }
 
 // wentQuiet reports an established relationship that has stopped.
@@ -173,15 +168,15 @@ func (d Dated) moment() occurredday.Moment {
 // "Established" is doing the work: a contact nobody has ever spoken to has not
 // gone quiet, they were never loud, and saying otherwise turns every dormant
 // record into an alert.
-func wentQuiet(lastInteraction Dated, now time.Time, zone *time.Location) (Change, bool) {
-	if lastInteraction.At == nil {
+func wentQuiet(lastInteraction *occurredday.Moment, now time.Time, zone *time.Location) (Change, bool) {
+	if lastInteraction == nil {
 		return Change{}, false
 	}
-	days := occurredday.DaysSince(*lastInteraction.At, lastInteraction.DateOnly, now, zone)
+	days := occurredday.DaysSince(*lastInteraction, now, zone)
 	if days < QuietDays {
 		return Change{}, false
 	}
-	return Change{Kind: ChangeWentQuiet, At: *lastInteraction.At, Days: days}, true
+	return Change{Kind: ChangeWentQuiet, At: lastInteraction.At, Days: days}, true
 }
 
 // bandMoved reports the §4 band crossing between the comparison window and

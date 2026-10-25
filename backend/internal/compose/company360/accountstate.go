@@ -189,14 +189,14 @@ func (a *assembly) readHealth() error {
 	}
 	health := crmcontracts.Company360Health{}
 
-	precision := a.out.LastInboundPrecision
-	inbound := relstrength.Dated{At: a.out.LastInboundAt, DateOnly: precision != nil && activitywhen.IsDay(*precision)}
-	if inbound.At != nil {
+	var inbound *occurredday.Moment
+	if at := a.out.LastInboundAt; at != nil {
+		inbound = &occurredday.Moment{At: *at, DateOnly: occurredday.IsStatedDay(a.out.LastInboundPrecision)}
 		loc, err := a.zone()
 		if err != nil {
 			return err
 		}
-		days := occurredday.DaysSince(*inbound.At, inbound.DateOnly, a.now, loc)
+		days := occurredday.DaysSince(*inbound, a.now, loc)
 		health.DaysSinceLastInbound = &days
 	}
 
@@ -239,7 +239,9 @@ func (a *assembly) readHealth() error {
 	if err != nil {
 		return err
 	}
-	health.LastMeetingAt = lastMeeting.At
+	if lastMeeting != nil {
+		health.LastMeetingAt = &lastMeeting.At
+	}
 
 	loc, err := a.zone()
 	if err != nil {

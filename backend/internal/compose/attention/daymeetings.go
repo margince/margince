@@ -10,13 +10,8 @@ import (
 	"context"
 	"time"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
-
-func isDayPrecision(p crmcontracts.OccurredPrecision) bool {
-	return p == crmcontracts.OccurredPrecisionOccurredPrecisionDay
-}
 
 // meetingsAhead is the meetings lane: what starts between asOf and the day's
 // end, and the day meetings dated today, which the zone says.

@@ -17,18 +17,18 @@ type Occurred occurredday.Moment
 // MarshalJSON is the time as a prompt states it, so the model never reads a day
 // entry's stored noon as a time somebody named.
 func (o Occurred) MarshalJSON() ([]byte, error) {
-	return json.Marshal(occurredday.When(o.At, o.DateOnly))
+	return json.Marshal(occurredday.When(occurredday.Moment(o)))
 }
 
 // date is the calendar date o names: a day entry's own date, an instant's date
 // in loc.
 func (o Occurred) date(loc *time.Location) time.Time {
-	return occurredday.DateIn(o.At, o.DateOnly, loc)
+	return occurredday.DateIn(occurredday.Moment(o), loc)
 }
 
 // daysAgo counts the calendar days in loc from o to now.
 func (o Occurred) daysAgo(now time.Time, loc *time.Location) int {
-	return occurredday.DaysSince(o.At, o.DateOnly, now, loc)
+	return occurredday.DaysSince(occurredday.Moment(o), now, loc)
 }
 
 // daysUntil counts the calendar days from o to later, each read by its own

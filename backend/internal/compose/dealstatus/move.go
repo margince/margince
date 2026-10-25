@@ -249,7 +249,7 @@ func sinceLastContact(f facts) string {
 	if !ok {
 		return said.Say(statusWords.Never)
 	}
-	return said.since(f.now, last.OccurredAt, activitywhen.IsDay(last.OccurredPrecision), f.loc)
+	return said.since(f.now, activitywhen.MomentOf(last), f.loc)
 }
 
 // The stakeholder roles this file reasons about. They are the wire values
@@ -381,7 +381,7 @@ func lastContact(f facts) (crmcontracts.Activity, bool) {
 		if a.AutomaticKind != nil {
 			automatic = relstrength.AutomaticKind(*a.AutomaticKind)
 		}
-		if occurredday.Begun(a.OccurredAt, activitywhen.IsDay(a.OccurredPrecision), f.now, f.loc) &&
+		if occurredday.Begun(activitywhen.MomentOf(a), f.now, f.loc) &&
 			relstrength.InteractionCounts(string(a.Kind), status, automatic) {
 			return a, true
 		}
@@ -396,7 +396,7 @@ func nextStepReason(f facts) string {
 		return said.Say(statusWords.NoContactNext)
 	}
 	return fmt.Sprintf(said.Say(statusWords.QuietNext),
-		said.since(f.now, last.OccurredAt, activitywhen.IsDay(last.OccurredPrecision), f.loc))
+		said.since(f.now, activitywhen.MomentOf(last), f.loc))
 }
 
 func lastContactEvidence(f facts) []crmcontracts.DealNextBestActionEvidence {
@@ -460,14 +460,14 @@ func (said statusCopy) subjectOf(a crmcontracts.Activity) string {
 
 // since spells the days from an activity to now. A day entry counts from its
 // own date, not from where its stored noon falls in loc.
-func (said statusCopy) since(now, then time.Time, dateOnly bool, loc *time.Location) string {
-	return said.spell(occurredday.DaysSince(then, dateOnly, now, loc))
+func (said statusCopy) since(now time.Time, then occurredday.Moment, loc *time.Location) string {
+	return said.spell(occurredday.DaysSince(then, now, loc))
 }
 
 // meetingDay is when the booked meeting falls for a day count. A day meeting
 // counts by its own date, not by where its stored noon falls in loc.
 func meetingDay(meeting activities.BookedMeeting, loc *time.Location) time.Time {
-	if meeting.Precision != activities.PrecisionDay {
+	if !occurredday.IsDay(meeting.Precision) {
 		return meeting.StartsAt
 	}
 	return occurredday.Begins(meeting.StartsAt, loc)

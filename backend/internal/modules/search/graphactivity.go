@@ -135,7 +135,7 @@ func activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within
 	// When it happens is half of what a prep is for, and the title alone does
 	// not carry it — a subject line reads the same the day before and the week
 	// after.
-	when := occurredday.When(occurredAt, dateOnly)
+	when := occurredday.When(occurredday.Moment{At: occurredAt, DateOnly: dateOnly})
 	return graphItem{
 		entityType: string(datasource.EntityActivity), id: activityID, dateOnly: dateOnly,
 		summary: fmt.Sprintf("%s — %s on %s", title, kind, when),

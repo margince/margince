@@ -17,6 +17,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
+// day is the stored and wire precision of an entry that names only a date.
+const day = "day"
+
+// Moment is an activity's stored time and whether it names only a date.
+type Moment struct {
+	At       time.Time
+	DateOnly bool
+}
+
+// IsDay says a stored or wire precision names only a date.
+func IsDay[P ~string](precision P) bool {
+	return precision == day
+}
+
+// IsStatedDay is IsDay for a precision the wire may leave out, which it does
+// only beside an absent time.
+func IsStatedDay[P ~string](precision *P) bool {
+	return precision != nil && IsDay(*precision)
+}
+
 // Anchor is the instant a day entry naming date is stored at: noon UTC of that
 // date. Only date's own year, month and day are read, so the writer's offset
 // names the date.
@@ -39,11 +59,11 @@ func Date(at time.Time) time.Time {
 
 // DateIn is the date an activity names: a day entry's own date, and the date
 // an instant falls on in zone.
-func DateIn(at time.Time, dateOnly bool, zone *time.Location) time.Time {
-	if dateOnly {
-		return Date(at)
+func DateIn(m Moment, zone *time.Location) time.Time {
+	if m.DateOnly {
+		return Date(m.At)
 	}
-	return elapsed.CalendarDay(at, zone)
+	return elapsed.CalendarDay(m.At, zone)
 }
 
 // Begins is when the date a day entry names begins in zone: the moment that
@@ -55,11 +75,11 @@ func Begins(at time.Time, zone *time.Location) time.Time {
 
 // When is an activity's time as text for a reader not told the precision. It is
 // a day entry's date, and the RFC 3339 instant otherwise.
-func When(at time.Time, dateOnly bool) string {
-	if dateOnly {
-		return Date(at).Format(time.DateOnly)
+func When(m Moment) string {
+	if m.DateOnly {
+		return Date(m.At).Format(time.DateOnly)
 	}
-	return at.UTC().Format(time.RFC3339)
+	return m.At.UTC().Format(time.RFC3339)
 }
 
 // Ended reports whether the date a day entry names is over at asOf, which is
@@ -71,24 +91,18 @@ func Ended(at, asOf time.Time, zone *time.Location) bool {
 // Begun reports whether an activity has happened at asOf: an instant once
 // asOf reaches it, a day entry once its date has begun in zone. BegunSQL is the
 // same rule in SQL.
-func Begun(at time.Time, dateOnly bool, asOf time.Time, zone *time.Location) bool {
-	if dateOnly {
-		return !at.After(AnchorIn(asOf, zone))
+func Begun(m Moment, asOf time.Time, zone *time.Location) bool {
+	if m.DateOnly {
+		return !m.At.After(AnchorIn(asOf, zone))
 	}
-	return !at.After(asOf)
+	return !m.At.After(asOf)
 }
 
 // DaysSince counts the calendar days from the date an activity names to
 // today's date in zone. A day entry dated today is zero days old.
-func DaysSince(at time.Time, dateOnly bool, asOf time.Time, zone *time.Location) int {
-	year, month, day := DateIn(at, dateOnly, zone).Date()
+func DaysSince(m Moment, asOf time.Time, zone *time.Location) int {
+	year, month, day := DateIn(m, zone).Date()
 	return elapsed.Days(time.Date(year, month, day, 12, 0, 0, 0, zone), asOf, zone)
-}
-
-// Moment is an activity's stored time and whether it names only a date.
-type Moment struct {
-	At       time.Time
-	DateOnly bool
 }
 
 // DaysBetween counts the calendar days from the date one activity names to the
@@ -98,7 +112,7 @@ func DaysBetween(from, to Moment, zone *time.Location) int {
 	if to.DateOnly {
 		later = Begins(later, zone)
 	}
-	return DaysSince(from.At, from.DateOnly, later, zone)
+	return DaysSince(from, later, zone)
 }
 
 // BegunSQL is Begun for the activity under alias at asOf, both SQL the caller

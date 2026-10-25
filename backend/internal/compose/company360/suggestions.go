@@ -278,7 +278,7 @@ func (said suggestionCopy) staleThread(
 	// which is a question about elapsed time. The figure PRINTED below is a
 	// day count a reader checks against dates on screen. So it counts from the
 	// date the message names, as every other day count a reader reads.
-	waitedDays := occurredday.DaysSince(newest.At, newest.DateOnly, now, loc)
+	waitedDays := occurredday.DaysSince(occurredday.Moment{At: newest.At, DateOnly: newest.DateOnly}, now, loc)
 	if waited < noReplyDays*24*time.Hour {
 		return nil
 	}

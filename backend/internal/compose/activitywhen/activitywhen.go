@@ -13,7 +13,12 @@ import (
 // Text is an activity's time for a prompt: the date of a day entry and the
 // RFC 3339 instant otherwise. A day's stored noon is no time anybody named.
 func Text(a crmcontracts.Activity) string {
-	return occurredday.When(a.OccurredAt, IsDay(a.OccurredPrecision))
+	return occurredday.When(MomentOf(a))
+}
+
+// MomentOf is an activity's time as occurredday reads it.
+func MomentOf(a crmcontracts.Activity) occurredday.Moment {
+	return occurredday.Moment{At: a.OccurredAt, DateOnly: occurredday.IsDay(a.OccurredPrecision)}
 }
 
 // Stated is the wire precision of a row a reader found. It is nil when there
@@ -24,15 +29,4 @@ func Stated(precision string) *crmcontracts.OccurredPrecision {
 	}
 	out := crmcontracts.OccurredPrecision(precision)
 	return &out
-}
-
-// IsDay says a precision names only a date.
-func IsDay(precision crmcontracts.OccurredPrecision) bool {
-	return precision == crmcontracts.OccurredPrecisionOccurredPrecisionDay
-}
-
-// IsStatedDay is IsDay for a precision the wire may leave out, which it does
-// only beside an absent time.
-func IsStatedDay(precision *crmcontracts.OccurredPrecision) bool {
-	return precision != nil && IsDay(*precision)
 }

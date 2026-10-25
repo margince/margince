@@ -7,6 +7,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -67,7 +68,7 @@ func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activ
 			ID:       activity.Id.String(),
 			Kind:     activity.Kind,
 			At:       activity.OccurredAt,
-			DateOnly: activity.OccurredPrecision == crmcontracts.OccurredPrecisionOccurredPrecisionDay,
+			DateOnly: occurredday.IsDay(activity.OccurredPrecision),
 			Logged:   logged,
 		}
 		if activity.Direction != nil {

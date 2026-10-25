@@ -176,10 +176,9 @@ func healthIn(h *deals.DealHealth) []FactorIn {
 // actIn dates an activity: a day entry by its own date, an instant by the date
 // it falls on in the installation zone.
 func actIn(a crmcontracts.Activity, now time.Time, loc *time.Location) ActIn {
-	day := activitywhen.IsDay(a.OccurredPrecision)
 	out := ActIn{
 		ID: a.Id.String(), Kind: string(a.Kind),
-		At: occurredday.DateIn(a.OccurredAt, day, loc).Format(time.DateOnly), When: whenOf(a, now, loc),
+		At: occurredday.DateIn(activitywhen.MomentOf(a), loc).Format(time.DateOnly), When: whenOf(a, now, loc),
 	}
 	if a.Direction != nil {
 		out.Direction = string(*a.Direction)
@@ -214,7 +213,7 @@ func unfinishedTask(a crmcontracts.Activity) bool {
 // meetings alongside past contact, and only this tells them apart. A day entry
 // is scheduled until its date is over in the installation zone.
 func whenOf(a crmcontracts.Activity, now time.Time, loc *time.Location) string {
-	if activitywhen.IsDay(a.OccurredPrecision) {
+	if occurredday.IsDay(a.OccurredPrecision) {
 		if !occurredday.Ended(a.OccurredAt, now, loc) {
 			return "scheduled"
 		}

@@ -68,7 +68,7 @@ func admitPatchPrecision(ctx context.Context, tx pgx.Tx, current crmcontracts.Ac
 	if in.OccurredPrecision == nil && in.OccurredAt != nil {
 		in.OccurredPrecision = new(PrecisionInstant)
 	}
-	storedDay := current.OccurredPrecision == crmcontracts.OccurredPrecisionOccurredPrecisionDay
+	storedDay := occurredday.IsDay(current.OccurredPrecision)
 	if in.OccurredPrecision == nil || *in.OccurredPrecision == PrecisionInstant {
 		if in.OccurredPrecision != nil && in.OccurredAt == nil && storedDay {
 			return &DayToInstantNeedsTimeError{}
@@ -153,7 +153,7 @@ func (e *DayHeldSlotError) FieldFault() (field, code, message string) {
 
 // refuseDayHeldSlot holds a meeting's precision against its slot claim.
 func refuseDayHeldSlot(precision string, holdsSlot bool) error {
-	if holdsSlot && precision == PrecisionDay {
+	if holdsSlot && occurredday.IsDay(precision) {
 		return &DayHeldSlotError{}
 	}
 	return nil

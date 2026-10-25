@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -244,7 +243,7 @@ func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []Cl
 			DueAt:       claim.DueAt,
 		}
 		if claim.OccurredAt != nil {
-			folded.OccurredAt = &Occurred{At: *claim.OccurredAt, DateOnly: activitywhen.IsDay(claim.OccurredPrecision)}
+			folded.OccurredAt = &Occurred{At: *claim.OccurredAt, DateOnly: occurredday.IsDay(claim.OccurredPrecision)}
 		}
 		if claim.SourceLabel != nil {
 			folded.SourceLabel = *claim.SourceLabel
@@ -291,7 +290,7 @@ func WithCounterpart(in *Input, view crmcontracts.Contact360) {
 			Kind: string(activity.Kind),
 			At:   activity.OccurredAt.UTC(),
 			// A day entry's anchor is no time anybody named (Input.MarshalJSON).
-			DateOnly: activitywhen.IsDay(activity.OccurredPrecision),
+			DateOnly: occurredday.IsDay(activity.OccurredPrecision),
 		}
 		if activity.Subject != nil {
 			folded.Subject = *activity.Subject
@@ -370,7 +369,7 @@ func (in Input) MarshalJSON() ([]byte, error) {
 	}
 	recent := make([]promptAct, 0, len(in.Recent))
 	for _, act := range in.Recent {
-		recent = append(recent, promptAct{ActIn: act, At: occurredday.When(act.At, act.DateOnly)})
+		recent = append(recent, promptAct{ActIn: act, At: occurredday.When(occurredday.Moment{At: act.At, DateOnly: act.DateOnly})})
 	}
 	return json.Marshal(struct {
 		plain
@@ -381,5 +380,5 @@ func (in Input) MarshalJSON() ([]byte, error) {
 
 // startsText is the meeting's start as a prompt states it.
 func (in Input) startsText() string {
-	return occurredday.When(in.StartsAt, in.StartsDateOnly)
+	return occurredday.When(occurredday.Moment{At: in.StartsAt, DateOnly: in.StartsDateOnly})
 }

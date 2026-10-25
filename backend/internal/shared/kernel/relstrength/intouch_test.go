@@ -33,7 +33,7 @@ func TestReadInTouchCountsMeetingsAsContact(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := ReadInTouch(Dated{At: optionalDaysAgo(tc.inbound)}, Dated{At: optionalDaysAgo(tc.met)}, optionalDaysAhead(tc.booked), now, time.UTC)
+			got := ReadInTouch(instantAt(optionalDaysAgo(tc.inbound)), instantAt(optionalDaysAgo(tc.met)), instantAt(optionalDaysAhead(tc.booked)), now, time.UTC)
 			if got.Basis != tc.wantBasis || got.Days != tc.wantDays {
 				t.Fatalf("reading = %s after %d days, want %s after %d", got.Basis, got.Days, tc.wantBasis, tc.wantDays)
 			}
@@ -51,7 +51,7 @@ func TestReadInTouchCountsMeetingsAsContact(t *testing.T) {
 // anybody yet and must not keep a quiet account off "at risk".
 func TestAMessageDatedAheadIsNotContact(t *testing.T) {
 	t.Parallel()
-	got := ReadInTouch(Dated{At: optionalDaysAhead(3)}, Dated{}, nil, now, time.UTC)
+	got := ReadInTouch(instantAt(optionalDaysAhead(3)), nil, nil, now, time.UTC)
 	if got.Basis != InTouchNever || got.Current() {
 		t.Fatalf("reading = %s (current %v), want never — the message has not been sent yet", got.Basis, got.Current())
 	}
@@ -61,7 +61,7 @@ func TestAMessageDatedAheadIsNotContact(t *testing.T) {
 // counts only as the booking the caller passes separately.
 func TestAMeetingAheadIsNotOneHeld(t *testing.T) {
 	t.Parallel()
-	got := ReadInTouch(Dated{At: daysAgo(77)}, Dated{At: optionalDaysAhead(3)}, nil, now, time.UTC)
+	got := ReadInTouch(instantAt(daysAgo(77)), instantAt(optionalDaysAhead(3)), nil, now, time.UTC)
 	if got.Basis != InTouchQuiet {
 		t.Fatalf("basis = %s, want %s — a meeting that has not happened yet is not contact we had", got.Basis, InTouchQuiet)
 	}
@@ -78,7 +78,7 @@ func TestAMessageDatedTodayIsContactBeforeItsStoredNoon(t *testing.T) {
 	}
 	morning := time.Date(2026, 3, 10, 9, 0, 0, 0, auckland)
 	today := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
-	got := ReadInTouch(Dated{At: &today, DateOnly: true}, Dated{}, nil, morning, auckland)
+	got := ReadInTouch(&occurredday.Moment{At: today, DateOnly: true}, nil, nil, morning, auckland)
 	if got.Basis != InTouchWrote || got.Days != 0 {
 		t.Fatalf("reading = %s after %d days, want %s after 0", got.Basis, got.Days, InTouchWrote)
 	}

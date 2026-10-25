@@ -63,7 +63,7 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 		// The instant, not a day: which day it falls on depends on the record's
 		// zone, which the client holds and this read does not.
 		return dimension(crmcontracts.HealthDimensionRatingGood, crmcontracts.HealthDimensionReasonCodeMeetingBooked,
-			crmcontracts.HealthDimensionReasonParams{At: touch.BookedAt}, "A meeting with them is booked.")
+			crmcontracts.HealthDimensionReasonParams{At: &touch.BookedAt.At}, "A meeting with them is booked.")
 	case touch.Basis == relstrength.InTouchMet:
 		// The meeting is named even on a single-threaded account: it is what
 		// keeps the rating off at risk, and SingleThreaded still says the rest.
@@ -133,12 +133,12 @@ func dimension(
 // readableMeetings is meetingsAround behind the activity grant readNextMeeting
 // asks. A reader without it gets no meeting dates and a rating made from what
 // they may see, so the rating cannot tell them a meeting exists.
-func (a *assembly) readableMeetings() (last relstrength.Dated, next *time.Time, err error) {
+func (a *assembly) readableMeetings() (last, next *occurredday.Moment, err error) {
 	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return relstrength.Dated{}, nil, nil
+			return nil, nil, nil
 		}
-		return relstrength.Dated{}, nil, err
+		return nil, nil, err
 	}
 	return a.meetingsAround()
 }
@@ -151,14 +151,14 @@ func (a *assembly) readableMeetings() (last relstrength.Dated, next *time.Time, 
 // neither. Nil is "no meeting on
 // record", a fact about the reading rather than a claim that none happened:
 // the caller may hold no scope over the activity that would prove otherwise.
-func (a *assembly) meetingsAround() (last relstrength.Dated, next *time.Time, err error) {
+func (a *assembly) meetingsAround() (last, next *occurredday.Moment, err error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(a.companyID.UUID)
 	nowPos := arg(a.now)
 	activityScope, err := auth.ActivityDiscoverClause(a.ctx, "a", arg)
 	if err != nil {
-		return relstrength.Dated{}, nil, err
+		return nil, nil, err
 	}
 	if activityScope == "" {
 		activityScope = scopeAll
@@ -179,20 +179,21 @@ func (a *assembly) meetingsAround() (last relstrength.Dated, next *time.Time, er
 		  ORDER BY %[4]s, a.id LIMIT 1)`,
 		where, relstrength.MeetingTookPlaceSQL("a", now), relstrength.MeetingAheadSQL("a", now), occurredday.StartSQL("a")), args...)
 	if err != nil {
-		return relstrength.Dated{}, nil, fmt.Errorf("read the account's meetings: %w", err)
+		return nil, nil, fmt.Errorf("read the account's meetings: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var side, precision string
 		var at time.Time
 		if err := rows.Scan(&side, &at, &precision); err != nil {
-			return relstrength.Dated{}, nil, err
+			return nil, nil, err
 		}
+		meeting := &occurredday.Moment{At: at, DateOnly: occurredday.IsDay(precision)}
 		if side == "last" {
-			last = relstrength.Dated{At: &at, DateOnly: precision == string(crmcontracts.OccurredPrecisionOccurredPrecisionDay)}
+			last = meeting
 			continue
 		}
-		next = &at
+		next = meeting
 	}
 	return last, next, rows.Err()
 }

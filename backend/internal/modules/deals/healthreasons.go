@@ -67,7 +67,7 @@ func recencyReason(ev DealHealthEvidence, now time.Time, loc *time.Location, sai
 	if ev.LastActivityAt == nil {
 		return said.Say(healthWords.NoActivity)
 	}
-	days := occurredday.DaysSince(*ev.LastActivityAt, ev.LastActivityDateOnly, now, loc)
+	days := occurredday.DaysSince(occurredday.Moment{At: *ev.LastActivityAt, DateOnly: ev.LastActivityDateOnly}, now, loc)
 	when := fmt.Sprintf(said.Say(healthWords.DaysAgo), days)
 	switch {
 	case days <= 0:

@@ -113,7 +113,7 @@ func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
 	// has not happened yet.
 	after := func(c ClaimIn) bool {
 		return c.OccurredAt != nil && c.OccurredAt.At.After(since.At) &&
-			occurredday.Begun(c.OccurredAt.At, c.OccurredAt.DateOnly, in.Now, in.Zone)
+			occurredday.Begun(occurredday.Moment(*c.OccurredAt), in.Now, in.Zone)
 	}
 	for _, claim := range ranked.takeAll(after, whatChangedCap) {
 		out = append(out, Sentence{
@@ -130,7 +130,7 @@ func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
 	conversations := 0
 	var newest *ActIn
 	for i := range in.Recent {
-		if act := in.Recent[i]; act.At.After(since.At) && occurredday.Begun(act.At, act.DateOnly, in.Now, in.Zone) {
+		if act := in.Recent[i]; act.At.After(since.At) && occurredday.Begun(occurredday.Moment{At: act.At, DateOnly: act.DateOnly}, in.Now, in.Zone) {
 			conversations++
 			if newest == nil {
 				newest = &in.Recent[i]

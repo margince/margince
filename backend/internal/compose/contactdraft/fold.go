@@ -13,7 +13,6 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -306,7 +305,7 @@ func FoldRecent(activities []crmcontracts.Activity, now time.Time) []ActIn {
 		folded := ActIn{
 			ID:      turn.ID,
 			Kind:    string(turn.Kind),
-			At:      occurredday.When(turn.At, turn.DateOnly),
+			At:      occurredday.When(occurredday.Moment{At: turn.At, DateOnly: turn.DateOnly}),
 			Inbound: turn.Direction == string(crmcontracts.ActivityDirectionInbound),
 			Subject: turn.Subject,
 		}
@@ -391,8 +390,8 @@ func foldMeeting(in *Input, view crmcontracts.Contact360, now time.Time) {
 	if !attends(meeting, view.Contact.Id) {
 		return
 	}
-	dateOnly := activitywhen.IsDay(meeting.OccurredPrecision)
-	folded := MeetingIn{ActivityID: meeting.ActivityId.String(), StartsAt: occurredday.When(meeting.StartsAt, dateOnly)}
+	starts := occurredday.Moment{At: meeting.StartsAt, DateOnly: occurredday.IsDay(meeting.OccurredPrecision)}
+	folded := MeetingIn{ActivityID: meeting.ActivityId.String(), StartsAt: occurredday.When(starts)}
 	if meeting.Subject != nil {
 		folded.Subject = *meeting.Subject
 	}
@@ -419,7 +418,7 @@ func attends(meeting *crmcontracts.Contact360NextMeeting, contactID openapi_type
 // meetingAhead says the next meeting has not happened yet. A day meeting has
 // no hour: the 360 kept it only while its date runs in the installation zone.
 func meetingAhead(meeting crmcontracts.Contact360NextMeeting, now time.Time) bool {
-	if activitywhen.IsDay(meeting.OccurredPrecision) {
+	if occurredday.IsDay(meeting.OccurredPrecision) {
 		return true
 	}
 	return meeting.StartsAt.After(now)

@@ -118,16 +118,10 @@ const (
 	InTouchNever  = "never"  // no word and no meeting, ever
 )
 
-// Dated is when an activity happened, and whether that names only a date: a
-// day entry's stored anchor. A nil At is no activity.
-type Dated struct {
-	At       *time.Time
-	DateOnly bool
-}
-
-// begun reports whether d names an activity that has happened at now.
-func (d Dated) begun(now time.Time, loc *time.Location) bool {
-	return d.At != nil && occurredday.Begun(*d.At, d.DateOnly, now, loc)
+// begun reports whether m names an activity that has happened at now; nil is
+// no activity.
+func begun(m *occurredday.Moment, now time.Time, loc *time.Location) bool {
+	return m != nil && occurredday.Begun(*m, now, loc)
 }
 
 // InTouch is one account's contact reading. Days counts from the latest of
@@ -135,7 +129,7 @@ func (d Dated) begun(now time.Time, loc *time.Location) bool {
 type InTouch struct {
 	Basis    string
 	Days     int
-	BookedAt *time.Time
+	BookedAt *occurredday.Moment
 }
 
 // Current reports whether the reading keeps the account off "at risk".
@@ -147,27 +141,27 @@ func (r InTouch) Current() bool {
 // message or meeting that has not happened (occurredday.Begun) never counts as
 // contact we had; a meeting ahead counts only as nextMeeting. Days are counted
 // by the calendar of loc, the zone the reader sees the dates in.
-func ReadInTouch(lastInbound, lastMeeting Dated, nextMeeting *time.Time, now time.Time, loc *time.Location) InTouch {
+func ReadInTouch(lastInbound, lastMeeting, nextMeeting *occurredday.Moment, now time.Time, loc *time.Location) InTouch {
 	latest, basis := lastInbound, InTouchWrote
-	if !latest.begun(now, loc) {
-		latest = Dated{}
+	if !begun(latest, now, loc) {
+		latest = nil
 	}
-	if lastMeeting.begun(now, loc) && (latest.At == nil || lastMeeting.At.After(*latest.At)) {
+	if begun(lastMeeting, now, loc) && (latest == nil || lastMeeting.At.After(latest.At)) {
 		latest, basis = lastMeeting, InTouchMet
 	}
 	var reading InTouch
-	if latest.At != nil {
-		reading.Days = occurredday.DaysSince(*latest.At, latest.DateOnly, now, loc)
+	if latest != nil {
+		reading.Days = occurredday.DaysSince(*latest, now, loc)
 	}
-	if nextMeeting != nil && nextMeeting.After(now) {
+	if nextMeeting != nil && nextMeeting.At.After(now) {
 		reading.BookedAt = nextMeeting
 	}
 	switch {
-	case latest.At != nil && reading.Days <= InTouchDays:
+	case latest != nil && reading.Days <= InTouchDays:
 		reading.Basis = basis
 	case reading.BookedAt != nil:
 		reading.Basis = InTouchBooked
-	case latest.At != nil:
+	case latest != nil:
 		reading.Basis = InTouchQuiet
 	default:
 		reading.Basis = InTouchNever

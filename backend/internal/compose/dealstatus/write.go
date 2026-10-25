@@ -64,7 +64,7 @@ func storyLines(f facts) []sentence {
 	lines := []sentence{plain(fmt.Sprintf(said.Say(statusWords.Story), f.deal.Name, said.dealStatus(string(f.deal.Status))))}
 	if last, ok := lastContact(f); ok {
 		lines = append(lines, said.cited(
-			fmt.Sprintf(said.Say(statusWords.LastContact), said.since(f.now, last.OccurredAt, activitywhen.IsDay(last.OccurredPrecision), f.loc), said.subjectOf(last)),
+			fmt.Sprintf(said.Say(statusWords.LastContact), said.since(f.now, activitywhen.MomentOf(last), f.loc), said.subjectOf(last)),
 			last))
 	} else {
 		lines = append(lines, plain(said.Say(statusWords.NoContact)))

@@ -397,7 +397,7 @@ func goingCold(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
 	if c.Status != dealStatusOpen || c.LastTouchAt.IsZero() || c.TouchedAsOf.IsZero() || c.Zone == nil {
 		return Risk{}, false
 	}
-	days := occurredday.DaysSince(c.LastTouchAt, c.LastTouchDateOnly, c.TouchedAsOf, c.Zone)
+	days := occurredday.DaysSince(occurredday.Moment{At: c.LastTouchAt, DateOnly: c.LastTouchDateOnly}, c.TouchedAsOf, c.Zone)
 	if days < goingColdDays {
 		return Risk{}, false
 	}

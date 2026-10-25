@@ -15,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // meetingItem renders one appointment still ahead today.
@@ -123,7 +124,7 @@ const meetingKindUnprepared = "unprepared"
 func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level := levelAgreed
 	reasons := []crmcontracts.WorklistReason{}
-	day := item.OccurredPrecision != nil && isDayPrecision(*item.OccurredPrecision)
+	day := occurredday.IsStatedDay(item.OccurredPrecision)
 	if !day && item.DueAt != nil && item.DueAt.Sub(asOf) <= meetingHorizon {
 		level = levelWaiting
 		reasons = append(reasons, reason("meeting_soon", nil))

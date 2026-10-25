@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // followUpOwed is the newest meeting on the deal that awaits a follow-up and
@@ -47,12 +48,12 @@ func followUpMove(f facts, met activities.AwaitingReply) crmcontracts.DealStatus
 	}
 	held := untimed(&meetingID, fmt.Sprintf(said.Say(statusWords.Met), subject))
 	held.OccurredAt = &met.SentAt
-	dateOnly := met.Precision == activities.PrecisionDay
-	if dateOnly {
+	sent := occurredday.Moment{At: met.SentAt, DateOnly: occurredday.IsDay(met.Precision)}
+	if sent.DateOnly {
 		held.OccurredPrecision = crmcontracts.OccurredPrecisionOccurredPrecisionDay
 	}
 	return move(ActionDraftEmail,
-		fmt.Sprintf(said.Say(statusWords.FollowUp), said.since(f.now, met.SentAt, dateOnly, f.loc)),
+		fmt.Sprintf(said.Say(statusWords.FollowUp), said.since(f.now, sent, f.loc)),
 		map[string]any{argActivityID: meetingID, argLinks: links}, held)
 }
 

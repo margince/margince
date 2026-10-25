@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -55,8 +56,11 @@ func (t LastTouch) Touches() relstrength.Touches {
 	}
 }
 
-func dated(at *time.Time, precision string) relstrength.Dated {
-	return relstrength.Dated{At: at, DateOnly: precision == activities.PrecisionDay}
+func dated(at *time.Time, precision string) *occurredday.Moment {
+	if at == nil {
+		return nil
+	}
+	return &occurredday.Moment{At: *at, DateOnly: occurredday.IsDay(precision)}
 }
 
 // LastTouchFor answers the two moments for every contact in the set the caller

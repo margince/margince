@@ -45,7 +45,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -321,8 +320,8 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 		return crmcontracts.ContactMoment{}, false
 	}
 	sinceWeWrote := occurredday.DaysBetween(
-		occurredday.Moment{At: *page.LastOutboundAt, DateOnly: activitywhen.IsStatedDay(page.LastOutboundPrecision)},
-		occurredday.Moment{At: inbound, DateOnly: activitywhen.IsStatedDay(page.LastLiveInboundPrecision)}, said.zone)
+		occurredday.Moment{At: *page.LastOutboundAt, DateOnly: occurredday.IsStatedDay(page.LastOutboundPrecision)},
+		occurredday.Moment{At: inbound, DateOnly: occurredday.IsStatedDay(page.LastLiveInboundPrecision)}, said.zone)
 	if sinceWeWrote < reEngagedQuietDays {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -374,13 +373,13 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		// They answered. Silence is not the story.
 		return crmcontracts.ContactMoment{}, false
 	}
-	waiting := occurredday.DaysSince(outbound, activitywhen.IsStatedDay(page.LastOutboundPrecision), now, said.zone)
+	waiting := occurredday.DaysSince(occurredday.Moment{At: outbound, DateOnly: occurredday.IsStatedDay(page.LastOutboundPrecision)}, now, said.zone)
 	if waiting < goneQuietAfterDays {
 		return crmcontracts.ContactMoment{}, false
 	}
 	quietFor := waiting
 	if page.LastInboundAt != nil {
-		quietFor = occurredday.DaysSince(*page.LastInboundAt, activitywhen.IsStatedDay(page.LastInboundPrecision), now, said.zone)
+		quietFor = occurredday.DaysSince(occurredday.Moment{At: *page.LastInboundAt, DateOnly: occurredday.IsStatedDay(page.LastInboundPrecision)}, now, said.zone)
 	}
 	evidence := said.outboundEvidence(page, outbound)
 	return crmcontracts.ContactMoment{

@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -44,7 +45,7 @@ func commercialStrip(open, stalled int) *crmcontracts.Company360StateStrip {
 
 func TestRelationshipIsAbsentOnAnAccountNobodyHasReached(t *testing.T) {
 	health := crmcontracts.Company360Health{ActiveContacts: new(0)}
-	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(relstrength.Dated{}, relstrength.Dated{}, nil, healthNow, time.UTC))
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(nil, nil, nil, healthNow, time.UTC))
 
 	// Not "at risk": an unstarted relationship is not a failing one, and rating
 	// it would put a verdict on something that has not begun.
@@ -55,6 +56,14 @@ func TestRelationshipIsAbsentOnAnAccountNobodyHasReached(t *testing.T) {
 
 // healthNow is the instant every relationship case states its dates against.
 var healthNow = time.Date(2026, 10, 6, 9, 0, 0, 0, time.UTC)
+
+// instantAt is an instant activity at at; nil is none.
+func instantAt(at *time.Time) *occurredday.Moment {
+	if at == nil {
+		return nil
+	}
+	return &occurredday.Moment{At: *at}
+}
 
 func healthDaysAgo(n int) *time.Time {
 	at := healthNow.AddDate(0, 0, -n)
@@ -132,7 +141,7 @@ func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 				ActiveContacts: new(tc.activeContacts),
 				SingleThreaded: new(tc.singleThreaded),
 			}
-			touch := relstrength.ReadInTouch(relstrength.Dated{At: tc.lastInbound}, relstrength.Dated{At: tc.lastMeeting}, tc.nextMeeting, healthNow, time.UTC)
+			touch := relstrength.ReadInTouch(instantAt(tc.lastInbound), instantAt(tc.lastMeeting), instantAt(tc.nextMeeting), healthNow, time.UTC)
 			rateHealthDimensions(&health, nil, touch)
 
 			got := health.Relationship
@@ -158,7 +167,7 @@ func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 // translation has nothing to say.
 func TestRelationshipReasonCarriesTheValuesItNames(t *testing.T) {
 	health := crmcontracts.Company360Health{ActiveContacts: new(2), SingleThreaded: new(false)}
-	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(relstrength.Dated{At: healthDaysAgo(77)}, relstrength.Dated{}, healthDaysAgo(-2), healthNow, time.UTC))
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(instantAt(healthDaysAgo(77)), nil, instantAt(healthDaysAgo(-2)), healthNow, time.UTC))
 
 	params := health.Relationship.ReasonParams
 	if params == nil || params.At == nil || !params.At.Equal(*healthDaysAgo(-2)) {
@@ -276,7 +285,7 @@ func TestLastMetCountsDaysInTheInstallationZone(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			touch := relstrength.ReadInTouch(relstrength.Dated{}, relstrength.Dated{At: &tc.met}, nil, tc.now, tc.loc)
+			touch := relstrength.ReadInTouch(nil, &occurredday.Moment{At: tc.met}, nil, tc.now, tc.loc)
 			if touch.Days != tc.days {
 				t.Fatalf("days = %d, want %d", touch.Days, tc.days)
 			}

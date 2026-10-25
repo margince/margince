@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -123,7 +124,7 @@ func previewOccurredAt(in activities.LogActivityInput) string {
 	switch {
 	case in.OccurredAt == nil:
 		return ""
-	case in.OccurredPrecision == activities.PrecisionDay:
+	case occurredday.IsDay(in.OccurredPrecision):
 		return in.OccurredAt.Format(time.DateOnly)
 	}
 	return in.OccurredAt.Format(time.RFC3339Nano)

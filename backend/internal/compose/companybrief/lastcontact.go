@@ -4,7 +4,6 @@
 package companybrief
 
 import (
-	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -19,7 +18,7 @@ func foldLastContact(view crmcontracts.Company360, in *Input) {
 	act := ActIn{
 		ID:   last.ActivityId.String(),
 		Kind: string(last.Kind),
-		At:   occurredday.When(last.At, activitywhen.IsDay(last.OccurredPrecision)),
+		At:   occurredday.When(occurredday.Moment{At: last.At, DateOnly: occurredday.IsDay(last.OccurredPrecision)}),
 	}
 	if view.Activities != nil {
 		for _, activity := range view.Activities.Data {

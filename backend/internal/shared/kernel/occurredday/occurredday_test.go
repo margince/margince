@@ -32,7 +32,7 @@ func TestADayIsStoredAtNoonUTCAndReadsBackAsItsDate(t *testing.T) {
 		if got := Date(at); !got.Equal(date) {
 			t.Errorf("%s reads back as %s", date.Format(time.DateOnly), got.Format(time.DateOnly))
 		}
-		if got := When(at, true); got != date.Format(time.DateOnly) {
+		if got := When(Moment{At: at, DateOnly: true}); got != date.Format(time.DateOnly) {
 			t.Errorf("%s is told as %q", date.Format(time.DateOnly), got)
 		}
 	}
@@ -62,7 +62,7 @@ func TestAnInstantIsDatedOnTheDayItFallsOnInTheZone(t *testing.T) {
 		if got.Format(time.DateOnly) != want || got.Hour() != 12 {
 			t.Errorf("%s: %v is anchored at %v, want noon UTC of %s", name, instant, got, want)
 		}
-		if got := DateIn(instant, false, zone(t, name)).Format(time.DateOnly); got != want {
+		if got := DateIn(Moment{At: instant}, zone(t, name)).Format(time.DateOnly); got != want {
 			t.Errorf("%s: an instant names %s, want %s", name, got, want)
 		}
 	}
@@ -71,10 +71,10 @@ func TestAnInstantIsDatedOnTheDayItFallsOnInTheZone(t *testing.T) {
 func TestWhenSaysADateOrAnInstant(t *testing.T) {
 	t.Parallel()
 	anchor := Anchor(time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC))
-	if got := When(anchor, true); got != "2025-03-09" {
+	if got := When(Moment{At: anchor, DateOnly: true}); got != "2025-03-09" {
 		t.Errorf("a day entry reads %q, want 2025-03-09", got)
 	}
-	if got := When(anchor, false); got != "2025-03-09T12:00:00Z" {
+	if got := When(Moment{At: anchor}); got != "2025-03-09T12:00:00Z" {
 		t.Errorf("an instant reads %q, want its RFC 3339 form", got)
 	}
 }
@@ -129,7 +129,7 @@ func TestADayEntryHasHappenedFromTheStartOfItsDate(t *testing.T) {
 			{time.Date(2025, 3, 9, 0, 0, 0, 0, loc), true},
 			{time.Date(2025, 3, 10, 9, 0, 0, 0, loc), true},
 		} {
-			if got := Begun(anchor, true, c.asOf, loc); got != c.want {
+			if got := Begun(Moment{At: anchor, DateOnly: true}, c.asOf, loc); got != c.want {
 				t.Errorf("%s at %v: begun = %v, want %v", name, c.asOf, got, c.want)
 			}
 		}
@@ -141,10 +141,10 @@ func TestAnInstantHasHappenedOnceTheClockReachesIt(t *testing.T) {
 	t.Parallel()
 	at := time.Date(2025, 3, 9, 12, 0, 0, 0, time.UTC)
 	tokyo := zone(t, "Asia/Tokyo")
-	if Begun(at, false, at.Add(-time.Minute), tokyo) {
+	if Begun(Moment{At: at}, at.Add(-time.Minute), tokyo) {
 		t.Error("an instant a minute ahead has happened")
 	}
-	if !Begun(at, false, at, tokyo) {
+	if !Begun(Moment{At: at}, at, tokyo) {
 		t.Error("an instant at the clock has not happened")
 	}
 }
@@ -156,13 +156,13 @@ func TestADayEntryDatedTodayIsZeroDaysOld(t *testing.T) {
 	auckland := zone(t, "Pacific/Auckland")
 	anchor := Anchor(time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC))
 	morning := time.Date(2025, 3, 9, 9, 0, 0, 0, auckland)
-	if got := DaysSince(anchor, true, morning, auckland); got != 0 {
+	if got := DaysSince(Moment{At: anchor, DateOnly: true}, morning, auckland); got != 0 {
 		t.Errorf("a day entry dated today is %d days old, want 0", got)
 	}
-	if got := DaysSince(anchor, true, morning.AddDate(0, 0, 3), auckland); got != 3 {
+	if got := DaysSince(Moment{At: anchor, DateOnly: true}, morning.AddDate(0, 0, 3), auckland); got != 3 {
 		t.Errorf("three days on it is %d days old, want 3", got)
 	}
-	if got := DaysSince(morning.Add(-time.Hour), false, morning, auckland); got != 0 {
+	if got := DaysSince(Moment{At: morning.Add(-time.Hour)}, morning, auckland); got != 0 {
 		t.Errorf("an instant an hour ago is %d days old, want 0", got)
 	}
 }

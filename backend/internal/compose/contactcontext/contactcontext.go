@@ -22,7 +22,6 @@ package contactcontext
 import (
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -72,5 +71,5 @@ func StampOf(at *time.Time, precision *crmcontracts.OccurredPrecision) string {
 	if at == nil {
 		return ""
 	}
-	return occurredday.When(*at, precision != nil && activitywhen.IsDay(*precision))
+	return occurredday.When(occurredday.Moment{At: *at, DateOnly: occurredday.IsStatedDay(precision)})
 }

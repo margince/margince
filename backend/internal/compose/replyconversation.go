@@ -48,7 +48,7 @@ func replyConversationText(turns []draftcore.Turn) string {
 			relation = "later than the selected message"
 		}
 		rendered = append(rendered, fmt.Sprintf("%s | %s | %s | %s\n%s", relation,
-			occurredday.When(turn.At, turn.DateOnly), direction, textcut.Runes(turn.Subject, 200), turn.Text))
+			occurredday.When(occurredday.Moment{At: turn.At, DateOnly: turn.DateOnly}), direction, textcut.Runes(turn.Subject, 200), turn.Text))
 	}
 	return textcut.Runes(strings.Join(rendered, "\n\n"), replyActivityMaxRunes)
 }
