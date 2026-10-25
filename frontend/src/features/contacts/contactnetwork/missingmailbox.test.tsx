@@ -23,7 +23,6 @@ describe("a colleague on the threads with no mailbox", () => {
     edges: [],
     groups_omitted: [],
     routes: [],
-    groups_omitted: [],
   };
 
   it("is named in a notice that later mail may be missing", async () => {
