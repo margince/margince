@@ -37,7 +37,7 @@ func (s *Sink) ladderSubjectTx(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// Asked first, of the derived counterparty itself. The connector reads
 	// mail from an alias as inbound with the alias as its counterparty. Only
 	// here are the seats' addresses in reach, and no seat is ever the subject.
-	us, err := workspacePartiesTx(ctx, tx)
+	us, err := workspacePartiesTx(ctx, tx, append([]string{cp.Email}, rec.Addresses...)...)
 	if err != nil {
 		return connector.Counterparty{}, err
 	}

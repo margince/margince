@@ -24,6 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func ensureFromMailbox(t *testing.T, e *integration.Env, owner ids.UUID, address, domain string) error {
@@ -152,38 +154,8 @@ func TestACounterpartyCheckWaitsForAnAliasClaimInFlight(t *testing.T) {
 
 func raceAliasClaimAndCheck(t *testing.T, claimed, checked string) {
 	e := integration.Setup(t)
-	ctx := context.Background()
-	stored, err := capture.ValidExclusionValue(capture.IdentityKindAddress, claimed)
-	if err != nil {
-		t.Fatalf("the claimed spelling %q is no address: %v", claimed, err)
-	}
 	mail := seedCapturedMail(t, e, checked, "hello")
-	owner := integration.OwnerConn(t)
-	gate, err := owner.Begin(ctx)
-	if err != nil {
-		t.Fatalf("opening the holding transaction: %v", err)
-	}
-	defer func() {
-		if rollbackErr := gate.Rollback(ctx); rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
-			t.Errorf("closing the holding transaction: %v", rollbackErr)
-		}
-	}()
-	// The same claim, uncommitted: the real claim takes its lock and then
-	// waits on this row's unique key.
-	if _, err := gate.Exec(ctx, `
-		INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
-		VALUES ($1, 'address', $2, 'user', 'human:holder')`, e.Rep1, stored); err != nil {
-		t.Fatalf("holding the claim: %v", err)
-	}
-
-	claimErr, claimDone := make(chan error, 1), make(chan struct{})
-	go func() {
-		_, err := capture.NewOwnerIdentityStore(e.DB()).Add(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
-			capture.IdentityKindAddress, claimed)
-		claimErr <- err
-		close(claimDone)
-	}()
-	waitForLockWaiter(t, claimDone, `'transactionid'`, "the alias claim finished without reaching the held row")
+	release, claimErr := claimInFlight(t, e, claimed)
 
 	ensureErr, ensureDone := make(chan error, 1), make(chan struct{})
 	go func() {
@@ -197,10 +169,7 @@ func raceAliasClaimAndCheck(t *testing.T, claimed, checked string) {
 	waitForLockWaiter(t, ensureDone, `'advisory'`,
 		"the counterparty check finished without waiting for the alias claim in flight, so it decided on a stale seat set")
 
-	if err := gate.Rollback(ctx); err != nil {
-		t.Fatalf("releasing the held claim: %v", err)
-	}
-	<-claimDone
+	release()
 	if err := <-claimErr; err != nil {
 		t.Fatalf("the alias claim failed: %v", err)
 	}
@@ -210,5 +179,145 @@ func raceAliasClaimAndCheck(t *testing.T, claimed, checked string) {
 	}
 	if n := contactsAt(t, e, checked); n != 0 {
 		t.Fatalf("%d contacts for the alias claimed in flight, want 0", n)
+	}
+}
+
+// claimInFlight starts Rep1's alias claim of address and holds it after its
+// lock. An uncommitted copy of the row makes the claim wait on its unique key.
+// release lets it commit.
+func claimInFlight(t *testing.T, e *integration.Env, address string) (release func(), claimed <-chan error) {
+	t.Helper()
+	ctx := context.Background()
+	gate, err := integration.OwnerConn(t).Begin(ctx)
+	if err != nil {
+		t.Fatalf("opening the holding transaction: %v", err)
+	}
+	t.Cleanup(func() {
+		if rollbackErr := gate.Rollback(ctx); rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
+			t.Errorf("closing the holding transaction: %v", rollbackErr)
+		}
+	})
+	stored, err := capture.ValidExclusionValue(capture.IdentityKindAddress, address)
+	if err != nil {
+		t.Fatalf("the claimed spelling %q is no address: %v", address, err)
+	}
+	if _, err := gate.Exec(ctx, `
+		INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
+		VALUES ($1, 'address', $2, 'user', 'human:holder')`, e.Rep1, stored); err != nil {
+		t.Fatalf("holding the claim: %v", err)
+	}
+	result, done := make(chan error, 1), make(chan struct{})
+	go func() {
+		_, err := capture.NewOwnerIdentityStore(e.DB()).Add(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
+			capture.IdentityKindAddress, address)
+		result <- err
+		close(done)
+	}()
+	waitForLockWaiter(t, done, `'transactionid'`, "the alias claim finished without reaching the held row")
+	return func() {
+		if err := gate.Rollback(ctx); err != nil {
+			t.Fatalf("releasing the held claim: %v", err)
+		}
+	}, result
+}
+
+// A mail captured while its sender's address is being claimed as Rep1's own
+// waits for the claim. The ledger then asks nothing about the address, and no
+// participant row names it as an outside party.
+func TestACaptureWaitsForAnAliasClaimOfItsSender(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const alias = "rep1.home@home.example"
+	release, claimed := claimInFlight(t, e, alias)
+
+	captured, done := make(chan ids.UUID, 1), make(chan struct{})
+	go func() {
+		defer close(done)
+		ref, err := newCaptureSink(e.Pool, CaptureConfig{}).Upsert(mailboxOwnerCtx(e, e.Rep1), connector.NormalizedRecord{
+			EntityType: "activity",
+			NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "alias-race-1"},
+			Counterparty: connector.Counterparty{
+				Email: alias, DisplayName: "Rep One", Domain: "home.example", Direction: connector.DirectionInbound,
+			},
+			Fields:    capture.ActivityFields{Kind: "email", Subject: "Angebot", Body: "Anbei.", Direction: connector.DirectionInbound},
+			ThreadKey: "thread-alias-race-1",
+			Addresses: []string{alias, partnerBuyer, "a@authz.test"},
+			Source:    "gmail:alias-race-1", CapturedBy: "connector:gmail",
+		})
+		if err != nil {
+			t.Errorf("capturing the mail: %v", err)
+		}
+		captured <- ref.ID
+	}()
+	waitForLockWaiter(t, done, `'advisory'`, "the capture finished without waiting for the alias claim of its sender")
+
+	release()
+	if err := <-claimed; err != nil {
+		t.Fatalf("the alias claim failed: %v", err)
+	}
+	<-done
+	mail := <-captured
+	if n := e.WsCount(t, `SELECT count(*) FROM capture_pending_counterparty WHERE email = $1`, alias); n != 0 {
+		t.Errorf("the ledger holds %d question(s) about the seat's own alias, want none", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND address = $2`, mail, alias); n != 0 {
+		t.Errorf("the alias was stamped %d time(s) as an outside party, want 0", n)
+	}
+	if n := contactsAt(t, e, alias); n != 0 {
+		t.Errorf("%d contacts for the seat's own alias, want 0", n)
+	}
+}
+
+// A ledger row retires to `unsure` while its address is claimed. The retire
+// takes the address's check lock first, so the claim waits for it. The claim
+// then settles the row instead of leaving an open review behind.
+func TestAnAliasClaimSettlesARowRetiringToUnsure(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := context.Background()
+	const alias = "rep1.retiring@home.example"
+	mail := seedCapturedMail(t, e, alias, "hello")
+	row := seedPendingDisposition(t, e, alias, "home.example", mail)
+	lease := ids.NewV7()
+	e.WsExec(t, `UPDATE capture_pending_counterparty SET claimed_by = $2, claimed_until = now() + interval '1 hour' WHERE id = $1`, row, lease)
+
+	gate, err := integration.OwnerConn(t).Begin(ctx)
+	if err != nil {
+		t.Fatalf("opening the holding transaction: %v", err)
+	}
+	defer func() {
+		if rollbackErr := gate.Rollback(ctx); rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
+			t.Errorf("closing the holding transaction: %v", rollbackErr)
+		}
+	}()
+	if _, err := gate.Exec(ctx, `SELECT id FROM capture_pending_counterparty WHERE id = $1 FOR UPDATE`, row); err != nil {
+		t.Fatalf("holding the row: %v", err)
+	}
+	retired, retireDone := make(chan error, 1), make(chan struct{})
+	go func() {
+		retired <- capture.NewPendingStore(InstallationDB(e.Pool)).Retire(principal.WithWorkspaceID(ctx, e.WS),
+			capture.PendingCounterparty{ID: row, Email: alias, Claim: lease}, "never cleared the floor", capture.VerdictMeasurement{})
+		close(retireDone)
+	}()
+	waitForLockWaiter(t, retireDone, `'tuple', 'transactionid'`, "the retire finished without reaching the held row")
+
+	claimed, claimDone := make(chan error, 1), make(chan struct{})
+	go func() {
+		_, err := capture.NewOwnerIdentityStore(e.DB()).Add(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
+			capture.IdentityKindAddress, alias)
+		claimed <- err
+		close(claimDone)
+	}()
+	waitForLockWaiter(t, claimDone, `'advisory'`, "the alias claim finished without waiting for the retire's check lock")
+
+	if err := gate.Commit(ctx); err != nil {
+		t.Fatalf("releasing the row: %v", err)
+	}
+	if err := <-retired; err != nil {
+		t.Fatalf("the retire failed: %v", err)
+	}
+	if err := <-claimed; err != nil {
+		t.Fatalf("the alias claim failed: %v", err)
+	}
+	if status := dispositionStatus(t, e, row); status != "suppressed" {
+		t.Fatalf("the row ended %q, want suppressed: the claim left an open review behind", status)
 	}
 }

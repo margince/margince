@@ -17,7 +17,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -101,11 +100,8 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 				return err
 			}
 		}
-		// Before the connection row lock, as LockSeatAddressClaim requires.
-		if row.accountLabel != nil {
-			if err := storekit.LockSeatAddressClaim(ctx, tx, *row.accountLabel); err != nil {
-				return err
-			}
+		if err := lockConnectionClaimsTx(ctx, tx, row.userID, row.provider, row.accountLabel); err != nil {
+			return err
 		}
 		var err error
 		id, priorRef, err = upsertConnection(ctx, tx, row)

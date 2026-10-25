@@ -168,7 +168,7 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 	var out OwnerIdentity
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if kind == IdentityKindAddress {
-			if err := storekit.LockSeatAddressClaim(ctx, tx, value); err != nil {
+			if err := storekit.LockSeatAddressClaims(ctx, tx, value); err != nil {
 				return err
 			}
 		}
@@ -213,6 +213,9 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := purgeExpiredWithdrawalsTx(ctx, tx); err != nil {
+			return err
+		}
+		if err := lockIdentityClaimTx(ctx, tx, id, actor.UserID); err != nil {
 			return err
 		}
 		var withdrawn withdrawnIdentity
@@ -394,8 +397,9 @@ func seatLoginAddressTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (string, 
 // made for — a ledger and a gate answering differently about the same address
 // is the shape nobody notices until a record appears.
 //
-// A row another transaction holds is skipped, never waited on. That is a
-// verdict in flight, and its seat check waits for this claim and refuses.
+// It waits on a row a transition holds. Every transition out of pending or
+// unsure takes the address's check lock first, so none holds a row this
+// claim's lock is blocking.
 func retirePendingForIdentityTx(ctx context.Context, tx pgx.Tx, user ids.UUID, identity OwnerIdentity) error {
 	var covered SelfSet
 	if identity.Kind == IdentityKindDomain {
@@ -405,8 +409,7 @@ func retirePendingForIdentityTx(ctx context.Context, tx pgx.Tx, user ids.UUID, i
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT id, email FROM capture_pending_counterparty
-		 WHERE owner_id = $1 AND status IN ('pending', 'unsure')
-		   FOR UPDATE SKIP LOCKED`, user)
+		 WHERE owner_id = $1 AND status IN ('pending', 'unsure')`, user)
 	if err != nil {
 		return fmt.Errorf("capture: reading the open questions about a claimed address: %w", err)
 	}

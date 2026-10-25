@@ -32,6 +32,16 @@ func contactIsSeatTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (bool, 
 // seat set under the shared lock of every address it asks about. An alias
 // claim in flight either commits first and is seen, or waits for this write.
 func seatContactsTx(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID) (map[ids.ContactID]bool, error) {
+	return seatContactsMatchingTx(ctx, tx, contactIDs, func(seats storekit.SeatAddresses, address string) bool {
+		return seats.Covers(address, ids.Nil)
+	})
+}
+
+// seatContactsMatchingTx reads each contact's live addresses, locks them for
+// the check, and reports the contacts holding one that match accepts.
+func seatContactsMatchingTx(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID,
+	match func(storekit.SeatAddresses, string) bool,
+) (map[ids.ContactID]bool, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT contact_id, lower(email) FROM contact_email
 		 WHERE contact_id = ANY($1) AND archived_at IS NULL`, contactIDs)
@@ -59,7 +69,7 @@ func seatContactsTx(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID) 
 	}
 	out := map[ids.ContactID]bool{}
 	for _, one := range addresses {
-		if seats.Covers(one.address, ids.Nil) {
+		if match(seats, one.address) {
 			out[one.contact] = true
 		}
 	}

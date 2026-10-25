@@ -115,7 +115,7 @@ func ownAddressHeldAloneTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, addres
 	if err != nil || !self.CoversAddressExactly(address) {
 		return false, err
 	}
-	if err := storekit.LockSeatAddressClaim(ctx, tx, address); err != nil {
+	if err := storekit.LockSeatAddressClaims(ctx, tx, address); err != nil {
 		return false, err
 	}
 	held, err := addressHeldByAnotherSeatTx(ctx, tx, seat, address)

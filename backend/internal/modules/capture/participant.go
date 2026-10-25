@@ -92,7 +92,7 @@ func stampCaptureParticipants(
 	// Never a seat's own address as the other end. Mail the owner sent from
 	// an alias arrives with that alias as its counterparty. Stamping it would
 	// record a seat as an outside party in the interaction graph's rows.
-	us, err := workspacePartiesTx(ctx, tx)
+	us, err := workspacePartiesTx(ctx, tx, address)
 	if err != nil {
 		return err
 	}

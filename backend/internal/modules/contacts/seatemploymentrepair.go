@@ -23,9 +23,12 @@ type SeatEmploymentPage struct {
 }
 
 // RetireSeatEmploymentEdgesTx archives the inferred employment edges on this
-// page whose contact holds a proven seat address. Inferred means the edge's
-// create audit names capture or a provider as its origin. An edge a human or
-// an agent has since touched, or one with no such audit, is left alone.
+// page whose contact holds a live seat's login address. A login changes only
+// with the seat's own account, unlike an alias or a mailbox label.
+//
+// Inferred means the create audit names capture or a provider as its origin.
+// Every audit row on the edge must also be by a system or connector principal.
+// An archived edge keeps its row and audit trail; a person records it again.
 func RetireSeatEmploymentEdgesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, runID string) (SeatEmploymentPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return SeatEmploymentPage{}, err
@@ -41,7 +44,9 @@ func RetireSeatEmploymentEdgesTx(ctx context.Context, tx pgx.Tx, after ids.UUID,
 	for i, edge := range retirable {
 		owners[i] = edge.contact
 	}
-	seats, err := seatContactsTx(ctx, tx, owners)
+	seats, err := seatContactsMatchingTx(ctx, tx, owners, func(seats storekit.SeatAddresses, address string) bool {
+		return seats.IsLogin(address)
+	})
 	if err != nil {
 		return SeatEmploymentPage{}, err
 	}
@@ -75,8 +80,8 @@ func inferredEmploymentPage(ctx context.Context, tx pgx.Tx, after ids.UUID, limi
 		                WHERE a.entity_type = $3 AND a.entity_id = r.id AND a.action = 'create'
 		                  AND a.after ->> $4 IN ($5, $6))
 		       AND NOT EXISTS (SELECT 1 FROM audit_log a
-		                WHERE a.entity_type = $3 AND a.entity_id = r.id AND a.actor_type IN ('human', 'agent')
-		                  AND NOT (a.action = 'create' AND a.after ->> $4 IN ($5, $6)))
+		                WHERE a.entity_type = $3 AND a.entity_id = r.id
+		                  AND a.actor_type NOT IN ('system', 'connector'))
 		  FROM relationship r
 		 WHERE r.kind = 'employment' AND r.archived_at IS NULL AND r.id > $1
 		 ORDER BY r.id

@@ -23,6 +23,7 @@ import (
 // Never return the members to a client: a seat's aliases are private to it.
 type SeatAddresses struct {
 	proven   map[string]struct{}
+	logins   map[string]struct{}
 	declared map[string]map[ids.UUID]struct{}
 }
 
@@ -34,11 +35,14 @@ func WorkspaceSeatAddresses(ctx context.Context, tx pgx.Tx) (SeatAddresses, erro
 	if err != nil {
 		return SeatAddresses{}, err
 	}
-	set := SeatAddresses{proven: map[string]struct{}{}, declared: map[string]map[ids.UUID]struct{}{}}
+	set := SeatAddresses{proven: map[string]struct{}{}, logins: map[string]struct{}{}, declared: map[string]map[ids.UUID]struct{}{}}
 	for _, record := range records {
 		address := mailidentity.SeatAddressKey(record.label, record.source)
 		if address == "" || !record.decidesNew() {
 			continue
+		}
+		if record.source == "login" {
+			set.logins[address] = struct{}{}
 		}
 		if provenSeatSource(record.source) {
 			set.proven[address] = struct{}{}
@@ -75,6 +79,13 @@ func (s SeatAddresses) Covers(address string, asking ids.UUID) bool {
 	return s.declaredBy(folded, asking)
 }
 
+// IsLogin reports whether address is a live seat's login, which only the
+// seat's own account changes.
+func (s SeatAddresses) IsLogin(address string) bool {
+	_, ok := s.logins[mailidentity.SeatAddressKey(address, "")]
+	return ok
+}
+
 // For lists the addresses Covers admits for asking, sorted, for binding as
 // one SQL array argument.
 func (s SeatAddresses) For(asking ids.UUID) []string {
@@ -100,32 +111,40 @@ func (s SeatAddresses) declaredBy(address string, asking ids.UUID) bool {
 // the caller will ask about. A claim of one of them that commits first is in
 // the answer; a later one waits until this transaction ends.
 func SeatAddressesFor(ctx context.Context, tx pgx.Tx, addresses ...string) (SeatAddresses, error) {
+	if err := LockSeatAddressChecks(ctx, tx, addresses...); err != nil {
+		return SeatAddresses{}, err
+	}
+	return WorkspaceSeatAddresses(ctx, tx)
+}
+
+// LockSeatAddressChecks takes the shared lock a check of these addresses holds.
+// A writer of a row that an alias claim also writes takes it before that row.
+func LockSeatAddressChecks(ctx context.Context, tx pgx.Tx, addresses ...string) error {
+	return lockSeatAddresses(ctx, tx, `pg_advisory_xact_lock_shared`, addresses)
+}
+
+// LockSeatAddressClaims is taken by every writer that adds, moves or withdraws
+// a seat's claim, over every address the change touches: the old and the new.
+// It waits for every check of them in flight. Take it before any row lock, and
+// wait on no contact row under it.
+func LockSeatAddressClaims(ctx context.Context, tx pgx.Tx, addresses ...string) error {
+	return lockSeatAddresses(ctx, tx, `pg_advisory_xact_lock`, addresses)
+}
+
+// lockSeatAddresses keys each lock on SeatAddressKey, the fold Covers compares,
+// and takes them sorted, so two holders of overlapping sets queue in one order.
+func lockSeatAddresses(ctx context.Context, tx pgx.Tx, lock string, addresses []string) error {
 	keys := make([]string, 0, len(addresses))
 	for _, address := range addresses {
 		if folded := mailidentity.SeatAddressKey(address, ""); folded != "" {
 			keys = append(keys, folded)
 		}
 	}
-	// Sorted, so two readers with overlapping addresses queue in one order.
 	slices.Sort(keys)
 	for _, key := range slices.Compact(keys) {
-		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock_shared(`+seatAddressLockKey+`)`, key); err != nil {
-			return SeatAddresses{}, fmt.Errorf("locking the seat address check: %w", err)
+		if _, err := tx.Exec(ctx, `SELECT `+lock+`(hashtext('margince:own-address:' || $1)::bigint)`, key); err != nil {
+			return fmt.Errorf("locking a seat address: %w", err)
 		}
-	}
-	return WorkspaceSeatAddresses(ctx, tx)
-}
-
-// LockSeatAddressClaim is taken by every writer that adds or moves a seat's
-// claim on address. It waits for every check of that address in flight. Take
-// it before any row lock, and wait on no contact row under it.
-func LockSeatAddressClaim(ctx context.Context, tx pgx.Tx, address string) error {
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(`+seatAddressLockKey+`)`,
-		mailidentity.SeatAddressKey(address, "")); err != nil {
-		return fmt.Errorf("locking who holds a seat address: %w", err)
 	}
 	return nil
 }
-
-// seatAddressLockKey keys both lock modes on SeatAddressKey, the fold Covers compares.
-const seatAddressLockKey = `hashtext('margince:own-address:' || $1)::bigint`

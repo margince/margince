@@ -37,7 +37,7 @@ func edgeLive(t *testing.T, e *integration.Env, edge ids.UUID) bool {
 	return e.WsCount(t, `SELECT count(*) FROM relationship WHERE id = $1 AND archived_at IS NULL`, edge) == 1
 }
 
-func TestTheSeatEmploymentTaskRetiresOnlyInferredEdgesOfSeatsAndReplaysSafely(t *testing.T) {
+func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndReplaysSafely(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	if _, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
@@ -49,7 +49,8 @@ func TestTheSeatEmploymentTaskRetiresOnlyInferredEdgesOfSeatsAndReplaysSafely(t 
 	if err != nil {
 		t.Fatalf("creating the second company: %v", err)
 	}
-	seat, inferred := capturedEmployee(t, e, "colleague@outside.test")
+	seat, inferred := capturedEmployee(t, e, "newhire@outside.test")
+	_, mailbox := capturedEmployee(t, e, "colleague@outside.test")
 	_, edited := capturedEmployee(t, e, "edited@outside.test")
 	_, client := capturedEmployee(t, e, "client@outside.test")
 	asserted, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
@@ -61,8 +62,11 @@ func TestTheSeatEmploymentTaskRetiresOnlyInferredEdgesOfSeatsAndReplaysSafely(t 
 	if _, err := e.Contacts.UpdateRelationship(e.Admin(), edited, contacts.UpdateRelationshipInput{Role: new("Advisor")}); err != nil {
 		t.Fatalf("editing the inferred edge by hand: %v", err)
 	}
+	// Two seats sign in at addresses capture met first. A third only has a
+	// mailbox there, which proves the address but can change with the grant.
+	e.WsExec(t, `UPDATE app_user SET email = 'newhire@outside.test' WHERE id = $1`, e.Rep3)
+	e.WsExec(t, `UPDATE app_user SET email = 'edited@outside.test' WHERE id = $1`, e.Rep1)
 	connectSeatMailbox(t, e, e.Rep2, "colleague@outside.test", "shared")
-	connectSeatMailbox(t, e, e.Rep3, "edited@outside.test", "shared")
 
 	task := seatEmploymentDataTask()
 	step := task.Steps[0]
@@ -83,9 +87,12 @@ func TestTheSeatEmploymentTaskRetiresOnlyInferredEdgesOfSeatsAndReplaysSafely(t 
 	runMachineAddressTask(ctx, t, e, task)
 
 	if edgeLive(t, e, inferred) {
-		t.Error("the employment capture inferred for a colleague's address is still live")
+		t.Error("the employment capture inferred for a colleague's login address is still live")
 	}
-	for name, edge := range map[string]ids.UUID{"the hand-made edge": asserted.ID, "the hand-edited edge": edited, "a client's edge": client} {
+	for name, edge := range map[string]ids.UUID{
+		"the hand-made edge": asserted.ID, "the hand-edited edge": edited, "a client's edge": client,
+		"the edge of an address only a mailbox proves": mailbox,
+	} {
 		if !edgeLive(t, e, edge) {
 			t.Errorf("%s was retired", name)
 		}

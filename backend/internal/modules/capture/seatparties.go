@@ -25,12 +25,14 @@ type workspaceParties struct {
 	asking ids.UUID
 }
 
-func workspacePartiesTx(ctx context.Context, tx pgx.Tx) (workspaceParties, error) {
-	self, err := ownerIdentitiesTx(ctx, tx)
+// workspacePartiesTx reads both sets under the shared lock of the addresses
+// the caller will decide about. An alias claim in flight is seen or waits.
+func workspacePartiesTx(ctx context.Context, tx pgx.Tx, addresses ...string) (workspaceParties, error) {
+	seats, err := storekit.SeatAddressesFor(ctx, tx, addresses...)
 	if err != nil {
 		return workspaceParties{}, err
 	}
-	seats, err := storekit.WorkspaceSeatAddresses(ctx, tx)
+	self, err := ownerIdentitiesTx(ctx, tx)
 	if err != nil {
 		return workspaceParties{}, err
 	}

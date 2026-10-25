@@ -12,7 +12,8 @@ package contacts
 //  4. new rows, and lead rows.
 //
 // The seat-address locks (storekit.SeatAddressesFor) come before the
-// employment lock. Alias writers hold them and wait on no contact row.
+// employment lock and before a capture ledger row a transition writes. Alias
+// writers hold them and wait on no contact row.
 //
 // So a writer holding a lane lock never waits on an existing contact. A create
 // takes the lanes and then writes a new contact. An edit locks its contact and
