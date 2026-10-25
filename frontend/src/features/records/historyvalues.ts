@@ -1,6 +1,11 @@
+import {
+  formatActivityWhen,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
 import { formatDateTime, formatMoneyOrAbsent } from "../../format/format";
 import { type Locale, translate } from "../../i18n";
 import { isUuid } from "../../lib/uuid";
+import { historyValueLabel } from "./historyvaluelabels";
 
 // A history value read the way the rest of the record page reads it.
 //
@@ -89,9 +94,15 @@ export function historyValue(
   field: string,
   value: string | null | undefined,
   ctx: HistoryValueCtx,
+  // An activity time's precision, from the image the value was read out of.
+  precision?: OccurredPrecision,
 ): string | null {
   if (value === null || value === undefined) {
     return null;
+  }
+  const label = historyValueLabel(field, value, ctx.locale);
+  if (label !== undefined) {
+    return label;
   }
   if (isMinorUnitField(field)) {
     const minor = Number(value);
@@ -104,7 +115,7 @@ export function historyValue(
     return formatMoneyOrAbsent(minor, ctx.currency, ctx.locale);
   }
   if (ISO_TIMESTAMP.test(value)) {
-    return formatDateTime(value, ctx.locale, ctx.zone);
+    return historyMoment(value, ctx, precision);
   }
   const items = asJsonArray(value);
   if (items !== undefined) {
@@ -121,4 +132,19 @@ export function historyValue(
     return value.split("/").at(-1) ?? value;
   }
   return value;
+}
+
+// A timestamp on the record's clock. An activity time with a known precision
+// goes through the owner, which draws no clock for a `day` entry.
+function historyMoment(
+  value: string,
+  { locale, zone }: HistoryValueCtx,
+  precision: OccurredPrecision | undefined,
+): string {
+  return precision
+    ? formatActivityWhen(value, precision, locale, {
+        record: zone,
+        viewer: zone,
+      })
+    : formatDateTime(value, locale, zone);
 }

@@ -102,10 +102,10 @@ func (s *Sink) identityOfRecord(rec connector.NormalizedRecord) (kind, key strin
 // occurrenceText is the occurrence handed to the keyer as the text the import
 // door states, so both doors reach one spelling through one function.
 //
-// An all-day occurrence goes over as its DATE. Its instant is the noon anchor
-// this system stores all-day events at, while an import states the same
-// meeting as the date's midnight; keyed as instants the two never meet, and a
-// HubSpot import plus the connected calendar hold every all-day event twice.
+// An all-day occurrence goes over as its DATE. A calendar hands it over at noon
+// UTC, while an import states the same meeting as the date's midnight. Keyed as
+// instants the two never meet, and a HubSpot import plus the connected calendar
+// hold every all-day event twice.
 func occurrenceText(id connector.CrossDoorIdentity) string {
 	if id.AllDay {
 		return id.Occurrence.UTC().Format(time.DateOnly)

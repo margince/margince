@@ -49,6 +49,17 @@ type Envelope struct {
 	// an unsigned draft rather than failing (DRAFT-AC-E-6).
 	SenderName  string `json:"sender_name,omitempty"`
 	SenderEmail string `json:"sender_email,omitempty"`
+	// zone is the record zone a day entry is dated in; never in the prompt.
+	zone *time.Location
+}
+
+// Zone is the record zone a draft dates a day entry in, UTC when the resolver
+// had none bound (a unit test's resolver).
+func (e Envelope) Zone() *time.Location {
+	if e.zone == nil {
+		return time.UTC
+	}
+	return e.zone
 }
 
 // IdentityMaxRunes bounds the sender's name and address in the prompt.

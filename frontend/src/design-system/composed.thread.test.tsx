@@ -24,6 +24,7 @@ function entry(overrides: Partial<TimelineEntry> = {}): TimelineEntry {
     kind: "email",
     title: "Re: Renewal",
     atIso: "2026-07-03T10:00:00Z",
+    atPrecision: "instant",
     provenance: { kind: "connector", connector: "gmail" },
     ...overrides,
   };
@@ -167,6 +168,7 @@ describe("a thread's card", () => {
               emailSummary: {
                 activity_id: "m2",
                 occurred_at: "2026-07-03T10:00:00Z",
+                occurred_precision: "instant",
                 direction: "inbound",
                 counterparty: "Ida Keller +1",
                 attachment_count: 0,
@@ -191,6 +193,7 @@ describe("a thread's card", () => {
     const summary = (id: string) => ({
       activity_id: id,
       occurred_at: "2026-07-03T10:00:00Z",
+      occurred_precision: "instant" as const,
       direction: "inbound" as const,
       counterparty: "Ida Keller",
       preview: `what ${id} said`,
@@ -309,6 +312,7 @@ describe("the files a thread carried", () => {
   ): NonNullable<TimelineEntry["emailSummary"]> => ({
     activity_id: "11111111-1111-4111-8111-111111111111",
     occurred_at: "2026-07-01T10:00:00Z",
+    occurred_precision: "instant",
     display_status: status,
     attachment_count: attachments,
     move: "none",

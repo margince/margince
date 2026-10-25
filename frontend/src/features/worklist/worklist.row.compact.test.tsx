@@ -23,6 +23,7 @@ afterEach(cleanup);
 
 function item(over: Partial<WorklistItem> = {}): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "row-1",
     source: "brief_item",
     category: "deals_at_risk",

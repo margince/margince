@@ -34,6 +34,7 @@ import type { MessageKey } from "../../i18n/en";
 import { invalidateApprovalViews } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { isVersionSkewOf, problemMessageOf } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import {
@@ -189,7 +190,7 @@ export function DecisionsSection({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const stagedDay = stagedDayFormatter(locale, viewerZone());
+  const stagedDay = stagedDayFormatter(locale, useRecordZone());
   const approvalNames = useApprovalNames(
     items.flatMap((item) =>
       item.kind === "single" ? [item.approval] : item.members,

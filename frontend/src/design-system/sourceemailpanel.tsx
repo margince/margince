@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import type { ActivityWhenFormatter } from "../format/activitywhen";
 import { useT } from "../i18n";
 import { EmailEnvelope, emailDetailKey } from "./emailmessage";
 import { EmailText } from "./emailtext";
@@ -45,7 +46,7 @@ export function SourceEmailPanel({
 }: Readonly<{
   activityId: string;
   /** The caller owns the reader's timezone, so it owns the formatting. */
-  formatWhen: (iso: string) => string;
+  formatWhen: ActivityWhenFormatter;
 }>) {
   const t = useT();
   const read = useQuery({
@@ -118,7 +119,7 @@ function SourceEmailBody({
   formatWhen,
 }: Readonly<{
   presentation: EmailPresentation;
-  formatWhen: (iso: string) => string;
+  formatWhen: ActivityWhenFormatter;
 }>) {
   const t = useT();
   if (presentation.access.content_state === "withheld") {

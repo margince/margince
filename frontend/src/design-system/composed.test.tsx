@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatMoneyCompact, MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { lastEmailAgo } from "../testing/dealmail";
 import { DealCard } from "./dealcard";
 import { armHoverIntent } from "./hoverintent-testing";
 import {
@@ -278,7 +279,7 @@ describe("DealCard + PipelineBoard", () => {
       <DealCard
         deal={{
           ...deal,
-          lastEmail: { agoMs: 10 * 86_400_000, direction: "outbound" },
+          lastEmail: lastEmailAgo(10 * 86_400_000, "outbound"),
         }}
         href="#/deals/d1"
         zone="Europe/Berlin"
@@ -303,7 +304,7 @@ describe("DealCard + PipelineBoard", () => {
       <DealCard
         deal={{
           ...deal,
-          lastEmail: { agoMs: 2 * 86_400_000, direction: "inbound" },
+          lastEmail: lastEmailAgo(2 * 86_400_000, "inbound"),
         }}
         href="#/deals/d1"
         zone="Europe/Berlin"
@@ -501,6 +502,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Re: fleet retrofit offer",
             atIso: "2026-06-12T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "agent", agent: "capture" },
           },
           {
@@ -508,6 +510,7 @@ describe("RecordView + timeline", () => {
             kind: "note",
             title: "Call notes",
             atIso: "2026-06-14T10:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human", self: true },
           },
         ]}
@@ -537,6 +540,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Update zu Margince",
             atIso: "2026-07-17T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "agent", agent: "capture" },
             body,
           },
@@ -560,6 +564,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Update zu Margince",
             atIso: "2026-07-17T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "agent", agent: "capture" },
             body: "   ",
           },
@@ -581,6 +586,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Re: Q3",
             atIso: "2026-07-01T00:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human", self: true },
             actions: (
               <button type="button" key="reply">
@@ -605,6 +611,7 @@ describe("TimelineText on a mail row", () => {
       kind,
       title: "Re: Angebot",
       atIso: "2026-07-01T00:00:00Z",
+      atPrecision: "instant" as const,
       provenance: { kind: "human" as const, self: true },
       body,
     },
@@ -619,6 +626,7 @@ describe("TimelineText on a mail row", () => {
   const IGNORED_SUMMARY = {
     activity_id: "a-ignored",
     occurred_at: "2026-07-01T00:00:00Z",
+    occurred_precision: "instant" as const,
     display_status: "team" as const,
     attachment_count: 0,
     move: "none" as const,
@@ -646,6 +654,7 @@ describe("TimelineText on a mail row", () => {
               kind,
               title: "Was besprochen wurde",
               atIso: "2026-07-01T00:00:00Z",
+              atPrecision: "instant",
               provenance: { kind: "human" as const, self: true },
               body: "Der ganze Text, den dieser Eintrag traegt.",
               emailSummary: IGNORED_SUMMARY,
@@ -678,6 +687,7 @@ describe("TimelineText on a mail row", () => {
             kind: "email",
             title: "Re: Angebot",
             atIso: "2026-07-01T09:12:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human" as const, self: true },
             body: "Der Text der Mail.",
             emailSummary: {
@@ -714,6 +724,7 @@ describe("TimelineText on a mail row", () => {
             kind: "email",
             title: "Re: Angebot",
             atIso: "2026-07-01T00:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human" as const, self: true },
             direction: "inbound",
             counterparts: "Anna Berger",

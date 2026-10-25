@@ -15,6 +15,7 @@ import {
 } from "../../../design-system/drawerbands";
 import { Heading } from "../../../design-system/heading";
 import { SurfaceState } from "../../../design-system/surfacestate";
+import type { ActivityWhenFormatter } from "../../../format/activitywhen";
 import { useT } from "../../../i18n";
 import { CoachPanel, MeetingPaths } from "./coaching";
 import { BriefHeader, type MeetingFacts, type PreparedFor } from "./header";
@@ -88,7 +89,7 @@ export function MeetingBriefView({
   // The project picker or the scope line, built by the drawer because only it
   // knows what the reader chose.
   scopeSlot?: ReactNode;
-  formatWhen?: (utcIso: string) => string;
+  formatWhen?: ActivityWhenFormatter;
   formatDay?: (utcIso: string) => string;
 }>) {
   const t = useT();

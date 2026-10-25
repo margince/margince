@@ -22,11 +22,11 @@ func TestABookedMeetingIsProjectedAsScheduledNotPast(t *testing.T) {
 	// this the card reports a meeting scheduled for Thursday as one that
 	// already took place, and then measures silence from it.
 	booked := act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, 3))
-	if got := actIn(booked, testNow).When; got != "scheduled" {
+	if got := actIn(booked, testNow, time.UTC).When; got != "scheduled" {
 		t.Fatalf("when = %q for a meeting three days out, want scheduled", got)
 	}
 	done := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -3))
-	if got := actIn(done, testNow).When; got != "past" {
+	if got := actIn(done, testNow, time.UTC).When; got != "past" {
 		t.Fatalf("when = %q for a mail three days ago, want past", got)
 	}
 }
@@ -39,7 +39,7 @@ func TestAWithheldRowContributesItsDateButNotItsWords(t *testing.T) {
 	a.Body = &body
 	state := crmcontracts.ActivityContentStateWithheld
 	a.ContentState = &state
-	got := actIn(a, testNow)
+	got := actIn(a, testNow, time.UTC)
 	if got.At == "" {
 		t.Fatal("a withheld row lost its date, so the story loses that contact happened")
 	}

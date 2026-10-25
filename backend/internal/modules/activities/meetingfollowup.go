@@ -102,7 +102,7 @@ func (s *Store) queryMeetingFollowUps(
 	var out []AwaitingReply
 	for rows.Next() {
 		var r AwaitingReply
-		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.Recipients, &r.CompanyID, &r.DealID); err != nil {
+		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.Recipients, &r.CompanyID, &r.DealID, &r.Precision); err != nil {
 			return nil, fmt.Errorf("activities: reading a meeting the reader owes a follow-up: %w", err)
 		}
 		if len(r.Recipients) > 0 {
@@ -149,7 +149,8 @@ var meetingFollowUpsSQL = `
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.deal_id ORDER BY wl.deal_id::text)
 	                 FILTER (WHERE wl.deal_id IS NOT NULL))[1],
-	                '00000000-0000-0000-0000-000000000000'::uuid)
+	                '00000000-0000-0000-0000-000000000000'::uuid),
+	       a.occurred_precision
 	  FROM activity a
 	  -- Who it was with: the contacts it is filed under first, then the ones
 	  -- its attendee list resolved to. A merged contact counts as its survivor.
@@ -202,7 +203,7 @@ var meetingFollowUpsSQL = `
 	                      AND later.occurred_at <= $%[1]d)
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[10]s)
 	   AND NOT ` + readerSetAsideSQL("$%[8]d", "%[9]s") + `
-	 GROUP BY a.id, a.subject, a.occurred_at, attendees.recipients
+	 GROUP BY a.id, a.subject, a.occurred_at, a.occurred_precision, attendees.recipients
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[11]d`
 

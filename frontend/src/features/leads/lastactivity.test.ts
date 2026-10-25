@@ -13,6 +13,8 @@ function row(fields: Partial<Activity>): Activity {
   return {
     id: "a1",
     kind: "email",
+    is_done: false,
+    occurred_precision: "instant",
     occurred_at: "2026-08-19T09:00:00Z",
     source: "manual",
     captured_by: "user:1",

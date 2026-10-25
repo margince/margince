@@ -118,6 +118,8 @@ function EntryFieldDetail({
               field={change.field}
               oldValue={change.oldValue}
               newValue={change.newValue}
+              oldPrecision={change.oldPrecision}
+              newPrecision={change.newPrecision}
               values={valueCtx}
             />
           )}
@@ -304,11 +306,12 @@ function UndoButton({
               <li key={change.field} className="entry-field">
                 <span>{historyFieldLabel(change.field, t)}</span>
                 <span>
-                  {historyValue(change.field, change.oldValue, {
-                    currency,
-                    locale,
-                    zone: recordZone,
-                  }) ?? t("history.cleared")}
+                  {historyValue(
+                    change.field,
+                    change.oldValue,
+                    { currency, locale, zone: recordZone },
+                    change.oldPrecision,
+                  ) ?? t("history.cleared")}
                 </span>
               </li>
             ))}

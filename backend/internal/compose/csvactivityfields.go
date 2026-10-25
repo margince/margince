@@ -26,6 +26,10 @@ const (
 	activityTargetDirection     = "direction"
 )
 
+// activityTypedPrecision is the typed key the cell check sets when the
+// timestamp cell named a day without a time. It is no column of the file.
+const activityTypedPrecision = "occurred_precision"
+
 // activityStoredColumns names the stored activity's JSON field for each target
 // the file spells differently. The duration is compared in seconds, the unit
 // the cell check typed it in.
@@ -49,6 +53,7 @@ func activityCreateFrom(fields map[string]string, typed map[string]any, sourceSy
 		DurationSeconds: activityDuration(fields, typed),
 		Author:          authorFrom(fields),
 	}
+	in.OccurredPrecision, _ = typed[activityTypedPrecision].(string)
 	// The owner is who the activity is attributed to. An address no seat holds
 	// leaves the importer as the author.
 	if seat, ok := typed[csvTargetOwner].(ids.UUID); ok {
@@ -73,6 +78,10 @@ func activityUpdateFrom(changed map[string]string, typed map[string]any) activit
 		Body:            importString(changed, activityTargetBody),
 		OccurredAt:      activityOccurredAt(changed, typed),
 		DurationSeconds: activityDuration(changed, typed),
+	}
+	// A new time alone is an instant to the store, so a day cell says so.
+	if precision, ok := typed[activityTypedPrecision].(string); ok && in.OccurredAt != nil {
+		in.OccurredPrecision = &precision
 	}
 	if _, given := changed[activityTargetMeetingStatus]; given {
 		if status, ok := typed[activityTargetMeetingStatus].(string); ok {

@@ -79,6 +79,7 @@ func (r *Retriever) AssembleContext(ctx context.Context, anchor datasource.Entit
 				Ref:        datasource.EntityRef{Type: datasource.EntityType(item.entityType), ID: item.id},
 				Summary:    item.summary,
 				OccurredAt: item.occurredAt,
+				DateOnly:   item.dateOnly,
 				Evidence: []retrieval.Evidence{{
 					Source:  item.entityType + ":" + item.id.String(),
 					Snippet: item.summary,

@@ -21,7 +21,9 @@ type Turn struct {
 	Kind      crmcontracts.ActivityKind
 	Direction string
 	At        time.Time
-	Subject   string
+	// DateOnly says At is a day entry's anchor, so only its date is known.
+	DateOnly bool
+	Subject  string
 	// Text is the authored opening of the message or note. A task or a call
 	// has none and carries only a subject.
 	Text string
@@ -62,10 +64,11 @@ func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activ
 			continue
 		}
 		turn := Turn{
-			ID:     activity.Id.String(),
-			Kind:   activity.Kind,
-			At:     activity.OccurredAt,
-			Logged: logged,
+			ID:       activity.Id.String(),
+			Kind:     activity.Kind,
+			At:       activity.OccurredAt,
+			DateOnly: activity.OccurredPrecision == crmcontracts.OccurredPrecisionOccurredPrecisionDay,
+			Logged:   logged,
 		}
 		if activity.Direction != nil {
 			turn.Direction = string(*activity.Direction)

@@ -260,7 +260,7 @@ func activity(inbound bool, subject string, body *string) crmcontracts.Activity 
 func foldedWith(acts ...crmcontracts.Activity) Input {
 	return Input{
 		Envelope: envelopeAt(textlang.German, convstate.BandFresh),
-		Recent:   FoldRecent(acts, draftedAt),
+		Recent:   FoldRecent(acts, draftedAt, time.UTC),
 	}
 }
 
@@ -426,6 +426,6 @@ func foldedWithMeeting(meeting *crmcontracts.Contact360NextMeeting) Input {
 	view := crmcontracts.Contact360{NextMeeting: meeting}
 	view.Contact.Id = recipientID
 	in := Input{Envelope: envelopeAt(textlang.German, convstate.BandFresh)}
-	foldMeeting(&in, view, draftedAt)
+	foldMeeting(&in, view, draftedAt, time.UTC)
 	return in
 }

@@ -59,6 +59,7 @@ export const view: Contact360 = {
   activities: {
     data: [
       {
+        occurred_precision: "instant",
         id: "a-1",
         kind: "email",
         subject: "Fleet renewal",

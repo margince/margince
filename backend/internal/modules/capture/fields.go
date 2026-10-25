@@ -30,9 +30,12 @@ type ActivityFields struct {
 	// provider that is not also a kind exists.
 	ChannelProvider string
 
-	Subject         string
-	Body            string
-	OccurredAt      time.Time
+	Subject    string
+	Body       string
+	OccurredAt time.Time
+	// DateOnly says OccurredAt is a date's anchor rather than a moment: an
+	// all-day calendar event states a date and no time.
+	DateOnly        bool
 	DurationSeconds *int
 	Direction       string // connector.DirectionInbound | DirectionOutbound | "" (not directional)
 

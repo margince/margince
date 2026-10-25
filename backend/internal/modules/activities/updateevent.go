@@ -23,6 +23,10 @@ func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEve
 	if in.OccurredAt != nil {
 		fields.OccurredAt = in.OccurredAt
 	}
+	if in.OccurredPrecision != nil {
+		precision := crmcontracts.PublicEventActivityChangedFieldsOccurredPrecision(*in.OccurredPrecision)
+		fields.OccurredPrecision = &precision
+	}
 	if in.DueAt != nil {
 		fields.DueAt = in.DueAt
 	}

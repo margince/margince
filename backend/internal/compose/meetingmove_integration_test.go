@@ -28,7 +28,7 @@ import (
 )
 
 func movingCalendarSink(e *integration.Env) *capture.Sink {
-	return calendarSink(e).WithMeetingMover(activities.MoveCapturedMeetingFor(capture.SeatHoldsActivityTx))
+	return calendarSink(e).WithMeetingMover(activities.MoveCapturedMeetingFor(capture.SeatHoldsActivityTx, installationZoneTx))
 }
 
 func readMeetingStart(t *testing.T, e *integration.Env, id ids.UUID) time.Time {
@@ -77,7 +77,7 @@ func TestAMoveReachesOnlyAMeetingCapturedEarlier(t *testing.T) {
 	sink := movingCalendarSink(e)
 	ctx := calendarOwnerCtx(e, e.AdminUser)
 
-	if err := sink.MoveMeeting(ctx, meetingKey, farOut, nil); err != nil {
+	if err := sink.MoveMeeting(ctx, meetingKey, connector.MeetingSlot{Start: farOut}); err != nil {
 		t.Fatalf("moving: %v", err)
 	}
 	if got := readMeetingStart(t, e, id); !got.Equal(farOut) {
@@ -85,7 +85,7 @@ func TestAMoveReachesOnlyAMeetingCapturedEarlier(t *testing.T) {
 	}
 
 	unknown := connector.NaturalKey{SourceSystem: calendarSystem, SourceID: "evt-never-captured"}
-	if err := sink.MoveMeeting(ctx, unknown, farOut, nil); err != nil {
+	if err := sink.MoveMeeting(ctx, unknown, connector.MeetingSlot{Start: farOut}); err != nil {
 		t.Fatalf("moving an event never captured: %v", err)
 	}
 	var n int
@@ -103,7 +103,7 @@ func TestAnotherConnectorCannotMoveACalendarMeeting(t *testing.T) {
 	id := captureMeeting(t, e, e.AdminUser)
 
 	err := movingCalendarSink(e).MoveMeeting(
-		connectorOwnerCtx(e, e.AdminUser, "gmail"), meetingKey, meetingStart.AddDate(1, 0, 0), nil)
+		connectorOwnerCtx(e, e.AdminUser, "gmail"), meetingKey, connector.MeetingSlot{Start: meetingStart.AddDate(1, 0, 0)})
 	if err == nil {
 		t.Error("a mail connector was allowed to move a calendar meeting")
 	}

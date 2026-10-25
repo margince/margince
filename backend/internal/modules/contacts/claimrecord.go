@@ -149,8 +149,10 @@ func recordClaimInTx(
 		Body:             in.Body,
 		SourceActivityId: openapi_types.UUID(in.ActivityID),
 		SourceQuote:      in.Quote,
-		Status:           crmcontracts.ConversationClaimStatusOpen,
-		DueAt:            in.DueAt,
+		// No source time is read on the write, and a claim without one says instant.
+		OccurredPrecision: crmcontracts.OccurredPrecisionOccurredPrecisionInstant,
+		Status:            crmcontracts.ConversationClaimStatusOpen,
+		DueAt:             in.DueAt,
 	}, true, nil
 }
 
@@ -194,6 +196,7 @@ func filedClaim(
 	}
 	claim.Id = openapi_types.UUID(id)
 	claim.SourceActivityId = openapi_types.UUID(activityID)
+	claim.OccurredPrecision = crmcontracts.OccurredPrecisionOccurredPrecisionInstant
 	if taskID != nil {
 		task := openapi_types.UUID(*taskID)
 		claim.TaskActivityId = &task

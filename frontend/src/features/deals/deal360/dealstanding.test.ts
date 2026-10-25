@@ -27,6 +27,7 @@ const AS_OF = "2026-08-13T12:00:00Z";
 
 function activity(over: Partial<Activity>): Activity {
   return {
+    occurred_precision: "instant",
     id: "a",
     kind: "email",
     occurred_at: "2026-08-01T09:00:00Z",
@@ -288,6 +289,7 @@ describe("the next step", () => {
         }),
       ],
       AS_OF,
+      "UTC",
     );
     expect(step).toEqual({
       kind: "meeting",
@@ -309,12 +311,31 @@ describe("the next step", () => {
         }),
       ],
       AS_OF,
+      "UTC",
     );
     expect(step?.at).toBe("2026-08-02T00:00:00Z");
   });
 
+  it("keeps a date-only meeting on today as the next step after its noon", () => {
+    // Noon on the 13th in Bangkok, read at 19:00 there.
+    const step = nextStepOf(
+      [
+        activity({
+          id: "m",
+          kind: "meeting",
+          meeting_status: "booked",
+          occurred_at: "2026-08-13T05:00:00Z",
+          occurred_precision: "day",
+        }),
+      ],
+      AS_OF,
+      "Asia/Bangkok",
+    );
+    expect(step?.kind).toBe("meeting");
+  });
+
   it("is none when nothing is dated ahead", () => {
-    expect(nextStepOf([activity({})], AS_OF)).toBeUndefined();
+    expect(nextStepOf([activity({})], AS_OF, "UTC")).toBeUndefined();
   });
 });
 

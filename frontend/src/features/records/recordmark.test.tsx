@@ -183,6 +183,7 @@ const thread = (sender: string, senderContactId?: string): Activity[] =>
     kind: "email",
     subject: "Fleet renewal",
     occurred_at: `2026-08-1${2 - at}T12:00:00Z`,
+    occurred_precision: "instant",
     direction: "inbound",
     thread_key: "t-fleet",
     is_done: false,
@@ -194,6 +195,7 @@ const thread = (sender: string, senderContactId?: string): Activity[] =>
     email_summary: {
       activity_id: id,
       occurred_at: `2026-08-1${2 - at}T12:00:00Z`,
+      occurred_precision: "instant" as const,
       version: 1,
       subject: "Fleet renewal",
       preview: "Can you hold the price?",

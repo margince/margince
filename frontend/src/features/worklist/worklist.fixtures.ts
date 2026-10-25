@@ -4,6 +4,7 @@ type WorklistItem = components["schemas"]["WorklistItem"];
 
 export function row(over: Partial<WorklistItem> = {}): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "row-1",
     source: "task",
     category: "tasks",

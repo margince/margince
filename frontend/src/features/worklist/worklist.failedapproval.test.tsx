@@ -30,6 +30,7 @@ function jsonResponse(body: unknown): Response {
 
 function failedRow(actions: WorklistItem["actions"]): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "a1",
     source: "failed_approval",
     category: "tasks",

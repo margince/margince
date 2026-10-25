@@ -174,6 +174,7 @@ export function stubRoutes(
 }
 
 export const activity202: Activity = {
+  occurred_precision: "instant",
   id: "act-1",
   kind: "email",
   subject: "Re: Q3",

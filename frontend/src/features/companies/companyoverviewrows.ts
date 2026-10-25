@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { activityIsAhead } from "../../format/activitywhen";
 import { calendarDaysUntil } from "../../format/daysuntil";
 import { daysLate } from "./companynextbar";
 
@@ -69,14 +70,14 @@ const DID_NOT_HAPPEN = new Set(["canceled", "no_show"]);
 
 /** The newest exchanges that already happened, newest first. Tasks and
  *  booked meetings ahead are not exchanges yet. */
-export function latestExchanges(view: Company360): Activity[] {
+export function latestExchanges(view: Company360, record: string): Activity[] {
   const asOf = Date.parse(view.as_of);
   return (view.activities?.data ?? [])
     .filter(
       (row) =>
         row.kind !== "task" &&
         !DID_NOT_HAPPEN.has(row.meeting_status ?? "") &&
-        Date.parse(row.occurred_at) <= asOf,
+        !activityIsAhead(row.occurred_at, row.occurred_precision, asOf, record),
     )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
     .slice(0, OVERVIEW_ROWS);

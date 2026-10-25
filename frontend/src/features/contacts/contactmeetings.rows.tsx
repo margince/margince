@@ -9,10 +9,13 @@ import { Badge } from "../../design-system/atoms";
 import { AvatarStack } from "../../design-system/avatarstack";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { PanelBody, PanelRow } from "../../design-system/panel";
+import {
+  activityTimeSpan,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
 import { dateTileParts } from "../../format/datetile";
 import { calendarDaysUntil } from "../../format/daysuntil";
-import { formatNumber, formatTimeOfDay } from "../../format/format";
-import { formatTimeRange } from "../../format/meetingtime";
+import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
 import { useMeetingInvitation } from "../../lib/meeting-invitation-query";
@@ -49,12 +52,18 @@ function endOf(activity: Activity): string | undefined {
   ).toISOString();
 }
 
-function useMeetingSpan(start: string, end: string | undefined): string {
+// Null for a meeting whose day alone is known: the date tile says all there is.
+function useMeetingSpan(
+  start: string,
+  end: string | undefined,
+  precision: OccurredPrecision,
+): string | null {
   const { locale } = useLocale();
   const zone = useRecordZone();
-  return end
-    ? formatTimeRange(start, end, locale, zone)
-    : formatTimeOfDay(start, locale, zone);
+  return activityTimeSpan(start, end, precision, locale, {
+    record: zone,
+    viewer: zone,
+  });
 }
 
 // The day as a small calendar page: weekday over day over month.
@@ -168,7 +177,11 @@ export function MeetingRow({
   verbs?: ReactNode;
 }>) {
   const t = useT();
-  const span = useMeetingSpan(activity.occurred_at, endOf(activity));
+  const span = useMeetingSpan(
+    activity.occurred_at,
+    endOf(activity),
+    activity.occurred_precision,
+  );
   const title = meetingSubject(activity, t);
   return (
     <PanelRow>
@@ -188,7 +201,7 @@ export function MeetingRow({
               invitation={activity.invitation_status}
             />
           </div>
-          <p className="t-caption t-num pe-meeting-meta">{span}</p>
+          {span && <p className="t-caption t-num pe-meeting-meta">{span}</p>}
         </div>
         <div className="pe-meeting-verbs">{verbs}</div>
       </article>
@@ -248,6 +261,7 @@ export function NextMeetingCard({
   const span = useMeetingSpan(
     next.starts_at,
     invitation?.end ?? (activity && endOf(activity)),
+    next.occurred_precision,
   );
   const place = invitation?.location.trim();
   const attendees = next.participants ?? [];
@@ -266,10 +280,12 @@ export function NextMeetingCard({
             />
           </div>
           <ul className="pe-meeting-facts">
-            <li>
-              <Clock aria-hidden="true" />
-              <span className="t-num">{span}</span>
-            </li>
+            {span && (
+              <li>
+                <Clock aria-hidden="true" />
+                <span className="t-num">{span}</span>
+              </li>
+            )}
             {place && (
               <li>
                 <MapPin aria-hidden="true" />

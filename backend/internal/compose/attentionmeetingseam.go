@@ -54,7 +54,7 @@ func (m attentionMeetings) Today(
 		}
 		needsPrep, known := meetingPrep(row)
 		ahead = append(ahead, attention.Meeting{
-			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt,
+			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt, Precision: row.OccurredPrecision,
 			NeedsPrep: needsPrep, PrepKnown: known, HostUserID: hostOfMeeting(row),
 		})
 	}
@@ -217,7 +217,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 			continue
 		}
 		over = append(over, attention.MeetingAwaitingOutcome{
-			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartedAt: row.OccurredAt,
+			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartedAt: row.OccurredAt, Precision: row.OccurredPrecision,
 			Version: row.Version, HostUserID: hostOfMeeting(row),
 		})
 	}

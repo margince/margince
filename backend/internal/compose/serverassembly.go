@@ -114,6 +114,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
+		WithRecordZone(installationZoneTx).
 		WithSettings(StoredConfig(pool)).
 		WithLocks(loadedLocks).
 		WithConsent(gate).

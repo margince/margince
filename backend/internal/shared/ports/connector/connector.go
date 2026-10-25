@@ -187,7 +187,7 @@ type IdentifiedMeetingCanceller interface {
 // and only a meeting it captured earlier moves. Optional, for
 // MeetingCanceller's reason.
 type MeetingMover interface {
-	MoveMeeting(ctx context.Context, key NaturalKey, start time.Time, duration *int) error
+	MoveMeeting(ctx context.Context, key NaturalKey, slot MeetingSlot) error
 }
 
 // MessageRemover is the mail connectors' equivalent: the provider reports that
@@ -433,7 +433,7 @@ type CrossDoorIdentity struct {
 	// identity: a series without one names every meeting in it at once.
 	Occurrence time.Time
 	// AllDay says the occurrence is a calendar DATE rather than an instant. An
-	// all-day start is stored at noon UTC (meetingmap.AllDayStart), which no
+	// all-day start arrives at noon UTC (meetingmap.AllDayStart), which no
 	// other door states: an importer or an ICS client says the date, or its
 	// midnight. The key is composed from the date alone, so both doors name the
 	// same all-day meeting once.

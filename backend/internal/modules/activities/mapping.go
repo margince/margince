@@ -192,10 +192,12 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		Subject:    req.Subject,
 		Body:       req.Body,
 		OccurredAt: req.OccurredAt,
-		DueAt:      req.DueAt,
-		RemindAt:   req.RemindAt,
-		AssigneeID: idArg[ids.UserKind](req.AssigneeId),
-		IsDone:     req.IsDone,
+		// Checked by the store, which also decides what a new time alone means.
+		OccurredPrecision: (*string)(req.OccurredPrecision),
+		DueAt:             req.DueAt,
+		RemindAt:          req.RemindAt,
+		AssigneeID:        idArg[ids.UserKind](req.AssigneeId),
+		IsDone:            req.IsDone,
 		// Carried, not checked here: the kind this must pair with belongs to the
 		// stored row, and only the store has read it. UpdateActivity refuses the
 		// mismatch with the same MeetingStatusKindError create raises.
@@ -398,6 +400,9 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 	if req.Direction != nil {
 		d := string(*req.Direction)
 		in.Direction = &d
+	}
+	if req.OccurredPrecision != nil {
+		in.OccurredPrecision = string(*req.OccurredPrecision)
 	}
 	if err := checkMeetingStatusKind(in.Kind, meetingStatusOf(req.MeetingStatus)); err != nil {
 		return err

@@ -20,9 +20,10 @@
 // what lives here is only the question of when a queue line is one.
 
 import { EmailEntry } from "../../design-system/emailentry";
-import { formatDateTime } from "../../format/format";
+import { formatActivityWhen } from "../../format/activitywhen";
 import { viewerZone } from "../../format/timezone";
 import { useLocale } from "../../i18n";
+import { useActivityZones } from "../../lib/recordzone";
 import type { WorklistItem } from "./worklist.queries";
 
 /**
@@ -50,6 +51,7 @@ export function WaitingEmailLine({
   onOpen: (activityId: string) => void;
 }>) {
   const { locale } = useLocale();
+  const zones = useActivityZones(viewerZone());
   const summary = item.email_summary;
   if (!summary) {
     return null;
@@ -57,7 +59,12 @@ export function WaitingEmailLine({
   return (
     <EmailEntry
       summary={summary}
-      timestamp={formatDateTime(summary.occurred_at, locale, viewerZone())}
+      timestamp={formatActivityWhen(
+        summary.occurred_at,
+        summary.occurred_precision,
+        locale,
+        zones,
+      )}
       onOpen={() => onOpen(summary.activity_id)}
     />
   );

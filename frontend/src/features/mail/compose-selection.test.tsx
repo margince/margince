@@ -31,6 +31,7 @@ function email(
   direction: "inbound" | "outbound" = "inbound",
 ): Activity {
   return {
+    occurred_precision: "instant",
     id,
     kind: "email",
     subject,
@@ -50,6 +51,7 @@ function email(
       preview: "Short preview",
       counterparty: "Ada",
       occurred_at: "2026-09-01T09:00:00Z",
+      occurred_precision: "instant",
       direction,
       display_status: "team",
       attachment_count: 0,

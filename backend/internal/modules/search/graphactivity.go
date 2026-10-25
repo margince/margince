@@ -28,13 +28,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // assembleActivityWithin builds the context for an activity anchor.
 func (s *Store) assembleActivityWithin(ctx context.Context, tx pgx.Tx, activityID ids.UUID, maxItems int, within projectScope) ([]graphSection, error) {
-	profile, err := activityProfile(ctx, tx, activityID, within)
+	profile, err := s.activityProfile(ctx, tx, activityID, within)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +103,7 @@ func (s *Store) assembleActivityWithin(ctx context.Context, tx pgx.Tx, activityI
 // is read. Filtering the walk around it while still naming the room and who
 // was in it would hand over the other engagement under a scope that claims
 // to have excluded it.
-func activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within projectScope) (graphItem, error) {
+func (s *Store) activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within projectScope) (graphItem, error) {
 	// Object RBAC before row scope: a caller with no read grant on activity at
 	// all is denied the type (403), not handed the subset of events their row
 	// scope would have admitted.
@@ -114,6 +115,7 @@ func activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within
 	}
 	var title, kind string
 	var occurredAt time.Time
+	var dateOnly bool
 	args := []any{activityID}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	filed := ""
@@ -121,9 +123,9 @@ func activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within
 		filed = " AND " + clause
 	}
 	err := tx.QueryRow(ctx, `
-		SELECT coalesce(a.subject, a.channel_provider, a.kind), a.kind, a.occurred_at
+		SELECT coalesce(a.subject, a.channel_provider, a.kind), a.kind, a.occurred_at, a.occurred_precision = 'day'
 		  FROM activity a WHERE a.id = $1 AND a.archived_at IS NULL`+filed, args...).
-		Scan(&title, &kind, &occurredAt)
+		Scan(&title, &kind, &occurredAt, &dateOnly)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return graphItem{}, apperrors.ErrNotFound
@@ -133,9 +135,16 @@ func activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within
 	// When it happens is half of what a prep is for, and the title alone does
 	// not carry it — a subject line reads the same the day before and the week
 	// after.
+	zone := time.UTC
+	if dateOnly {
+		if zone, err = s.dayZone(ctx, tx); err != nil {
+			return graphItem{}, err
+		}
+	}
+	when := occurredday.When(occurredAt, dateOnly, zone)
 	return graphItem{
-		entityType: string(datasource.EntityActivity), id: activityID,
-		summary: fmt.Sprintf("%s — %s on %s", title, kind, occurredAt.UTC().Format(time.RFC3339)),
+		entityType: string(datasource.EntityActivity), id: activityID, dateOnly: dateOnly,
+		summary: fmt.Sprintf("%s — %s on %s", title, kind, when),
 		// Also as a FIELD, not only inside the sentence. The prep's anchor is
 		// the most date-sensitive item it has, and a reader told to prefer the
 		// structured date would read its absence as "not an event".

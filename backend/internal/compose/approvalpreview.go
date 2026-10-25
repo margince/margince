@@ -308,6 +308,11 @@ func (r approvalPreviewReader) value(ctx context.Context, field string, raw json
 			}
 		}
 		value.Kind, value.Text = previewValueDate, text
+	case activityTargetOccurredAt:
+		// A bare date is a day entry; a timestamp stays the instant it names.
+		if _, err := time.Parse(time.DateOnly, text); err == nil {
+			value.Kind = previewValueDate
+		}
 	default:
 		if strings.HasSuffix(field, "_id") {
 			return r.referenceValue(ctx, field, text)

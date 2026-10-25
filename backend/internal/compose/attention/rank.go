@@ -245,6 +245,8 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 			item.Dispositions = &offered
 		}
 		item.PrimaryAction = primaryActionFor(item)
+		// A row built without a time states one anyway, since the wire requires it.
+		item.OccurredPrecision = precisionOf(&item.OccurredPrecision)
 		// The heading this row sits under. Stamped after the sort, so it
 		// describes a row's place on the page it is actually on.
 		band := crmcontracts.WorklistItemBand(bandOfRow(row))

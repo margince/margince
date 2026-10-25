@@ -42,6 +42,7 @@ type meeting struct {
 	ID        ids.UUID
 	Subject   string
 	StartsAt  time.Time
+	DateOnly  bool
 	Deal      *dealRow
 	Project   *projectRow
 	Attendees []attendeeRow
@@ -130,7 +131,7 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	var projectID *ids.UUID
 	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.contact, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos,
 		clauses.amount), args...).
-		Scan(&out.ID, &out.StartsAt, &subject,
+		Scan(&out.ID, &out.StartsAt, &out.DateOnly, &subject,
 			&dealID, &deal.Name, &stage, &deal.AmountMinor, &currency, &deal.CloseDate,
 			&projectID, &project.Name, &project.Key, &project.Phase, &project.TargetEndDate,
 			&attendees)
@@ -180,7 +181,7 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 // it is what makes the first-time flag honest: null means we have never
 // exchanged anything with them, which is precisely "you have not met".
 const meetingQuery = `
-	SELECT a.id, a.occurred_at, a.subject,
+	SELECT a.id, a.occurred_at, a.occurred_precision = 'day', a.subject,
 	       d.id, COALESCE(d.name, ''), d.stage_name, d.amount_minor, d.currency, d.expected_close_date,
 	       pr.id, COALESCE(pr.name, ''), COALESCE(pr.key, ''), COALESCE(pr.phase, ''), pr.target_end_date,
 	       COALESCE((

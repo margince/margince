@@ -41,6 +41,9 @@ func meetingLine(in Input) string {
 		subject = said.Say(headerWords.Meeting)
 	}
 	when := in.StartsAt.Format("2006-01-02 15:04 MST")
+	if in.StartsDateOnly {
+		when = in.startsText()
+	}
 	if in.Company == "" {
 		return fmt.Sprintf("%s, %s.", subject, when)
 	}

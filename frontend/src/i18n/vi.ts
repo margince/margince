@@ -2025,6 +2025,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.name": "Tên",
   "history.field.note": "Ghi chú",
   "history.field.occurred_at": "Thời điểm xảy ra",
+  "history.field.occurred_precision": "Độ chính xác của thời gian",
   "history.field.company_id": "Công ty",
   "history.field.owner_id": "Người chịu trách nhiệm",
   "history.field.provider_claims_received": "Thông tin đã nhận từ nhà cung cấp",
@@ -2078,6 +2079,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.priority": "Độ ưu tiên",
   "history.field.acquisition_source": "Nguồn tiếp cận",
   "history.emptyList": "Chưa có",
+  "history.value.occurred_precision.instant": "Ngày và giờ",
+  "history.value.occurred_precision.day": "Chỉ ngày",
 
   "confidence.high": "cao",
   "confidence.med": "trung bình",
@@ -3769,6 +3772,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "activity.files.title": "Tệp của {subject}",
   "activity.followUpOpen": "Chưa hoàn thành",
   "activity.detail.withheldReason": "Nội dung hoạt động bị giữ lại",
+  "activity.dayHoldsHostSlot":
+    "Cuộc họp này đã được đặt trong lịch, nên cần có giờ chứ không chỉ có ngày.",
   "activity.detail.when": "Thời gian",
   "activity.detail.attendees": "Người tham dự",
   "activity.detail.colleagues": "Đồng nghiệp",
@@ -15712,7 +15717,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nội dung trao đổi và bước tiếp theo. Có thể sửa ghi chú từ lịch tại đây.",
   "worklist.verb.meetingHeld": "Đã diễn ra",
   "worklist.verb.meetingNoShow": "Vắng mặt",
-  "worklist.verb.meetingCanceled": "Đã hủy",
+  "worklist.verb.meetingCanceled": "Đánh dấu đã hủy",
   "worklist.verb.meetingOutcomeRecorded": "Đã ghi nhận kết quả cuộc họp",
   "worklist.verb.meetingOutcomeFailed": "Không thể ghi nhận kết quả. Thử lại.",
   "worklist.verb.meetingDayMissing":

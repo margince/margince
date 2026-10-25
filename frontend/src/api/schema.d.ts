@@ -23910,6 +23910,8 @@ export interface components {
             preview?: string | null;
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /** @enum {string|null} */
             direction?: null | "inbound" | "outbound";
             /**
@@ -24122,6 +24124,8 @@ export interface components {
             lifecycle: "delivered";
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             summary: components["schemas"]["EmailSummary"];
             /**
              * @description The message as plain text, normalised. Null when withheld. Provider payloads are
@@ -26732,6 +26736,8 @@ export interface components {
             subject?: string | null;
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /**
              * @description Whether this reader may read what the activity says. The same vocabulary `ActivityAccess.content_state` uses, because it is the same question about the same row.
              * @enum {string}
@@ -28750,6 +28756,8 @@ export interface components {
             activity_id: string;
             /** Format: date-time */
             starts_at: string;
+            /** @description How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             subject: string;
             /**
              * Format: uuid
@@ -29432,6 +29440,8 @@ export interface components {
             activity_id: string;
             /** Format: date-time */
             starts_at: string;
+            /** @description How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             subject?: string | null;
             /** Format: uuid */
             linked_deal_id?: string | null;
@@ -29479,6 +29489,8 @@ export interface components {
             source_label?: string | null;
             /** Format: date-time */
             occurred_at?: string | null;
+            /** @description How to read `occurred_at`, the source activity's time. `day` means only its date is known, so a client draws no time. `instant` when `occurred_at` is absent. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /**
              * @description `open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.
              * @enum {string}
@@ -30763,6 +30775,11 @@ export interface components {
         AgentContextItem: {
             evidence: components["schemas"]["AgentExcerpt"][];
             occurred_at?: string;
+            /**
+             * @description Present when only the date of occurred_at is known.
+             * @enum {string}
+             */
+            occurred_precision?: "day";
             /** Format: uuid */
             record_id: string;
             record_type: string;
@@ -32079,6 +32096,8 @@ export interface components {
         DealLastEmail: {
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /**
              * @description Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
              * @enum {string|null}
@@ -34285,6 +34304,8 @@ export interface components {
             readonly language?: "de" | "en" | "vi" | null;
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /**
              * Format: date-time
              * @description Task only.
@@ -34580,6 +34601,8 @@ export interface components {
             body?: string | null;
             /** Format: date-time */
             occurred_at?: string;
+            /** @description `day` when only the date is known: the date `occurred_at` names in its own offset is stored at that date's noon in the installation's zone. Omitted means `instant`. `day` without `occurred_at` is refused with 422. */
+            occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date-time */
             due_at?: string | null;
             /**
@@ -34644,6 +34667,11 @@ export interface components {
          * @enum {string}
          */
         ActivityAudience: "workspace" | "participants" | "selected";
+        /**
+         * @description How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is that date's noon in the installation's zone, so read its date in that zone. A meeting of this precision never holds its host's calendar slot.
+         * @enum {string}
+         */
+        OccurredPrecision: "instant" | "day";
         WorklistPinRequest: {
             /**
              * @description The lane the row came from. Paired with `row_id` because that pair is what
@@ -34746,6 +34774,8 @@ export interface components {
             body?: string | null;
             /** Format: date-time */
             occurred_at?: string;
+            /** @description How to read `occurred_at` from now on. A patch that sends `occurred_at` without this field sets `instant`, because a new time is a known time. `day` stores the date at its noon in the installation's zone: the date `occurred_at` names in its own offset, or, sent alone, the date the stored time falls on in that zone. */
+            occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date-time */
             due_at?: string | null;
             /** Format: uuid */
@@ -40870,6 +40900,8 @@ export interface components {
              * @description When an event item happened, null when the item is not an event. A reader states a date from THIS rather than from one written inside a summary's prose — a note recalling "October" for a September email is the reading that otherwise reaches the customer. It is an instant in UTC; render it in the reader's zone before naming a calendar day.
              */
             occurred_at?: string | null;
+            /** @description `day` when only the date of `occurred_at` is known: name the day and never its time. Absent on an instant. */
+            occurred_precision?: components["schemas"]["OccurredPrecision"];
             evidence?: components["schemas"]["ContextEvidence"][];
         };
         ContextSection: {
@@ -47048,6 +47080,8 @@ export interface components {
              * @description When a done_for_you receipt actually happened.
              */
             occurred_at?: string;
+            /** @description How to read a meeting row's time (`due_at` or `occurred_at`). Absent means `instant`. */
+            occurred_precision?: components["schemas"]["OccurredPrecision"];
             /**
              * Format: date-time
              * @description When something last happened on the item's subject, where its lane knows and
@@ -48570,6 +48604,8 @@ export interface components {
              * @description When the thing being reported happened.
              */
             occurred_at?: string;
+            /** @description How to read the meeting or activity time on this row: `occurred_at`, or `due_at` on a `meeting` row, where it is the start. `day` means only the date is known. `instant` on every row whose time is a real moment, and on a row with no such time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /**
              * @description The way back from work that was APPLIED rather than approved.
              *     A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.

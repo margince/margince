@@ -383,6 +383,7 @@ describe("Prepare meeting on the company page", () => {
       next_meeting: {
         activity_id: "a-1",
         starts_at: "2026-08-20T13:00:00Z",
+        occurred_precision: "instant",
         subject: "Renewal review",
         participants: [{ contact_id: "p-1", display_name: "Dana Buyer" }],
       },

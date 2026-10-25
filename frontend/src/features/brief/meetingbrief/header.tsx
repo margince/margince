@@ -10,6 +10,10 @@
 
 import type { components } from "../../../api/schema";
 import { Avatar } from "../../../design-system/atoms";
+import type {
+  ActivityMoment,
+  ActivityWhenFormatter,
+} from "../../../format/activitywhen";
 import { useT } from "../../../i18n";
 import { WrittenBy } from "../../records/record360";
 
@@ -19,7 +23,8 @@ type MeetingBrief = components["schemas"]["MeetingBrief"];
 // the three callers hold different amounts of it.
 export type MeetingFacts = Readonly<{
   subject?: string | null;
-  startsAt?: string;
+  // A `day` meeting has a date and no start time.
+  start?: ActivityMoment;
   participants?: readonly { contact_id: string; full_name: string }[];
 }>;
 
@@ -41,11 +46,12 @@ export function BriefHeader({
   preparedFor?: PreparedFor;
   // Formatting belongs to the caller: this tier holds no locale and no zone,
   // exactly as SurfaceState's `staleAsOf` does.
-  formatWhen?: (utcIso: string) => string;
+  formatWhen?: ActivityWhenFormatter;
 }>) {
   const t = useT();
+  const start = meeting?.start;
   const when =
-    meeting?.startsAt && formatWhen ? formatWhen(meeting.startsAt) : undefined;
+    start && formatWhen ? formatWhen(start.at, start.precision) : undefined;
   return (
     <>
       {preparedFor && (

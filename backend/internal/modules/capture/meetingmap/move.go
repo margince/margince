@@ -33,7 +33,8 @@ func MoveOne(ctx context.Context, raw []byte, sink connector.Sink, owner, connec
 	if key.SourceID == "" {
 		return nil
 	}
-	if err := mover.MoveMeeting(ctx, key, m.occurredAt, m.durationSeconds); err != nil && !errors.Is(err, connector.ErrSkip) {
+	slot := connector.MeetingSlot{Start: m.occurredAt, Duration: m.durationSeconds, AllDay: m.allDay}
+	if err := mover.MoveMeeting(ctx, key, slot); err != nil && !errors.Is(err, connector.ErrSkip) {
 		return err
 	}
 	return nil

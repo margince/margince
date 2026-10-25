@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -108,7 +109,7 @@ func SetupSearch(t *testing.T) *SearchEnv {
 	// last and sees a package that has genuinely stopped.
 	testdb.AssertPoolsQuiesced(t)
 	e.Pool = pool
-	e.Store = search.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS)))
+	e.Store = search.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))).WithRecordZone(identity.ZoneAppliedTx)
 	return e
 }
 

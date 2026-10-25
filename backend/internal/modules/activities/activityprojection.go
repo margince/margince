@@ -50,6 +50,8 @@ type activityScan struct {
 	// must not fail a read.
 	language *string
 	kind     string
+	// occurredPrecision is scanned as text and typed in record().
+	occurredPrecision string
 	// The nullable strings that become typed contract enums.
 	channelProvider, direction, meetingStatus, invitationStatus, threadKey, captureLabel *string
 	// audienceReason says why a derived audience is what it is. It travels with
@@ -103,6 +105,7 @@ var activityProjection = []activityColumn{
 	{"a.subject", func(s *activityScan) any { return &s.a.Subject }},
 	{"a.body", func(s *activityScan) any { return &s.a.Body }},
 	{"a.occurred_at", func(s *activityScan) any { return &s.a.OccurredAt }},
+	{"a.occurred_precision", func(s *activityScan) any { return &s.occurredPrecision }},
 	{"a.direction", func(s *activityScan) any { return &s.direction }},
 	{"a.due_at", func(s *activityScan) any { return &s.a.DueAt }},
 	{"a.remind_at", func(s *activityScan) any { return &s.a.RemindAt }},
@@ -296,6 +299,7 @@ func (s *activityScan) record() crmcontracts.Activity {
 		a.Raw = &raw
 	}
 	a.Kind = crmcontracts.ActivityKind(s.kind)
+	a.OccurredPrecision = crmcontracts.OccurredPrecision(s.occurredPrecision)
 	a.ChannelProvider = s.channelProvider
 	if s.direction != nil {
 		d := crmcontracts.ActivityDirection(*s.direction)
@@ -365,10 +369,11 @@ func RowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
 	}
 	withheld := a.ContentState != nil && *a.ContentState == crmcontracts.ActivityContentStateWithheld
 	summary := crmcontracts.EmailSummary{
-		ActivityId:    a.Id,
-		OccurredAt:    a.OccurredAt,
-		DisplayStatus: crmcontracts.EmailAccessStatusWithheld,
-		Move:          crmcontracts.EmailSummaryMoveNone,
+		ActivityId:        a.Id,
+		OccurredAt:        a.OccurredAt,
+		OccurredPrecision: a.OccurredPrecision,
+		DisplayStatus:     crmcontracts.EmailAccessStatusWithheld,
+		Move:              crmcontracts.EmailSummaryMoveNone,
 	}
 	if a.Version != nil {
 		summary.Version = *a.Version

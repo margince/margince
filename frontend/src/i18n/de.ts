@@ -2093,6 +2093,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.name": "Name",
   "history.field.note": "Notiz",
   "history.field.occurred_at": "Zeitpunkt",
+  "history.field.occurred_precision": "Zeitgenauigkeit",
   "history.field.company_id": "Unternehmen",
   "history.field.owner_id": "Verantwortlich",
   "history.field.provider_claims_received": "Erhaltene Anbieterangaben",
@@ -2147,6 +2148,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.priority": "Priorität",
   "history.field.acquisition_source": "Akquisitionsquelle",
   "history.emptyList": "Nichts festgelegt",
+  "history.value.occurred_precision.instant": "Datum und Uhrzeit",
+  "history.value.occurred_precision.day": "Nur Datum",
 
   "confidence.high": "hoch",
   "confidence.med": "mittel",
@@ -3882,6 +3885,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.files.title": "Dateien zu {subject}",
   "activity.followUpOpen": "Offen",
   "activity.detail.withheldReason": "Inhalt der Aktivität ist zurückgehalten",
+  "activity.dayHoldsHostSlot":
+    "Dieser Termin ist in einem Kalender gebucht und braucht deshalb eine Uhrzeit, nicht nur ein Datum.",
   "activity.detail.when": "Wann",
   "activity.detail.attendees": "Teilnehmende",
   "activity.detail.colleagues": "Teammitglieder",
@@ -16127,7 +16132,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
   "worklist.verb.meetingHeld": "Stattgefunden",
   "worklist.verb.meetingNoShow": "Nicht erschienen",
-  "worklist.verb.meetingCanceled": "Abgesagt",
+  "worklist.verb.meetingCanceled": "Als abgesagt markieren",
   "worklist.verb.meetingOutcomeRecorded": "Terminergebnis erfasst",
   "worklist.verb.meetingOutcomeFailed":
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",

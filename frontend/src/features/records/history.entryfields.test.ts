@@ -33,6 +33,28 @@ describe("entryFieldChanges", () => {
     expect(change.newValue).toBe('{"city":"Berlin"}');
   });
 
+  // Each side takes the precision its own image holds. A move to a date-only
+  // entry shows a clock only before it.
+  it("reads each side's activity-time precision from that side's image", () => {
+    const changes = entryFieldChanges({
+      before: {
+        occurred_at: "2026-08-26T09:30:00Z",
+        occurred_precision: "instant",
+      },
+      after: { occurred_at: "2026-08-27T05:00:00Z", occurred_precision: "day" },
+    });
+    expect(changes.find((c) => c.field === "occurred_at")).toEqual({
+      field: "occurred_at",
+      oldValue: "2026-08-26T09:30:00Z",
+      newValue: "2026-08-27T05:00:00Z",
+      oldPrecision: "instant",
+      newPrecision: "day",
+    });
+    expect(
+      changes.find((c) => c.field === "occurred_precision")?.newPrecision,
+    ).toBeUndefined();
+  });
+
   it("has nothing to show for an entry that carries no images", () => {
     expect(entryFieldChanges({ before: null, after: null })).toEqual([]);
   });

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { createContext, type ReactNode, useContext, useEffect } from "react";
+import type { ActivityZones } from "../format/activitywhen";
 import { isRenderableZone } from "../format/format";
 import { FALLBACK_RECORD_ZONE } from "../format/timezone";
 import { logUnexpectedError } from "./problem";
@@ -48,6 +49,11 @@ const RecordZoneContext = createContext<string>(FALLBACK_RECORD_ZONE);
  */
 export function useRecordZone(): string {
   return useContext(RecordZoneContext);
+}
+
+/** The record zone beside the zone this screen draws an instant in. */
+export function useActivityZones(viewer: string): ActivityZones {
+  return { record: useRecordZone(), viewer };
 }
 
 /**

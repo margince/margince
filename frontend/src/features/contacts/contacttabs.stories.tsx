@@ -36,7 +36,7 @@ function activity(
   row: Pick<SectionActivity, "id" | "kind" | "occurred_at"> &
     Partial<SectionActivity>,
 ): SectionActivity {
-  return { is_done: false, ...CAPTURED, ...row };
+  return { occurred_precision: "instant", is_done: false, ...CAPTURED, ...row };
 }
 
 // The tab reads the page's own activities section rather than fetching, so the
@@ -162,6 +162,7 @@ export const LongEmailBesideVerbs: Story = {
           email_summary: {
             activity_id: "a-4",
             occurred_at: "2026-08-12T16:00:00Z",
+            occurred_precision: "instant",
             version: 1,
             subject: LONG_SUBJECT,
             preview:

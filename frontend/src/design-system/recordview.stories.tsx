@@ -14,6 +14,7 @@ const emailEntry: TimelineEntry = {
   kind: "email",
   title: "Re: Q3 renewal terms",
   atIso: "2026-07-01T09:12:00Z",
+  atPrecision: "instant",
   provenance: { kind: "human", self: true },
 };
 const meetingEntry: TimelineEntry = {
@@ -21,6 +22,7 @@ const meetingEntry: TimelineEntry = {
   kind: "meeting",
   title: "Discovery call",
   atIso: "2026-06-24T14:00:00Z",
+  atPrecision: "instant",
   provenance: { kind: "agent", agent: "capture" },
 };
 const noteEntry: TimelineEntry = {
@@ -28,6 +30,7 @@ const noteEntry: TimelineEntry = {
   kind: "note",
   title: "Left a voicemail",
   atIso: "2026-06-20T16:30:00Z",
+  atPrecision: "instant",
   provenance: { kind: "human", self: true },
 };
 

@@ -2171,6 +2171,13 @@ components:
           type: string
           format: date-time
           description: The activity's new occurred_at (absent when this update did not touch it).
+        occurred_precision:
+          type: string
+          enum: [instant, day]
+          x-enum-varnames: [ActivityTimeIsAnInstant, ActivityTimeIsADay]
+          description: >-
+            How to read the activity's occurred_at from now on: `day` when only its date is
+            known. Carried when this update set the time or its precision.
         due_at:
           type: string
           format: date-time

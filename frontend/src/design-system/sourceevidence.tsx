@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { formatDateTime } from "../format/format";
+import { formatActivityWhen } from "../format/activitywhen";
 import { useLocale, useT } from "../i18n";
 import { useActivity } from "../lib/activityread";
 import { ProblemError, problemCode } from "../lib/problem";
@@ -72,7 +72,12 @@ export function SourceEvidence({
     return (
       <SourceEmailPanel
         activityId={activityId}
-        formatWhen={(iso) => formatDateTime(iso, locale, recordZone)}
+        formatWhen={(at, precision) =>
+          formatActivityWhen(at, precision, locale, {
+            record: recordZone,
+            viewer: recordZone,
+          })
+        }
       />
     );
   }
@@ -80,7 +85,12 @@ export function SourceEvidence({
     <div>
       <p className="t-caption">
         {[
-          formatDateTime(source.occurred_at, locale, recordZone),
+          formatActivityWhen(
+            source.occurred_at,
+            source.occurred_precision,
+            locale,
+            { record: recordZone, viewer: recordZone },
+          ),
           source.subject,
         ]
           .filter(Boolean)

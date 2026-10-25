@@ -72,6 +72,8 @@ type Sink struct {
 	// moves one.
 	moveMeeting       MeetingMover
 	resolveInvitation CalendarInvitationResolver
+	// recordZone anchors a date-only capture (WithRecordZone). Nil refuses one.
+	recordZone RecordZone
 	// takeOverAsserted writes this connector's reading of a message over a row
 	// an importer asserted. Nil leaves an asserted incumbent alone, which is
 	// the behaviour that predates the take-over.

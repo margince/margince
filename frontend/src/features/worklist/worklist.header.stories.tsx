@@ -150,6 +150,7 @@ function grouped(page: Worklist): Worklist {
     ...page,
     queue: [
       {
+        occurred_precision: "instant",
         id: "duplicates",
         source: "batch",
         category: "decisions",
@@ -162,6 +163,7 @@ function grouped(page: Worklist): Worklist {
       },
       ...[1, 2].map((n) => ({
         id: `task-${n}`,
+        occurred_precision: "instant" as const,
         source: "task" as const,
         category: "tasks" as const,
         level: 4,

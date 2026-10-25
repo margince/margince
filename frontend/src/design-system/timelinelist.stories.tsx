@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider, useLocale, useT } from "../i18n";
@@ -43,6 +44,7 @@ function entry(
     kind: "email",
     title: "Re: Fleet renewal",
     atIso,
+    atPrecision: "instant",
     provenance: { kind: "connector", connector: "gmail" },
     ...overrides,
   };
@@ -176,6 +178,7 @@ function thread(links: Activity["links"], sender: string | null): Activity[] {
     subject: "Fleet renewal",
     body: "Can you hold the price until Friday?",
     occurred_at: `2026-08-1${2 - at}T12:00:00Z`,
+    occurred_precision: "instant",
     direction: "inbound",
     thread_key: "t-fleet",
     is_done: false,
@@ -188,6 +191,7 @@ function thread(links: Activity["links"], sender: string | null): Activity[] {
       ? {
           activity_id: id,
           occurred_at: `2026-08-1${2 - at}T12:00:00Z`,
+          occurred_precision: "instant" as const,
           version: 1,
           subject: "Fleet renewal",
           preview: "Can you hold the price until Friday?",
@@ -336,6 +340,7 @@ function summaryOf(
   return {
     activity_id: id,
     occurred_at: "2026-08-14T15:20:00Z",
+    occurred_precision: "instant",
     display_status: displayStatus,
     attachment_count: attachments,
     move: "none",
@@ -437,4 +442,34 @@ export const TaskStates: Story = {
 export const TaskStatesDark: Story = {
   ...TaskStates,
   globals: { theme: "dark" },
+};
+
+// A meeting logged with its date and no time sits under its day with no time
+// below it, beside a call whose time is known.
+export const DateOnlyEntry: Story = {
+  args: {
+    zone: ZONE,
+    entries: [
+      entry("day-call", "2026-08-14T09:05:00Z", {
+        kind: "call",
+        title: "Call about the renewal",
+        provenance: { kind: "human", self: true },
+      }),
+      entry("day-meeting", "2026-08-12T10:00:00Z", {
+        kind: "meeting",
+        title: "Site visit at the depot",
+        atPrecision: "day",
+        provenance: { kind: "human", self: true },
+      }),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const day = (await canvas.findByText("Site visit at the depot")).closest(
+      "li",
+    );
+    const timed = canvas.getByText("Call about the renewal").closest("li");
+    await expect(day?.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+    await expect(timed?.textContent).toMatch(/11:05/);
+  },
 };

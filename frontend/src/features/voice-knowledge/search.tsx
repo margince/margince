@@ -31,11 +31,12 @@ import {
   QueryStates,
 } from "../../design-system/querystates";
 import { RecordCard } from "../../design-system/recordcard";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatRecordWhen } from "../../format/activitywhen";
+import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useActivityZones, useRecordZone } from "../../lib/recordzone";
 import { navigate, routeHash, useRoute } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { companyTabRoute } from "../companies/companytab";
@@ -338,7 +339,7 @@ function SearchHit({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zones = useActivityZones(useRecordZone());
   // An email hit IS the canonical row — the same one the timeline draws, from
   // the same server projection. It replaces the generic title-and-snippet
   // rather than sitting beside it: the snippet was a raw 200-character slice
@@ -350,7 +351,7 @@ function SearchHit({
       <li className="search-hit search-hit-email">
         <EmailEntry
           summary={summary}
-          timestamp={formatDateTime(summary.occurred_at, locale, zone)}
+          timestamp={formatRecordWhen(summary, locale, zones)}
           onOpen={() => onOpen(summary.activity_id, "email")}
         />
       </li>

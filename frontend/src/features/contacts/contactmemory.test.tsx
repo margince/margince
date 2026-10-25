@@ -47,6 +47,7 @@ function emailSummary(over: Partial<EmailSummary> = {}): EmailSummary {
   return {
     activity_id: EMAIL_ID,
     occurred_at: "2026-08-29T09:15:00Z",
+    occurred_precision: "instant" as const,
     version: 4,
     subject: "Re: the renewal quote",
     preview: "Can you hold the price until Friday?",
@@ -62,6 +63,7 @@ function emailSummary(over: Partial<EmailSummary> = {}): EmailSummary {
 
 function emailRow(over: Partial<Activity> = {}): Activity {
   return {
+    occurred_precision: "instant",
     id: EMAIL_ID,
     kind: "email",
     occurred_at: "2026-08-29T09:15:00Z",
@@ -81,6 +83,7 @@ function emailRow(over: Partial<Activity> = {}): Activity {
 }
 
 const noteRow: Activity = {
+  occurred_precision: "instant",
   id: NOTE_ID,
   kind: "note",
   occurred_at: "2026-08-28T11:00:00Z",
@@ -253,6 +256,7 @@ it("groups replies by conversation without clearing another request from the sam
     thread_key: "answered",
     direction: "outbound",
     occurred_at: "2026-08-30T09:00:00Z",
+    occurred_precision: "instant" as const,
     email_summary: emailSummary({
       activity_id: "reply",
       subject: "Competitor question",

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { lastEmailAgo } from "../testing/dealmail";
 import { DealCard } from "./dealcard";
 import { EmailReference } from "./emailreference";
 import { Eyebrow } from "./eyebrow";
@@ -49,7 +50,7 @@ const states: { label: string; deal: BoardDeal }[] = [
       name: "ERP connector, phase 2",
       closeDate: "2027-03-14",
       owner: { id: "u-2", name: "Jonas Ritter" },
-      lastEmail: { agoMs: 2 * DAY_MS, direction: "inbound" },
+      lastEmail: lastEmailAgo(2 * DAY_MS, "inbound"),
     }),
   },
   {
@@ -57,7 +58,7 @@ const states: { label: string; deal: BoardDeal }[] = [
     deal: boardDeal({
       name: "deal-de-lumenhealth-x-gradion-dataplatform-migration-2026",
       valueMinor: 12_500_000,
-      lastEmail: { agoMs: 5 * DAY_MS, direction: "outbound" },
+      lastEmail: lastEmailAgo(5 * DAY_MS, "outbound"),
     }),
   },
   {
@@ -68,7 +69,7 @@ const states: { label: string; deal: BoardDeal }[] = [
       ageMs: 23 * DAY_MS,
       closeDate: "2027-04-30",
       closeDateProvisional: true,
-      lastEmail: { agoMs: 23 * DAY_MS, direction: "outbound" },
+      lastEmail: lastEmailAgo(23 * DAY_MS, "outbound"),
     }),
   },
   {
@@ -122,7 +123,7 @@ export const BoardCardMailFlyout: StoryObj = {
         deal={boardDeal({
           stalled: true,
           closeDate: "2026-09-30",
-          lastEmail: { agoMs: 10 * DAY_MS, direction: "outbound" },
+          lastEmail: lastEmailAgo(10 * DAY_MS, "outbound"),
         })}
         href="#/deals/d2"
         zone="Europe/Berlin"

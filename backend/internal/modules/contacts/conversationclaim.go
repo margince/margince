@@ -198,7 +198,7 @@ func (s *Store) readClaims(
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.kind, c.body, c.source_activity_id, c.source_quote,
-		       a.subject, a.occurred_at, c.status, c.due_at,
+		       a.subject, a.occurred_at, a.occurred_precision, c.status, c.due_at,
  (c.needs_review OR (c.kind IN ('commitment_ours','commitment_theirs') AND NOT `+admission+`)),
 		       c.corrected_at, c.task_activity_id, c.taken_by_user_id, taker.display_name, c.taken_at
 		FROM conversation_claim c
@@ -220,7 +220,7 @@ func (s *Store) readClaims(
 		var subject *string
 		var occurredAt time.Time
 		if err := rows.Scan(&id, &claim.Kind, &claim.Body, &activityID, &claim.SourceQuote,
-			&subject, &occurredAt, &claim.Status, &claim.DueAt, &claim.NeedsReview,
+			&subject, &occurredAt, &claim.OccurredPrecision, &claim.Status, &claim.DueAt, &claim.NeedsReview,
 			&claim.CorrectedAt, &taskID, &takerID, &claim.TakenByName, &claim.TakenAt); err != nil {
 			return nil, fmt.Errorf("scan a conversation claim: %w", err)
 		}

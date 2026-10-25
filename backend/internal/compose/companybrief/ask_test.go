@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"gopkg.in/yaml.v3"
@@ -182,7 +183,7 @@ func TestTheWriterIsToldWhichSubjectsToStayOffOf(t *testing.T) {
 
 	// End to end into the bytes the model receives, not just into the struct: the
 	// instruction is worthless if the payload never names the section.
-	payload := AskRequest(crmcontracts.CompanyQuestionMeetingPrep, FromView(restricted), string(textlang.English)).Messages[0].Content
+	payload := AskRequest(crmcontracts.CompanyQuestionMeetingPrep, FromView(restricted, time.UTC), string(textlang.English)).Messages[0].Content
 	if !strings.Contains(payload, `"sections_omitted":["deals"]`) {
 		t.Errorf("the prompt payload does not name the withheld section, so the "+
 			"instruction to stay silent about it applies to nothing: %s", payload)

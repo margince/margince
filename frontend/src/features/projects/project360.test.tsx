@@ -244,6 +244,7 @@ describe("ProjectScreen", () => {
         activities: {
           data: [
             {
+              occurred_precision: "instant",
               id: "act-1",
               kind: "email",
               subject: "Kickoff agenda",

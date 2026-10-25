@@ -143,6 +143,7 @@ export function CompanyHowItStands({
             t,
             locale,
             zone,
+            record: zone,
             asOf: view.as_of,
             onOpen: onOpenTab && (() => onOpenTab("timeline")),
           })}

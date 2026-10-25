@@ -14,7 +14,8 @@ import {
   ProjectPicker,
   ScopeLine,
 } from "../../../design-system/projectpicker";
-import { formatDate, formatDateTime } from "../../../format/format";
+import { formatActivityWhen } from "../../../format/activitywhen";
+import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { ENTITY, isEntityKind } from "../../../lib/entity";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
@@ -131,7 +132,12 @@ export function ContactMeetingBrief({
         onOpenEmail={onOpenEmail}
         titleId="contact-meeting-title"
         onClose={onClose}
-        formatWhen={(utcIso) => formatDateTime(utcIso, locale, zone)}
+        formatWhen={(at, precision) =>
+          formatActivityWhen(at, precision, locale, {
+            record: zone,
+            viewer: zone,
+          })
+        }
         formatDay={(utcIso) => formatDate(utcIso, locale, zone)}
         scopeSlot={
           <>

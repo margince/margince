@@ -1,4 +1,4 @@
-import { formatDateTime } from "../../format/format";
+import { formatActivityWhen } from "../../format/activitywhen";
 import type { Locale } from "../../i18n/locale";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -17,6 +17,11 @@ export function scheduledText(
 ): string | null {
   if (item.source !== "meeting_outcome" || !item.occurred_at) return null;
   return t("worklist.when.scheduled", {
-    when: formatDateTime(item.occurred_at, locale, record),
+    when: formatActivityWhen(
+      item.occurred_at,
+      item.occurred_precision,
+      locale,
+      { record, viewer: record },
+    ),
   });
 }

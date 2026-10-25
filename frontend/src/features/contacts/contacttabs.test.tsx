@@ -44,7 +44,7 @@ function activity(
   row: Pick<SectionActivity, "id" | "kind" | "occurred_at"> &
     Partial<SectionActivity>,
 ): SectionActivity {
-  return { is_done: false, ...CAPTURED, ...row };
+  return { occurred_precision: "instant", is_done: false, ...CAPTURED, ...row };
 }
 
 // The six tabs beside Overview were placeholders for a release, and the thing
@@ -137,6 +137,7 @@ const view: Contact360 = {
   next_meeting: {
     activity_id: "a-9",
     starts_at: "2026-08-20T13:00:00Z",
+    occurred_precision: "instant",
     subject: "Contract review",
     participants: [{ contact_id: "p-1", full_name: "Dana Buyer" }],
   },

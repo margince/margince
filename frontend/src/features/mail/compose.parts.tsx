@@ -8,7 +8,8 @@ import { ErrorLine } from "../../design-system/errorline";
 import { IconAction } from "../../design-system/iconaction";
 import { RichText } from "../../design-system/richtext";
 import { Select } from "../../design-system/select";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatActivityWhen } from "../../format/activitywhen";
+import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -17,6 +18,7 @@ import {
   type CommunicationContext,
   contextOptions,
 } from "../../lib/compose-context";
+import { useActivityZones } from "../../lib/recordzone";
 import { useRichTextLabels } from "../../lib/richtextlabels";
 import type { CarriageViolation } from "./carriage";
 import type { Activity, VoiceProfile } from "./compose";
@@ -349,7 +351,7 @@ export function EarlierMessages({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zones = useActivityZones(viewerZone());
   const [open, setOpen] = useState(false);
   const readable = messages.filter(
     (message) => message.content_state !== "withheld" && message.body,
@@ -381,7 +383,12 @@ export function EarlierMessages({
           <figure key={message.id} className="compose-quoted">
             <figcaption className="t-caption">
               {t("compose.quotedHeader", {
-                when: formatDateTime(message.occurred_at, locale, zone),
+                when: formatActivityWhen(
+                  message.occurred_at,
+                  message.occurred_precision,
+                  locale,
+                  zones,
+                ),
                 who:
                   message.direction === "outbound"
                     ? t("compose.quotedYou")

@@ -11,11 +11,14 @@ package meetingbrief
 // agreement.
 
 import (
+	"encoding/json"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // Input is the room, the deal, what was promised, and what recently happened.
@@ -24,6 +27,9 @@ type Input struct {
 	ActivityID string
 	Subject    string
 	StartsAt   time.Time
+	// StartsDateOnly says StartsAt is a day meeting's anchor, so only its date
+	// is known (MarshalJSON).
+	StartsDateOnly bool `json:"-"`
 	// Now is the instant the brief was assembled, carried so "days since last
 	// touch" is arithmetic on one clock rather than on time.Now() called from
 	// several places that could straddle a midnight.
@@ -169,6 +175,8 @@ type ActIn struct {
 	Subject   string
 	Direction string
 	At        time.Time
+	// DateOnly says At is a day entry's anchor (Input.MarshalJSON).
+	DateOnly bool `json:"-"`
 }
 
 // FromMeeting folds the gated meeting read into the brief's input.
@@ -178,6 +186,8 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 		Subject:    room.Subject,
 		StartsAt:   room.StartsAt.UTC(),
 		Now:        now,
+		// The meeting read states the precision with the start it describes.
+		StartsDateOnly: room.DateOnly,
 	}
 	if room.Deal != nil {
 		in.Deal = &DealIn{
@@ -278,6 +288,8 @@ func WithCounterpart(in *Input, view crmcontracts.Contact360) {
 			ID:   ids.UUID(activity.Id).String(),
 			Kind: string(activity.Kind),
 			At:   activity.OccurredAt.UTC(),
+			// A day entry's anchor is no time anybody named (Input.MarshalJSON).
+			DateOnly: activitywhen.IsDay(activity.OccurredPrecision),
 		}
 		if activity.Subject != nil {
 			folded.Subject = *activity.Subject
@@ -344,4 +356,36 @@ func derefInt(v *int64) int64 {
 		return 0
 	}
 	return *v
+}
+
+// MarshalJSON is the input as the model reads it. A day meeting's start and a
+// day entry's time are their dates in the record zone, never the stored noon.
+func (in Input) MarshalJSON() ([]byte, error) {
+	type plain Input
+	type promptAct struct {
+		ActIn
+		At string
+	}
+	recent := make([]promptAct, 0, len(in.Recent))
+	for _, act := range in.Recent {
+		recent = append(recent, promptAct{ActIn: act, At: occurredday.When(act.At, act.DateOnly, in.zone())})
+	}
+	return json.Marshal(struct {
+		plain
+		StartsAt string
+		Recent   []promptAct
+	}{plain: plain(in), StartsAt: in.startsText(), Recent: recent})
+}
+
+// startsText is the meeting's start as a prompt states it.
+func (in Input) startsText() string {
+	return occurredday.When(in.StartsAt, in.StartsDateOnly, in.zone())
+}
+
+// zone is the record zone, UTC for an input built without one.
+func (in Input) zone() *time.Location {
+	if in.Zone == nil {
+		return time.UTC
+	}
+	return in.Zone
 }

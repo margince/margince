@@ -162,6 +162,34 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "A day count is a fact about a named zone: the same two instants are different numbers of calendar days in UTC+7, UTC-5 and UTC.",
   },
   {
+    file: "lib/activitybody.test.ts",
+    why: "A backdated entry's wire date must be the picked day in zones a day ahead of UTC at the moment of logging, so each case names the zone it is logged in.",
+  },
+  {
+    file: "features/worklist/worklist.held.test.ts",
+    why: "A date-only meeting reads on the record's clock and a timed one on the reader's, and the two only differ between named zones far apart.",
+  },
+  {
+    file: "features/leads/leadstanding.test.ts",
+    why: "A date-only signal reads on the record's clock and the other dates on the reader's, and the two only differ between named zones far apart.",
+  },
+  {
+    file: "features/leads/leadstandingparts.test.ts",
+    why: "A date-only signal dates its rung on the record's clock, which differs from the reader's only between named zones far apart.",
+  },
+  {
+    file: "features/automations/approvalpreview.conflicts.test.ts",
+    why: "A date-only source's midday falls on the day before west of the record zone, so the case names a zone east of UTC.",
+  },
+  {
+    file: "features/brief/meetingbrief/view.test.tsx",
+    why: "A date-only meeting's midday lands on another day in the reader's zone, so the case names the record zone and a reader zone far from it.",
+  },
+  {
+    file: "format/activitywhen.test.ts",
+    why: "A date-only entry's midday lands on another UTC day in the zones furthest from UTC, so the case names those zones.",
+  },
+  {
     file: "features/companies/companynextbar.test.ts",
     why: "The days-late count takes the zone its date is drawn in; the fixture pins UTC so the expected count does not move with the test machine.",
   },

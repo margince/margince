@@ -44,7 +44,7 @@ function activity(
   row: Pick<SectionActivity, "id" | "kind" | "occurred_at"> &
     Partial<SectionActivity>,
 ): SectionActivity {
-  return { is_done: false, ...CAPTURED, ...row };
+  return { occurred_precision: "instant", is_done: false, ...CAPTURED, ...row };
 }
 
 const change: FieldChange = {

@@ -29,16 +29,21 @@ import (
 type UpdateActivityInput struct {
 	recordedAt         *time.Time
 	calendarSettlement bool
+	// recordZone anchors a day; the store sets it from WithRecordZone.
+	recordZone RecordZone
 	// Trail names what the audit trail calls this write; zero is an update.
-	Trail           storekit.AuditTrail
-	Subject         *string
-	Body            *string
-	OccurredAt      *time.Time
-	DurationSeconds *int
-	DueAt           *time.Time
-	RemindAt        *time.Time
-	AssigneeID      *ids.UserID
-	IsDone          *bool
+	Trail      storekit.AuditTrail
+	Subject    *string
+	Body       *string
+	OccurredAt *time.Time
+	// OccurredPrecision nil with OccurredAt set means an instant: a new time is
+	// a known time. A day sent alone keeps the stored date, moved to its anchor.
+	OccurredPrecision *string
+	DurationSeconds   *int
+	DueAt             *time.Time
+	RemindAt          *time.Time
+	AssigneeID        *ids.UserID
+	IsDone            *bool
 	// Clear names the fields sent as an explicit JSON null, which a nil pointer
 	// cannot tell from a field not mentioned.
 	Clear []string
@@ -62,7 +67,7 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 		return crmcontracts.Activity{}, err
 	}
 	at := s.now()
-	in.recordedAt = &at
+	in.recordedAt, in.recordZone = &at, s.recordZone
 	if err := s.readPatchColumns(ctx, &in); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -128,6 +133,7 @@ func updateActivityInTx(
 		  is_done = coalesce($%[8]d, is_done),
 		  meeting_status = coalesce($%[9]d, meeting_status),
 		  duration_seconds = coalesce($%[10]d, duration_seconds),
+		  occurred_precision = coalesce($%[14]d, occurred_precision),
 		  -- The language was READ from the text, so an edit to the text retires
 		  -- it. Cleared rather than recomputed: detection lives in Go, and a
 		  -- label that outlived the words it described would send a reply in
@@ -139,12 +145,12 @@ func updateActivityInTx(
 		  done_at = CASE
 		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
 		    WHEN $%[8]d IS FALSE THEN NULL
-		    ELSE done_at END%[14]s
+		    ELSE done_at END%[15]s
 		WHERE id = $%[1]d`,
 		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
-		customAssignments(in.customColumns, in.CustomFields, arg)),
+		arg(in.OccurredPrecision), customAssignments(in.customColumns, in.CustomFields, arg)),
 		args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -201,6 +207,9 @@ func (in UpdateActivityInput) movesAField(current crmcontracts.Activity) bool {
 	}
 	if in.OccurredAt != nil {
 		p.Set("occurred_at", current.OccurredAt, *in.OccurredAt)
+	}
+	if in.OccurredPrecision != nil {
+		p.Set(fieldOccurredPrecision, string(current.OccurredPrecision), *in.OccurredPrecision)
 	}
 	if in.DurationSeconds != nil {
 		p.Set("duration_seconds", current.DurationSeconds, *in.DurationSeconds)
@@ -276,6 +285,11 @@ func admitActivityPatch(
 		return crmcontracts.Activity{}, held, err
 	}
 	maskMailPatch(current, in)
+	if !held {
+		if err := admitPatchPrecision(ctx, tx, current, in); err != nil {
+			return crmcontracts.Activity{}, held, err
+		}
+	}
 	if !held && in.Subject != nil && current.Kind == crmcontracts.ActivityKindTask {
 		subject, err := taskSubject(*in.Subject)
 		if err != nil {

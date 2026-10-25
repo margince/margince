@@ -25,6 +25,7 @@ export default meta;
 type Story = StoryObj;
 
 const TASK: components["schemas"]["Activity"] = {
+  occurred_precision: "instant",
   id: "task-1",
   kind: "task",
   subject: "Call back Alice about the renewal",

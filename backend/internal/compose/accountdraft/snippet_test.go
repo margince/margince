@@ -32,7 +32,7 @@ func TestARepeatedSubjectThreadReachesTheModelWithItsWords(t *testing.T) {
 				"how the pricing works."),
 	)
 
-	recent := foldRecent(view)
+	recent := foldRecent(view, time.UTC)
 	if len(recent) != 2 {
 		t.Fatalf("expected both messages to fold, got %d", len(recent))
 	}
@@ -57,7 +57,7 @@ func TestARepeatedSubjectThreadReachesTheModelWithItsWords(t *testing.T) {
 func TestAnActivityWithNoBodyStillFolds(t *testing.T) {
 	view := viewWithActivities(t, activityWith(t, "Intro call", ""))
 
-	recent := foldRecent(view)
+	recent := foldRecent(view, time.UTC)
 	if len(recent) != 1 {
 		t.Fatalf("expected the activity to fold, got %d", len(recent))
 	}
@@ -76,7 +76,7 @@ func TestAQuotedOnlyBodyContributesNothing(t *testing.T) {
 	view := viewWithActivities(t, activityWith(t, "Re: Welcome to Surfe!",
 		"From: marine@surfe.com\nTo: rep@gradion.com\n\n> the whole of the previous message\n> quoted back"))
 
-	recent := foldRecent(view)
+	recent := foldRecent(view, time.UTC)
 	if len(recent) != 1 {
 		t.Fatalf("expected the activity to fold, got %d", len(recent))
 	}

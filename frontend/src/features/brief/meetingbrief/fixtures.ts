@@ -22,7 +22,7 @@ const CONTACT = "3f7c1a90-0000-4000-8000-00000000p001";
 // from what it already holds.
 export const meetingFacts = {
   subject: "Retrofit-Abstimmung",
-  startsAt: "2026-06-24T13:00:00Z",
+  start: { at: "2026-06-24T13:00:00Z", precision: "instant" },
   participants: [{ contact_id: CONTACT, full_name: "Anna Weber" }],
 } as const;
 

@@ -2,6 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatActivityWhen } from "../../../format/activitywhen";
 import { StoryProviders } from "../../../testing/story-utils";
 import {
   briefManager,
@@ -368,5 +369,34 @@ describe("the states a read can land in", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalled();
+  });
+});
+
+describe("the meeting line", () => {
+  // A `day` meeting is stored at noon on the record's clock. The header hands
+  // its precision on, so the line names the date and draws no start time.
+  it("names a date-only meeting's day without a clock", () => {
+    render(
+      <StoryProviders>
+        <MeetingBriefView
+          state={{ kind: "ready", brief: briefReady }}
+          meeting={{
+            ...meetingFacts,
+            start: { at: "2026-06-24T05:00:00Z", precision: "day" },
+          }}
+          onOpenRecord={vi.fn()}
+          titleId="t"
+          onClose={() => {}}
+          formatWhen={(at, precision) =>
+            formatActivityWhen(at, precision, "en", {
+              record: "Asia/Ho_Chi_Minh",
+              viewer: "America/Los_Angeles",
+            })
+          }
+        />
+      </StoryProviders>,
+    );
+    expect(screen.getByText("24/06/2026")).toBeTruthy();
+    expect(screen.queryByText(/12:00|22:00/)).toBeNull();
   });
 });

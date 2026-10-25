@@ -7,6 +7,7 @@
 
 import type { components } from "../../../api/schema";
 import type { ReadingTone } from "../../../design-system/readingtone";
+import { activityIsAhead } from "../../../format/activitywhen";
 import { calendarDaysBetween } from "../../../format/format";
 import { ghostCount } from "./dealcommittee";
 
@@ -276,6 +277,7 @@ export type NextStep = Readonly<{
 export function nextStepOf(
   activities: readonly Activity[],
   asOf: string,
+  record: string,
 ): NextStep | undefined {
   const now = Date.parse(asOf);
   const meeting = soonest(
@@ -283,7 +285,7 @@ export function nextStepOf(
       (row) =>
         row.kind === "meeting" &&
         row.meeting_status === "booked" &&
-        Date.parse(row.occurred_at) >= now,
+        activityIsAhead(row.occurred_at, row.occurred_precision, now, record),
     ),
     (row) => row.occurred_at,
   );

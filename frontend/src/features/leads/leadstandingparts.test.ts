@@ -24,6 +24,7 @@ const ctx: ReadingContext = {
   t,
   locale: "en",
   zone: UTC_ZONE,
+  record: UTC_ZONE,
   asOf: "2026-08-13T10:00:00Z",
 };
 
@@ -43,6 +44,7 @@ function lead(extra: Partial<Lead> = {}): Lead {
 
 function activity(extra: Partial<Activity>): Activity {
   return {
+    occurred_precision: "instant",
     id: "a1",
     kind: "email",
     occurred_at: "2026-08-09T09:00:00Z",
@@ -91,6 +93,23 @@ describe("ladderDates", () => {
       }),
       [],
       ctx,
+    );
+    expect(dates.engaged).toBe('lead.ladder.enteredNow:{"at":"9 Aug"}');
+  });
+
+  // A `day` signal sits at noon on the record's clock, which west of it is
+  // the evening before. The rung keeps the record's date.
+  it("dates the signal on the record's clock, not the reader's", () => {
+    const dates = ladderDates(
+      lead({
+        status_set_by: "system",
+        qualification_evidence: {
+          trigger: "meeting_held",
+          occurred_at: "2026-08-09T05:00:00Z",
+        },
+      }),
+      [],
+      { ...ctx, zone: "America/Los_Angeles", record: "Asia/Ho_Chi_Minh" },
     );
     expect(dates.engaged).toBe('lead.ladder.enteredNow:{"at":"9 Aug"}');
   });
@@ -299,7 +318,7 @@ describe("nextBookedMeeting", () => {
         occurred_at: "2026-08-10T09:00:00Z",
       }),
     ];
-    expect(nextBookedMeeting(rows, ctx.asOf)?.id).toBe("soon");
+    expect(nextBookedMeeting(rows, ctx.asOf, ctx.record)?.id).toBe("soon");
   });
 });
 

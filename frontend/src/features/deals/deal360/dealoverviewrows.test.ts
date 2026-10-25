@@ -18,6 +18,7 @@ const t = (
 
 function task(id: string, over: Partial<Activity> = {}): Activity {
   return {
+    occurred_precision: "instant",
     id,
     kind: "task",
     occurred_at: "2026-10-01T09:00:00Z",

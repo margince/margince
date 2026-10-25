@@ -37,6 +37,7 @@ const TASK = {
   kind: "task",
   subject: "Send demo email",
   occurred_at: "2026-08-10T09:00:00Z",
+  occurred_precision: "instant",
   due_at: "2026-08-11T09:00:00Z",
   is_done: false,
   version: 4,

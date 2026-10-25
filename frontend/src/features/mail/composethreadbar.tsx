@@ -19,9 +19,16 @@ import type { NameOf } from "../../design-system/participants";
 import { Popover } from "../../design-system/popover";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { TimelineRow } from "../../design-system/timeline";
-import { formatDate, formatDateTime, formatNumber } from "../../format/format";
+import {
+  type ActivityZones,
+  activityDay,
+  formatActivityWhen,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
+import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useActivityZones } from "../../lib/recordzone";
 import type { ComposeThread } from "./composeanchor";
 import type { Conversation, ThreadRead } from "./composethread";
 import "./composethread.css";
@@ -32,10 +39,11 @@ type EmailSummary = components["schemas"]["EmailSummary"];
 // A time the read did not carry is left out, rather than drawn as an error.
 function whenOf(
   iso: string | null | undefined,
-  locale: Parameters<typeof formatDateTime>[1],
-  zone: string,
+  precision: OccurredPrecision,
+  locale: Parameters<typeof formatActivityWhen>[2],
+  zones: ActivityZones,
 ): string | undefined {
-  return iso ? formatDateTime(iso, locale, zone) : undefined;
+  return iso ? formatActivityWhen(iso, precision, locale, zones) : undefined;
 }
 
 /** One thread on offer, and whether the draft answers it. */
@@ -47,6 +55,7 @@ type Card = Readonly<{
   /** A non-mail anchor has no summary, and is drawn as its timeline row. */
   activity?: Activity;
   atIso: string;
+  atPrecision: OccurredPrecision;
   selected: boolean;
 }>;
 
@@ -66,6 +75,7 @@ export function threadCards(
     counterparts: conversation.counterparts,
     summary: conversation.summary,
     atIso: conversation.atIso,
+    atPrecision: conversation.atPrecision,
     selected:
       answering !== undefined && conversation.memberIds.includes(answering),
   }));
@@ -86,6 +96,7 @@ export function threadCards(
       summary: anchor.email_summary ?? undefined,
       activity: anchor,
       atIso: anchor.occurred_at ?? "",
+      atPrecision: anchor.occurred_precision,
       selected: true,
     },
     ...cards,
@@ -326,6 +337,7 @@ function ThreadRow({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
+  const zones = useActivityZones(zone);
   const others =
     card.selected && !thread.pending && !thread.failed
       ? thread.messages.filter((message) => message.id !== answering)
@@ -335,7 +347,7 @@ function ThreadRow({
       {card.summary ? (
         <EmailEntry
           summary={card.summary}
-          timestamp={whenOf(card.atIso, locale, zone)}
+          timestamp={whenOf(card.atIso, card.atPrecision, locale, zones)}
           onSelect={() => onChoose(card.anchorId)}
           selected={card.selected}
           disabled={disabled}
@@ -365,7 +377,8 @@ function ThreadRow({
           <span className="t-caption">
             {[
               card.counterparts,
-              card.atIso && formatDate(card.atIso, locale, zone),
+              card.atIso &&
+                activityDay(card.atIso, card.atPrecision, locale, zones),
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -408,6 +421,7 @@ function ThreadMessage({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
+  const zones = useActivityZones(zone);
   const summary = message.email_summary;
   if (!summary) {
     return activityTimeline([message], viewerUserId, undefined, {
@@ -416,7 +430,9 @@ function ThreadMessage({
       locale,
     }).map((entry) => <TimelineRow key={entry.id} entry={entry} zone={zone} />);
   }
-  const timestamp = whenOf(message.occurred_at, locale, zone) ?? "";
+  const timestamp =
+    whenOf(message.occurred_at, message.occurred_precision, locale, zones) ??
+    "";
   const held =
     message.content_state === "withheld" ||
     summary.display_status === "withheld";

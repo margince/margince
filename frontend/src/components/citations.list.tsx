@@ -1,7 +1,8 @@
 import { Badge, Button } from "../design-system/atoms";
 import { EmailReference } from "../design-system/emailreference";
 import { Popover } from "../design-system/popover";
-import { formatDate, formatDateTime } from "../format/format";
+import { formatActivityWhen } from "../format/activitywhen";
+import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useRecordZone } from "../lib/recordzone";
@@ -94,7 +95,12 @@ export function Citations({
           <EmailReference
             key={`activity:${cited.entity_id}`}
             subject={summary.subject}
-            occurredAt={formatDateTime(summary.occurred_at, locale, recordZone)}
+            occurredAt={formatActivityWhen(
+              summary.occurred_at,
+              summary.occurred_precision,
+              locale,
+              { record: recordZone, viewer: recordZone },
+            )}
             withheld={withheld}
             onOpen={
               onOpenEmail ? () => onOpenEmail(summary.activity_id) : undefined

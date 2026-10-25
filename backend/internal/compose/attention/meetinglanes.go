@@ -12,6 +12,7 @@ import (
 	"context"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -43,6 +44,8 @@ type MeetingAwaitingOutcome struct {
 	// Not a due moment: a meeting that happened cannot be late, and an overdue
 	// mark on it would contradict the row's whole point.
 	StartedAt time.Time
+	// Precision says StartedAt is a date's anchor when it is day.
+	Precision crmcontracts.OccurredPrecision
 
 	// What the answer is pinned to: two readers answering one meeting would
 	// otherwise both succeed, the later winning silently. A pointer because a
@@ -65,6 +68,8 @@ type Meeting struct {
 	ID       ids.UUID
 	Subject  string
 	StartsAt time.Time
+	// Precision says StartsAt is a date's anchor when it is day.
+	Precision crmcontracts.OccurredPrecision
 
 	// Who the meeting is with, and so whose page the brief is read on. The
 	// brief opens as `?prep=<activity>` on a CONTACT's record, so the activity
@@ -86,4 +91,21 @@ type Meeting struct {
 	// when no calendar claims it, and the row then names nobody rather than
 	// guessing.
 	HostUserID ids.UUID
+}
+
+// precisionOf is a row's wire precision: what the lane said, else an instant.
+func precisionOf(p *crmcontracts.OccurredPrecision) crmcontracts.OccurredPrecision {
+	if p == nil || *p == "" {
+		return crmcontracts.OccurredPrecisionOccurredPrecisionInstant
+	}
+	return *p
+}
+
+// dayOnly carries a day precision onto a lane item, and nothing for an
+// instant, which the item's absent field already says.
+func dayOnly(p crmcontracts.OccurredPrecision) *crmcontracts.OccurredPrecision {
+	if p != crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+		return nil
+	}
+	return &p
 }

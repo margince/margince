@@ -8,11 +8,8 @@ import { useRef } from "react";
 import { TaskNextSteps } from "../../components/tasknextsteps";
 import { Button, Card } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
-import {
-  formatDayMonth,
-  formatNumber,
-  formatTimeOfDay,
-} from "../../format/format";
+import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
+import { formatDayMonth, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
@@ -92,9 +89,26 @@ export function Triage({
   // The head's facts come from the helpers the row uses, so the card and the
   // queue agree. A message is dated by its arrival, the rest by its own clock.
   // The reader's own pin is the queue's reason, not the card's.
-  const arrived = lead.email_summary?.occurred_at;
+  const arrived = lead.email_summary;
+  const zones = { record: recordZone, viewer: zone };
   const when = arrived
-    ? `${formatDayMonth(arrived, locale, zone)}, ${formatTimeOfDay(arrived, locale, zone)}`
+    ? [
+        activityDay(
+          arrived.occurred_at,
+          arrived.occurred_precision,
+          locale,
+          zones,
+          formatDayMonth,
+        ),
+        activityTimeOfDay(
+          arrived.occurred_at,
+          arrived.occurred_precision,
+          locale,
+          zones,
+        ),
+      ]
+        .filter(Boolean)
+        .join(", ")
     : whenText(lead, t, locale, zone, recordZone, new Date());
   const label = t(eyebrowKeyFor(lead));
   return (

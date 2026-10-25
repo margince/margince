@@ -78,11 +78,12 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 
 	withheld := activity.ContentState != nil && *activity.ContentState == crmcontracts.ActivityContentStateWithheld
 	out := crmcontracts.EmailPresentation{
-		Id:         activity.Id,
-		Lifecycle:  crmcontracts.EmailPresentationLifecycleDelivered,
-		OccurredAt: activity.OccurredAt,
-		ThreadKey:  activity.ThreadKey,
-		Body:       activity.Body,
+		Id:                activity.Id,
+		Lifecycle:         crmcontracts.EmailPresentationLifecycleDelivered,
+		OccurredAt:        activity.OccurredAt,
+		OccurredPrecision: activity.OccurredPrecision,
+		ThreadKey:         activity.ThreadKey,
+		Body:              activity.Body,
 	}
 	if activity.Version != nil {
 		out.Version = *activity.Version
@@ -177,12 +178,13 @@ func availableSummary(
 	status crmcontracts.EmailAccessStatus,
 ) crmcontracts.EmailSummary {
 	summary := crmcontracts.EmailSummary{
-		ActivityId:      activity.Id,
-		OccurredAt:      activity.OccurredAt,
-		DisplayStatus:   status,
-		AttachmentCount: attachments,
-		Move:            crmcontracts.EmailSummaryMoveNone,
-		Subject:         activity.Subject,
+		ActivityId:        activity.Id,
+		OccurredAt:        activity.OccurredAt,
+		OccurredPrecision: activity.OccurredPrecision,
+		DisplayStatus:     status,
+		AttachmentCount:   attachments,
+		Move:              crmcontracts.EmailSummaryMoveNone,
+		Subject:           activity.Subject,
 	}
 	if activity.Version != nil {
 		summary.Version = *activity.Version
@@ -263,11 +265,12 @@ func readEmailAttachments(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]
 // happened and that it happened, with the words removed.
 func withheldSummary(activity crmcontracts.Activity) crmcontracts.EmailSummary {
 	summary := crmcontracts.EmailSummary{
-		ActivityId:      activity.Id,
-		OccurredAt:      activity.OccurredAt,
-		DisplayStatus:   crmcontracts.EmailAccessStatusWithheld,
-		AttachmentCount: 0,
-		Move:            crmcontracts.EmailSummaryMoveNone,
+		ActivityId:        activity.Id,
+		OccurredAt:        activity.OccurredAt,
+		OccurredPrecision: activity.OccurredPrecision,
+		DisplayStatus:     crmcontracts.EmailAccessStatusWithheld,
+		AttachmentCount:   0,
+		Move:              crmcontracts.EmailSummaryMoveNone,
 	}
 	if activity.Version != nil {
 		summary.Version = *activity.Version

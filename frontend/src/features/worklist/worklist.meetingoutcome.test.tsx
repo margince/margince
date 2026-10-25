@@ -77,6 +77,7 @@ const CAPTURED_MEETING = {
   // 21:00 in Bangkok and 09:00 in New York, noon in neither zone. A save that
   // wrote the zone's noon cannot pass for one that kept the start.
   occurred_at: "2026-01-15T14:00:00Z",
+  occurred_precision: "instant",
   meeting_status: "booked",
   version: 3,
   source: "gcal",
@@ -157,7 +158,9 @@ describe("a meeting that owes an answer", () => {
     expect(
       await screen.findByRole("button", { name: /update/i }),
     ).not.toBeNull();
-    expect(screen.getByRole("button", { name: /^canceled$/i })).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: /^mark as canceled$/i }),
+    ).not.toBeNull();
     // The two statuses that need prose are answers INSIDE the composer, not
     // verbs on the card: a row that still offered them would write one word and
     // close, which is the whole behaviour this replaced.
@@ -172,7 +175,7 @@ describe("a meeting that owes an answer", () => {
     renderUnderAToastRegion();
 
     await user.click(
-      await screen.findByRole("button", { name: /^canceled$/i }),
+      await screen.findByRole("button", { name: /^mark as canceled$/i }),
     );
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     expect(sent).toEqual([{ meeting_status: "canceled" }]);
@@ -265,7 +268,7 @@ describe("a meeting that owes an answer", () => {
     renderUnderAToastRegion();
 
     await user.click(
-      await screen.findByRole("button", { name: /^canceled$/i }),
+      await screen.findByRole("button", { name: /^mark as canceled$/i }),
     );
     // A refused write leaves the row exactly as it was, which renders the same
     // as a click that did nothing.
@@ -353,9 +356,46 @@ describe("the start a meeting outcome saves", () => {
       ).not.toBeNull();
       expect(sent[0]).toMatchObject({
         occurred_at: "2026-01-16T14:00:00.000Z",
+        occurred_precision: "instant",
       });
     },
   );
+
+  it("moves a date-only meeting to its new date alone and keeps it date-only", async () => {
+    const sent: Record<string, unknown>[] = [];
+    // Noon on the 15th in Bangkok, as the server stores a date-only meeting.
+    stubWithMeetingRead(sent, 200, {
+      ...CAPTURED_MEETING,
+      occurred_at: "2026-01-15T05:00:00Z",
+      occurred_precision: "day",
+    });
+    await openAndSave("Asia/Bangkok", picked("Friday, 16 January 2026"));
+
+    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
+    expect(sent[0]).toMatchObject({
+      occurred_at: "2026-01-16T12:00:00Z",
+      occurred_precision: "day",
+    });
+  });
+
+  it("files a date-only meeting moved onto today as today, not as now", async () => {
+    // 05:00 on the 20th in Bangkok, still the 19th in UTC.
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-01-19T22:00:00Z"));
+    const sent: Record<string, unknown>[] = [];
+    stubWithMeetingRead(sent, 200, {
+      ...CAPTURED_MEETING,
+      occurred_at: "2026-01-15T05:00:00Z",
+      occurred_precision: "day",
+    });
+    await openAndSave("Asia/Bangkok", typed("2026-01-20"));
+
+    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
+    expect(sent[0]).toMatchObject({
+      occurred_at: "2026-01-20T12:00:00Z",
+      occurred_precision: "day",
+    });
+  });
 
   it("files a meeting moved onto today at now while its hour is still to come", async () => {
     // 17:00 in Bangkok; the meeting's 21:00 has not come yet.

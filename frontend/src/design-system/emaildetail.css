@@ -30,6 +30,7 @@
 .emaildetail__partyLabel {
   display: inline-block;
   min-width: 5.5rem;
+  margin-inline-end: var(--space-2);
 }
 
 /* A name on an envelope line that is also a way to the record. It keeps the

@@ -33,6 +33,7 @@ import "./worklist.row.css";
 // client.
 
 const UNDECIDED: WorklistItem = {
+  occurred_precision: "instant",
   id: "mckinsey.com",
   source: "domain_question",
   category: "decisions",

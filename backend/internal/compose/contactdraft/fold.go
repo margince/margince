@@ -13,6 +13,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -20,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -33,12 +35,12 @@ func FromView(view crmcontracts.Contact360, req Request) Input {
 		SectionsOmitted: omittedNames(view.SectionsOmitted),
 	}
 	if view.Activities != nil {
-		in.Recent = FoldRecent(view.Activities.Data, req.Envelope.At())
+		in.Recent = FoldRecent(view.Activities.Data, req.Envelope.At(), req.Envelope.Zone())
 	}
 	foldCommercial(&in, view)
 	foldProject(&in, view, req.ProjectID)
 	foldClaims(&in, view, req.Envelope.At())
-	foldMeeting(&in, view, req.Envelope.At())
+	foldMeeting(&in, view, req.Envelope.At(), req.Envelope.Zone())
 	return in
 }
 
@@ -297,14 +299,14 @@ func hoistOverdueOurs(claims []crmcontracts.ConversationClaim, now time.Time) []
 // The alternative was a second copy of the loop in the lead's fold, which is
 // how the bound and the newest-inbound rule would come to disagree between two
 // drafts of the same conversation.
-func FoldRecent(activities []crmcontracts.Activity, now time.Time) []ActIn {
+func FoldRecent(activities []crmcontracts.Activity, now time.Time, zone *time.Location) []ActIn {
 	var out []ActIn
 	readInbound := false
 	for _, turn := range draftcore.Conversation(activities, nil, now, DraftInputActivities) {
 		folded := ActIn{
 			ID:      turn.ID,
 			Kind:    string(turn.Kind),
-			At:      turn.At.UTC().Format(time.RFC3339),
+			At:      occurredday.When(turn.At, turn.DateOnly, zone),
 			Inbound: turn.Direction == string(crmcontracts.ActivityDirectionInbound),
 			Subject: turn.Subject,
 		}
@@ -385,15 +387,16 @@ func (in Input) Booked() bool { return in.Meeting != nil }
 // meeting whose participant list does not include this contact is somebody
 // else's: naming it to them discloses a meeting they were not invited to,
 // which is the privacy line this grounding sits closest to.
-func foldMeeting(in *Input, view crmcontracts.Contact360, now time.Time) {
+func foldMeeting(in *Input, view crmcontracts.Contact360, now time.Time, zone *time.Location) {
 	meeting := view.NextMeeting
-	if meeting == nil || !meeting.StartsAt.After(now) {
+	if meeting == nil || !meetingAhead(*meeting, now, zone) {
 		return
 	}
 	if !attends(meeting, view.Contact.Id) {
 		return
 	}
-	folded := MeetingIn{ActivityID: meeting.ActivityId.String(), StartsAt: meeting.StartsAt.UTC().Format(time.RFC3339)}
+	dateOnly := activitywhen.IsDay(meeting.OccurredPrecision)
+	folded := MeetingIn{ActivityID: meeting.ActivityId.String(), StartsAt: occurredday.When(meeting.StartsAt, dateOnly, zone)}
 	if meeting.Subject != nil {
 		folded.Subject = *meeting.Subject
 	}
@@ -415,4 +418,13 @@ func attends(meeting *crmcontracts.Contact360NextMeeting, contactID openapi_type
 		}
 	}
 	return false
+}
+
+// meetingAhead says the next meeting has not happened yet. A day meeting has
+// no hour, so it stays ahead for its whole date.
+func meetingAhead(meeting crmcontracts.Contact360NextMeeting, now time.Time, zone *time.Location) bool {
+	if activitywhen.IsDay(meeting.OccurredPrecision) {
+		return !occurredday.Ended(meeting.StartsAt, now, zone)
+	}
+	return meeting.StartsAt.After(now)
 }

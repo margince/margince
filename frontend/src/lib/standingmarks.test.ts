@@ -23,6 +23,7 @@ const words = {
   t,
   locale: "en",
   zone: UTC_ZONE,
+  record: UTC_ZONE,
   asOf: "2026-08-13T09:00:00Z",
 } as const;
 

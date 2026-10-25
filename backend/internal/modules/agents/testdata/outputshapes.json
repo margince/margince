@@ -1329,6 +1329,9 @@
                         "type": "string",
                         "format": "date-time"
                       },
+                      "occurred_precision": {
+                        "type": "string"
+                      },
                       "record_id": {
                         "type": "string",
                         "format": "uuid"
@@ -7526,6 +7529,9 @@
                           "occurred_at": {
                             "type": "string",
                             "format": "date-time"
+                          },
+                          "occurred_precision": {
+                            "type": "string"
                           },
                           "record_id": {
                             "type": "string",

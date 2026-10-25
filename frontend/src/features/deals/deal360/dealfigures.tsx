@@ -10,6 +10,10 @@ import {
 import { StatCard } from "../../../design-system/statcard";
 import { StatStrip } from "../../../design-system/statstrip";
 import {
+  activityHasBegun,
+  activityIsAhead,
+} from "../../../format/activitywhen";
+import {
   calendarDaysBetween,
   formatDayMonth,
   formatMoneyCompact,
@@ -147,7 +151,7 @@ function DaysInStageFigure({ inputs, words }: FigureProps) {
 
 function NextStepFigure({ inputs, words }: FigureProps) {
   const { t, locale, zone } = words;
-  const step = nextStepOf(inputs.activities, inputs.asOf);
+  const step = nextStepOf(inputs.activities, inputs.asOf, zone);
   const label = t("deal.standing.figure.next");
   if (!step) {
     return <StatCard label={label} value={t("standing.noneYet")} />;
@@ -188,6 +192,7 @@ export function DealTimeline({
       events={timelineEvents(inputs, words)}
       marks={activityMarks(inputs.activities, {
         ...words,
+        record: words.zone,
         asOf: inputs.asOf,
         onOpen: onOpenHistory,
       })}
@@ -227,7 +232,11 @@ export function timelineEvents(
   const day = (iso: string) => formatDayMonth(iso, locale, zone);
   const titleOf = (row: Activity) => row.subject || t(KIND_LABEL[row.kind]);
   const held = activities
-    .filter((row) => isConversation(row) && Date.parse(row.occurred_at) <= now)
+    .filter(
+      (row) =>
+        isConversation(row) &&
+        activityHasBegun(row.occurred_at, row.occurred_precision, now, zone),
+    )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
     .slice(0, DONE_EVENTS)
     .map(
@@ -245,7 +254,7 @@ export function timelineEvents(
       (row) =>
         row.kind === "meeting" &&
         row.meeting_status === "booked" &&
-        Date.parse(row.occurred_at) > now,
+        activityIsAhead(row.occurred_at, row.occurred_precision, now, zone),
     )
     .map(
       (row): TimelineEvent => ({

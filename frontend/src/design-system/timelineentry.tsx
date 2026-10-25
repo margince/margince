@@ -9,7 +9,13 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { formatDate, formatNumber, formatTimeOfDay } from "../format/format";
+import {
+  type ActivityZones,
+  activityDay,
+  activityTimeOfDay,
+  type OccurredPrecision,
+} from "../format/activitywhen";
+import { formatNumber } from "../format/format";
 import {
   type Locale,
   translatePlural,
@@ -18,6 +24,7 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useActivityZones } from "../lib/recordzone";
 import { Badge } from "./atoms";
 import { moveLabel } from "./emailentry";
 import type { ContactOn } from "./participants";
@@ -58,6 +65,8 @@ export type TimelineEntry = {
   title: string;
   isDone?: boolean;
   atIso: string;
+  // `day` when only the date is known, so the row draws no time.
+  atPrecision: OccurredPrecision;
   provenance: Provenance;
   commitmentReviewCount?: number;
   // A right-aligned per-row action slot (Reply / Relink). Absent on rows with
@@ -271,24 +280,47 @@ export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
 
 /**
  * TimelineWhen is the row's place on the axis: the day, and under it the time
- * of day. The day alone told a reader two calls happened on the 26th, and not
- * which came first. Nor did it say whether the reply landed an hour after the
+ * of day when one is known. The day alone told a reader two calls happened on
+ * the 26th, and not which came first. Nor did it say whether the reply landed an hour after the
  * ask or a working day later. That is the one thing a chronology is opened to
  * settle. Tabular digits keep the column straight whatever each date's digits
  * are.
  */
 export function TimelineWhen({
-  atIso,
+  entry,
   zone,
-}: Readonly<{ atIso: string; zone: string }>) {
+}: Readonly<{ entry: TimelineMoment; zone: string }>) {
   const { locale } = useLocale();
+  const zones = useActivityZones(zone);
+  const time = entryTimeOfDay(entry, locale, zones);
   return (
     <span className="tl-when t-num">
-      {formatDate(atIso, locale, zone)}
-      <span className="tl-when-time">
-        {formatTimeOfDay(atIso, locale, zone)}
-      </span>
+      {entryDay(entry, locale, zones)}
+      {time && <span className="tl-when-time">{time}</span>}
     </span>
+  );
+}
+
+type TimelineMoment = Pick<TimelineEntry, "atIso" | "atPrecision">;
+
+/** The date an entry falls on. */
+export function entryDay(
+  entry: TimelineMoment,
+  locale: Locale,
+  zones: ActivityZones,
+): string {
+  return activityDay(entry.atIso, entry.atPrecision, locale, zones);
+}
+
+/** An entry's clock reading, or undefined when only its day is known. */
+export function entryTimeOfDay(
+  entry: TimelineMoment,
+  locale: Locale,
+  zones: ActivityZones,
+): string | undefined {
+  return (
+    activityTimeOfDay(entry.atIso, entry.atPrecision, locale, zones) ??
+    undefined
   );
 }
 

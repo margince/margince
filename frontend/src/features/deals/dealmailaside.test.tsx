@@ -175,7 +175,11 @@ describe("lastMailColumn", () => {
         <LocaleProvider initial="en">
           <Cell
             deal={tableDeal({
-              last_email: { occurred_at: daysAgo(10), direction: "outbound" },
+              last_email: {
+                occurred_at: daysAgo(10),
+                occurred_precision: "instant",
+                direction: "outbound",
+              },
             })}
           />
         </LocaleProvider>

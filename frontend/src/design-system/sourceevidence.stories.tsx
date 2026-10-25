@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 
 import {
   installFetchStub,
@@ -19,6 +20,7 @@ function activity(kind: "email" | "meeting") {
     subject: kind === "email" ? "Fleet renewal" : "Quarterly review",
     body: "",
     occurred_at: "2026-09-01T09:00:00Z",
+    occurred_precision: "instant",
     is_done: true,
     source: "capture",
     captured_by: "connector:gmail",
@@ -98,6 +100,26 @@ export const Transcript: StoryObj = {
         <SourceEvidence activityId={ACTIVITY} onOpenTranscript={() => {}} />
       </StoryProviders>
     );
+  },
+};
+
+/** A meeting logged with its date alone: the caption names the date, no time. */
+export const DateOnlyTranscript: StoryObj = {
+  render: () => {
+    installFetchStub({
+      [`GET /activities/${ACTIVITY}`]: () =>
+        jsonResponse({ ...activity("meeting"), occurred_precision: "day" }),
+    });
+    return (
+      <StoryProviders>
+        <SourceEvidence activityId={ACTIVITY} onOpenTranscript={() => {}} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const caption = await within(canvasElement).findByText(/Quarterly review/);
+    await expect(caption.textContent).toMatch(/\d{2}\/\d{2}\/\d{4}/);
+    await expect(caption.textContent).not.toMatch(/\d{1,2}:\d{2}/);
   },
 };
 

@@ -2056,7 +2056,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 1386,
+      "tokens": 1381,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -2294,7 +2294,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 672,
+      "tokens": 679,
       "agents": [],
       "required_by_cases": [
         "case1_log_it",
@@ -2324,7 +2324,7 @@
     },
     {
       "name": "update_record",
-      "tokens": 620,
+      "tokens": 641,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company",

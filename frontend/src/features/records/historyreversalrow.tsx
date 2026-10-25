@@ -70,8 +70,12 @@ function SettledFace({
           <li key={change.field} className="entry-field">
             <span>{historyFieldLabel(change.field, t)}</span>
             <span>
-              {historyValue(change.field, change.newValue, values) ??
-                t("history.cleared")}
+              {historyValue(
+                change.field,
+                change.newValue,
+                values,
+                change.newPrecision,
+              ) ?? t("history.cleared")}
             </span>
           </li>
         ))}
@@ -105,6 +109,8 @@ function ResidualFace({
               field={change.field}
               oldValue={change.oldValue}
               newValue={change.newValue}
+              oldPrecision={change.oldPrecision}
+              newPrecision={change.newPrecision}
               values={values}
             />
           </li>

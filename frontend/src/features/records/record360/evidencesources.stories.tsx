@@ -24,6 +24,7 @@ const basis: Cited[] = [
     email_summary: {
       activity_id: "a-1",
       occurred_at: "2026-07-11T14:17:00Z",
+      occurred_precision: "instant",
       version: 1,
       subject: "Re: Pilot slots before the review",
       preview: "Two slots next week would work on our side.",

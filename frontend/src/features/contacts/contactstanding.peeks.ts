@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
 import type { StandingPeek } from "../../design-system/standingdims";
+import { activityHasBegun } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
@@ -94,7 +95,7 @@ function exchangePeek(
       (row) =>
         MESSAGE_KINDS.has(row.kind) &&
         (row.email_summary?.direction ?? row.direction) &&
-        Date.parse(row.occurred_at) <= asOf &&
+        activityHasBegun(row.occurred_at, row.occurred_precision, asOf, zone) &&
         asOf - Date.parse(row.occurred_at) <= NINETY_DAYS_MS,
     )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))

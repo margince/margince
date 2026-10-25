@@ -43,7 +43,7 @@ export function LatestCard({
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
-  const rows = latestExchanges(view);
+  const rows = latestExchanges(view, useRecordZone());
   const hidden = view.sections_omitted.includes("activities");
   return (
     <OverviewCard

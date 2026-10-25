@@ -5,6 +5,7 @@ import {
   commercialPreviewDisplay,
   LIFECYCLE_CONFLICT_LABELS,
 } from "../../lib/approvalpreview";
+import { stagedDayFormatter } from "./approvaldisplay";
 
 function sourceFunction(path: string, name: string): string {
   const source = readFileSync(
@@ -115,4 +116,27 @@ it("keeps source date and scope visible while an active agreement blocks termina
     ]),
   );
   expect(rows.some((row) => row.field === "owner_id")).toBe(false);
+});
+
+// A `day` activity sits at noon on the record's clock. West of that zone the
+// instant is the evening before, so the source date must not follow the reader.
+it("dates the lifecycle source on the record's clock", () => {
+  const rows = commercialPreviewDisplay(
+    {
+      version: 1,
+      changes: [],
+      reviewer_reason: "record_authority",
+      state: "ready",
+      lifecycle_evidence: {
+        scope: "company",
+        occurred_at: "2026-07-31T05:00:00Z",
+      },
+    },
+    (key) => key,
+    "en",
+    stagedDayFormatter("en", "Asia/Ho_Chi_Minh"),
+  );
+  const source = rows.find((row) => row.field === "source_date");
+  expect(source?.value).toContain("31");
+  expect(source?.value).not.toContain("30");
 });

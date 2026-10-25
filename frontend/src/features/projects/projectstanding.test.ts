@@ -260,6 +260,7 @@ describe("the figures and the axis", () => {
       kind: "note" as const,
       subject,
       occurred_at: at,
+      occurred_precision: "instant" as const,
       is_done: false,
       source: "manual",
       captured_by: "human:u-1",

@@ -3,6 +3,7 @@ import type {
   TimelineEvent,
   TimelineGap,
 } from "../../design-system/standingtimeline";
+import { activityIsAhead } from "../../format/activitywhen";
 import { formatMoneyCompact, formatNumber } from "../../format/format";
 import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
@@ -61,7 +62,12 @@ export function companyTimeline(
         row.kind !== "task" &&
         row.id !== last?.activity_id &&
         !DID_NOT_HAPPEN.has(row.meeting_status ?? "") &&
-        Date.parse(row.occurred_at) <= asOf,
+        !activityIsAhead(
+          row.occurred_at,
+          row.occurred_precision,
+          asOf,
+          words.zone,
+        ),
     )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
     .slice(0, PAST_EVENTS);
@@ -174,7 +180,7 @@ function owedAhead(
       });
     }
   }
-  const meeting = upcomingMeeting(view);
+  const meeting = upcomingMeeting(view, words.zone);
   if (meeting) {
     events.push({
       key: `meeting-${meeting.activity_id}`,

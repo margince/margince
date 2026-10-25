@@ -529,6 +529,20 @@ export const wholeWeek: WeeklyReview = {
 export type Worklist = components["schemas"]["Worklist"];
 type Readings = components["schemas"]["WorklistReadings"];
 
+/** The next booked meeting a day names, with its start time known. */
+export function nextMeeting(
+  id: string,
+  startsAt: string,
+  subject?: string,
+): NonNullable<Worklist["next_meeting"]> {
+  return {
+    activity_id: id,
+    starts_at: startsAt,
+    occurred_precision: "instant",
+    subject,
+  };
+}
+
 /**
  * One meeting row, prepared or not, as the queue would carry it.
  *
@@ -543,6 +557,7 @@ export function meetingRow(
   startsAt = "2026-09-03T09:30:00Z",
 ): WorklistItem {
   return {
+    occurred_precision: "instant",
     id,
     source: "meeting",
     kind: prepared ? "prepared" : "unprepared",
@@ -564,6 +579,7 @@ export function meetingRow(
  */
 export function leadRow(id: string, due?: string): WorklistItem {
   return {
+    occurred_precision: "instant",
     id,
     source: "task",
     level: due === undefined ? 1 : 2,
@@ -596,6 +612,7 @@ type WorklistItem = components["schemas"]["WorklistItem"];
  */
 export function overnightRow(id: string, dealId: string): WorklistItem {
   return {
+    occurred_precision: "instant",
     id,
     source: "brief_item",
     level: 3,
@@ -618,6 +635,7 @@ export function legacyStalledRow(): WorklistItem {
 /** One customer waiting on an answer — the row Do next leads with. */
 export function waitingRow(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "w1",
     source: "customer_waiting",
     level: 1,
@@ -636,6 +654,7 @@ export function waitingRow(): WorklistItem {
  */
 export function waitingEmailRow(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "waiting-sonya",
     source: "customer_waiting",
     category: "customer_waiting",
@@ -663,6 +682,7 @@ export function waitingEmailRow(): WorklistItem {
       preview:
         "Hey Josh — let's meet next Tues instead of Monday. You're going to be talking to the team about the rollout?",
       occurred_at: "2026-09-03T16:46:00Z",
+      occurred_precision: "instant",
       direction: "inbound",
       counterparty: "Sonya Beck",
       attachment_count: 0,
@@ -766,6 +786,7 @@ export function boundedMeetings(
  */
 export function decisionRow(id: string, blocking: boolean): WorklistItem {
   return {
+    occurred_precision: "instant",
     id,
     source: "approval",
     // `kind` is what the server actually decides on: blocksCustomerWork reads
@@ -801,6 +822,7 @@ export function boundedDecisions(
 
 export function taskRow(id: string, title: string): WorklistItem {
   return {
+    occurred_precision: "instant",
     id,
     source: "task",
     level: 2,
@@ -814,6 +836,7 @@ export function taskRow(id: string, title: string): WorklistItem {
 
 export function failedApprovalRow(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "approved-stage-change",
     source: "failed_approval",
     category: "tasks",

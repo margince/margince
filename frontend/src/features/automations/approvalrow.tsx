@@ -18,7 +18,6 @@ import { provenanceOf } from "../../design-system/provenanceof";
 import { useToast } from "../../design-system/toast";
 import { AutonomyDot } from "../../design-system/trust";
 import { formatCountdown, useNow } from "../../format/now";
-import { viewerZone } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { editedCommercialPreview } from "../../lib/approvalpreview";
@@ -34,6 +33,7 @@ import {
   ProblemError,
   unwrap,
 } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useSendPermission } from "../../lib/usesendpermission";
@@ -293,12 +293,13 @@ export function ApprovalRow({
   const change = approval.proposed_change ?? {};
   const linkedIn = useLinkedInChoice(approval);
   const approvalNames = useApprovalNames([approval]);
+  const recordZone = useRecordZone();
   const strings = editableStrings(approval.kind, change);
   const display = resolveDisplay(
     approval.kind,
     change,
     t,
-    stagedDayFormatter(locale, viewerZone()),
+    stagedDayFormatter(locale, recordZone),
     approvalNames,
     approval.requested_decider_id,
     approval.assignee_inactive,

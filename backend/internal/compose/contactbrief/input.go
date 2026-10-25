@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -254,7 +255,7 @@ type ActIn struct {
 // FromView folds the assembled 360 into the brief's input. Nothing re-queries:
 // the reader's scope is already spent, and asking again would be a second set
 // of gates that could disagree with the first.
-func FromView(view crmcontracts.Contact360) Input {
+func FromView(view crmcontracts.Contact360, zone *time.Location) Input {
 	in := Input{
 		ID:              view.Contact.Id.String(),
 		Name:            view.Contact.FullName,
@@ -273,7 +274,7 @@ func FromView(view crmcontracts.Contact360) Input {
 	foldMoment(&in, view)
 	foldChanges(&in, view)
 	foldClaims(&in, view)
-	foldRecent(&in, view)
+	foldRecent(&in, view, zone)
 	return in
 }
 
@@ -387,7 +388,7 @@ func foldMoment(in *Input, view crmcontracts.Contact360) {
 	in.Moment = &folded
 }
 
-func foldRecent(in *Input, view crmcontracts.Contact360) {
+func foldRecent(in *Input, view crmcontracts.Contact360, zone *time.Location) {
 	if view.Activities == nil {
 		return
 	}
@@ -398,7 +399,7 @@ func foldRecent(in *Input, view crmcontracts.Contact360) {
 		folded := ActIn{
 			ID:       activity.Id.String(),
 			Kind:     string(activity.Kind),
-			At:       stampAt(activity.OccurredAt),
+			At:       activitywhen.Text(activity, zone),
 			Withheld: withheldContent(activity),
 		}
 		if activity.Subject != nil {

@@ -14,11 +14,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -30,7 +32,9 @@ type activityPlan struct {
 
 // storedActivity is the part of the stored activity a plan decides on.
 type storedActivity struct {
-	Kind string `json:"kind"`
+	Kind              string    `json:"kind"`
+	OccurredAt        time.Time `json:"occurred_at"`
+	OccurredPrecision string    `json:"occurred_precision"`
 }
 
 // planActivityUpdate reads the stored activity and decides what the row
@@ -52,11 +56,17 @@ func (w *csvWriters) planActivityUpdate(
 			delete(changed, target)
 		}
 	}
-	plan := activityPlan{patch: activityUpdateFrom(changed, typed), changed: len(changed)}
 	var stored storedActivity
 	if err := json.Unmarshal(current, &stored); err != nil {
-		return plan, migration.Reason{}, fmt.Errorf("import: reading the stored activity: %w", err)
+		return activityPlan{}, migration.Reason{}, fmt.Errorf("import: reading the stored activity: %w", err)
 	}
+	if text, given := fields[activityTargetOccurredAt]; given {
+		delete(changed, activityTargetOccurredAt)
+		if !sameOccurrence(stored, typed, w.zone) {
+			changed[activityTargetOccurredAt] = text
+		}
+	}
+	plan := activityPlan{patch: activityUpdateFrom(changed, typed), changed: len(changed)}
 	// The row's own type cell may be absent, so the kind the fields are held
 	// against is the stored one: a patch cannot change it.
 	err = activities.CheckKindFields(stored.Kind, plan.patch.DurationSeconds, plan.patch.MeetingStatus, "")
@@ -111,4 +121,18 @@ func (w *csvWriters) predictActivityUpdate(
 		return predictUnwritable, cannotEditWhy(w.object), nil
 	}
 	return predictUpdate, migration.Reason{}, nil
+}
+
+// sameOccurrence says the timestamp cell names what the activity already holds.
+// A day cell is a date, so it matches any stored time on that date in the
+// record zone. A timed cell matches only the same instant, never a day.
+func sameOccurrence(stored storedActivity, typed map[string]any, zone *time.Location) bool {
+	at, ok := typed[activityTargetOccurredAt].(time.Time)
+	if !ok {
+		return true
+	}
+	if precision, _ := typed[activityTypedPrecision].(string); precision == activities.PrecisionDay {
+		return occurredday.Date(stored.OccurredAt, zone).Equal(at)
+	}
+	return stored.OccurredPrecision != activities.PrecisionDay && stored.OccurredAt.Equal(at)
 }

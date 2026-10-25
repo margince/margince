@@ -2,6 +2,7 @@ import type { useInteractionLabel } from "../../components/interactionchrome";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import type { ReadingTone } from "../../design-system/readingtone";
 import { groupChronology } from "../../design-system/timelinegroups";
+import { activityIsAhead } from "../../format/activitywhen";
 import { primaryPhone } from "../../format/contacturi";
 import { formatDayMonth } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
@@ -41,7 +42,8 @@ export function memoryRows(
   recordZone: string,
 ): MemoryRow[] {
   const entries = view.conversation_memory ?? [];
-  const said = entries.length > 0 ? entries.map(fromEntry) : folded(view, t);
+  const said =
+    entries.length > 0 ? entries.map(fromEntry) : folded(view, t, recordZone);
   return said.map((row) => ({
     key: row.key,
     title: row.title || interactionLabel(row.kind, row.provider),
@@ -82,9 +84,18 @@ function fromEntry(entry: Entry): Said {
   };
 }
 
-function folded(view: Contact360, t: Translator): Said[] {
+function folded(view: Contact360, t: Translator, recordZone: string): Said[] {
+  // A meeting still to come belongs on the Next bar, not among what was said.
+  const now = Date.now();
   const rows = (view.activities?.data ?? []).filter(
-    (row) => row.kind !== "task" && !isFuture(row),
+    (row) =>
+      row.kind !== "task" &&
+      !activityIsAhead(
+        row.occurred_at,
+        row.occurred_precision,
+        now,
+        recordZone,
+      ),
   );
   const byId = new Map(rows.map((row) => [row.id, row]));
   return groupChronology(activityTimeline(rows)).flatMap((group) => {
@@ -107,11 +118,6 @@ function folded(view: Contact360, t: Translator): Said[] {
       emailId: row.kind === "email" ? row.id : null,
     };
   });
-}
-
-// A meeting still to come belongs on the Next bar, not among what was said.
-function isFuture(row: Activity): boolean {
-  return new Date(row.occurred_at).getTime() > Date.now();
 }
 
 // Only an answer on this conversation settles it; a contact can owe several.

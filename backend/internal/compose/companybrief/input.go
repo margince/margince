@@ -21,6 +21,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -279,7 +280,7 @@ const briefInputActivities = 12
 // FromView assembles the input from an already-read 360. Nothing here
 // re-queries: the 360 ran under the caller's gates, so anything absent from
 // it is absent because that caller may not see it.
-func FromView(view crmcontracts.Company360) Input {
+func FromView(view crmcontracts.Company360, zone *time.Location) Input {
 	in := Input{ID: view.Company.Id.String(), Name: view.Company.DisplayName}
 	if view.Company.Industry != nil {
 		in.Industry = string(*view.Company.Industry)
@@ -305,7 +306,7 @@ func FromView(view crmcontracts.Company360) Input {
 	foldTasks(view, &in)
 	foldCommitments(view, &in)
 	foldOpenWorkGaps(view, &in)
-	foldRecent(view, &in)
+	foldRecent(view, &in, zone)
 	if view.Scope != nil {
 		in.Project = &ProjectIn{ID: view.Scope.ProjectId.String(), Name: view.Scope.Name}
 		if view.Scope.Key != nil {
@@ -359,7 +360,7 @@ func foldTasks(view crmcontracts.Company360, in *Input) {
 
 // foldRecent takes the newest slice of the timeline. A brief is about what
 // is happening now; a longer window costs prefill and buys older news.
-func foldRecent(view crmcontracts.Company360, in *Input) {
+func foldRecent(view crmcontracts.Company360, in *Input, zone *time.Location) {
 	if view.Activities == nil {
 		return
 	}
@@ -370,7 +371,7 @@ func foldRecent(view crmcontracts.Company360, in *Input) {
 		act := ActIn{
 			ID:   activity.Id.String(),
 			Kind: string(activity.Kind),
-			At:   activity.OccurredAt.UTC().Format(time.RFC3339),
+			At:   activitywhen.Text(activity, zone),
 		}
 		if activity.Subject != nil {
 			act.Subject = *activity.Subject

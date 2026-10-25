@@ -86,6 +86,7 @@ const reachableOnZalo = [
 // kind is a closed union, and a bare object literal widens it to `string`.
 // The timeline's own type then refuses it.
 const chatMessage: components["schemas"]["Activity"] = {
+  occurred_precision: "instant",
   id: "a-chat",
   kind: "message",
   channel_provider: "zalo_oa",
@@ -415,6 +416,7 @@ describe("which meeting the brief drawer asks about", () => {
     kind: "meeting" as const,
     subject: "Depot walkthrough",
     occurred_at: "2026-08-09T08:00:00Z",
+    occurred_precision: "instant" as const,
     is_done: false,
     ...CAPTURED,
   };
@@ -425,6 +427,7 @@ describe("which meeting the brief drawer asks about", () => {
     next_meeting: {
       activity_id: "a-booked",
       starts_at: "2026-08-20T13:00:00Z",
+      occurred_precision: "instant",
       subject: "Contract review",
       participants: [{ contact_id: "p-1", full_name: "Dana Buyer" }],
     },

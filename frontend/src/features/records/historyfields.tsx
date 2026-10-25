@@ -344,6 +344,8 @@ export function changeTimeline(
     // what the record did.
     qualifier,
     atIso: change.changed_at,
+    // A field change is stamped by the server, so its time is always known.
+    atPrecision: "instant",
     provenance: provenanceOfEntry(change, viewerUserId),
     // The grounding travels with the row. An agent's change is only checkable
     // through the passport that made it and the evidence it cited, and moving

@@ -28,6 +28,7 @@ function summary(overrides: Partial<EmailSummary> = {}): EmailSummary {
     subject: "Translation fallback decision",
     preview: "Could you confirm which locale wins when the string is missing?",
     occurred_at: "2026-09-03T09:15:00Z",
+    occurred_precision: "instant" as const,
     direction: "inbound",
     counterparty: "Frédéric de Gombert",
     attachment_count: 0,

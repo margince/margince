@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { type ActivityZones, activityDay } from "../../format/activitywhen";
 import { formatDateAbbrev } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import type { Locale } from "../../i18n";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 
@@ -67,8 +67,18 @@ export type CalendarDay =
   | Readonly<{ state: "quiet"; next: NextMeeting }>;
 
 /** The next meeting's day, spelled one way wherever the brief names it. */
-export function nextMeetingDay(next: NextMeeting, locale: Locale): string {
-  return formatDateAbbrev(next.starts_at, locale, viewerZone());
+export function nextMeetingDay(
+  next: NextMeeting,
+  locale: Locale,
+  zones: ActivityZones,
+): string {
+  return activityDay(
+    next.starts_at,
+    next.occurred_precision,
+    locale,
+    zones,
+    formatDateAbbrev,
+  );
 }
 
 export function calendarDay(day: Worklist): CalendarDay {

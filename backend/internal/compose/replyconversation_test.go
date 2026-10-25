@@ -44,7 +44,7 @@ func TestTheReplyAndContactDraftersReadTheSameTurns(t *testing.T) {
 	}
 	rows := []crmcontracts.Activity{mail(1), mail(2)}
 	reply := replyConversationText(draftcore.Conversation(rows, nil, conversationNow, replyContextTurns))
-	for i, recent := range contactdraft.FoldRecent(rows, conversationNow) {
+	for i, recent := range contactdraft.FoldRecent(rows, conversationNow, time.UTC) {
 		if recent.Said == "" || !strings.Contains(reply, recent.Said) {
 			t.Errorf("turn %d: the contact drafter reads %q, which the reply drafter does not", i, recent.Said)
 		}

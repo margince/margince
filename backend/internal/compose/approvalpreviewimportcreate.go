@@ -5,8 +5,10 @@ package compose
 
 import (
 	"context"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -69,7 +71,7 @@ func (r approvalPreviewReader) importActivityDetails(ctx, execCtx context.Contex
 		in.Author.AuthorID = owner
 	}
 	fields := map[string]any{
-		previewFieldKind: in.Kind, activityTargetSubject: in.Subject, activityTargetBody: in.Body, activityTargetOccurredAt: in.OccurredAt,
+		previewFieldKind: in.Kind, activityTargetSubject: in.Subject, activityTargetBody: in.Body, activityTargetOccurredAt: previewOccurredAt(in),
 		"direction": in.Direction, "duration_seconds": in.DurationSeconds, activityTargetMeetingStatus: in.MeetingStatus,
 		fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
 		previewFieldSourceAuthorID: in.Author.AuthorID, previewFieldSourceAuthorName: in.Author.AuthorName,
@@ -113,4 +115,16 @@ func (r approvalPreviewReader) importDealDetails(ctx context.Context, writer *cs
 		effects = append(effects, "import_close_deal")
 	}
 	return details, effects, nil
+}
+
+// previewOccurredAt is the activity's time as the preview shows it. A day
+// entry shows its date, so the reviewer never reads the anchor as a time.
+func previewOccurredAt(in activities.LogActivityInput) string {
+	switch {
+	case in.OccurredAt == nil:
+		return ""
+	case in.OccurredPrecision == activities.PrecisionDay:
+		return in.OccurredAt.Format(time.DateOnly)
+	}
+	return in.OccurredAt.Format(time.RFC3339Nano)
 }

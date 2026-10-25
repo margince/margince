@@ -63,3 +63,25 @@ func TestAnUneditedTimestampIsNotAChangeWhateverZoneTheStoreAnswersIn(t *testing
 		t.Fatalf("changed = %v, %v; want none: the stored instant is the cell's instant", changed, err)
 	}
 }
+
+// A day cell moves a stored activity to a day, because the store reads a new
+// time sent alone as an instant. A timed cell says nothing, which is that instant.
+func TestADayCellCarriesItsPrecisionToTheCreateAndTheUpdate(t *testing.T) {
+	for cell, want := range map[string]string{"2025-03-09": activities.PrecisionDay, "2025-03-09T10:00:00Z": ""} {
+		fields := map[string]string{activityTargetOccurredAt: cell}
+		typed, problem := checkActivityCells(fields, nil, cellClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), zone: time.UTC})
+		if problem != nil {
+			t.Fatalf("%s: %+v", cell, problem)
+		}
+		if got := activityCreateFrom(fields, typed, importSourceSystem(""), "src").OccurredPrecision; got != want {
+			t.Errorf("%s creates as %q, want %q", cell, got, want)
+		}
+		got := ""
+		if p := activityUpdateFrom(fields, typed).OccurredPrecision; p != nil {
+			got = *p
+		}
+		if got != want {
+			t.Errorf("%s updates as %q, want %q", cell, got, want)
+		}
+	}
+}

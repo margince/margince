@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
-import { calendarDay, dueInstant, middayInstant } from "../format/calendarday";
+import { dayOccurredAt, type OccurredPrecision } from "../format/activitywhen";
+import { calendarDay, dueInstant } from "../format/calendarday";
 import type { EntityKind } from "./entity";
 
 // One drafted entry and the wire body it becomes: the shape the composer holds
@@ -81,23 +82,20 @@ export const NO_ATTENDEES: MeetingAttendees = {
 // a 422 with no field to correct.
 export const KINDS_WITH_A_CONTACT = new Set(["meeting", "call"]);
 
-// The instant a logged activity carries. The picked day left on today — or, for
-// a note, pushed into the future, which nothing can have occurred in — means the
-// actual moment of logging, so entries logged in sequence keep their timeline
-// order. A backdated day becomes that day's noon in the record zone. Either way the
-// entry files under the day the writer picked, because both branches and the
-// timeline's day headings read the same clock. A task's picked day is its DUE
-// date instead — the task itself occurred now.
-export function occurredInstant(
+// The time a logged activity carries. A day left on today, or a note's future
+// day, means the moment of logging, so entries keep their timeline order. A
+// backdated day is sent as a `day`, since nobody said at what time. Today is the
+// record zone's. A task's picked day is its due date; the task occurred now.
+export function occurredFields(
   input: ActivityDraft,
   recordZone: string,
-): string {
+): { occurred_at: string; occurred_precision: OccurredPrecision } {
   const now = new Date();
   const today = calendarDay(now, recordZone);
   if (input.kind === "task" || input.day === "" || input.day >= today) {
-    return now.toISOString();
+    return { occurred_at: now.toISOString(), occurred_precision: "instant" };
   }
-  return middayInstant(input.day, recordZone);
+  return { occurred_at: dayOccurredAt(input.day), occurred_precision: "day" };
 }
 
 // The body as it goes on the wire, for every form that writes one. Empty is
@@ -128,7 +126,7 @@ export function activityRequestBody(
   const isTranscript = input.kind === "meeting" && input.asTranscript;
   return {
     kind: input.kind,
-    occurred_at: occurredInstant(input, recordZone),
+    ...occurredFields(input, recordZone),
     ...(input.kind === "task"
       ? {
           ...taskRequestFields(input, recordZone),

@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import type { PeekContent } from "../../design-system/peek";
 import type { ReadingTone } from "../../design-system/readingtone";
 import type { StandingDim } from "../../design-system/standingdims";
+import { activityDay, activityIsAhead } from "../../format/activitywhen";
 import {
   formatDayMonth,
   formatDuration,
@@ -34,6 +35,8 @@ export type ReadingContext = Readonly<{
   t: Translator;
   locale: Locale;
   zone: string;
+  // The record zone, which a date-only activity is read in.
+  record: string;
   // The instant the page read the lead at.
   asOf: string;
 }>;
@@ -72,33 +75,37 @@ export function ladderDates(
   const top = reached < 0 ? LADDER.length - 1 : reached;
   const dates: Partial<Record<LadderOpenStep, string>> = {};
   LADDER.slice(0, top + 1).forEach((step) => {
-    const at = enteredAt(lead, step, changes);
-    if (!at) {
+    const entered = enteredAt(lead, step, changes, ctx);
+    if (!entered) {
       return;
     }
-    const day = formatDayMonth(at, ctx.locale, ctx.zone);
+    const day = formatDayMonth(entered.at, ctx.locale, entered.zone);
     dates[step] =
       step === lead.status ? ctx.t("lead.ladder.enteredNow", { at: day }) : day;
   });
   return dates;
 }
 
+// A rung's date, and the zone it is read in. A captured signal is an activity,
+// and an activity's day belongs to the record's clock.
 function enteredAt(
   lead: Lead,
   step: LadderOpenStep,
   changes: readonly StatusChange[],
-): string | undefined {
+  { zone, record }: ReadingContext,
+): Readonly<{ at: string; zone: string }> | undefined {
   if (step === "new") {
-    return lead.created_at;
+    return { at: lead.created_at, zone };
   }
   const newest = changes
     .filter((change) => change.new_value === step)
     .sort((a, b) => Date.parse(b.changed_at) - Date.parse(a.changed_at))[0];
   if (newest) {
-    return newest.changed_at;
+    return { at: newest.changed_at, zone };
   }
-  return step === "engaged" && lead.status_set_by === "system"
-    ? (lead.qualification_evidence?.occurred_at ?? undefined)
+  const signal = lead.qualification_evidence?.occurred_at;
+  return step === "engaged" && lead.status_set_by === "system" && signal
+    ? { at: signal, zone: record }
     : undefined;
 }
 
@@ -227,7 +234,7 @@ export function leadFigures(
   return [
     firstResponseFigure(lead, ctx),
     lastTouchFigure(lastTouchAt(lead, activities, ctx.asOf, wholeHistory), ctx),
-    meetingFigure(nextBookedMeeting(activities, ctx.asOf), ctx),
+    meetingFigure(nextBookedMeeting(activities, ctx.asOf, ctx.record), ctx),
     {
       key: "company",
       label: t("lead.readings.company"),
@@ -320,7 +327,7 @@ function meetingFigure(
   meeting: Activity | undefined,
   ctx: ReadingContext,
 ): LeadFigure {
-  const { t, locale, zone } = ctx;
+  const { t, locale, zone, record } = ctx;
   const label = t("lead.figure.nextMeeting");
   if (!meeting) {
     return { key: "meeting", label, value: t("lead.figure.noneBooked") };
@@ -328,7 +335,13 @@ function meetingFigure(
   return {
     key: "meeting",
     label,
-    value: formatDayMonth(meeting.occurred_at, locale, zone),
+    value: activityDay(
+      meeting.occurred_at,
+      meeting.occurred_precision,
+      locale,
+      { record, viewer: zone },
+      formatDayMonth,
+    ),
     detail: meeting.subject?.trim() || t("lead.figure.booked"),
     tone: "success",
   };
@@ -338,6 +351,7 @@ function meetingFigure(
 export function nextBookedMeeting(
   activities: readonly Activity[],
   asOf: string,
+  record: string,
 ): Activity | undefined {
   const now = Date.parse(asOf);
   return activities
@@ -345,7 +359,7 @@ export function nextBookedMeeting(
       (row) =>
         row.kind === "meeting" &&
         row.meeting_status === "booked" &&
-        Date.parse(row.occurred_at) > now,
+        activityIsAhead(row.occurred_at, row.occurred_precision, now, record),
     )
     .sort((a, b) => Date.parse(a.occurred_at) - Date.parse(b.occurred_at))[0];
 }

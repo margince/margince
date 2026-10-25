@@ -56,6 +56,7 @@ const contact: components["schemas"]["Contact"] = {
 
 function inboundEmail(): Activity {
   return {
+    occurred_precision: "instant",
     id: "a-1",
     kind: "email",
     direction: "inbound",
@@ -117,6 +118,7 @@ const granted: Contact360 = {
   next_meeting: {
     activity_id: "a-2",
     starts_at: daysAgo(-2),
+    occurred_precision: "instant",
     subject: "Fleet retrofit walkthrough",
   },
 };

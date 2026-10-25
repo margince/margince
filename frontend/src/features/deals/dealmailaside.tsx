@@ -25,9 +25,10 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import type { ListColumn } from "../../design-system/listtable";
 import type { BoardDeal } from "../../design-system/pipelineboard";
 import { QueryStates } from "../../design-system/querystates";
-import { formatElapsed } from "../../format/now";
+import { activityAgo } from "../../format/activitywhen";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { boardMail } from "./boarddeal";
 import "./dealmailaside.css";
@@ -76,12 +77,10 @@ export function DealMailAside({
   const { locale } = useLocale();
   const query = useDealMail(dealId);
   const now = useNow(60_000);
+  const record = useRecordZone();
   const when = (mail: Activity) => {
-    const ago = formatElapsed(
-      now - new Date(mail.occurred_at).getTime(),
-      t,
-      locale,
-    );
+    const moment = { at: mail.occurred_at, precision: mail.occurred_precision };
+    const ago = activityAgo(moment, now, t, locale, record);
     if (mail.direction === "outbound") {
       return t("deal.mail.sent", { ago });
     }

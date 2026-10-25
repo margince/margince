@@ -225,6 +225,7 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 			// The sink adds a mask of the subject to this.
 			CredentialsMasked: m.masked,
 			OccurredAt:        m.occurredAt,
+			DateOnly:          m.allDay,
 			DurationSeconds:   m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
 			Direction: "",
@@ -293,7 +294,8 @@ func buildBody(ev Event, attendeeEmails []string) (body string, masked bool) {
 	return textcut.BytesMarked(maskedBody, MaxBodyLen, "…"), maskedBody != body
 }
 
-// AllDayStart anchors an all-day date (YYYY-MM-DD) at noon UTC.
+// AllDayStart anchors an all-day date (YYYY-MM-DD) at noon UTC. The sink stores
+// that date at noon in the record zone; this instant carries the date there.
 //
 // An all-day date is calendar-local with no timezone; reading it as midnight
 // UTC lands it on the PREVIOUS day for any zone west of UTC. Noon keeps the

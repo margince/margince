@@ -44,6 +44,8 @@ type AwaitedReply struct {
 	DealID     ids.UUID
 	// Recipients is who a meeting follow-up goes to, ContactID first.
 	Recipients []ids.UUID
+	// Precision says a meeting's SentAt is a date's anchor when it is day.
+	Precision crmcontracts.OccurredPrecision
 	// Present when the reader may read the message, which is what the
 	// composer drafts the follow-up from.
 	EmailSummary *crmcontracts.EmailSummary
@@ -213,6 +215,7 @@ func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time) (ranked, bool) {
 	}
 	held := met.SentAt
 	row.OccurredAt = &held
+	row.OccurredPrecision = precisionOf(&met.Precision)
 	return ranked{
 		item: row, waitingDays: days, waitingRank: orderingAge(days), occurredAt: held,
 		ownerRef: ownedByWhoeverIsReading(), contact: met.ContactID,

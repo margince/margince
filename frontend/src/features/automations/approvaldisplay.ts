@@ -485,10 +485,11 @@ const supersededBy = new Map<string, string>([
  */
 export function stagedDayFormatter(
   locale: Locale,
-  zone: string,
+  // The record zone: a staged day and the cited activity's day are the record's.
+  record: string,
 ): (value: string) => string {
   return (value) => {
-    const day = formatDate(value, locale, zone);
+    const day = formatDate(value, locale, record);
     return day.includes("Invalid") ? value : day;
   };
 }

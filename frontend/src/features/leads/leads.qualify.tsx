@@ -15,11 +15,11 @@ import { Select } from "../../design-system/select";
 import { formatDate } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import { toMinorUnits } from "../../format/minorunits";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { leadPromotePreviewKey, leadWriteKeys } from "../../lib/leadkeys";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import "./leads.css";
 
@@ -141,7 +141,8 @@ export function QualifyDialog({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  // The signal is an activity, so its day is the record's.
+  const zone = useRecordZone();
   const queryClient = useQueryClient();
   const preview = usePromotePreview(lead.id, open);
   const pipelines = usePipelines(open);

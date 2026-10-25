@@ -9,6 +9,7 @@ import type { WorklistItem } from "./worklist.queries";
 
 const t: Translator = (key, params) => translate("en", key, params);
 const base: WorklistItem = {
+  occurred_precision: "instant",
   id: "row",
   source: "lead_response",
   category: "leads",

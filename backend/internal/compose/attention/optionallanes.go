@@ -127,7 +127,7 @@ func (s *Service) optionalLanes(
 		{
 			name: "meetings", bound: s.meetings != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				booked, err := s.meetings.Today(ctx, asOf, until, plannedCap, s.taskScope, s.taskOwner)
+				booked, err := s.meetingsAhead(ctx, asOf, until)
 				return renderEach(booked, meetingItem), err
 			},
 			into: &out.Meetings, count: &out.Counts.Meetings,
@@ -145,11 +145,7 @@ func (s *Service) optionalLanes(
 				// nobody has closed off does not. Opening this window at the
 				// day's start made an unanswered meeting disappear overnight
 				// with its status still unset and nothing left to raise it.
-				began, err := s.unansweredSince(ctx, asOf)
-				if err != nil {
-					return nil, err
-				}
-				over, err := s.meetingsAwaitingOutcome.Since(ctx, began, asOf, plannedCap, s.taskScope, s.taskOwner)
+				over, err := s.meetingsOwingAnOutcome(ctx, asOf)
 				return renderEach(over, meetingAwaitingOutcomeItem), err
 			},
 			into: &out.MeetingsUnreported, count: &out.Counts.MeetingsUnreported,

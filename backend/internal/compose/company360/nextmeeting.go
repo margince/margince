@@ -34,6 +34,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -44,18 +45,21 @@ import (
 // happens. Ordering by anything else would put a long-booked meeting behind one
 // entered this morning for next month.
 //
+// A day meeting has no start hour, so it is next for its whole date in zone.
+//
 // One query, not two. The 360 has a fixed query budget
 // (TestCompany360CostDoesNotGrowWithTheAccount). A section that reads the row
 // and then its children costs more per account than per page. The deal and
 // the attendees come back as columns
 // from activities.MeetingRoomColumns, carrying their own grants and row scope.
 func nextMeetingSection(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, zone *time.Location, opts AssembleOptions,
 ) (*crmcontracts.Company360NextMeeting, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
 	nowPos := arg(now)
+	todayPos := arg(storekit.StartOfDay(now, zone))
 	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
 		return nil, err
@@ -78,7 +82,7 @@ func nextMeetingSection(
 		occurred  *time.Time
 	)
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT a.id, a.occurred_at, coalesce(a.subject, ''), %[3]s
+		SELECT a.id, a.occurred_at, a.occurred_precision, coalesce(a.subject, ''), %[3]s
 		FROM activity a
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 		  -- A canceled meeting is still a future row. Offering it as the next
@@ -86,14 +90,14 @@ func nextMeetingSection(
 		  -- and hides the real next one behind it. A NULL status is a manual
 		  -- booking nobody has tracked a status on, which is a real meeting.
 		  AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
-		  AND a.occurred_at > $%[4]d
+		  AND (a.occurred_at > $%[4]d OR (a.occurred_precision = 'day' AND a.occurred_at >= $%[6]d))
 		  AND %[1]s AND %[2]s%[5]s
 		ORDER BY a.occurred_at, a.id
 		LIMIT 1`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), room, nowPos,
-		opts.projectScope(arg)),
+		opts.projectScope(arg), todayPos),
 		args...,
-	).Scan(&id, &occurred, &meeting.Subject, &dealID, &attendees)
+	).Scan(&id, &occurred, &meeting.OccurredPrecision, &meeting.Subject, &dealID, &attendees)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing scheduled. The caller holds the grant, so this is the account's
 		// own state and the page says so.

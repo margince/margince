@@ -1,10 +1,16 @@
+import {
+  type ActivityZones,
+  activityTimeOfDay,
+  formatActivityWhen,
+  isDeadlineRow,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
 import { middayInstant, sameCalendarDay } from "../../format/calendarday";
 import {
   formatDate,
   formatDateTime,
   formatMoney,
   formatNumber,
-  formatTimeOfDay,
 } from "../../format/format";
 import type { Locale } from "../../i18n";
 import { translatePlural } from "../../i18n";
@@ -238,8 +244,13 @@ export function whenText(
   if (key === null) {
     return null;
   }
-  const zone = item.source === "task" ? record : viewer;
-  return t(key, { when: momentText(item.due_at, locale, zone, now) });
+  const zones = { record, viewer: item.source === "task" ? record : viewer };
+  // A meeting's `due_at` is its start, as exact as the meeting is; any other
+  // row's is a deadline, which always has its time.
+  const when = isDeadlineRow(item)
+    ? momentText(item.due_at, "instant", locale, zones, now)
+    : momentText(item.due_at, item.occurred_precision, locale, zones, now);
+  return t(key, { when });
 }
 
 // Which sentence the moment goes in, or null for a row whose `due_at` is not a
@@ -267,14 +278,16 @@ function whenKeyFor(
 }
 
 // The moment itself: the time alone when it falls today, the date and time
-// otherwise.
+// otherwise, and the date alone when no time is known.
 function momentText(
   dueAt: string,
+  precision: OccurredPrecision,
   locale: Locale,
-  zone: string,
+  zones: ActivityZones,
   now: Date,
 ): string {
-  return sameCalendarDay(new Date(dueAt), now, zone)
-    ? formatTimeOfDay(dueAt, locale, zone)
-    : formatDateTime(dueAt, locale, zone);
+  const clock = sameCalendarDay(new Date(dueAt), now, zones.viewer)
+    ? activityTimeOfDay(dueAt, precision, locale, zones)
+    : null;
+  return clock ?? formatActivityWhen(dueAt, precision, locale, zones);
 }

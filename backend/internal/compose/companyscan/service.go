@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/companybrief"
@@ -85,6 +86,14 @@ type Service struct {
 	// reader's own grants, so it is attached to the merged list on the way out
 	// and never to the rows that get settled.
 	emailRows briefevidence.Reader
+	// zone dates a day entry for the model (WithRecordZone).
+	zone activitywhen.Zone
+}
+
+// WithRecordZone binds the record zone a day entry is dated in.
+func (s *Service) WithRecordZone(zone activitywhen.Zone) *Service {
+	s.zone = zone
+	return s
 }
 
 // WithEmailSummaries binds the reader that opens a cited message.
@@ -332,7 +341,11 @@ func (s *Service) assemble(ctx context.Context, companyID ids.CompanyID, languag
 	if err != nil {
 		return Input{}, "", err
 	}
-	in := Input{Account: companybrief.FromView(view).WordedIn(language)}
+	zone, err := activitywhen.Of(ctx, s.zone)
+	if err != nil {
+		return Input{}, "", err
+	}
+	in := Input{Account: companybrief.FromView(view, zone).WordedIn(language)}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		words, err := readWords(ctx, tx, companyID, s.now().UTC())
 		if errors.Is(err, apperrors.ErrPermissionDenied) {

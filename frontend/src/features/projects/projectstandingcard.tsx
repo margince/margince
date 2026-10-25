@@ -111,6 +111,7 @@ export function ProjectStanding({
           events={projectEvents(view, ctx)}
           marks={activityMarks(view.activities?.data ?? [], {
             ...ctx,
+            record: zone,
             asOf: view.as_of,
           })}
         />

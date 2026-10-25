@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -186,7 +187,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		RecipientLastName: textcut.Runes(surname, recipientMaxRunes),
 		Subject:           textcut.Runes(topic, replyActivityMaxRunes),
 		Body:              textcut.Runes(body, replyActivityMaxRunes),
-		OccurredAt:        activity.OccurredAt.UTC().Format(time.RFC3339),
+		OccurredAt:        activitywhen.Text(activity, envelope.Zone()),
 		Intent:            textcut.Runes(steering.Intent, replyActivityMaxRunes),
 		RewriteOf:         textcut.Runes(steering.RewriteOf, replyActivityMaxRunes),
 		Conversation:      replyConversationText(turns),

@@ -37,6 +37,7 @@ const DEAL = "01a05500-0000-7000-8000-0000000000da";
 /** A deal the night picked out, with more to say than one line can hold. */
 function dealRow(over: Partial<WorklistItem> = {}): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "row-1",
     source: "brief_item",
     category: "deals_at_risk",
@@ -220,6 +221,7 @@ export const UpdateAboutAMail: Story = {
   args: {
     ...COMPACT,
     item: {
+      occurred_precision: "instant",
       id: "row-notice",
       source: "notice",
       category: "tasks",

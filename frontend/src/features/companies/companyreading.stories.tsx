@@ -111,12 +111,14 @@ const standing: components["schemas"]["Company360"] = {
   next_meeting: {
     activity_id: "m-walk",
     starts_at: "2026-08-20T10:00:00Z",
+    occurred_precision: "instant",
     subject: "Walkthrough",
     participants: [],
   },
   activities: {
     data: [
       {
+        occurred_precision: "instant",
         id: "a-kickoff",
         kind: "meeting",
         subject: "Kickoff call",
@@ -125,6 +127,7 @@ const standing: components["schemas"]["Company360"] = {
         ...written,
       },
       {
+        occurred_precision: "instant",
         id: "a-visit",
         kind: "note",
         subject: "Site visit",
@@ -133,6 +136,7 @@ const standing: components["schemas"]["Company360"] = {
         ...written,
       },
       {
+        occurred_precision: "instant",
         id: "a-wrote",
         kind: "email",
         direction: "inbound",

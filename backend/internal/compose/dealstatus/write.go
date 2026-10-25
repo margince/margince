@@ -279,9 +279,10 @@ func citedRecord(f facts, id string) (crmcontracts.Activity, bool) {
 func taskAsActivity(t activities.OpenTask) crmcontracts.Activity {
 	subject := t.Subject
 	out := crmcontracts.Activity{
-		Id:      openapi_types.UUID(t.ID),
-		Kind:    crmcontracts.ActivityKindTask,
-		Subject: &subject,
+		Id:                openapi_types.UUID(t.ID),
+		Kind:              crmcontracts.ActivityKindTask,
+		Subject:           &subject,
+		OccurredPrecision: crmcontracts.OccurredPrecisionOccurredPrecisionInstant,
 	}
 	if t.DueAt != nil {
 		out.OccurredAt = *t.DueAt

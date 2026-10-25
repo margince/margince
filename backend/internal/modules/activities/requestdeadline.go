@@ -18,11 +18,24 @@ import (
 // RecordZone is the installation's zone, read inside the caller's transaction.
 type RecordZone func(ctx context.Context, tx pgx.Tx) (*time.Location, error)
 
-// WithRecordZone wires the zone a stated deadline day ends in. Unbound, an
-// automatic reminder stays undated rather than ending the day in a guessed zone.
+// WithRecordZone wires the zone a stated deadline day ends in and a day entry
+// is anchored in. Unbound, an automatic reminder stays undated, and a day entry
+// is refused rather than filed under a date in a guessed zone.
 func (s *Store) WithRecordZone(zone RecordZone) *Store {
 	s.recordZone = zone
 	return s
+}
+
+// WithRecordZone wires the zone this transport's day entries are anchored in.
+func (h Handlers) WithRecordZone(zone RecordZone) Handlers {
+	h.store = h.store.WithRecordZone(zone)
+	return h
+}
+
+// WithRecordZone wires the zone the tool surface's day entries are anchored in.
+func (p *Provider) WithRecordZone(zone RecordZone) *Provider {
+	p.store = p.store.WithRecordZone(zone)
+	return p
 }
 
 // statedRequestDue is the end of the day the request's own words name as its

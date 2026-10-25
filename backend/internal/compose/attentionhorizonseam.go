@@ -73,7 +73,7 @@ func (h attentionMeetingHorizon) NextCustomerMeeting(
 	if err != nil || !found {
 		return crmcontracts.Contact360NextMeeting{}, false, err
 	}
-	meeting := crmcontracts.Contact360NextMeeting{ActivityId: row.Id, StartsAt: row.OccurredAt, Subject: row.Subject}
+	meeting := crmcontracts.Contact360NextMeeting{ActivityId: row.Id, StartsAt: row.OccurredAt, OccurredPrecision: row.OccurredPrecision, Subject: row.Subject}
 	room.Onto(&meeting)
 	return meeting, true, nil
 }

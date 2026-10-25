@@ -14,6 +14,18 @@ const ctx = (overrides: Partial<HistoryValueCtx> = {}): HistoryValueCtx => ({
 });
 
 describe("historyValue", () => {
+  it("names a change of time precision in words, not wire spellings", () => {
+    expect(historyValue("occurred_precision", "day", ctx())).toBe("Date only");
+    expect(historyValue("occurred_precision", "instant", ctx())).toBe(
+      "Date and time",
+    );
+    expect(
+      historyValue("occurred_precision", "day", ctx({ locale: "de" })),
+    ).toBe("Nur Datum");
+    // A spelling the vocabulary does not hold is left as stored.
+    expect(historyValue("occurred_precision", "week", ctx())).toBe("week");
+  });
+
   it("renders a minor-unit amount as money, not as its stored integer", () => {
     const rendered = historyValue("amount_minor", "2500000", ctx());
     expect(rendered).toContain("25,000");
@@ -72,6 +84,16 @@ describe("historyValue", () => {
     expect(
       historyValue("changed_at", "2026-08-26T02:12:07.551698Z", ctx()),
     ).toBe("26/08/2026, 09:12");
+  });
+
+  // A `day` entry is stored at noon in the record zone; its time is not a
+  // clock anybody set, so only the date shows.
+  it("shows a date-only activity time as its date, with no clock", () => {
+    const at = "2026-08-26T05:00:00Z";
+    expect(historyValue("occurred_at", at, ctx(), "day")).toBe("26/08/2026");
+    expect(historyValue("occurred_at", at, ctx(), "instant")).toBe(
+      "26/08/2026, 12:00",
+    );
   });
 
   it("renders a JSON array as its items joined with a comma", () => {

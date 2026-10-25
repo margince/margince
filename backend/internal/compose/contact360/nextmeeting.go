@@ -26,22 +26,29 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // nextMeetingSection reads the soonest booked meeting and who is in it.
 //
 // ONE query, not two. Participants come back as JSON from a lateral sub-select
-// carrying its own row-scope predicate: a section that read the row and then
-// its children is how a composite read starts costing per record.
+// carrying its own row-scope predicate. A section that read the row and then
+// its children would cost per record. A day
+// meeting has no start hour. It is next for its whole date in the record zone.
 func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, opts AssembleOptions, out *crmcontracts.Contact360) error {
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
+	zone, err := recordZone(ctx, tx)
+	if err != nil {
+		return err
+	}
 	linkPos := arg(contactID)
 	nowPos := arg(now)
+	todayPos := arg(storekit.StartOfDay(now, zone))
 	scope, err := activityScope(ctx, arg)
 	if err != nil {
 		return err
@@ -59,16 +66,16 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID i
 	var dealID *ids.UUID
 	var participants []byte
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT a.id, a.occurred_at, a.subject, %s
+		SELECT a.id, a.occurred_at, a.occurred_precision, a.subject, %s
 		FROM activity a
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
-		  AND a.occurred_at > $%d
+		  AND (a.occurred_at > $%d OR (a.occurred_precision = 'day' AND a.occurred_at >= $%d))
 		  AND `+fmt.Sprintf(contactReachesActivity, bind(linkPos))+`
 		  AND (%s)%s
 		ORDER BY a.occurred_at, a.id
-		LIMIT 1`, room, nowPos, scope, projectScope(opts, arg)), args...).
-		Scan(&activityID, &meeting.StartsAt, &subject, &dealID, &participants)
+		LIMIT 1`, room, nowPos, todayPos, scope, projectScope(opts, arg)), args...).
+		Scan(&activityID, &meeting.StartsAt, &meeting.OccurredPrecision, &subject, &dealID, &participants)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing booked. That IS the answer, and the strip renders "None".
 		return nil

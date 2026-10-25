@@ -21,6 +21,7 @@ const pricing: Conversation = {
   subject: "Pricing for Q4",
   counterparts: "Ada Brandt",
   atIso: "2026-08-20T09:00:00Z",
+  atPrecision: "instant",
   count: 2,
   partial: false,
   memberIds: ["a2", "a1"],
@@ -167,6 +168,7 @@ it("offers each thread and the way back as design-system buttons", async () => {
 
 it("puts a reply to a thread outside the offer at the top, marked", () => {
   const cards = threadCards([pricing], "old-1", {
+    occurred_precision: "instant",
     id: "old-1",
     kind: "email",
     subject: "An older thread",
@@ -197,6 +199,7 @@ it("draws a thread whose time the read did not carry", async () => {
             activity_id: "a2",
             subject: "Pricing for Q4",
             occurred_at: "",
+            occurred_precision: "instant",
             display_status: "team",
             attachment_count: 0,
             move: "none",

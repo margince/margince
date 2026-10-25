@@ -78,6 +78,7 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
             t,
             locale,
             zone,
+            record: zone,
             asOf: view.as_of,
             onOpen: openHistory,
           })}

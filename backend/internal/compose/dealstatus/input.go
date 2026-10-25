@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -133,7 +134,7 @@ func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 		if unfinishedTask(a) {
 			continue
 		}
-		in.Timeline = append(in.Timeline, actIn(a, f.now))
+		in.Timeline = append(in.Timeline, actIn(a, f.now, f.loc))
 	}
 	for _, t := range f.openTasks {
 		in.OpenTasks = append(in.OpenTasks, taskIn(t, f.now))
@@ -149,7 +150,7 @@ func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 			if len(in.Timeline) >= maxTimelineRows {
 				in.Timeline = in.Timeline[:maxTimelineRows-1]
 			}
-			in.Timeline = append(in.Timeline, actIn(inbound, f.now))
+			in.Timeline = append(in.Timeline, actIn(inbound, f.now, f.loc))
 		}
 	}
 	return in
@@ -171,10 +172,12 @@ func healthIn(h *deals.DealHealth) []FactorIn {
 	}
 }
 
-func actIn(a crmcontracts.Activity, now time.Time) ActIn {
+// actIn dates an activity in the installation zone, where a day entry's anchor
+// names its own date.
+func actIn(a crmcontracts.Activity, now time.Time, loc *time.Location) ActIn {
 	out := ActIn{
 		ID: a.Id.String(), Kind: string(a.Kind),
-		At: a.OccurredAt.Format("2006-01-02"), When: whenOf(a, now),
+		At: occurredday.Date(a.OccurredAt, loc).Format(time.DateOnly), When: whenOf(a, now),
 	}
 	if a.Direction != nil {
 		out.Direction = string(*a.Direction)

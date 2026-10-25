@@ -119,6 +119,9 @@ func contextItemWire(item retrieval.Item) crmcontracts.ContextItem {
 	if !item.OccurredAt.IsZero() {
 		out.OccurredAt = new(item.OccurredAt)
 	}
+	if item.DateOnly {
+		out.OccurredPrecision = new(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
+	}
 	if len(item.Evidence) > 0 {
 		ev := make([]crmcontracts.ContextEvidence, 0, len(item.Evidence))
 		for _, e := range item.Evidence {

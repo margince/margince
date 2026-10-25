@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -218,7 +219,7 @@ func FromView(
 		CompanyID:  view.Company.Id.String(),
 		Company:    view.Company.DisplayName,
 		Recipient:  recipientOf(contact),
-		Recent:     foldRecent(view),
+		Recent:     foldRecent(view, req.Envelope.Zone()),
 		Commitment: foldCommitment(view),
 	}
 	if view.Company.Industry != nil {
@@ -358,7 +359,7 @@ func languageEvidence(view crmcontracts.Company360, now time.Time) []string {
 	return draftcore.LanguageEvidenceOf(view.Activities.Data, now)
 }
 
-func foldRecent(view crmcontracts.Company360) []ActIn {
+func foldRecent(view crmcontracts.Company360, zone *time.Location) []ActIn {
 	if view.Activities == nil {
 		return nil
 	}
@@ -370,7 +371,7 @@ func foldRecent(view crmcontracts.Company360) []ActIn {
 		item := ActIn{
 			ID:      act.Id.String(),
 			Kind:    string(act.Kind),
-			At:      act.OccurredAt.UTC().Format(rfc3339),
+			At:      activitywhen.Text(act, zone),
 			Inbound: act.Direction != nil && *act.Direction == crmcontracts.ActivityDirectionInbound,
 		}
 		if act.Subject != nil {

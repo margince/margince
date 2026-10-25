@@ -141,10 +141,11 @@ func base(
 		// Carried, not re-derived: the lane decided whether there was a way
 		// back, and a queue that answered it again could offer the verb on a
 		// row the lane had already reversed.
-		Undo:       carriedUndo(item.Undo),
-		OccurredAt: item.OccurredAt,
-		Actions:    carriedActions(item.Actions),
-		Because:    []crmcontracts.WorklistReason{},
+		Undo:              carriedUndo(item.Undo),
+		OccurredAt:        item.OccurredAt,
+		OccurredPrecision: precisionOf(item.OccurredPrecision),
+		Actions:           carriedActions(item.Actions),
+		Because:           []crmcontracts.WorklistReason{},
 	}
 }
 

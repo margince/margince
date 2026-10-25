@@ -10,7 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
-var activityNow = time.Date(2026, 10, 15, 12, 0, 0, 0, time.UTC)
+var activityNow = cellClock{now: time.Date(2026, 10, 15, 12, 0, 0, 0, time.UTC), zone: time.UTC}
 
 func activityProblem(t *testing.T, fields map[string]string) *cellProblem {
 	t.Helper()
@@ -120,5 +120,23 @@ func TestADirectionIsInboundOrOutbound(t *testing.T) {
 	problem := activityProblem(t, map[string]string{"type": "email", "direction": "sideways"})
 	if problem == nil || problem.Why.Code != migration.ReasonDirectionUnknown {
 		t.Fatalf("a sideways email = %+v, want %s", problem, migration.ReasonDirectionUnknown)
+	}
+}
+
+// A day cell is held against today's date in the record zone. Today passes all
+// day, and tomorrow is refused even once UTC has reached it.
+func TestADayCellIsHeldAgainstTodayInTheRecordZone(t *testing.T) {
+	york, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatal(err)
+	}
+	morning := cellClock{now: time.Date(2026, 3, 9, 8, 0, 0, 0, york).UTC(), zone: york}
+	if _, problem := checkActivityCells(map[string]string{"occurred_at": "2026-03-09"}, nil, morning); problem != nil {
+		t.Errorf("today's date refused before noon: %+v", problem)
+	}
+	evening := cellClock{now: time.Date(2026, 3, 9, 22, 0, 0, 0, york).UTC(), zone: york}
+	_, problem := checkActivityCells(map[string]string{"occurred_at": "2026-03-10"}, nil, evening)
+	if problem == nil || problem.Why.Code != migration.ReasonOccurredAtFuture {
+		t.Errorf("tomorrow's date = %+v, want %s", problem, migration.ReasonOccurredAtFuture)
 	}
 }

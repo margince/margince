@@ -89,6 +89,7 @@ const OPEN_TASK = {
   kind: "task",
   subject: "Send the renewal quote",
   occurred_at: "2026-08-10T09:00:00Z",
+  occurred_precision: "instant",
   is_done: false,
   ...CAPTURED,
 } as const;

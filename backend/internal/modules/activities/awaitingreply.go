@@ -52,6 +52,9 @@ type AwaitingReply struct {
 	// Recipients is who a meeting follow-up goes to, best first; ContactID is
 	// the first of them. Empty on a sent message.
 	Recipients []ids.UUID
+	// Precision is how to read a meeting's SentAt; empty on a sent message,
+	// whose time is always an instant.
+	Precision string
 }
 
 // AwaitingReplies answers which messages the reader sent that are still the

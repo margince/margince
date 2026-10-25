@@ -658,6 +658,21 @@ func (e AgentClientRegisteredBy) Valid() bool {
 	}
 }
 
+// Defines values for AgentContextItemOccurredPrecision.
+const (
+	AgentContextItemOccurredPrecisionDay AgentContextItemOccurredPrecision = "day"
+)
+
+// Valid indicates whether the value is a known member of the AgentContextItemOccurredPrecision enum.
+func (e AgentContextItemOccurredPrecision) Valid() bool {
+	switch e {
+	case AgentContextItemOccurredPrecisionDay:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentToolTier.
 const (
 	AgentToolTierAutoExecute          AgentToolTier = "auto_execute"
@@ -13960,6 +13975,24 @@ func (e NotificationDelivery) Valid() bool {
 	}
 }
 
+// Defines values for OccurredPrecision.
+const (
+	OccurredPrecisionOccurredPrecisionDay     OccurredPrecision = "day"
+	OccurredPrecisionOccurredPrecisionInstant OccurredPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the OccurredPrecision enum.
+func (e OccurredPrecision) Valid() bool {
+	switch e {
+	case OccurredPrecisionOccurredPrecisionDay:
+		return true
+	case OccurredPrecisionOccurredPrecisionInstant:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OfferStatus.
 const (
 	OfferStatusAccepted   OfferStatus = "accepted"
@@ -24775,9 +24808,12 @@ type Activity struct {
 	Links *[]ActivityLink `json:"links,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
-	MeetingStatus *ActivityMeetingStatus  `json:"meeting_status,omitempty"`
-	OccurredAt    time.Time               `json:"occurred_at"`
-	Raw           *map[string]interface{} `json:"raw,omitempty"`
+	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
+	OccurredAt    time.Time              `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
+	OccurredPrecision OccurredPrecision       `json:"occurred_precision"`
+	Raw               *map[string]interface{} `json:"raw,omitempty"`
 
 	// RemindAt Task only. Reminder-fire time; the B-E16.6 scan reads tasks whose reminder is due, not-done, and un-archived.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
@@ -24901,6 +24937,9 @@ type ActivityReference struct {
 	// Kind What KIND of activity it is, so a client dispatches on it: an email opens the drawer, a task opens the task detail, anything else opens the activity itself.
 	Kind       ActivityReferenceKind `json:"kind"`
 	OccurredAt time.Time             `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Subject The activity's own subject line. Null when it has none, and when the content is not this reader's — the two are told apart by `content_state`, never by this field being empty.
 	Subject *string `json:"subject,omitempty"`
@@ -25178,12 +25217,18 @@ type AgentContextHit struct {
 
 // AgentContextItem One record in an assembled picture, summarised, with the passages that put it there.
 type AgentContextItem struct {
-	Evidence   []AgentExcerpt     `json:"evidence"`
-	OccurredAt *string            `json:"occurred_at,omitempty"`
-	RecordId   openapi_types.UUID `json:"record_id"`
-	RecordType string             `json:"record_type"`
-	Summary    string             `json:"summary"`
+	Evidence   []AgentExcerpt `json:"evidence"`
+	OccurredAt *string        `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision Present when only the date of occurred_at is known.
+	OccurredPrecision *AgentContextItemOccurredPrecision `json:"occurred_precision,omitempty"`
+	RecordId          openapi_types.UUID                 `json:"record_id"`
+	RecordType        string                             `json:"record_type"`
+	Summary           string                             `json:"summary"`
 }
+
+// AgentContextItemOccurredPrecision Present when only the date of occurred_at is known.
+type AgentContextItemOccurredPrecision string
 
 // AgentContextSection One heading of an assembled picture: recent activity, open tasks, related records.
 type AgentContextSection struct {
@@ -28329,6 +28374,9 @@ type AttentionItem struct {
 
 	// OccurredAt When a done_for_you receipt actually happened.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read a meeting row's time (`due_at` or `occurred_at`). Absent means `instant`.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
@@ -31728,6 +31776,9 @@ type Company360NextMeeting struct {
 	// LinkedDealId The deal this meeting is filed against, when the caller may read it.
 	LinkedDealId *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 
+	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Participants The attendees on file, row-scoped. Empty is honest — a meeting can be booked before anyone is linked to it.
 	Participants []Company360MeetingParticipant `json:"participants"`
 	StartsAt     time.Time                      `json:"starts_at"`
@@ -34561,6 +34612,9 @@ type Contact360NextMeeting struct {
 	ActivityId   openapi_types.UUID  `json:"activity_id"`
 	LinkedDealId *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 
+	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Participants Who is in the room, so the reader knows whether they are single-threaded before they walk in.
 	Participants *[]struct {
 		ContactId openapi_types.UUID `json:"contact_id"`
@@ -35412,9 +35466,12 @@ type ContextItem struct {
 	Evidence *[]ContextEvidence `json:"evidence,omitempty"`
 
 	// OccurredAt When an event item happened, null when the item is not an event. A reader states a date from THIS rather than from one written inside a summary's prose — a note recalling "October" for a September email is the reading that otherwise reaches the customer. It is an instant in UTC; render it in the reader's zone before naming a calendar day.
-	OccurredAt *time.Time       `json:"occurred_at,omitempty"`
-	Ref        ContextEntityRef `json:"ref"`
-	Summary    *string          `json:"summary,omitempty"`
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision `day` when only the date of `occurred_at` is known: name the day and never its time. Absent on an instant.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
+	Ref               ContextEntityRef   `json:"ref"`
+	Summary           *string            `json:"summary,omitempty"`
 }
 
 // ContextResponse defines model for ContextResponse.
@@ -35590,9 +35647,12 @@ type ConversationClaim struct {
 	Kind ConversationClaimKind `json:"kind"`
 
 	// NeedsReview Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
-	NeedsReview      bool               `json:"needs_review"`
-	OccurredAt       *time.Time         `json:"occurred_at,omitempty"`
-	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
+	NeedsReview bool       `json:"needs_review"`
+	OccurredAt  *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`, the source activity's time. `day` means only its date is known, so a client draws no time. `instant` when `occurred_at` is absent.
+	OccurredPrecision OccurredPrecision  `json:"occurred_precision"`
+	SourceActivityId  openapi_types.UUID `json:"source_activity_id"`
 
 	// SourceLabel How to name the source in a chip — the thread subject or the meeting title.
 	SourceLabel *string `json:"source_label,omitempty"`
@@ -35731,6 +35791,9 @@ type CreateActivityRequest struct {
 	} `json:"links,omitempty"`
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision `day` when only the date is known: the date `occurred_at` names in its own offset is stored at that date's noon in the installation's zone. Omitted means `instant`. `day` without `occurred_at` is refused with 422.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. An inbound message whose `from` is the mail system itself (postmaster, mailer-daemon, a bounce address) is a delivery report and returns `422` on `participants.from`.
 	Participants *struct {
@@ -37235,6 +37298,9 @@ type DealLastEmail struct {
 	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
 	Direction  *DealLastEmailDirection `json:"direction"`
 	OccurredAt time.Time               `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 }
 
 // DealLastEmailDirection Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
@@ -38310,6 +38376,9 @@ type EmailPresentation struct {
 	Links      []ActivityLink `json:"links"`
 	OccurredAt time.Time      `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Summary One retained email, reduced to what a row shows without opening it. Present on an
 	// activity only when `kind=email`; every other kind carries none, and a reader that
 	// branches on this field is asking the one question that decides the canonical row.
@@ -38478,6 +38547,9 @@ type EmailSummary struct {
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
 	Move       EmailSummaryMove `json:"move"`
 	OccurredAt time.Time        `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Preview One line of the sender's own text, signature and quoted history already removed.
 	// Null when withheld, and when the message has no text of its own.
@@ -44724,6 +44796,9 @@ type NotificationPreference struct {
 type NotificationPreferenceList struct {
 	Items []NotificationPreference `json:"items"`
 }
+
+// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is that date's noon in the installation's zone, so read its date in that zone. A meeting of this precision never holds its host's calendar slot.
+type OccurredPrecision string
 
 // Offer A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
 type Offer struct {
@@ -51616,6 +51691,9 @@ type UpdateActivityRequest struct {
 	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
+	// OccurredPrecision How to read `occurred_at` from now on. A patch that sends `occurred_at` without this field sets `instant`, because a new time is a known time. `day` stores the date at its noon in the installation's zone: the date `occurred_at` names in its own offset, or, sent alone, the date the stored time falls on in that zone.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
+
 	// RemindAt Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.
 	RemindAt             *time.Time             `json:"remind_at,omitempty"`
 	Subject              *string                `json:"subject,omitempty"`
@@ -54898,6 +54976,9 @@ type WorklistItem struct {
 
 	// OccurredAt When the thing being reported happened.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read the meeting or activity time on this row: `occurred_at`, or `due_at` on a `meeting` row, where it is the start. `day` means only the date is known. `instant` on every row whose time is a real moment, and on a row with no such time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Overdue Past due at the read instant, resolved server-side so every surface agrees.
 	Overdue *bool `json:"overdue,omitempty"`
@@ -64124,6 +64205,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_at")
 	}
 
+	if raw, found := object["occurred_precision"]; found {
+		err = json.Unmarshal(raw, &a.OccurredPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_precision': %w", err)
+		}
+		delete(object, "occurred_precision")
+	}
+
 	if raw, found := object["raw"]; found {
 		err = json.Unmarshal(raw, &a.Raw)
 		if err != nil {
@@ -64428,6 +64517,11 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 	object["occurred_at"], err = json.Marshal(a.OccurredAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+	}
+
+	object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
 	}
 
 	if a.Raw != nil {
@@ -66408,6 +66502,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_at")
 	}
 
+	if raw, found := object["occurred_precision"]; found {
+		err = json.Unmarshal(raw, &a.OccurredPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_precision': %w", err)
+		}
+		delete(object, "occurred_precision")
+	}
+
 	if raw, found := object["participants"]; found {
 		err = json.Unmarshal(raw, &a.Participants)
 		if err != nil {
@@ -66631,6 +66733,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["occurred_at"], err = json.Marshal(a.OccurredAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+		}
+	}
+
+	if a.OccurredPrecision != nil {
+		object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
 		}
 	}
 
@@ -72248,6 +72357,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_at")
 	}
 
+	if raw, found := object["occurred_precision"]; found {
+		err = json.Unmarshal(raw, &a.OccurredPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_precision': %w", err)
+		}
+		delete(object, "occurred_precision")
+	}
+
 	if raw, found := object["remind_at"]; found {
 		err = json.Unmarshal(raw, &a.RemindAt)
 		if err != nil {
@@ -72322,6 +72439,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["occurred_at"], err = json.Marshal(a.OccurredAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+		}
+	}
+
+	if a.OccurredPrecision != nil {
+		object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
 		}
 	}
 

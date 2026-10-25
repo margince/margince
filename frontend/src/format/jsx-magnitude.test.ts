@@ -16,7 +16,8 @@ import { describe, expect, it } from "vitest";
 import {
   extensionFrontendFiles,
   filesUnder,
-  parseSource,
+  plantedProgram,
+  programOver,
   sourceFileAt,
 } from "../../scripts/lib/source-tree";
 
@@ -487,50 +488,11 @@ function findingsIn(
   return { findings, unjudged };
 }
 
-/**
- * The compiler options the app itself is built with.
- *
- * Borrowed rather than restated because the path aliases are how an extension
- * screen's imports resolve at all, and a second spelling of them here is a
- * second answer to what the bundler does.
- */
-function appOptions(): ts.CompilerOptions {
-  const config = ts.getParsedCommandLineOfConfigFile(
-    join(frontendRoot, "tsconfig.app.json"),
-    {},
-    {
-      ...ts.sys,
-      onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
-        throw new Error(
-          ts.flattenDiagnosticMessageText(diagnostic.messageText, " "),
-        );
-      },
-    },
-  );
-  if (config === undefined) {
-    throw new Error("tsconfig.app.json did not parse");
-  }
-  return config.options;
-}
-
-/**
- * The program the checker comes from, built over the swept corpus rather than
- * over `tsconfig.app.json`'s own file list.
- *
- * That difference is the census. The project excludes every test, and its
- * `include` never reaches `extensions/`. Borrowing its file list would read
- * a smaller tree and report the same word for it, PASS.
- * Only the options are borrowed.
- */
-function programOver(files: string[]): ts.Program {
-  return ts.createProgram(files, appOptions());
-}
-
 describe("a magnitude is drawn in the reader's own notation", () => {
   const blind = blindStringifiers();
   const geometry = svgGeometry();
   const files = sourceFiles();
-  const program = programOver(files);
+  const program = programOver(files, frontendRoot);
   const checker = program.getTypeChecker();
   const verdicts = files.flatMap((path) => {
     const parsed = program.getSourceFile(path);
@@ -740,17 +702,7 @@ function plant(
   const source = [preamble, ...lines.map((line) => `void (${line});`)].join(
     "\n",
   );
-  const options = appOptions();
-  const host = ts.createCompilerHost(options, true);
-  const readReal = host.getSourceFile.bind(host);
-  host.getSourceFile = (name, version, onError, shouldCreate) =>
-    name === fixtureName
-      ? parseSource(name, source)
-      : readReal(name, version, onError, shouldCreate);
-  host.fileExists = (name) => name === fixtureName || ts.sys.fileExists(name);
-  host.readFile = (name) =>
-    name === fixtureName ? source : ts.sys.readFile(name);
-  const program = ts.createProgram([fixtureName], options, host);
+  const program = plantedProgram(fixtureName, source, frontendRoot);
   const parsed = program.getSourceFile(fixtureName);
   if (parsed === undefined) {
     throw new Error("the planted fixture did not compile");

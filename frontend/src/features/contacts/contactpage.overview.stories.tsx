@@ -135,6 +135,7 @@ const richLoops: View = {
       kind: "commitment_theirs",
       body: "send the fleet utilization numbers",
       source_activity_id: "a-1",
+      occurred_precision: "instant",
       source_quote: "I'll get you the utilization numbers by Friday.",
       source_label: "Re: retrofit timeline",
       occurred_at: "2026-08-01T10:15:00Z",
@@ -146,6 +147,7 @@ const richLoops: View = {
       kind: "open_question",
       body: "whether the depot needs a second charger bank",
       source_activity_id: "a-1",
+      occurred_precision: "instant",
       source_quote: "Not sure yet if one charger bank covers the whole depot.",
       source_label: "Re: retrofit timeline",
       occurred_at: "2026-08-01T10:15:00Z",
@@ -157,6 +159,7 @@ const richLoops: View = {
       kind: "commitment_ours",
       body: "confirm the installation window",
       source_activity_id: "a-1",
+      occurred_precision: "instant",
       source_quote: "We'll confirm the installation window by Monday.",
       source_label: "Re: retrofit timeline",
       occurred_at: "2026-07-28T10:15:00Z",
@@ -239,6 +242,7 @@ const foldedActivities: View = {
   activities: {
     data: [
       {
+        occurred_precision: "instant",
         id: "a-40",
         kind: "email",
         occurred_at: "2026-08-29T09:15:00Z",
@@ -255,6 +259,7 @@ const foldedActivities: View = {
         email_summary: {
           activity_id: "a-40",
           occurred_at: "2026-08-29T09:15:00Z",
+          occurred_precision: "instant",
           version: 4,
           subject: "Re: the renewal quote",
           preview: "Can you hold the price until Friday?",
@@ -266,6 +271,7 @@ const foldedActivities: View = {
         },
       },
       {
+        occurred_precision: "instant",
         id: "a-41",
         kind: "email",
         occurred_at: "2026-08-27T16:40:00Z",
@@ -279,6 +285,7 @@ const foldedActivities: View = {
         email_summary: {
           activity_id: "a-41",
           occurred_at: "2026-08-27T16:40:00Z",
+          occurred_precision: "instant",
           version: 2,
           display_status: "withheld",
           move: "none",
@@ -286,6 +293,7 @@ const foldedActivities: View = {
         },
       },
       {
+        occurred_precision: "instant",
         id: "a-42",
         kind: "note",
         occurred_at: "2026-08-26T11:00:00Z",

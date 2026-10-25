@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Disclosure } from "../../design-system/disclosure";
 import { PanelBody, PanelRow } from "../../design-system/panel";
-import { formatDateTime } from "../../format/format";
+import { formatActivityWhen } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 
@@ -41,7 +41,12 @@ export function ContactClaimsReview({
               {[
                 claim.source_label,
                 claim.occurred_at &&
-                  formatDateTime(claim.occurred_at, locale, zone),
+                  formatActivityWhen(
+                    claim.occurred_at,
+                    claim.occurred_precision,
+                    locale,
+                    { record: zone, viewer: zone },
+                  ),
               ]
                 .filter(Boolean)
                 .join(" · ")}

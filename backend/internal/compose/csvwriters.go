@@ -107,6 +107,8 @@ type csvWriters struct {
 	// now is the clock an activity's timestamp is held against; nil is the
 	// system clock.
 	now func() time.Time
+	// zone is the record zone a day cell's date is read in, read once per run.
+	zone *time.Location
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
 	// no "updated" member — the frozen-source model it was built for had no
 	// such outcome — so the count rides here and the report reads it.
@@ -130,7 +132,7 @@ func newCSVWriters(
 			WithGrantCarrier(identity.NewServiceFor(db)).
 			WithInstallationRenamer(installationRenamer(db.Pool())),
 		deals:            dealsStoreOver(db),
-		activities:       activities.NewStore(db),
+		activities:       activities.NewStore(db).WithRecordZone(installationZoneTx),
 		tags:             collections.NewStore(db),
 		identities:       migration.NewRunStore(db),
 		runID:            runID,

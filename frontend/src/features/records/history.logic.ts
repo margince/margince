@@ -1,6 +1,7 @@
 import type { components } from "../../api/schema";
 import { provenanceOf } from "../../design-system/provenanceof";
 import type { Provenance } from "../../design-system/trust";
+import type { OccurredPrecision } from "../../format/activitywhen";
 import { stable } from "../../format/collate";
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
@@ -97,6 +98,9 @@ export type EntryFieldChange = {
   field: string;
   oldValue: string | null;
   newValue: string | null;
+  // How precisely each side's activity time is known, from that side's image.
+  oldPrecision?: OccurredPrecision;
+  newPrecision?: OccurredPrecision;
 };
 
 // The fields ONE audit row touched.
@@ -144,12 +148,36 @@ export function entryFieldChanges(
   }
   return fields
     .filter((field) => !DERIVED_COLUMNS.has(field))
-    .map((field) => ({
-      field,
-      oldValue: imageValue(before[field]),
-      newValue: imageValue(after[field]),
-    }))
+    .map(
+      (field): EntryFieldChange => ({
+        field,
+        oldValue: imageValue(before[field]),
+        newValue: imageValue(after[field]),
+        oldPrecision: precisionOf(before, field),
+        newPrecision: precisionOf(after, field),
+      }),
+    )
     .filter((change) => change.oldValue !== change.newValue);
+}
+
+// An activity's time takes the precision stored beside it in the same image.
+// A `day` entry has no clock on either side of a change.
+function precisionOf(
+  image: Readonly<Record<string, unknown>>,
+  field: string,
+): OccurredPrecision | undefined {
+  if (field !== "occurred_at") {
+    return undefined;
+  }
+  // The image is untyped jsonb, so each spelling is read back by name.
+  switch (image.occurred_precision) {
+    case "day":
+      return "day";
+    case "instant":
+      return "instant";
+    default:
+      return undefined;
+  }
 }
 
 // A jsonb value as the diff renders it. Anything that is not already text is

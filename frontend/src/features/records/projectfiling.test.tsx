@@ -394,6 +394,7 @@ describe("ProjectFilingAction", () => {
 
 describe("TimelineActions", () => {
   const activity: Activity = {
+    occurred_precision: "instant",
     id: "act-1",
     kind: "note",
     subject: "Milestone",
