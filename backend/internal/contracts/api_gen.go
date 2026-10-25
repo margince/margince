@@ -35174,7 +35174,10 @@ type ContactGraphReceipt struct {
 	// that drew every one of them as an email would tell a reader a meeting was one.
 	Kind       ContactGraphReceiptKind `json:"kind"`
 	OccurredAt time.Time               `json:"occurred_at"`
-	Subject    *string                 `json:"subject,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
 }
 
 // ContactGraphReceiptKind What the receipt is evidence OF. The graph counts attendees and organizers as well
@@ -37472,6 +37475,9 @@ type DealCommitment struct {
 	// OccurredAt When it was said.
 	OccurredAt time.Time `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// SourceActivityId The captured activity it was read from.
 	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
 
@@ -37577,7 +37583,10 @@ type DealDocumentOrigin struct {
 	// Kind The activity kind the file arrived with: email, message, meeting.
 	Kind       string    `json:"kind"`
 	OccurredAt time.Time `json:"occurred_at"`
-	Subject    *string   `json:"subject,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
 }
 
 // DealFollowUpDraft One drafted follow-up, the activity it was saved as, and why the deal is on the list.
@@ -38224,7 +38233,10 @@ type DealSuggestionEvidence struct {
 	AttachmentId *openapi_types.UUID        `json:"attachment_id,omitempty"`
 	Kind         DealSuggestionEvidenceKind `json:"kind"`
 	OccurredAt   time.Time                  `json:"occurred_at"`
-	SignalId     *openapi_types.UUID        `json:"signal_id,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at` for a meeting or a document. `day` means only its date is known, its UTC date, so a client draws no time. Absent for a signal, whose time is the newest of the activities it cites.
+	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
+	SignalId          *openapi_types.UUID `json:"signal_id,omitempty"`
 
 	// Title The meeting's subject, the signal's summary or the document's file name.
 	Title string `json:"title"`
@@ -40141,6 +40153,9 @@ type HeldThread struct {
 
 	// OccurredAt When that message arrived. Absent for the same reason `subject` can be.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// ParticipantCount How many addresses outside the workspace that message names, of which `participants`
 	// shows up to five. Absent when `participants` is.
@@ -42618,9 +42633,12 @@ type LeadQualification struct {
 // What the qualify dialog shows as the reason and sends back as `trigger`; null when the
 // lead has no such signal yet (a human may still qualify with `human_qualify`).
 type LeadQualificationEvidence struct {
-	ActivityId *openapi_types.UUID              `json:"activity_id,omitempty"`
-	OccurredAt *time.Time                       `json:"occurred_at,omitempty"`
-	Trigger    LeadQualificationEvidenceTrigger `json:"trigger"`
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision *OccurredPrecision               `json:"occurred_precision,omitempty"`
+	Trigger           LeadQualificationEvidenceTrigger `json:"trigger"`
 }
 
 // LeadQualificationEvidenceTrigger defines model for LeadQualificationEvidence.Trigger.
@@ -43181,9 +43199,12 @@ type LicenseHolder struct {
 
 // LifecyclePreviewEvidence Current readable source and scope supporting a company lifecycle review.
 type LifecyclePreviewEvidence struct {
-	OccurredAt time.Time                     `json:"occurred_at"`
-	Scope      LifecyclePreviewEvidenceScope `json:"scope"`
-	Workstream *string                       `json:"workstream,omitempty"`
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision             `json:"occurred_precision"`
+	Scope             LifecyclePreviewEvidenceScope `json:"scope"`
+	Workstream        *string                       `json:"workstream,omitempty"`
 }
 
 // LifecyclePreviewEvidenceScope defines model for LifecyclePreviewEvidence.Scope.
@@ -49088,6 +49109,9 @@ type RestrictedRecord struct {
 	Kind       string    `json:"kind"`
 	OccurredAt time.Time `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Projects Every project the record qualifies through, by name, on the same terms as `deals`. A project qualifies its correspondence by existing — it is a commercial engagement, so the mail filed under it is about an actual transaction whether or not a deal on it has closed. A record can qualify through both a deal and a project; neither list is a summary of the other.
 	Projects *[]struct {
 		Id   openapi_types.UUID `json:"id"`
@@ -51346,6 +51370,9 @@ type TagSuggestionEvidence struct {
 	// Kind The activity kind: email, meeting, note or call.
 	Kind       string    `json:"kind"`
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Subject Absent when the activity has none or it was redacted.
 	Subject *string `json:"subject,omitempty"`

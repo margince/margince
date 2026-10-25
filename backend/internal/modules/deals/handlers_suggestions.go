@@ -130,7 +130,8 @@ func SuggestionWire(s Suggestion) crmcontracts.DealSuggestion {
 	for _, e := range s.Evidence {
 		out.Evidence = append(out.Evidence, crmcontracts.DealSuggestionEvidence{
 			Kind: crmcontracts.DealSuggestionEvidenceKind(e.Kind), OccurredAt: e.OccurredAt, Title: e.Title,
-			ActivityId: uuidPtr(e.ActivityID), SignalId: uuidPtr(e.SignalID), AttachmentId: uuidPtr(e.AttachmentID),
+			OccurredPrecision: (*crmcontracts.OccurredPrecision)(e.Precision),
+			ActivityId:        uuidPtr(e.ActivityID), SignalId: uuidPtr(e.SignalID), AttachmentId: uuidPtr(e.AttachmentID),
 		})
 	}
 	return out

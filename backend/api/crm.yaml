@@ -34656,6 +34656,9 @@ components:
           type: string
           format: date-time
           description: When that message arrived. Absent for the same reason `subject` can be.
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
         participants:
           type: array
           maxItems: 5
@@ -36031,6 +36034,9 @@ components:
         signal_id: { type: [string, 'null'], format: uuid }
         attachment_id: { type: [string, 'null'], format: uuid, description: 'The document sent to the company.' }
         occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at` for a meeting or a document. `day` means only its date is known, its UTC date, so a client draws no time. Absent for a signal, whose time is the newest of the activities it cites.
         title: { type: string, description: 'The meeting''s subject, the signal''s summary or the document''s file name.' }
     DealSuggestionListResponse:
       type: object
@@ -42319,7 +42325,7 @@ components:
         interactions_90d: { type: integer }
         inbound_90d: { type: integer }
         outbound_90d: { type: integer }
-        last_at: { type: [string, 'null'], format: date-time }
+        last_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` among the activities the edge counts. A client orders edges by it.' }
         receipts:
           type: array
           maxItems: 3
@@ -42331,11 +42337,14 @@ components:
 
     ContactGraphReceipt:
       type: object
-      required: [activity_id, occurred_at, kind]
+      required: [activity_id, occurred_at, occurred_precision, kind]
       properties:
         activity_id: { type: string, format: uuid }
         subject: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         kind:
           type: string
           enum: [email, call, meeting, note, task, message]
@@ -43283,7 +43292,7 @@ components:
           description: False when a commitment was left out because its contact or its message is outside what the caller may read.
     DealCommitment:
       type: object
-      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, source_kind, occurred_at]
+      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, source_kind, occurred_at, occurred_precision]
       properties:
         id: { type: string, format: uuid, description: 'The id of the claim, which `POST /claims/{id}/settle` takes.' }
         contact_id: { type: string, format: uuid }
@@ -43294,6 +43303,9 @@ components:
         source_kind: { type: string, description: 'The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.' }
         due_at: { type: string, format: date-time, nullable: true, description: 'Absent when the conversation named no day.' }
         occurred_at: { type: string, format: date-time, description: 'When it was said.' }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
     ReportEvidenceSearchRequest:
       type: object
       description: What `search_report_evidence` takes beside the run the path names.
@@ -48181,12 +48193,15 @@ components:
     DealDocumentOrigin:
       type: object
       description: Where a captured file came from. Present for a file that arrived with a message linked to the deal; absent for a file uploaded on the deal.
-      required: [activity_id, kind, occurred_at]
+      required: [activity_id, kind, occurred_at, occurred_precision]
       properties:
         activity_id: { type: string, format: uuid }
         kind: { type: string, description: 'The activity kind the file arrived with: email, message, meeting.' }
         subject: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         counterparty_email: { type: [string, 'null'], format: email }
 
     DealDocumentListResponse:
@@ -49680,6 +49695,9 @@ components:
           x-enum-varnames: [LeadQualificationEvidenceTriggerInboundReply, LeadQualificationEvidenceTriggerMeetingBooked, LeadQualificationEvidenceTriggerMeetingHeld]
         activity_id: { type: string, format: uuid }
         occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
 
     PromoteLeadResponse:
       type: object
@@ -51376,12 +51394,15 @@ components:
 
     TagSuggestionEvidence:
       type: object
-      required: [activity_id, kind, occurred_at]
+      required: [activity_id, kind, occurred_at, occurred_precision]
       properties:
         activity_id: { type: string, format: uuid }
         kind: { type: string, description: 'The activity kind: email, meeting, note or call.' }
         subject: { type: [string, 'null'], description: Absent when the activity has none or it was redacted. }
         occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
 
     TagUsage:
       type: object
@@ -58151,10 +58172,13 @@ components:
     LifecyclePreviewEvidence:
       type: object
       description: Current readable source and scope supporting a company lifecycle review.
-      required: [scope, occurred_at]
+      required: [scope, occurred_at, occurred_precision]
       properties:
         scope: { type: string, enum: [company, workstream, unknown] }
         occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         workstream: { type: string }
     ApprovalPreview:
       type: object
@@ -58729,11 +58753,14 @@ components:
       # disclosing it: no subject, no body, no counterparty. A record can
       # qualify through MORE THAN ONE transaction, so the deals are a list —
       # naming one would be a guess presented as a fact.
-      required: [activity_id, kind, occurred_at, restricted_at, restricted_until, reason, deals]
+      required: [activity_id, kind, occurred_at, occurred_precision, restricted_at, restricted_until, reason, deals]
       properties:
         activity_id: { type: string, format: uuid }
         kind: { type: string, description: "The interaction kind (email, call, meeting, message)." }
         occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         restricted_at: { type: string, format: date-time, description: When the erasure request was suspended and the record restricted. }
         restricted_until:
           type: string

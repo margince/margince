@@ -1294,6 +1294,11 @@ export interface components {
              * @description When the reply activity occurred.
              */
             occurred_at: string;
+            /**
+             * @description How to read occurred_at: `day` when only the reply's date is known, its UTC date.
+             * @enum {string}
+             */
+            occurred_precision?: "instant" | "day";
             /** @description The capture natural key (source_system:source_id) this reply was detected from. */
             idempotency_key: string;
             /**
@@ -1926,6 +1931,7 @@ export const publicEventIntroRequestDecidedDecisionValues: ReadonlyArray<Flatten
 export const publicEventIntroRequestCompletedOutcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventIntroRequestCompleted"]["outcome"]> = ["introduced", "name_dropped"];
 export const publicEventIntroRequestClosedReasonValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventIntroRequestClosed"]["reason"]> = ["cancelled", "expired"];
 export const publicEventCommsDeliveryBouncedKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventCommsDeliveryBounced"]["kind"]> = ["hard", "soft"];
+export const publicEventEngagementReplyOccurred_precisionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventEngagementReply"]["occurred_precision"]> = ["instant", "day"];
 export const publicEventRetentionRestrictedActionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventRetentionRestricted"]["action"]> = ["restrict", "release", "pin"];
 export const publicEventRetentionAppliedActionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventRetentionApplied"]["action"]> = ["archive", "anonymize", "erase"];
 export const userReactivatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["UserReactivatedStatus"]> = ["invited", "active"];

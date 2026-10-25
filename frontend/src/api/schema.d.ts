@@ -23829,6 +23829,8 @@ export interface components {
              * @description When that message arrived. Absent for the same reason `subject` can be.
              */
             occurred_at?: string;
+            /** @description How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision?: components["schemas"]["OccurredPrecision"];
             /**
              * @description Up to five addresses outside the workspace on the message that opened the thread, so you
              *     can tell who a held thread is with. Colleagues are left out. Present exactly when
@@ -25092,6 +25094,8 @@ export interface components {
             attachment_id?: string | null;
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at` for a meeting or a document. `day` means only its date is known, its UTC date, so a client draws no time. Absent for a signal, whose time is the newest of the activities it cites. */
+            occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The meeting's subject, the signal's summary or the document's file name. */
             title: string;
         };
@@ -30162,6 +30166,8 @@ export interface components {
             subject?: string | null;
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /**
              * @description What the receipt is evidence OF. The graph counts attendees and organizers as well
              *     as correspondents, so a meeting is as much a receipt here as a mail — and a citation
@@ -30877,6 +30883,8 @@ export interface components {
              * @description When it was said.
              */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
         };
         /** @description What `search_report_evidence` takes beside the run the path names. */
         ReportEvidenceSearchRequest: {
@@ -35106,6 +35114,8 @@ export interface components {
             subject?: string | null;
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /** Format: email */
             counterparty_email?: string | null;
         };
@@ -36450,6 +36460,8 @@ export interface components {
             activity_id?: string;
             /** Format: date-time */
             occurred_at?: string;
+            /** @description How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision?: components["schemas"]["OccurredPrecision"];
         } | null;
         PromoteLeadResponse: {
             contact: components["schemas"]["Contact"];
@@ -38015,6 +38027,8 @@ export interface components {
             subject?: string | null;
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
         };
         /**
          * @description How many records of each advertised type carry this tag, counted within what the
@@ -42575,6 +42589,8 @@ export interface components {
             scope: "company" | "workstream" | "unknown";
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             workstream?: string;
         };
         /** @description A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. */
@@ -43042,6 +43058,8 @@ export interface components {
             kind: string;
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /**
              * Format: date-time
              * @description When the erasure request was suspended and the record restricted.

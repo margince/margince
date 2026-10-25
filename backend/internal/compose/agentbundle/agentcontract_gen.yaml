@@ -11862,11 +11862,14 @@ components:
           items: {$ref: '#/components/schemas/ContactGraphReceipt'}
     ContactGraphReceipt:
       type: object
-      required: [activity_id, occurred_at, kind]
+      required: [activity_id, occurred_at, occurred_precision, kind]
       properties:
         activity_id: {type: string, format: uuid}
         subject: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         kind:
           type: string
           enum: [email, call, meeting, note, task, message]
@@ -12331,7 +12334,7 @@ components:
           description: False when a commitment was left out because its contact or its message is outside what the caller may read.
     DealCommitment:
       type: object
-      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, source_kind, occurred_at]
+      required: [id, contact_id, contact_name, body, source_quote, source_activity_id, source_kind, occurred_at, occurred_precision]
       properties:
         id: {type: string, format: uuid, description: 'The id of the claim, which `POST /claims/{id}/settle` takes.'}
         contact_id: {type: string, format: uuid}
@@ -12342,6 +12345,9 @@ components:
         source_kind: {type: string, description: 'The kind of activity it was read from (`email`, `meeting`, …), so a client opens it in the reader that kind needs.'}
         due_at: {type: string, format: date-time, nullable: true, description: 'Absent when the conversation named no day.'}
         occurred_at: {type: string, format: date-time, description: 'When it was said.'}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
     ReportEvidenceSearchRequest:
       type: object
       description: What `search_report_evidence` takes beside the run the path names.
@@ -15446,12 +15452,15 @@ components:
     DealDocumentOrigin:
       type: object
       description: Where a captured file came from. Present for a file that arrived with a message linked to the deal; absent for a file uploaded on the deal.
-      required: [activity_id, kind, occurred_at]
+      required: [activity_id, kind, occurred_at, occurred_precision]
       properties:
         activity_id: {type: string, format: uuid}
         kind: {type: string, description: 'The activity kind the file arrived with: email, message, meeting.'}
         subject: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         counterparty_email: {type: [string, 'null'], format: email}
     DealDocumentListResponse:
       type: object
@@ -16146,6 +16155,9 @@ components:
           enum: [inbound_reply, meeting_booked, meeting_held]
         activity_id: {type: string, format: uuid}
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
     PromoteLeadResponse:
       type: object
       required: [contact, merged]
@@ -19594,10 +19606,13 @@ components:
     LifecyclePreviewEvidence:
       type: object
       description: Current readable source and scope supporting a company lifecycle review.
-      required: [scope, occurred_at]
+      required: [scope, occurred_at, occurred_precision]
       properties:
         scope: {type: string, enum: [company, workstream, unknown]}
         occurred_at: {type: string, format: date-time}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         workstream: {type: string}
     ApprovalPreview:
       type: object

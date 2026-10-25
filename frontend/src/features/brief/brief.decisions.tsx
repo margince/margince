@@ -190,7 +190,8 @@ export function DecisionsSection({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const stagedDay = stagedDayFormatter(locale, useRecordZone());
+  const recordZone = useRecordZone();
+  const stagedDay = stagedDayFormatter(locale, recordZone);
   const approvalNames = useApprovalNames(
     items.flatMap((item) =>
       item.kind === "single" ? [item.approval] : item.members,
@@ -376,6 +377,7 @@ export function DecisionsSection({
             approval.assignee_inactive,
             approval.preview,
             locale,
+            recordZone,
           ),
         })}
       />

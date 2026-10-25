@@ -49,12 +49,15 @@ const suggestion = {
       kind: "email",
       subject: "Pricing for Product X",
       occurred_at: "2026-10-07T14:00:00Z",
+      occurred_precision: "instant",
     },
     {
       activity_id: "01a0e9f1-0000-7000-8000-0000000000e2",
       kind: "meeting",
       subject: "Intro call",
-      occurred_at: "2026-10-02T10:00:00Z",
+      // Logged for its date alone: cited by that date, with no time.
+      occurred_at: "2026-10-02T12:00:00Z",
+      occurred_precision: "day",
     },
   ],
 };

@@ -131,6 +131,7 @@ func toContractHeldThread(t capture.HeldThread) crmcontracts.HeldThread {
 		out.Participants, out.ParticipantCount = &parties, &count
 	}
 	out.OccurredAt = t.OccurredAt
+	out.OccurredPrecision = (*crmcontracts.OccurredPrecision)(t.Precision)
 	return out
 }
 

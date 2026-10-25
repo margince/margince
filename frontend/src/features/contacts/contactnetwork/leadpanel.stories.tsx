@@ -47,6 +47,7 @@ function route(over: Partial<RouteCandidate> = {}): RouteCandidate {
         activity_id: "018f3a1b-0000-7000-8000-0000000000e1",
         subject: "Re: Q4 rollout — site list",
         occurred_at: "2026-08-28T09:00:00Z",
+        occurred_precision: "instant",
         kind: "email",
       },
     ],

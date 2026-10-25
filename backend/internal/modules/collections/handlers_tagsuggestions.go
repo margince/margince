@@ -59,10 +59,11 @@ func WireTagSuggestion(s TagSuggestion) crmcontracts.TagSuggestion {
 	}
 	for _, e := range s.Evidence {
 		out.Evidence = append(out.Evidence, crmcontracts.TagSuggestionEvidence{
-			ActivityId: openapi_types.UUID(e.ActivityID),
-			Kind:       e.Kind,
-			Subject:    e.Subject,
-			OccurredAt: e.OccurredAt,
+			ActivityId:        openapi_types.UUID(e.ActivityID),
+			Kind:              e.Kind,
+			Subject:           e.Subject,
+			OccurredAt:        e.OccurredAt,
+			OccurredPrecision: crmcontracts.OccurredPrecision(e.Precision),
 		})
 	}
 	return out

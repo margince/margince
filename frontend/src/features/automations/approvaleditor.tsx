@@ -188,6 +188,7 @@ function ApprovalDetailBody({
     approval.assignee_inactive,
     approval.preview,
     locale,
+    recordZone,
   );
   const named = withoutRepeatedLead(display, approval.summary).filter(
     (entry) => entry.value !== null,

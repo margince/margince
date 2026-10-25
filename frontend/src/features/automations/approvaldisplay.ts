@@ -361,11 +361,10 @@ function displayValue(
 }
 
 /**
- * What this proposal shows, resolved into the reader's language.
- *
- * The card is handed finished strings rather than a policy to interpret: which
- * fields a kind shows is the product's vocabulary, and a design-system
- * primitive that looked it up would be a second author of it.
+ * What this proposal shows, resolved into the reader's language: finished
+ * strings rather than a policy to interpret. Which fields a kind shows is the
+ * product's vocabulary, and a design-system primitive that looked it up would
+ * be a second author of it. `zone` is the record's, a cited day is read in it.
  */
 export function resolveDisplay(
   kind: string,
@@ -377,6 +376,7 @@ export function resolveDisplay(
   assigneeInactive = false,
   preview?: components["schemas"]["ApprovalPreview"],
   locale: Locale = "en",
+  zone?: string,
 ): readonly ResolvedDisplayField[] {
   const args =
     kind === "advance_deal" || kind === "progress_deal"
@@ -399,7 +399,7 @@ export function resolveDisplay(
         (entry) => preview.state === "ready" && entry.lead && entry.value,
       ),
       ...madeByRow(kind, change, names, t),
-      ...commercialPreviewDisplay(preview, t, locale, formatDay),
+      ...commercialPreviewDisplay(preview, t, locale, formatDay, zone),
     ];
   if (
     kind === "commitment_task" &&

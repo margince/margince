@@ -79,3 +79,34 @@ export const WithoutOptionalEvidence: Story = {
     </StoryProviders>
   ),
 };
+
+// The account's ending cites a meeting logged for its date alone: the source
+// date is that date on the record's clock, with no time.
+export const DayLifecycleSource: Story = {
+  render: () => (
+    <StoryProviders>
+      <Panel>
+        <MagicLaneSection
+          lane="needs_you"
+          title="Waiting on you"
+          rows={[
+            {
+              ...wonProposal,
+              approval_preview: wonProposal.approval_preview && {
+                ...wonProposal.approval_preview,
+                lifecycle_evidence: {
+                  scope: "company",
+                  occurred_at: "2026-07-31T12:00:00Z",
+                  occurred_precision: "day",
+                },
+              },
+            },
+          ]}
+          since={undefined}
+          zone={viewerZone()}
+          byDay={false}
+        />
+      </Panel>
+    </StoryProviders>
+  ),
+};

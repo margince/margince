@@ -73,15 +73,16 @@ func (h dealCommitmentHandlers) read(ctx context.Context, dealID ids.DealID) (cr
 	}
 	for _, row := range rows {
 		out.Data = append(out.Data, crmcontracts.DealCommitment{
-			Id:               openapi_types.UUID(row.ID),
-			ContactId:        openapi_types.UUID(row.ContactID.UUID),
-			ContactName:      row.ContactName,
-			Body:             row.Body,
-			SourceQuote:      row.SourceQuote,
-			SourceActivityId: openapi_types.UUID(row.ActivityID),
-			SourceKind:       row.SourceKind,
-			DueAt:            row.DueAt,
-			OccurredAt:       row.OccurredAt,
+			Id:                openapi_types.UUID(row.ID),
+			ContactId:         openapi_types.UUID(row.ContactID.UUID),
+			ContactName:       row.ContactName,
+			Body:              row.Body,
+			SourceQuote:       row.SourceQuote,
+			SourceActivityId:  openapi_types.UUID(row.ActivityID),
+			SourceKind:        row.SourceKind,
+			DueAt:             row.DueAt,
+			OccurredAt:        row.OccurredAt,
+			OccurredPrecision: crmcontracts.OccurredPrecision(row.Precision),
 		})
 	}
 	return out, nil

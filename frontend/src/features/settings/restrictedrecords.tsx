@@ -15,6 +15,7 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
+import { activityDay } from "../../format/activitywhen";
 import { formatDate, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -253,7 +254,12 @@ export function RestrictedRecordsCard() {
           <CellStack>
             <span>{kindOf(row)}</span>
             <span className="t-caption">
-              {formatDate(row.occurred_at, locale, recordZone)}
+              {activityDay(
+                row.occurred_at,
+                row.occurred_precision,
+                locale,
+                recordZone,
+              )}
             </span>
             <span className="t-caption">
               {removed === 0
@@ -326,7 +332,12 @@ export function RestrictedRecordsCard() {
           <Button
             aria-label={t("restricted.release.actionNamed", {
               kind: kindOf(row),
-              date: formatDate(row.occurred_at, locale, recordZone),
+              date: activityDay(
+                row.occurred_at,
+                row.occurred_precision,
+                locale,
+                recordZone,
+              ),
             })}
             aria-haspopup="dialog"
             onClick={() => setReleasing({ activityId: row.activity_id })}

@@ -192,6 +192,24 @@ func (e PublicEventCommsDeliveryBouncedKind) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventEngagementReplyOccurredPrecision.
+const (
+	ReplyTimeIsADay      PublicEventEngagementReplyOccurredPrecision = "day"
+	ReplyTimeIsAnInstant PublicEventEngagementReplyOccurredPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventEngagementReplyOccurredPrecision enum.
+func (e PublicEventEngagementReplyOccurredPrecision) Valid() bool {
+	switch e {
+	case ReplyTimeIsADay:
+		return true
+	case ReplyTimeIsAnInstant:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventForecastAssuranceCreatedReadiness.
 const (
 	AssuranceChecksIncomplete    PublicEventForecastAssuranceCreatedReadiness = "checks_incomplete"
@@ -1740,7 +1758,13 @@ type PublicEventEngagementReply struct {
 
 	// OccurredAt When the reply activity occurred.
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// OccurredPrecision How to read occurred_at: `day` when only the reply's date is known, its UTC date.
+	OccurredPrecision *PublicEventEngagementReplyOccurredPrecision `json:"occurred_precision,omitempty"`
 }
+
+// PublicEventEngagementReplyOccurredPrecision How to read occurred_at: `day` when only the reply's date is known, its UTC date.
+type PublicEventEngagementReplyOccurredPrecision string
 
 // PublicEventEntityRef The primary entity the event concerns.
 type PublicEventEntityRef struct {
@@ -3494,7 +3518,7 @@ var PublicEventSamples = map[string]string{
 	"deal_room.thread_resolved":                 "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"document_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"thread_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal_room.updated":                         "{\"changed_fields\":[\"Sample changed fields\"],\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"email_signature.changed":                   "{\"has_signature\":true}",
-	"engagement.reply":                          "{\"channel\":\"Sample channel\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"idempotency_key\":\"Sample idempotency key\",\"matched_outbound_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"occurred_at\":\"2026-10-14T09:12:00Z\"}",
+	"engagement.reply":                          "{\"channel\":\"Sample channel\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"idempotency_key\":\"Sample idempotency key\",\"matched_outbound_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\"}",
 	"forecast.assurance_created":                "{\"eligible_deals\":1,\"eligible_signals\":1,\"readiness\":\"ready\",\"run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"complete\"}",
 	"forecast.created":                          "{\"amount_minor\":1,\"author_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"call_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"currency\":\"Sample currency\",\"period_end\":\"2026-10-14\",\"period_start\":\"2026-10-14\",\"supersedes_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"forecast.exception_resolved":               "{\"actor_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"exception_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"expires_at\":\"2026-10-14T09:12:00Z\",\"outcome\":\"fixed_record\"}",

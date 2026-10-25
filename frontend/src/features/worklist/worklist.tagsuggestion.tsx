@@ -14,7 +14,7 @@ import { Row, Stack } from "../../design-system/stack";
 import { TagPill } from "../../design-system/tagpill";
 import { useToast } from "../../design-system/toast";
 import { ProvenanceTag, StagingCard } from "../../design-system/trust";
-import { formatDate } from "../../format/format";
+import { activityDay } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import {
@@ -80,7 +80,12 @@ function TagSuggestionCard({
               {t("tagSuggestion.evidence", {
                 kind: t(evidenceKindKey(evidence.kind)),
                 subject: evidence.subject ?? t("tagSuggestion.noSubject"),
-                when: formatDate(evidence.occurred_at, locale, zone),
+                when: activityDay(
+                  evidence.occurred_at,
+                  evidence.occurred_precision,
+                  locale,
+                  zone,
+                ),
               })}
             </li>
           ))}

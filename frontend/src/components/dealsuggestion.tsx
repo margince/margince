@@ -26,7 +26,8 @@ import {
   ProvenanceTag,
   StagingCard,
 } from "../design-system/trust";
-import { formatDate, formatMoney } from "../format/format";
+import { activityDay } from "../format/activitywhen";
+import { formatMoney } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { useRecordZone } from "../lib/recordzone";
@@ -131,7 +132,12 @@ export function DealSuggestionCard({
               >
                 <span>{evidenceLine(evidence, t)}</span>
                 {" — "}
-                {formatDate(evidence.occurred_at, locale, zone)}
+                {activityDay(
+                  evidence.occurred_at,
+                  evidence.occurred_precision ?? "instant",
+                  locale,
+                  zone,
+                )}
               </li>
             ))}
           </ul>

@@ -51,10 +51,10 @@ var precisionlessActivityTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml ConsentEvent.occurred_at":      "when consent changed, the ledger row's own instant",
 	"api/crm.yaml ConsentQualifyingEvent.occurred_at": "the proof a consent guard holds in consent_qualifying_event; no client draws it, " +
 		"and the guard measures it against windows of 90 days and more, which a date's hours do not move",
-	"api/crm.yaml QualifyingEventRecord.occurred_at":             "a qualifying exchange a person stated, stored in consent_qualifying_event, not an activity",
-	"api/crm.yaml RecordQualifyingEventRequest.occurred_at":      "a qualifying exchange a person states, written to consent_qualifying_event, not an activity",
+	"api/crm.yaml QualifyingEventRecord.occurred_at":             "a qualifying exchange a rep stated, stored in consent_qualifying_event, not an activity",
+	"api/crm.yaml RecordQualifyingEventRequest.occurred_at":      "a qualifying exchange a rep states, written to consent_qualifying_event, not an activity",
 	"api/crm.yaml RecordCommunicationContextRequest.occurred_at": "a rep's statement about a contact, written to consent_qualifying_event, not an activity",
-	"api/crm.yaml NoticeAcquisition.occurred_at": "when a contact's data was acquired, stated by a person or taken from captured mail's sent " +
+	"api/crm.yaml NoticeAcquisition.occurred_at": "when a contact's data was acquired, stated by a rep or taken from captured mail's sent " +
 		"instant, held in contact_acquisition_evidence and not an activity",
 	"api/crm.yaml NoticeOrigin.occurred_at":                         "when the event behind a notification was emitted, the bus's own instant",
 	"api/crm.yaml ListDependency.occurred_at":                       "when an export ran or a list rule was made, not an activity",

@@ -305,6 +305,7 @@ export function ApprovalRow({
     approval.assignee_inactive,
     editedCommercialPreview(approval.preview, draft, editing),
     locale,
+    recordZone,
   );
 
   const problem =

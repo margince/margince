@@ -12,7 +12,7 @@ import {
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
-import { formatDate } from "../../format/format";
+import { activityDay } from "../../format/activitywhen";
 import { leadIdentityName } from "../../format/leadname";
 import { toMinorUnits } from "../../format/minorunits";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -73,7 +73,12 @@ function reasonSentence(
     return t("lead.qualify.reasonHuman");
   }
   const at = evidence.occurred_at
-    ? formatDate(evidence.occurred_at, locale, zone)
+    ? activityDay(
+        evidence.occurred_at,
+        evidence.occurred_precision ?? "instant",
+        locale,
+        zone,
+      )
     : "";
   switch (evidence.trigger) {
     case "meeting_held":

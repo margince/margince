@@ -12,6 +12,7 @@ import {
   activityDay,
   activityDaysAway,
   activityIsAhead,
+  type OccurredPrecision,
 } from "../../format/activitywhen";
 import {
   daysAgoText,
@@ -84,33 +85,46 @@ export function ladderDates(
     if (!entered) {
       return;
     }
-    const day = formatDayMonth(entered.at, ctx.locale, entered.zone);
+    const day = activityDay(
+      entered.at,
+      entered.precision,
+      ctx.locale,
+      entered.zone,
+      formatDayMonth,
+    );
     dates[step] =
       step === lead.status ? ctx.t("lead.ladder.enteredNow", { at: day }) : day;
   });
   return dates;
 }
 
-// A rung's date, and the zone it is read in. A captured signal carries no
-// precision, so its day is read on the record's clock.
+// A rung's date, the zone it is read in and its precision. The signal that
+// engaged the lead is read on the record's clock, a day entry by its own date.
 function enteredAt(
   lead: Lead,
   step: LadderOpenStep,
   changes: readonly StatusChange[],
   { zone, record }: ReadingContext,
-): Readonly<{ at: string; zone: string }> | undefined {
+):
+  | Readonly<{ at: string; zone: string; precision: OccurredPrecision }>
+  | undefined {
   if (step === "new") {
-    return { at: lead.created_at, zone };
+    return { at: lead.created_at, zone, precision: "instant" };
   }
   const newest = changes
     .filter((change) => change.new_value === step)
     .sort((a, b) => Date.parse(b.changed_at) - Date.parse(a.changed_at))[0];
   if (newest) {
-    return { at: newest.changed_at, zone };
+    return { at: newest.changed_at, zone, precision: "instant" };
   }
-  const signal = lead.qualification_evidence?.occurred_at;
+  const evidence = lead.qualification_evidence;
+  const signal = evidence?.occurred_at;
   return step === "engaged" && lead.status_set_by === "system" && signal
-    ? { at: signal, zone: record }
+    ? {
+        at: signal,
+        zone: record,
+        precision: evidence?.occurred_precision ?? "instant",
+      }
     : undefined;
 }
 

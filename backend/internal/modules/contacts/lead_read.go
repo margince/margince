@@ -92,7 +92,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	(SELECT jsonb_build_object('trigger', CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 'meeting_held'
 	                                           WHEN a.kind = 'meeting' THEN 'meeting_booked'
 	                                           ELSE 'inbound_reply' END,
-	                           'activity_id', a.id, 'occurred_at', a.occurred_at)
+	                           'activity_id', a.id, 'occurred_at', a.occurred_at, 'occurred_precision', a.occurred_precision)
 	   FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	  WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	    AND ((a.kind = 'email' AND a.direction = 'inbound')

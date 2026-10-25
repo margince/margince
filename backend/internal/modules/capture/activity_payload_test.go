@@ -22,6 +22,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // TestActivityCaptureEventPayload proves the capture auto-create path names
@@ -67,7 +68,7 @@ func TestEngagementReplyPayload_WithContact(t *testing.T) {
 	contact := ids.From[ids.ContactKind](ids.NewV7())
 
 	payload := engagementReplyPayload(matched,
-		replyOrigin{channel: channelEmail, contactID: &contact}, occurredAt, "gmail:msg-42")
+		replyOrigin{channel: channelEmail, contactID: &contact}, occurredday.Moment{At: occurredAt}, "gmail:msg-42")
 
 	if !reflect.DeepEqual(payload.EventType(), "engagement.reply") {
 		t.Errorf("got %v, want %v", payload.EventType(), "engagement.reply")
@@ -114,10 +115,13 @@ func TestEngagementReplyPayload_NoContact(t *testing.T) {
 	occurredAt := time.Date(2026, 7, 22, 9, 30, 0, 0, time.UTC)
 
 	payload := engagementReplyPayload(matched,
-		replyOrigin{channel: channelEmail}, occurredAt, "gmail:msg-43")
+		replyOrigin{channel: channelEmail}, occurredday.Moment{At: occurredAt, DateOnly: true}, "gmail:msg-43")
 
 	if payload.ContactId != nil {
 		t.Errorf("expected nil, got %v", payload.ContactId)
+	}
+	if payload.OccurredPrecision == nil || *payload.OccurredPrecision != crmcontracts.ReplyTimeIsADay {
+		t.Errorf("a reply known only by its date names precision %v, want day", payload.OccurredPrecision)
 	}
 	raw, err := json.Marshal(payload)
 	if err != nil {
@@ -138,7 +142,7 @@ func TestEngagementReplyPayload_ChannelReply(t *testing.T) {
 	contact := ids.From[ids.ContactKind](ids.NewV7())
 
 	payload := engagementReplyPayload(matched,
-		replyOrigin{channel: "telegram", contactID: &contact}, occurredAt, "telegram:7:42:9")
+		replyOrigin{channel: "telegram", contactID: &contact}, occurredday.Moment{At: occurredAt}, "telegram:7:42:9")
 
 	if !reflect.DeepEqual(payload.Channel, "telegram") {
 		t.Errorf("got %v, want %v", payload.Channel, "telegram")
