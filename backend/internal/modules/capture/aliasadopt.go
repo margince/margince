@@ -218,8 +218,12 @@ func adoptOneMessageTx(
 	// The seat's own participant row, so they can actually read what they now
 	// hold. A message adopted with no participant row is imported for somebody
 	// the audience derivation cannot see.
+	us, err := workspacePartiesTx(ctx, tx, msg.counterparty)
+	if err != nil {
+		return err
+	}
 	if err := stampCaptureParticipants(ctx, tx, msg.id, seat, kindEmail, msg.direction,
-		connector.Counterparty{Email: msg.counterparty}); err != nil {
+		connector.Counterparty{Email: msg.counterparty}, us); err != nil {
 		return err
 	}
 	if !openQuestion {
