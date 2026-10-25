@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: SECURITY.md CONTRIBUTING.md -->
 # Report a problem
 
 Mail a short description of the problem to **bugs@gradion.com**, with a subject
