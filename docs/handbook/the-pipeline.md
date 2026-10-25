@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/deals backend/internal/modules/deals/deal_advance.go backend/internal/modules/deals/pipeline.go backend/internal/modules/deals/stages.go backend/internal/modules/deals/stageprogression.go backend/internal/modules/deals/closedatesweep.go backend/internal/modules/deals/health.go -->
 # The pipeline: how a deal moves
 
 The pipeline in Margince is the ladder of stages every deal moves through. Deals

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/design-system/provenance.tsx frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore -->
 # What the AI does, and what it does not
 
 What the AI makes for you, and how to read it. The rules that limit it (the

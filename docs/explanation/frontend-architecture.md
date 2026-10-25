@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/App.tsx frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of

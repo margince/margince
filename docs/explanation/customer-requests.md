@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go -->
 # Customer requests last longer than pipeline stages
 
 A captured request and a sales deal have different lives. When a deal closes, Margince stops telling

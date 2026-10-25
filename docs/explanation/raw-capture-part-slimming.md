@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/capture/partslim backend/internal/modules/capture/partslimstore.go backend/internal/compose/jobs_partslim.go backend/internal/modules/capture/sinkraw.go backend/internal/compose/sarrestore.go backend/internal/modules/privacy/erasure_attachments.go -->
 # raw_capture part slimming: what the stored original promises
 
 `raw_capture` holds the provider's original for every captured message. Without slimming it would

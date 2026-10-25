@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/consent backend/internal/modules/privacy backend/internal/shared/ports/commsauthz backend/internal/shared/ports/jurisdiction backend/internal/compose/jobs_privacyretention.go backend/internal/compose/siteleadnotice.go extensions/de -->
 # Privacy, consent & the GDPR engines
 
 How Margince meets its duties to a data subject. The **authorization engine** decides whether each

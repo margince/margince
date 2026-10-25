@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/settings frontend/src/lib/settingscatalog.ts frontend/src/lib/settingscapability.ts frontend/src/App.settings.tsx backend/internal/platform/settings backend/internal/modules/identity/internal/policy/defaults.go -->
 # Settings
 
 Margince settings open from the **account menu** at the top right. They are not in the sidebar. Which settings pages you see follows your permissions.

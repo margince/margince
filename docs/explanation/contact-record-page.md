@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts -->
 # The contact record page
 
 The Overview tab puts recorded context and real work first. A new contact must not look like an old relationship that is now silent.

@@ -9,10 +9,7 @@
 // composition root — as store + contract mapping + transport handlers +
 // the deals slice of the datasource provider, flat per ADR-0054 §3.
 //
-// Tables owned: deal, deal_stage_history, pipeline, stage,
-// stage_exit_criterion, deal_stage_evidence, stage_progression_outcome,
-// stage_progression_policy, fx_rate, product, offer, offer_line_item and
-// offer_template.
+// Tables owned: docs/reference/entity-model/deals.md.
 //
 // close_date_run and close_date_run_member hold the nightly close-date pass
 // and the eligible set frozen at its start. So a pass resumes where it

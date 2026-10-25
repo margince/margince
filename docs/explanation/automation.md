@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/automation backend/internal/compose/workflows.go -->
 # Automation: the closed catalog and its trigger runtime
 
 `internal/modules/automation` lets a workspace turn on, and set values for, a **fixed** set of

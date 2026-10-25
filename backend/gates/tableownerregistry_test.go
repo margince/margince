@@ -10,8 +10,8 @@ package gates
 // of a gate a reader reads whole. The two are one gate; only the file is split.
 
 // tableOwners maps every core-migration table to the ONE module whose store
-// owns its writes (module doc.go "Tables owned" declarations, kept in sync).
-// This map is the hand-maintained artifact: a new table gets an owner here
+// owns its writes. docs/reference/entity-model/ is rendered from it, and a
+// module's doc.go points there rather than copying it. This map is the hand-maintained artifact: a new table gets an owner here
 // before its first write lands.
 // gatekit:fixture the owning module path each table's writes are compared
 // against — expected data, not a cost anyone is paying.

@@ -9,12 +9,13 @@ Use this page to add a new **capability** (a module) or a **link between two mod
 ## Add a new module
 
 1. **Create the flat package** `backend/internal/modules/<name>/` with a `doc.go`.
-   In `doc.go`, state the module's job in one line and add a **"Tables owned"** list.
-   The table owner test reads that list.
+   In `doc.go`, state the module's job in one line, then the line
+   `// Tables owned: docs/reference/entity-model/<name>.md.` That generated page is the list; the
+   `doc.go` never copies it (`tablelistpointer_test.go`).
    Choose one shape: *Handlers→Store* (CRUD) or *Handlers→Service* (engine).
    [reference/modules.md](../reference/modules.md) lists the modules that exist.
-2. **Add its migrations** ([apply-migrations.md](apply-migrations.md)) and list every new table in the
-   `doc.go`.
+2. **Add its migrations** ([apply-migrations.md](apply-migrations.md)) and give every new table its
+   owner in `tableOwners` (`backend/gates/tableownerregistry_test.go`).
 3. **Add its contract operations** and run `make gen` ([add-an-endpoint.md](add-an-endpoint.md)).
    Each operation answers 501 until you wire it.
 4. **Put the handler set in `Server`** (`backend/internal/compose/server.go`).

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/api/jobs.yaml backend/tools/gen-jobs backend/internal/platform/jobs/spec.go backend/internal/platform/jobs/govern.go backend/internal/platform/jobs/fault.go backend/internal/compose/dispatch.go backend/internal/compose/jobregistry.go backend/internal/compose/workspacejob.go -->
 # The job fleet: the declaration, the dispatcher, and one row per workspace
 
 Jobs that run outside a request in this backend run on [River](https://riverqueue.com), a job queue that keeps its jobs

@@ -35,6 +35,25 @@ The handbook (`docs/handbook/`) and `user-guide/` are for those who use Margince
 the words on the screen. Server, transaction, row, token, an API path or a permission key appears only when the
 reader must type it. One handbook page owns a topic, and the others link to it.
 
+## A fact the code owns is linked, and a story names its code
+
+A list the code already holds (tables, tiers, job schedules, settings) is not typed into a page. Link the
+generated page that lists it; the [entity model](entity-model/README.md) is the one list of tables.
+
+An explanation or handbook page states how the product behaves, so it names the code that decides that
+behaviour in one line above its title:
+
+```markdown
+<!-- prose:plain -->
+<!-- describes: backend/internal/modules/comms/dispatcher.go frontend/src/features/outbox -->
+# How a message goes out
+```
+
+`docsdescribes_test.go` checks that each path exists. `make docs-describing` lists the pages whose code
+a branch changes, and the pull request answers each one with `still true` or `updated`. Name the files
+whose change would make the page false, not every file it mentions. The knowledge chunker leaves a
+line that is only an HTML comment out of a passage, so **Ask your documents** never quotes it.
+
 ## What the gate holds
 
 Each rule runs on prose with fenced code, inline code, link targets and HTML comments removed. Tables count as prose.

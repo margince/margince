@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/search backend/internal/compose/embeddriftsweep.go backend/internal/compose/embedreindextransport.go backend/internal/compose/jobs_embedreindex.go backend/internal/compose/embedreadyz.go backend/internal/shared/ports/retrieval -->
 # Search & retrieval: two arms, one row scope, two kinds of stale data
 
 Search is how a typed query becomes a ranked list of records. Behind one more seam, it is also how

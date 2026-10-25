@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/capture backend/internal/modules/capture/sinkidentity.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part
@@ -24,9 +25,8 @@ Also called: sent items, outgoing mail, outbox, log sent emails.
 
 A captured message passes four stages, in order.
 
-**1. The connector picks it up.** Some things never leave the connector, such as
-a chat reaction or a message your own mail rules filtered. Those never reach
-Margince at all.
+**1. The connector picks it up.** Some things never leave the connector, such as a chat reaction
+or a message your own mail rules filtered. Those never reach Margince at all.
 
 **2. The first check.** Margince confirms the message follows the expected format,
 is within size limits, and comes from a source that stands behind the addresses on it.

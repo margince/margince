@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page

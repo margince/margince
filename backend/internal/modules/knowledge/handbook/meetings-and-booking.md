@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go -->
 # Meetings and booking
 
 Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.

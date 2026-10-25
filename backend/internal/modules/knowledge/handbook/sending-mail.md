@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/mail frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/compose/draftcore -->
 # Writing and sending mail
 
 [Capture](capture.md) is how mail comes **in**. This page is how it goes **out**:

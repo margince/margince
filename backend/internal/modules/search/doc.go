@@ -8,8 +8,7 @@
 // hit IS a read, so existence-hiding holds here exactly as on the
 // per-entity lists.
 //
-// Tables owned: embed_store_binding, embedding, graph_interaction_edge,
-// graph_contact_edge — the retrieval slice and the interaction projections,
-// all derived and rebuildable. Domain tables are read through their declared
+// Tables owned: docs/reference/entity-model/search.md. They are the retrieval
+// slice and the interaction projections, all derived and rebuildable. Domain tables are read through their declared
 // indexes only. Imports shared + platform only; never a sibling module.
 package search

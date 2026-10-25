@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting -->
 # Analytics and forecasting
 
 **Analytics** in Margince is the reporting screen. It shows forecast, pipeline

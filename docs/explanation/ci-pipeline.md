@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/scheduled.yml .github/actions/go-build-cache scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is

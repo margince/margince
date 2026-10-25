@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml -->
 # Authorization & access control
 
 How Margince decides who may do what, and where that decision is made. You may look for the auth check in

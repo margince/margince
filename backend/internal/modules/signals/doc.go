@@ -13,5 +13,5 @@
 // The warm room proposes; the rep sends — every proposed outbound rides
 // the 🟡 confirm-first send tool, never this module.
 //
-// Tables owned: signal, signal_resolution.
+// Tables owned: docs/reference/entity-model/signals.md.
 package signals

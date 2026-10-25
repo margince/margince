@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/aiactivity backend/internal/modules/ai/railstart.go backend/internal/modules/ai/railowner.go backend/internal/modules/agents/runner/activity.go frontend/src/app/agentrail.tsx frontend/src/app/ai-activity-lines.ts frontend/src/api/model-inflight.ts -->
 # The AI activity rail: what the AI is doing for you, while it does it
 
 A rep who asks for a summary should see that it is being written. The AI activity rail shows AI work

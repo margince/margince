@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/api/ai-tasks.yaml backend/internal/modules/ai/router.go backend/internal/modules/ai/decideroute.go backend/internal/modules/ai/budget.go backend/internal/modules/ai/tracing.go backend/internal/modules/ai/usage.go backend/internal/modules/ai/providerregistry.go backend/internal/compose/jobs_aibudget.go -->
 # The AI runtime: tasks, tiers, routing, and the one gate
 
 How every AI call in Margince is *named*, *routed*, *metered*, *traced*, and *certified*. This is the

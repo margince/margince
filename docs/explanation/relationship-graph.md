@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go -->
 # The relationship graph: participants, the interaction edge & deal coverage
 
 Margince answers the question *is this account cold* from the real parties to each conversation. It

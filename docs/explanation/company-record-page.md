@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/compose/company360 backend/internal/compose/companybrief backend/internal/compose/companyscan backend/internal/compose/jobs_accountscan.go backend/internal/modules/contacts/companylogo.go frontend/src/features/companies frontend/src/features/records/record360 backend/api/crm.yaml -->
 # The company record page: one gated read, text per viewer, named gaps
 
 The account page a rep opens on a company. It shows who works there, what is open, what moved, and what

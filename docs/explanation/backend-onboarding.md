@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/cmd backend/internal/compose backend/internal/platform/database/storekit backend/internal/platform/database/database.go backend/internal/platform/auth backend/internal/platform/events backend/api/crm.yaml -->
 # A guide to the backend for new developers
 
 The starting point for a developer new to the Margince backend. It is the map that joins the other docs

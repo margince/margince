@@ -6,6 +6,7 @@ package knowledge
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 )
@@ -21,6 +22,11 @@ const maxChunkChars = 800
 // chunk — without it, the answer to a question is split across two passages and
 // present in neither.
 const overlapChars = 120
+
+// authorNoteLine is a line that is wholly an HTML comment. A rendered page never
+// shows one, so an answer quoting it quotes what the reader cannot see. It is
+// blanked rather than cut so StartLine still counts the page's own lines.
+var authorNoteLine = regexp.MustCompile(`(?m)^[ \t]*<!--(?:[^-]|-[^-])*-->[ \t]*$`)
 
 // Chunk is one embeddable span of a document, in document order.
 type Chunk struct {
@@ -53,6 +59,7 @@ func (c Chunk) Hash() string {
 // the content hash decide whether a re-ingest costs any model calls.
 func ChunkText(text string) []Chunk {
 	text = strings.ReplaceAll(text, "\r\n", "\n")
+	text = authorNoteLine.ReplaceAllString(text, "")
 	if strings.TrimSpace(text) == "" {
 		return nil
 	}

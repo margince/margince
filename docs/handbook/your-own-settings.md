@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings:

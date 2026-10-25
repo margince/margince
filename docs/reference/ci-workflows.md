@@ -13,6 +13,7 @@ workflow is outside the gate:
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
 | `closing-declaration.yml` | pull request events | No |
+| `docs-describing.yml` | pull request events | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
 | `main-health.yml` | `main` every two hours, manual dispatch | No |
 | `scheduled.yml` | daily and weekly on `main` | No |
@@ -125,6 +126,23 @@ that users do not read the warning.
 [`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh) makes the
 report. It reads its evidence from the environment, so a fixture can drive every case
 (`make test-closing-declaration`).
+
+## `docs-describing.yml`
+
+What starts it: `opened`, `reopened`, `edited`, `synchronize` and `ready_for_review`. Each page in
+`docs/explanation/` and `docs/handbook/` names its code in a `<!-- describes: -->` line above its title,
+and `docsdescribes_test.go` checks that every path in it exists. This workflow lists the pages whose
+paths the pull request changes. The body answers each one on its own line:
+`- docs/handbook/capture.md: still true`, or `updated`. A page the pull request edits counts as
+answered.
+
+A check cannot tell that a sentence stopped being true. The answer is a human's, and the workflow asks
+for it where the reviewer reads. It warns and never fails, for the same reason as
+`closing-declaration.yml`, and deletes its comment once every page is answered. A failed query for the
+changed files stops without a comment.
+[`scripts/check-docs-describing.sh`](../../scripts/check-docs-describing.sh) makes the report. It reads
+its evidence from the environment, so a fixture can drive every case (`make test-docs-describing`).
+`make docs-describing` prints the same list for a local branch.
 
 ## `issue-closed.yml`
 

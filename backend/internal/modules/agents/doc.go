@@ -7,10 +7,10 @@
 // approval flow, and the Surface-B reasoning loop. It reaches records only
 // through the datasource seam.
 //
-// Tables owned: agent_run and runner_job — the scheduled runner's own
-// execution state — plus agent_standing_grant, which records whether a rep
-// has said yes to an agent working on their behalf and which passport
-// carries that authority.
+// Tables owned: docs/reference/entity-model/agents.md. agent_run and runner_job
+// are the scheduled runner's own execution state. agent_standing_grant records
+// whether a rep has said yes to an agent working for them. It also names the
+// passport that carries that authority.
 //
 // Nothing ELSE is owned here, and that is the line worth stating: records
 // belong to the domain modules (reached via the injected datasource

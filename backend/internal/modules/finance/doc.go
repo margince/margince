@@ -33,6 +33,5 @@
 // The core ships no accounting source. Each one is an extension unit's
 // FinanceSource, offered to an administrator on the finance settings page.
 //
-// Tables owned: finance_connection, finance_external_customer,
-// finance_customer_link, finance_invoice, finance_payment.
+// Tables owned: docs/reference/entity-model/finance.md.
 package finance

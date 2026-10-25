@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/privacy frontend/src/features/lists/filterexport.tsx frontend/src/features/import/import.result.tsx backend/internal/modules/privacy backend/internal/modules/consent backend/internal/modules/collections/exportsource.go backend/internal/compose/export.go -->
 # What is kept, what is destroyed
 
 What Margince keeps, for how long, what a delete destroys, and how you get data in and out. Read it before you promise anything to a customer or to someone who checks your records.

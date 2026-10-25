@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a

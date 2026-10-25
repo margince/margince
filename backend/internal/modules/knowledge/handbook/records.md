@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/contacts frontend/src/features/companies frontend/src/features/records backend/internal/modules/contacts backend/internal/modules/activities backend/internal/modules/customfields backend/internal/modules/collections backend/internal/platform/vatcheck -->
 # Contacts, companies, leads, deals and projects
 
 Margince holds five kinds of record: contacts, companies, leads, deals and projects.

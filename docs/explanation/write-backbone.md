@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/platform/database/storekit backend/internal/platform/database/database.go backend/internal/shared/kernel/events backend/internal/platform/events/relay.go backend/internal/platform/events/subscriber.go backend/internal/platform/events/dedupe.go backend/internal/platform/httpserver/chassis.go backend/internal/compose/runnerservice.go -->
 # The write backbone: storekit, `audit_log` & the outbox
 
 Every audited write in this backend commits **three rows in one transaction**. They are the domain row, an

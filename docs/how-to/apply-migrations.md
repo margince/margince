@@ -70,7 +70,8 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
 3. **Keep each enum in step.** A Go enum may mirror a new `CHECK (col IN (...))`.
    Then add the value to that Go `const` set too, or `enumsync_test.go` fails.
 4. **Reach the erase and SAR paths** if the table holds personal data (`piicoverage_test.go`).
-   Add the table to the "Tables owned" list in the owning module's `doc.go` (`tableownership_test.go`).
+   Give the table its owner in `tableOwners` (`backend/gates/tableownerregistry_test.go`), then regenerate
+   the entity model: `cd backend && go test ./gates -run EntityModel -update-entity-model`.
 5. **`SET LOCAL lock_timeout` limits the wait, never the hold.**
    It limits how long a statement waits for a lock before it gives up.
    Once the statement has the lock, it holds it until the transaction ends.

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/webhooks backend/internal/compose/webhooks.go backend/api/public-events.yaml frontend/src/features/settings/webhooks.tsx -->
 # Outbound webhooks: the governed outbound surface and delivery engine
 
 `internal/modules/webhooks` is the outbound integration surface **built into** Margince. A workspace

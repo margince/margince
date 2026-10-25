@@ -69,7 +69,7 @@ store writes, which step 3 needs: [explanation/write-backbone.md](../explanation
 
 5. **Add a migration if the schema changed.**
    See [apply-migrations.md](apply-migrations.md).
-   Add any new table to the "Tables owned" list in the owning module's `doc.go`.
+   Give any new table its owner in `tableOwners` (`backend/gates/tableownerregistry_test.go`).
 
 6. **Check** with `make check`.
    `build` and the `var _ ServerInterface = Server{}` line prove the operation exists in the contract.

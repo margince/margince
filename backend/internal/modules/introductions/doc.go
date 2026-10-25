@@ -25,5 +25,5 @@
 // Every reader that moves or expires rows by status also asks the origin.
 // Unlike an ask, a recorded row is readable by anyone who can read the contact.
 //
-// Tables owned: intro_request
+// Tables owned: docs/reference/entity-model/introductions.md.
 package introductions

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the

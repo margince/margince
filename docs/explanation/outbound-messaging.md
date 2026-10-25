@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/comms/dispatcher.go backend/internal/modules/comms/store.go backend/internal/modules/comms/storechannel.go backend/internal/modules/comms/gates.go backend/internal/modules/comms/sendseam.go backend/internal/modules/comms/policy.go backend/internal/modules/activities/email.go backend/internal/modules/activities/channelsend.go -->
 # Outbound messaging: the delivery work behind a sent message
 
 `internal/modules/comms` is how Margince sends a message out. It holds the durable record of what was

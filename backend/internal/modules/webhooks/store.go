@@ -10,6 +10,8 @@
 // the workspace), not a third-party app marketplace and not an inbound
 // receiver (features/04 §3). A subscription's signing secret is sealed at
 // rest (cipher.go); it is returned exactly once at create/rotate.
+//
+// Tables owned: docs/reference/entity-model/webhooks.md.
 package webhooks
 
 import (

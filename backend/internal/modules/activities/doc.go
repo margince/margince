@@ -7,15 +7,7 @@
 // contract mapping + transport handlers + the activities slice of the
 // datasource provider, flat per ADR-0054 §3.
 //
-// Tables owned: activity, activity_link, activity_participant,
-// activity_audience_member, activity_meeting_history,
-// activity_retention_evidence, transcript_read, attachment_extraction,
-// deal_document_hide, activity_sales_state, activity_reader_state,
-// worklist_pin, worklist_done, activity_review_template, activity_review_response,
-// activity_request_settlement, activity_identity, mail_draft,
-// booking_page, meeting_invitation, meeting_proposal,
-// activity_calendar_method_backfill, activity_waiting_horizon.
-// Also owns activity_commitment_admission and activity_clock_refold_mark.
+// Tables owned: docs/reference/entity-model/activities.md.
 //
 // mail_draft is the composer's own state — a message the rep has started and
 // not sent — and it is here because sending it is: the transaction that sends

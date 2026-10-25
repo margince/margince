@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/app/nav.ts frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search -->
 # What Margince is
 
 Margince is a CRM. It is one place for the contacts you sell to, the companies

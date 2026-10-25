@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx -->
 # Capture connectors: the inbound integration seam and the mail pipeline
 
 `internal/modules/capture` is the **inbound** integration surface of Margince. A *connector* works with an

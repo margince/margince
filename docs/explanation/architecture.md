@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/.go-arch-lint.yml backend/.golangci.yml backend/internal/compose backend/internal/platform/database/storekit backend/internal/platform/auth backend/api/crm.yaml -->
 # Architecture
 
 The short map of how this code base is shaped. New backend developers should start at
@@ -48,8 +49,8 @@ What each directory owns, and the rule that goes with it:
     protocol adapter), `agents/runner` (an engine of its own), `identity/internal/policy` (a private
     rule set).
   - A module never imports a sibling; if feature A needs B, compose puts the edge in. A module writes
-    only the tables it owns, declared in its `doc.go` and gated by
-    `backend/gates/tableownership_test.go`. Each module follows one of
+    only the tables it owns, declared in `tableOwners` (`backend/gates/tableownerregistry_test.go`) and
+    gated by `backend/gates/tableownership_test.go`. Each module follows one of
     [the two spine shapes](#the-two-spine-shapes).
 - `internal/compose/`: the compose layer that every process role shares. It holds the contract HTTP
   surface, the composite `datasource.SystemOfRecordProvider`, and the MCP registry + approvals adapter.
@@ -99,8 +100,8 @@ imports (the inside of the `aicert` package) means it moves and versions with th
 through `internal/compose` and meant to run as a server or job, it gets a `cmd/<role>`. If it is a tool
 around one package, it stays with that package.
 
-To place a new feature: add `internal/modules/<name>/` (flat), and give it a `doc.go` with a
-"Tables owned" list. Follow one spine shape, and wire any need that crosses modules as a `compose`
+To place a new feature: add `internal/modules/<name>/` (flat), and give it a `doc.go` whose
+`Tables owned:` line names its page in the [entity model](../reference/entity-model/README.md). Follow one spine shape, and wire any need that crosses modules as a `compose`
 adapter, never a sibling import.
 
 ## The two spine shapes
