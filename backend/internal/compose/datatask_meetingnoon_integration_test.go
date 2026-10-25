@@ -74,6 +74,20 @@ func (f noonFixture) save(id ids.ActivityID, start time.Time) {
 	}
 }
 
+// move is a start change by whoever ctx is, with the status only when given.
+func (f noonFixture) move(ctx context.Context, id ids.ActivityID, start time.Time, status *string) {
+	f.t.Helper()
+	if _, err := f.e.Activities.UpdateActivity(ctx, id, activities.UpdateActivityInput{MeetingStatus: status, OccurredAt: &start}); err != nil {
+		f.t.Fatalf("moving the meeting: %v", err)
+	}
+}
+
+func (f noonFixture) historyStart(id ids.ActivityID) string {
+	f.t.Helper()
+	return f.e.WsScalar(f.t, `SELECT to_char(scheduled_start AT TIME ZONE 'UTC', '`+noonStartLayout+`') FROM activity_meeting_history
+		WHERE activity_id = $1 AND status = 'held'`, id.UUID)
+}
+
 func (f noonFixture) start(id ids.ActivityID) string {
 	f.t.Helper()
 	return f.e.WsScalar(f.t, `SELECT to_char(occurred_at AT TIME ZONE 'UTC', '`+noonStartLayout+`') FROM activity WHERE id = $1`, id.UUID)
@@ -100,6 +114,19 @@ func TestTheNoonTaskRestoresOnlyStartsAnOutcomeSaveMovedBeforeTheCutoff(t *testi
 	afternoon := berlinNoon.Add(3 * time.Hour)
 	f.save(movedAfterwards, afternoon)
 
+	held := string(crmcontracts.ActivityMeetingStatusHeld)
+	noStatusChange := f.book(bookedAtMorning, shared)
+	f.move(e.Admin(), noStatusChange, berlinNoon, nil)
+	backToNoon := f.book(bookedAtMorning, shared)
+	f.save(backToNoon, berlinNoon)
+	f.move(e.Admin(), backToNoon, afternoon, nil)
+	f.move(e.Admin(), backToNoon, berlinNoon, nil)
+	bySystem := f.book(bookedAtMorning, shared)
+	f.move(ctx, bySystem, berlinNoon, &held)
+	if got := f.historyStart(damaged); got != "2026-07-15T10:00:00.000Z" {
+		t.Fatalf("the history start before the repair = %s, want the noon of the save", got)
+	}
+
 	owner := integration.OwnerConn(t)
 	if _, err := owner.Exec(context.Background(), `UPDATE schema_migrations_core SET applied_at = now() WHERE version = $1`,
 		activities.MeetingNoonCutoffMigration); err != nil {
@@ -125,13 +152,20 @@ func TestTheNoonTaskRestoresOnlyStartsAnOutcomeSaveMovedBeforeTheCutoff(t *testi
 		AND (after ->> 'occurred_at')::timestamptz = $2 AND actor_type = 'system'`, damaged.UUID, bookedAtMorning); got != 1 {
 		t.Errorf("system restore audit rows = %d, want 1", got)
 	}
-	for name, id := range map[string]ids.ActivityID{"a meeting booked at noon": reallyAtNoon, "a meeting after the cutoff": afterCutoff} {
+	if got := f.historyStart(damaged); got != "2026-07-15T07:00:00.123Z" {
+		t.Errorf("the history start after the repair = %s, want the restored start", got)
+	}
+	for name, id := range map[string]ids.ActivityID{
+		"a meeting booked at noon": reallyAtNoon, "a meeting after the cutoff": afterCutoff,
+		"a noon move without an outcome": noStatusChange, "a colleague's later move back to noon": backToNoon,
+		"a noon save by the system": bySystem,
+	} {
 		if got := f.start(id); got != "2026-07-15T10:00:00.000Z" {
 			t.Errorf("%s was moved to %s", name, got)
 		}
 	}
 	if got := f.start(movedAfterwards); got != "2026-07-15T13:00:00.000Z" {
-		t.Errorf("the meeting a person moved afterwards starts at %s, want their 13:00Z", got)
+		t.Errorf("the meeting a colleague moved afterwards starts at %s, want their 13:00Z", got)
 	}
 	if got := f.version(afterCutoff); got != before["after"] {
 		t.Errorf("the meeting after the cutoff changed version to %d", got)

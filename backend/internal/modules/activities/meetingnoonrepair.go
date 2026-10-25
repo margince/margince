@@ -27,12 +27,13 @@ import (
 const MeetingNoonCutoffMigration = "1792761600"
 
 // noonMeetingScope selects meetings whose last start change is an update made
-// before the cutoff. That update left the start at noon of the day it already
-// had. No later change moved the start. The zone is $1, the cutoff migration $2.
+// before the cutoff. A human actor made it, and it set the outcome with a start at
+// noon of the day the start already had. No later change moved the start. The
+// zone is $1, the cutoff migration $2.
 const noonMeetingScope = `
   FROM activity a
   JOIN LATERAL (
-       SELECT au.action, au.occurred_at AS saved_at,
+       SELECT au.action, au.actor_type, au.occurred_at AS saved_at, au.after ? 'meeting_status' AS set_status,
               (au.before ->> 'occurred_at')::timestamptz AS original,
               (au.after ->> 'occurred_at')::timestamptz AS moved
          FROM audit_log au
@@ -41,7 +42,7 @@ const noonMeetingScope = `
  WHERE a.kind = 'meeting' AND a.meeting_status IS NOT NULL
    AND a.restricted_at IS NULL AND a.archived_at IS NULL
    AND (a.occurred_at AT TIME ZONE $1)::time = TIME '12:00:00'
-   AND last.action = 'update' AND last.moved = a.occurred_at AND last.original IS NOT NULL
+   AND last.action = 'update' AND last.actor_type = 'human' AND last.set_status AND last.moved = a.occurred_at AND last.original IS NOT NULL
    AND (last.original AT TIME ZONE $1)::date = (a.occurred_at AT TIME ZONE $1)::date
    AND (last.original AT TIME ZONE $1)::time <> TIME '12:00:00'
    AND last.saved_at < (SELECT m.applied_at FROM schema_migrations_core m WHERE m.version = $2)
@@ -87,9 +88,9 @@ func CountNoonMeetingsTx(ctx context.Context, q pgx.Tx, zone string, limit int64
 }
 
 // RestoreMeetingStartTx puts a meeting's start back through the module's own
-// update. That update locks the row, bumps the version, audits, emits the event
-// and moves the last-activity clocks. It answers false and writes nothing when
-// the row changed since it was read.
+// update, and on its history rows. That update locks the row, bumps the version,
+// audits, emits the event and moves the last-activity clocks. It answers false
+// and writes nothing when the row changed since it was read.
 func RestoreMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
@@ -102,6 +103,12 @@ func RestoreMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting) (bool,
 	}
 	if err != nil {
 		return false, fmt.Errorf("activities: restoring a meeting start: %w", err)
+	}
+	// The outcome save also recorded the noon start on its history row, which
+	// the held-meetings report prefers over the activity's own start.
+	if _, err := tx.Exec(ctx, `UPDATE activity_meeting_history SET scheduled_start = $2
+		WHERE activity_id = $1 AND scheduled_start = $3`, m.ID, m.Original, m.Noon); err != nil {
+		return false, fmt.Errorf("activities: restoring a meeting's history start: %w", err)
 	}
 	return true, nil
 }
