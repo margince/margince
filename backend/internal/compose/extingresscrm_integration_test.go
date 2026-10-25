@@ -129,17 +129,17 @@ func TestACompanyIsCreatedThenFilledByItsOutsideIdAndKeepsWhatAUserTyped(t *test
 	}
 	// A user types an industry, then the feed sends a different one and a description.
 	if _, err := e.Contacts.UpdateCompany(e.Admin(), ids.From[ids.CompanyKind](ids.MustParse(first.Ref.ID)),
-		contacts.UpdateCompanyInput{Industry: new("Hand typed")}); err != nil {
+		contacts.UpdateCompanyInput{Industry: new("automotive")}); err != nil {
 		t.Fatalf("editing as a user: %v", err)
 	}
 	second := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{
-		DisplayName: "Acme Renamed", Industry: "Feed value", Description: "from the feed",
+		DisplayName: "Acme Renamed", Industry: "education", Description: "from the feed",
 	}))
 	if second.Ref.ID != first.Ref.ID {
 		t.Fatalf("second ingest made %s, want the same company %s", second.Ref.ID, first.Ref.ID)
 	}
 	industry, description, system, key := e.companyColumns(t, first.Ref.ID)
-	if industry == nil || *industry != "Hand typed" {
+	if industry == nil || *industry != "automotive" {
 		t.Errorf("industry = %v, want the user's value kept", industry)
 	}
 	if description == nil || *description != "from the feed" {
@@ -156,20 +156,20 @@ func TestACompanyIsCreatedThenFilledByItsOutsideIdAndKeepsWhatAUserTyped(t *test
 func TestAHandMadeCompanyIsAdoptedByDomainAndKeepsWhatAUserTyped(t *testing.T) {
 	e := setupCRMIngress(t)
 	made, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
-		DisplayName: "Hand made", Industry: new("Manufacturing"),
+		DisplayName: "Hand made", Industry: new("manufacturing"),
 		Domains: []contacts.CompanyDomainInput{{Domain: "acme.test", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("seeding the hand-made company: %v", err)
 	}
 	res := e.mustIngest(t, companyRecord("acct-9", extension.CompanyFields{
-		DisplayName: "Acme", Industry: "Software", Description: "adopted", Domain: "acme.test", AdoptOn: extension.AdoptKeyDomain,
+		DisplayName: "Acme", Industry: "software", Description: "adopted", Domain: "acme.test", AdoptOn: extension.AdoptKeyDomain,
 	}))
 	if res.Ref.ID != made.Id.String() {
 		t.Fatalf("adopt made %s, want the hand-made %s", res.Ref.ID, made.Id)
 	}
 	industry, description, _, key := e.companyColumns(t, res.Ref.ID)
-	if industry == nil || *industry != "Manufacturing" || description == nil || *description != "adopted" {
+	if industry == nil || *industry != "manufacturing" || description == nil || *description != "adopted" {
 		t.Errorf("industry/description = %v/%v, want the user's industry kept and the empty description filled", industry, description)
 	}
 	if key == nil || *key != "acct-9" {
@@ -210,7 +210,7 @@ func TestAClashWithAVisibleRecordUpdatesIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seeding the holder: %v", err)
 	}
-	res := e.mustIngest(t, companyRecord("acct-8", extension.CompanyFields{DisplayName: "Acme", Industry: "Software"}))
+	res := e.mustIngest(t, companyRecord("acct-8", extension.CompanyFields{DisplayName: "Acme", Industry: "software"}))
 	if res.Ref.ID != held.Id.String() {
 		t.Fatalf("ingest made %s, want the visible holder %s", res.Ref.ID, held.Id)
 	}
@@ -301,7 +301,7 @@ func TestAnActivityIsRelinkedOntoACompanyByItsKey(t *testing.T) {
 
 func TestReplayedAndRacingRecordsLeaveOneRowAndOneAuditEntryPerChange(t *testing.T) {
 	e := setupCRMIngress(t)
-	rec := companyRecord("acct-race", extension.CompanyFields{DisplayName: "Acme", Industry: "Software"})
+	rec := companyRecord("acct-race", extension.CompanyFields{DisplayName: "Acme", Industry: "software"})
 
 	var wg sync.WaitGroup
 	errs := make(chan error, 8)

@@ -26,24 +26,24 @@ func TestAFeedValueIsKeptBesideTheTypedOneAndReplacedByTheNextOffer(t *testing.T
 	first := e.companyEditedByAUser(t)
 	id := ids.From[ids.CompanyKind](ids.MustParse(first.Ref.ID))
 
-	e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "Feed value"}))
-	e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "Feed again"}))
+	e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "education"}))
+	e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "construction"}))
 
 	offered, err := e.Contacts.ListOfferedValues(e.Admin(), id)
 	if err != nil {
 		t.Fatalf("listing offered values: %v", err)
 	}
-	if len(offered) != 1 || offered[0].Field != "industry" || offered[0].Value != "Feed again" || offered[0].SourceSystem == "" {
+	if len(offered) != 1 || offered[0].Field != "industry" || offered[0].Value != "construction" || offered[0].SourceSystem == "" {
 		t.Errorf("offered = %+v, want the one latest industry offer", offered)
 	}
-	if industry, _, _, _ := e.companyColumns(t, first.Ref.ID); industry == nil || *industry != "Hand typed" {
+	if industry, _, _, _ := e.companyColumns(t, first.Ref.ID); industry == nil || *industry != "automotive" {
 		t.Errorf("industry = %v, want the typed value beside the offer", industry)
 	}
 }
 
 func TestAnArchivedCompanyServesNoOfferedValues(t *testing.T) {
 	e := setupCRMIngress(t)
-	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "Feed value"}))
+	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "education"}))
 	id := ids.From[ids.CompanyKind](ids.MustParse(made.Ref.ID))
 	if _, err := e.Contacts.ArchiveCompany(e.Admin(), id, nil); err != nil {
 		t.Fatalf("archiving: %v", err)
@@ -73,7 +73,7 @@ func TestErasingAnEmployeeDeletesTheOfferedValuesOfTheirCompany(t *testing.T) {
 
 func TestOfferedValuesGoWithTheCompanyTheyDescribe(t *testing.T) {
 	e := setupCRMIngress(t)
-	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "Feed value"}))
+	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "education"}))
 	count := `SELECT count(*) FROM company_offered_value`
 	if got := e.countAsWorkspace(t, count); got != 1 {
 		t.Fatalf("offered rows = %d, want 1", got)

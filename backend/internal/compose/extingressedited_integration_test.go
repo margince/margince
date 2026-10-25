@@ -34,7 +34,7 @@ func (e *crmEnv) companyEditedByAUser(t *testing.T) extension.Result {
 	t.Helper()
 	first := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
 	if _, err := e.Contacts.UpdateCompany(e.Admin(), ids.From[ids.CompanyKind](ids.MustParse(first.Ref.ID)),
-		contacts.UpdateCompanyInput{Industry: new("Hand typed")}); err != nil {
+		contacts.UpdateCompanyInput{Industry: new("automotive")}); err != nil {
 		t.Fatalf("editing as a user: %v", err)
 	}
 	return first
@@ -45,7 +45,7 @@ func TestAFeedWithholdsAFieldAUserEditedAndSaysSo(t *testing.T) {
 	first := e.companyEditedByAUser(t)
 
 	second := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{
-		DisplayName: "Acme", Industry: "Feed value", Description: "from the feed",
+		DisplayName: "Acme", Industry: "education", Description: "from the feed",
 	}))
 	if second.Ref.ID != first.Ref.ID {
 		t.Fatalf("second ingest made %s, want the same company %s", second.Ref.ID, first.Ref.ID)
@@ -54,7 +54,7 @@ func TestAFeedWithholdsAFieldAUserEditedAndSaysSo(t *testing.T) {
 		t.Errorf("withheld = %v, want [industry]", second.Withheld)
 	}
 	industry, description, _, _ := e.companyColumns(t, first.Ref.ID)
-	if industry == nil || *industry != "Hand typed" || description == nil || *description != "from the feed" {
+	if industry == nil || *industry != "automotive" || description == nil || *description != "from the feed" {
 		t.Errorf("industry/description = %v/%v, want the user's value kept and the other field written", industry, description)
 	}
 }
@@ -64,20 +64,20 @@ func TestAFeedAllowedToOverwriteReplacesAFieldAUserEdited(t *testing.T) {
 	first := e.companyEditedByAUser(t)
 	e.allowOverwrite(t, true)
 
-	res := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "Feed value"}))
+	res := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "education"}))
 	if len(res.Withheld) != 0 {
 		t.Errorf("withheld = %v, want none once the unit may overwrite", res.Withheld)
 	}
-	if industry, _, _, _ := e.companyColumns(t, first.Ref.ID); industry == nil || *industry != "Feed value" {
+	if industry, _, _, _ := e.companyColumns(t, first.Ref.ID); industry == nil || *industry != "education" {
 		t.Errorf("industry = %v, want the feed's value", industry)
 	}
 
 	e.allowOverwrite(t, false)
 	if _, err := e.Contacts.UpdateCompany(e.Admin(), ids.From[ids.CompanyKind](ids.MustParse(first.Ref.ID)),
-		contacts.UpdateCompanyInput{Industry: new("Typed again")}); err != nil {
+		contacts.UpdateCompanyInput{Industry: new("agriculture")}); err != nil {
 		t.Fatalf("editing as a user: %v", err)
 	}
-	res = e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "Feed again"}))
+	res = e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "construction"}))
 	if !slices.Equal(res.Withheld, []string{"industry"}) {
 		t.Errorf("withheld = %v after switching the setting off, want [industry]", res.Withheld)
 	}

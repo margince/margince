@@ -161,6 +161,7 @@ func TestSchema_companyOpenPipelineRollupIsSecurityInvoker(t *testing.T) {
 // naming a row-scoped business record. Values are prose for the reader;
 // the map's completeness is the invariant.
 var rowScopedFKDecisions = gatekit.Waive(map[string]string{
+	"company_offered_value.company_id": "child row: what a feed offered for a company, written by contacts.RecordOfferedValues from an extension landing under the service member's own update right on the company and auth.EnsureWritableLive, never from a request body, and read only through contacts.ListOfferedValues, which gates the company with auth.EnsureReadable and answers 404 for an archived one. ON DELETE CASCADE, and the erasure path deletes a row by statement",
 	// Client-supplied references — visibility-gated at the store:
 	"site_read.company_id":                 "gated: auth.EnsureVisible in StartSiteRead (the one human entry point); Begin/Finish only re-address a row Start created, and GetSiteRead re-checks EnsureVisible on every read",
 	"deal.company_id":                      "gated: auth.EnsureLinkTarget in CreateDeal/UpdateDeal (H1)",
