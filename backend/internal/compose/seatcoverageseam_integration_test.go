@@ -27,8 +27,8 @@ import (
 )
 
 // seedUnmailedSeats puts n invited colleagues on the Cc line of one message
-// from the contact. Invited seats have no connection, so none has a mailbox.
-func seedUnmailedSeats(t *testing.T, e *integration.Env, contact ids.UUID, n int) {
+// from the contact, dated with precision. Invited seats have no mailbox.
+func seedUnmailedSeats(t *testing.T, e *integration.Env, contact ids.UUID, n int, precision string) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
@@ -43,8 +43,9 @@ func seedUnmailedSeats(t *testing.T, e *integration.Env, contact ids.UUID, n int
 			addresses = append(addresses, address)
 		}
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO activity (kind, occurred_at, direction, source, captured_by)
-			VALUES ('email', now(), 'inbound', 'imap', 'connector:imap') RETURNING id`).Scan(&activity); err != nil {
+			INSERT INTO activity (kind, occurred_at, occurred_precision, direction, source, captured_by)
+			VALUES ('email', date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' - interval '12 hours',
+			        $1, 'inbound', 'imap', 'connector:imap') RETURNING id`, precision).Scan(&activity); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
@@ -79,18 +80,18 @@ func readContactNetwork(t *testing.T, e *integration.Env, contact ids.UUID) crmc
 
 func TestBothNetworkSurfacesCountEveryColleagueWithoutAMailbox(t *testing.T) {
 	cases := []struct {
-		name       string
-		seats      int
-		wantListed int
+		name, precision string
+		seats           int
+		wantListed      int
 	}{
-		{name: "a list past its limit names ten and counts twelve", seats: 12, wantListed: 10},
-		{name: "a list under its limit names and counts all three", seats: 3, wantListed: 3},
+		{name: "a list past its limit names ten and counts twelve", precision: "instant", seats: 12, wantListed: 10},
+		{name: "a list under its limit names and counts all three", precision: "day", seats: 3, wantListed: 3},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
 			contact := seedGraphContact(t, e, "Outside Contact")
-			seedUnmailedSeats(t, e, contact, tc.seats)
+			seedUnmailedSeats(t, e, contact, tc.seats, tc.precision)
 
 			network := readContactNetwork(t, e, contact)
 			if len(network.CaptureGaps) != tc.wantListed || network.CaptureGapsTotal != tc.seats {
@@ -105,6 +106,12 @@ func TestBothNetworkSurfacesCountEveryColleagueWithoutAMailbox(t *testing.T) {
 			if len(reading.CaptureGaps) != tc.wantListed || reading.CaptureGapsTotal != tc.seats {
 				t.Errorf("who_knows lists %d of %d, want %d of %d",
 					len(reading.CaptureGaps), reading.CaptureGapsTotal, tc.wantListed, tc.seats)
+			}
+			for i, gap := range reading.CaptureGaps {
+				if gap.LastOnThreadPrecision != tc.precision || i >= len(network.CaptureGaps) ||
+					network.CaptureGaps[i].LastOnThreadPrecision == nil || string(*network.CaptureGaps[i].LastOnThreadPrecision) != tc.precision {
+					t.Errorf("gap %d: who_knows reads its time as %q, want %q as the Network tab does", i, gap.LastOnThreadPrecision, tc.precision)
+				}
 			}
 		})
 	}

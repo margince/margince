@@ -52,10 +52,11 @@ type WhoKnowsReading struct {
 // CaptureGap is one colleague whose mail with a contact is not captured. It
 // mirrors the REST ContactCaptureGap field for field.
 type CaptureGap struct {
-	UserID         ids.UUID  `json:"user_id"`
-	DisplayName    string    `json:"display_name"`
-	Invited        bool      `json:"invited"`
-	LastOnThreadAt time.Time `json:"last_on_thread_at"`
+	UserID                ids.UUID  `json:"user_id"`
+	DisplayName           string    `json:"display_name"`
+	Invited               bool      `json:"invited"`
+	LastOnThreadAt        time.Time `json:"last_on_thread_at"`
+	LastOnThreadPrecision string    `json:"last_on_thread_precision,omitempty"`
 }
 
 // WhoKnowsAnswer is what who_knows answers: the colleagues who know one

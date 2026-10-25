@@ -13406,6 +13406,9 @@
                   "type": "string",
                   "format": "date-time"
                 },
+                "last_on_thread_precision": {
+                  "type": "string"
+                },
                 "user_id": {
                   "type": "string",
                   "format": "uuid"
