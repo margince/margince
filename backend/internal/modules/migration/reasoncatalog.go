@@ -353,9 +353,9 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.Vietnamese: "Mô tả dài {length} ký tự; mô tả công ty tối đa {max}.",
 	}},
 	ReasonSizeBandInvalid: {params: []string{paramValue, "allowed"}, text: map[textlang.Lang]string{
-		textlang.English:    "Size_band “{value}” is not one of {allowed}.",
-		textlang.German:     "Die Größenklasse {value:q} gehört nicht zu: {allowed}",
-		textlang.Vietnamese: "Nhóm quy mô {value:q} không thuộc: {allowed}",
+		textlang.English:    "Employees “{value}” is not one of {allowed}.",
+		textlang.German:     "Mitarbeitende {value:q} gehört nicht zu: {allowed}",
+		textlang.Vietnamese: "Số nhân viên {value:q} không thuộc: {allowed}",
 	}},
 	ReasonTagNameInvalid: {params: []string{paramName, "detail"}, text: map[textlang.Lang]string{
 		textlang.English:    "The tag “{name}” cannot be created: its name {detail}.",

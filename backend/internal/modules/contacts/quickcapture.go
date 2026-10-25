@@ -169,7 +169,7 @@ func (s *Store) employerForQuickCapture(
 func nameProfileURLField(err error) error {
 	if parseErr, ok := errors.AsType[*values.ParseError](err); ok && parseErr.Field == linkedinURLField {
 		renamed := *parseErr
-		renamed.Field = "profile_url"
+		renamed.Field = profileURLRequestField
 		return &renamed
 	}
 	return err
