@@ -216,22 +216,51 @@ func TestTheDeliveryReportTaskStepsAnEngagedLeadBackAndKeepsEverythingElse(t *te
 	}
 }
 
-func TestTheDeliveryReportTaskNeverLowersALeadBelowAStatusAHumanPlacedBeforeTheBounce(t *testing.T) {
+// Who counts as a human hand is the audit actor's call: status_set_by reads
+// "human" for every actor but the system.
+func TestTheDeliveryReportTaskKeepsOnlyAStatusAHumanHandPlacedBeforeTheBounce(t *testing.T) {
 	f := newReportFixture(t)
-	lead := f.lead(t, "Human Then Bounce Lead")
-	contacted := "contacted"
-	if _, err := contacts.NewStore(f.e.DB()).UpdateLead(f.ctx, ids.From[ids.LeadKind](lead), contacts.UpdateLeadInput{Status: &contacted}); err != nil {
-		t.Fatalf("the human moving the lead to contacted: %v", err)
+	actingFor := func(p principal.Principal) context.Context {
+		p.Permissions = integration.AdminPerms
+		p.UserID = f.e.AdminUser
+		ctx := principal.WithWorkspaceID(context.Background(), f.e.WS)
+		return principal.WithActor(principal.WithCorrelationID(ctx, ids.NewV7()), p)
 	}
-	f.file(t, lead, "bounce-7", "postmaster@client.test", new("mirror:hubspot"))
-	if status, _ := f.state(t, lead); status != "engaged" {
-		t.Fatalf("fixture: the bounce left the lead %q, so it would test nothing", status)
+	type moved struct {
+		name string
+		want string
+		lead ids.UUID
+	}
+	var leads []moved
+	for _, c := range []struct {
+		name string
+		ctx  context.Context
+		want string
+	}{
+		{"a human", f.ctx, "contacted"},
+		{"an agent on a passport", actingFor(principal.Principal{Type: principal.PrincipalAgent, ID: "agent:seat", OnBehalfOf: f.e.AdminUser}), "contacted"},
+		{"an agent without a passport", actingFor(principal.Principal{Type: principal.PrincipalAgent, ID: "agent:loose"}), "new"},
+		{"a connector", actingFor(principal.Principal{Type: principal.PrincipalConnector, ID: "connector:sync"}), "new"},
+		{"the system", f.system, "new"},
+	} {
+		lead := f.lead(t, "Lead moved by "+c.name)
+		contacted := "contacted"
+		if _, err := contacts.NewStore(f.e.DB()).UpdateLead(c.ctx, ids.From[ids.LeadKind](lead), contacts.UpdateLeadInput{Status: &contacted}); err != nil {
+			t.Fatalf("%s moving the lead to contacted: %v", c.name, err)
+		}
+		f.file(t, lead, "bounce-"+c.name, "postmaster@client.test", new("mirror:hubspot"))
+		if status, _ := f.state(t, lead); status != "engaged" {
+			t.Fatalf("fixture: the bounce left the lead moved by %s at %q, so it would test nothing", c.name, status)
+		}
+		leads = append(leads, moved{c.name, c.want, lead})
 	}
 
 	f.runTask(t)
 
-	if status, _ := f.state(t, lead); status != "contacted" {
-		t.Errorf("the repaired lead reads %q, want the contacted a human placed", status)
+	for _, m := range leads {
+		if status, _ := f.state(t, m.lead); status != m.want {
+			t.Errorf("after the repair, a lead moved to contacted by %s reads %q, want %q", m.name, status, m.want)
+		}
 	}
 }
 

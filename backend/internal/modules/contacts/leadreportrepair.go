@@ -91,12 +91,17 @@ func ReDeriveLeadFromRemainingTouchesTx(ctx context.Context, tx pgx.Tx, leadID i
 }
 
 // lastHumanPlacedStatus answers the status of the newest audit entry that a
-// human wrote to the lead's status, or "" when no human ever placed one.
+// human hand wrote to the lead's status, or "" when none did. status_set_by
+// cannot say it: the store stamps "human" for every actor but the system, so
+// the audit actor decides. A human counts, and so does an agent acting on a
+// colleague's passport (on_behalf_of set). A passportless agent and a
+// connector do not.
 func lastHumanPlacedStatus(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) (LeadStatus, error) {
 	var status string
 	err := tx.QueryRow(ctx, `SELECT after->>'status' FROM audit_log
  WHERE entity_type = 'lead' AND entity_id = $1
    AND after->>'status_set_by' = $2 AND after ? 'status'
+   AND (actor_type = 'human' OR (actor_type = 'agent' AND on_behalf_of IS NOT NULL))
  ORDER BY occurred_at DESC, id DESC LIMIT 1`,
 		leadID, string(crmcontracts.LeadStatusSetByLeadStatusSetByHuman)).Scan(&status)
 	if errors.Is(err, pgx.ErrNoRows) {
