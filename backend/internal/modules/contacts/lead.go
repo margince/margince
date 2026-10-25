@@ -195,6 +195,11 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 
 // insertLeadRow writes the lead row itself and answers with its id.
 func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []fieldcatalog.Column, by string) (ids.LeadID, error) {
+	if in.Email != nil {
+		if err := storekit.RefuseErasedEmail(ctx, tx, leadEmailColumn, *in.Email); err != nil {
+			return ids.LeadID{}, err
+		}
+	}
 	fit, err := initialLeadScore(ctx, tx, in)
 	if err != nil {
 		return ids.LeadID{}, err

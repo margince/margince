@@ -7702,6 +7702,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du darfst dieses Mitglied nicht als verantwortlich eintragen, daher bist du für seine Zeilen verantwortlich.",
   "import.reason.owner_unknown":
     "Kein Mitglied hat diese E-Mail-Adresse, daher bist du verantwortlich; ein Lead bleibt nicht zugewiesen. Betroffene Zeilen: {rows}.",
+  "import.reason.address_erased":
+    "Wer diese E-Mail-Adresse besitzt, hat die Löschung verlangt und darf nicht erneut gespeichert werden, daher wurde die Zeile nicht importiert.",
   "import.reason.address_not_split":
     "Die Adresse ließ sich nicht in Straße, Postleitzahl und Ort aufteilen, daher bleibt sie in der ersten Adresszeile.",
   "import.reason.phone_needs_country":

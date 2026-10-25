@@ -64,6 +64,9 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 		// "skipped, the address is held" is not answered by different words.
 		return skippedFor(contactEmailClaimedWhy), nil
 	}
+	if refusedAsErased(err) {
+		return skippedFor(addressErasedWhy), nil
+	}
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}

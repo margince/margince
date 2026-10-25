@@ -27,6 +27,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -375,6 +376,12 @@ func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, req crmco
 	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
 		// The contacts store names its own field; this form's address is booker.email.
 		httperr.Write(w, r, httperr.Validation("booker.email", badValue.Code, badValue.Message))
+		return ids.Nil, false
+	}
+	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+		// This door is anonymous, so its answer must not tell a stranger that
+		// the address belongs to someone who asked to be erased.
+		httperr.Write(w, r, httperr.Validation("booker.email", "invalid", "This address cannot be used to book. Use a different address."))
 		return ids.Nil, false
 	}
 	if err != nil {

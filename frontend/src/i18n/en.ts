@@ -7775,6 +7775,8 @@ export const en = {
     "You cannot make this user an owner, so you become the owner of their rows.",
   "import.reason.owner_unknown":
     "No user has this email, so you become the owner; a lead stays unassigned. Rows naming it: {rows}.",
+  "import.reason.address_erased":
+    "Whoever owns this email address asked to be erased and not to be stored again, so the row was not imported.",
   "import.reason.address_not_split":
     "Address could not be split into street, postal code and city, so it stays in the first address line.",
   "import.reason.phone_needs_country":

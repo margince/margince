@@ -211,6 +211,11 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 		if err := refuseMachineAddress(e.Email); err != nil {
 			return err
 		}
+		// Every address a contact gains is written here, so every create and
+		// update door meets the erasure list without asking for it.
+		if err := storekit.RefuseErasedEmail(ctx, tx, "emails", e.Email); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by, from_correspondence)
 			 VALUES ($1, lower($2), $3, $4, $5, $6, $7, $8)`,

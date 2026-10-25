@@ -65,6 +65,40 @@ func EmailSuppressed(ctx context.Context, tx pgx.Tx, email string) (bool, error)
 	return suppressed, err
 }
 
+// ErasedIdentifierCode is the contract's machine code for a write refused
+// because the identifier belongs to an erased subject.
+const ErasedIdentifierCode = "address_erased"
+
+// ErasedIdentifierError refuses a write that would store an erased subject's
+// address or channel account again. It names the field and nothing else: the
+// caller typed the value, and whose record it once was is gone.
+type ErasedIdentifierError struct {
+	Field string
+}
+
+func (e *ErasedIdentifierError) Error() string {
+	return "storekit: " + e.Field + " belongs to a person who asked to be erased and not stored again"
+}
+
+// FieldFault answers 422 naming the field the caller must leave out.
+func (e *ErasedIdentifierError) FieldFault() (field, code, message string) {
+	return e.Field, ErasedIdentifierCode,
+		"The person with this address asked to be erased and not to be stored again. Leave the address out."
+}
+
+// RefuseErasedEmail is EmailSuppressed for a writer that stores the address:
+// a hit is an *ErasedIdentifierError naming field.
+func RefuseErasedEmail(ctx context.Context, tx pgx.Tx, field, email string) error {
+	suppressed, err := EmailSuppressed(ctx, tx, email)
+	if err != nil {
+		return fmt.Errorf("storekit: checking an address against the erasure list: %w", err)
+	}
+	if suppressed {
+		return &ErasedIdentifierError{Field: field}
+	}
+	return nil
+}
+
 // ChannelIdentityHash is the suppression key for a messaging-channel
 // identity: "provider:channel_user_id" under the hashing rule above,
 // applied per FIELD before they are joined. The two sides read the value
@@ -93,6 +127,18 @@ func ChannelIdentitySuppressed(ctx context.Context, tx pgx.Tx, provider, channel
 		`SELECT EXISTS (SELECT 1 FROM erasure_suppression WHERE kind = 'channel_identity' AND value_hash = $1)`,
 		ChannelIdentityHash(provider, channelUserID)).Scan(&suppressed)
 	return suppressed, err
+}
+
+// RefuseErasedChannelIdentity is RefuseErasedEmail for a channel account.
+func RefuseErasedChannelIdentity(ctx context.Context, tx pgx.Tx, field, provider, channelUserID string) error {
+	suppressed, err := ChannelIdentitySuppressed(ctx, tx, provider, channelUserID)
+	if err != nil {
+		return fmt.Errorf("storekit: checking a channel account against the erasure list: %w", err)
+	}
+	if suppressed {
+		return &ErasedIdentifierError{Field: field}
+	}
+	return nil
 }
 
 // ChannelIdentityKey names one channel account for the lock below: the same

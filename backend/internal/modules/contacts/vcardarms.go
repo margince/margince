@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -154,6 +155,9 @@ func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name str
 	err = s.AskHolderToShare(ctx, err)
 	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
 		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: held.Error()}, nil
+	}
+	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardErasedAddress}, nil
 	}
 	return VCardResult{}, err
 }

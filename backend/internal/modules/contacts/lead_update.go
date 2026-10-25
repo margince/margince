@@ -285,6 +285,9 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
+	if err := refuseErasedLeadEmail(ctx, tx, current, in); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	if err := stampHumanFirstResponse(ctx, p, current, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
@@ -314,25 +317,31 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventLeadUpdated{ChangedFields: p.After()}); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	// A rename or a new company/address can make this lead read like another
-	// one; the review trail follows the identity, not just the create.
-	if identityTouched(p, leadNameColumn, leadCompanyColumn, leadEmailColumn) {
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return crmcontracts.Lead{}, err
-		}
-		updated, err := readLead(ctx, tx, id, storekit.LiveOnly, nil)
-		if err != nil {
-			return crmcontracts.Lead{}, err
-		}
-		if err := s.recordLeadNearMatch(ctx, tx, updated, by); err != nil {
-			return crmcontracts.Lead{}, err
-		}
+	if err := s.reviewTouchedLeadIdentity(ctx, tx, id, p); err != nil {
+		return crmcontracts.Lead{}, err
 	}
 	if err := recordRescoreHistory(ctx, tx, id, in, rescore); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	return readLead(ctx, tx, id, storekit.LiveOnly, active)
+}
+
+// reviewTouchedLeadIdentity re-asks the near-match question after a rename or
+// a new company or address: the review trail follows the identity, not just
+// the create.
+func (s *Store) reviewTouchedLeadIdentity(ctx context.Context, tx pgx.Tx, id ids.LeadID, p *storekit.Patch) error {
+	if !identityTouched(p, leadNameColumn, leadCompanyColumn, leadEmailColumn) {
+		return nil
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	updated, err := readLead(ctx, tx, id, storekit.LiveOnly, nil)
+	if err != nil {
+		return err
+	}
+	return s.recordLeadNearMatch(ctx, tx, updated, by)
 }
 
 // recordRescoreHistory writes the score history entry an edit owes once the

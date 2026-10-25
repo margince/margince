@@ -7475,6 +7475,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không thể đặt thành viên này làm người chịu trách nhiệm nên bạn trở thành người chịu trách nhiệm các hàng của họ.",
   "import.reason.owner_unknown":
     "Không có thành viên nào có email này nên bạn trở thành người chịu trách nhiệm; lead vẫn chưa giao. Số hàng nêu email này: {rows}.",
+  "import.reason.address_erased":
+    "Chủ của địa chỉ email này đã yêu cầu xóa và không được lưu lại, nên hàng không được nhập.",
   "import.reason.address_not_split":
     "Không tách được địa chỉ thành đường, mã bưu chính và thành phố nên địa chỉ vẫn nằm ở dòng địa chỉ đầu tiên.",
   "import.reason.phone_needs_country":

@@ -11518,6 +11518,7 @@ const (
 	ImportReasonCodeActivityTypeUnknown          ImportReasonCode = "activity_type_unknown"
 	ImportReasonCodeActivityTypeUnnamed          ImportReasonCode = "activity_type_unnamed"
 	ImportReasonCodeActivityUnlinked             ImportReasonCode = "activity_unlinked"
+	ImportReasonCodeAddressErased                ImportReasonCode = "address_erased"
 	ImportReasonCodeAddressNotSplit              ImportReasonCode = "address_not_split"
 	ImportReasonCodeAmountNegative               ImportReasonCode = "amount_negative"
 	ImportReasonCodeAuthorTooLong                ImportReasonCode = "author_too_long"
@@ -11644,6 +11645,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeActivityTypeUnnamed:
 		return true
 	case ImportReasonCodeActivityUnlinked:
+		return true
+	case ImportReasonCodeAddressErased:
 		return true
 	case ImportReasonCodeAddressNotSplit:
 		return true
