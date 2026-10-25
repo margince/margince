@@ -1,4 +1,4 @@
-<!-- prose:plain max-words=1000 -->
+<!-- prose:plain max-words=1025 -->
 # Contributing to Margince
 
 Margince is source-available under the Business Source License (BUSL-1.1). AI agents write most of
@@ -103,6 +103,7 @@ drop an error. A test must prove how the code works, or it is noise.
 - Each GitHub issue starts from a form: a bug, a deferred
   follow-up, a missing feature or proposal, or a problem in the docs.
 - A deferred follow-up is a problem you leave for later: an issue, not a comment in the code.
+- A user mails a problem instead: [Report a problem](docs/handbook/report-a-problem.md).
 - A security problem goes in private, as [SECURITY.md](SECURITY.md) explains. Never open a public issue
   for it.
 - This repository is public. Never put a secret, customer or personal data, a local path, or a private
