@@ -216,6 +216,25 @@ func TestTheDeliveryReportTaskStepsAnEngagedLeadBackAndKeepsEverythingElse(t *te
 	}
 }
 
+func TestTheDeliveryReportTaskNeverLowersALeadBelowAStatusAHumanPlacedBeforeTheBounce(t *testing.T) {
+	f := newReportFixture(t)
+	lead := f.lead(t, "Human Then Bounce Lead")
+	contacted := "contacted"
+	if _, err := contacts.NewStore(f.e.DB()).UpdateLead(f.ctx, ids.From[ids.LeadKind](lead), contacts.UpdateLeadInput{Status: &contacted}); err != nil {
+		t.Fatalf("the human moving the lead to contacted: %v", err)
+	}
+	f.file(t, lead, "bounce-7", "postmaster@client.test", new("mirror:hubspot"))
+	if status, _ := f.state(t, lead); status != "engaged" {
+		t.Fatalf("fixture: the bounce left the lead %q, so it would test nothing", status)
+	}
+
+	f.runTask(t)
+
+	if status, _ := f.state(t, lead); status != "contacted" {
+		t.Errorf("the repaired lead reads %q, want the contacted a human placed", status)
+	}
+}
+
 func TestTheDeliveryReportTaskPagesOverRowsItKeepsAndRollsBackWithItsBatch(t *testing.T) {
 	f := newReportFixture(t)
 	importer := new("mirror:hubspot")

@@ -28,7 +28,9 @@ var endOfTime = time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC)
 // remain (leadBehavioralSignals, ladderStepFor, isFirstResponseActivity).
 //
 // This is the one step DOWN the ladder, so it is not AdvanceLeadStatus.
-// Only a step the system set is lowered. A lead a human placed keeps its status.
+// Only a step the system set is lowered, and never below the last status a
+// human placed: a later system advance overwrote status_set_by, so the audit
+// trail is where that human step survives. A lead a human placed keeps its status.
 // A first-response stamp that matches no remaining touch (a human's disposition
 // wrote it) stays.
 func ReDeriveLeadFromRemainingTouchesTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time) error {
@@ -62,8 +64,12 @@ func ReDeriveLeadFromRemainingTouchesTx(ctx context.Context, tx pgx.Tx, leadID i
 		leadID).Scan(&status, &setBy, &stamp, &created); err != nil {
 		return err
 	}
+	floor, err := lastHumanPlacedStatus(ctx, tx, leadID)
+	if err != nil {
+		return err
+	}
 	p := storekit.NewPatch()
-	if target, down := stepDownFor(LeadStatus(status), setBy, touches); down {
+	if target, down := stepDownFor(LeadStatus(status), setBy, touches, floor); down {
 		p.Set(leadStatusColumn, status, string(target))
 	}
 	if moved, to := restampFirstResponse(stamp, created, touches); moved {
@@ -84,13 +90,35 @@ func ReDeriveLeadFromRemainingTouchesTx(ctx context.Context, tx pgx.Tx, leadID i
 	})
 }
 
+// lastHumanPlacedStatus answers the status of the newest audit entry that a
+// human wrote to the lead's status, or "" when no human ever placed one.
+func lastHumanPlacedStatus(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) (LeadStatus, error) {
+	var status string
+	err := tx.QueryRow(ctx, `SELECT after->>'status' FROM audit_log
+ WHERE entity_type = 'lead' AND entity_id = $1
+   AND after->>'status_set_by' = $2 AND after ? 'status'
+ ORDER BY occurred_at DESC, id DESC LIMIT 1`,
+		leadID, string(crmcontracts.LeadStatusSetByLeadStatusSetByHuman)).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return LeadStatus(status), nil
+}
+
 // stepDownFor answers the status the remaining touches earn when it is below
-// the current one and the system placed the current one.
-func stepDownFor(current LeadStatus, setBy *string, touches []leadResponseTouch) (LeadStatus, bool) {
+// the current one and the system placed the current one. The earned status
+// never falls under floor, the last status a human placed.
+func stepDownFor(current LeadStatus, setBy *string, touches []leadResponseTouch, floor LeadStatus) (LeadStatus, bool) {
 	if !current.Open() || setBy == nil || *setBy != string(crmcontracts.LeadStatusSetByLeadStatusSetBySystem) {
 		return "", false
 	}
 	earned := LeadStatusNew
+	if floor.Open() {
+		earned = floor
+	}
 	for _, t := range touches {
 		if step, ok := ladderStepFor(t); ok && earned.Advances(step) {
 			earned = step
