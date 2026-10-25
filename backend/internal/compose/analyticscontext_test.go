@@ -18,18 +18,18 @@ func forecastGrant(read, create bool) map[string]principal.ObjectGrant {
 
 func TestMarkAssertableNeedsTheForecastGrants(t *testing.T) {
 	cases := []struct {
-		name         string
-		read, create bool
-		want         bool
+		name  string
+		grant map[string]principal.ObjectGrant
+		want  bool
 	}{
-		{"read and create", true, true, true},
-		{"no forecast read", false, true, false},
-		{"no forecast create", true, false, false},
+		{"read and create", forecastGrant(true, true), true},
+		{"no forecast read", forecastGrant(false, true), false},
+		{"no forecast create", forecastGrant(true, false), false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			actor := actorWithScope(principal.RowScopeOwn)
-			actor.Permissions.Objects = forecastGrant(tc.read, tc.create)
+			actor.Permissions.Objects = tc.grant
 			ctx := principal.WithActor(context.Background(), actor)
 			scope := crmcontracts.AnalyticsScope{
 				Kind: crmcontracts.AnalyticsScopeKindOwner, Id: ptrUUID(actor.UserID),
