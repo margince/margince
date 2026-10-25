@@ -56,8 +56,8 @@ func LanguageEvidence(turns []Turn) []string {
 // the shared conversation reader and returns their language evidence. The
 // reader keeps every row so LanguageEvidence orders before it cuts: newer
 // outbound mail must not push an older inbound message out of the window.
-func LanguageEvidenceOf(activities []crmcontracts.Activity, now time.Time) []string {
-	return LanguageEvidence(Conversation(activities, nil, now, len(activities)))
+func LanguageEvidenceOf(activities []crmcontracts.Activity, now time.Time, zone *time.Location) []string {
+	return LanguageEvidence(Conversation(activities, nil, now, zone, len(activities)))
 }
 
 func isInbound(turn Turn) bool {

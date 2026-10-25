@@ -24,7 +24,7 @@ func TestReplyConversationOmitsWithheldMessagesAndBoundsTheEvidence(t *testing.T
 	for range 10 {
 		rows = append(rows, crmcontracts.Activity{Id: crmcontracts.Id(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail, Body: &longBody})
 	}
-	got := replyConversationText(draftcore.Conversation(rows, &anchor, conversationNow, replyContextTurns))
+	got := replyConversationText(draftcore.Conversation(rows, &anchor, conversationNow, time.UTC, replyContextTurns))
 	if strings.Contains(got, secret) || strings.Count(got, "界") != 6*draftcore.TurnTextRunes || len([]rune(got)) > replyActivityMaxRunes {
 		t.Fatalf("conversation bounds or withheld filtering failed: %d runes", len([]rune(got)))
 	}
@@ -43,8 +43,8 @@ func TestTheReplyAndContactDraftersReadTheSameTurns(t *testing.T) {
 		}
 	}
 	rows := []crmcontracts.Activity{mail(1), mail(2)}
-	reply := replyConversationText(draftcore.Conversation(rows, nil, conversationNow, replyContextTurns))
-	for i, recent := range contactdraft.FoldRecent(rows, conversationNow) {
+	reply := replyConversationText(draftcore.Conversation(rows, nil, conversationNow, time.UTC, replyContextTurns))
+	for i, recent := range contactdraft.FoldRecent(rows, conversationNow, time.UTC) {
 		if recent.Said == "" || !strings.Contains(reply, recent.Said) {
 			t.Errorf("turn %d: the contact drafter reads %q, which the reply drafter does not", i, recent.Said)
 		}
@@ -60,7 +60,7 @@ func TestTheReplyConversationStatesADayEntryAsItsDate(t *testing.T) {
 		OccurredAt:        time.Date(2026, 8, 30, 12, 0, 0, 0, time.UTC),
 		OccurredPrecision: crmcontracts.OccurredPrecisionOccurredPrecisionDay,
 	}
-	got := replyConversationText(draftcore.Conversation([]crmcontracts.Activity{call}, nil, conversationNow, replyContextTurns))
+	got := replyConversationText(draftcore.Conversation([]crmcontracts.Activity{call}, nil, conversationNow, time.UTC, replyContextTurns))
 	if !strings.Contains(got, "| 2026-08-30 |") || strings.Contains(got, "12:00") {
 		t.Errorf("the day entry reads %q, want its date and no time", got)
 	}

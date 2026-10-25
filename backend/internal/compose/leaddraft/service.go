@@ -128,9 +128,10 @@ func (s *Service) Draft(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
+	zone := s.envelope.Zone(ctx)
 	envelope := s.envelope.Resolve(ctx,
-		draftfloor.Written{Thread: draftcore.LanguageEvidenceOf(activities, s.envelope.Now()), Rewrite: req.RewriteOf, Purpose: req.Intent},
-		ConversationState(activities, s.envelope.Now()))
+		draftfloor.Written{Thread: draftcore.LanguageEvidenceOf(activities, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent},
+		ConversationState(activities, s.envelope.Now(), zone)).InZone(zone)
 	in := FromLead(lead, activities, req, envelope)
 	grounding, err := in.Grounding()
 	if err != nil {

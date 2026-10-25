@@ -47,6 +47,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -357,7 +358,11 @@ func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids
 	}
 	// A meeting in the future has not been held. The capture path records
 	// scheduled meetings too, and one settles event_held only once it happened.
-	if facts.OccurredAt.After(t.now()) {
+	zone, err := installationZone(ctx, t.pool)
+	if err != nil {
+		return err
+	}
+	if !occurredday.MeetingTookPlace(occurredday.Moment{At: facts.OccurredAt, DateOnly: facts.DateOnly}, t.now(), zone) {
 		return nil
 	}
 	proof := deals.MeetingWasHeld(

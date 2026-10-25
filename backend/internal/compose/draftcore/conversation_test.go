@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 var turnsNow = time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
@@ -40,7 +41,7 @@ func TestConversationGivesOurOwnMailItsTextAndMarksANoteAsContext(t *testing.T) 
 		turnRow(crmcontracts.ActivityKindEmail, out, 20, "First ask: may we send a quote?"),
 		turnRow(crmcontracts.ActivityKindNote, "", 30, "Office move on Friday."),
 	}
-	turns := draftcore.Conversation(rows, nil, turnsNow, 6)
+	turns := draftcore.Conversation(rows, nil, turnsNow, time.UTC, 6)
 	if len(turns) != 3 {
 		t.Fatalf("got %d turns, want 3", len(turns))
 	}
@@ -61,7 +62,7 @@ func TestConversationSkipsWithheldRowsTheAnchorAndNoContactNotes(t *testing.T) {
 	anchor := turnRow(crmcontracts.ActivityKindEmail, out, 5, "the selected message")
 	future := turnRow(crmcontracts.ActivityKindMeeting, "", -48, "meeting not yet held")
 	rows := []crmcontracts.Activity{hidden, future, turnRow(crmcontracts.ActivityKindEmail, out, 3, "newer"), anchor}
-	turns := draftcore.Conversation(rows, &anchor, turnsNow, 6)
+	turns := draftcore.Conversation(rows, &anchor, turnsNow, time.UTC, 6)
 	if len(turns) != 1 || turns[0].Text != "newer" || !turns[0].AfterAnchor {
 		t.Fatalf("turns = %+v, want only the newer mail, marked after the anchor", turns)
 	}
@@ -78,13 +79,35 @@ func TestConversationBoundsEveryTurnAndTheirNumber(t *testing.T) {
 		}
 		rows = append(rows, turnRow(crmcontracts.ActivityKindEmail, direction, hours+1, long))
 	}
-	turns := draftcore.Conversation(rows, nil, turnsNow, 6)
+	turns := draftcore.Conversation(rows, nil, turnsNow, time.UTC, 6)
 	if len(turns) != 6 {
 		t.Fatalf("got %d turns, want the limit of 6", len(turns))
 	}
 	for _, turn := range turns {
 		if got := len([]rune(turn.Text)); got == 0 || got > draftcore.TurnTextRunes {
 			t.Errorf("%s turn has %d runes, want 1 to %d", turn.Direction, got, draftcore.TurnTextRunes)
+		}
+	}
+}
+
+// A day note dated today has happened in Auckland though its stored noon is
+// ahead; a day meeting dated today has not until its date ends.
+func TestADayTouchDatedTodayIsReadByItsDate(t *testing.T) {
+	t.Parallel()
+	auckland, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatal(err)
+	}
+	morning := time.Date(2026, 9, 2, 8, 0, 0, 0, auckland)
+	today := occurredday.AnchorIn(morning, auckland)
+	for kind, want := range map[crmcontracts.ActivityKind]bool{
+		crmcontracts.ActivityKindNote:    true,
+		crmcontracts.ActivityKindMeeting: false,
+	} {
+		row := turnRow(kind, "", 0, "Met at the fair")
+		row.OccurredAt, row.OccurredPrecision = today, crmcontracts.OccurredPrecisionOccurredPrecisionDay
+		if got := draftcore.IsLoggedTouch(row, morning, auckland); got != want {
+			t.Errorf("a day %s dated today is a logged touch = %v, want %v", kind, got, want)
 		}
 	}
 }

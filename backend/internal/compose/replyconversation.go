@@ -30,7 +30,7 @@ func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts
 	if err != nil {
 		return nil, err
 	}
-	return draftcore.Conversation(rows, &anchor, d.envelope.Now(), replyContextTurns), nil
+	return draftcore.Conversation(rows, &anchor, d.envelope.Now(), d.envelope.Zone(ctx), replyContextTurns), nil
 }
 
 // replyConversationText renders the turns the way the reply prompt describes

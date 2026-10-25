@@ -144,7 +144,7 @@ func TestAutomaticMailPastTheCapLeavesTheHumanMessageInTheBriefs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(strings.Join(draftcore.LanguageEvidenceOf(draftView.Activities.Data, f.now), "\n"), "their-pricing-reply") {
+	if !strings.Contains(strings.Join(draftcore.LanguageEvidenceOf(draftView.Activities.Data, f.now, time.UTC), "\n"), "their-pricing-reply") {
 		t.Error("the drafting language reads the notices instead of the human reply")
 	}
 

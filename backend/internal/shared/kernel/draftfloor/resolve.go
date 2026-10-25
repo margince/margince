@@ -42,6 +42,9 @@ type BaseLanguage func(ctx context.Context) string
 // language outranks it.
 type UserLanguage func(ctx context.Context) string
 
+// Zone answers the installation's time zone, which says which date is today.
+type Zone func(ctx context.Context) (*time.Location, error)
+
 // Resolver assembles the envelope every drafting surface is handed.
 //
 // It is one type rather than a method on each service because the fallbacks are
@@ -54,6 +57,7 @@ type Resolver struct {
 	base   BaseLanguage
 	user   UserLanguage
 	now    Clock
+	zone   Zone
 	logger *slog.Logger
 }
 
@@ -92,6 +96,27 @@ func (r *Resolver) WithClock(now Clock) *Resolver {
 func (r *Resolver) WithLogger(logger *slog.Logger) *Resolver {
 	r.logger = logger
 	return r
+}
+
+// WithZone binds the installation's zone. Without one, today is the UTC date.
+func (r *Resolver) WithZone(zone Zone) *Resolver {
+	r.zone = zone
+	return r
+}
+
+// Zone is the zone a draft reads which date is today in. A zone that will not
+// resolve is UTC, the installation's default, and says so in the log.
+func (r *Resolver) Zone(ctx context.Context) *time.Location {
+	if r == nil || r.zone == nil {
+		return time.UTC
+	}
+	zone, err := r.zone(ctx)
+	if err != nil || zone == nil {
+		r.log().WarnContext(ctx, "the installation zone could not be read; the draft reads today as the UTC date",
+			"reason", err)
+		return time.UTC
+	}
+	return zone
 }
 
 // Now is the resolver's clock, for a caller that needs the same instant the

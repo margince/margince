@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/stateddeadline"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -76,7 +77,13 @@ func readCommitmentEvidence(ctx context.Context, tx pgx.Tx, c Commitment, due *t
 	if evidence.OccurredAt, err = commitmentSaidAt(ctx, tx, evidence); err != nil {
 		return commitmentRead{}, err
 	}
-	read := commitmentRead{Reason: activities.AdmitAutomaticCommitment(evidence, c.AsOf, due), LoggedByHand: evidence.LoggedByHand}
+	// Captured mail is placed by the instant it states.
+	evidence.DateOnly = evidence.DateOnly && !evidence.CapturedMail
+	zone, err := identity.ZoneAppliedTx(ctx, tx)
+	if err != nil {
+		return commitmentRead{}, err
+	}
+	read := commitmentRead{Reason: activities.AdmitAutomaticCommitment(evidence, c.AsOf, zone, due), LoggedByHand: evidence.LoggedByHand}
 	if read.Reason != activities.CommitmentCurrent || !evidence.CapturedMail {
 		return read, nil
 	}
@@ -126,7 +133,9 @@ func withStatedWeek(ctx context.Context, tx pgx.Tx, c Commitment) (Commitment, e
 	if err != nil {
 		return c, err
 	}
-	if day, ok := stateddeadline.ThisWeek(c.Meaning.DeadlineQuote, stateddeadline.SentDay(said, zone), workdays); ok {
+	// A day entry is said on its own date, whatever the zone.
+	sent := occurredday.DateIn(occurredday.Moment{At: said, DateOnly: evidence.DateOnly && !evidence.CapturedMail}, zone)
+	if day, ok := stateddeadline.ThisWeek(c.Meaning.DeadlineQuote, stateddeadline.SentDay(sent, time.UTC), workdays); ok {
 		c.DueDate, c.DueZone = day.String(), zone.String()
 	}
 	return c, nil

@@ -6,6 +6,7 @@ package draftcore_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -20,7 +21,7 @@ func TestLanguageEvidenceReadsTheRecipientsOwnMailFirst(t *testing.T) {
 		turnRow(crmcontracts.ActivityKindEmail, in, 9, "their older"),
 		turnRow(crmcontracts.ActivityKindEmail, out, 3, "our middle"),
 	}
-	got := draftcore.LanguageEvidenceOf(rows, turnsNow)
+	got := draftcore.LanguageEvidenceOf(rows, turnsNow, time.UTC)
 	want := []string{"their newer", "their older", "our newest", "our middle"}
 	if len(got) != len(want) {
 		t.Fatalf("got %d strings %q, want %d", len(got), got, len(want))
@@ -44,7 +45,7 @@ func TestLanguageEvidenceDropsWithheldAndEmptyRowsAndStaysBounded(t *testing.T) 
 	for i := range 20 {
 		rows = append(rows, turnRow(crmcontracts.ActivityKindEmail, in, 3+i, strings.Repeat("long ", 500)))
 	}
-	got := draftcore.LanguageEvidenceOf(rows, turnsNow)
+	got := draftcore.LanguageEvidenceOf(rows, turnsNow, time.UTC)
 	if want := draftcore.LanguageEvidenceTurns; len(got) != want {
 		t.Errorf("got %d strings, want %d", len(got), want)
 	}
@@ -63,7 +64,7 @@ func TestLanguageEvidenceKeepsAnOldInboundMessageBehindManyNewerOutboundOnes(t *
 		rows = append(rows, turnRow(crmcontracts.ActivityKindEmail, out, i+1, "our newer mail"))
 	}
 	rows = append(rows, turnRow(crmcontracts.ActivityKindEmail, in, 40, "their old reply"))
-	got := draftcore.LanguageEvidenceOf(rows, turnsNow)
+	got := draftcore.LanguageEvidenceOf(rows, turnsNow, time.UTC)
 	if len(got) == 0 || !strings.HasSuffix(got[0], "their old reply") {
 		t.Errorf("first evidence = %q, want their old inbound reply ahead of newer outbound mail", got)
 	}

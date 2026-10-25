@@ -6,8 +6,10 @@ package draftcore
 import (
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // ClassifyWithLogged is convstate.Classify with a logged note or meeting
@@ -19,8 +21,8 @@ import (
 // take to mean mail only. The contact, lead and account drafts all classify
 // through it, because the shared TIME rule tells each of them what
 // silence_days counts from.
-func ClassifyWithLogged(now, lastIn, lastOut time.Time, activities []crmcontracts.Activity) convstate.State {
-	if logged := lastLoggedTouch(activities, now); logged.After(lastOut) {
+func ClassifyWithLogged(now time.Time, zone *time.Location, lastIn, lastOut time.Time, activities []crmcontracts.Activity) convstate.State {
+	if logged := lastLoggedTouch(activities, now, zone); logged.After(lastOut) {
 		lastOut = logged
 	}
 	return convstate.Classify(now, lastIn, lastOut)
@@ -28,9 +30,9 @@ func ClassifyWithLogged(now, lastIn, lastOut time.Time, activities []crmcontract
 
 // lastLoggedTouch is the newest logged touch in newest-first activities, zero
 // when there is none.
-func lastLoggedTouch(activities []crmcontracts.Activity, now time.Time) time.Time {
+func lastLoggedTouch(activities []crmcontracts.Activity, now time.Time, zone *time.Location) time.Time {
 	for _, activity := range activities {
-		if IsLoggedTouch(activity, now) {
+		if IsLoggedTouch(activity, now, zone) {
 			return activity.OccurredAt.UTC()
 		}
 	}
@@ -44,11 +46,11 @@ func IsLoggedKind(kind crmcontracts.ActivityKind) bool {
 }
 
 // IsLoggedTouch reports a note or meeting that records contact which really
-// happened: dated at or before now, and not a meeting that was canceled or
-// that the other side missed. A past meeting still marked booked counts: it
-// most often took place, and reps rarely come back to mark it held.
-func IsLoggedTouch(activity crmcontracts.Activity, now time.Time) bool {
-	if !IsLoggedKind(activity.Kind) || activity.OccurredAt.After(now) {
+// happened by now (occurredday.Happened, today's date read in zone), and not a
+// meeting that was canceled or that the other side missed. A past meeting still
+// marked booked counts: it most often took place, and reps rarely come back to mark it held.
+func IsLoggedTouch(activity crmcontracts.Activity, now time.Time, zone *time.Location) bool {
+	if !IsLoggedKind(activity.Kind) || !occurredday.Happened(string(activity.Kind), activitywhen.MomentOf(activity), now, zone) {
 		return false
 	}
 	status := activity.MeetingStatus

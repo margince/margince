@@ -48,7 +48,7 @@ func TurnText(body string) string {
 // It is the anchor itself. It is a note or meeting that records no contact
 // (see IsLoggedTouch). Our own sent mail keeps its text, so a follow-up knows
 // what we already asked.
-func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activity, now time.Time, limit int) []Turn {
+func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activity, now time.Time, zone *time.Location, limit int) []Turn {
 	var turns []Turn
 	for _, activity := range activities {
 		if len(turns) == limit {
@@ -61,7 +61,7 @@ func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activ
 			continue
 		}
 		logged := IsLoggedKind(activity.Kind)
-		if logged && !IsLoggedTouch(activity, now) {
+		if logged && !IsLoggedTouch(activity, now, zone) {
 			continue
 		}
 		turn := Turn{

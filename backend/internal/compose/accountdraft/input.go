@@ -333,12 +333,12 @@ func foldCommitment(view crmcontracts.Company360) *TaskIn {
 // first touch. That is the conservative end of the axis and the right answer
 // here: a caller who cannot see the history has no basis for a draft that
 // refers to it.
-func ConversationState(view crmcontracts.Company360, now time.Time) convstate.State {
+func ConversationState(view crmcontracts.Company360, now time.Time, zone *time.Location) convstate.State {
 	var activities []crmcontracts.Activity
 	if view.Activities != nil {
 		activities = view.Activities.Data
 	}
-	return draftcore.ClassifyWithLogged(now, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
+	return draftcore.ClassifyWithLogged(now, zone, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
 }
 
 // instant reads one optional stamp, treating an absent one as never.
@@ -352,11 +352,11 @@ func instant(at *time.Time) time.Time {
 // languageEvidence is what the account's correspondence language is read from.
 // This drafter opens a new conversation, so the text is evidence about the
 // ACCOUNT's language rather than about a thread being answered.
-func languageEvidence(view crmcontracts.Company360, now time.Time) []string {
+func languageEvidence(view crmcontracts.Company360, now time.Time, zone *time.Location) []string {
 	if view.Activities == nil {
 		return nil
 	}
-	return draftcore.LanguageEvidenceOf(view.Activities.Data, now)
+	return draftcore.LanguageEvidenceOf(view.Activities.Data, now, zone)
 }
 
 func foldRecent(view crmcontracts.Company360) []ActIn {
