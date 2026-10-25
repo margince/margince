@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
@@ -55,18 +56,33 @@ type QuietContact struct {
 	OwnerID ids.UUID
 }
 
-// recentMemberJoin is the live-member rule for the ceiling's own edge alias.
-var recentMemberJoin = `JOIN app_user ru ON ru.id = recent.user_id AND ` + workforce.LiveMemberSQL("ru")
+// liveExchangeClock selects the newest exchange any live colleague has with the
+// candidate contact. It reads the activities, not the edge's last_at. A
+// colleague's message on a thread the contact only belongs to then cannot hide
+// a quiet relationship, and the same colleague's older exchange still counts.
+func liveExchangeClock() string {
+	return fmt.Sprintf(`SELECT max(a.occurred_at) AS touched
+		      FROM activity_participant cp
+		      JOIN activity a ON a.id = cp.activity_id AND a.archived_at IS NULL%s
+		       AND %s
+		      JOIN activity_participant up ON up.activity_id = a.id AND up.role IN %s
+		      JOIN app_user lu ON lu.id = up.user_id AND %s
+		     WHERE cp.contact_id = e.contact_id AND cp.role IN %s`,
+		audienceWorkspaceOnly, relstrength.ContactExchangeSQL("a", "e.contact_id", "now()"),
+		interactionRoles, workforce.LiveMemberSQL("lu"), interactionRoles)
+}
 
 // QuietContacts answers "which relationships have gone silent", most exchanged
 // first. It is the candidate half of the decay lane. Whether a silence is
 // worth reporting stays with the relationship-change derivation in contacts.
 //
-// A relationship is silent when no live colleague's edge is newer than
-// QuietBefore, and still current when some live colleague's edge is newer than
-// TouchedAfter. Both bounds read every live member's edge, so the silence and
-// its ceiling belong to the contact, not to one colleague. A pair with fewer
-// than two interactions is a cold contact, not a lapsed relationship.
+// A relationship is silent when no live colleague has an exchange with the
+// contact newer than QuietBefore. It is still current when some live colleague
+// has one newer than TouchedAfter. An exchange follows the contact's last-touch
+// rule, so a colleague's message on a thread the contact only belongs to is not
+// one. The silence and its ceiling belong to the contact, not to one colleague.
+// A pair with fewer than two interactions is a cold contact, not a lapsed
+// relationship.
 //
 // The contact row scope applies at source, before the LIMIT, so an unreadable
 // contact neither leaks through an edge row nor evicts a readable lapse.
@@ -103,32 +119,26 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 	limitPos := arg(read.Limit)
 	offsetPos := arg(read.Offset)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT q.user_id, q.contact_id, q.last_at, q.last_inbound_at, q.last_outbound_at,
+		SELECT q.user_id, q.contact_id, q.touched_at, q.last_inbound_at, q.last_outbound_at,
 		       q.count_90d, q.in_count_90d, q.out_count_90d, q.count_total, q.live_owner
 		  FROM (
-		    SELECT DISTINCT ON (e.contact_id) e.user_id, e.contact_id, e.last_at,
+		    SELECT DISTINCT ON (e.contact_id) e.user_id, e.contact_id, x.touched AS touched_at,
 		           e.last_inbound_at, e.last_outbound_at, e.count_90d, e.in_count_90d,
 		           e.out_count_90d, e.count_total, o.id AS live_owner
 		      FROM graph_interaction_edge e
 		      %s
+		      JOIN LATERAL (%s) x ON x.touched <= $%d AND x.touched > $%d
 		      JOIN contact p ON p.id = e.contact_id AND p.archived_at IS NULL
 		      LEFT JOIN app_user o ON o.id = p.owner_id AND %s
-		     WHERE e.last_at <= $%d
-		       AND e.count_total >= $%d
-		       AND NOT EXISTS (SELECT 1 FROM graph_interaction_edge later
-		                         %s
-		                        WHERE later.contact_id = e.contact_id AND later.last_at > $%d)
-		       AND EXISTS (SELECT 1 FROM graph_interaction_edge recent
-		                     %s
-		                    WHERE recent.contact_id = e.contact_id AND recent.last_at > $%d)
+		     WHERE e.count_total >= $%d
 		       AND (%s)
 		       AND (%s)
 		       AND (%s)
-		     ORDER BY e.contact_id, e.count_total DESC, e.last_at DESC, e.user_id
+		     ORDER BY e.contact_id, e.count_total DESC, x.touched DESC, e.user_id
 		  ) q
-		 ORDER BY q.count_total DESC, q.last_at ASC, q.contact_id
-		 LIMIT $%d OFFSET $%d`, liveMemberJoin, workforce.LiveMemberSQL("o"), beforePos,
-		exchangedPos, laterMemberJoin, beforePos, recentMemberJoin, afterPos,
+		 ORDER BY q.count_total DESC, q.touched_at ASC, q.contact_id
+		 LIMIT $%d OFFSET $%d`, liveMemberJoin, liveExchangeClock(), beforePos, afterPos, workforce.LiveMemberSQL("o"),
+		exchangedPos,
 		owned, scope, excluded, limitPos, offsetPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading quiet relationships: %w", err)

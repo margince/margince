@@ -38649,7 +38649,7 @@ components:
           description: What they do at that employer, when it differs from `title`.
         profile_url:
           type: [string, 'null']
-          description: The public profile this was read from. Stored, never fetched.
+          description: 'The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field.'
         email: { type: [string, 'null'], format: email, description: 'Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.' }
         phone: { type: [string, 'null'] }
       additionalProperties: false
@@ -47299,6 +47299,19 @@ components:
         `withheld`.
       required: [id, kind, occurred_at, occurred_precision, source, captured_by, created_at, updated_at, offers_email]
       properties:
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS activity: the same question the server's write
+            gate answers on a mutation — an `activity:update` grant, plus authorship, assignment
+            or a linked record the caller may change, or an unbounded seat. Server-computed per
+            row, per caller.
+            It is a UX signal, never the enforcement. A client uses it to draw or withhold
+            edit affordances so a reader is not offered a control the save would refuse; the
+            server refuses an unauthorized write with 403 whatever this said. Absent means
+            NOT writable, so a client reading a response from a server too old to send it
+            fails closed.
         commitment_admissions:
           type: array
           readOnly: true
@@ -53893,6 +53906,12 @@ components:
             The team or contact measured. Absent for workspace and managed_teams, which name
             no single subject.
         label: { type: string, description: "What to call this population on screen." }
+        assertable:
+          type: boolean
+          description: >-
+            Whether this caller may record a forecast call or issue a share about this
+            population. Absent from a server that predates the field; a screen then offers the
+            controls and the write route decides.
       additionalProperties: false
     AnalyticsCapabilities:
       type: object

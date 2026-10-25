@@ -13,6 +13,7 @@ import { formatDateAbbrev, formatNumber } from "../format/format";
 import {
   type Locale,
   type PluralBase,
+  type Translator,
   useLocale,
   usePlural,
   useT,
@@ -68,6 +69,15 @@ export const SIZE_BAND_OPTIONS = [
   "1001-5000",
   "5000+",
 ] as const;
+
+/**
+ * One size band as a count of employees: "51–200 employees". The wire value is
+ * a bare range, so every screen that draws a band goes through here to say what
+ * the range counts.
+ */
+export function formatSizeBand(t: Translator, band: string): string {
+  return t("company.sizeBandValue", { band: band.replace("-", "–") });
+}
 
 export const HEALTH_RATING_LABEL: Record<HealthRating, MessageKey> = {
   at_risk: "co.health.rating.atRisk",

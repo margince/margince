@@ -100,6 +100,9 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 				return err
 			}
 		}
+		if err := lockConnectionClaimsTx(ctx, tx, row.userID, row.provider, row.accountLabel); err != nil {
+			return err
+		}
 		var err error
 		id, priorRef, err = upsertConnection(ctx, tx, row)
 		return err

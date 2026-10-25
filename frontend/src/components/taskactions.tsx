@@ -27,6 +27,7 @@ import { calendarDay, dueInstant } from "../format/calendarday";
 import { isoOrBlank } from "../format/datepattern";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { EntityRef } from "./entityref";
@@ -318,6 +319,9 @@ export function TaskDetailDialog({
   const titleId = useId();
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
+  // The fetched activity carries the server's per-row answer, so the dialog
+  // decides for every host whether its changes would be admitted.
+  const rowWritable = useCanWriteRecord("activity", task);
   // Logged here rather than in the shell's drawer, which would cover the task.
   const callLog = useCallLogFor(useTaskContact(task).contact?.id);
   const body = useRef<HTMLDivElement>(null);
@@ -400,7 +404,7 @@ export function TaskDetailDialog({
                 task={task}
                 className="form-actions task-detail-actions"
               />
-              {!task.is_done && !readOnly && (
+              {!task.is_done && !readOnly && rowWritable && (
                 <div ref={verbs} className="form-actions task-detail-actions">
                   <TaskQuickActions
                     activityId={task.id}

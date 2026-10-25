@@ -20,6 +20,7 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useT } from "../../i18n";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
 import { useMessageAudience } from "../../lib/audienceservice";
+import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import {
@@ -74,6 +75,7 @@ export function TimelineActions({
 }>) {
   const t = useT();
   const [relink, setRelink] = useState(false);
+  const writable = useCanWriteRecord("activity", activity);
   return (
     <>
       {activity.kind === "task" && activity.content_state !== "withheld" && (
@@ -106,7 +108,12 @@ export function TimelineActions({
       )}
       {extra?.(activity)}
       <ActivityFilesAction activity={activity} />
-      <Button onClick={() => setRelink(true)}>{t("compose.relink")}</Button>
+      <Button
+        onClick={() => setRelink(true)}
+        reason={writable ? undefined : t("activity.notYoursToChange")}
+      >
+        {t("compose.relink")}
+      </Button>
       {/* Every row on a project's timeline is filed under that project, so this
           is the one surface where taking the filing back is always meaningful. */}
       {entityType === "project" && (
@@ -174,6 +181,7 @@ export function AudienceAction({
   entityId: string;
 }>) {
   const t = useT();
+  const writable = useCanWriteRecord("activity", activity);
   const [open, setOpen] = useState(false);
   const current: ActivityAudience = activity.audience ?? "workspace";
   const [choice, setChoice] = useState<ActivityAudience>(current);
@@ -194,7 +202,7 @@ export function AudienceAction({
     invalidate: () => entityTimelineKeys(entityType, entityId),
     onSettled: () => setOpen(false),
   });
-  if (activity.content_state === "withheld") {
+  if (activity.content_state === "withheld" || !writable) {
     return null;
   }
   // A DERIVED audience is not this dialog's to change, and offering it anyway

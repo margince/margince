@@ -241,7 +241,7 @@ func (s *Sink) finishNewActivity(
 	// owner is known — every consumer downstream sees an activity whose
 	// captured_by reads `connector:gmail` and cannot recover the human behind
 	// it. The participant rows are the record of that fact.
-	if err := stampMessageEnds(ctx, tx, id, actorUserID(ctx), fields, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, actorUserID(ctx), fields, rec); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// Everyone else who was in it — the CCs, the meeting's organizer and
@@ -327,7 +327,7 @@ func (s *Sink) finishNewActivity(
 			return counterpartyDecision{}, err
 		}
 	}
-	if err := limitLinkLessAudience(ctx, tx, id, rec, decision, derivedLinks); err != nil {
+	if err := limitLinkLessAudience(ctx, tx, id, rec, fields.Kind, decision, derivedLinks); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// This mailbox's own record of having imported the message, and the

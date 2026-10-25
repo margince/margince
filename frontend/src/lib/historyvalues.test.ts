@@ -64,6 +64,16 @@ describe("historyValue", () => {
     );
   });
 
+  it("words an industry code the way the record page does", () => {
+    expect(historyValue("industry", "healthcare", ctx())).toBe("Healthcare");
+    expect(historyValue("industry", "healthcare", ctx({ locale: "de" }))).toBe(
+      "Gesundheitswesen",
+    );
+    expect(historyValue("industry", "Medical devices", ctx())).toBe(
+      "Medical devices",
+    );
+  });
+
   // The diff draws its own wording for a value the record does not hold, so an
   // absent value has to stay distinguishable from empty text.
   it("keeps an absent value absent", () => {

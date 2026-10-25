@@ -731,3 +731,74 @@ func TestATaskFiledOnlyOnAContactTheCallerCannotReadOffersNoAddress(t *testing.T
 		t.Errorf("address = %q, want empty — the only linked contact is private to somebody else", got.Address)
 	}
 }
+
+func TestSenderContactsNamesTheFromParticipantNotTheCopiedOne(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+	copied := e.linkContact(t, anchor, "Anne Wiegert")
+	e.participate(t, anchor, copied, "cc", nil)
+	sender := e.linkContact(t, anchor, "Dietmar Rietsch")
+	e.participate(t, anchor, sender, "from", nil)
+	bare := e.seedAnchor(t, "", "")
+
+	ctx := e.as(principal.RowScopeAll)
+	got, err := e.store(nil).SenderContacts(ctx, []ids.UUID{anchor.UUID, bare.UUID})
+	if err != nil {
+		t.Fatalf("SenderContacts: %v", err)
+	}
+	if got[anchor.UUID] != sender {
+		t.Errorf("sender = %v, want the from participant %v", got[anchor.UUID], sender)
+	}
+	if _, ok := got[bare.UUID]; ok {
+		t.Errorf("a message with no from participant has a sender entry: %v", got[bare.UUID])
+	}
+	recipient, err := e.store(nil).ReplyRecipientFor(ctx, anchor)
+	if err != nil {
+		t.Fatalf("ReplyRecipientFor: %v", err)
+	}
+	if recipient.ContactID != sender.String() {
+		t.Errorf("recipient contact = %q, want %v", recipient.ContactID, sender)
+	}
+}
+
+func TestSenderContactsAnswersNothingForAnActivityTheCallerCannotRead(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+	sender := e.linkContact(t, anchor, "Dietmar Rietsch")
+	e.participate(t, anchor, sender, "from", nil)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE activity SET audience = 'participants' WHERE id = $1`, anchor); err != nil {
+		t.Fatalf("limiting the audience: %v", err)
+	}
+
+	got, err := e.store(nil).SenderContacts(e.as(principal.RowScopeAll), []ids.UUID{anchor.UUID})
+	if err != nil {
+		t.Fatalf("SenderContacts: %v", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("senders = %v, want none for an activity whose content the caller cannot read", got)
+	}
+}
+
+func TestAReadableCopiedContactIsNotTheAddresseeWhenTheSenderIsPrivate(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+	readable := e.linkContact(t, anchor, "Anne Wiegert")
+	e.participate(t, anchor, readable, "cc", nil)
+	private := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
+		 VALUES ($1, 'Dietmar Rietsch', $2, 'owner', 'manual', 'human:x')`,
+		private, e.other); err != nil {
+		t.Fatalf("seeding the owner-private contact: %v", err)
+	}
+	e.participate(t, anchor, private, "from", nil)
+
+	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
+	if err != nil {
+		t.Fatalf("ReplyRecipientFor: %v", err)
+	}
+	if got.FullName != "Anne Wiegert" || got.ContactID != "" {
+		t.Errorf("recipient = %q with contact id %q, want the readable name and no addressee id", got.FullName, got.ContactID)
+	}
+}

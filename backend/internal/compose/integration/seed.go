@@ -101,11 +101,10 @@ func LinkActivity(t *testing.T, owner *pgx.Conn, activity ids.UUID, entityType s
 	}
 }
 
-// LinkActivitySender names WHO sent an activity — distinct from LinkActivity,
-// which only says the activity CONCERNS somebody. sender.go's SenderPredicate
-// (backend/internal/modules/contacts/sender.go) reads this row for "they wrote
-// last" answers, and a thread linked to everybody it concerns says nothing
-// about which of them is its author.
+// LinkActivitySender names who sent an activity. LinkActivity only says the
+// activity concerns somebody. relstrength.SenderSQL reads this row for "they
+// wrote last" answers, and a thread linked to everybody says nothing about its
+// author.
 func LinkActivitySender(t *testing.T, owner *pgx.Conn, activity, contact ids.UUID) {
 	t.Helper()
 	if _, err := owner.Exec(context.Background(),

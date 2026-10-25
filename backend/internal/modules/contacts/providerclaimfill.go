@@ -98,7 +98,7 @@ func fillLinkedIn(ctx context.Context, tx pgx.Tx, subject ids.UUID, _ string, v 
 	if err := auth.HoldWritableLive(ctx, tx, entityContact, subject); err != nil {
 		return nothingFilled, err
 	}
-	handle, err := NormalizeLinkedInURL(v.linkedInURL)
+	handle, err := NormalizeContactLinkedInURL(v.linkedInURL)
 	if err != nil {
 		// A provider that answered an unreadable URL has told us nothing about
 		// this contact's profile: an empty answer, not a fault to fail on.

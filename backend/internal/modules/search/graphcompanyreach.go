@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
 // companyArms is the three links themselves — the account an activity is filed
@@ -24,7 +25,8 @@ var companyArms = `FROM activity_link l
 		    LEFT JOIN deal d ON d.id = l.deal_id
 		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
 		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
-		      AND ` + employment.InPlaceForSQL("r", "la")
+		      AND ` + employment.InPlaceForSQL("r", "la") + `
+		      AND ` + relationshipmark.ContactNotMarkedSQL("r.contact_id")
 
 // participantEmployerArm is the fourth arm: the employer of somebody who is on
 // the event as a participant rather than as a link. Without it a meeting whose
@@ -40,6 +42,7 @@ var participantEmployerArm = `EXISTS (
 		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
 		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
 		        AND ` + employment.InPlaceForSQL("emp", "a") + `
+		        AND ` + relationshipmark.ContactNotMarkedSQL("emp.contact_id") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 
 // participantEntry is where the participant branch starts: every activity an
@@ -47,7 +50,8 @@ var participantEmployerArm = `EXISTS (
 var participantEntry = `SELECT a.id, e0.company_id FROM relationship e0
 		    JOIN activity_participant p0 ON p0.contact_id = e0.contact_id
 		    JOIN activity a ON a.id = p0.activity_id
-		    WHERE e0.company_id = %s AND e0.kind = 'employment' AND `
+		    WHERE e0.company_id = %s AND e0.kind = 'employment'
+		      AND ` + relationshipmark.ContactNotMarkedSQL("e0.contact_id") + ` AND `
 
 // activityReachesCompany is "this activity belongs to the account", for a query
 // that aliases activity as a.

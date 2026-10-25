@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** Never empty: a form opens on the first code and sends it for an empty field. */
+import { isAssignedCurrency } from "./assignedcurrencies";
+
 export type LeadingCurrencies = readonly [string, ...string[]];
 
 // What a picker leads with before the installation's base currency is known:
@@ -17,8 +19,8 @@ export const FALLBACK_LEADING_CURRENCIES: LeadingCurrencies = [
 /**
  * Every currency code a money field can offer: `leading` first, in the order
  * given, then the code the record already carries, then the platform's ISO
- * 4217 list. The server accepts any assigned code, and a narrower picker hides
- * currencies the workspace already prices in.
+ * 4217 list. Only a code the server assigns is offered as a choice; the code
+ * the record already carries stays listed so the field can show it.
  */
 export function currencyCodes(
   leading: LeadingCurrencies,
@@ -28,7 +30,13 @@ export function currencyCodes(
     typeof Intl.supportedValuesOf === "function"
       ? Intl.supportedValuesOf("currency")
       : [];
-  return [...new Set([...leading, ...(current ? [current] : []), ...platform])];
+  return [
+    ...new Set([
+      ...leading.filter(isAssignedCurrency),
+      ...(current ? [current] : []),
+      ...platform.filter(isAssignedCurrency),
+    ]),
+  ];
 }
 
 /**

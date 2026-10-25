@@ -87,7 +87,7 @@ func TestAFollowUpWithoutAResolverIsEnglish(t *testing.T) {
 	bare := stageOneFollowUp(t, NewFollowUpReconciler(nil, nil, nil), nil)
 
 	for field, pair := range map[string][2]string{
-		"summary":     {bare.summary, `Draft a follow-up on "Acme Rollout" — a call on 2026-09-21 left no next step planned`},
+		"summary":     {bare.summary, `Draft a follow-up on "Acme Rollout" — the call on 2026-09-21 left no next step planned`},
 		"subject":     {bare.proposal.Subject, "Follow up on Acme Rollout"},
 		"body":        {bare.proposal.Body, "Follow up on the call from 2026-09-21. No next step is on the timeline yet."},
 		"quoted body": {quoted.proposal.Body, "Follow up on the call “Q4 offer” from 2026-09-21. No next step is on the timeline yet."},

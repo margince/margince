@@ -95,8 +95,8 @@ func checkParsedCells(object string, fields map[string]string) (map[string]any, 
 }
 
 // storedSpelling is the parser each object's store runs on a phone or a
-// LinkedIn URL. A company's page and a contact's slot are narrower than a
-// lead's profile URL.
+// LinkedIn URL. A company takes a company page; a contact and a lead take a
+// profile.
 func storedSpelling(object, target, text string) (string, error) {
 	switch {
 	case target == fieldPhone:
@@ -104,10 +104,8 @@ func storedSpelling(object, target, text string) (string, error) {
 		return phone.String(), err
 	case object == migration.ObjectCompany:
 		return contacts.NormalizeCompanyLinkedInURL(text)
-	case object == migration.ObjectContact:
-		return contacts.NormalizeContactLinkedInURL(text)
 	default:
-		return contacts.NormalizeLinkedInURL(text)
+		return contacts.NormalizeContactLinkedInURL(text)
 	}
 }
 

@@ -21,14 +21,16 @@ const (
 
 // LanguageEvidence is the text a draft's language is read from, one string per
 // message with subject and body together. Inbound mail comes first, newest
-// first, because it is the best evidence of the other side's language.
+// first, because it is the best evidence of the other side's language. The
+// addressee's own mail leads it, since another participant may write in a
+// different language. An empty addressee ranks all inbound mail alike.
 // Our outbound mail and logged notes follow. So a thread where only we wrote
 // still resolves.
 //
 // One string per message rather than a joined blob. textlang.FirstKnown takes
 // the first text that clears the detector. So a short message does not dilute
 // a clear one next to it.
-func LanguageEvidence(turns []Turn) []string {
+func LanguageEvidence(turns []Turn, addressee string) []string {
 	ordered := make([]Turn, 0, len(turns))
 	for _, turn := range turns {
 		if strings.TrimSpace(turn.Subject) != "" || strings.TrimSpace(turn.Text) != "" {
@@ -36,9 +38,9 @@ func LanguageEvidence(turns []Turn) []string {
 		}
 	}
 	sort.SliceStable(ordered, func(i, j int) bool {
-		a, b := isInbound(ordered[i]), isInbound(ordered[j])
+		a, b := evidenceRank(ordered[i], addressee), evidenceRank(ordered[j], addressee)
 		if a != b {
-			return a
+			return a < b
 		}
 		return ordered[i].At.After(ordered[j].At)
 	})
@@ -57,9 +59,18 @@ func LanguageEvidence(turns []Turn) []string {
 // reader keeps every row so LanguageEvidence orders before it cuts: newer
 // outbound mail must not push an older inbound message out of the window.
 func LanguageEvidenceOf(activities []crmcontracts.Activity, now time.Time, zone *time.Location) []string {
-	return LanguageEvidence(Conversation(activities, nil, now, zone, len(activities)))
+	return LanguageEvidence(Conversation(activities, nil, now, zone, len(activities)), "")
 }
 
-func isInbound(turn Turn) bool {
-	return turn.Direction == string(crmcontracts.ActivityDirectionInbound)
+// evidenceRank orders evidence: the addressee's inbound mail, other inbound
+// mail, then everything else.
+func evidenceRank(turn Turn, addressee string) int {
+	switch {
+	case turn.Direction != string(crmcontracts.ActivityDirectionInbound):
+		return 2
+	case addressee != "" && turn.SenderID == addressee:
+		return 0
+	default:
+		return 1
+	}
 }

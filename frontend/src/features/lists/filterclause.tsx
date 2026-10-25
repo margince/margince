@@ -220,6 +220,7 @@ export function ClauseRow({
           references={chosen?.references}
           options={chosen?.options}
           currency={chosen?.currency}
+          field={chosen?.name}
           op={op}
           value={value}
           onChange={(nextValue) =>

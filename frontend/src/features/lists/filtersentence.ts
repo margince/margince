@@ -12,6 +12,7 @@ import {
   formatMoney,
   formatNumber,
 } from "../../format/format";
+import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
@@ -312,7 +313,10 @@ function scalarText(
   const day =
     CALENDAR_DAY.test(operand) &&
     (field === undefined || field.type === "date");
-  return day ? formatDateAbbrev(operand, locale, zone) : operand;
+  if (day) {
+    return formatDateAbbrev(operand, locale, zone);
+  }
+  return field?.name === INDUSTRY_FIELD ? industryWords(t, operand) : operand;
 }
 
 /**

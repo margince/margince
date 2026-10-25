@@ -295,6 +295,7 @@ export function CompanyActionBadges({
         )}
 
         <MergeAction
+          requires={{ object: "company", action: "update" }}
           disabledReasonId={refusedByState}
           label={t("merge.company")}
           sourceId={company.id}
@@ -356,6 +357,7 @@ export function CompanyActionBadges({
         {/* Last, set apart by the panel's seam (atoms.css): the one verb here
             a reader cannot walk back from the header. */}
         <ArchiveAction
+          requires={{ object: "company", action: "delete" }}
           disabledReasonId={refusedByState}
           label={t("record.archive")}
           confirmText={t("record.archiveConfirm")}

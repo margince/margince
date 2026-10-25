@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -149,6 +150,10 @@ func digestQuietProjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]captu
 	if err != nil {
 		return nil, err
 	}
+	zone, err := installationZoneTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, p.name, p.key, p.phase, p.owner_id, `+projects.ProjectQuietAnchorSQL("p")+`
 		  FROM project p
@@ -166,7 +171,7 @@ func digestQuietProjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]captu
 		if err := row.Scan(&item.ProjectID, &item.Name, &item.Key, &item.Phase, &item.OwnerID, &item.QuietSince); err != nil {
 			return item, err
 		}
-		item.DaysQuiet = int(now.Sub(item.QuietSince).Hours() / 24)
+		item.DaysQuiet = max(elapsed.Days(item.QuietSince, now, zone), 0)
 		return item, nil
 	})
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -113,7 +114,7 @@ func ownAddressHeldAloneTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, addres
 	if err != nil || !self.CoversAddressExactly(address) {
 		return false, err
 	}
-	if err := lockOwnAddressTx(ctx, tx, address); err != nil {
+	if err := storekit.LockSeatAddressClaims(ctx, tx, address); err != nil {
 		return false, err
 	}
 	held, err := addressHeldByAnotherSeatTx(ctx, tx, seat, address)
@@ -150,14 +151,4 @@ func addressHeldByAnotherSeatTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, a
 		}
 	}
 	return false, rows.Err()
-}
-
-// lockOwnAddressTx serializes everything that decides or changes which seats
-// hold one address, keyed on its folded form.
-func lockOwnAddressTx(ctx context.Context, tx pgx.Tx, address string) error {
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('margince:own-address:' || $1)::bigint)`,
-		foldAddress(bareAddress(address))); err != nil {
-		return fmt.Errorf("capture: locking who holds %s: %w", address, err)
-	}
-	return nil
 }

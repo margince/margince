@@ -5,7 +5,6 @@ package activities
 
 import (
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
@@ -23,14 +22,6 @@ var preamblePattern = regexp.MustCompile(`^From:[^\n]*\nTo:[^\n]*\n\n`)
 // signatureDelimiter is RFC 3676 §4.3: a line of exactly two hyphens.
 // Trailing whitespace is allowed because mail clients strip it inconsistently.
 var signatureDelimiter = regexp.MustCompile(`^--\s*$`)
-
-// The Outlook top-reply block: a From:/Von: line whose neighbours carry the
-// sent-date field. Recognised as a pair because "Von:" alone is ordinary prose
-// in German mail.
-var (
-	replyHeaderFrom = regexp.MustCompile(`^(Von|From):\s`)
-	replyHeaderSent = regexp.MustCompile(`^(Gesendet|Sent|Datum|Date):\s`)
-)
 
 // signOffPrefixes may open a line, since a name usually follows on the same one.
 var signOffPrefixes = []string{
@@ -139,13 +130,7 @@ func isQuoteStart(lines []string, index int) bool {
 	}
 	// The Outlook block: the sent-date field within the next few lines is what
 	// separates a reply header from a sentence that opens "Von:".
-	if index > 0 && replyHeaderFrom.MatchString(line) {
-		end := min(index+5, len(lines))
-		if slices.ContainsFunc(lines[index+1:end], replyHeaderSent.MatchString) {
-			return true
-		}
-	}
-	return false
+	return index > 0 && mailquote.OpensReplyHeader(line, lines[index+1:])
 }
 
 // boundaryIndex is the first line belonging to the tail rather than the

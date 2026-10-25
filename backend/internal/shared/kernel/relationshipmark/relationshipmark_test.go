@@ -25,3 +25,11 @@ func TestValidAcceptsOnlyTheVocabulary(t *testing.T) {
 		}
 	}
 }
+
+func TestContactNotMarkedSQLNamesTheIDExpression(t *testing.T) {
+	t.Parallel()
+	want := "EXISTS (SELECT 1 FROM contact mk WHERE mk.id = r.contact_id AND mk.relationship_mark IS NULL)"
+	if got := ContactNotMarkedSQL("r.contact_id"); got != want {
+		t.Fatalf("ContactNotMarkedSQL = %q, want %q", got, want)
+	}
+}

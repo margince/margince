@@ -67,6 +67,10 @@ export const INDUSTRY_CODES: readonly IndustryCode[] = [
   "telecommunications",
 ];
 
+// The field name every surface that lists record fields (history, saved views,
+// Magic changes) uses for the company industry.
+export const INDUSTRY_FIELD = "industry";
+
 // The wording key of a stored industry, or undefined for a value that is no
 // code (an older server, or a row not yet repaired).
 export function industryLabelKey(value: string): MessageKey | undefined {

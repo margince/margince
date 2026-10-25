@@ -49,6 +49,19 @@ describe("a live contact that is not the viewer's to change refuses its core wri
   });
 });
 
+describe("a seat without the delete grant is not offered archive", () => {
+  it("shows archive disabled with the reason and no dialog opens", async () => {
+    mount("overview", view, [], {}, { contact: ["read", "update"] });
+    await openRecordMenu();
+    const verb = await screen.findByTestId("archive-record");
+    await waitFor(() => expect(verb.hasAttribute("disabled")).toBe(true));
+    expect(
+      document.getElementById(verb.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe(en["record.actionRefused"]);
+  });
+});
+
 describe("the header's core record verbs — edit, merge, archive", () => {
   it("PATCHes /contacts/{id} from the header's edit form, and the page shows the save — not the stale 360 it had cached", async () => {
     let patchBody: unknown = null;

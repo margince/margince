@@ -78,6 +78,7 @@ func refusalFor(code crmcontracts.ProjectFilingRefusalCode) *ProjectFilingRefuse
 // filingEntry is one project filing on record. The id is absent once the
 // project was deleted; the name is the one frozen when the filing qualified.
 type filingEntry struct {
+	evidenceID  ids.UUID
 	projectID   *ids.UUID
 	name        string
 	qualifiedAt time.Time
@@ -132,6 +133,7 @@ type projectFilingFacts struct {
 	filings     []filingEntry
 	hidden      map[ids.UUID]bool // projects that exist and this caller cannot see
 	hiddenLink  bool
+	staleFiling bool // evidence of a replaced or deleted project still holds the class
 	dealVisible bool // the caller may read deals, and so may be told one qualifies
 }
 
@@ -153,7 +155,7 @@ func (f projectFilingFacts) refusal() *ProjectFilingRefusedError {
 		return refusalFor(crmcontracts.ProjectFilingRefusalCodeErasurePending)
 	case f.hiddenLink:
 		return refusalFor(crmcontracts.ProjectFilingRefusalCodeHiddenProject)
-	case f.otherBasis:
+	case f.otherBasis || f.staleFiling:
 		return refusalFor(crmcontracts.ProjectFilingRefusalCodeOtherBasisRemains)
 	case f.qualifiedDeal && f.dealVisible:
 		return refusalFor(crmcontracts.ProjectFilingRefusalCodeQualifyingDeal)
@@ -166,6 +168,9 @@ func (f projectFilingFacts) refusal() *ProjectFilingRefusedError {
 // readProjectFilingFacts gathers the blockers, the filings and the links under
 // the caller's transaction. The undo calls it under the row lock, so what it read
 // is what the write then changes.
+//
+// A filing counts only while its project still holds the link. Evidence of a
+// replaced link or a deleted project stays for retention and is not listed.
 func readProjectFilingFacts(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (projectFilingFacts, error) {
 	var facts projectFilingFacts
 	var err error
@@ -177,17 +182,19 @@ func readProjectFilingFacts(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (
 	}
 	facts.dealVisible = auth.ReadGranted(ctx, "deal")
 	rows, err := tx.Query(ctx, `
-		SELECT project_id, coalesce(project_name, ''), qualified_at
-		  FROM activity_retention_evidence
-		 WHERE activity_id = $1 AND basis = $2
-		 ORDER BY qualified_at, id`, id, BasisProjectLinked)
+		SELECT e.id, e.project_id, coalesce(e.project_name, ''), e.qualified_at
+		  FROM activity_retention_evidence e
+		 WHERE e.activity_id = $1 AND e.basis = $2
+		   AND EXISTS (SELECT 1 FROM activity_link l
+		         WHERE l.activity_id = e.activity_id AND l.project_id = e.project_id)
+		 ORDER BY e.qualified_at, e.id`, id, BasisProjectLinked)
 	if err != nil {
 		return facts, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var entry filingEntry
-		if err := rows.Scan(&entry.projectID, &entry.name, &entry.qualifiedAt); err != nil {
+		if err := rows.Scan(&entry.evidenceID, &entry.projectID, &entry.name, &entry.qualifiedAt); err != nil {
 			return facts, err
 		}
 		facts.filings = append(facts.filings, entry)
@@ -196,6 +203,13 @@ func readProjectFilingFacts(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (
 		return facts, err
 	}
 	rows.Close()
+
+	var recorded int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM activity_retention_evidence
+		WHERE activity_id = $1 AND basis = $2`, id, BasisProjectLinked).Scan(&recorded); err != nil {
+		return facts, err
+	}
+	facts.staleFiling = recorded > len(facts.filings)
 
 	named := make([]ids.UUID, 0, len(facts.filings))
 	for _, filing := range facts.filings {

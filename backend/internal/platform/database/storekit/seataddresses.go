@@ -5,6 +5,8 @@ package storekit
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/jackc/pgx/v5"
@@ -21,21 +23,26 @@ import (
 // Never return the members to a client: a seat's aliases are private to it.
 type SeatAddresses struct {
 	proven   map[string]struct{}
+	logins   map[string]struct{}
 	declared map[string]map[ids.UUID]struct{}
 }
 
 // WorkspaceSeatAddresses reads the set from the same records MailSeatIdentities
-// folds. A domain-kind identity is not read, so it covers no address.
+// folds. A domain-kind identity is not read, so it covers no address. A writer
+// that acts on the answer reads it through SeatAddressesFor instead.
 func WorkspaceSeatAddresses(ctx context.Context, tx pgx.Tx) (SeatAddresses, error) {
 	records, err := readMailSeatIdentities(ctx, tx)
 	if err != nil {
 		return SeatAddresses{}, err
 	}
-	set := SeatAddresses{proven: map[string]struct{}{}, declared: map[string]map[ids.UUID]struct{}{}}
+	set := SeatAddresses{proven: map[string]struct{}{}, logins: map[string]struct{}{}, declared: map[string]map[ids.UUID]struct{}{}}
 	for _, record := range records {
-		address := mailidentity.ReaderAddress(record.label, record.source)
-		if address == "" {
+		address := mailidentity.SeatAddressKey(record.label, record.source)
+		if address == "" || !record.decidesNew() {
 			continue
+		}
+		if record.source == loginSource {
+			set.logins[address] = struct{}{}
 		}
 		if provenSeatSource(record.source) {
 			set.proven[address] = struct{}{}
@@ -55,7 +62,7 @@ func WorkspaceSeatAddresses(ctx context.Context, tx pgx.Tx) (SeatAddresses, erro
 
 func provenSeatSource(source string) bool {
 	switch source {
-	case "login", provedMailboxSource, "provider":
+	case loginSource, provedMailboxSource, "provider":
 		return true
 	}
 	return false
@@ -65,11 +72,18 @@ func provenSeatSource(source string) bool {
 // asking: proven for any seat, or declared by asking itself. ids.Nil asks for
 // proof alone, which is the answer for every other seat's records.
 func (s SeatAddresses) Covers(address string, asking ids.UUID) bool {
-	folded := mailidentity.ReaderAddress(address, "")
+	folded := mailidentity.SeatAddressKey(address, "")
 	if _, ok := s.proven[folded]; ok {
 		return true
 	}
 	return s.declaredBy(folded, asking)
+}
+
+// IsLogin reports whether address is a live seat's login, which only the
+// seat's own account changes.
+func (s SeatAddresses) IsLogin(address string) bool {
+	_, ok := s.logins[mailidentity.SeatAddressKey(address, "")]
+	return ok
 }
 
 // For lists the addresses Covers admits for asking, sorted, for binding as
@@ -91,4 +105,46 @@ func (s SeatAddresses) For(asking ids.UUID) []string {
 func (s SeatAddresses) declaredBy(address string, asking ids.UUID) bool {
 	_, ok := s.declared[address][asking]
 	return ok && !asking.IsZero()
+}
+
+// SeatAddressesFor reads the set after taking the shared lock on each address
+// the caller will ask about. A claim of one of them that commits first is in
+// the answer; a later one waits until this transaction ends.
+func SeatAddressesFor(ctx context.Context, tx pgx.Tx, addresses ...string) (SeatAddresses, error) {
+	if err := LockSeatAddressChecks(ctx, tx, addresses...); err != nil {
+		return SeatAddresses{}, err
+	}
+	return WorkspaceSeatAddresses(ctx, tx)
+}
+
+// LockSeatAddressChecks takes the shared lock a check of these addresses holds.
+// A writer of a row that an alias claim also writes takes it before that row.
+func LockSeatAddressChecks(ctx context.Context, tx pgx.Tx, addresses ...string) error {
+	return lockSeatAddresses(ctx, tx, `pg_advisory_xact_lock_shared`, addresses)
+}
+
+// LockSeatAddressClaims is taken by every writer that adds, moves or withdraws
+// a seat's claim, over every address the change touches: the old and the new.
+// It waits for every check of them in flight. Take it before any row lock, and
+// wait on no contact row under it.
+func LockSeatAddressClaims(ctx context.Context, tx pgx.Tx, addresses ...string) error {
+	return lockSeatAddresses(ctx, tx, `pg_advisory_xact_lock`, addresses)
+}
+
+// lockSeatAddresses keys each lock on SeatAddressKey, the fold Covers compares,
+// and takes them sorted, so two holders of overlapping sets queue in one order.
+func lockSeatAddresses(ctx context.Context, tx pgx.Tx, lock string, addresses []string) error {
+	keys := make([]string, 0, len(addresses))
+	for _, address := range addresses {
+		if folded := mailidentity.SeatAddressKey(address, ""); folded != "" {
+			keys = append(keys, folded)
+		}
+	}
+	slices.Sort(keys)
+	for _, key := range slices.Compact(keys) {
+		if _, err := tx.Exec(ctx, `SELECT `+lock+`(hashtext('margince:own-address:' || $1)::bigint)`, key); err != nil {
+			return fmt.Errorf("locking a seat address: %w", err)
+		}
+	}
+	return nil
 }

@@ -320,3 +320,45 @@ func TestTheReminderFilterFollowsEditsAndReassignment(t *testing.T) {
 		t.Errorf("the colleague's reminders are %v, want the task handed to them", rep2)
 	}
 }
+
+func TestATaskTheReaderMayNotReadIsNotOnTheirWorklist(t *testing.T) {
+	r := setupReminders(t)
+	e := r.e
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	subject := "Renewal terms for the Buyer account"
+	due := r.now.Add(-time.Hour)
+	row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, DueAt: &due, RemindAt: new(r.now.Add(-time.Minute)), Source: "manual",
+		AssigneeID: new(ids.From[ids.UserKind](e.Rep2)),
+		Links:      []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hidden := ids.From[ids.ActivityKind](ids.UUID(row.Id))
+	if _, err := e.Activities.SetAudience(e.Admin(), hidden, activities.SetAudienceInput{
+		Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: e.Rep1}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	readable := r.task(t, "Send the agenda", due, nil, &e.Rep2)
+
+	page := r.worklist(r.rep2, t, "mine", ids.Nil)
+
+	if at, _ := rowFor(page, hidden); at >= 0 {
+		t.Errorf("a task the reader may not read sits at %d on their Worklist", at)
+	}
+	if at, _ := rowFor(page, readable); at < 0 {
+		t.Error("the readable task is missing from the same Worklist")
+	}
+	for _, count := range page.Counts {
+		if count.Category == crmcontracts.WorklistCountCategoryTasks && count.Considered != 1 {
+			t.Errorf("tasks considered = %d, want only the readable one", count.Considered)
+		}
+	}
+	for _, item := range page.Queue {
+		if item.Title != nil && *item.Title == subject {
+			t.Error("the hidden task's subject reached the Worklist")
+		}
+	}
+}

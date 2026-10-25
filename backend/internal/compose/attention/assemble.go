@@ -48,4 +48,7 @@ type besideDay struct {
 	failed []*crmcontracts.WorklistSourceUnavailable
 	// until is where the day's lanes stopped reading, so a read past today starts there.
 	until time.Time
+	// zone is the installation calendar this response was assembled in, so a
+	// lane that counts days uses the same one as the lanes before it.
+	zone *time.Location
 }

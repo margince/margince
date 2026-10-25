@@ -140,10 +140,12 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
-	turns, err := d.replyConversation(ctx, activity)
+	thread, err := d.replyConversation(ctx, activity)
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
+	turns := thread.prompt
+	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
 	topic := stringValue(activity.Subject)
 	body := stringValue(activity.Body)
 	threaded := activities.IsMailThread(activity.Kind, activity.Direction)
@@ -161,11 +163,11 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		Stored:  activityLanguage(activity),
 		Body:    body,
 		Subject: topic,
-		Thread:  draftcore.LanguageEvidence(turns),
+		Thread:  draftcore.LanguageEvidence(thread.evidence, addressee.ContactID),
 		Rewrite: steering.RewriteOf,
 		Purpose: steering.Intent,
 	}, state)
-	recipient, surname := d.recipientName(ctx, ids.From[ids.ActivityKind](anchor))
+	recipient, surname := addressee.GreetingNames()
 
 	fallbackSubject, fallbackBody := activities.DeterministicEmailDraft(activities.DraftContext{
 		Topic: topic,
@@ -241,28 +243,27 @@ func (d replyDrafter) logger() *slog.Logger {
 const recipientMaxRunes = 200
 
 // recipientName is who this reply is written to, or nothing.
-//
-// A failure to resolve the name degrades to no name rather than failing the
-// draft: the contact may be outside this caller's scope, the activity may be
-// linked to nobody, and in both cases an unnamed greeting is the honest answer.
-// The reason is logged, so a lookup that breaks for some other cause is visible
-// rather than silently reading as "no recipient".
-// It answers both names because the two greeting registers take different
-// ones: the familiar form uses the first name, the formal form the surname.
-// Resolving them together keeps one read behind one greeting.
 func (d replyDrafter) recipientName(ctx context.Context, anchor ids.ActivityID) (greeting, surname string) {
+	return d.recipientFor(ctx, anchor).GreetingNames()
+}
+
+// recipientFor is the resolved recipient, empty when it cannot be resolved.
+// The reply route asks it before deciding the language, because the
+// addressee's own mail is the best evidence of it.
+//
+// A failure degrades to no name rather than failing the draft: the contact may
+// be outside this caller's scope or the activity linked to nobody. The reason
+// is logged so a lookup that breaks for another cause stays visible.
+func (d replyDrafter) recipientFor(ctx context.Context, anchor ids.ActivityID) activities.ReplyRecipient {
 	if d.store == nil {
-		return "", ""
+		return activities.ReplyRecipient{}
 	}
 	recipient, err := d.store.ReplyRecipientFor(ctx, anchor)
 	if err != nil {
 		d.logger().WarnContext(ctx, "reply recipient unavailable; drafting without a greeting name", "err", err)
-		return "", ""
+		return activities.ReplyRecipient{}
 	}
-	if recipient.FirstName != "" {
-		return recipient.FirstName, recipient.LastName
-	}
-	return recipient.FullName, recipient.LastName
+	return recipient
 }
 
 // conversationState places the message being answered on the silence axis.

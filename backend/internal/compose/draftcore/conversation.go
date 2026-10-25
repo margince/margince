@@ -31,6 +31,10 @@ type Turn struct {
 	// Logged marks a note or meeting a rep wrote down. It is context for the
 	// draft, never the message being continued.
 	Logged bool
+	// SenderID is the contact who sent the message, empty when capture did not
+	// resolve one. Conversation leaves it empty; a caller that knows senders
+	// fills it so LanguageEvidence can prefer the addressee's mail.
+	SenderID string
 	// AfterAnchor is true when the turn is newer than the selected message.
 	AfterAnchor bool
 }

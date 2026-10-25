@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -405,6 +406,13 @@ func moneyValue(r ranked) *crmcontracts.WorklistValue {
 func daysSince(from, asOf time.Time) int {
 	days, _ := deadline.DaysPast(&from, asOf)
 	return days
+}
+
+// calendarDaysSince is how many calendar days in loc `from` lies before
+// `asOf`, so a same-day event is zero and one across local midnight is one.
+// Clamped at zero for the same clock-skew reason as daysSince.
+func calendarDaysSince(from, asOf time.Time, loc *time.Location) int {
+	return max(elapsed.Days(from, asOf, loc), 0)
 }
 
 func daysValue(days int) *crmcontracts.WorklistValue {

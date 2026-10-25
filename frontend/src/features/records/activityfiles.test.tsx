@@ -37,6 +37,7 @@ const PRICE_LIST: Attachment = {
 };
 
 const KICKOFF: Activity = {
+  writable: true,
   id: "act-kickoff",
   kind: "meeting",
   subject: "Kickoff with Brandt IT",
@@ -100,7 +101,7 @@ async function uploadThroughDialog(user: ReturnType<typeof userEvent.setup>) {
 describe("ActivityFiles", () => {
   it("lists the activity's own files, each linking to its bytes", async () => {
     const calls = stubApi([PRICE_LIST]);
-    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" />);
+    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" writable />);
     const link = await screen.findByRole("link", {
       name: /price-list-2026\.pdf/,
     });
@@ -112,7 +113,7 @@ describe("ActivityFiles", () => {
 
   it("says so when the activity has no files", async () => {
     stubApi([]);
-    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" />);
+    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" writable />);
     expect(
       await screen.findByText("No files on this activity yet."),
     ).toBeTruthy();
@@ -121,7 +122,7 @@ describe("ActivityFiles", () => {
   it("uploads a file against the activity and reads the list again", async () => {
     const calls = stubApi([]);
     const user = userEvent.setup();
-    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" />);
+    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" writable />);
     await uploadThroughDialog(user);
     await waitFor(() => expect(listReads(calls)).toHaveLength(2));
     const upload = calls.find((call) => call.key === "POST /attachments");
@@ -139,7 +140,7 @@ describe("ActivityFiles", () => {
     render(
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
-          <ActivityFiles activityId="act-kickoff" />
+          <ActivityFiles activityId="act-kickoff" writable />
         </LocaleProvider>
       </QueryClientProvider>,
     );
@@ -157,8 +158,7 @@ describe("ActivityFiles", () => {
   });
 
   it("shows the refusal when the activity is not this rep's to change", async () => {
-    // The activity read carries no per-row writable flag, so the server's
-    // refusal is what reaches a rep holding the grant but not the row.
+    // A stale read can still offer the control; the server's refusal then shows.
     const calls = stubApi([], undefined, () =>
       jsonResponse(
         {
@@ -171,7 +171,7 @@ describe("ActivityFiles", () => {
       ),
     );
     const user = userEvent.setup();
-    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" />);
+    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" writable />);
     const dialog = await uploadThroughDialog(user);
     expect(await within(dialog).findByText("Upload failed")).toBeTruthy();
     expect(listReads(calls)).toHaveLength(1);
@@ -179,7 +179,20 @@ describe("ActivityFiles", () => {
 
   it("says why a seat that may not change activities cannot upload", async () => {
     stubApi([], { activity: ["read"] });
-    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" />);
+    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" writable />);
+    const reason = await screen.findByText(
+      "You do not have permission to add documents to this record.",
+    );
+    const add = screen.getByRole("button", { name: "Add document" });
+    expect(add.getAttribute("aria-describedby")).toBe(reason.id);
+    expect(add.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("says why a rep cannot upload to a colleague's activity", async () => {
+    stubApi([]);
+    renderWithQueryClient(
+      <ActivityFiles activityId="act-kickoff" writable={false} />,
+    );
     const reason = await screen.findByText(
       "You do not have permission to add documents to this record.",
     );
@@ -190,7 +203,9 @@ describe("ActivityFiles", () => {
 
   it("offers no upload on an archived activity", async () => {
     stubApi([PRICE_LIST]);
-    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" archived />);
+    renderWithQueryClient(
+      <ActivityFiles activityId="act-kickoff" writable archived />,
+    );
     await screen.findByRole("link", { name: /price-list-2026\.pdf/ });
     expect(screen.queryByRole("button", { name: "Add document" })).toBeNull();
   });

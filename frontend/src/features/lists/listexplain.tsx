@@ -13,6 +13,7 @@ import {
   displayDay,
   formatNumber,
 } from "../../format/format";
+import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
   type FilterVocabulary,
@@ -196,9 +197,24 @@ export function useFieldValueText(
           ? (moneyText(raw, field.currency, locale) ?? raw)
           : t("filters.sentence.pendingValue");
       default:
-        return field?.references === "app_user" ? (users.get(raw) ?? raw) : raw;
+        return plainValueText(name, raw, field, users, t);
     }
   };
+}
+
+// A value with no kind-specific reading: an industry code in the reader's
+// words, a colleague by name, anything else as stored.
+function plainValueText(
+  name: string,
+  raw: string,
+  field: VocabularyField | undefined,
+  users: ReadonlyMap<string, string>,
+  t: ReturnType<typeof useT>,
+): string {
+  if (name === INDUSTRY_FIELD) {
+    return industryWords(t, raw);
+  }
+  return field?.references === "app_user" ? (users.get(raw) ?? raw) : raw;
 }
 
 // The colleague a clause's value names, when its field references one.

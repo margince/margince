@@ -267,6 +267,42 @@ describe("LeadManualSignals", () => {
     ).toBe(true);
   });
 
+  it("lists stored signals with the raw value when the catalog endpoint is missing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input instanceof Request ? input.url : input).endsWith(
+          "/lead-signal-catalog",
+        )
+          ? Response.json({ title: "Not Found", status: 404 }, { status: 404 })
+          : Response.json({
+              data: [
+                {
+                  factor: "fleet_size",
+                  band: "huge",
+                  points: 5,
+                  signal_kind: "assumption",
+                  confidence: null,
+                  reason: "Heard at the fair",
+                  set_by: "11111111-1111-4111-8111-111111111111",
+                  set_at: "2026-10-01T10:00:00Z",
+                  superseded_at: null,
+                  superseded_by: null,
+                },
+              ],
+            }),
+      ),
+    );
+    render(
+      <Providers>
+        <LeadManualSignals id="l-1" readOnlyReason="Closed." />
+      </Providers>,
+    );
+
+    expect(await screen.findByText("fleet_size")).toBeTruthy();
+    expect(screen.getByText("huge")).toBeTruthy();
+  });
+
   it("shows the repair marker as a translated label, not the stored constant", async () => {
     vi.stubGlobal(
       "fetch",

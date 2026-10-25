@@ -3,6 +3,7 @@ import {
   type OccurredPrecision,
 } from "../format/activitywhen";
 import { formatDateTime, formatMoneyOrAbsent } from "../format/format";
+import { INDUSTRY_FIELD, industryWords } from "../format/industry";
 import { type Locale, translate } from "../i18n";
 import { historyValueLabel } from "./historyvaluelabels";
 import { isUuid } from "./uuid";
@@ -131,6 +132,9 @@ export function historyValue(
       return value;
     }
     return formatMoneyOrAbsent(minor, ctx.currency, ctx.locale);
+  }
+  if (field === INDUSTRY_FIELD) {
+    return industryWords((key) => translate(ctx.locale, key), value);
   }
   if (ISO_TIMESTAMP.test(value)) {
     return historyMoment(value, ctx, precision);

@@ -7,6 +7,7 @@ import {
   RELATIONSHIP_TYPE_OPTIONS,
 } from "../../components/companyform";
 import {
+  formatSizeBand,
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
   RELATIONSHIP_TYPE_LABELS,
@@ -107,7 +108,10 @@ export function CompaniesScreen() {
       key: "size_band",
       label: t("company.sizeBand"),
       allLabel: t("company.filterSizeBandAll"),
-      options: SIZE_BAND_OPTIONS.map((value) => ({ value, label: value })),
+      options: SIZE_BAND_OPTIONS.map((value) => ({
+        value,
+        label: formatSizeBand(t, value),
+      })),
     },
   ];
 

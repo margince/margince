@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
@@ -191,3 +192,29 @@ func DiscoveredMachineAddress(source, label string) bool {
 func InboundFromSendingSystem(kind, direction, from string) bool {
 	return kind == "email" && direction == "inbound" && IsMachineAddress(from)
 }
+
+// SeatAddressKey is the spelling seat-address checks, their set and their
+// locks compare: ReaderAddress, then FoldAddress.
+func SeatAddressKey(label, source string) string {
+	return FoldAddress(ReaderAddress(label, source))
+}
+
+// FoldAddress lowercases an address and normalizes its domain the way
+// NormalizeDomain does, so a unicode domain and its punycode form are one
+// address. Plus-addressing is kept: `me+news@` is another address.
+func FoldAddress(address string) string {
+	folded := strings.ToLower(strings.TrimSpace(address))
+	at := strings.LastIndex(folded, "@")
+	if at < 0 {
+		return folded
+	}
+	domain := NormalizeDomain(folded[at+1:])
+	if domain == "" {
+		return folded
+	}
+	return folded[:at+1] + domain
+}
+
+// NormalizeDomain is the one domain fold, owndomain.Fold, so a seat's address
+// and an own domain compare in the same form.
+func NormalizeDomain(domain string) string { return owndomain.Fold(domain) }

@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -121,10 +120,9 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		fmt.Sprintf(contactReachesActivity, "c.id"), scope, projectScope(opts, arg),
 		auth.AudienceWorkspaceOnly("a"))
 	humanClock := relstrength.LastActivityCountsSQL("a", "now()") + " AND " + relstrength.WrittenByHumanSQL("a")
-	sender := contacts.SenderPredicate("c.id", "a")
+	sender := relstrength.SenderSQL("c.id", "a")
 	inbound := fmt.Sprintf(`a.direction = 'inbound' AND %s AND %s`, sender, humanClock)
-	exchange := fmt.Sprintf(`%s AND %s AND (a.direction IS DISTINCT FROM 'inbound' OR %s)`,
-		relstrength.InteractionCountsSQL("a"), relstrength.LastActivityCountsSQL("a", "now()"), sender)
+	exchange := relstrength.ContactExchangeSQL("a", "c.id", "now()")
 	// One newest row per direction carries its time and its precision together.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, inbound.touched_at, outbound.touched_at, live.touched_at, exchange.touched_at, preceding.touched_at,
