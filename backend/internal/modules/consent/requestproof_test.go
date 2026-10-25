@@ -9,19 +9,26 @@ import (
 )
 
 func TestAProofIsKeptThreeYearsPastTheEndOfTheYearItWasAnsweredIn(t *testing.T) {
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	newYearBerlin := time.Date(2031, 1, 1, 0, 0, 0, 0, berlin)
 	cases := []struct {
 		name     string
 		answered time.Time
+		zone     *time.Location
 		want     time.Time
 	}{
-		{"the first day of a year", time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC), time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)},
-		{"the last morning of a year", time.Date(2026, 12, 31, 9, 0, 0, 0, time.UTC), time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)},
-		{"an answer where the new year has begun", time.Date(2026, 12, 31, 11, 0, 0, 0, time.UTC), time.Date(2031, 1, 1, 0, 0, 0, 0, time.UTC)},
-		{"the next day", time.Date(2027, 1, 1, 9, 0, 0, 0, time.UTC), time.Date(2031, 1, 1, 0, 0, 0, 0, time.UTC)},
-		{"the same instant carried in another zone", time.Date(2026, 12, 31, 20, 0, 0, 0, time.FixedZone("UTC-10", -10*60*60)), time.Date(2031, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{"the first day of a year", time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC), time.UTC, time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{"the last minute of a year", time.Date(2026, 12, 31, 23, 59, 0, 0, time.UTC), time.UTC, time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{"the next minute", time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC), time.UTC, time.Date(2031, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{"new year in Berlin is still the old year in UTC", time.Date(2026, 12, 31, 23, 30, 0, 0, time.UTC), berlin, newYearBerlin},
+		{"the boundary is midnight in the same zone", time.Date(2027, 6, 1, 0, 0, 0, 0, berlin), berlin, newYearBerlin},
 	}
 	for _, c := range cases {
-		if got := ProofKeepUntil(c.answered); !got.Equal(c.want) {
+		got := ProofKeepUntil(c.answered, c.zone)
+		if !got.Equal(c.want) {
 			t.Errorf("%s: answered %s is kept until %s, want %s", c.name, c.answered, got, c.want)
 		}
 	}

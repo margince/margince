@@ -23,6 +23,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -177,7 +178,9 @@ func TestAClosedRequestRefusesAnotherAnswerAndAcceptsItsOwn(t *testing.T) {
 func TestARepeatedErasureFulfilmentIsAccepted(t *testing.T) {
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
-	erase := func(context.Context, ids.UUID, string) (map[string]int64, error) { return map[string]int64{}, nil }
+	erase := func(context.Context, ids.UUID, string) (erasureaccount.Account, error) {
+		return erasureaccount.Empty(), nil
+	}
 	in := UpdateDSRInput{Status: new("fulfilled"), Resolution: new("erased on request"), Proof: idDocumentChecked}
 
 	for attempt := 1; attempt <= 2; attempt++ {

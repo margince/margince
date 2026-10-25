@@ -8,7 +8,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
+	"errors"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -25,13 +25,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// proofEnv is one installation with the consent handlers wired to the real
-// erasure engine, as the server wires them.
+// proofEnv is one installation with the consent handlers the server builds.
 type proofEnv struct {
 	*integration.Env
 	handlers consent.Handlers
@@ -43,8 +41,8 @@ func setupProofs(t *testing.T) proofEnv {
 	e := integration.Setup(t)
 	return proofEnv{
 		Env:      e,
-		handlers: consent.NewHandlers(e.DB()).WithEraser(privacy.NewEraser(e.DB())),
-		store:    consent.NewStore(e.DB()),
+		handlers: newConsentHandlers(e.Pool),
+		store:    consent.NewStore(e.DB()).WithInstallationZone(identity.ZoneAppliedTx),
 	}
 }
 
@@ -57,14 +55,18 @@ func (e proofEnv) openRequest(t *testing.T, kind, subjectRef string) ids.UUID {
 	return created.ID
 }
 
-func (e proofEnv) patch(t *testing.T, id ids.UUID, body string) {
-	t.Helper()
+func patchWith(ctx context.Context, handlers consent.Handlers, id ids.UUID, body string) *httptest.ResponseRecorder {
 	r := httptest.NewRequest(http.MethodPatch, "/v1/data-subject-requests/"+id.String(),
-		strings.NewReader(body)).WithContext(e.Admin())
+		strings.NewReader(body)).WithContext(ctx)
 	r.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	e.handlers.UpdateDataSubjectRequest(w, r, openapi_types.UUID(id))
-	if w.Code != http.StatusOK {
+	handlers.UpdateDataSubjectRequest(w, r, openapi_types.UUID(id))
+	return w
+}
+
+func (e proofEnv) patch(t *testing.T, id ids.UUID, body string) {
+	t.Helper()
+	if w := patchWith(e.Admin(), e.handlers, id, body); w.Code != http.StatusOK {
 		t.Fatalf("PATCH %s → %d: %s", body, w.Code, w.Body)
 	}
 }
@@ -84,36 +86,60 @@ func (e proofEnv) proofCounts(t *testing.T, request ids.UUID) map[string]int64 {
 	return counts
 }
 
-// tombstoneCounts reads the counts the erasure engine certified for request on
-// contact, so the proof can be held to the engine's own numbers.
-func (e proofEnv) tombstoneCounts(t *testing.T, contact, request ids.UUID) map[string]int64 {
+// tombstone reads the account the erasure engine certified for request, so
+// the proof can be held to the engine's own numbers.
+func (e proofEnv) tombstone(t *testing.T, request ids.UUID) erasureaccount.Account {
 	t.Helper()
-	var evidence map[string]any
+	var account erasureaccount.Account
 	if err := json.Unmarshal([]byte(e.WsScalar(t, `
 		SELECT evidence::text FROM audit_log
-		 WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'erase'
-		   AND evidence->>'reason' = $2`, contact, "dsr:"+request.String())), &evidence); err != nil {
+		 WHERE entity_type = 'contact' AND action = 'erase' AND evidence->>'reason' = $1`,
+		"dsr:"+request.String())), &account); err != nil {
 		t.Fatal(err)
 	}
-	out := map[string]int64{}
-	for key, value := range evidence {
-		if count, isCount := value.(float64); isCount {
-			out[key] = int64(count)
-		}
-	}
-	return out
+	return account
 }
 
-func TestFulfillingAnErasureWritesOneProofWithTheErasureCountsAndTheOfficer(t *testing.T) {
-	e := setupProofs(t)
-	contact := e.SeedContact(t, "Henrike Proofsubject", nil)
-	subject, body := "Loeschantrag Henrike", "Bitte alles loeschen, Ihre Henrike"
+func (e proofEnv) seedNoteFor(t *testing.T, contact ids.UUID, subject, body string) {
+	t.Helper()
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Subject: &subject, Body: &body, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// erasureTrail counts the erase tombstones of request and the erase events on
+// contact.
+func (e proofEnv) erasureTrail(t *testing.T, contact, request ids.UUID) (tombstones, events int) {
+	t.Helper()
+	tombstones = e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'contact' AND action = 'erase'
+		AND evidence->>'reason' = $1`, "dsr:"+request.String())
+	events = e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'retention.applied'
+		AND envelope->'entity'->>'id' = $1::text`, contact)
+	return tombstones, events
+}
+
+// installationZone is the zone the proof writer counts in.
+func (e proofEnv) installationZone(t *testing.T) *time.Location {
+	t.Helper()
+	var zone *time.Location
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var err error
+		zone, err = identity.ZoneAppliedTx(e.Admin(), tx)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return zone
+}
+
+func TestFulfillingAnErasureWritesOneProofWithTheErasuresOwnAccount(t *testing.T) {
+	e := setupProofs(t)
+	contact := e.SeedContact(t, "Henrike Proofsubject", nil)
+	subject, body := "Loeschantrag Henrike", "Bitte alles loeschen, Ihre Henrike"
+	e.seedNoteFor(t, contact, subject, body)
 	request := e.openRequest(t, "erasure", contact.String())
 	closing := `{"status":"fulfilled","resolution":"erased","identity_check":"id_document","requester_email":"Henrike@Proof.test"}`
 
@@ -123,12 +149,15 @@ func TestFulfillingAnErasureWritesOneProofWithTheErasureCountsAndTheOfficer(t *t
 	if n := e.proofCount(t, request); n != 1 {
 		t.Fatalf("%d proofs after a fulfilment and its replay, want 1", n)
 	}
+	if tombstones, events := e.erasureTrail(t, contact, request); tombstones != 1 || events != 1 {
+		t.Fatalf("%d erase tombstones and %d events after a replay, want 1 and 1", tombstones, events)
+	}
 	counts := e.proofCounts(t, request)
-	if want := e.tombstoneCounts(t, contact, request); !maps.Equal(counts, want) {
+	if want := e.tombstone(t, request).Rows; !maps.Equal(counts, want) {
 		t.Fatalf("proof counts %v, want the erasure's own %v", counts, want)
 	}
-	if counts["activities_redacted"] != 1 || counts["contacts_anonymized"] != 1 {
-		t.Fatalf("proof counts %v, want the one note and the one contact", counts)
+	if counts["activity.updated"] < 1 || counts["contact.updated"] < 1 {
+		t.Fatalf("proof counts %v, want the note and the contact among them", counts)
 	}
 	got := e.WsScalar(t, `SELECT concat_ws('|', completed_by_type, completed_by_id, identity_check, result,
 		request_kind, requester_email, erased_counts_known::text) FROM privacy_request_proof WHERE request_id = $1`, request)
@@ -146,16 +175,84 @@ func TestFulfillingAnErasureWritesOneProofWithTheErasureCountsAndTheOfficer(t *t
 	}
 }
 
+// failingAfterErase erases for real, then fails: what FulfilErasure sees when
+// the erasure committed and the close cannot finish.
+type failingAfterErase struct{ inner consent.Eraser }
+
+var errClosingDied = errors.New("the close died after the erase")
+
+func (f failingAfterErase) EraseContactCounted(ctx context.Context, contact ids.UUID, reason string) (erasureaccount.Account, error) {
+	if _, err := f.inner.EraseContactCounted(ctx, contact, reason); err != nil {
+		return erasureaccount.Account{}, err
+	}
+	return erasureaccount.Account{}, errClosingDied
+}
+
+func TestARetriedCloseStoresTheFirstErasuresAccount(t *testing.T) {
+	e := setupProofs(t)
+	contact := e.SeedContact(t, "Retried Subject", nil)
+	e.seedNoteFor(t, contact, "Bitte loeschen", "Bitte loeschen Sie alles")
+	request := e.openRequest(t, "erasure", contact.String())
+	closing := `{"status":"fulfilled","resolution":"erased","identity_check":"id_document"}`
+
+	dying := consent.NewHandlers(e.DB()).WithEraser(failingAfterErase{inner: privacy.NewEraser(e.DB())})
+	if w := patchWith(e.Admin(), dying, request, closing); w.Code == http.StatusOK {
+		t.Fatalf("the dying close answered %d", w.Code)
+	}
+	if n := e.proofCount(t, request); n != 0 {
+		t.Fatalf("%d proofs after a close that died", n)
+	}
+	e.patch(t, request, closing)
+
+	counts := e.proofCounts(t, request)
+	if want := e.tombstone(t, request).Rows; !maps.Equal(counts, want) || counts["activity.updated"] < 1 {
+		t.Fatalf("the retried proof counts %v, want the first erasure's %v", counts, want)
+	}
+	if tombstones, _ := e.erasureTrail(t, contact, request); tombstones != 1 {
+		t.Fatalf("%d erase tombstones after a retry, want 1", tombstones)
+	}
+}
+
+func TestARequestWhoseIdentityWasNotCheckedCannotBeFulfilled(t *testing.T) {
+	e := setupProofs(t)
+	contact := e.SeedContact(t, "Unverified Subject", nil)
+	for kind, subjectRef := range map[string]string{"access": "unverified@proof.test", "erasure": contact.String()} {
+		request := e.openRequest(t, kind, subjectRef)
+		w := patchWith(e.Admin(), e.handlers, request,
+			`{"status":"fulfilled","resolution":"done","identity_check":"not_verified"}`)
+		if w.Code != http.StatusUnprocessableEntity || !strings.Contains(w.Body.String(), "identity_check") {
+			t.Fatalf("%s fulfilled with not_verified → %d %s, want 422 naming identity_check", kind, w.Code, w.Body)
+		}
+		if status := e.WsScalar(t, `SELECT status FROM data_subject_request WHERE id = $1`, request); status != "open" {
+			t.Fatalf("the refused %s request is %s", kind, status)
+		}
+		if n := e.proofCount(t, request); n != 0 {
+			t.Fatalf("%d proofs after a refused %s close", n, kind)
+		}
+	}
+	if name := e.WsScalar(t, `SELECT full_name FROM contact WHERE id = $1`, contact); name != "Unverified Subject" {
+		t.Fatalf("the refused erasure erased the contact (name %q)", name)
+	}
+}
+
+func TestARejectedRequestKeepsAProofThatErasedNothing(t *testing.T) {
+	e := setupProofs(t)
+	request := e.openRequest(t, "access", "rejected@proof.test")
+	e.patch(t, request, `{"status":"rejected","resolution":"not the subject","identity_check":"not_verified"}`)
+
+	got := e.WsScalar(t, `SELECT concat_ws('|', result, identity_check, request_kind, requester_email,
+		erased_counts::text, cardinality(erased_uncounted)::text, erased_counts_known::text, completed_by_id)
+		FROM privacy_request_proof WHERE request_id = $1`, request)
+	if want := "rejected|not_verified|access|rejected@proof.test|{}|0|true|human:" + e.AdminUser.String(); got != want {
+		t.Fatalf("rejected proof = %s, want %s", got, want)
+	}
+}
+
 func TestClosingARequestFiledByHandNeedsTheIdentityCheck(t *testing.T) {
 	e := setupProofs(t)
 	contact := e.SeedContact(t, "Unchecked Subject", nil)
 	request := e.openRequest(t, "erasure", contact.String())
-	r := httptest.NewRequest(http.MethodPatch, "/v1/data-subject-requests/"+request.String(),
-		strings.NewReader(`{"status":"fulfilled","resolution":"erased"}`)).WithContext(e.Admin())
-	r.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	e.handlers.UpdateDataSubjectRequest(w, r, openapi_types.UUID(request))
-
+	w := patchWith(e.Admin(), e.handlers, request, `{"status":"fulfilled","resolution":"erased"}`)
 	if w.Code != http.StatusUnprocessableEntity || !strings.Contains(w.Body.String(), "identity_check") {
 		t.Fatalf("a close without an identity check → %d %s, want 422 naming identity_check", w.Code, w.Body)
 	}
@@ -164,152 +261,5 @@ func TestClosingARequestFiledByHandNeedsTheIdentityCheck(t *testing.T) {
 	}
 	if n := e.proofCount(t, request); n != 0 {
 		t.Fatalf("%d proofs after a refused close", n)
-	}
-}
-
-// answerProofAt moves a proof's answer date, and its retention date by the
-// writer's own rule. The sweep then meets ages a test cannot wait for.
-func (e proofEnv) answerProofAt(t *testing.T, request ids.UUID, answered time.Time) {
-	t.Helper()
-	e.WsExec(t, `UPDATE privacy_request_proof SET answered_at = $2, keep_until = $3 WHERE request_id = $1`,
-		request, answered, consent.ProofKeepUntil(answered))
-}
-
-func (e proofEnv) closeAccess(t *testing.T, subjectRef string) ids.UUID {
-	t.Helper()
-	request := e.openRequest(t, "access", subjectRef)
-	e.patch(t, request, `{"status":"fulfilled","resolution":"package sent","identity_check":"address_on_file"}`)
-	return request
-}
-
-func (e proofEnv) expire(t *testing.T, now time.Time) {
-	t.Helper()
-	worker := &requestProofExpiryWorker{
-		requests: e.store, identity: identity.NewService(e.Pool), now: func() time.Time { return now },
-		log: slog.New(slog.DiscardHandler),
-	}
-	if err := worker.Work(context.Background(), nil); err != nil {
-		t.Fatalf("expiry pass: %v", err)
-	}
-}
-
-func TestTheJanuaryRunDeletesProofsThreeYearsAfterTheirYearAndKeepsTheRest(t *testing.T) {
-	e := setupProofs(t)
-	due := e.closeAccess(t, "due@proof.test")
-	younger := e.closeAccess(t, "younger@proof.test")
-	disputed := e.closeAccess(t, "disputed@proof.test")
-	e.answerProofAt(t, due, time.Date(2026, 12, 31, 9, 0, 0, 0, time.UTC))
-	e.answerProofAt(t, younger, time.Date(2027, 1, 1, 9, 0, 0, 0, time.UTC))
-	e.answerProofAt(t, disputed, time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC))
-	e.patch(t, disputed, `{"dispute_open":true}`)
-
-	e.expire(t, time.Date(2029, 12, 31, 23, 0, 0, 0, time.UTC))
-	if n := e.proofCount(t, due); n != 1 {
-		t.Fatal("a proof went before its third year had ended")
-	}
-	e.expire(t, time.Date(2030, 2, 1, 0, 0, 0, 0, time.UTC))
-	if n := e.proofCount(t, due); n != 1 {
-		t.Fatal("a run outside January deleted a proof")
-	}
-	e.expire(t, time.Date(2030, 1, 2, 3, 0, 0, 0, time.UTC))
-	if n := e.proofCount(t, due); n != 0 {
-		t.Fatal("the January run kept a proof three years past the end of its year")
-	}
-	if n := e.proofCount(t, younger); n != 1 {
-		t.Fatal("the January run deleted a proof answered a day later, in the next year")
-	}
-	if n := e.proofCount(t, disputed); n != 1 {
-		t.Fatal("the January run deleted a proof whose request is under dispute")
-	}
-
-	e.patch(t, disputed, `{"dispute_open":false}`)
-	e.expire(t, time.Date(2030, 1, 20, 3, 0, 0, 0, time.UTC))
-	if n := e.proofCount(t, disputed); n != 0 {
-		t.Fatal("a proof outlived the dispute that held it")
-	}
-}
-
-func TestAnExpiredProofTakesTheRequestersReferenceFromTheRequestAndItsAuditImage(t *testing.T) {
-	e := setupProofs(t)
-	const reference = "expiring.requester@proof.test"
-	request := e.closeAccess(t, reference)
-	e.answerProofAt(t, request, time.Date(2025, 3, 1, 9, 0, 0, 0, time.UTC))
-
-	entity, id := "data_subject_request", request
-	readTrail := func() string {
-		page, err := privacy.ListAuditLog(e.Admin(), e.DB(), privacy.AuditFilter{EntityType: &entity, EntityID: &id})
-		if err != nil {
-			t.Fatal(err)
-		}
-		var trail strings.Builder
-		for _, entry := range page.Entries {
-			trail.Write(entry.Before)
-			trail.Write(entry.After)
-		}
-		return trail.String()
-	}
-	if !strings.Contains(readTrail(), reference) {
-		t.Fatal("the creation image never held the reference, so its absence below would prove nothing")
-	}
-
-	e.expire(t, time.Date(2029, 1, 3, 3, 0, 0, 0, time.UTC))
-
-	if got := e.WsScalar(t, `SELECT subject_ref FROM data_subject_request WHERE id = $1`, request); got != "erased+"+request.String() {
-		t.Fatalf("the expired request still names %q", got)
-	}
-	if trail := readTrail(); strings.Contains(trail, reference) {
-		t.Fatalf("the audit trail still shows the reference: %s", trail)
-	}
-}
-
-func TestTheProofBackfillRebuildsWhatTheRecordsHoldAndReplaysSafely(t *testing.T) {
-	e := setupProofs(t)
-	contact := e.SeedContact(t, "Earlier Subject", nil)
-	erasure := e.openRequest(t, "erasure", contact.String())
-	e.patch(t, erasure, `{"status":"fulfilled","resolution":"erased","identity_check":"id_document"}`)
-	access := e.closeAccess(t, "earlier@proof.test")
-	erased := e.proofCounts(t, erasure)
-	// The state an installation was in before proofs were written.
-	e.WsExec(t, `DELETE FROM privacy_request_proof`)
-
-	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	step := requestProofDataTask().Steps[0]
-	var estimated int64
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		var err error
-		estimated, _, err = step.Estimate(ctx, tx, 1000)
-		return err
-	}); err != nil || estimated != 2 {
-		t.Fatalf("estimate = %d, %v, want 2", estimated, err)
-	}
-	task := requestProofDataTask()
-	task.Steps[0].Limit = 1
-	runMachineAddressTask(ctx, t, e.Env, task)
-
-	if got := e.proofCounts(t, erasure); !maps.Equal(got, erased) {
-		t.Fatalf("backfilled counts %v, want the tombstone's %v", got, erased)
-	}
-	got := e.WsScalar(t, `SELECT string_agg(concat_ws('|', request_kind, identity_check, erased_counts_known::text,
-		coalesce(requester_email, '-'), completed_by_id), ',' ORDER BY request_kind) FROM privacy_request_proof`)
-	admin := "human:" + e.AdminUser.String()
-	if want := "access|unknown|true|earlier@proof.test|" + admin + ",erasure|unknown|true|-|" + admin; got != want {
-		t.Fatalf("backfilled proofs = %s, want %s", got, want)
-	}
-	if n := e.proofCount(t, access); n != 1 {
-		t.Fatalf("%d proofs for the access request, want 1", n)
-	}
-
-	audits := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'privacy_request_proof'`)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
-		if err == nil && (out.Changed != 0 || out.Scanned != 2) {
-			t.Errorf("replay changed %d of %d, want 0 of 2", out.Changed, out.Scanned)
-		}
-		return err
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if again := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'privacy_request_proof'`); again != audits {
-		t.Fatalf("a replay raised the proof audit rows from %d to %d", audits, again)
 	}
 }

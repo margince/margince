@@ -468,6 +468,25 @@ describe("the proof a closed request keeps", () => {
     );
   });
 
+  it("offers only Reject for a request whose identity could not be checked", async () => {
+    stubRoutes();
+    render(<RequestsPanel />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
+    );
+    await userEvent.type(
+      screen.getByLabelText(/resolution/i),
+      "unknown sender",
+    );
+    await choose(
+      screen.getByLabelText(en["privacy.identityCheck"]),
+      en["privacy.identityCheck.not_verified"],
+    );
+    const row = await findDsrRow("8f3a-contact-uuid");
+    expect(within(row).getByRole("button", { name: /fulfil/i })).toBeDisabled();
+    expect(within(row).getByRole("button", { name: /reject/i })).toBeEnabled();
+  });
+
   it("records a complaint on a closed request, which holds its proof", async () => {
     const sent = stubRoutes();
     render(<RequestsPanel />);

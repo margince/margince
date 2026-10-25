@@ -336,7 +336,7 @@ export function DsrDetail({
           {open && (
             <DsrTransitions
               status={dsr.status}
-              ready={closingReady(closing, dsr.resolution)}
+              ready={(next) => closingReady(next, closing, dsr.resolution)}
               pending={patch.isPending}
               onTransition={transition}
             />
@@ -536,7 +536,7 @@ function DsrTransitions({
   onTransition,
 }: Readonly<{
   status: DsrStatus;
-  ready: boolean;
+  ready: (next: DsrStatus) => boolean;
   pending: boolean;
   onTransition: (next: DsrStatus) => void;
 }>) {
@@ -546,7 +546,7 @@ function DsrTransitions({
       {nextStatuses(status).map((next) => (
         <Button
           key={next}
-          disabled={pending || (isTerminal(next) && !ready)}
+          disabled={pending || (isTerminal(next) && !ready(next))}
           onClick={() => onTransition(next)}
         >
           {t(transitionLabelKey(next))}

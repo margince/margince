@@ -407,7 +407,7 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 			out = current
 			return nil
 		}
-		source, err := readProofSource(ctx, tx, current, in)
+		source, err := s.readProofSource(ctx, tx, current, in)
 		if err != nil {
 			return err
 		}

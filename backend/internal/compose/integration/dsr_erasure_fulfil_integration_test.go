@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -147,7 +148,7 @@ type gatedEraser struct {
 	release chan struct{}
 }
 
-func (g *gatedEraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (map[string]int64, error) {
+func (g *gatedEraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error) {
 	close(g.entered)
 	<-g.release
 	return g.inner.EraseContactCounted(ctx, contactID, reason)

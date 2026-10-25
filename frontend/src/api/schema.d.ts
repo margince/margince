@@ -43438,7 +43438,9 @@ export interface components {
             resolution?: string | null;
             /**
              * @description True while a complaint or dispute about this request is open. The proof of the
-             *     answer is kept past its retention date until this is false again.
+             *     answer is kept until 1 January of the fourth year after the year it was answered in,
+             *     with both the year and that date read in the installation's time zone
+             *     (`installation.timezone`), and past that date until this is false again.
              */
             dispute_open: boolean;
             /** Format: date-time */
@@ -43747,7 +43749,9 @@ export interface components {
              *     subject used a link mailed to their address. `address_on_file`: the request came from,
              *     or was confirmed at, an address the record already held. `id_document`: an identity
              *     document was seen. `in_person`: the requester was known in person. `not_verified`: the
-             *     identity could not be checked, which is a reason to reject. Ignored on any other patch.
+             *     identity could not be checked. A request closes with `not_verified` only as `rejected`;
+             *     a patch that fulfils with it is refused with 422 before anything is erased. Ignored on
+             *     any other patch.
              * @enum {string}
              */
             identity_check?: "confirm_link" | "address_on_file" | "id_document" | "in_person" | "not_verified";

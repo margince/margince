@@ -197,7 +197,7 @@ The list of privacy requests, **Settings → Privacy and retention → Requests 
 
 A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." To give a request back, set **Assignee** to **Unassigned**.
 
-To close a request you also fill **How the identity was checked**. Fill **Requester’s email address** when the request came from an address that the subject reference does not name.
+To close a request you also fill **How the identity was checked**. If it could not be checked, the request can only be rejected. Fill **Requester’s email address** when the request came from an address that the subject reference does not name.
 
 **Margince works out the due date.** It counts from the day the request arrived, under the law chosen on **Settings → Governance → Jurisdiction**. With none chosen, it is one calendar month.
 

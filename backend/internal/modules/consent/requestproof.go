@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -33,22 +34,22 @@ const (
 	// identityUnknown is only for a proof backfilled from a request closed
 	// before proofs existed, when nothing recorded how the identity was checked.
 	identityUnknown = "unknown"
+	// identityNotVerified closes a request only as rejected: fulfilling it
+	// would answer, or erase, for somebody nobody checked.
+	identityNotVerified = "not_verified"
 
 	// proofRetentionYears is how long a proof is kept after the end of the
 	// calendar year its request was answered in.
 	proofRetentionYears = 3
 )
 
-// dateLineEast is the zone where a new year starts first. An answer's year is
-// read there, so a proof is kept a year longer at most, never shorter.
-var dateLineEast = time.FixedZone("UTC+14", 14*60*60)
-
 // ProofKeepUntil is when a proof answered at answered may be deleted: the
-// start of the fourth year after the year it was answered in. Exported for
+// start of the fourth year after the year it was answered in. The year and its
+// start are both read in zone, the installation's own calendar. Exported for
 // the tests that set a proof's age, so they apply this rule rather than a copy.
-func ProofKeepUntil(answered time.Time) time.Time {
-	year := answered.In(dateLineEast).Year()
-	return time.Date(year+proofRetentionYears+1, time.January, 1, 0, 0, 0, 0, time.UTC)
+func ProofKeepUntil(answered time.Time, zone *time.Location) time.Time {
+	year := answered.In(zone).Year()
+	return time.Date(year+proofRetentionYears+1, time.January, 1, 0, 0, 0, 0, zone)
 }
 
 // ProofStatement is what the officer closing a request says for its proof.
@@ -89,7 +90,9 @@ const linkMailedToSQL = `(SELECT t.delivered_to FROM contact_confirm_submission 
 // proofSource is what the proof copies from the request before it closes.
 // The zero value is a patch that closes nothing, and writes no proof.
 type proofSource struct {
-	closes        bool
+	closes bool
+	// zone is the installation's calendar the retention date is counted in.
+	zone          *time.Location
 	requestNumber string
 	// requesterEmail is empty when no address is known; the column is NULL.
 	requesterEmail string
@@ -103,16 +106,20 @@ type proofSource struct {
 // It runs before an erasure, because the erasure deletes the confirm link the
 // requester's address is read from. It refuses a close that states no identity
 // check, so a request that cannot close is never erased.
-func readProofSource(ctx context.Context, tx pgx.Tx, current dsrRow, in UpdateDSRInput) (proofSource, error) {
+func (s *Store) readProofSource(ctx context.Context, tx pgx.Tx, current dsrRow, in UpdateDSRInput) (proofSource, error) {
 	if !closes(current, in) {
 		return proofSource{}, nil
 	}
+	zone, err := s.installationZone(ctx, tx)
+	if err != nil {
+		return proofSource{}, err
+	}
 	var (
-		source   = proofSource{closes: true}
+		source   = proofSource{closes: true, zone: zone}
 		channel  *string
 		mailedTo *string
 	)
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT coalesce(d.receipt_reference, d.id::text), coalesce(d.received_at, d.created_at), d.channel,
 		       `+linkMailedToSQL+`
 		  FROM data_subject_request d WHERE d.id = $1`, current.ID,
@@ -130,6 +137,9 @@ func readProofSource(ctx context.Context, tx pgx.Tx, current dsrRow, in UpdateDS
 		source.identityCheck = identityConfirmLink
 	default:
 		return proofSource{}, &ValidationError{Field: fieldIdentityCheck, Reason: "closing a request needs how the requester's identity was checked"}
+	}
+	if source.identityCheck == identityNotVerified && *in.Status == dsrStatusFulfilled {
+		return proofSource{}, &ValidationError{Field: fieldIdentityCheck, Reason: "a request whose identity could not be checked can only be rejected"}
 	}
 	source.requesterEmail, err = requesterAddress(in.Proof.RequesterEmail, mailedTo, current.SubjectRef)
 	if err != nil {
@@ -161,12 +171,12 @@ func requesterAddress(stated, mailedTo *string, subjectRef string) (string, erro
 
 // requestProof is one proof row as it is written.
 type requestProof struct {
-	requestID    ids.UUID
-	source       proofSource
-	kind         string
-	result       string
-	erasedCounts map[string]int64
-	countsKnown  bool
+	requestID   ids.UUID
+	source      proofSource
+	kind        string
+	result      string
+	erased      erasureaccount.Account
+	countsKnown bool
 	// completedByType and completedByID name the closer as audit_log names an
 	// actor; both nil when no record names one.
 	completedByType, completedByID *string
@@ -176,9 +186,9 @@ type requestProof struct {
 
 // writeRequestProof writes the proof of a request this transaction closed.
 //
-// erased is what the erasure removed. nil means it erased nothing, which the
-// proof records as an empty map, not an unknown one.
-func writeRequestProof(ctx context.Context, tx pgx.Tx, source proofSource, closed dsrRow, erased map[string]int64) error {
+// erased is the erasure's account. nil means the request erased nothing, which
+// the proof records as an empty account, not an unknown one.
+func writeRequestProof(ctx context.Context, tx pgx.Tx, source proofSource, closed dsrRow, erased *erasureaccount.Account) error {
 	if !source.closes {
 		return nil
 	}
@@ -186,8 +196,9 @@ func writeRequestProof(ctx context.Context, tx pgx.Tx, source proofSource, close
 	if err != nil {
 		return err
 	}
-	if erased == nil {
-		erased = map[string]int64{}
+	account := erasureaccount.Empty()
+	if erased != nil {
+		account = *erased
 	}
 	// updated_at is the closing write's own transaction time, stamped by the
 	// row's trigger.
@@ -197,7 +208,7 @@ func writeRequestProof(ctx context.Context, tx pgx.Tx, source proofSource, close
 	}
 	_, err = insertRequestProof(ctx, tx, requestProof{
 		requestID: closed.ID, source: source, kind: closed.Kind, result: closed.Status,
-		erasedCounts: erased, countsKnown: true, answeredAt: answeredAt,
+		erased: account, countsKnown: true, answeredAt: answeredAt,
 		completedByType: new(string(actor.Type)), completedByID: new(actor.ID),
 	})
 	return err
@@ -209,18 +220,23 @@ func writeRequestProof(ctx context.Context, tx pgx.Tx, source proofSource, close
 // The audit image carries no address, so deleting the proof deletes the
 // address it recorded.
 func insertRequestProof(ctx context.Context, tx pgx.Tx, p requestProof) (bool, error) {
-	keepUntil := ProofKeepUntil(p.answeredAt)
+	keepUntil := ProofKeepUntil(p.answeredAt, p.source.zone)
+	uncounted := p.erased.Uncounted
+	if uncounted == nil {
+		uncounted = []string{}
+	}
 	var proofID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO privacy_request_proof
 		  (request_id, request_number, requester_email, received_at, request_kind, identity_check, result,
-		   erased_counts, erased_counts_known, completed_by_type, completed_by_id, answered_at, keep_until)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		   erased_counts, erased_uncounted, erased_counts_known, completed_by_type, completed_by_id,
+		   answered_at, keep_until)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		ON CONFLICT (request_id) DO NOTHING
 		RETURNING id`,
 		p.requestID, p.source.requestNumber, pgtype.Text{String: p.source.requesterEmail, Valid: p.source.requesterEmail != ""},
 		p.source.receivedAt, p.kind,
-		p.source.identityCheck, p.result, p.erasedCounts, p.countsKnown, p.completedByType, p.completedByID,
+		p.source.identityCheck, p.result, p.erased.Rows, uncounted, p.countsKnown, p.completedByType, p.completedByID,
 		p.answeredAt, keepUntil,
 	).Scan(&proofID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -231,7 +247,7 @@ func insertRequestProof(ctx context.Context, tx pgx.Tx, p requestProof) (bool, e
 	}
 	image := map[string]any{
 		"request_id": p.requestID, fieldKind: p.kind, fieldIdentityCheck: p.source.identityCheck,
-		"result": p.result, "erased_counts": p.erasedCounts, "erased_counts_known": p.countsKnown,
+		"result": p.result, "erased_counts": p.erased.Rows, "erased_uncounted": uncounted, "erased_counts_known": p.countsKnown,
 		"keep_until": keepUntil,
 	}
 	if p.backfillSource != "" {

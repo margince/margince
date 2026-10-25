@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -83,7 +84,7 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 		}
 		// Read before the erase, which deletes the confirm link the requester's
 		// address is read from.
-		source, err := readProofSource(ctx, tx, current, in)
+		source, err := s.readProofSource(ctx, tx, current, in)
 		if err != nil {
 			return err
 		}
@@ -98,14 +99,14 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 		if err != nil {
 			return err
 		}
-		return writeRequestProof(ctx, tx, source, out, erased)
+		return writeRequestProof(ctx, tx, source, out, &erased)
 	})
 	return out, err
 }
 
 // EraseFunc is the privacy engine's erasure, run in its own transaction. It
-// answers how many records of each category it removed or anonymised.
-type EraseFunc func(ctx context.Context, contactID ids.UUID, reason string) (map[string]int64, error)
+// answers its own account of what it removed or anonymised.
+type EraseFunc func(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error)
 
 // withoutReplayedAnswer drops the officer's text from a repeated fulfilment.
 // The erasure already replaced that text, so the retry is a no-op and not a

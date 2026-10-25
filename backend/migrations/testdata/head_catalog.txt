@@ -4617,6 +4617,7 @@ public.idx_attachment_extraction_activity_settled CREATE INDEX idx_attachment_ex
 public.idx_attachment_extraction_latest CREATE INDEX idx_attachment_extraction_latest ON public.attachment_extraction USING btree (attachment_id, created_at DESC)
 public.idx_audit_actor CREATE INDEX idx_audit_actor ON public.audit_log USING btree (actor_id, occurred_at DESC)
 public.idx_audit_entity CREATE INDEX idx_audit_entity ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC)
+public.idx_audit_erasure_reason CREATE INDEX idx_audit_erasure_reason ON public.audit_log USING btree (((evidence ->> 'reason'::text))) WHERE ((action = 'erase'::text) AND (entity_type = 'contact'::text))
 public.idx_audit_log_batch CREATE INDEX idx_audit_log_batch ON public.audit_log USING btree (batch_id) WHERE (batch_id IS NOT NULL)
 public.idx_audit_scrub_boundary CREATE INDEX idx_audit_scrub_boundary ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))
 public.idx_audit_time CREATE INDEX idx_audit_time ON public.audit_log USING btree (occurred_at DESC)
@@ -6134,6 +6135,7 @@ public.privacy_request_proof.completed_by_id text gen=- def=-
 public.privacy_request_proof.completed_by_type text gen=- def=-
 public.privacy_request_proof.erased_counts jsonb NOT NULL gen=- def='{}'::jsonb
 public.privacy_request_proof.erased_counts_known boolean NOT NULL gen=- def=true
+public.privacy_request_proof.erased_uncounted text[] NOT NULL gen=- def='{}'::text[]
 public.privacy_request_proof.id uuid NOT NULL gen=- def=uuidv7()
 public.privacy_request_proof.identity_check text NOT NULL gen=- def=-
 public.privacy_request_proof.keep_until timestamp with time zone NOT NULL gen=- def=-

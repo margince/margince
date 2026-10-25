@@ -9,6 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -37,7 +39,9 @@ func requestProofDataTask() datatask.Task {
 			if err != nil {
 				return datatask.BatchOut{}, err
 			}
-			page, err := consent.BackfillRequestProofsTx(ctx, tx, after, in.Limit)
+			page, err := consent.BackfillRequestProofsTx(ctx, tx, after, in.Limit, consent.ProofBackfillSeams{
+				Zone: identity.ZoneAppliedTx, Erasure: privacy.CertifiedErasureTx,
+			})
 			if err != nil {
 				return datatask.BatchOut{}, err
 			}

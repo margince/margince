@@ -34,6 +34,9 @@ func (s *Store) ExpireRequestProofs(ctx context.Context, now time.Time, limit in
 	if now.Month() != time.January {
 		return 0, nil
 	}
+	if s.retireCase == nil {
+		return 0, errNoRetirer
+	}
 	var expired int
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		due, err := lockExpiredProofs(ctx, tx, now, limit)
@@ -41,7 +44,7 @@ func (s *Store) ExpireRequestProofs(ctx context.Context, now time.Time, limit in
 			return err
 		}
 		for _, proof := range due {
-			if err := expireRequestProof(ctx, tx, proof); err != nil {
+			if err := expireRequestProof(ctx, tx, proof, s.retireCase); err != nil {
 				return err
 			}
 		}
@@ -83,7 +86,7 @@ func lockExpiredProofs(ctx context.Context, tx pgx.Tx, now time.Time, limit int)
 	return out, rows.Err()
 }
 
-func expireRequestProof(ctx context.Context, tx pgx.Tx, proof expiredProof) error {
+func expireRequestProof(ctx context.Context, tx pgx.Tx, proof expiredProof, retire RightsCaseRetirer) error {
 	if _, err := tx.Exec(ctx, `DELETE FROM privacy_request_proof WHERE id = $1`, proof.id); err != nil {
 		return err
 	}
@@ -91,18 +94,11 @@ func expireRequestProof(ctx context.Context, tx pgx.Tx, proof expiredProof) erro
 		map[string]any{"cause": proofExpiryCause, "request_id": proof.requestID}); err != nil {
 		return err
 	}
-	// The same tombstone the erasure engine writes on a subject's other cases,
-	// so a reader meets one spelling of a request whose subject is gone.
-	tag, err := tx.Exec(ctx, `
-		UPDATE data_subject_request
-		   SET subject_ref = 'erased+' || id,
-		       resolution = CASE WHEN resolution IS NULL THEN NULL ELSE '`+erasedResolution+`' END,
-		       contact_id = NULL
-		 WHERE id = $1 AND NOT dispute_open`, proof.requestID)
+	retired, err := retire(ctx, tx, proof.requestID)
 	if err != nil {
 		return err
 	}
-	if tag.RowsAffected() != 1 {
+	if !retired {
 		return fmt.Errorf("consent: the request %s behind an expired proof changed while it was locked", proof.requestID)
 	}
 	_, err = storekit.AuditWithEvidence(ctx, tx, "anonymize", "data_subject_request", proof.requestID, nil, nil,

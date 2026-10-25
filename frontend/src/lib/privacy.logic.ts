@@ -88,16 +88,18 @@ export type DsrClosing = Readonly<{
   requesterEmail: string;
 }>;
 
-// A close needs its answer and the identity check. The server takes a
-// confirm-link case without the check; the form asks every time, so one rule
-// covers both kinds of request.
+// A close to `next` needs its answer and the identity check, and an identity
+// nobody could check closes only as rejected. The server takes a confirm-link
+// case without the check; the form asks every time, so one rule covers both.
 export function closingReady(
+  next: DsrStatus,
   closing: DsrClosing,
   storedResolution: string | null | undefined,
 ): boolean {
   return (
     Boolean(closing.resolution.trim() || storedResolution) &&
-    closing.identityCheck !== ""
+    closing.identityCheck !== "" &&
+    !(next === "fulfilled" && closing.identityCheck === "not_verified")
   );
 }
 

@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -79,17 +80,24 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 	return err
 }
 
-// EraseContactCounted is EraseContact answering the tombstone's counts by
-// category, for the proof a closed privacy request keeps.
+// EraseContactCounted is EraseContact answering the erasure's account of its
+// work, for the proof a closed privacy request keeps. The cascade runs on a
+// tallyTx, so every statement it makes is counted.
+//
+// A request's erasure runs once: a replay of "dsr:<id>" on a contact that
+// request erased answers the first account and runs nothing.
 //
 //nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
-func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (map[string]int64, error) {
+func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erased erasureaccount.Account, err error) {
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
-		return nil, err
+		return erasureaccount.Account{}, err
+	}
+	if prior, done, err := e.priorErasure(ctx, contactID, reason); err != nil || done {
+		return prior, err
 	}
 	subject := ids.From[ids.ContactKind](contactID)
-	var erased map[string]int64
-	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = e.db.Tx(ctx, func(raw pgx.Tx) error {
+		tx := newTallyTx(raw)
 		floor, err := e.erasableUnderFloor(ctx, tx, subject)
 		if err != nil {
 			return err
@@ -194,10 +202,9 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err != nil {
 			return err
 		}
-		erased, err = certifyErasure(ctx, tx, subject, reason, identities, contactErasureCounts{
+		erased, err = certifyErasure(ctx, tx, subject, reason, identities, e.uncountedArms(), contactErasureCounts{
 			emailsSuppressed: len(emails), rawRowsPurged: rawPurged, aiPayloadsPurged: aiPayloadsPurged,
 			activitiesRedacted: len(activitiesRedacted), activitiesRestricted: len(activitiesHeld),
-			leadsAnonymized: len(leadsWiped),
 		})
 		return err
 	})

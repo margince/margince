@@ -8,10 +8,12 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -36,6 +38,15 @@ func (RequestProofExpiryArgs) InsertOpts() river.InsertOpts {
 	return river.InsertOpts{
 		MaxAttempts: 3,
 		UniqueOpts:  river.UniqueOpts{ByState: activeSweepStates},
+	}
+}
+
+// newRequestProofExpiryWorker wires the pass to the tombstone the erasure
+// engine writes, so an expired proof ends its case the way an erasure does.
+func newRequestProofExpiryWorker(pool *pgxpool.Pool, now func() time.Time, log *slog.Logger) *requestProofExpiryWorker {
+	return &requestProofExpiryWorker{
+		requests: consent.NewStore(InstallationDB(pool)).WithRightsCaseRetirer(privacy.RetireExpiredRightsCaseTx),
+		identity: identity.NewService(pool), now: now, log: log,
 	}
 }
 

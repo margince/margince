@@ -11,16 +11,14 @@ package consent
 // erasure tombstone names the request. The closer is empty with no audit row.
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -35,10 +33,19 @@ type ProofBackfillPage struct {
 	Changed int
 }
 
+// ProofBackfillSeams are what the backfill reads from other modules: the
+// installation's zone, and the account an erasure's tombstone certifies.
+type ProofBackfillSeams struct {
+	Zone InstallationZoneFunc
+	// Erasure answers the account certified under a reason, and whether a
+	// tombstone carries that reason at all.
+	Erasure func(ctx context.Context, tx pgx.Tx, reason string) (erasureaccount.Account, bool, error)
+}
+
 // BackfillRequestProofsTx gives up to limit closed requests after `after` a
 // proof, inside the data task's transaction. A request that has one keeps it,
 // so a replay from the start writes nothing.
-func BackfillRequestProofsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (ProofBackfillPage, error) {
+func BackfillRequestProofsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, seams ProofBackfillSeams) (ProofBackfillPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return ProofBackfillPage{}, err
 	}
@@ -62,8 +69,12 @@ func BackfillRequestProofsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, lim
 	if err := rows.Err(); err != nil {
 		return ProofBackfillPage{}, err
 	}
+	zone, err := seams.Zone(ctx, tx)
+	if err != nil {
+		return ProofBackfillPage{}, err
+	}
 	for _, id := range page.Scanned {
-		wrote, err := backfillRequestProof(ctx, tx, id)
+		wrote, err := backfillRequestProof(ctx, tx, id, zone, seams)
 		if err != nil {
 			return ProofBackfillPage{}, err
 		}
@@ -105,10 +116,10 @@ type closedRequestRecord struct {
 	closedAt                 *time.Time
 }
 
-func backfillRequestProof(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
-	var rec closedRequestRecord
-	// The closing audit row is the first update that left the request in the
-	// status it holds now.
+func backfillRequestProof(ctx context.Context, tx pgx.Tx, id ids.UUID, zone *time.Location, seams ProofBackfillSeams) (bool, error) {
+	rec := closedRequestRecord{source: proofSource{zone: zone}}
+	// The closing audit row is the latest update that moved the request into
+	// the status it holds now. A write that left it there names no closer.
 	err := tx.QueryRow(ctx, `
 		SELECT d.kind, d.status, d.subject_ref, coalesce(d.receipt_reference, d.id::text),
 		       coalesce(d.received_at, d.created_at), d.channel, d.updated_at,
@@ -119,7 +130,8 @@ func backfillRequestProof(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, er
 		        SELECT a.actor_type, a.actor_id, a.occurred_at FROM audit_log a
 		         WHERE a.entity_type = 'data_subject_request' AND a.entity_id = d.id
 		           AND a.action = 'update' AND a.after->>'status' = d.status
-		         ORDER BY a.occurred_at, a.id LIMIT 1) closing ON true
+		           AND a.before->>'status' IS DISTINCT FROM d.status
+		         ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1) closing ON true
 		 WHERE d.id = $1
 		   FOR UPDATE OF d`, id,
 	).Scan(&rec.kind, &rec.status, &rec.subjectRef, &rec.source.requestNumber, &rec.source.receivedAt,
@@ -127,7 +139,7 @@ func backfillRequestProof(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, er
 	if err != nil {
 		return false, fmt.Errorf("consent: reading a closed request for its proof: %w", err)
 	}
-	erased, known, err := recordedErasure(ctx, tx, id, rec)
+	erased, known, err := recordedErasure(ctx, tx, id, rec, seams)
 	if err != nil {
 		return false, err
 	}
@@ -140,7 +152,7 @@ func backfillRequestProof(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, er
 	}
 	proof := requestProof{
 		requestID: id, source: rec.source, kind: rec.kind, result: rec.status,
-		erasedCounts: erased, countsKnown: known, answeredAt: rec.updatedAt, backfillSource: proofBackfillSource,
+		erased: erased, countsKnown: known, answeredAt: rec.updatedAt, backfillSource: proofBackfillSource,
 		completedByType: rec.closerType, completedByID: rec.closerID,
 	}
 	if rec.closedAt != nil {
@@ -149,50 +161,16 @@ func backfillRequestProof(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, er
 	return insertRequestProof(ctx, tx, proof)
 }
 
-// recordedErasure reads what a fulfilled erasure removed from the tombstone the
-// erasure engine wrote for this request. The tombstone sits on the contact the
-// request names, which only an unretired subject_ref still holds.
-func recordedErasure(ctx context.Context, tx pgx.Tx, id ids.UUID, rec closedRequestRecord) (map[string]int64, bool, error) {
+// recordedErasure reads what a fulfilled erasure removed from the tombstone
+// the erasure engine wrote for this request. It finds that tombstone by its
+// reason "dsr:<request-id>", since the case's own reference may be gone.
+func recordedErasure(ctx context.Context, tx pgx.Tx, id ids.UUID, rec closedRequestRecord, seams ProofBackfillSeams) (erasureaccount.Account, bool, error) {
 	if rec.kind != dsrKindErasure || rec.status != dsrStatusFulfilled {
-		return map[string]int64{}, true, nil
+		return erasureaccount.Empty(), true, nil
 	}
-	contactID, resolved := resolveDSRSubject(dsrRow{SubjectRef: rec.subjectRef})
-	if !resolved {
-		return map[string]int64{}, false, nil
+	account, found, err := seams.Erasure(ctx, tx, "dsr:"+id.String())
+	if err != nil || !found {
+		return erasureaccount.Empty(), false, err
 	}
-	var evidence []byte
-	err := tx.QueryRow(ctx, `
-		SELECT evidence FROM audit_log
-		 WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'erase'
-		   AND evidence->>'reason' = $2
-		 ORDER BY occurred_at, id LIMIT 1`, contactID, "dsr:"+id.String()).Scan(&evidence)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return map[string]int64{}, false, nil
-		}
-		return nil, false, fmt.Errorf("consent: reading the erasure tombstone of a closed request: %w", err)
-	}
-	return erasureCounts(evidence)
-}
-
-// erasureCounts keeps the whole-number entries of a tombstone's evidence, which
-// are its counts; the reason and any other text are not categories.
-func erasureCounts(evidence []byte) (map[string]int64, bool, error) {
-	decoder := json.NewDecoder(bytes.NewReader(evidence))
-	decoder.UseNumber()
-	var entries map[string]any
-	if err := decoder.Decode(&entries); err != nil {
-		return nil, false, fmt.Errorf("consent: reading an erasure tombstone's counts: %w", err)
-	}
-	out := map[string]int64{}
-	for category, entry := range entries {
-		number, isNumber := entry.(json.Number)
-		if !isNumber {
-			continue
-		}
-		if count, err := number.Int64(); err == nil {
-			out[category] = count
-		}
-	}
-	return out, true, nil
+	return account, true, nil
 }

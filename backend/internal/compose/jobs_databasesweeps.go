@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
@@ -80,9 +79,7 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	addDeclaredWorker[MailDraftRetentionArgs](reg, &mailDraftRetentionWorker{
 		drafts: activities.NewStore(InstallationDB(pool)), identity: identity.NewService(pool), log: log,
 	})
-	addDeclaredWorker[RequestProofExpiryArgs](reg, &requestProofExpiryWorker{
-		requests: consent.NewStore(InstallationDB(pool)), identity: identity.NewService(pool), now: time.Now, log: log,
-	})
+	addDeclaredWorker[RequestProofExpiryArgs](reg, newRequestProofExpiryWorker(pool, time.Now, log))
 	addDeclaredWorker[WaitingHorizonRefreshArgs](reg, newWaitingHorizonRefreshWorker(pool, log))
 	addBriefGenerateJobs(reg, pool, log, briefMail)
 }

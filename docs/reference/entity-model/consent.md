@@ -762,7 +762,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## privacy_request_proof
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -772,6 +772,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `completed_by_type` | `text` |  | One of `human`, `agent`, `connector`, `system`. |
 | `erased_counts` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `erased_counts_known` | `boolean`, default `true` | yes |  |
+| `erased_uncounted` | `text[]`, default `'{}'::text[]` | yes |  |
 | `identity_check` | `text` | yes | One of `confirm_link`, `address_on_file`, `id_document`, `in_person`, `not_verified`, `unknown`. |
 | `keep_until` | `timestamp with time zone` | yes |  |
 | `received_at` | `timestamp with time zone` | yes |  |

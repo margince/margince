@@ -40,6 +40,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -375,7 +376,7 @@ func validationField(t *testing.T, body []byte) string {
 // refusal happens BEFORE any erase is attempted.
 type recordingEraser struct{ calls int }
 
-func (e *recordingEraser) EraseContactCounted(context.Context, ids.UUID, string) (map[string]int64, error) {
+func (e *recordingEraser) EraseContactCounted(context.Context, ids.UUID, string) (erasureaccount.Account, error) {
 	e.calls++
-	return map[string]int64{}, nil
+	return erasureaccount.Empty(), nil
 }
