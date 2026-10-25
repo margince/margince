@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -97,6 +98,12 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 		// outcome the refusal is there to prevent, arrived at by timing.
 		if key := appSettingKeyForConnector(name); key != "" {
 			if err := settings.LockForWrite(ctx, tx, key); err != nil {
+				return err
+			}
+		}
+		// Before the connection row lock, as LockSeatAddressClaim requires.
+		if row.accountLabel != nil {
+			if err := storekit.LockSeatAddressClaim(ctx, tx, *row.accountLabel); err != nil {
 				return err
 			}
 		}

@@ -78,6 +78,10 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err := lockContactForAttach(ctx, tx, contactID); err != nil {
 		return err
 	}
+	// The seat check before the employment lock: contacts/lockorder.go.
+	if seat, err := contactIsSeatTx(ctx, tx, contactID.UUID); err != nil || seat {
+		return err
+	}
 	// And the same per-contact lock every other writer of this contact's
 	// current-primary employment takes. The contact row lock above answers a
 	// different question — is this contact still here — and the two writers that
@@ -89,9 +93,6 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	// After the row lock, never before: create takes them in this order too, and
 	// two writers taking one pair of locks in opposite orders is a deadlock.
 	if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, contactID.String()); err != nil {
-		return err
-	}
-	if seat, err := contactIsSeatTx(ctx, tx, contactID.UUID); err != nil || seat {
 		return err
 	}
 	var edgeID ids.UUID

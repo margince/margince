@@ -19,6 +19,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -154,7 +156,7 @@ func foldIdentityRows(rows pgx.Rows) (addresses, domains []string, err error) {
 // from now on, and an address deferred moments earlier would still become a
 // contact through the very door this claim closes.
 func (s *Sink) claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, value string) error {
-	if err := lockOwnAddressTx(ctx, tx, value); err != nil {
+	if err := storekit.LockSeatAddressClaim(ctx, tx, value); err != nil {
 		return err
 	}
 	var identity OwnerIdentity

@@ -11,6 +11,9 @@ package contacts
 //  3. the lane locks: phone, then address base, then name (plain and digraph);
 //  4. new rows, and lead rows.
 //
+// The seat-address locks (storekit.SeatAddressesFor) come before the
+// employment lock. Alias writers hold them and wait on no contact row.
+//
 // So a writer holding a lane lock never waits on an existing contact. A create
 // takes the lanes and then writes a new contact. An edit locks its contact and
 // takes the lanes before it writes an address. A provider fill, whose contact

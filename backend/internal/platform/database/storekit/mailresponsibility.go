@@ -98,7 +98,9 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 	return out, nil
 }
 
-// MailSeatIdentities reads live mailbox identities for restoring factual recipient evidence.
+// MailSeatIdentities reads live mailbox identities for restoring factual
+// recipient evidence. It keeps a withdrawn mailbox's label, because stored
+// mail that mailbox received was the seat's when it arrived.
 func MailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][]string, error) {
 	records, err := readMailSeatIdentities(ctx, tx)
 	if err != nil {
@@ -113,15 +115,24 @@ func MailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][]string, er
 	return out, nil
 }
 
-const provedMailboxSource = "proved_mailbox"
+const (
+	provedMailboxSource    = "proved_mailbox"
+	withdrawnMailboxSource = "withdrawn_mailbox"
+)
 
 type mailSeatIdentity struct{ seat, label, source string }
+
+// decidesNew is the lifecycle of a withdrawn mailbox: its label is no evidence
+// for a decision made now. UnambiguousMailSeatIdentities claims no such source,
+// and MailSeatIdentities reads it for stored history.
+func (r mailSeatIdentity) decidesNew() bool { return r.source != withdrawnMailboxSource }
 
 func readMailSeatIdentities(ctx context.Context, tx pgx.Tx) ([]mailSeatIdentity, error) {
 	rows, err := tx.Query(ctx, `SELECT u.id::text, u.email, 'login' FROM app_user u WHERE `+workforce.LiveMemberSQL("u")+`
  UNION SELECT i.user_id::text, i.value, i.source FROM capture_owner_identity i
  JOIN app_user u ON u.id = i.user_id WHERE i.kind = 'address' AND `+workforce.LiveMemberSQL("u")+`
- UNION SELECT c.user_id::text, c.account_label, CASE WHEN `+provedMailboxClause("c")+` THEN '`+provedMailboxSource+`' ELSE '' END FROM capture_connection c
+ UNION SELECT c.user_id::text, c.account_label, CASE WHEN `+provedMailboxClause("c")+` THEN '`+provedMailboxSource+`'
+   WHEN c.status <> 'connected' THEN '`+withdrawnMailboxSource+`' ELSE '' END FROM capture_connection c
  JOIN app_user u ON u.id = c.user_id WHERE c.archived_at IS NULL AND `+workforce.LiveMemberSQL("u")+` AND coalesce(c.account_label, '') <> ''`)
 	if err != nil {
 		return nil, fmt.Errorf("reading mail identities: %w", err)
