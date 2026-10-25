@@ -503,6 +503,13 @@ paths:
           schema: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}
           description: >-
             Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
+        - name: extension_relationship_type
+          in: query
+          schema:
+            type: string
+            pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'
+          description: >-
+            Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both.
         - name: owner_team_id
           in: query
           schema: {type: string, format: uuid}
@@ -10267,6 +10274,11 @@ components:
           items: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}
           description: >-
             WHAT THE COMPANY IS to us. Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
+        extension_relationship_types:
+          type: array
+          items: {type: string, pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'}
+          description: >-
+            The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`).
         logo_url:
           type: [string, 'null']
           readOnly: true
@@ -10388,6 +10400,11 @@ components:
           description: >-
             Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
           items: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}
+        extension_relationship_types:
+          type: array
+          description: >-
+            Replace-set of the types an installed extension adds (`ext:<unit>:<type>`), applied like `relationship_types`. Absent = untouched; an empty array clears them. A value no extension declares is refused with 422.
+          items: {type: string, pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'}
       additionalProperties: true
     CompanyListResponse:
       type: object

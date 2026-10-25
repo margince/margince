@@ -16,7 +16,7 @@ are done.
 | # | Feature | What someone can do now | Page with the details | State |
 |---|---|---|---|---|
 | 1 | Audited fix of signal evidence | Correct a signal's type and evidence. The old values stay in the audit log. | [Audited fix of signal evidence](#audited-fix-of-signal-evidence) | done |
-| 2 | Company type field | Nothing yet. | None yet | planned |
+| 2 | Company type field | Declare a company type in an extension and set it on a company. See it in the company list and filter by it. | [Company type field](#company-type-field) | done |
 | 3 | Extension record kinds and link registry | Nothing yet. | None yet | planned |
 | 4 | Extension report breakdowns and counts | Nothing yet. | None yet | planned |
 | 5 | Extension signal types with structured evidence | Nothing yet. | None yet | planned |
@@ -65,3 +65,27 @@ The request contract accepts only those six kinds. The store also accepts the si
 when it is outside the six, so a client can send back what it read. Any other change of `kind` is refused with a 422 on
 the field `kind`, code `invalid_kind`, and nothing changes. The maintainers decide which of the other signal kinds may be
 corrected. Until then they are refused.
+
+## Company type field
+
+An extension can add company types beside core's fixed list. The steps to declare and set one are in
+[Declare a company type](../how-to/add-an-extension.md#declare-a-company-type).
+
+The extension's types live in their own field, `extension_relationship_types`, and core's `relationship_types` list
+is unchanged. A published list that grows cannot be narrowed again, and a client that switches on the old list would
+meet a value it never saw. The list filter follows the same split. The two fields share one table, so one company can
+carry both.
+
+| Part | What it does |
+|---|---|
+| Value | `ext:<unit>:<type>`, built from the declaring unit's name. A unit cannot set another unit's value. |
+| `Extension.CompanyTypes` | The unit declares the types and a label for each. The boot refuses a bad name or a duplicate. |
+| `SetExtensionTypes` | The unit sets its own types on a company. It leaves other units' types alone. |
+| `PATCH /v1/companies/{id}` | A user or an agent sets `extension_relationship_types`. A value no unit declares is a 422 with the code `invalid_enum`. |
+| `GET /v1/company-types` | Lists every declared value and its label, for any signed-in user. |
+| `extension_relationship_type` list filter | Takes a declared extension value. The `relationship_type` filter stays core's closed list, because narrowing a published parameter later breaks clients. |
+| Agent tools | The company update shape carries `extension_relationship_types`, the same as the REST body. |
+
+`partner` works as before: it needs a partner row, and removing it while a partner row exists is a 422. Setting an
+extension type does not touch it. The database check on `company_relationship_type` accepts the shape
+`ext:<unit>:<type>`; which pairs exist is decided by the composed set, not by the database.

@@ -102,6 +102,9 @@ type unitManifest struct {
 	// core on the unit's card of the Extensions page.
 	Settings []declaredSetting `json:"settings,omitempty"`
 
+	// CompanyTypes are the company types the unit adds beside core's own.
+	CompanyTypes []declaredCompanyType `json:"company_types,omitempty"`
+
 	// Panels are the places on core pages that draw the unit's own component.
 	Panels []declaredPanel `json:"panels,omitempty"`
 

@@ -15,15 +15,15 @@ anything. This page shows what each declared agent pays, how much room that leav
 what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
 [mcp-info.md](mcp-info.md#index).
 
-The heaviest menu is `overnight_at_risk_sweep`: 6239 of the window's 32768 tokens per step (19%).
+The heaviest menu is `overnight_at_risk_sweep`: 6263 of the window's 32768 tokens per step (19%).
 
 ## The declared agents
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 37 | 2072 | 1501 | 4165 | 12% | 19045 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 37 | 3300 | 2347 | 6239 | 19% | 16971 | 4 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 37 |  | 23137 |  |  | 70% |  |  |  |
+| `morning_brief` | 5 | 5 of 37 | 2084 | 1513 | 4189 | 12% | 19021 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 37 | 3312 | 2359 | 6263 | 19% | 16947 | 4 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 37 |  | 23149 |  |  | 70% |  |  |  |
 
 ### `morning_brief`
 
@@ -39,8 +39,8 @@ existing order. If there are no items, finish without inventing a brief. A tool 
 findings were not saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 4165 tokens on every step (2072 listing, 1501 step schema), leaving
-19045 of its budget and 28603 tokens of the
+Attaches 5 tools and pays 4189 tokens on every step (2084 listing, 1513 step schema), leaving
+19021 of its budget and 28579 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -60,8 +60,8 @@ at-risk deal summarizing the risk and the evidence (cite the records you read). 
 stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 6239 tokens on every step (3300 listing, 2347 step schema), leaving
-16971 of its budget and 26529 tokens of the
+Attaches 7 tools and pays 6263 tokens on every step (3312 listing, 2359 step schema), leaving
+16947 of its budget and 26505 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`

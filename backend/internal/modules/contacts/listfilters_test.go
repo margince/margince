@@ -29,7 +29,8 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 	}))
 	assertEveryFilterNarrows(t, "company", companyListFilters, withListControls(map[string]string{
 		"domain": "kaercher-technik.example", "lifecycle": "customer", "owner_id": owner,
-		"relationship_type": "partner", "tag_id": ids.NewV7().String(), "tag_mode": "none",
+		"relationship_type": "partner", "extension_relationship_type": "ext:acme:reseller",
+		"tag_id": ids.NewV7().String(), "tag_mode": "none",
 		"industry": "payments", "size_band": "51-200", "include_anchor": "true",
 		"source_system": "acme-erp", "source_id": "C-1",
 	}))
@@ -59,8 +60,8 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 			"owner_team_id", "relationship_mark", "sort", "tag_id", "tag_mode", "unassigned",
 		}},
 		{datasource.EntityCompany, []string{
-			"ai_written", "captured_by_kind", "domain", "include_anchor", "include_archived", "industry", "lifecycle", "list_id",
-			"owner_id", "owner_team_id", "relationship_type", "size_band", "sort", "source_id", "source_system", "tag_id",
+			"ai_written", "captured_by_kind", "domain", "extension_relationship_type", "include_anchor", "include_archived",
+			"industry", "lifecycle", "list_id", "owner_id", "owner_team_id", "relationship_type", "size_band", "sort", "source_id", "source_system", "tag_id",
 			"tag_mode", "unassigned",
 		}},
 		{datasource.EntityLead, []string{

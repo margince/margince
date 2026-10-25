@@ -449,7 +449,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `company_id` | `uuid` | yes | Points at `company.id`. |
-| `relationship_type` | `text` | yes | One of `customer`, `partner`, `supplier`, `investor`, `portfolio_company`, `competitor` and 1 more. |
+| `relationship_type` | `text` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -465,7 +465,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `company_relationship_type_relationship_type_check`: `CHECK ((relationship_type = ANY (ARRAY['customer', 'partner', 'supplier', 'investor', 'portfolio_company', 'competitor', 'other'])))`
+- `company_relationship_type_relationship_type_check`: `CHECK (((relationship_type = ANY (ARRAY['customer', 'partner', 'supplier', 'investor', 'portfolio_company', 'competitor', 'other'])) OR (relationship_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$')))`
 - `company_relationship_type_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**

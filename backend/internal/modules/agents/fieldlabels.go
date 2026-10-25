@@ -110,6 +110,8 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Valid until",
 		"visibility":               "Visibility",
 		"wait_until":               "Waiting until",
+
+		"extension_relationship_types": "Extension relationship types",
 	},
 	textlang.German: {
 		"acquisition_source":       "Akquisitionsquelle",
@@ -196,6 +198,8 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Gültig bis",
 		"visibility":               "Sichtbarkeit",
 		"wait_until":               "Wartet bis",
+
+		"extension_relationship_types": "Erweiterungs-Beziehungstypen",
 	},
 	textlang.Vietnamese: {
 		"acquisition_source":       "Nguồn tiếp cận",
@@ -282,6 +286,8 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Có hiệu lực đến",
 		"visibility":               "Phạm vi hiển thị",
 		"wait_until":               "Chờ đến",
+
+		"extension_relationship_types": "Loại quan hệ từ tiện ích mở rộng",
 	},
 }
 

@@ -34,6 +34,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+const filterExtensionRelationshipType = "extension_relationship_type"
+
 // The filter names this module answers, spelled once each. They are wire names
 // — a caller's query parameter — which is why they are not the column
 // constants they happen to match today.
@@ -107,6 +109,8 @@ var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
 	filterOwnerID:         storekit.FilterID(func(in *ListCompaniesInput, id *ids.UserID) { in.OwnerID = id }),
 	filterRelationshipType: storekit.FilterWord(
 		func(in *ListCompaniesInput, v *string) { in.RelationshipType = v }),
+	filterExtensionRelationshipType: storekit.FilterWord(
+		func(in *ListCompaniesInput, v *string) { in.ExtensionRelationshipType = v }),
 	filterSourceSystem: storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.SourceSystem = v }),
 	filterSourceID:     storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.SourceID = v }),
 	filterTag:          storekit.FilterIDList[ids.TagKind](func(in *ListCompaniesInput, v []ids.UUID) { in.TagIDs = v }),

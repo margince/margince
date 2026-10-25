@@ -1207,6 +1207,10 @@ func (stubs) PutAnchorCompany(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PutAnchorCompany")
 }
 
+func (stubs) ListCompanyTypes(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListCompanyTypes")
+}
+
 func (stubs) GetAnchorCompanyContext(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAnchorCompanyContextParams) {
 	httperr.NotImplemented(w, r, "GetAnchorCompanyContext")
 }

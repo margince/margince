@@ -327,6 +327,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/companies/{id}/technical-enrich/latest":                        {Op: "getLatestTechnicalEnrich", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/companies/{id}/vat-check":                                      {Op: "getCompanyVatCheck", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/company":                                                       {Op: "getAnchorCompany", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/company-types":                                                 {Op: "listCompanyTypes", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/company/context":                                               {Op: "getAnchorCompanyContext", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/company/context/capabilities":                                  {Op: "getAnchorCompanyContextCapabilities", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/company/site-reads/{readId}":                                   {Op: "getAnchorCompanySiteRead", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

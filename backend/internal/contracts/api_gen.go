@@ -32326,10 +32326,13 @@ type Company struct {
 	CreatedAt    time.Time `json:"created_at"`
 
 	// Description One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose).
-	Description *string            `json:"description,omitempty"`
-	DisplayName string             `json:"display_name"`
-	Domains     *[]CompanyDomain   `json:"domains,omitempty"`
-	Id          openapi_types.UUID `json:"id"`
+	Description *string          `json:"description,omitempty"`
+	DisplayName string           `json:"display_name"`
+	Domains     *[]CompanyDomain `json:"domains,omitempty"`
+
+	// ExtensionRelationshipTypes The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`).
+	ExtensionRelationshipTypes *[]string          `json:"extension_relationship_types,omitempty"`
+	Id                         openapi_types.UUID `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -34769,6 +34772,23 @@ type CompanyTriagedDomain struct {
 	// Domain The mail domain, lower-cased as the ledger stores it.
 	Domain string            `json:"domain"`
 	Rung   PipelineStageRung `json:"rung"`
+}
+
+// CompanyTypeDirectory The company types installed extensions add, ordered by value.
+type CompanyTypeDirectory struct {
+	Data []CompanyTypeOption `json:"data"`
+}
+
+// CompanyTypeOption defines model for CompanyTypeOption.
+type CompanyTypeOption struct {
+	// Label What a screen shows, in English, as the extension declared it.
+	Label string `json:"label"`
+
+	// Unit The extension that declared the type.
+	Unit string `json:"unit"`
+
+	// Value The value a company carries, `ext:<unit>:<type>`.
+	Value string `json:"value"`
 }
 
 // CompanyVatCheck One company's current VAT standing, and the evidence for it. The row keeps only the
@@ -53466,6 +53486,9 @@ type UpdateCompanyRequest struct {
 	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
 
+	// ExtensionRelationshipTypes Replace-set of the types an installed extension adds (`ext:<unit>:<type>`), applied like `relationship_types`. Absent = untouched; an empty array clears them. A value no extension declares is refused with 422.
+	ExtensionRelationshipTypes *[]string `json:"extension_relationship_types,omitempty"`
+
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry  *string `json:"industry,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
@@ -59239,6 +59262,9 @@ type ListCompaniesParams struct {
 
 	// RelationshipType Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
 	RelationshipType *ListCompaniesParamsRelationshipType `form:"relationship_type,omitempty" json:"relationship_type,omitempty"`
+
+	// ExtensionRelationshipType Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both.
+	ExtensionRelationshipType *string `form:"extension_relationship_type,omitempty" json:"extension_relationship_type,omitempty"`
 
 	// OwnerTeamId Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
 	// a team the caller cannot see returns their own visible rows filtered to nothing, not a
@@ -67138,6 +67164,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "domains")
 	}
 
+	if raw, found := object["extension_relationship_types"]; found {
+		err = json.Unmarshal(raw, &a.ExtensionRelationshipTypes)
+		if err != nil {
+			return fmt.Errorf("error reading 'extension_relationship_types': %w", err)
+		}
+		delete(object, "extension_relationship_types")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -67440,6 +67474,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["domains"], err = json.Marshal(a.Domains)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'domains': %w", err)
+		}
+	}
+
+	if a.ExtensionRelationshipTypes != nil {
+		object["extension_relationship_types"], err = json.Marshal(a.ExtensionRelationshipTypes)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'extension_relationship_types': %w", err)
 		}
 	}
 
@@ -75005,6 +75046,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "domains")
 	}
 
+	if raw, found := object["extension_relationship_types"]; found {
+		err = json.Unmarshal(raw, &a.ExtensionRelationshipTypes)
+		if err != nil {
+			return fmt.Errorf("error reading 'extension_relationship_types': %w", err)
+		}
+		delete(object, "extension_relationship_types")
+	}
+
 	if raw, found := object["industry"]; found {
 		err = json.Unmarshal(raw, &a.Industry)
 		if err != nil {
@@ -75128,6 +75177,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["domains"], err = json.Marshal(a.Domains)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'domains': %w", err)
+		}
+	}
+
+	if a.ExtensionRelationshipTypes != nil {
+		object["extension_relationship_types"], err = json.Marshal(a.ExtensionRelationshipTypes)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'extension_relationship_types': %w", err)
 		}
 	}
 
@@ -77996,6 +78052,9 @@ type ServerInterface interface {
 	// Save the installation's own company — the human's confirm-first write.
 	// (PUT /company)
 	PutAnchorCompany(w http.ResponseWriter, r *http.Request)
+	// Which company types installed extensions add beside core's own.
+	// (GET /company-types)
+	ListCompanyTypes(w http.ResponseWriter, r *http.Request)
 	// The deterministic, typed context assembled from the anchor company.
 	// (GET /company/context)
 	GetAnchorCompanyContext(w http.ResponseWriter, r *http.Request, params GetAnchorCompanyContextParams)
@@ -81662,6 +81721,12 @@ func (_ Unimplemented) GetAnchorCompany(w http.ResponseWriter, r *http.Request) 
 // Save the installation's own company — the human's confirm-first write.
 // (PUT /company)
 func (_ Unimplemented) PutAnchorCompany(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which company types installed extensions add beside core's own.
+// (GET /company-types)
+func (_ Unimplemented) ListCompanyTypes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -95026,6 +95091,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "extension_relationship_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "extension_relationship_type", r.URL.Query(), &params.ExtensionRelationshipType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "extension_relationship_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "extension_relationship_type", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "owner_team_id" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_team_id", r.URL.Query(), &params.OwnerTeamId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
@@ -98044,6 +98122,26 @@ func (siw *ServerInterfaceWrapper) PutAnchorCompany(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PutAnchorCompany(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCompanyTypes operation middleware
+func (siw *ServerInterfaceWrapper) ListCompanyTypes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCompanyTypes(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -125534,6 +125632,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/company", wrapper.PutAnchorCompany)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/company-types", wrapper.ListCompanyTypes)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/company/context", wrapper.GetAnchorCompanyContext)

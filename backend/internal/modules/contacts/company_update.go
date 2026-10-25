@@ -10,6 +10,8 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -67,6 +69,9 @@ type UpdateCompanyInput struct {
 	// clears them, except that 'partner' cannot be dropped while the partner
 	// extension row lives.
 	RelationshipTypes *[]string
+	// ExtensionRelationshipTypes is RelationshipTypes for the `ext:<unit>:<type>`
+	// values; each half is replaced without touching the other.
+	ExtensionRelationshipTypes *[]string
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
 	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
@@ -93,6 +98,27 @@ func (s *Store) UpdateCompany(ctx context.Context, id ids.CompanyID, in UpdateCo
 		return err
 	})
 	return out, err
+}
+
+// ReplaceUnitCompanyTypesTx sets the extension types one unit holds on a company,
+// on the caller's transaction, and leaves every other unit's types alone. The
+// prefix is `ext:<unit>:`, so the colon keeps `ext:a:` from matching `ext:a-b:`.
+// The edit is the ordinary one: grant, row scope, audit and event are
+// UpdateCompany's.
+func (s *Store) ReplaceUnitCompanyTypesTx(
+	ctx context.Context, tx pgx.Tx, id ids.CompanyID, prefix string, values []string, active CustomColumns,
+) (crmcontracts.Company, error) {
+	if err := auth.Require(ctx, companyEntity, principal.ActionUpdate); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	all, err := readLiveRelationshipTypes(ctx, tx, id)
+	if err != nil {
+		return crmcontracts.Company{}, err
+	}
+	_, held := splitRelationshipTypes(all)
+	desired := slices.DeleteFunc(held, func(v string) bool { return strings.HasPrefix(v, prefix) })
+	desired = append(desired, values...)
+	return s.updateCompanyInTx(ctx, tx, id, UpdateCompanyInput{ExtensionRelationshipTypes: &desired}, active.cols)
 }
 
 // updateCompanyInTx is the edit itself: the locks it owes, the patch it
@@ -311,7 +337,7 @@ func stampEditedDescriptionAuthor(ctx context.Context, tx pgx.Tx, id ids.Company
 func stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	current crmcontracts.Company, in UpdateCompanyInput, p *storekit.Patch,
 ) (string, error) {
-	if in.RelationshipTypes == nil && in.Domains == nil {
+	if in.RelationshipTypes == nil && in.ExtensionRelationshipTypes == nil && in.Domains == nil {
 		return "", nil
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -324,6 +350,17 @@ func stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 			return "", err
 		}
 		*in.RelationshipTypes = deduped
+	}
+	if in.ExtensionRelationshipTypes != nil {
+		live, err := readLiveRelationshipTypes(ctx, tx, id)
+		if err != nil {
+			return "", err
+		}
+		deduped, err := dedupeExtensionRelationshipTypes(*in.ExtensionRelationshipTypes, live)
+		if err != nil {
+			return "", err
+		}
+		*in.ExtensionRelationshipTypes = deduped
 	}
 	if in.Domains != nil {
 		if err := parseCompanyDomains(*in.Domains); err != nil {
@@ -375,12 +412,20 @@ func reconcileCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyI
 		after["domains"] = domainSummaries(*in.Domains)
 	}
 	if in.RelationshipTypes != nil {
-		typesBefore, err := reconcileCompanyRelationshipTypes(ctx, tx, id, "manual", by, *in.RelationshipTypes)
+		typesBefore, err := reconcileCompanyRelationshipTypes(ctx, tx, id, "manual", by, *in.RelationshipTypes, false)
 		if err != nil {
 			return err
 		}
 		before["relationship_types"] = typesBefore
 		after["relationship_types"] = *in.RelationshipTypes
+	}
+	if in.ExtensionRelationshipTypes != nil {
+		typesBefore, err := reconcileCompanyRelationshipTypes(ctx, tx, id, "manual", by, *in.ExtensionRelationshipTypes, true)
+		if err != nil {
+			return err
+		}
+		before["extension_relationship_types"] = typesBefore
+		after["extension_relationship_types"] = *in.ExtensionRelationshipTypes
 	}
 	return nil
 }

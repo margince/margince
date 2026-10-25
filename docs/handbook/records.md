@@ -182,6 +182,8 @@ Two fields describe a company, and many users mix them up.
 
 **Relationship types**: what the company *is* to you. Many at once: **customer, partner, supplier, investor, portfolio company, competitor, other.**
 
+An extension your admin turned on can add types of its own, such as **Reseller**. They show beside the others in the **Relationship type** column and the **Relationship type** filter, and you cannot change them in **Details**. The extension sets them.
+
 So a company can be a customer *and* a supplier. It cannot be both a prospect and a customer, because that is one question with one answer.
 
 Size bands are: 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5000+.
