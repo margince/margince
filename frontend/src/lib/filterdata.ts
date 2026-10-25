@@ -39,17 +39,6 @@ export type FilterResource = FilterVocabulary["resource"];
  */
 export const PREVIEW_PAGE = 25;
 
-/**
- * The fields a reader may start a new clause on. A `distance` field needs a
- * place picker the builder lacks, so it is not offered. A clause that already
- * uses one still reads, and other consumers keep the full vocabulary.
- */
-export function offerableFields(
-  fields: readonly VocabularyField[],
-): VocabularyField[] {
-  return fields.filter((field) => field.type !== "distance");
-}
-
 export function vocabularyQueryKey(resource: FilterResource) {
   return ["filter-vocabulary", resource] as const;
 }
