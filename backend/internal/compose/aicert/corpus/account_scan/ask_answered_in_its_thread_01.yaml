@@ -1,0 +1,48 @@
+name: scan_reads_the_thread_past_an_answered_ask
+task: account_scan
+site: company_scan
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  name: Hafenblick Immobilien GmbH
+  industry: Real estate
+  contacts:
+    - label: mira
+      name: Mira Albers
+  messages:
+    - label: her_ask
+      kind: email
+      direction: inbound
+      subject: "Listing details for the harbour units"
+      at: "2026-09-02T09:10:00Z"
+      text: "Thanks for the tour yesterday. Could you send me the listing details for the three harbour units, with the floor plans?"
+      thread: t1
+      settled: true
+    - label: our_delivery
+      kind: email
+      direction: outbound
+      subject: "Re: Listing details for the harbour units"
+      at: "2026-09-02T16:40:00Z"
+      text: "Here are the listing details for all three harbour units, floor plans attached. The contract draft is in final review and goes to you this week."
+      thread: t1
+    - label: her_viewing
+      kind: email
+      direction: inbound
+      subject: "Re: Listing details for the harbour units"
+      at: "2026-09-04T08:05:00Z"
+      text: "Got them, thank you. My partner would like to see unit 3 again before we decide. Could we view it on Tuesday afternoon?"
+      thread: t1
+expect:
+  outcome: accepted
+  answer: [her_viewing]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Her first ask is marked settled: our reply in the same thread sent the
+    details, and she confirmed she has them. What is open is her newest
+    message, which asks for a viewing on Tuesday. Score high when the scan
+    raises question_unanswered on that message, quoting it, with the action
+    draft_reply. Score low for any finding saying the listing details were
+    never sent, or that rests on her first ask.

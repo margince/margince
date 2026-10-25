@@ -42,6 +42,7 @@ type companyScanFixture struct {
 	Deals           []companyBriefDealFixture   `json:"open_deals,omitempty"`
 	Tasks           []companyScanNamedFixture   `json:"open_tasks,omitempty"`
 	Messages        []companyScanMessageFixture `json:"messages"`
+	Partner         bool                        `json:"partner,omitempty"`
 }
 
 type companyScanNamedFixture struct {
@@ -56,6 +57,8 @@ type companyScanMessageFixture struct {
 	Subject   string `json:"subject,omitempty"`
 	At        string `json:"at"`
 	Text      string `json:"text"`
+	Thread    string `json:"thread,omitempty"`
+	Settled   bool   `json:"settled,omitempty"`
 }
 
 type companyScanCases struct{}
@@ -100,7 +103,7 @@ func (companyScanCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 func companyScanInput(f companyScanFixture) (companyscan.Input, map[string]string, error) {
 	in := companyscan.Input{Account: companybrief.Input{
 		Name: f.Name, Industry: f.Industry, SectionsOmitted: f.SectionsOmitted,
-	}}
+	}, Partner: f.Partner}
 	label := map[string]string{}
 	for _, contact := range f.Contacts {
 		if err := refuseUnnameable(contact.Label, "contact", label); err != nil {
@@ -141,7 +144,7 @@ func companyScanInput(f companyScanFixture) (companyscan.Input, map[string]strin
 		label[message.Label] = id.String()
 		in.Messages = append(in.Messages, companyscan.MessageIn{
 			ID: id, Kind: message.Kind, Direction: message.Direction, Subject: message.Subject,
-			At: at.UTC(), Text: message.Text,
+			At: at.UTC(), Text: message.Text, Thread: message.Thread, Settled: message.Settled,
 		})
 	}
 	if len(in.Messages) == 0 {

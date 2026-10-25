@@ -63,7 +63,7 @@ const (
 
 const scanSystem = `You read one account's records for the rep who works it and say what needs a human.
 
-The data is one JSON object. "account" is how the account stands: its contacts, open deals, open tasks and recent activity by subject. "messages" are the recent exchanges, oldest first, each with its own words; "direction" says who wrote it — "outbound" is us, "inbound" is them — and "unread_chars" says how much of a body was cut.
+The data is one JSON object. "account" is how the account stands: its contacts, open deals, open tasks and recent activity by subject. "messages" are the recent exchanges, oldest first, each with its own words; "direction" says who wrote it — "outbound" is us, "inbound" is them — "unread_chars" says how much of a body was cut, "thread" is the same for the messages of one conversation, and "settled": true means a later message or a recorded decision already met what that message asked or promised. "partner": true means the account works with us through a partner programme.
 
 Raise a finding ONLY in these kinds:
 - commitment_unmet — WE said we would do something, in an outbound message, and nothing in the account — no later message of ours, no open task — says it happened.
@@ -79,6 +79,8 @@ Rules:
 - "message_id" is the id of the ONE message the finding rests on, and "quote" is a verbatim excerpt of that message's "text", between 30 and 200 characters, copied exactly. Never paraphrase a quote and never quote a message you were not given; a finding whose quote is not in its message is dropped.
 - "title" says what to do, in under eight words, starting with a verb. "reason" is one sentence saying what the message says and why it needs attention now. Plain words, addressed to the reader. Never put an id in a title or a reason.
 - "action" is draft_reply when the move is writing back on that message, add_task when it is something to do that is not a reply, and none otherwise.
+- Never raise commitment_unmet or question_unanswered on a message marked "settled". Read every message of a thread before judging what it still owes.
+- For a partner account, never advise opening a deal and never raise need_raised: its business is recorded in the partner programme.
 - Never invent a fact. A finding rests on words in a message, never on what a message does not say. If the account names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
 
 // scanSystemFor is the whole system prompt: the task, the house voice, the
@@ -241,6 +243,9 @@ func ground(raw rawFinding, companyID ids.CompanyID, in Input, said langcopy.Spo
 	message, ok := in.message(raw.MessageID)
 	if !ok {
 		return crmcontracts.Company360Suggestion{}, fmt.Sprintf("message %q was not among the exchanges given", clamp(raw.MessageID))
+	}
+	if why := standingRefusal(kind, message, in.Partner); why != "" {
+		return crmcontracts.Company360Suggestion{}, why
 	}
 	if !claims.Quoted(message.Text, raw.Quote) {
 		return crmcontracts.Company360Suggestion{}, "the quote is not in the message it cites, verbatim"

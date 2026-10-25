@@ -75,7 +75,8 @@ func readWords(
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, a.kind, coalesce(a.direction, ''), coalesce(a.subject, ''), a.occurred_at,
 		       coalesce(left(a.body, $%[3]d), ''),
-		       greatest(coalesce(char_length(a.body), 0) - $%[3]d, 0)
+		       greatest(coalesce(char_length(a.body), 0) - $%[3]d, 0),
+		       coalesce(a.thread_key || '/' || a.kind || '/' || coalesce(a.channel_provider, ''), '')
 		  FROM activity a
 		 WHERE %[6]s AND a.archived_at IS NULL
 		   AND a.occurred_at >= $%[2]d AND (%[5]s)
@@ -89,12 +90,15 @@ func readWords(
 	}
 	defer rows.Close()
 	var out []MessageIn
+	var threads []string
 	for rows.Next() {
 		var message MessageIn
+		var thread string
 		if err := rows.Scan(&message.ID, &message.Kind, &message.Direction, &message.Subject,
-			&message.At, &message.Text, &message.UnreadChars); err != nil {
+			&message.At, &message.Text, &message.UnreadChars, &thread); err != nil {
 			return nil, err
 		}
+		threads = append(threads, thread)
 		message.At = message.At.UTC()
 		// The quote gate reads Text too, so a quoted reply can be neither shown
 		// nor cited as this message's words.
@@ -104,8 +108,44 @@ func readWords(
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	// Newest first is the read's order, because the cap keeps the newest;
-	// oldest first is the model's, because a conversation is read forwards.
+	// Newest first is the read's order, because the cap keeps the newest. So
+	// whenever a thread is in the read, its newest message is too. Oldest first
+	// is the model's, because a conversation is read forwards.
 	slices.Reverse(out)
+	slices.Reverse(threads)
+	labelThreads(out, threads)
+	if err := markSettled(ctx, tx, out, now); err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+// labelThreads gives the messages of one thread one opaque label.
+func labelThreads(messages []MessageIn, threads []string) {
+	labels := map[string]string{}
+	for i, thread := range threads {
+		if thread == "" {
+			continue
+		}
+		if _, seen := labels[thread]; !seen {
+			labels[thread] = fmt.Sprintf("t%d", len(labels)+1)
+		}
+		messages[i].Thread = labels[thread]
+	}
+}
+
+// markSettled asks the activities module which messages their thread settled.
+func markSettled(ctx context.Context, tx pgx.Tx, messages []MessageIn, now time.Time) error {
+	cited := make([]ids.UUID, 0, len(messages))
+	for _, message := range messages {
+		cited = append(cited, message.ID)
+	}
+	settled, err := activities.SettledCitations(ctx, tx, cited, now)
+	if err != nil {
+		return fmt.Errorf("companyscan: reading which exchanges their threads settled: %w", err)
+	}
+	for i := range messages {
+		messages[i].Settled = settled[messages[i].ID]
+	}
+	return nil
 }
