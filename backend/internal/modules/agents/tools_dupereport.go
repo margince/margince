@@ -103,6 +103,9 @@ const (
 	CodeDuplicateCheckFailed = "duplicate_check_unavailable"
 )
 
+const duplicateCheckFailedMessage = "The record was created. Whether it duplicates one already here could not be checked, " +
+	"so treat this as unknown rather than as no duplicate."
+
 // duplicateWarning renders the human-readable half. It names the count and what
 // happens next, and deliberately does NOT say the record was rejected or
 // merged: it was neither. The record exists, and a human will decide.
@@ -141,25 +144,61 @@ type createdRecord struct {
 	TagOffer *TagOffer `json:"tag_offer,omitempty"`
 }
 
-// reportCreateDuplicates is reportDuplicates for any create. An employment edge
-// is reported against its contact. The edge gives the contact its employer,
-// and the pair it filed names the contact.
-func (t createRecord) reportCreateDuplicates(ctx context.Context, recordType string, fields json.RawMessage, id ids.UUID) []DuplicateCandidate {
+// employmentEdgeContact names the contact an employment-edge create gives an
+// employer to, and reports false for every other create.
+func employmentEdgeContact(recordType string, fields json.RawMessage) (ids.UUID, bool) {
 	if recordType != string(datasource.EntityRelationship) {
-		return t.reportDuplicates(ctx, recordType, id)
+		return ids.UUID{}, false
 	}
 	var edge struct {
 		Kind      string `json:"kind"`
 		ContactID string `json:"contact_id"`
 	}
 	if err := json.Unmarshal(fields, &edge); err != nil || edge.Kind != "employment" {
-		return nil
+		return ids.UUID{}, false
 	}
 	contact, err := ids.Parse(edge.ContactID)
+	return contact, err == nil
+}
+
+// openPairsBefore snapshots the pairs already open on the contact an
+// employment edge is about to be created for. The contact existed before the
+// edge, so its older pairs are not what the edge filed. It returns nil for any
+// other create, whose new record cannot have a pair yet. A failed read is
+// reported with ok false so the later report says the check could not run.
+func (t createRecord) openPairsBefore(ctx context.Context, recordType string, fields json.RawMessage) (before map[string]struct{}, ok bool) {
+	contact, edge := employmentEdgeContact(recordType, fields)
+	if !edge || t.duplicates == nil {
+		return nil, true
+	}
+	open, err := t.duplicates(ctx, "contact", contact)
 	if err != nil {
+		return nil, false
+	}
+	before = make(map[string]struct{}, len(open))
+	for _, d := range open {
+		before[d.CandidateID] = struct{}{}
+	}
+	return before, true
+}
+
+// reportCreateDuplicates is reportDuplicates for any create. An employment edge
+// is reported against its contact. The edge gives the contact its employer,
+// and the pairs it filed name the contact. Pairs in before were open already
+// and are left out.
+func (t createRecord) reportCreateDuplicates(ctx context.Context, recordType string, fields json.RawMessage, id ids.UUID, before map[string]struct{}, snapshotOK bool) []DuplicateCandidate {
+	contact, edge := employmentEdgeContact(recordType, fields)
+	if recordType == string(datasource.EntityRelationship) && !edge {
 		return nil
 	}
-	return t.reportDuplicates(ctx, "contact", contact)
+	if !edge {
+		return t.reportDuplicates(ctx, recordType, id, nil)
+	}
+	if !snapshotOK {
+		noteWarning(ctx, CodeDuplicateCheckFailed, duplicateCheckFailedMessage)
+		return nil
+	}
+	return t.reportDuplicates(ctx, "contact", contact, before)
 }
 
 // reportDuplicates tells the caller what this create filed for review.
@@ -174,16 +213,23 @@ func (t createRecord) reportCreateDuplicates(ctx context.Context, recordType str
 // asked. "The check could not run" says nothing about whether one exists —
 // folding them together would let a caller report "no duplicate found" for a
 // check that never happened, which is the failure this whole path corrects.
-func (t createRecord) reportDuplicates(ctx context.Context, recordType string, id ids.UUID) []DuplicateCandidate {
+func (t createRecord) reportDuplicates(ctx context.Context, recordType string, id ids.UUID, skip map[string]struct{}) []DuplicateCandidate {
 	if t.duplicates == nil {
 		return nil
 	}
 	found, err := t.duplicates(ctx, recordType, id)
 	if err != nil {
-		noteWarning(ctx, CodeDuplicateCheckFailed,
-			"The record was created. Whether it duplicates one already here could not be checked, "+
-				"so treat this as unknown rather than as no duplicate.")
+		noteWarning(ctx, CodeDuplicateCheckFailed, duplicateCheckFailedMessage)
 		return nil
+	}
+	if len(skip) > 0 {
+		kept := found[:0:0]
+		for _, d := range found {
+			if _, old := skip[d.CandidateID]; !old {
+				kept = append(kept, d)
+			}
+		}
+		found = kept
 	}
 	if len(found) == 0 {
 		return nil

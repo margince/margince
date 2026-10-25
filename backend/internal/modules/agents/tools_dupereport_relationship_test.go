@@ -41,7 +41,7 @@ func TestEmploymentRelationshipCreateReportsTheContactsPairs(t *testing.T) {
 				gotType, gotID = rt, id
 				return []DuplicateCandidate{{CandidateID: "c", OtherRecordID: ids.NewV7().String()}}, nil
 			}}
-			found := tool.reportCreateDuplicates(context.Background(), tc.recordType, json.RawMessage(tc.fields), edge)
+			found := tool.reportCreateDuplicates(context.Background(), tc.recordType, json.RawMessage(tc.fields), edge, nil, true)
 			if gotType != tc.wantType || gotID != tc.wantID {
 				t.Fatalf("asked for %s %s, want %s %s", gotType, gotID, tc.wantType, tc.wantID)
 			}
@@ -58,5 +58,21 @@ func TestCreateRecordCopyTellsAnAgentToAskAboutTheSameEmployerContact(t *testing
 	}
 	if !strings.Contains(createRecordCopy.Instead, "same employer, ask the human whether it is the same contact") {
 		t.Fatalf("copy does not say to ask the human: %s", createRecordCopy.Instead)
+	}
+}
+
+func TestEmploymentRelationshipCreateLeavesOutPairsOpenBeforeIt(t *testing.T) {
+	contact := ids.NewV7()
+	fields := json.RawMessage(`{"kind":"employment","contact_id":"` + contact.String() + `"}`)
+	open := []DuplicateCandidate{{CandidateID: "older"}}
+	tool := createRecord{duplicates: func(context.Context, string, ids.UUID) ([]DuplicateCandidate, error) {
+		return open, nil
+	}}
+	before, ok := tool.openPairsBefore(context.Background(), "relationship", fields)
+	open = append(open, DuplicateCandidate{CandidateID: "filed-by-edge"})
+
+	found := tool.reportCreateDuplicates(context.Background(), "relationship", fields, ids.NewV7(), before, ok)
+	if len(found) != 1 || found[0].CandidateID != "filed-by-edge" {
+		t.Fatalf("reported %+v, want only the pair the edge filed", found)
 	}
 }

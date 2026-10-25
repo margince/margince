@@ -80,6 +80,16 @@ func (h Reads) addAccountGroup(
 	return dropped, h.addAccountEdges(ctx, tx, contacts, now, out)
 }
 
+// seatViewer is the user whose typed seat aliases this viewer may see. An
+// agent working on a colleague's passport sees what that colleague sees, so it
+// is asked as the colleague and not as proof-only.
+func seatViewer(viewer principal.Principal) ids.UUID {
+	if viewer.ActsAsItsUser() {
+		return viewer.OnBehalfOf
+	}
+	return viewer.UserID
+}
+
 // readCompanyContacts finds the other current employees of this contact's
 // employer, row-scoped in the query itself.
 //
@@ -123,7 +133,7 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		return nil, 0, err
 	}
 	viewer, _ := principal.Actor(ctx)
-	seatPos := arg(seats.For(viewer.UserID))
+	seatPos := arg(seats.For(seatViewer(viewer)))
 	limitPos := arg(graphAccountCap)
 
 	// count(*) OVER () rides the same row-scoped predicate as the page, so the
