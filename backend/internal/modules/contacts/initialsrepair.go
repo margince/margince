@@ -165,6 +165,9 @@ func RepairInitialsDisplayNameTx(
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
 	}
+	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
+		return false, err
+	}
 	var previous string
 	var split bool
 	err := tx.QueryRow(ctx, `

@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/captureorigin"
+	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -32,10 +33,14 @@ const (
 // protect a name the way an explicit edit does.
 const DisplayNameRepairActor = "system:participant_backfill"
 
+// InitialsRepairTaskID names the initials data task. A data task names no
+// migration, so its number is a version no namespace carries.
+const InitialsRepairTaskID = "core/1792896243_initials_display_names"
+
 // InitialsRepairActor is the principal the initials data task's batches bind.
 // Its rewrite of capture's guess is still capture's, so a name learned later
 // may replace it.
-const InitialsRepairActor = "system:datatask:core/1792896243_initials_display_names"
+var InitialsRepairActor = datatask.ActorID(InitialsRepairTaskID)
 
 // StaleDisplayNamesTx answers up to limit contacts whose display name the
 // repair may replace with the pair their split columns carry. The repair's
