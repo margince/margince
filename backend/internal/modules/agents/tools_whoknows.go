@@ -44,7 +44,9 @@ type WhoKnowsReading struct {
 	// CaptureGaps are colleagues on the contact's threads with no connected
 	// mailbox. They are information, never entries of Colleagues.
 	CaptureGaps []CaptureGap
-	Truncated   bool
+	// CaptureGapsTotal counts every such colleague; CaptureGaps may stop short.
+	CaptureGapsTotal int
+	Truncated        bool
 }
 
 // CaptureGap is one colleague whose mail with a contact is not captured. It
@@ -71,6 +73,9 @@ type WhoKnowsAnswer struct {
 	ContactName string           `json:"contact_name,omitempty"`
 	Colleagues  []KnownColleague `json:"colleagues"`
 	CaptureGaps []CaptureGap     `json:"capture_gaps"`
+	// CaptureGapsTotal is how many colleagues lack a mailbox in all. Above
+	// len(CaptureGaps), the list names only the most recent of them.
+	CaptureGapsTotal int `json:"capture_gaps_total"`
 }
 
 // --- who_knows (🟢 read) ---
@@ -139,6 +144,6 @@ func (t whoKnowsTool) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	return json.Marshal(WhoKnowsAnswer{
 		ContactID: args.ContactID, ContactName: reading.ContactName, Colleagues: colleagues,
-		CaptureGaps: gaps,
+		CaptureGaps: gaps, CaptureGapsTotal: reading.CaptureGapsTotal,
 	})
 }

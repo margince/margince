@@ -19532,7 +19532,8 @@ paths:
       summary: Read AI administration status (ai_diagnostics and ai_budget read).
       description: |
         Requires both diagnostics and allowance read permissions. Without ai_routing
-        read, features and unused_tiers are empty and routing_version is an empty
+        read, features, unused_tiers and lanes_needing_a_key are empty and
+        routing_version is an empty
         string; routing settings are not read. Deferred-work counts cover the company.
       responses:
         '200':
@@ -36355,6 +36356,19 @@ components:
             Work waiting for the AI provider to answer, not for the budget. It resumes by
             itself at the provider's next probe, and a budget raise does not change it;
             `count` holds only what a raise would resume.
+    AiLaneNeedingAKey:
+      type: object
+      required: [lane, provider, key_env]
+      description: 'One saved binding whose vendor needs a key that is not held.'
+      properties:
+        lane:
+          type: string
+          description: 'The lane the binding sits on, named as the router names it: a tier name, `embed` or `decide`.'
+        provider: { type: string }
+        model: { type: string }
+        key_env:
+          type: string
+          description: 'The environment variable that would supply the key, named so an operator can act without looking it up.'
     AiStatus:
       type: object
       required: [observed_at, budget, routing_version, task_contract_hash, features, deferred_work, deferred_work_coverage]
@@ -36367,6 +36381,10 @@ components:
         deferred_work: { type: array, items: { $ref: '#/components/schemas/AiDeferredWork' } }
         deferred_work_coverage: { type: string }
         unused_tiers: { type: array, items: { type: string } }
+        lanes_needing_a_key:
+          type: array
+          items: { $ref: '#/components/schemas/AiLaneNeedingAKey' }
+          description: 'The saved bindings that cannot run, because the vendor they name holds no key. The router keeps serving whatever it served before such a save, so without this the screen names a model that is not answering.'
     AiBudgetPreview:
       type: object
       required: [current, proposed, features, deferred_work]
@@ -42970,7 +42988,7 @@ components:
       description: |
         The colleagues who know this contact, warmest first. Ordering is the answer, not
         a presentation detail: it is who to ask.
-      required: [contact_id, colleagues, capture_gaps]
+      required: [contact_id, colleagues, capture_gaps, capture_gaps_total]
       properties:
         contact_id:  { type: string, format: uuid }
         colleagues: { type: array, items: { $ref: '#/components/schemas/ContactNetworkColleague' } }
@@ -42981,8 +42999,14 @@ components:
             later replies they alone receive may be missing here. Information only: a seat
             listed here is not a route in, owns no work and may not send. An invited seat
             appears here and never in `colleagues`. At most ten are returned, most recent
-            first.
+            first; `capture_gaps_total` counts them all.
           items: { $ref: '#/components/schemas/ContactCaptureGap' }
+        capture_gaps_total:
+          type: integer
+          minimum: 0
+          description: |
+            How many colleagues meet the `capture_gaps` condition in all. When it is larger
+            than the length of `capture_gaps`, the list names only the most recent of them.
 
     ContactCaptureGap:
       type: object
@@ -47985,9 +48009,10 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The account this file rolls up to, kept as a read path rather than a second parent. Visibility
-            stays the primary parent's, and this is maintained on relink and merge so a file
-            follows the record it belongs to.
+            The account an upload is filed under: the company it was uploaded on, or the account of the
+            deal it was uploaded on at that time. A file that came with a captured mail carries none; the
+            account's Documents list reaches it through the mail's links as they are now. A read path
+            rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
         contract_id:
           type: [string, 'null']
           format: uuid
@@ -48010,9 +48035,31 @@ components:
             The address of a `link` row, and null for every other category. It is an http or https
             address on a known document host. The reader renders it as an outbound link to open in
             a new tab, never as a download.
+        origin:
+          $ref: '#/components/schemas/AttachmentOrigin'
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         created_at: { type: string, format: date-time }
+
+    AttachmentOrigin:
+      type: object
+      readOnly: true
+      x-email-presentation: exempt
+      x-email-presentation-reason: The line naming the mail a file came with, gated with that mail's content; opening it goes to the canonical email drawer.
+      description: >-
+        The mail a file came with. Present on a Documents list row whose file hangs off a mail the
+        caller may read; absent on an upload, and absent when the caller may not read the mail.
+      required: [activity_id, kind, occurred_at]
+      properties:
+        activity_id: { type: string, format: uuid, description: The mail to open. }
+        kind: { type: string, description: 'The activity kind the file arrived with: email, message.' }
+        subject: { type: [string, 'null'] }
+        occurred_at: { type: string, format: date-time, description: When the mail was sent or received. }
+        sender:
+          $ref: '#/components/schemas/EmailParty'
+          description: >-
+            Who the mail is from, named as the caller may see them: a contact's name only when the
+            caller may see that contact. Absent when capture recorded no sender.
 
     AttachmentListResponse:
       type: object
@@ -48033,6 +48080,9 @@ components:
         hidden: { type: boolean }
         origin:
           $ref: '#/components/schemas/DealDocumentOrigin'
+          description: >-
+            Deprecated: read attachment.origin, which names the mail's sender rather than its
+            counterparty and is gated like every Documents list. Kept for older clients.
 
     DealDocumentOrigin:
       type: object

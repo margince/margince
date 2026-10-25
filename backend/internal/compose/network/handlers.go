@@ -59,7 +59,7 @@ type Reads struct {
 
 // SeatGaps reads the colleagues on a contact's threads who have no connected
 // mailbox. It runs in the caller's transaction, after the contact read gates.
-type SeatGaps func(ctx context.Context, tx pgx.Tx, contactID ids.UUID) ([]capture.UncapturedSeat, error)
+type SeatGaps func(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (capture.UncapturedSeats, error)
 
 // WithSeatGaps binds the reader behind the capture_gaps notice.
 func (h Reads) WithSeatGaps(gaps SeatGaps) Reads {
@@ -113,7 +113,8 @@ func (h Reads) GetContactNetwork(w http.ResponseWriter, r *http.Request, id crmc
 		if err != nil {
 			return err
 		}
-		for _, g := range gaps {
+		out.CaptureGapsTotal = gaps.Total
+		for _, g := range gaps.Seats {
 			out.CaptureGaps = append(out.CaptureGaps, crmcontracts.ContactCaptureGap{
 				UserId: openapi_types.UUID(g.UserID), DisplayName: g.DisplayName,
 				Invited: g.Invited, LastOnThreadAt: g.LastOnThread,

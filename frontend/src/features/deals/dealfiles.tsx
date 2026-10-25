@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { FileOrigin } from "../../components/fileorigin";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable } from "../../design-system/datatable";
@@ -72,7 +73,14 @@ export function useDealDocuments(dealId: string, includeHidden = false) {
   });
 }
 
-export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
+export function DealFiles({
+  deal,
+  onOpenEmail,
+}: Readonly<{
+  deal: Deal;
+  /** Opens a mail in the page's drawer, from the line naming a file's mail. */
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const dealId = deal.id;
   // useCanWriteRecord, not useCanWrite: every write here — the upload, a
@@ -134,6 +142,7 @@ export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
               files={files}
               mayWrite={mayWrite}
               focusLanding={focusLanding}
+              onOpenEmail={onOpenEmail}
             />
           </SurfaceState>
         </div>
@@ -147,11 +156,13 @@ function FilesTable({
   files,
   mayWrite,
   focusLanding,
+  onOpenEmail,
 }: Readonly<{
   dealId: string;
   files: readonly DealDocument[];
   mayWrite: boolean;
   focusLanding: () => HTMLElement | null;
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -180,22 +191,25 @@ function FilesTable({
         {
           key: "origin",
           header: t("dealfiles.col.origin"),
-          // A captured file names the party whose message carried it; an
-          // upload has no sender, only the deal it was put on.
+          // A mail's file names who sent the mail, as the contact and company
+          // lists do. A meeting's or a task's file names nothing; an upload
+          // says it was put on the deal.
           render: (doc) =>
-            doc.origin
-              ? t("dealfiles.origin.from", {
-                  who:
-                    doc.origin.counterparty_email ?? t("files.originUnknown"),
-                })
-              : t("dealfiles.origin.upload"),
+            doc.attachment.origin ? (
+              <FileOrigin
+                origin={doc.attachment.origin}
+                onOpenEmail={onOpenEmail}
+              />
+            ) : doc.attachment.entity_type === "activity" ? null : (
+              t("dealfiles.origin.upload")
+            ),
         },
         {
           key: "added",
           header: t("dealfiles.col.added"),
           render: (doc) =>
             formatDateAbbrev(
-              doc.origin?.occurred_at ?? doc.attachment.created_at,
+              doc.attachment.origin?.occurred_at ?? doc.attachment.created_at,
               locale,
               recordZone,
             ),
@@ -305,7 +319,7 @@ function FileMenu({
   onDelete: () => void;
 }>) {
   const t = useT();
-  const captured = doc.origin !== undefined;
+  const captured = doc.attachment.entity_type === "activity";
   return (
     <OverflowMenu
       label={t("table.rowActions", { name: doc.attachment.filename })}

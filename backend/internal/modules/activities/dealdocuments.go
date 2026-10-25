@@ -131,7 +131,7 @@ func (s *Store) ListDealDocuments(
 			}
 			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
-		return nil
+		return withDealMailOrigins(ctx, tx, out)
 	})
 	if out == nil {
 		out = []crmcontracts.DealDocument{}
@@ -172,6 +172,22 @@ func scanDealDocument(rows pgx.Rows) (crmcontracts.DealDocument, error) {
 		}
 	}
 	return doc, nil
+}
+
+// withDealMailOrigins names the mail on each deal file's own row, as the
+// contact and company lists do.
+func withDealMailOrigins(ctx context.Context, tx pgx.Tx, docs []crmcontracts.DealDocument) error {
+	files := make([]crmcontracts.Attachment, len(docs))
+	for i, doc := range docs {
+		files[i] = doc.Attachment
+	}
+	if err := withMailOrigins(ctx, tx, files); err != nil {
+		return err
+	}
+	for i := range docs {
+		docs[i].Attachment = files[i]
+	}
+	return nil
 }
 
 // HideDealDocument takes a file off this deal's Files area. The caller needs

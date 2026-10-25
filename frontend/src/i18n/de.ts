@@ -5819,6 +5819,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "files.empty":
     "Noch keine Dateien an diesem Deal. Lade eine Datei hoch oder verknüpfe eine E-Mail mit Anhang.",
   "files.originUnknown": "unbekannter Absendeadresse",
+  "files.origin.mail": "Von {who} · {subject}",
   "files.hiddenBadge": "Ausgeblendet",
   "files.hide": "An diesem Deal ausblenden",
   "files.unhide": "Wieder an diesem Deal anzeigen",
@@ -9125,6 +9126,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiHealth.noCalls": "Keine Modellaufrufe in den letzten {hours} h.",
   "aiHealth.answering": "Antwortet",
   "aiHealth.notAnswering": "Antwortet nicht",
+  "aiHealth.laneNeedsKey":
+    "{provider} hat keinen Schlüssel, daher ist die gespeicherte Bindung nicht aktiv und das vorherige Modell antwortet weiterhin. Setze {env}.",
   "aiHealth.callCounts_one": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "aiHealth.callCounts_other": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "heldThreads.title": "Zurückgehaltene Threads",
@@ -14301,6 +14304,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.network.captureGap_other":
     "{names} stehen in den Threads dieses Kontakts und haben kein Postfach verbunden, daher kann spätere Post hier fehlen.",
   "contact.network.captureGapInvited": "{name} (noch nicht angemeldet)",
+  "contact.network.captureGapMore_one":
+    "{names} und {count} weiteres Teammitglied",
+  "contact.network.captureGapMore_other":
+    "{names} und {count} weitere Teammitglieder",
+  "contact.network.captureGapsFailed":
+    "Es konnte nicht gelesen werden, welche Teammitglieder in den Threads dieses Kontakts kein Postfach verbunden haben.",
   "contact.graph.noDirect":
     "Im Unternehmen hat noch niemand mit diesem Kontakt korrespondiert.",
   "contact.graph.sideColumn": "Vorstellungen und Veränderungen",
@@ -14377,6 +14386,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.change.buckets": "{from} → {to}",
   "contact.intro.stripHandoff": "Anfrage zur Vorstellung",
   "contact.intro.handoffNotStarted": "Nicht begonnen",
+  "contact.intro.handoffUnread": "Nicht lesbar",
   "contact.intro.handoffOwner": "Als Nächstes: {name}",
   "contact.intro.ownerColleague": "ein Teammitglied",
   "contact.intro.ownerNobody": "niemand",
@@ -14493,6 +14503,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.answerDeclineHelp":
     "Die Anfrage wird geschlossen. Ergänze bei Bedarf einen Grund.",
   "contact.intro.asksTitle": "Vorstellungen",
+  "contact.intro.asksFailed":
+    "Die Vorstellungen zu diesem Kontakt konnten nicht gelesen werden.",
   "contact.intro.answerAction": "Antworten",
   "contact.intro.completeIntroducedAction": "Als vorgestellt markieren",
   "contact.intro.completeNameDroppedAction": "Namensnennung markieren",

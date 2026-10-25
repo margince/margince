@@ -24,8 +24,15 @@ type UncapturedSeat struct {
 	LastOnThread time.Time
 }
 
+// UncapturedSeats is the listed seats and how many met the condition in all,
+// so a caller can say the list stopped at its limit.
+type UncapturedSeats struct {
+	Seats []UncapturedSeat
+	Total int
+}
+
 // SeatsWithoutMailbox lists the colleagues on this contact's threads who have
-// no connected mailbox, most recent first, at most limit.
+// no connected mailbox, most recent first, at most limit, and counts them all.
 //
 // A seat counts when a participant row names it by user_id (calendar attendees,
 // own sent mail). It also counts when an unattested To or Cc address equals its
@@ -43,9 +50,11 @@ type UncapturedSeat struct {
 // The caller must already have passed the contact read gates.
 func SeatsWithoutMailbox(
 	ctx context.Context, tx pgx.Tx, contactID ids.UUID, mailProviders []string, limit int,
-) ([]UncapturedSeat, error) {
+) (UncapturedSeats, error) {
+	// The window count runs over the grouped seats before LIMIT, so the total
+	// comes from the same rule and the same statement as the list.
 	rows, err := tx.Query(ctx, `
-		SELECT u.id, u.display_name, u.status = 'invited', max(a.occurred_at)
+		SELECT u.id, u.display_name, u.status = 'invited', max(a.occurred_at), count(*) OVER ()
 		  FROM activity_participant pc
 		  JOIN activity a ON a.id = pc.activity_id AND a.archived_at IS NULL
 		   AND `+relstrength.WorkspaceAudienceSQL("a")+`
@@ -64,19 +73,19 @@ func SeatsWithoutMailbox(
 		 ORDER BY max(a.occurred_at) DESC, u.id
 		 LIMIT $3`, contactID, mailProviders, limit)
 	if err != nil {
-		return nil, fmt.Errorf("capture: reading seats without a mailbox: %w", err)
+		return UncapturedSeats{}, fmt.Errorf("capture: reading seats without a mailbox: %w", err)
 	}
 	defer rows.Close()
-	out := []UncapturedSeat{}
+	out := UncapturedSeats{Seats: []UncapturedSeat{}}
 	for rows.Next() {
 		var s UncapturedSeat
-		if err := rows.Scan(&s.UserID, &s.DisplayName, &s.Invited, &s.LastOnThread); err != nil {
-			return nil, fmt.Errorf("capture: scanning a seat without a mailbox: %w", err)
+		if err := rows.Scan(&s.UserID, &s.DisplayName, &s.Invited, &s.LastOnThread, &out.Total); err != nil {
+			return UncapturedSeats{}, fmt.Errorf("capture: scanning a seat without a mailbox: %w", err)
 		}
-		out = append(out, s)
+		out.Seats = append(out.Seats, s)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("capture: reading seats without a mailbox: %w", err)
+		return UncapturedSeats{}, fmt.Errorf("capture: reading seats without a mailbox: %w", err)
 	}
 	return out, nil
 }

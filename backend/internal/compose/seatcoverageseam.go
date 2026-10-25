@@ -20,6 +20,6 @@ const seatGapLimit = 10
 // threads without a connected mailbox", for the Network tab and the who_knows
 // tool. capture cannot import compose, so the mail-provider set is passed in
 // here. Callers run it after their contact read gates, in the same transaction.
-func contactSeatGaps(ctx context.Context, tx pgx.Tx, contactID ids.UUID) ([]capture.UncapturedSeat, error) {
+func contactSeatGaps(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (capture.UncapturedSeats, error) {
 	return capture.SeatsWithoutMailbox(ctx, tx, contactID, MailProviders(), seatGapLimit)
 }

@@ -5881,6 +5881,7 @@ export const en = {
   "files.empty":
     "No files on this deal yet. Upload a file, or link an email with an attachment.",
   "files.originUnknown": "an unknown sender",
+  "files.origin.mail": "From {who} · {subject}",
   "files.hiddenBadge": "Hidden",
   "files.hide": "Hide from this deal",
   "files.unhide": "Show on this deal again",
@@ -9179,6 +9180,8 @@ export const en = {
   "aiHealth.noCalls": "No model calls in the last {hours}h.",
   "aiHealth.answering": "Responding",
   "aiHealth.notAnswering": "Not responding",
+  "aiHealth.laneNeedsKey":
+    "{provider} holds no key, so the saved binding is not running and the previous model keeps answering. Set {env}.",
   "aiHealth.callCounts_one": "{count} call, {failures} failed",
   "aiHealth.callCounts_other": "{count} calls, {failures} failed",
   "heldThreads.title": "Held threads",
@@ -14245,6 +14248,10 @@ export const en = {
   "contact.network.captureGap_other":
     "{names} are on this contact’s threads and have not connected a mailbox, so later mail may be missing here.",
   "contact.network.captureGapInvited": "{name} (has not signed in yet)",
+  "contact.network.captureGapMore_one": "{names} and {count} more",
+  "contact.network.captureGapMore_other": "{names} and {count} more",
+  "contact.network.captureGapsFailed":
+    "Could not read which colleagues on this contact’s threads lack a connected mailbox.",
   "contact.graph.noDirect":
     "No one in the company has corresponded with this contact.",
   // Names the column beside the graph, for a reader who lands in it from the
@@ -14321,6 +14328,7 @@ export const en = {
   "contact.intro.change.buckets": "{from} → {to}",
   "contact.intro.stripHandoff": "Intro request",
   "contact.intro.handoffNotStarted": "Not started",
+  "contact.intro.handoffUnread": "Could not be read",
   "contact.intro.handoffOwner": "Next: {name}",
   "contact.intro.ownerColleague": "a colleague",
   "contact.intro.ownerNobody": "no one",
@@ -14433,6 +14441,8 @@ export const en = {
   "contact.intro.answerDeclineHelp":
     "The request closes. Add a reason if useful.",
   "contact.intro.asksTitle": "Introductions",
+  "contact.intro.asksFailed":
+    "The introductions for this contact could not be read.",
   "contact.intro.answerAction": "Answer",
   "contact.intro.completeIntroducedAction": "Mark introduced",
   "contact.intro.completeNameDroppedAction": "Mark name used",

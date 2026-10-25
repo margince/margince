@@ -13285,7 +13285,8 @@ export interface paths {
         /**
          * Read AI administration status (ai_diagnostics and ai_budget read).
          * @description Requires both diagnostics and allowance read permissions. Without ai_routing
-         *     read, features and unused_tiers are empty and routing_version is an empty
+         *     read, features, unused_tiers and lanes_needing_a_key are empty and
+         *     routing_version is an empty
          *     string; routing settings are not read. Deferred-work counts cover the company.
          */
         get: operations["getAiStatus"];
@@ -25474,6 +25475,15 @@ export interface components {
              */
             waiting_on_provider?: number;
         };
+        /** @description One saved binding whose vendor needs a key that is not held. */
+        AiLaneNeedingAKey: {
+            /** @description The lane the binding sits on, named as the router names it: a tier name, `embed` or `decide`. */
+            lane: string;
+            provider: string;
+            model?: string;
+            /** @description The environment variable that would supply the key, named so an operator can act without looking it up. */
+            key_env: string;
+        };
         AiStatus: {
             /** Format: date-time */
             observed_at: string;
@@ -25484,6 +25494,8 @@ export interface components {
             deferred_work: components["schemas"]["AiDeferredWork"][];
             deferred_work_coverage: string;
             unused_tiers?: string[];
+            /** @description The saved bindings that cannot run, because the vendor they name holds no key. The router keeps serving whatever it served before such a save, so without this the screen names a model that is not answering. */
+            lanes_needing_a_key?: components["schemas"]["AiLaneNeedingAKey"][];
         };
         AiBudgetPreview: {
             current: components["schemas"]["AiBudgetSnapshot"];
@@ -30624,9 +30636,14 @@ export interface components {
              *     later replies they alone receive may be missing here. Information only: a seat
              *     listed here is not a route in, owns no work and may not send. An invited seat
              *     appears here and never in `colleagues`. At most ten are returned, most recent
-             *     first.
+             *     first; `capture_gaps_total` counts them all.
              */
             capture_gaps: components["schemas"]["ContactCaptureGap"][];
+            /**
+             * @description How many colleagues meet the `capture_gaps` condition in all. When it is larger
+             *     than the length of `capture_gaps`, the list names only the most recent of them.
+             */
+            capture_gaps_total: number;
         };
         /** @description One colleague on a contact's threads whose mail is not captured. */
         ContactCaptureGap: {
@@ -34974,7 +34991,7 @@ export interface components {
             supersedes_id?: string | null;
             /**
              * Format: uuid
-             * @description The account this file rolls up to, kept as a read path rather than a second parent. Visibility stays the primary parent's, and this is maintained on relink and merge so a file follows the record it belongs to.
+             * @description The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
              */
             readonly company_id?: string | null;
             /**
@@ -34986,11 +35003,30 @@ export interface components {
             readonly bytes_withheld?: boolean;
             /** @description The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download. */
             readonly url?: string | null;
+            origin?: components["schemas"]["AttachmentOrigin"];
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
             /** Format: date-time */
             created_at: string;
+        };
+        /** @description The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail. */
+        AttachmentOrigin: {
+            /**
+             * Format: uuid
+             * @description The mail to open.
+             */
+            activity_id: string;
+            /** @description The activity kind the file arrived with: email, message. */
+            kind: string;
+            subject?: string | null;
+            /**
+             * Format: date-time
+             * @description When the mail was sent or received.
+             */
+            occurred_at: string;
+            /** @description Who the mail is from, named as the caller may see them: a contact's name only when the caller may see that contact. Absent when capture recorded no sender. */
+            sender?: components["schemas"]["EmailParty"];
         };
         AttachmentListResponse: {
             data: components["schemas"]["Attachment"][];
@@ -35004,6 +35040,7 @@ export interface components {
         DealDocument: {
             attachment: components["schemas"]["Attachment"];
             hidden: boolean;
+            /** @description Deprecated: read attachment.origin, which names the mail's sender rather than its counterparty and is gated like every Documents list. Kept for older clients. */
             origin?: components["schemas"]["DealDocumentOrigin"];
         };
         /** @description Where a captured file came from. Present for a file that arrived with a message linked to the deal; absent for a file uploaded on the deal. */

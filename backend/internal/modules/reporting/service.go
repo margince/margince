@@ -81,6 +81,7 @@ type CalendarSource func(context.Context, pgx.Tx) (Calendar, error)
 // Service coordinates saved reporting over injected calculation and authority seams.
 type Service struct {
 	language  func(context.Context, pgx.Tx) textlang.Lang
+	reader    func(context.Context, pgx.Tx) textlang.Lang
 	store     *store
 	evaluator Evaluator
 	authority Authority

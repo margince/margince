@@ -11,6 +11,7 @@
 import { useState } from "react";
 import { EntityRef } from "../../components/entityref";
 import { Badge, Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDate } from "../../format/format";
 import { INTRO_STATUS_LABELS as STATUS_LABEL } from "../../format/introstatus";
@@ -68,6 +69,28 @@ export function IntroAsksPanel({
   const complete = useCompleteIntroRequest(contactId);
   const cancel = useCancelIntroRequest(contactId);
 
+  // A failed read keeps the card, because no card at all reads as no asks.
+  if (asks.isError) {
+    return (
+      <Panel title={t("contact.intro.asksTitle")}>
+        <PanelBody>
+          <ErrorLine
+            actions={
+              <Button
+                variant="link"
+                pending={asks.isFetching}
+                onClick={() => asks.refetch()}
+              >
+                {t("common.retry")}
+              </Button>
+            }
+          >
+            {t("contact.intro.asksFailed")}
+          </ErrorLine>
+        </PanelBody>
+      </Panel>
+    );
+  }
   const rows = asks.data ?? [];
   if (rows.length === 0) {
     return null;

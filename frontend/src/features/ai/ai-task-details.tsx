@@ -7,7 +7,12 @@ import { Badge } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { decisionSkipLabel } from "./ai-decision-labels";
-import { laneRung, TaskState } from "./ai-lane-state";
+import {
+  type LaneKeyGap,
+  laneKeyGap,
+  laneRung,
+  TaskState,
+} from "./ai-lane-state";
 import { providerName } from "./ai-provider-names";
 import { TermChip } from "./ai-terms";
 import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";
@@ -91,16 +96,25 @@ export function TaskDetails({
   row,
   health,
   providers,
+  lanesNeedingAKey,
   canTrace,
   custom,
 }: Readonly<{
   row: Feature;
   health: Health | undefined;
   providers: ProviderHealth | undefined;
+  // The saved bindings that hold no key, so this task's lane can be told from
+  // one that is merely idle.
+  lanesNeedingAKey?: readonly LaneKeyGap[];
   canTrace: boolean;
   custom: boolean;
 }>) {
   const t = useT();
+  const keyGap = laneKeyGap(
+    lanesNeedingAKey,
+    row.leading_tier,
+    startsOnDecision(row, blockedOnChain(row, providers)),
+  );
   return (
     <div className="ai-task-details">
       <p className="t-caption">
@@ -127,6 +141,14 @@ export function TaskDetails({
       {row.decision_skip_reason ? (
         <p className="t-caption">
           {decisionSkipLabel(row.decision_skip_reason, t)}
+        </p>
+      ) : null}
+      {keyGap ? (
+        <p className="t-caption">
+          {t("aiHealth.laneNeedsKey", {
+            provider: providerName(keyGap.provider, t),
+            env: keyGap.key_env,
+          })}
         </p>
       ) : null}
       <OutageNote row={row} providers={providers} />

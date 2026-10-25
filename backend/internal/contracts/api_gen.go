@@ -26236,6 +26236,17 @@ type AiHealth struct {
 	WindowHours int `json:"window_hours"`
 }
 
+// AiLaneNeedingAKey One saved binding whose vendor needs a key that is not held.
+type AiLaneNeedingAKey struct {
+	// KeyEnv The environment variable that would supply the key, named so an operator can act without looking it up.
+	KeyEnv string `json:"key_env"`
+
+	// Lane The lane the binding sits on, named as the router names it: a tier name, `embed` or `decide`.
+	Lane     string  `json:"lane"`
+	Model    *string `json:"model,omitempty"`
+	Provider string  `json:"provider"`
+}
+
 // AiModelRate One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
 type AiModelRate struct {
 	CacheReadPerMtok  string             `json:"cache_read_per_mtok"`
@@ -26826,10 +26837,13 @@ type AiStatus struct {
 	DeferredWork         []AiDeferredWork `json:"deferred_work"`
 	DeferredWorkCoverage string           `json:"deferred_work_coverage"`
 	Features             []AiFeatureRoute `json:"features"`
-	ObservedAt           time.Time        `json:"observed_at"`
-	RoutingVersion       string           `json:"routing_version"`
-	TaskContractHash     string           `json:"task_contract_hash"`
-	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
+
+	// LanesNeedingAKey The saved bindings that cannot run, because the vendor they name holds no key. The router keeps serving whatever it served before such a save, so without this the screen names a model that is not answering.
+	LanesNeedingAKey *[]AiLaneNeedingAKey `json:"lanes_needing_a_key,omitempty"`
+	ObservedAt       time.Time            `json:"observed_at"`
+	RoutingVersion   string               `json:"routing_version"`
+	TaskContractHash string               `json:"task_contract_hash"`
+	UnusedTiers      *[]string            `json:"unused_tiers,omitempty"`
 }
 
 // AiTask AI task key from the task catalog, used to localize its display name.
@@ -27805,7 +27819,7 @@ type Attachment struct {
 	// Checksum sha256 of the bytes, for integrity/dedupe.
 	Checksum *string `json:"checksum,omitempty"`
 
-	// CompanyId The account this file rolls up to, kept as a read path rather than a second parent. Visibility stays the primary parent's, and this is maintained on relink and merge so a file follows the record it belongs to.
+	// CompanyId The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
 	CompanyId   *openapi_types.UUID `json:"company_id,omitempty"`
 	ContentType *string             `json:"content_type,omitempty"`
 
@@ -27819,6 +27833,9 @@ type Attachment struct {
 	EntityType AttachmentEntityType `json:"entity_type"`
 	Filename   string               `json:"filename"`
 	Id         openapi_types.UUID   `json:"id"`
+
+	// Origin The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail.
+	Origin *AttachmentOrigin `json:"origin,omitempty"`
 
 	// Pinned Held at the top of the account's library. An assertion by a human, like the state.
 	Pinned *bool  `json:"pinned,omitempty"`
@@ -27899,6 +27916,22 @@ type AttachmentExtractionAcceptResponse struct {
 type AttachmentListResponse struct {
 	Data []Attachment `json:"data"`
 	Page PageInfo     `json:"page"`
+}
+
+// AttachmentOrigin The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail.
+type AttachmentOrigin struct {
+	// ActivityId The mail to open.
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Kind The activity kind the file arrived with: email, message.
+	Kind string `json:"kind"`
+
+	// OccurredAt When the mail was sent or received.
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// Sender One address on a message, resolved to a contact or a seat when it is one.
+	Sender  *EmailParty `json:"sender,omitempty"`
+	Subject *string     `json:"subject,omitempty"`
 }
 
 // AttachmentReadStarted The reading `readAttachmentForFields` started, or the one already in flight it joined.
@@ -35303,10 +35336,14 @@ type ContactNetwork struct {
 	// later replies they alone receive may be missing here. Information only: a seat
 	// listed here is not a route in, owns no work and may not send. An invited seat
 	// appears here and never in `colleagues`. At most ten are returned, most recent
-	// first.
-	CaptureGaps []ContactCaptureGap       `json:"capture_gaps"`
-	Colleagues  []ContactNetworkColleague `json:"colleagues"`
-	ContactId   openapi_types.UUID        `json:"contact_id"`
+	// first; `capture_gaps_total` counts them all.
+	CaptureGaps []ContactCaptureGap `json:"capture_gaps"`
+
+	// CaptureGapsTotal How many colleagues meet the `capture_gaps` condition in all. When it is larger
+	// than the length of `capture_gaps`, the list names only the most recent of them.
+	CaptureGapsTotal int                       `json:"capture_gaps_total"`
+	Colleagues       []ContactNetworkColleague `json:"colleagues"`
+	ContactId        openapi_types.UUID        `json:"contact_id"`
 }
 
 // ContactNetworkColleague One colleague's own relationship with this contact.

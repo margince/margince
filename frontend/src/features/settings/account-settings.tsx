@@ -35,6 +35,7 @@ import {
 } from "../../lib/theme";
 import { MfaSettingRow } from "../sign-in/mfacard";
 import { PasswordSettingRow } from "../sign-in/passwordcard";
+import { reloadReaderLanguageReads } from "./languagereads";
 import { NameSettingRows, useAccountNames } from "./settings-names";
 import { SignatureSettingRow } from "./settingssignaturerow";
 import { InstallSettingRow } from "./thisdevice";
@@ -176,6 +177,7 @@ function LanguageSettingRow() {
       setLocale(next);
       setDraft(null);
       void queryClient.invalidateQueries({ queryKey: ["me"] });
+      void reloadReaderLanguageReads(queryClient);
     },
   });
   const refusalId = useId();
