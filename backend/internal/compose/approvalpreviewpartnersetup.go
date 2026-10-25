@@ -43,7 +43,7 @@ func decodePartnerSetUpPreview(approval crmcontracts.Approval) (partnerSetUpPrev
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil {
-		return request, false, nil
+		return request, false, nil //nolint:nilerr // A malformed stored request is shown as incomplete.
 	}
 	if !crmcontracts.SetUpPartnerRequestPartnerRole(request.PartnerRole).Valid() {
 		return request, false, nil
@@ -53,7 +53,7 @@ func decodePartnerSetUpPreview(approval crmcontracts.Approval) (partnerSetUpPrev
 	}
 	if due := request.NextStepDueAt; due != nil {
 		if _, err := time.Parse(time.DateOnly, *due); err != nil {
-			return request, false, nil
+			return request, false, nil //nolint:nilerr // A malformed stored due date is shown as incomplete.
 		}
 	}
 	return request, true, nil

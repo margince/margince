@@ -35,6 +35,6 @@ func (changeState) routeTargets() map[string]string {
 		"demote":         "demote_lead",
 		"move_deal":      "progress_deal",
 		"move_project":   "advance_project_phase",
-		"set_up_partner": "set_up_partner",
+		"set_up_partner": setUpPartnerToolName,
 	}
 }

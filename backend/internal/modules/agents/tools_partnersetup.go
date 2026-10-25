@@ -61,9 +61,11 @@ type setUpPartner struct {
 	language baselanguage.Resolver
 }
 
+const setUpPartnerToolName = "set_up_partner"
+
 func (t setUpPartner) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "set_up_partner", Title: "Set up a partner program", Version: toolVersionV1,
+		Name: setUpPartnerToolName, Title: "Set up a partner program", Version: toolVersionV1,
 		Description: setUpPartnerCopy.render(),
 		Instead:     setUpPartnerCopy.Instead,
 		// Waits for a human even when a passport acts as its user. The web app

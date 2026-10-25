@@ -90,8 +90,8 @@ func TestTheAgentPartnerSetUpCannotCarryATier(t *testing.T) {
 }
 
 func reflectHasJSONField(t reflect.Type, name string) bool {
-	for i := range t.NumField() {
-		if strings.Split(t.Field(i).Tag.Get("json"), ",")[0] == name {
+	for field := range t.Fields() {
+		if strings.Split(field.Tag.Get("json"), ",")[0] == name {
 			return true
 		}
 	}

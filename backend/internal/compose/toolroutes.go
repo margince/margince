@@ -98,7 +98,7 @@ func (s Server) QualifyLead(w http.ResponseWriter, r *http.Request, id crmcontra
 // tool's own refusal.
 func (s Server) SetUpPartner(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.SetUpPartnerParams) {
 	serveToolCommand(w, r, s.toolRegistry.Invoke, "set_up_partner", reservedArgs{params.IdempotencyKey, params.XApprovalToken},
-		pathArgument{"company_id", id.String()})
+		pathArgument{refColCompany, id.String()})
 }
 
 // QueryWorkspace serves query_workspace.
