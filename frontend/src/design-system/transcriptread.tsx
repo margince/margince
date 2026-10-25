@@ -70,12 +70,7 @@ function TranscriptReadOutcome({
       </EmptyState>
     );
   }
-  return (
-    <TranscriptReadProposals
-      ids={report.proposal_ids}
-      detail={report.status_detail ?? null}
-    />
-  );
+  return <TranscriptReadProposals ids={report.proposal_ids} />;
 }
 
 // What became of what the reading staged.
@@ -93,10 +88,7 @@ function TranscriptReadOutcome({
 //
 // A hook cannot sit under a changing early return, which is why this is its own
 // component: the parent returns before it for a failed or empty reading.
-function TranscriptReadProposals({
-  ids,
-  detail,
-}: Readonly<{ ids: string[]; detail: string | null }>) {
+function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -171,16 +163,11 @@ function TranscriptReadProposals({
             })}
           </span>
         )}
-        {/* A suggestion staged for a colleague is refused to this reader
-            without revealing it exists, so its status reads as unavailable.
-            The reading's own sentence names who it went to, which is the
-            honest account of that case. */}
         {unreadable > 0 && (
           <span className="t-caption">
-            {detail ??
-              plural("transcriptread.statusUnknown", unreadable, {
-                count: formatNumber(unreadable, locale),
-              })}
+            {plural("transcriptread.statusUnknown", unreadable, {
+              count: formatNumber(unreadable, locale),
+            })}
           </span>
         )}
         {/* The worklist is where a pending suggestion is decided. Once none is,
