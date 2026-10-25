@@ -6,7 +6,7 @@
 // The tab draws all four; the room's own page draws the notice and the line.
 
 import { DoorOpen } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId } from "react";
 import type { components } from "../../../api/schema";
 import { requireVersion } from "../../../api/version";
 import { RoomStateBadge } from "../../../components/dealroom";
