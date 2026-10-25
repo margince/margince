@@ -49,7 +49,7 @@ func WithMessageVoices(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 	if actor, ok := principal.Actor(ctx); ok {
 		reader = actor.UserID
 	}
-	var unresolved []*crmcontracts.ActivityAuthor
+	var unresolved []unresolvedAuthor
 	for i := range page {
 		if !contentReadable(page[i]) {
 			continue
@@ -62,7 +62,7 @@ func WithMessageVoices(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 			author.IsReader = true
 		}
 		if author != nil && author.Kind == crmcontracts.ActivityAuthorKindUnresolved && author.Address != nil {
-			unresolved = append(unresolved, author)
+			unresolved = append(unresolved, unresolvedAuthor{activity: ids.UUID(page[i].Id), author: author})
 		}
 		page[i].Voice = &crmcontracts.ActivityVoice{Author: author}
 	}
@@ -103,11 +103,16 @@ func machineSent(a crmcontracts.Activity) bool {
 	return a.AutomaticKind != nil && *a.AutomaticKind == crmcontracts.ActivityAutomaticKindSendingSystem
 }
 
-// identifiedFirst prefers a party a seat or contact identifies over a bare
-// header address for the same role.
+// identifiedFirst prefers a party a seat or contact identifies. Next comes one
+// that states an address, and last a row the reader can name nothing from.
 func identifiedFirst(parties []crmcontracts.EmailParty) crmcontracts.EmailParty {
 	for _, p := range parties {
 		if p.UserId != nil || p.ContactId != nil {
+			return p
+		}
+	}
+	for _, p := range parties {
+		if p.Address != "" {
 			return p
 		}
 	}
@@ -232,66 +237,90 @@ func seatNamesFor(ctx context.Context, tx pgx.Tx, seats []ids.UUID) (map[ids.UUI
 	return out, rows.Err()
 }
 
-// resolveAuthorContacts names a sender stored as a bare address by the one
-// contact holding that address, within the reader's contact scope. An address
-// two contacts share names neither.
-func resolveAuthorContacts(ctx context.Context, tx pgx.Tx, authors []*crmcontracts.ActivityAuthor) error {
+// unresolvedAuthor is a sender stated only as an address, with its row.
+type unresolvedAuthor struct {
+	activity ids.UUID
+	author   *crmcontracts.ActivityAuthor
+}
+
+// authorCandidate is one live contact that may be a row's sender, and whether
+// the reader may see it.
+type authorCandidate struct {
+	Activity ids.UUID
+	Contact  ids.UUID
+	Name     *string
+	Visible  bool
+}
+
+// resolveAuthorContacts names a sender stated as a bare address by its contact.
+// The candidate is the From row's own contact when it names one, else every
+// live contact holding the address. It is decided over all contacts, so a
+// contact out of the reader's sight is never replaced by a visible namesake.
+// The one candidate is named only when the reader may see it.
+func resolveAuthorContacts(ctx context.Context, tx pgx.Tx, authors []unresolvedAuthor) error {
 	if len(authors) == 0 || !auth.ReadGranted(ctx, "contact") {
 		return nil
 	}
+	activityIDs := make([]ids.UUID, 0, len(authors))
 	addresses := make([]string, 0, len(authors))
 	for _, a := range authors {
-		addresses = append(addresses, correspondence.Fold(*a.Address))
+		activityIDs = append(activityIDs, a.activity)
+		addresses = append(addresses, correspondence.Fold(*a.author.Address))
 	}
-	args := []any{addresses}
+	args := []any{activityIDs, addresses}
 	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", func(v any) int { args = append(args, v); return len(args) })
 	if err != nil {
 		return err
 	}
-	visible := ""
-	if scope != "" {
-		visible = " AND (" + scope + ")"
+	if scope == "" {
+		scope = "true"
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT e.email, (array_agg(p.id))[1], (array_agg(p.full_name))[1]
-		  FROM contact_email e
-		  JOIN contact p ON p.id = e.contact_id AND p.archived_at IS NULL`+visible+`
-		 WHERE e.email = ANY($1) AND e.archived_at IS NULL
-		 GROUP BY e.email
-		HAVING count(DISTINCT p.id) = 1`, args...)
+		WITH wanted(activity_id, address) AS (SELECT * FROM unnest($1::uuid[], $2::text[])),
+		stated AS (
+		  SELECT DISTINCT ON (ap.activity_id) ap.activity_id, ap.contact_id
+		    FROM activity_participant ap JOIN wanted w ON w.activity_id = ap.activity_id
+		   WHERE ap.role = 'from' AND ap.contact_id IS NOT NULL
+		   ORDER BY ap.activity_id, ap.created_at, ap.id)
+		SELECT w.activity_id, cand.id, cand.full_name, cand.visible
+		  FROM wanted w
+		  LEFT JOIN stated s ON s.activity_id = w.activity_id
+		 CROSS JOIN LATERAL (
+		  SELECT p.id, p.full_name, coalesce(`+scope+`, false) AS visible
+		    FROM contact p
+		   WHERE p.archived_at IS NULL
+		     AND CASE WHEN s.contact_id IS NOT NULL THEN p.id = s.contact_id
+		              ELSE EXISTS (SELECT 1 FROM contact_email e
+		                            WHERE e.contact_id = p.id AND e.archived_at IS NULL AND e.email = w.address) END
+		   LIMIT 2) cand`, args...)
 	if err != nil {
 		return fmt.Errorf("activities: naming the senders of a page: %w", err)
 	}
-	type named struct {
-		id   ids.UUID
-		name *string
-	}
-	byAddress := map[string]named{}
-	for rows.Next() {
-		var address string
-		var n named
-		if err := rows.Scan(&address, &n.id, &n.name); err != nil {
-			rows.Close()
-			return fmt.Errorf("activities: naming the senders of a page: %w", err)
-		}
-		byAddress[address] = n
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+	candidates, err := pgx.CollectRows(rows, pgx.RowToStructByPos[authorCandidate])
+	if err != nil {
 		return fmt.Errorf("activities: naming the senders of a page: %w", err)
 	}
+	byActivity := make(map[ids.UUID][]authorCandidate, len(candidates))
+	for _, c := range candidates {
+		byActivity[c.Activity] = append(byActivity[c.Activity], c)
+	}
 	for _, a := range authors {
-		n, ok := byAddress[correspondence.Fold(*a.Address)]
-		if !ok {
-			continue
-		}
-		id := openapi_types.UUID(n.id)
-		a.ContactId, a.Kind = &id, crmcontracts.ActivityAuthorKindContactRecord
-		if n.name != nil && *n.name != "" {
-			a.DisplayName = n.name
-		}
+		nameAuthorContact(a.author, byActivity[a.activity])
 	}
 	return nil
+}
+
+// nameAuthorContact names the author by its one candidate contact, when the
+// reader may see it. Two candidates, or one out of sight, leave the address.
+func nameAuthorContact(author *crmcontracts.ActivityAuthor, candidates []authorCandidate) {
+	if len(candidates) != 1 || !candidates[0].Visible {
+		return
+	}
+	id := openapi_types.UUID(candidates[0].Contact)
+	author.ContactId, author.Kind = &id, crmcontracts.ActivityAuthorKindContactRecord
+	if name := candidates[0].Name; name != nil && *name != "" {
+		author.DisplayName = name
+	}
 }
 
 func contentReadable(a crmcontracts.Activity) bool {

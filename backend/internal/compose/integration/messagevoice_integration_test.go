@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -336,5 +337,74 @@ func briefSpeakerOf(t *testing.T, in contactbrief.Input, id openapi_types.UUID) 
 		}
 	}
 	t.Fatalf("the brief input does not carry activity %s", id)
+	return nil
+}
+
+// A From row that names a contact the reader may not see stays an address. The
+// address it states now belongs to a contact the reader does see, and that
+// namesake is never shown as the author.
+func TestAHiddenSenderIsNeverNamedAsAVisibleNamesake(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	hidden := e.SeedContact(t, "Ada Hidden", &e.Rep1)
+	filedUnder := e.SeedContact(t, "Cleo Visible", &e.Rep1)
+	address := commitmentMailAddress(t, e, hidden)
+	logger := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
+	logged, _, err := e.Activities.LogActivity(logger, activities.LogActivityInput{
+		Kind: "email", Subject: new("Contract question"), Body: new("Can we talk?"), Direction: new("inbound"),
+		EmailFrom: address,
+		Links: []activities.ActivityLinkInput{
+			{EntityType: "contact", EntityID: hidden}, {EntityType: "contact", EntityID: filedUnder},
+		},
+	})
+	if err != nil {
+		t.Fatalf("logging the mail: %v", err)
+	}
+	private := "owner"
+	if _, err := e.Contacts.UpdateContact(admin, ids.From[ids.ContactKind](hidden), contacts.UpdateContactInput{
+		Visibility: &private,
+		Emails:     []contacts.ContactEmailInput{{Email: "ada.new@buyer.example", EmailType: "work", IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("hiding the sender and moving their address: %v", err)
+	}
+	namesake := e.SeedContact(t, "Bea Namesake", &e.Rep2)
+	if _, err := e.Contacts.UpdateContact(admin, ids.From[ids.ContactKind](namesake), contacts.UpdateContactInput{
+		Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("giving the namesake the address: %v", err)
+	}
+
+	stranger := listedAuthorOn(t, e, e.Rep2, filedUnder, ids.UUID(logged.Id))
+	if stranger != nil && (stranger.ContactId != nil || stranger.DisplayName != nil && *stranger.DisplayName == "Bea Namesake") {
+		t.Errorf("a reader who cannot see the sender is shown author %+v, want the stated address only", stranger)
+	}
+	owner := listedAuthorOn(t, e, e.Rep1, filedUnder, ids.UUID(logged.Id))
+	if owner == nil || owner.ContactId == nil || ids.UUID(*owner.ContactId) != hidden {
+		t.Errorf("the sender's owner is shown author %+v, want the sender %v", owner, hidden)
+	}
+}
+
+// listedAuthorOn is the author one row carries on a contact's activity list.
+func listedAuthorOn(t *testing.T, e *Env, seat, contact, activityID ids.UUID) *crmcontracts.ActivityAuthor {
+	t.Helper()
+	reader := e.As(seat, []ids.UUID{e.Team1}, AccountRepPerms)
+	entity := "contact"
+	var listed []crmcontracts.Activity
+	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		listed, _, err = activities.ListActivitiesTx(reader, tx, activities.ListActivitiesInput{EntityType: &entity, EntityID: &contact})
+		return err
+	}); err != nil {
+		t.Fatalf("listing the activities: %v", err)
+	}
+	for _, a := range listed {
+		if ids.UUID(a.Id) == activityID {
+			if a.Voice == nil {
+				return nil
+			}
+			return a.Voice.Author
+		}
+	}
+	t.Fatalf("seat %v does not see the mail on the contact's list", seat)
 	return nil
 }
