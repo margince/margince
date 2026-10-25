@@ -21,7 +21,7 @@ type Contact = components["schemas"]["Contact"];
 // Merge-target search (P-2) over the list read. The detail line tells two
 // contacts of one name apart. A field the reader may not see arrives empty,
 // and it is left out with its separator.
-async function searchContactsTargets(
+export async function searchContactsTargets(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
   const data = unwrap(
@@ -32,6 +32,7 @@ async function searchContactsTargets(
   return data.data.map((candidate) => ({
     id: candidate.id,
     name: candidate.full_name,
+    writable: candidate.writable,
     detail:
       [
         candidate.employer?.company_name,

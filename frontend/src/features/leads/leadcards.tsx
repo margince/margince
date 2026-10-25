@@ -14,13 +14,14 @@ import {
 import type { RecordTimeline } from "../../design-system/recordtimeline";
 import { emailSummaryText } from "../../format/emailtext";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import type { Lead } from "./leads";
 import { type PromotionRecord, promotionSummary } from "./leads.promotion";
 import { usePromotePreview } from "./leads.qualify";
 import {
   evidenceText,
   LeadManualSignals,
+  listedFactors,
+  signalLabel,
   useLeadSignalCatalog,
   useManualSignals,
 } from "./leadsignals";
@@ -176,8 +177,8 @@ function KnowRow({
   live,
 }: Readonly<{ factor: string; live?: ManualSignal }>) {
   const t = useT();
-  const label = (key: string) => t(`lead.signal.${key}` as MessageKey);
-  const band = live ? label(`${factor}.${live.band}`) : undefined;
+  const label = (key: string, raw = key) => signalLabel(t, key, raw);
+  const band = live ? label(`${factor}.${live.band}`, live.band) : undefined;
   return (
     <OverviewRow
       title={label(factor)}
@@ -206,7 +207,6 @@ export function LeadKnowCard({
   const [adding, setAdding] = useState(false);
   const signals = useManualSignals(id);
   const catalog = useLeadSignalCatalog();
-  const factors = catalog.data ?? [];
   return (
     <OverviewCard
       title={t("lead.card.know")}
@@ -226,9 +226,9 @@ export function LeadKnowCard({
       {(signals.isError || catalog.isError) && (
         <ErrorLine error={signals.error ?? catalog.error} />
       )}
-      {signals.isSuccess && catalog.isSuccess && (
+      {signals.isSuccess && !catalog.isPending && (
         <OverviewList>
-          {factors.map(({ factor }) => (
+          {listedFactors(catalog.data, signals.data).map((factor) => (
             <KnowRow
               key={factor}
               factor={factor}

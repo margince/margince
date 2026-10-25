@@ -14,7 +14,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { isMessageKey, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
   leadManualSignalsKey,
@@ -42,6 +42,31 @@ export function useLeadSignalCatalog() {
     staleTime: 60 * 60 * 1000,
     queryFn: async () => unwrap(await api.GET("/lead-signal-catalog")).factors,
   });
+}
+
+/**
+ * The factors to list. The catalog is authoritative while it answers; when it
+ * does not (a client newer than its server), the factors already stored are
+ * listed so a recorded signal is never hidden by a missing catalog.
+ */
+export function listedFactors(
+  catalog: readonly SignalCatalogFactor[] | undefined,
+  stored: readonly ManualSignal[],
+): readonly SetSignalRequest["factor"][] {
+  if (catalog) {
+    return catalog.map(({ factor }) => factor);
+  }
+  return [...new Set(stored.map(({ factor }) => factor))];
+}
+
+/** A translated signal label, or the stored value as written when none exists. */
+export function signalLabel(
+  t: ReturnType<typeof useT>,
+  key: string,
+  raw: string,
+): string {
+  const full = `lead.signal.${key}`;
+  return isMessageKey(full) ? t(full) : raw;
 }
 
 const SIGNAL_KINDS: readonly SignalKind[] = ["fact", "assumption", "judgement"];
@@ -200,7 +225,7 @@ export function LeadManualSignals({
   const busy = set.isPending || clear.isPending;
   const canEdit = !readOnlyReason && !busy;
   const answered = factors.filter((entry) => !!answers[entry.factor]);
-  const label = (key: string) => t(`lead.signal.${key}` as MessageKey);
+  const label = (key: string, raw = key) => signalLabel(t, key, raw);
 
   // `reason` is what the rep typed and nothing else: the store refuses a
   // blank one, so the form never invents a sentence to get past it.
@@ -221,9 +246,9 @@ export function LeadManualSignals({
           say what is set, so nothing here claims "not entered". */}
       {signals.isPending && <span>{t("lead.scoreLoading")}</span>}
       <ErrorLine error={signals.error ?? catalog.error} />
-      {signals.isSuccess && catalog.isSuccess && (
+      {signals.isSuccess && (catalog.isSuccess || catalog.isError) && (
         <ul className="leadsignals-list">
-          {factors.map(({ factor: name }) => {
+          {listedFactors(catalog.data, signals.data).map((name) => {
             const entries = signals.data.filter(
               (entry: ManualSignal) => entry.factor === name,
             );
@@ -234,7 +259,7 @@ export function LeadManualSignals({
                 <span>{label(name)}</span>
                 {live ? (
                   <>
-                    <strong>{label(`${name}.${live.band}`)}</strong>
+                    <strong>{label(`${name}.${live.band}`, live.band)}</strong>
                     <Badge>
                       {live.points >= 0 ? "+" : ""}
                       {formatNumber(live.points, locale)}
@@ -279,7 +304,7 @@ export function LeadManualSignals({
                     key={`${entry.set_at}-${entry.band}`}
                   >
                     {t("lead.signalSuperseded", {
-                      value: label(`${name}.${entry.band}`),
+                      value: label(`${name}.${entry.band}`, entry.band),
                       source:
                         entry.superseded_by ?? t("lead.signalAutomaticSource"),
                     })}

@@ -53750,6 +53750,12 @@ components:
             The team or contact measured. Absent for workspace and managed_teams, which name
             no single subject.
         label: { type: string, description: "What to call this population on screen." }
+        assertable:
+          type: boolean
+          description: >-
+            Whether this caller may record a forecast call or issue a share about this
+            population. Absent from a server that predates the field; a screen then offers the
+            controls and the write route decides.
       additionalProperties: false
     AnalyticsCapabilities:
       type: object

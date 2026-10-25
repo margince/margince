@@ -27259,6 +27259,9 @@ type AnalyticsSchema struct {
 
 // AnalyticsScope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 type AnalyticsScope struct {
+	// Assertable Whether this caller may record a forecast call or issue a share about this population. Absent from a server that predates the field; a screen then offers the controls and the write route decides.
+	Assertable *bool `json:"assertable,omitempty"`
+
 	// Id The team or contact measured. Absent for workspace and managed_teams, which name no single subject.
 	Id *openapi_types.UUID `json:"id,omitempty"`
 

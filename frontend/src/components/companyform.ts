@@ -54,6 +54,7 @@ export async function searchCompanyTargets(
   return data.data.map((candidate) => ({
     id: candidate.id,
     name: candidate.display_name,
+    writable: candidate.writable,
     detail: candidate.domains?.find((domain) => domain.is_primary)?.domain,
   }));
 }

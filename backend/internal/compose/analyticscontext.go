@@ -118,8 +118,14 @@ func analyticsContextFor(ctx context.Context, tx pgx.Tx, now time.Time) (crmcont
 	// the backend will reject.
 	maySubmit := auth.Require(ctx, objectForecast, principal.ActionCreate) == nil
 
+	defaultScope := scopeToWire(def)
+	markAssertable(p, &defaultScope)
+	for i := range allowed {
+		markAssertable(p, &allowed[i])
+	}
+
 	return crmcontracts.AnalyticsContext{
-		DefaultScope:  scopeToWire(def),
+		DefaultScope:  defaultScope,
 		AllowedScopes: allowed,
 		Capabilities: crmcontracts.AnalyticsCapabilities{
 			// A caller whose default population is their own records has no
@@ -214,6 +220,25 @@ func scopeToWire(s ResolvedScope) crmcontracts.AnalyticsScope {
 		out.Id = ptrUUID(ids.UUID(*s.ID))
 	}
 	return out
+}
+
+// markAssertable says whether a forecast call or a share may name this scope,
+// by asking the rule ResolveAssertionScope applies, so the screen hides the
+// controls the write routes would refuse. managed_teams names several
+// populations and no write accepts it.
+func markAssertable(p principal.Principal, scope *crmcontracts.AnalyticsScope) {
+	assertable := false
+	if scope.Kind != crmcontracts.AnalyticsScopeKindManagedTeams {
+		var id *ids.UUID
+		if scope.Id != nil {
+			named := ids.UUID(*scope.Id)
+			id = &named
+		}
+		assertable = assertionLensRefusal(p,
+			RequestedScope{Kind: string(scope.Kind), ID: id},
+			ResolvedScope{Kind: string(scope.Kind), ID: id}) == nil
+	}
+	scope.Assertable = &assertable
 }
 
 func ptrUUID(id ids.UUID) *openapi_types.UUID {

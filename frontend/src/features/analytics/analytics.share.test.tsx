@@ -9,7 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
@@ -308,12 +308,15 @@ function serve(
 
 const FORECAST_CREATE: GrantSpec = { forecast: ["create"] };
 
-function mountActions(staleTime = 0) {
+function mountActions(
+  staleTime = 0,
+  scope: ComponentProps<typeof ForecastShareActions>["scope"] = {
+    kind: "workspace",
+    label: "Whole company",
+  },
+) {
   return render(
-    <ForecastShareActions
-      target="forecast"
-      scope={{ kind: "workspace", label: "Whole company" }}
-    />,
+    <ForecastShareActions target="forecast" scope={scope} />,
     staleTime,
   );
 }
@@ -327,6 +330,22 @@ function rowOf(population: string): HTMLElement {
 }
 
 describe("the links a reader has shared", () => {
+  it("withholds Share view for a scope the seat may read but not assert about", async () => {
+    serve(
+      { "GET /forecast/shares": () => json({ data: [] }) },
+      FORECAST_CREATE,
+    );
+    mountActions(0, {
+      kind: "team",
+      id: "t-9",
+      label: "South",
+      assertable: false,
+    });
+
+    await screen.findByRole("button", { name: "Shared links" });
+    expect(screen.queryByRole("button", { name: "Share view" })).toBeNull();
+  });
+
   it("shows neither verb and asks for no list to a seat without forecast:create", async () => {
     const calls = serve({}, { forecast: ["read"] });
     mountActions();

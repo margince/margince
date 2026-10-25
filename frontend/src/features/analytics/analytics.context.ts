@@ -103,12 +103,14 @@ export function reportScope(
  * write may not: a forecast or a share is an assertion about one named
  * population, and `managed_teams` covers several. Rather than pick one team on
  * the caller's behalf — a narrower claim than the number they are looking at —
- * this returns null and the surface withholds the action.
+ * this returns null and the surface withholds the action. The same holds for a
+ * scope the server marks `assertable: false`: the seat may read it, and the
+ * write routes would refuse it.
  */
 export function writableScope(
   scope: AnalyticsScope,
 ): { scope_kind: "workspace" | "team" | "owner"; scope_id?: string } | null {
-  if (scope.kind === "managed_teams") {
+  if (scope.kind === "managed_teams" || scope.assertable === false) {
     return null;
   }
   if (scope.kind === "workspace") {
