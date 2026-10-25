@@ -15,10 +15,9 @@ package integration
 // the page asks: it showed what was FILED here rather than what this human was
 // part of, and a contact copied on the whole negotiation had an empty timeline.
 //
-// The second half of this is what the page may then CLAIM. Links describe how a
-// message is filed; a participant row does not make one, so the payload must not
-// report a link that activity_link does not hold — a client acting on it, to
-// unfile the message from this contact, would act on nothing.
+// The second half is what the page may then CLAIM. A participant row names the
+// links activity_link holds, as /activities does, and never one for the
+// participant: a client unfiling that would act on nothing.
 
 import (
 	"slices"
@@ -65,7 +64,7 @@ func TestTheContactPageShowsAThreadTheContactWasOnlyCopiedOn(t *testing.T) {
 	if ids.UUID(row.Id) != ids.UUID(logged.Id) {
 		t.Fatalf("timeline row = %s, want the thread %s they were copied on", row.Id, logged.Id)
 	}
-	// And it does NOT claim a filing that does not exist: the one link it names
+	// And it does not claim a filing that does not exist: the one link it names
 	// is the counterparty's, the row activity_link holds.
 	var named []ids.UUID
 	if row.Links != nil {
