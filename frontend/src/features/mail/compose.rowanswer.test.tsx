@@ -230,6 +230,14 @@ describe("what a row offers to write", () => {
         offers_email: false,
       }),
     ],
+    [
+      "a kind a newer server sends",
+      {
+        ...row({ id: "x", kind: "note", offers_email: false }),
+        // Read off the wire, where the kind union does not bind.
+        ...JSON.parse('{"kind":"fax"}'),
+      },
+    ],
   ] as const)("offers nothing on %s", (_, activity) => {
     draw([ADDRESSED_CALL, activity], DEAL_PAGE);
 

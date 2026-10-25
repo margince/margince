@@ -16,5 +16,8 @@ export function rowAnswer(kind: Kind | undefined): "reply" | "about" {
     case "meeting":
     case "task":
       return "about";
+    default:
+      // A kind from a newer server is never mail this client can answer.
+      return "about";
   }
 }

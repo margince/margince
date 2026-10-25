@@ -128,7 +128,14 @@ export const DraftedBesideThread: StoryObj = {
       .getByRole("button", { name: "Bold" })
       .getBoundingClientRect();
     await expect(body.bottom).toBeLessThanOrEqual(toolbar.top);
-    await expect(toolbar.bottom).toBeLessThanOrEqual(send.top);
+    // The marks share the foot with Send, beside it or wrapped under it.
+    const apart =
+      toolbar.right <= send.left ||
+      send.right <= toolbar.left ||
+      toolbar.bottom <= send.top ||
+      send.bottom <= toolbar.top;
+    await expect(apart).toBe(true);
+    await expect(toolbar.bottom).toBeLessThanOrEqual(window.innerHeight);
     await expect(send.bottom).toBeLessThanOrEqual(window.innerHeight);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       window.innerWidth,

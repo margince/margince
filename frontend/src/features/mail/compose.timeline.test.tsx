@@ -256,7 +256,7 @@ describe("TimelineActions", () => {
         <TimelineActions activity={task} entityType="deal" entityId="d1" />
       </>,
     );
-    // The note's verb waits on the same contact read the task would.
+    // The note row is the positive control in the same render.
     await screen.findByRole("button", { name: "Write email" });
     expect(screen.getAllByRole("button", { name: "Write email" })).toHaveLength(
       1,

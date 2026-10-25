@@ -185,6 +185,24 @@ describe("a saved draft", () => {
     expect(query.get("anchor_id")).toBe("act-1");
   });
 
+  // A 200 that is not a draft keeps nothing, so the window stays open and says
+  // the save failed instead of restoring an empty shape.
+  it("stays open when the save answers something that is not a draft", async () => {
+    const onClose = vi.fn();
+    stubRoutes({
+      "GET /mail-drafts": () => jsonResponse(SAVED),
+      "PUT /mail-drafts": () => jsonResponse({ data: [], page: {} }),
+    });
+    render(composer(onClose));
+    await screen.findByText("Saved draft restored");
+    writeMessage("Body", "Finished after lunch");
+
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(await screen.findByText(/The draft was not saved/)).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("saves over the version it restored and closes", async () => {
     const onClose = vi.fn();
     const sent = stubRoutes({

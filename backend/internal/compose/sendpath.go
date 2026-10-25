@@ -347,6 +347,7 @@ func ColleagueDomainsFor(pool *pgxpool.Pool) ColleagueDomains {
 	return ColleagueDomains{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 }
 
+// Covers answers whether an address is at one of our vouched-for own domains.
 func (c ColleagueDomains) Covers(ctx context.Context) (func(address string) bool, error) {
 	own, err := c.store.Colleagues(ctx)
 	if err != nil {
