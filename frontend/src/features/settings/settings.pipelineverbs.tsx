@@ -74,6 +74,7 @@ export function PipelineRetirement({
   }
   return (
     <ArchiveAction
+      requires={{ object: "pipeline", action: "delete" }}
       label={t("pipeline.retire")}
       confirmText={t("pipeline.retireConfirm", { name: pipeline.name })}
       // The version travels as If-Match: retiring a pipeline somebody has

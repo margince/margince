@@ -290,6 +290,7 @@ export function DealActions({
           </>
         )}
         <ArchiveAction
+          requires={{ object: "deal", action: "delete" }}
           disabledReasonId={refusedReasonId}
           label={t("deal.archive")}
           confirmText={t("deal.archiveConfirm")}

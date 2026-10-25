@@ -17,10 +17,10 @@ import (
 )
 
 // StampActivitiesWritable sets Writable on a page of activities from the
-// question the update path asks: the object grant, then the row authority
-// that auth.ActivityWritableSubset answers for the whole page in one statement.
-// Every read that returns activities calls it, so the list, the single read and
-// the contact timeline cannot disagree about one row.
+// question the update path asks. That is the object grant, then the row
+// authority auth.ActivityWritableSubset answers for the whole page at once.
+// Every read that returns activities calls it, so the list, the single read
+// and the contact timeline cannot disagree about one row.
 func StampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
 	may := make(map[ids.UUID]bool)
 	err := auth.Require(ctx, "activity", principal.ActionUpdate)

@@ -247,6 +247,7 @@ describe("ProjectScreen", () => {
               offers_email: false,
               id: "act-1",
               kind: "email",
+              writable: true,
               subject: "Kickoff agenda",
               occurred_at: "2026-07-01T09:00:00Z",
               is_done: false,

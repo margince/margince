@@ -2311,6 +2311,8 @@ export const en = {
   "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange":
     "You cannot edit this company. Ask its owner to share it, or an administrator for edit rights.",
+  "record.actionRefused":
+    "Your role does not include this action. Ask an administrator for the right.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",

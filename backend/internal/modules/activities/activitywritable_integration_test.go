@@ -47,8 +47,8 @@ func (e *promiseEnv) seedLinkedNote(t *testing.T, contactOwner ids.UUID) (activi
 	return activityID
 }
 
-// The flag on the single read and on the list is the answer the update path
-// gives, so a rep with own scope is told a colleague's activity is read-only.
+// The flag on the single read and on the list is the update path's answer.
+// A rep with own scope is told a colleague's activity is read-only.
 func TestActivityReadsSayWhetherTheCallerMayChangeIt(t *testing.T) {
 	e := setupPromises(t)
 	mine := e.seedLinkedNote(t, e.rep)

@@ -2360,6 +2360,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
   "record.notYoursToChange":
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+  "record.actionRefused":
+    "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
   "record.logActivityRefused":
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
@@ -3895,7 +3897,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.followUps": "Folgeaufgaben",
   "activity.noFollowUps": "Keine Folgeaufgaben",
   "activity.notYoursToChange":
-    "Du kannst diese Aktivität nicht ändern. Bitte die Kollegin oder den Kollegen, zu der oder dem sie gehört, oder einen Admin um Bearbeitungsrechte.",
+    "Du kannst diese Aktivität nicht ändern. Frage einen Admin nach Bearbeitungsrechten.",
   "activity.files.empty": "Noch keine Dateien an dieser Aktivität.",
   "activity.files.title": "Dateien zu {subject}",
   "activity.followUpOpen": "Offen",
