@@ -26,9 +26,9 @@ import {
   useT,
 } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
+import { closeDayOf } from "../../../lib/closeday";
 import { useRecordZone } from "../../../lib/recordzone";
 import { activityMarks } from "../../../lib/standingmarks";
-import { closeDayOf } from "../closeday";
 import { useStageTimes } from "./dealstagehistory";
 import type { DealStandingInputs } from "./dealstanding";
 import { lastInbound, nextStepOf, standingOffer } from "./dealstanding";

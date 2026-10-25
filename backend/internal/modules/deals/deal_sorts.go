@@ -115,9 +115,9 @@ func orderByCloseDay(zone string) func(context.Context, func(any) int) (string, 
 // installation added.
 //
 // Value orders in the base currency, because raw minor units rank ¥150,000
-// above €1,000. Each cursor field carries a digest of the valuation. A cursor
-// minted under another base, day or zone is refused, because its key does not
-// compare with this page's values.
+// above €1,000. Each cursor field digests what its key depends on, so a cursor
+// minted under another base, day or zone is refused. The close day depends on
+// the zone alone, so a page continues across local midnight.
 func dealListVocabulary(v dealValuation) map[string]storekit.SortField {
 	vocab := maps.Clone(dealListFields)
 	vocab[dealAmountField] = storekit.SortField{
@@ -128,7 +128,7 @@ func dealListVocabulary(v dealValuation) map[string]storekit.SortField {
 	vocab[closeDayField] = storekit.SortField{
 		Kind:        fieldcatalog.TypeDate,
 		Expr:        orderByCloseDay(v.zone),
-		CursorField: "close_day:" + v.digest(),
+		CursorField: "close_day:" + digestOf(v.zone),
 	}
 	return vocab
 }
@@ -144,7 +144,11 @@ type dealValuation struct {
 // digest names the valuation in a cursor without spelling it out. Only
 // equality is ever asked of it.
 func (v dealValuation) digest() string {
-	sum := sha256.Sum256([]byte(v.base + "|" + v.day + "|" + v.zone))
+	return digestOf(v.base, v.day)
+}
+
+func digestOf(parts ...string) string {
+	sum := sha256.Sum256([]byte(strings.Join(parts, "|")))
 	return hex.EncodeToString(sum[:8])
 }
 

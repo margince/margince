@@ -67,7 +67,7 @@ func TestFollowUpsAreReadOnlyWhereTheReadersOwnDayIs(t *testing.T) {
 	reader := &countingAwaiting{rows: []AwaitedReply{{ActivityID: ids.NewV7(), SentAt: at}}}
 	for _, scope := range []TaskScope{TasksOwnedBy, TasksUnassigned} {
 		s := &Service{awaiting: reader, taskScope: scope}
-		scoped, refusals := s.readingAwaiting(context.Background(), at)
+		scoped, refusals := s.readingAwaiting(context.Background(), at, time.UTC)
 		if len(refusals) != 0 || len(scoped.followUps.rows) != 0 || scoped.followUps.read {
 			t.Errorf("scope %v read %d follow-ups, want none", scope, len(scoped.followUps.rows))
 		}
@@ -77,7 +77,7 @@ func TestFollowUpsAreReadOnlyWhereTheReadersOwnDayIs(t *testing.T) {
 	}
 	for _, scope := range []TaskScope{TasksMine, TasksVisible} {
 		s := &Service{awaiting: reader, taskScope: scope, now: func() time.Time { return at }}
-		scoped, refusals := s.readingAwaiting(context.Background(), at)
+		scoped, refusals := s.readingAwaiting(context.Background(), at, time.UTC)
 		if refusals[0] != nil || refusals[1] != nil || len(scoped.followUps.rows) != 1 {
 			t.Errorf("scope %v read %d follow-ups, want the reader's one", scope, len(scoped.followUps.rows))
 		}
@@ -111,7 +111,7 @@ func TestAFailedMeetingReadKeepsTheReplies(t *testing.T) {
 	} {
 		reader := &countingAwaiting{rows: []AwaitedReply{{ActivityID: ids.NewV7(), SentAt: at}}, meetingsErr: err}
 		s := &Service{awaiting: reader, taskScope: TasksMine, now: func() time.Time { return at }}
-		scoped, refusals := s.readingAwaiting(context.Background(), at)
+		scoped, refusals := s.readingAwaiting(context.Background(), at, time.UTC)
 		if len(scoped.followUps.rows) != 1 || refusals[0] != nil {
 			t.Errorf("%v: kept %d replies, refusal %v; want the one reply kept", err, len(scoped.followUps.rows), refusals[0])
 		}
@@ -198,7 +198,7 @@ func TestNoMeetingFollowUpRowIsDrawnWithoutAnAction(t *testing.T) {
 		}
 	}
 	s := &Service{awaiting: &countingAwaiting{meetings: reads}, taskScope: TasksMine, now: func() time.Time { return at }}
-	scoped, _ := s.readingAwaiting(context.Background(), at)
+	scoped, _ := s.readingAwaiting(context.Background(), at, time.UTC)
 	if len(scoped.followUps.rows) != len(reads)-1 {
 		t.Fatalf("%d rows from %d reads, want every read but the one naming no record", len(scoped.followUps.rows), len(reads))
 	}

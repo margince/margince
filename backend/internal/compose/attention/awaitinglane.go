@@ -80,23 +80,10 @@ func (s *Service) WithAwaiting(a Awaiting) *Service {
 // reader's own. They ride the reader's own day and the team and all views
 // that include it, never a colleague's queue or the unassigned one.
 // The two reads fail apart, so one stumbling keeps the other's rows.
-func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time) (*Service, []*crmcontracts.WorklistSourceUnavailable) {
+func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time, loc *time.Location) (*Service, []*crmcontracts.WorklistSourceUnavailable) {
 	scoped := *s
 	if s.awaiting == nil || s.taskScope == TasksOwnedBy || s.taskScope == TasksUnassigned {
 		return &scoped, nil
-	}
-	var loc *time.Location
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
-		var zoneErr error
-		loc, zoneErr = s.location(ctx)
-		return zoneErr
-	})
-	if err != nil {
-		slog.Log(ctx, laneFailureLevel(ctx), "the installation zone failed, so follow-ups cannot be aged", "error", err)
-		failed := func(source string) *crmcontracts.WorklistSourceUnavailable {
-			return &crmcontracts.WorklistSourceUnavailable{Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed}
-		}
-		return &scoped, []*crmcontracts.WorklistSourceUnavailable{failed(sourceAwaitingReply), failed(sourceMeetingFollowUp)}
 	}
 	replies, cut, repliesErr := s.readFollowUps(ctx, sourceAwaitingReply, asOf, s.awaiting.AwaitingReplies)
 	meetings, meetingsCut, meetingsErr := s.readFollowUps(ctx, sourceMeetingFollowUp, asOf, s.awaiting.MeetingFollowUps)

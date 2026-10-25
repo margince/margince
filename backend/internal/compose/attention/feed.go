@@ -324,7 +324,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 		out.Counts.DealSuggestionsOpen = count.suggestions
 		out.Counts.TagSuggestionsOpen = count.tagSuggestions
 	})
-	beside := besideDay{failed: count.failed, until: until}
+	beside := besideDay{failed: count.failed, until: until, zone: loc}
 	if err != nil {
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
