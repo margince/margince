@@ -9,16 +9,17 @@ package gates
 //
 // Over means ENDED: start plus duration for an hour, the end of its date in the
 // installation zone for a day. A copy of the end once called a day meeting over
-// at its stored noon. So a literal outside the owner that adds a duration to a
-// start is a finding.
+// at its stored noon. So a statement outside the owner that adds a duration to
+// a start is a finding, unless that line of SQL says why only an instant can
+// reach it: `-- meeting end: <reason>`.
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -36,58 +37,58 @@ var (
 	// interval made from seconds, or seconds multiplied by one.
 	meetingEndSpelling = regexp.MustCompile(`make_interval\(\s*secs\s*=>\s*coalesce\([^)]*duration_seconds|` +
 		`duration_seconds[^']*\*\s*interval\s*'1\s*second'`)
-	// meetingSlotSpellings hold a host's calendar hour, which only an instant
-	// has, so they add a duration to a start no day meeting reaches.
-	meetingSlotSpellings = gatekit.Waive(map[string]string{
-		filepath.Join("internal", "modules", "activities", "scheduling.go"): "the host's busy hours for booking, read " +
-			"with occurred_precision = 'instant': a day meeting holds no hour of the calendar",
-		filepath.Join("internal", "modules", "activities", "scheduling_occupancy.go"): "the slots a host's meetings " +
-			"hold, and a meeting that holds one is an instant (refuseDayHeldSlot)",
-	})
+	// meetingEndWaiver is the marker a statement carries on the spelling's line.
+	meetingEndWaiver = regexp.MustCompile(`--\s*meeting end:\s*\S+(?:\s+\S+){2,}`)
 )
 
-// meetingEndLiterals counts the string literals in file that spell a meeting's end.
-func meetingEndLiterals(file *ast.File) int {
-	found := 0
-	ast.Inspect(file, func(n ast.Node) bool {
-		lit, ok := n.(*ast.BasicLit)
-		if !ok || lit.Kind != token.STRING {
-			return true
+// meetingEnds counts the spellings of a meeting's end in file's statements, and
+// how many carry no waiver on their own line.
+func meetingEnds(file *ast.File) (spelled, unwaived int) {
+	for _, statement := range gatekit.SQLStatementsOf(file) {
+		for _, at := range meetingEndSpelling.FindAllStringIndex(statement, -1) {
+			spelled++
+			lineEnd := strings.IndexByte(statement[at[1]:], '\n')
+			if lineEnd < 0 {
+				lineEnd = len(statement) - at[1]
+			}
+			lineStart := strings.LastIndexByte(statement[:at[1]], '\n') + 1
+			if !meetingEndWaiver.MatchString(statement[lineStart : at[1]+lineEnd]) {
+				unwaived++
+			}
 		}
-		text, err := strconv.Unquote(lit.Value)
-		if err == nil && meetingEndSpelling.MatchString(text) {
-			found++
-		}
-		return true
-	})
-	return found
+	}
+	return spelled, unwaived
 }
 
 func TestAMeetingsEndIsSpelledOnce(t *testing.T) {
 	t.Parallel()
 	scope := gatekit.Scope{
 		Roots:   []string{"internal"},
-		Subject: func(_ string, file *ast.File) bool { return meetingEndLiterals(file) > 0 },
+		Subject: func(_ string, file *ast.File) bool { spelled, _ := meetingEnds(file); return spelled > 0 },
 		Exempt:  gatekit.Waive(map[string]string{}),
 	}
-	owned := false
+	owned, waived := false, 0
 	for _, src := range scope.Files(t) {
 		if filepath.Clean(src.Path) == meetingEndOwner {
 			owned = true
 			continue
 		}
-		if meetingSlotSpellings.Waived(t, filepath.Clean(src.Path)) {
-			continue
+		spelled, unwaived := meetingEnds(src.File)
+		waived += spelled - unwaived
+		if unwaived > 0 {
+			t.Errorf("%s spells a meeting's end itself %d times. Ask occurredday.EndSQL, or "+
+				"storekit.MeetingIsOverSQL for \"is it over\": a copy misses the day meeting that "+
+				"ends with its date, not at its stored noon. If only an instant can reach it, say "+
+				"why on its line: -- meeting end: <reason>", src.Path, unwaived)
 		}
-		t.Errorf("%s spells a meeting's end itself. Ask occurredday.EndSQL, or "+
-			"storekit.MeetingIsOverSQL for \"is it over\": a copy misses the day "+
-			"meeting that ends with its date, not at its stored noon", src.Path)
 	}
 	if !owned {
 		t.Errorf("%s no longer spells a meeting's end where this census looks, so it "+
 			"would report a pass having seen nothing. Re-derive the pattern from the owner", meetingEndOwner)
 	}
-	meetingSlotSpellings.AssertAllMatched(t)
+	if waived < 3 {
+		t.Errorf("found %d waived meeting-end spellings, want the host-slot reads' 3: the census reads less than it should", waived)
+	}
 }
 
 // The census sees both spellings of an end, so a copy written the other way
@@ -105,6 +106,19 @@ func TestTheMeetingEndCensusSeesBothSpellings(t *testing.T) {
 	}
 	if meetingEndSpelling.MatchString("m.duration_seconds > 0 AND m.kind = 'meeting'") {
 		t.Error("the census reads a bare duration as a meeting's end")
+	}
+	for statement, want := range map[string]int{
+		"SELECT m.occurred_at + make_interval(secs => coalesce(m.duration_seconds, 0)) FROM activity m":                               1,
+		"SELECT m.occurred_at + make_interval(secs => coalesce(m.duration_seconds, 0)) -- meeting end: an instant read\n FROM x":      0,
+		"SELECT m.occurred_at + make_interval(secs => coalesce(m.duration_seconds, 0))\n -- meeting end: a later line waives nothing": 1,
+	} {
+		file, err := parser.ParseFile(token.NewFileSet(), "seeded.go", "package p\nconst q = `"+statement+"`\n", 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, unwaived := meetingEnds(file); unwaived != want {
+			t.Errorf("%q has %d unwaived spellings, want %d", statement, unwaived, want)
+		}
 	}
 }
 

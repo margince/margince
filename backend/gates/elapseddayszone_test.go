@@ -8,15 +8,16 @@ package gates
 // A day count is reckoned in the zone the sentence is drawn in.
 //
 // elapsed.Days takes the zone as its third argument so a caller cannot forget
-// it, and occurredday's day counts take it last. This gate fails the two ways a
-// caller can still count in UTC. One is passing time.UTC, time.Local or nil as
-// the zone. The other is flooring to a UTC day by hand with
-// Truncate(24 * time.Hour) in a file that counts days.
+// it, and occurredday's date readers and the brief's day counts take it last.
+// This gate fails the two ways a caller can still count in UTC. One is passing
+// time.UTC, time.Local or nil as the zone. The other is flooring to a UTC day
+// by hand with Truncate(24 * time.Hour) in a file that counts days.
 //
 // The subject is derived from the tree: every non-test Go file under internal/
-// that imports shared/kernel/elapsed or occurredday. The UTC day floors that stay
-// are dates of rates, rollups and automation clocks. They are not reader
-// sentences, and none of those files imports elapsed.
+// that imports shared/kernel/elapsed or occurredday, or calls the brief's day
+// counts. The UTC day floors that stay are dates of rates, rollups and
+// automation clocks. They are not reader sentences, and none of those files
+// imports elapsed.
 
 import (
 	"go/ast"
@@ -33,8 +34,15 @@ const (
 	occurreddayImport = `"github.com/margince/margince/backend/internal/shared/kernel/occurredday"`
 )
 
-// occurreddayDayCounts are occurredday's day counts, each taking the zone last.
-var occurreddayDayCounts = map[string]bool{"DaysSince": true, "DaysBetween": true}
+// occurreddayDayCounts are occurredday's readers of a date in a zone, each
+// taking the zone last.
+var occurreddayDayCounts = map[string]bool{
+	"DaysSince": true, "DaysBetween": true, "DateIn": true, "Begun": true, "AnchorIn": true, "Ended": true,
+	"MeetingTookPlace": true, "Happened": true,
+}
+
+// briefDayCounts are meetingbrief.Occurred's day counts, which take the zone last too.
+var briefDayCounts = map[string]bool{"daysAgo": true, "daysUntil": true}
 
 // minElapsedCallers is the floor under the census: fewer files than this means
 // the walk is reading a smaller tree than the one that has callers.
@@ -56,16 +64,23 @@ func TestEveryDayCountNamesAZone(t *testing.T) {
 func TestTheZoneGateSeesEachWayToCountInUTC(t *testing.T) {
 	t.Parallel()
 	cases := map[string]string{
-		"nil zone":           `_ = elapsed.Days(a, b, nil)`,
-		"time.UTC":           `_ = elapsed.Days(a, b, time.UTC)`,
-		"time.Local":         `_ = elapsed.Days(a, b, time.Local)`,
-		"hand floor":         `_ = a.UTC().Truncate(24 * time.Hour)`,
-		"named hours floor":  `_ = a.UTC().Truncate(hoursPerDay * time.Hour)`,
-		"day count in UTC":   `_ = occurredday.DaysSince(a, true, b, time.UTC)`,
-		"day gap in no zone": `_ = occurredday.DaysBetween(a, false, b, true, nil)`,
+		"nil zone":            `_ = elapsed.Days(a, b, nil)`,
+		"time.UTC":            `_ = elapsed.Days(a, b, time.UTC)`,
+		"time.Local":          `_ = elapsed.Days(a, b, time.Local)`,
+		"hand floor":          `_ = a.UTC().Truncate(24 * time.Hour)`,
+		"named hours floor":   `_ = a.UTC().Truncate(hoursPerDay * time.Hour)`,
+		"day count in UTC":    `_ = occurredday.DaysSince(m, b, time.UTC)`,
+		"day gap in no zone":  `_ = occurredday.DaysBetween(m, n, nil)`,
+		"date in UTC":         `_ = occurredday.DateIn(m, time.UTC)`,
+		"begun in no zone":    `_ = occurredday.Begun(m, b, nil)`,
+		"anchor in local":     `_ = occurredday.AnchorIn(b, time.Local)`,
+		"ended in UTC":        `_ = occurredday.Ended(a, b, time.UTC)`,
+		"meeting held in UTC": `_ = occurredday.MeetingTookPlace(m, b, time.UTC)`,
+		"brief age in UTC":    `_ = o.daysAgo(b, time.UTC)`,
+		"brief gap in none":   `_ = o.daysUntil(p, nil)`,
 	}
 	for name, body := range cases {
-		src := "package p\nimport (\n\"time\"\n" + elapsedImport + "\n)\nfunc f(a, b time.Time) {\n" + body + "\n}\n"
+		src := "package p\nimport (\n\"time\"\n" + elapsedImport + "\n)\nfunc f(a, b time.Time, m, n occurredday.Moment) {\n" + body + "\n}\n"
 		if got := zonelessDayCounts(t, "seeded.go", []byte(src)); len(got) == 0 {
 			t.Errorf("%s: the gate did not flag %q", name, body)
 		}
@@ -93,7 +108,8 @@ func elapsedCallerFiles(t *testing.T) []string {
 		if err != nil {
 			return err
 		}
-		counts := strings.Contains(string(raw), elapsedImport) || strings.Contains(string(raw), occurreddayImport)
+		counts := strings.Contains(string(raw), elapsedImport) || strings.Contains(string(raw), occurreddayImport) ||
+			strings.Contains(string(raw), ".daysAgo(") || strings.Contains(string(raw), ".daysUntil(")
 		if counts && !strings.HasPrefix(path, filepath.Join("internal", "shared", "kernel", "elapsed")) {
 			out = append(out, path)
 		}
@@ -134,9 +150,9 @@ func zonelessDayCounts(t *testing.T, path string, src []byte) []string {
 			if len(call.Args) != 3 || isUTCZone(call.Args[2]) {
 				out = append(out, where+": elapsed.Days needs the zone the sentence is drawn in as its third argument, not nil, time.UTC or time.Local")
 			}
-		case isIdent(sel.X, "occurredday") && occurreddayDayCounts[sel.Sel.Name]:
+		case isIdent(sel.X, "occurredday") && occurreddayDayCounts[sel.Sel.Name], briefDayCounts[sel.Sel.Name]:
 			if len(call.Args) == 0 || isUTCZone(call.Args[len(call.Args)-1]) {
-				out = append(out, where+": occurredday."+sel.Sel.Name+" needs the zone the sentence is drawn in as its last argument, not nil, time.UTC or time.Local")
+				out = append(out, where+": "+sel.Sel.Name+" needs the zone the sentence is drawn in as its last argument, not nil, time.UTC or time.Local")
 			}
 		case sel.Sel.Name == "Truncate" && len(call.Args) == 1 && isDayDuration(call.Args[0]):
 			out = append(out, where+": Truncate by a day floors to a UTC day; use elapsed.CalendarDay with the reader's zone")

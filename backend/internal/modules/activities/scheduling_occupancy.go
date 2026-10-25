@@ -19,11 +19,11 @@ const occupiesHostSlotSQL = `(a.claims_host_slot OR EXISTS(SELECT 1 FROM meeting
 func localMeetingSlots(ctx context.Context, tx pgx.Tx, host ids.UserID, from, to time.Time, exclude ids.UUID) ([]slot, error) {
 	args := schedulingArgs{}
 	h, f, t, id := args.add(host), args.add(from), args.add(to), args.add(exclude)
-	rows, err := tx.Query(ctx, `SELECT occurred_at,occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second'
+	rows, err := tx.Query(ctx, `SELECT occurred_at,occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second' -- meeting end: only an instant holds an hour of the host calendar (refuseDayHeldSlot)
  FROM activity a WHERE host_user_id=`+h+` AND id<>`+id+` AND kind='meeting' AND archived_at IS NULL
  AND `+occupiesHostSlotSQL+`
  AND meeting_status IS DISTINCT FROM 'canceled' AND occurred_at<`+t+`
- AND occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second'>`+f+`
+ AND occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second'>`+f+` -- meeting end: only an instant holds an hour of the host calendar (refuseDayHeldSlot)
  UNION ALL SELECT (appointment->>'Start')::timestamptz,(appointment->>'End')::timestamptz
  FROM meeting_invitation WHERE host_user_id=`+h+` AND activity_id<>`+id+`
  AND command='update' AND status IN ('rescheduling','needs_attention')

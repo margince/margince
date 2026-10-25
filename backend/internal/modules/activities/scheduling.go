@@ -168,7 +168,7 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 			SELECT a.occurred_at, CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END FROM activity a
 			WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND a.occurred_precision = 'instant'
 			  AND a.host_user_id = $%d
-			  AND a.occurred_at + (CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END) * interval '1 second' > $%d
+			  AND a.occurred_at + (CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END) * interval '1 second' > $%d -- meeting end: this read takes instants alone, the rows that hold a host hour
 			  AND a.occurred_at < $%d
 			  AND a.meeting_status IS DISTINCT FROM 'canceled'
 			  AND %s
