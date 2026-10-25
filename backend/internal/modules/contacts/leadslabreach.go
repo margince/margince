@@ -154,8 +154,8 @@ func stampDayAnswers(ctx context.Context, tx pgx.Tx, now time.Time) error {
 const dayAnswerPage = 500
 
 // dayAnswerCandidates are the leads after `after`, in id order, holding a day
-// touch that may answer them by now: one mayAnswerSQL admits, whose answer the
-// lead takes (leadTakesFirstResponseSQL), as the subscriber's write asks.
+// touch that may answer them by now. mayAnswerSQL admits the touch, and the
+// lead takes its answer (leadTakesFirstResponseSQL), as the subscriber's write asks.
 func dayAnswerCandidates(ctx context.Context, tx pgx.Tx, now time.Time, after ids.LeadID) ([]ids.LeadID, error) {
 	proven := occurredday.ProvenSQL("a")
 	rows, err := tx.Query(ctx, `

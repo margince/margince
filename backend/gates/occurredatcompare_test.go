@@ -761,8 +761,8 @@ func TestTheCensusSeesAColumnHandedToAHelper(t *testing.T) {
 	}
 }
 
-// A helper handing back an activity's occurred_at aggregated raw is a finding
-// where a caller orders it, on either side, unless a waiver stands beside it.
+// A helper may hand back an activity's occurred_at aggregated raw. A caller
+// ordering it on either side is a finding, unless a waiver stands beside it.
 func TestTheCensusSeesARawTimeAHelperHandsBack(t *testing.T) {
 	t.Parallel()
 	const raw = "package p\nfunc cited(e string) string { return `(SELECT max(a.occurred_at) FROM activity a WHERE ` + e + `)` }\n"

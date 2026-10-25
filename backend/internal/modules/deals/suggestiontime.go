@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 func suggestionSourceTimes(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (bool, error) {
@@ -67,4 +68,47 @@ func (s *Store) supersedeIfBuyerChanged(ctx context.Context, tx pgx.Tx, current 
 		return false, err
 	}
 	return true, supersedeTx(ctx, tx, current.ID, nil)
+}
+
+// placed is when the item counts as having happened against the floor: a day
+// entry when its date begins in zone, as occurredday.StartSQL places it.
+func (e SuggestionEvidence) placed(zone *time.Location) time.Time {
+	if e.DateOnly {
+		return occurredday.Begins(e.OccurredAt, zone)
+	}
+	return e.OccurredAt
+}
+
+// evidenceStandsTx says whether the draft's evidence still stands: each item
+// is at its source's time and past the company's floor. It answers the newest
+// item's time with it.
+func evidenceStandsTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft, zone *time.Location) (time.Time, bool, error) {
+	if zone == nil {
+		return time.Time{}, false, errors.New("deals: recording a suggestion needs the installation zone")
+	}
+	current, err := suggestionSourceTimes(ctx, tx, d.Evidence)
+	if err != nil || !current {
+		return time.Time{}, false, err
+	}
+	floor, err := suggestionFloorTx(ctx, tx, d.CompanyID)
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	through, past := evidenceThrough(d.Evidence, floor, zone)
+	return through, past, nil
+}
+
+// evidenceThrough is the newest item's time, and whether every item falls
+// after floor where zone places it. A nil floor admits every item.
+func evidenceThrough(evidence []SuggestionEvidence, floor *time.Time, zone *time.Location) (time.Time, bool) {
+	through := evidence[0].OccurredAt
+	for _, e := range evidence {
+		if floor != nil && !e.placed(zone).After(*floor) {
+			return time.Time{}, false
+		}
+		if e.OccurredAt.After(through) {
+			through = e.OccurredAt
+		}
+	}
+	return through, true
 }

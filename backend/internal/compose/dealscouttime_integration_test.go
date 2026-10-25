@@ -75,7 +75,7 @@ func (e *scoutEnv) dayMeeting(t *testing.T, contact ids.UUID, date time.Time) de
 }
 
 // A day meeting falls past a dismissal by its date, as the scout's SQL places
-// it: one dated the dismissal's own date began before it and is refused.
+// it. One dated the dismissal's own date began before it, so it is refused.
 func TestTheWriterPlacesADayMeetingByItsDateAgainstTheFloor(t *testing.T) {
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
@@ -92,8 +92,10 @@ func TestTheWriterPlacesADayMeetingByItsDateAgainstTheFloor(t *testing.T) {
 		t.Fatal(err)
 	}
 	draft := func(evidence deals.SuggestionEvidence) deals.SuggestionDraft {
-		return deals.SuggestionDraft{CompanyID: acme, NameHint: deals.HintMeetingHeld, Confidence: 0.6,
-			Evidence: []deals.SuggestionEvidence{evidence}}
+		return deals.SuggestionDraft{
+			CompanyID: acme, NameHint: deals.HintMeetingHeld, Confidence: 0.6,
+			Evidence: []deals.SuggestionEvidence{evidence},
+		}
 	}
 
 	if raised, err := e.record(e.system(), t, draft(e.dayMeeting(t, dana, date))); err != nil || raised {

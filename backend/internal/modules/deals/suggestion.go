@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // suggestionEntity names a suggestion in its audit rows and events.
@@ -55,15 +54,6 @@ type SuggestionEvidence struct {
 	OccurredAt   time.Time
 	// DateOnly says OccurredAt is a day entry's anchor: only its date is known.
 	DateOnly bool
-}
-
-// placed is when the item counts as having happened against the floor: a day
-// entry when its date begins in zone, as occurredday.StartSQL places it.
-func (e SuggestionEvidence) placed(zone *time.Location) time.Time {
-	if e.DateOnly {
-		return occurredday.Begins(e.OccurredAt, zone)
-	}
-	return e.OccurredAt
 }
 
 // ref is the item's own id, whichever column carries it.
@@ -196,29 +186,13 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft, zone 
 	if err := validDraft(d); err != nil {
 		return false, err
 	}
-	if zone == nil {
-		return false, errors.New("deals: recording a suggestion needs the installation zone")
-	}
-	current, err := suggestionSourceTimes(ctx, tx, d.Evidence)
-	if err != nil || !current {
+	through, stands, err := evidenceStandsTx(ctx, tx, d, zone)
+	if err != nil || !stands {
 		return false, err
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return false, err
-	}
-	floor, err := suggestionFloorTx(ctx, tx, d.CompanyID)
-	if err != nil {
-		return false, err
-	}
-	through := d.Evidence[0].OccurredAt
-	for _, e := range d.Evidence {
-		if floor != nil && !e.placed(zone).After(*floor) {
-			return false, nil
-		}
-		if e.OccurredAt.After(through) {
-			through = e.OccurredAt
-		}
 	}
 	cited, err := evidenceRaisedOnDuplicateTx(ctx, tx, d)
 	if err != nil || cited {

@@ -88,10 +88,10 @@ func firstResponseAtSQL(alias, at string) string {
 }
 
 // leadTakesFirstResponseSQL is whether the live lead under alias takes a
-// response at `at` as its first: none is stamped, or a later one is. The
+// response at `at` as its first: no stamp holds it back that is not later. The
 // subscriber's write and the day-answer sweep both ask it.
 func leadTakesFirstResponseSQL(alias, at string) string {
-	return fmt.Sprintf(`(%[1]s.archived_at IS NULL AND (%[1]s.first_response_at IS NULL OR %[1]s.first_response_at > %[2]s))`,
+	return fmt.Sprintf(`(%[1]s.archived_at IS NULL AND coalesce(%[1]s.first_response_at > %[2]s, true))`,
 		alias, firstResponseAtSQL(alias, at))
 }
 
@@ -181,7 +181,7 @@ func recordFirstResponseTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, at
 		}
 		var current *time.Time
 		var takes bool
-		// A backdated activity can predate the lead it answers. The FIRST
+		// A backdated activity can predate the lead it answers. The first
 		// response is the earliest one, since the bus is at-least-once and
 		// unordered; a later or equal stamp is a replay and a no-op.
 		if err := tx.QueryRow(ctx, `SELECT first_response_at, `+firstResponseAtSQL("lead", "$2")+`, `+

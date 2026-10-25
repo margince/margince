@@ -180,8 +180,8 @@ type leadResponseTouch struct {
 // provenance instead.
 const activitySourceManual = "manual"
 
-// touchOutbound and touchNote are the direction and kind §18.1 compares. Named
-// once so mayAnswerSQL renders the literals the Go rule reads.
+// touchOutbound and touchNote are the direction and kind the first-response
+// rule compares, so mayAnswerSQL renders the literals the Go rule reads.
 const (
 	touchOutbound = "outbound"
 	touchNote     = "note"
