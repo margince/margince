@@ -577,5 +577,9 @@ const (
 	// 138: contacts.SignatureFieldSourcesTx pages the signature fields for the
 	// repair data task, as the system actor over the whole workspace. The ids
 	// go only to RetractSignatureFieldsByIDTx, ratified in writesWithoutARowProbe.
-	modulesTierUnscopedCeiling = 138
+	//
+	// 139: contacts.primaryEmployersOf lists every current employee of the
+	// company a merge retires, past the reader's scope, because the merge moves
+	// every edge. The ids go only to the merge's twin re-check; none is returned.
+	modulesTierUnscopedCeiling = 139
 )
