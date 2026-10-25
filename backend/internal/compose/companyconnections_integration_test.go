@@ -57,7 +57,7 @@ func TestConnectorCapturedMailPutsAColleagueOnTheAccount(t *testing.T) {
 	now := time.Now().UTC()
 
 	// A contact, and mail that arrived the way real mail arrives: through a
-	// connector, stamped `connector:gmail`, naming no human on the activity.
+	// connector, stamped `connector:gmail:<seat>` for the mailbox it came from.
 	var contact ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
@@ -74,8 +74,8 @@ func TestConnectorCapturedMailPutsAColleagueOnTheAccount(t *testing.T) {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO activity (kind, subject, direction, occurred_at, source, captured_by)
-			VALUES ('email', 'Angebot', 'inbound', $1, 'gmail:m-1', 'connector:gmail')
-			RETURNING id`, now.AddDate(0, 0, -1)).Scan(&activityID); err != nil {
+			VALUES ('email', 'Angebot', 'inbound', $1, 'gmail:m-1', 'connector:gmail:' || $2::text)
+			RETURNING id`, now.AddDate(0, 0, -1), owner).Scan(&activityID); err != nil {
 			return err
 		}
 		// The participant rows capture stamps: the mailbox owner and the
