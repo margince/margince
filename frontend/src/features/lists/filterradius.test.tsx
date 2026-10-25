@@ -63,4 +63,28 @@ describe("the radius value editor", () => {
     type("filters.radius.lat", "91");
     expect(seen.at(-1)).toBe("");
   });
+
+  it("shows the tree's operand again when the tree changes it without the editor", () => {
+    const stored = { lat: 48.77, lon: 9.18, radius_km: 50 };
+    const view = (value: LeafValue) => (
+      <StoryProviders>
+        <ValueControl
+          type="distance"
+          references={undefined}
+          options={undefined}
+          op="within_radius"
+          value={value}
+          onChange={() => {}}
+        />
+      </StoryProviders>
+    );
+    const { rerender } = render(view(stored));
+    fireEvent.change(screen.getByLabelText(en["filters.radius.km"]), {
+      target: { value: "7" },
+    });
+    rerender(view({ ...stored }));
+    expect(screen.getByLabelText(en["filters.radius.km"])).toHaveValue("50");
+    rerender(view(""));
+    expect(screen.getByLabelText(en["filters.radius.lat"])).toHaveValue("");
+  });
 });

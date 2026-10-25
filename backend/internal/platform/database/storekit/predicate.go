@@ -28,6 +28,7 @@ package storekit
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -122,6 +123,9 @@ var operatorOrder = []string{
 var linkOperators = map[string]bool{
 	OpEq: true, OpNeq: true, OpIn: true, OpExists: true,
 }
+
+// Operators lists every operator a filter leaf may name, in the reading order.
+func Operators() []string { return slices.Clone(operatorOrder) }
 
 // OperatorsFor answers the operators this field admits, in operatorOrder.
 //

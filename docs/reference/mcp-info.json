@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 129401,
+    "tool_catalog_bytes": 129629,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 33247,
+    "approx_wire_tokens_total": 33304,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 33216,
-      "input_schema_bytes": 61708,
+      "input_schema_bytes": 61936,
       "output_schema_bytes": 25553,
-      "description_plus_input_schema_bytes": 94924
+      "description_plus_input_schema_bytes": 95152
     }
   },
   "tools": {
@@ -1049,12 +1049,13 @@
                     "eq",
                     "neq",
                     "gt",
-                    "lt",
                     "gte",
+                    "lt",
                     "lte",
                     "in",
                     "contains",
-                    "exists"
+                    "exists",
+                    "within_radius"
                   ],
                   "type": "string"
                 },
@@ -1080,7 +1081,7 @@
                   "type": "array"
                 },
                 "value": {
-                  "description": "A value, a list for in, true or false for exists, or {\"days_ago\": N} for a date"
+                  "description": "A value, a list for in, true or false for exists, {\"days_ago\": N} for a date, or {\"lat\": N, \"lon\": N, \"radius_km\": N, \"label\": \"optional place name\"} for within_radius"
                 }
               },
               "type": "object"
@@ -4825,12 +4826,13 @@
                     "eq",
                     "neq",
                     "gt",
-                    "lt",
                     "gte",
+                    "lt",
                     "lte",
                     "in",
                     "contains",
-                    "exists"
+                    "exists",
+                    "within_radius"
                   ],
                   "type": "string"
                 },
@@ -4856,7 +4858,7 @@
                   "type": "array"
                 },
                 "value": {
-                  "description": "A value, a list for in, true or false for exists, or {\"days_ago\": N} for a date"
+                  "description": "A value, a list for in, true or false for exists, {\"days_ago\": N} for a date, or {\"lat\": N, \"lon\": N, \"radius_km\": N, \"label\": \"optional place name\"} for within_radius"
                 }
               },
               "type": "object"

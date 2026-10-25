@@ -27,32 +27,20 @@ function draftOf(value: LeafValue): Draft {
   };
 }
 
-function numberIn(text: string, low: number, high: number): number | undefined {
-  if (text.trim() === "") {
-    return undefined;
-  }
-  const parsed = Number(text);
-  return Number.isFinite(parsed) && parsed >= low && parsed <= high
-    ? parsed
-    : undefined;
+function numberOf(text: string): number {
+  return text.trim() === "" ? Number.NaN : Number(text);
 }
 
-/**
- * The operand the draft states, or undefined while any part is missing or
- * outside what the server accepts. Mirrors that check so the tree never holds
- * an operand the preview would send only to be refused.
- */
+/** The operand the draft states, or undefined until it passes the shared validator. */
 export function radiusOf(draft: Draft): RadiusOperand | undefined {
-  const lat = numberIn(draft.lat, -90, 90);
-  const lon = numberIn(draft.lon, -180, 180);
-  const km = numberIn(draft.km, Number.MIN_VALUE, Number.MAX_VALUE);
-  if (lat === undefined || lon === undefined || km === undefined) {
-    return undefined;
-  }
   const label = draft.label.trim();
-  return label === ""
-    ? { lat, lon, radius_km: km }
-    : { lat, lon, radius_km: km, label };
+  const candidate = {
+    lat: numberOf(draft.lat),
+    lon: numberOf(draft.lon),
+    radius_km: numberOf(draft.km),
+    ...(label === "" ? {} : { label }),
+  };
+  return isRadiusOperand(candidate) ? candidate : undefined;
 }
 
 /**
@@ -71,6 +59,16 @@ export function RadiusValue({
 }>) {
   const t = useT();
   const [draft, setDraft] = useState<Draft>(() => draftOf(value));
+  // A change the tree made without this editor, such as Discard, replaces the
+  // typed boxes. The editor's own edits already equal the tree and change nothing.
+  const [seen, setSeen] = useState<LeafValue>(value);
+  if (seen !== value) {
+    setSeen(value);
+    const held = isRadiusOperand(value) ? value : undefined;
+    if (JSON.stringify(held) !== JSON.stringify(radiusOf(draft))) {
+      setDraft(draftOf(value));
+    }
+  }
   const edit = (part: Partial<Draft>) => {
     const next = { ...draft, ...part };
     setDraft(next);

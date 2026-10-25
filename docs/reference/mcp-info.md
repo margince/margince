@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 126.4 KB |
+| Tool catalog | 126.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 33247 |
+| Approx. wire tokens | 33304 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 25.0 KB | 19% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 32.4 KB | 25% | Yes, every step |
-| Input schemas | 60.3 KB | 47% | Yes, every step |
+| Input schemas | 60.5 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
-| **Description + input schema** | **92.7 KB** | **73%** | **the recurring cost** |
+| **Description + input schema** | **92.9 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -63,7 +63,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 808 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1386 |
-| [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
+| [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1117 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 553 |
@@ -83,7 +83,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 824 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
-| [`read_lists`](#read_lists) | Find and read lists | yes |  | 745 |
+| [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
@@ -1332,12 +1332,13 @@ and its new version from the answer. (Runs immediately; requires passport scope 
             "eq",
             "neq",
             "gt",
-            "lt",
             "gte",
+            "lt",
             "lte",
             "in",
             "contains",
-            "exists"
+            "exists",
+            "within_radius"
           ],
           "type": "string"
         },
@@ -1363,7 +1364,7 @@ and its new version from the answer. (Runs immediately; requires passport scope 
           "type": "array"
         },
         "value": {
-          "description": "A value, a list for in, true or false for exists, or {\"days_ago\": N} for a date"
+          "description": "A value, a list for in, true or false for exists, {\"days_ago\": N} for a date, or {\"lat\": N, \"lon\": N, \"radius_km\": N, \"label\": \"optional place name\"} for within_radius"
         }
       },
       "type": "object"
@@ -5342,12 +5343,13 @@ Keep list_id, the version for a later change, and next_cursor to read the next p
             "eq",
             "neq",
             "gt",
-            "lt",
             "gte",
+            "lt",
             "lte",
             "in",
             "contains",
-            "exists"
+            "exists",
+            "within_radius"
           ],
           "type": "string"
         },
@@ -5373,7 +5375,7 @@ Keep list_id, the version for a later change, and next_cursor to read the next p
           "type": "array"
         },
         "value": {
-          "description": "A value, a list for in, true or false for exists, or {\"days_ago\": N} for a date"
+          "description": "A value, a list for in, true or false for exists, {\"days_ago\": N} for a date, or {\"lat\": N, \"lon\": N, \"radius_km\": N, \"label\": \"optional place name\"} for within_radius"
         }
       },
       "type": "object"

@@ -140,8 +140,7 @@ func scanValues(ctx context.Context, tx pgx.Tx, sql string, args []any, shown []
 		}
 		for i, column := range shown {
 			if column.linked {
-				kept, truncated := capLinked(lists[i])
-				values[column.name] = FieldValue{Linked: rawLinked(kept), LinkedTruncated: truncated}
+				values[column.name] = FieldValue{Linked: rawLinked(lists[i])}
 				continue
 			}
 			values[column.name] = FieldValue{Value: texts[i]}
@@ -220,7 +219,8 @@ func resolveLinkedColumn(ctx context.Context, tx pgx.Tx, values map[ids.UUID]map
 		for i, v := range raw {
 			keys[i] = v.Value
 		}
-		record[column.name] = FieldValue{Linked: resolveLinked(found, keys), LinkedTruncated: record[column.name].LinkedTruncated}
+		linked, truncated := capLinked(resolveLinked(found, keys))
+		record[column.name] = FieldValue{Linked: linked, LinkedTruncated: truncated}
 	}
 	return nil
 }

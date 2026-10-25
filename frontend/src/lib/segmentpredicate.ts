@@ -62,6 +62,11 @@ export type LeafValue =
   | RelativeDate
   | RadiusOperand;
 
+/**
+ * A point on the globe and a positive distance, the same bounds storekit's
+ * within_radius compiler enforces. The editor builds its operand through this
+ * too, so the client has one validator.
+ */
 export function isRadiusOperand(value: unknown): value is RadiusOperand {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -73,9 +78,9 @@ export function isRadiusOperand(value: unknown): value is RadiusOperand {
   return (
     Object.keys(rest).length === 0 &&
     typeof lat === "number" &&
-    Number.isFinite(lat) &&
+    Math.abs(lat) <= 90 &&
     typeof lon === "number" &&
-    Number.isFinite(lon) &&
+    Math.abs(lon) <= 180 &&
     typeof radius_km === "number" &&
     Number.isFinite(radius_km) &&
     radius_km > 0 &&

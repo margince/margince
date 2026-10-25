@@ -16,17 +16,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// linkedValueCap bounds how many linked values one record reports per field.
-// The reading selects one more, so a record that holds more can say so.
+// linkedValueCap bounds how many readable linked values one record reports per
+// field. It is applied after the reader's visibility, so a row they may not
+// open neither fills it nor counts as more.
 const linkedValueCap = 50
-
-// capLinked trims a reading that selected one past the cap and says whether it did.
-func capLinked(raw []string) ([]string, bool) {
-	if len(raw) <= linkedValueCap {
-		return raw, false
-	}
-	return raw[:linkedValueCap], true
-}
 
 const linkExistsPrefix = "EXISTS (SELECT 1 FROM "
 
@@ -39,7 +32,7 @@ type LinkedValue struct {
 }
 
 // LinkValuesSQL is a scalar subquery giving the text[] of distinct values the
-// record carries behind field.Link, at most linkedValueCap+1 of them.
+// record carries behind field.Link.
 func LinkValuesSQL(field Field, arg func(any) int) (string, error) {
 	inner, err := scopedLinkInner(field, "TRUE", arg)
 	if err != nil {
@@ -51,8 +44,8 @@ func LinkValuesSQL(field Field, arg func(any) int) (string, error) {
 	}
 	from := strings.TrimSuffix(strings.TrimPrefix(exists, linkExistsPrefix), ")")
 	return fmt.Sprintf(
-		"(SELECT coalesce(array_agg(v), '{}') FROM (SELECT DISTINCT (%s)::text AS v FROM %s AND (%s) IS NOT NULL ORDER BY v LIMIT %d) linked_values)",
-		field.Expr, from, field.Expr, linkedValueCap+1), nil
+		"(SELECT coalesce(array_agg(v), '{}') FROM (SELECT DISTINCT (%s)::text AS v FROM %s AND (%s) IS NOT NULL ORDER BY v) linked_values)",
+		field.Expr, from, field.Expr), nil
 }
 
 // fieldReading is how one leaf's field is shown to this reader.
@@ -138,6 +131,24 @@ func resolveLinked(found map[string]LinkedValue, values []string) []LinkedValue 
 	}
 	sort.SliceStable(out, func(i, j int) bool { return linkedSortKey(out[i]) < linkedSortKey(out[j]) })
 	return out
+}
+
+// capLinked keeps the first linkedValueCap readable values and says whether
+// more were readable. Hidden placeholders follow and never count.
+func capLinked(resolved []LinkedValue) ([]LinkedValue, bool) {
+	readable, hidden := []LinkedValue{}, []LinkedValue{}
+	for _, v := range resolved {
+		if v.Hidden {
+			hidden = append(hidden, v)
+		} else {
+			readable = append(readable, v)
+		}
+	}
+	truncated := len(readable) > linkedValueCap
+	if truncated {
+		readable = readable[:linkedValueCap]
+	}
+	return append(readable, hidden...), truncated
 }
 
 func linkedSortKey(v LinkedValue) string {

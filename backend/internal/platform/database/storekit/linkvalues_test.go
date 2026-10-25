@@ -4,7 +4,6 @@
 package storekit
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 )
@@ -15,7 +14,7 @@ func TestALinkReadingSharesTheLinkTemplateOfTheClause(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"FROM taggable tg", "live_tag.archived_at IS NULL", fmt.Sprintf("LIMIT %d", linkedValueCap+1), "array_agg"} {
+	for _, want := range []string{"FROM taggable tg", "live_tag.archived_at IS NULL", "array_agg", "array_agg"} {
 		if !strings.Contains(sql, want) {
 			t.Errorf("reading %q lacks %q", sql, want)
 		}
@@ -45,14 +44,23 @@ func TestATemplateThatIsNotAnExistsCannotBeRead(t *testing.T) {
 	}
 }
 
-func TestACappedLinkReadingSaysItWasCut(t *testing.T) {
-	full := make([]string, linkedValueCap+1)
-	kept, cut := capLinked(full)
-	if len(kept) != linkedValueCap || !cut {
-		t.Errorf("a reading one past the cap kept %d, cut=%v", len(kept), cut)
+func TestACappedLinkReadingCountsOnlyWhatTheReaderMayOpen(t *testing.T) {
+	readable := func(n int) []LinkedValue {
+		out := make([]LinkedValue, n)
+		for i := range out {
+			label := "x"
+			out[i] = LinkedValue{Value: "v", Label: &label}
+		}
+		return out
 	}
-	kept, cut = capLinked(full[:linkedValueCap])
-	if len(kept) != linkedValueCap || cut {
-		t.Errorf("a reading at the cap kept %d, cut=%v", len(kept), cut)
+	hidden := []LinkedValue{{Hidden: true}, {Hidden: true}}
+
+	kept, cut := capLinked(append(readable(linkedValueCap), hidden...))
+	if cut || len(kept) != linkedValueCap+len(hidden) {
+		t.Errorf("50 readable and 2 hidden kept %d, cut=%v, want no cut", len(kept), cut)
+	}
+	kept, cut = capLinked(readable(linkedValueCap + 1))
+	if !cut || len(kept) != linkedValueCap {
+		t.Errorf("51 readable kept %d, cut=%v, want 50 and a cut", len(kept), cut)
 	}
 }

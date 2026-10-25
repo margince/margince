@@ -77,7 +77,6 @@ type explainLeaf struct {
 	// resolveLinked then names for this reader.
 	linked    bool
 	raw       []string
-	truncated bool
 	reference Reference
 }
 
@@ -157,11 +156,6 @@ func scanExplanation(row pgx.Row, root *ExplainNode, leaves []explainLeaf) (Expl
 			return Explanation{}, apperrors.ErrNotFound
 		}
 		return Explanation{}, fmt.Errorf("explain a filter for one record: %w", err)
-	}
-	for i := range leaves {
-		if leaves[i].linked {
-			leaves[i].raw, leaves[i].truncated = capLinked(leaves[i].raw)
-		}
 	}
 	combine(root)
 	if isTrue(root.Result) != isTrue(filterSelects) {
@@ -298,8 +292,7 @@ func withholdUnseenReferences(ctx context.Context, tx pgx.Tx, leaves []explainLe
 			if err != nil {
 				return fmt.Errorf("explain: %w", err)
 			}
-			leaf.node.Linked = resolveLinked(found, leaf.raw)
-			leaf.node.LinkedTruncated = leaf.truncated
+			leaf.node.Linked, leaf.node.LinkedTruncated = capLinked(resolveLinked(found, leaf.raw))
 			continue
 		}
 		if leaf.references == "" || leaf.node.Value == nil {
