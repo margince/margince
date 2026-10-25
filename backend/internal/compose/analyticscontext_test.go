@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func forecastGrant(read, create bool) map[string]principal.ObjectGrant {
-	return map[string]principal.ObjectGrant{"forecast": {Read: read, Create: create}}
+func forecastGrant(grant principal.ObjectGrant) map[string]principal.ObjectGrant {
+	return map[string]principal.ObjectGrant{"forecast": grant}
 }
 
 func TestMarkAssertableNeedsTheForecastGrants(t *testing.T) {
@@ -22,9 +22,9 @@ func TestMarkAssertableNeedsTheForecastGrants(t *testing.T) {
 		grant map[string]principal.ObjectGrant
 		want  bool
 	}{
-		{"read and create", forecastGrant(true, true), true},
-		{"no forecast read", forecastGrant(false, true), false},
-		{"no forecast create", forecastGrant(true, false), false},
+		{"read and create", forecastGrant(principal.ObjectGrant{Read: true, Create: true}), true},
+		{"no forecast read", forecastGrant(principal.ObjectGrant{Create: true}), false},
+		{"no forecast create", forecastGrant(principal.ObjectGrant{Read: true}), false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -68,7 +68,7 @@ func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.actor.Permissions.Objects = forecastGrant(true, true)
+			tc.actor.Permissions.Objects = forecastGrant(principal.ObjectGrant{Read: true, Create: true})
 			ctx := principal.WithActor(context.Background(), tc.actor)
 			markAssertable(ctx, tc.actor, &tc.scope)
 			if tc.scope.Assertable == nil || *tc.scope.Assertable != tc.want {
