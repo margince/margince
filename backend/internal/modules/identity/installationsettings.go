@@ -428,6 +428,11 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 		if err := s.changeCountryTx(ctx, tx, in.Country); err != nil {
 			return err
 		}
+		if in.Timezone != nil {
+			if err := refuseZoneTheDatabaseLacksTx(ctx, tx, *in.Timezone); err != nil {
+				return err
+			}
+		}
 		if err := s.scheduleAgentWindowTx(ctx, tx, in.AgentAllowances.WindowHours); err != nil {
 			return err
 		}
