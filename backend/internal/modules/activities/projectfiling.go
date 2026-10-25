@@ -166,6 +166,10 @@ func (f projectFilingFacts) refusal() *ProjectFilingRefusedError {
 // readProjectFilingFacts gathers the blockers, the filings and the links under
 // the caller's transaction. The undo calls it under the row lock, so what it read
 // is what the write then changes.
+//
+// A filing counts while its project still holds the link, or once the project is
+// deleted and only the frozen name is left. Evidence of a link a relink replaced
+// stays in the table for retention but names no project the undo can unfile.
 func readProjectFilingFacts(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (projectFilingFacts, error) {
 	var facts projectFilingFacts
 	var err error
@@ -178,9 +182,11 @@ func readProjectFilingFacts(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (
 	facts.dealVisible = auth.ReadGranted(ctx, "deal")
 	rows, err := tx.Query(ctx, `
 		SELECT project_id, coalesce(project_name, ''), qualified_at
-		  FROM activity_retention_evidence
-		 WHERE activity_id = $1 AND basis = $2
-		 ORDER BY qualified_at, id`, id, BasisProjectLinked)
+		  FROM activity_retention_evidence e
+		 WHERE e.activity_id = $1 AND e.basis = $2
+		   AND (e.project_id IS NULL OR EXISTS (SELECT 1 FROM activity_link l
+		         WHERE l.activity_id = e.activity_id AND l.project_id = e.project_id))
+		 ORDER BY e.qualified_at, e.id`, id, BasisProjectLinked)
 	if err != nil {
 		return facts, err
 	}

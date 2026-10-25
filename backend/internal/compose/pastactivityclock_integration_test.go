@@ -150,6 +150,18 @@ func TestAFutureMeetingIsNotTheLastActivity(t *testing.T) {
 	f.assertClocks(t, meetsAt, "once the meeting has started, the refold counts it")
 }
 
+func TestAFutureDatedNoteCallOrEmailIsNotTheLastActivity(t *testing.T) {
+	for _, kind := range []string{"note", "call", "email"} {
+		t.Run(kind, func(t *testing.T) {
+			f := newAccountFixture(t)
+			mailed := f.now.AddDate(0, 0, -3)
+			f.log(t, "email", mailed)
+			f.log(t, kind, f.now.AddDate(70, 0, 0))
+			f.assertClocks(t, mailed, "a "+kind+" dated years ahead has not happened")
+		})
+	}
+}
+
 // The worker did not run for days around the meeting's start. The mark is
 // where the last run left it, so the first run after the outage still reaches it.
 func TestAMeetingThatStartedDuringAnOutageStillMovesTheClock(t *testing.T) {

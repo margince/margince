@@ -131,6 +131,39 @@ func TestUndoingAProjectFilingWithdrawsTheClassAndRecordsTheDecision(t *testing.
 	}
 }
 
+// A project the activity was moved away from is no longer a filing.
+// The state and the undo name only the project that holds the link.
+func TestAFilingListsOnlyTheProjectThatStillHoldsTheLink(t *testing.T) {
+	e := Setup(t)
+	f := filedUnderAProject(t, e)
+	id := ids.ActivityID{UUID: f.email}
+	other := ids.NewV7()
+	e.WsExec(t, `INSERT INTO project (id, name, company_id, phase, source, captured_by)
+		SELECT $1, 'Datacentre migration', company_id, 'delivering', 'manual', 'human:x'
+		  FROM project WHERE id = $2`, other, f.project)
+	if _, err := e.Activities.RelinkActivity(e.Admin(), id, activities.RelinkActivityInput{
+		EntityType: "project", EntityID: other, ReplaceExistingOfType: true,
+	}); err != nil {
+		t.Fatalf("moving the email to the second project: %v", err)
+	}
+
+	state, err := e.Activities.GetProjectFiling(e.Admin(), id)
+	if err != nil {
+		t.Fatalf("reading the filing: %v", err)
+	}
+	if !state.Filed || len(state.Projects) != 1 || state.Projects[0].Name != "Datacentre migration" {
+		t.Fatalf("after the move the filing reads %+v, want only Datacentre migration", state.Projects)
+	}
+
+	after, err := e.Activities.UndoProjectFiling(e.Admin(), id, undoReason)
+	if err != nil {
+		t.Fatalf("undoing the filing: %v", err)
+	}
+	if len(after.Undone) != 1 || len(after.Undone[0].Projects) != 1 || after.Undone[0].Projects[0] != "Datacentre migration" {
+		t.Errorf("the decision on record is %+v, want only the project that held the link", after.Undone)
+	}
+}
+
 // Another qualifying basis keeps the class, so the project filing alone cannot
 // be undone while a won deal still holds the correspondence.
 func TestAFilingIsNotUndoneWhileAWonDealStillQualifiesTheActivity(t *testing.T) {

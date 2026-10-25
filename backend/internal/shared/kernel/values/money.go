@@ -12,21 +12,10 @@ const CurrencyPattern = `^[A-Z]{3}$`
 
 var iso4217 = regexp.MustCompile(CurrencyPattern)
 
-// ValidCurrency answers whether s has the shape of an ISO-4217 code, for the
-// callers that hold a currency string without minting a Money out of it — the
-// FX-rate pair, the installation's base-currency setting.
-//
-// Exported because both of those had written their own: one a rune loop, one a
-// verbatim copy of the regexp var above under the same name. Three spellings of
-// one predicate is three places to correct when the schema's CHECK moves, and
-// the copy nobody remembers is the one that keeps admitting what the database
-// then refuses.
-//
-// It is a SHAPE check, not a membership check: it says the string looks like a
-// currency code, not that ISO assigns it. That is deliberately the same claim
-// the schema's CHECK makes, so Go and the database agree about what they admit
-// rather than one refusing what the other stored.
-func ValidCurrency(s string) bool { return iso4217.MatchString(s) }
+// ValidCurrency answers whether s is an assigned ISO-4217 code, so a typo such
+// as EUT is refused where every writer takes it. The database CHECK stays the
+// shape alone, because a migration cannot follow amendments to the standard.
+func ValidCurrency(s string) bool { return iso4217.MatchString(s) && IsAssignedCurrency(s) }
 
 // Money binds an amount in minor units to its ISO-4217 currency. The
 // fields are unexported so a half-money — the amount-without-currency
@@ -42,7 +31,7 @@ type Money struct {
 func NewMoney(amountMinor int64, currency string) (Money, error) {
 	if !ValidCurrency(currency) {
 		return Money{}, &ParseError{Field: "currency", Code: "currency_malformed",
-			Message: "currency is the three-letter ISO-4217 code, uppercase"}
+			Message: "currency is an assigned three-letter ISO-4217 code, uppercase"}
 	}
 	return Money{amountMinor: amountMinor, currency: currency}, nil
 }
