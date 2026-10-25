@@ -21,6 +21,10 @@ import (
 // open neither fills it nor counts as more.
 const linkedValueCap = 50
 
+// linkedValueScanCap bounds the raw values one record reads before visibility.
+// A record linked to thousands of rows then cannot make a list page read them all.
+const linkedValueScanCap = 4 * linkedValueCap
+
 const linkExistsPrefix = "EXISTS (SELECT 1 FROM "
 
 // LinkedValue is one value behind a link field. Hidden says it names a row the
@@ -32,7 +36,8 @@ type LinkedValue struct {
 }
 
 // LinkValuesSQL is a scalar subquery giving the text[] of distinct values the
-// record carries behind field.Link.
+// record carries behind field.Link, at most linkedValueScanCap+1 of them. The
+// extra one tells capLinked that more exist.
 func LinkValuesSQL(field Field, arg func(any) int) (string, error) {
 	inner, err := scopedLinkInner(field, "TRUE", arg)
 	if err != nil {
@@ -44,8 +49,8 @@ func LinkValuesSQL(field Field, arg func(any) int) (string, error) {
 	}
 	from := strings.TrimSuffix(strings.TrimPrefix(exists, linkExistsPrefix), ")")
 	return fmt.Sprintf(
-		"(SELECT coalesce(array_agg(v), '{}') FROM (SELECT DISTINCT (%s)::text AS v FROM %s AND (%s) IS NOT NULL ORDER BY v) linked_values)",
-		field.Expr, from, field.Expr), nil
+		"(SELECT coalesce(array_agg(v), '{}') FROM (SELECT DISTINCT (%s)::text AS v FROM %s AND (%s) IS NOT NULL ORDER BY v LIMIT %d) linked_values)",
+		field.Expr, from, field.Expr, linkedValueScanCap+1), nil
 }
 
 // fieldReading is how one leaf's field is shown to this reader.
@@ -134,8 +139,10 @@ func resolveLinked(found map[string]LinkedValue, values []string) []LinkedValue 
 }
 
 // capLinked keeps the first linkedValueCap readable values and says whether
-// more were readable. Hidden placeholders follow and never count.
+// more were readable or the scan stopped early. Hidden placeholders follow and
+// never count.
 func capLinked(resolved []LinkedValue) ([]LinkedValue, bool) {
+	scanCut := len(resolved) > linkedValueScanCap
 	readable, hidden := []LinkedValue{}, []LinkedValue{}
 	for _, v := range resolved {
 		if v.Hidden {
@@ -144,8 +151,8 @@ func capLinked(resolved []LinkedValue) ([]LinkedValue, bool) {
 			readable = append(readable, v)
 		}
 	}
-	truncated := len(readable) > linkedValueCap
-	if truncated {
+	truncated := scanCut || len(readable) > linkedValueCap
+	if len(readable) > linkedValueCap {
 		readable = readable[:linkedValueCap]
 	}
 	return append(readable, hidden...), truncated

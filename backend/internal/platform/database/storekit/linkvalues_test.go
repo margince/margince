@@ -4,6 +4,7 @@
 package storekit
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -62,5 +63,19 @@ func TestACappedLinkReadingCountsOnlyWhatTheReaderMayOpen(t *testing.T) {
 	kept, cut = capLinked(readable(linkedValueCap + 1))
 	if !cut || len(kept) != linkedValueCap {
 		t.Errorf("51 readable kept %d, cut=%v, want 50 and a cut", len(kept), cut)
+	}
+}
+
+func TestALinkReadingStopsReadingPastTheScanCap(t *testing.T) {
+	sql, err := LinkValuesSQL(Field{Expr: "tg.tag_id", Link: TagLinkTemplate("contact")}, func(any) int { return 1 })
+	if err != nil || !strings.Contains(sql, fmt.Sprintf("LIMIT %d", linkedValueScanCap+1)) {
+		t.Fatalf("reading %q (%v) reads every linked row", sql, err)
+	}
+	hidden := make([]LinkedValue, linkedValueScanCap+1)
+	for i := range hidden {
+		hidden[i] = LinkedValue{Hidden: true}
+	}
+	if _, cut := capLinked(hidden); !cut {
+		t.Error("a scan that stopped early reported no cut")
 	}
 }

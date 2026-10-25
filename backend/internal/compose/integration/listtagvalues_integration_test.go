@@ -104,7 +104,7 @@ func TestATagReadingPastTheCapSaysMoreExist(t *testing.T) {
 	store := collections.NewStore(e.DB())
 	contact := e.SeedContact(t, "Carries Many", &e.Rep1)
 	var first ids.TagID
-	for i := 0; i < 51; i++ {
+	for i := range 51 {
 		tag, err := store.CreateTag(e.Admin(), fmt.Sprintf("Bulk Tag %02d", i), nil, nil)
 		if err != nil {
 			t.Fatal(err)
