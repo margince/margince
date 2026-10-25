@@ -3,11 +3,13 @@
 
 import { describe, expect, it } from "vitest";
 import happenedCases from "../../../backend/internal/shared/kernel/occurredday/testdata/happened.json";
+import withinCases from "../../../backend/internal/shared/kernel/occurredday/testdata/within.json";
 import {
   activityAgo,
   activityDate,
   activityDay,
   activityDaysAway,
+  activityFallsWithin,
   activityHasBegun,
   activityHasHappened,
   activityIsAhead,
@@ -160,6 +162,16 @@ describe("whether an activity has taken place", () => {
     expect(activityHasHappened(row, Date.parse(c.now), c.zone)).toBe(
       c.happened,
     );
+  });
+});
+
+// The period cases occurredday.WithinSQL answers on the server.
+describe("the period an activity falls in", () => {
+  it.each(withinCases)("$name", (c) => {
+    const period = { from: Date.parse(c.from), to: Date.parse(c.to) };
+    expect(
+      activityFallsWithin(c.at, precisionOf(c.precision), period, c.zone),
+    ).toBe(c.within);
   });
 });
 

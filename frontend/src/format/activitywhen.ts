@@ -14,7 +14,7 @@ import { calendarDaysUntil } from "./daysuntil";
 import { formatDate, formatDateTime, formatTimeOfDay } from "./format.dates";
 import { formatTimeRange } from "./meetingtime";
 import { formatElapsed } from "./now";
-import { sameWallClockOnDay, UTC_ZONE } from "./timezone";
+import { sameWallClockOnDay, startOfDayInZone, UTC_ZONE } from "./timezone";
 
 export type OccurredPrecision = components["schemas"]["OccurredPrecision"];
 
@@ -167,6 +167,29 @@ export function activityHasBegun(
   if (precision === "day")
     return activityDaysAway(at, "day", now, record, record) <= 0;
   return Date.parse(at) <= now;
+}
+
+/**
+ * Whether an activity falls in the period [`from`, `to`), the mirror of
+ * occurredday.WithinSQL. An instant falls by its time, a `day` entry where its
+ * date begins in the record zone. A bound left out leaves that side open.
+ */
+export function activityFallsWithin(
+  at: string,
+  precision: OccurredPrecision,
+  period: Readonly<{ from?: number; to?: number }>,
+  record: string,
+): boolean {
+  const start =
+    precision === "day"
+      ? Date.parse(
+          startOfDayInZone(activityDate(at, precision, record), record),
+        )
+      : Date.parse(at);
+  return (
+    (period.from === undefined || start >= period.from) &&
+    (period.to === undefined || start < period.to)
+  );
 }
 
 /**

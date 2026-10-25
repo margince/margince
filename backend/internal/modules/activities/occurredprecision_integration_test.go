@@ -340,10 +340,7 @@ func TestADayEntryEndsWithItsDateInSQLAsInGo(t *testing.T) {
 	ctx := e.as(principal.RowScopeAll)
 	meeting := logDayMeeting(ctx, t, e.store(nil), pastDay)
 	for _, name := range []string{"Pacific/Auckland", "America/Los_Angeles", "UTC"} {
-		if _, err := e.owner.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ('installation.timezone', to_jsonb($1::text))
-			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, name); err != nil {
-			t.Fatal(err)
-		}
+		setInstallationZone(t, e, name)
 		zone := zoneNamed(t, name)
 		midnight := time.Date(2026, 3, 10, 0, 0, 0, 0, zone)
 		for _, asOf := range []time.Time{midnight.Add(-time.Minute), midnight} {
@@ -379,10 +376,7 @@ func TestHappenedSQLAnswersTheSharedCases(t *testing.T) {
 		t.Fatal("read no cases")
 	}
 	for _, c := range cases {
-		if _, err := e.owner.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ('installation.timezone', to_jsonb($1::text))
-			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, c.Zone); err != nil {
-			t.Fatal(err)
-		}
+		setInstallationZone(t, e, c.Zone)
 		var happened, ahead bool
 		if err := e.owner.QueryRow(context.Background(), fmt.Sprintf(
 			`SELECT %s, %s FROM (VALUES ($2::text, $3::timestamptz, $4::text, NULL::integer))
@@ -396,6 +390,48 @@ func TestHappenedSQLAnswersTheSharedCases(t *testing.T) {
 		// A meeting is ahead until it takes place, and not after.
 		if c.Kind == "meeting" && ahead == c.Happened {
 			t.Errorf("%s: AheadSQL = %v beside a meeting that took place = %v", c.Name, ahead, c.Happened)
+		}
+	}
+}
+
+// setInstallationZone names the zone the owner's SQL reads which date is today in.
+func setInstallationZone(t *testing.T, e *sendEnv, name string) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ('installation.timezone', to_jsonb($1::text))
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, name); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// occurredday.WithinSQL answers the shared period cases: a day entry falls in
+// the period whose local dates hold its date, from UTC-12 to UTC+14.
+func TestWithinSQLAnswersTheSharedCases(t *testing.T) {
+	e := setupSend(t)
+	raw, err := os.ReadFile("../../shared/kernel/occurredday/testdata/within.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		Name, Precision, Zone string
+		At, From, To          time.Time
+		Within                bool
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) < 10 {
+		t.Fatalf("read %d cases, want the whole table", len(cases))
+	}
+	for _, c := range cases {
+		setInstallationZone(t, e, c.Zone)
+		var within bool
+		if err := e.owner.QueryRow(context.Background(), fmt.Sprintf(
+			`SELECT %s FROM (VALUES ($3::timestamptz, $4::text)) AS a(occurred_at, occurred_precision)`,
+			occurredday.WithinSQL("a", "$1", "$2")), c.From, c.To, c.At, c.Precision).Scan(&within); err != nil {
+			t.Fatalf("%s: %v", c.Name, err)
+		}
+		if within != c.Within {
+			t.Errorf("%s: SQL says within = %v, want %v", c.Name, within, c.Within)
 		}
 	}
 }

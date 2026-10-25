@@ -8,7 +8,8 @@
 //
 // A day meeting has taken place once its date is over in the installation zone,
 // as the outcome lane and meeting prep read it. An instant meeting has once it
-// starts. Every other day entry has happened from the start of its date.
+// starts. Every other day entry has happened from the start of its date. A day
+// entry falls in a period of local dates when its own date is one of them.
 //
 // In kernel because the writers and readers sit in sibling modules (activities,
 // capture, search, deals) and in compose, and no module imports a sibling.
@@ -175,8 +176,22 @@ func todayAnchorSQL(asOf string) string {
 // Ended's rule. alias is SQL the caller renders, never request text.
 func EndSQL(alias string) string {
 	return fmt.Sprintf(`(CASE WHEN %[1]s.occurred_precision = 'day'
-		THEN (date_trunc('day', %[1]s.occurred_at AT TIME ZONE 'UTC') + interval '1 day') AT TIME ZONE `+installationZoneSQL+`
-		ELSE %[1]s.occurred_at + make_interval(secs => coalesce(%[1]s.duration_seconds, 0)) END)`, alias)
+		THEN %[2]s
+		ELSE %[1]s.occurred_at + make_interval(secs => coalesce(%[1]s.duration_seconds, 0)) END)`, alias, dateEndSQL(alias))
+}
+
+// ProvenSQL is the first moment the activity under alias is known to have
+// happened. An instant is at its time, a day entry once its date ends (Ended).
+// A date proves nothing about its hours, so a deadline in hours reads this.
+func ProvenSQL(alias string) string {
+	return fmt.Sprintf(`(CASE WHEN %[1]s.occurred_precision = 'day' THEN %[2]s ELSE %[1]s.occurred_at END)`,
+		alias, dateEndSQL(alias))
+}
+
+// dateEndSQL is when the date the day entry under alias names ends in the
+// installation zone.
+func dateEndSQL(alias string) string {
+	return `(date_trunc('day', ` + alias + `.occurred_at AT TIME ZONE 'UTC') + interval '1 day') AT TIME ZONE ` + installationZoneSQL
 }
 
 // StartSQL is when the activity under alias starts: an instant at its time,
@@ -186,6 +201,37 @@ func StartSQL(alias string) string {
 	return fmt.Sprintf(`(CASE WHEN %[1]s.occurred_precision = 'day'
 		THEN date_trunc('day', %[1]s.occurred_at AT TIME ZONE 'UTC') AT TIME ZONE `+installationZoneSQL+`
 		ELSE %[1]s.occurred_at END)`, alias)
+}
+
+// WithinSQL is "the activity under alias falls in the period [from, to)", both
+// bounds SQL the caller renders. An instant falls in it by its time. A day entry
+// falls in it where its date begins in the installation zone (StartSQL). So a
+// period of whole local dates holds the day entries those dates name, no more.
+func WithinSQL(alias, from, to string) string {
+	return "(" + FromSQL(alias, from) + " AND " + BeforeSQL(alias, to) + ")"
+}
+
+// FromSQL is WithinSQL's lower edge alone. A date begins at or before its
+// anchor, so `occurred_at >= from` holds every row that passes and keeps a
+// range scan.
+func FromSQL(alias, from string) string {
+	return fmt.Sprintf(`(%[1]s.occurred_at >= %[2]s AND (%[1]s.occurred_precision = 'instant' OR %[3]s >= %[2]s))`,
+		alias, from, StartSQL(alias))
+}
+
+// BeforeSQL is WithinSQL's upper edge alone. A date begins at most 26 hours
+// before its anchor (UTC+14), the bound that keeps a range scan.
+func BeforeSQL(alias, to string) string {
+	return fmt.Sprintf(`(%[1]s.occurred_at < CAST(%[2]s AS timestamptz) + interval '26 hours'
+		AND (%[1]s.occurred_precision = 'instant' AND %[1]s.occurred_at < %[2]s OR %[1]s.occurred_precision = 'day' AND %[3]s < %[2]s))`,
+		alias, to, StartSQL(alias))
+}
+
+// DatesSQL is "the day entry under alias names a date in [from, before)", both
+// bounds anchors (Anchor) the caller renders. Anchors order as their dates do.
+func DatesSQL(alias, from, before string) string {
+	return fmt.Sprintf(`(%[1]s.occurred_precision = 'day' AND %[1]s.occurred_at >= %[2]s AND %[1]s.occurred_at < %[3]s)`,
+		alias, from, before)
 }
 
 // AheadSQL is "the meeting under alias is still to come" at now, the negation

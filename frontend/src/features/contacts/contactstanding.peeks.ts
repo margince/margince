@@ -1,6 +1,10 @@
 import type { components } from "../../api/schema";
 import type { StandingPeek } from "../../design-system/standingdims";
-import { activityDay, activityHasBegun } from "../../format/activitywhen";
+import {
+  activityDay,
+  activityFallsWithin,
+  activityHasBegun,
+} from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
@@ -96,7 +100,12 @@ function exchangePeek(
         MESSAGE_KINDS.has(row.kind) &&
         (row.email_summary?.direction ?? row.direction) &&
         activityHasBegun(row.occurred_at, row.occurred_precision, asOf, zone) &&
-        asOf - Date.parse(row.occurred_at) <= NINETY_DAYS_MS,
+        activityFallsWithin(
+          row.occurred_at,
+          row.occurred_precision,
+          { from: asOf - NINETY_DAYS_MS },
+          zone,
+        ),
     )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
     .slice(0, total);
