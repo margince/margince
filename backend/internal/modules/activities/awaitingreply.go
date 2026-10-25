@@ -268,7 +268,7 @@ var awaitingRepliesSQL = `
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	 WHERE ` + awaitingTheirAnswerSQL("$%[1]d", sentByReaderSQL("$%[9]d", "$%[4]d"), "%[7]s") + `
 	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int) -- occurred_at raw: an age of whole days
-	   AND a.occurred_at >= $%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)
+	   AND ` + occurredday.FromSQL("a", "$%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)") + `
 	   AND %[2]s
 	   -- Nor any contact since with someone it went to, on any channel: a call
 	   -- or a meeting with them is a follow-up already made.

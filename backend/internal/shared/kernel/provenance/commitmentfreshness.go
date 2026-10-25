@@ -28,5 +28,5 @@ func CurrentCommitmentClause(source, locator, due string, asOf time.Time, arg fu
  AND `+MailBodyCompleteSQL("evidence")+`
  AND EXISTS (SELECT 1 FROM activity origin WHERE origin.id = admitted.source_activity_id AND `+MailBodyCompleteSQL("origin")+`)
  AND (evidence.kind <> 'meeting' OR evidence.meeting_status IS DISTINCT FROM 'canceled')
- AND (evidence.occurred_at >= $%d OR %s >= $%d))`, source, locator, happened, cutoff, due, cutoff)
+ AND (%s OR %s >= $%d))`, source, locator, happened, occurredday.FromSQL("evidence", fmt.Sprintf("$%d", cutoff)), due, cutoff)
 }

@@ -359,15 +359,15 @@ func contactStrengths(
 	rows, err := tx.Query(ctx, `
 		SELECT l.contact_id,
 		       max(a.occurred_at),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'inbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'outbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = l.contact_id
 		         WHERE i.direction = 'inbound' AND `+strengthCitedCounts+`
-		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+`
+		           AND i.archived_at IS NULL AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+`
 		           AND ($3::timestamptz IS NULL OR `+occurredday.HappenedSQL("i", "$3")+`)`+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
@@ -432,15 +432,15 @@ func strengthInputs(
 	// touch, the 90-day direction counts, and the contributing ids.
 	if err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'inbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'outbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = $1
 		         WHERE i.direction = 'inbound' AND `+strengthCitedCounts+`
-		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+citedWithin+`
+		           AND i.archived_at IS NULL AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM activity a
@@ -461,7 +461,7 @@ func strengthInputs(
 	rows, err := tx.Query(ctx, `
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		WHERE `+strengthCounts+` AND a.archived_at IS NULL AND a.occurred_at >= $2`+auth.AudienceWorkspaceOnly("a")+contributingWithin+`
+		WHERE `+strengthCounts+` AND a.archived_at IS NULL AND `+occurredday.FromSQL("a", "$2")+auth.AudienceWorkspaceOnly("a")+contributingWithin+`
 		ORDER BY a.occurred_at DESC
 		LIMIT $3`, citeArgs...)
 	if err != nil {

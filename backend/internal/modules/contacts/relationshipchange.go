@@ -32,6 +32,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -208,13 +209,13 @@ func changeInputs(
 	// unchanged and the whole derivation silent.
 	if err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
-		       max(a.occurred_at) FILTER (WHERE a.occurred_at < $3),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'inbound'),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'outbound')
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'inbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'outbound'),
+		       max(a.occurred_at) FILTER (WHERE `+occurredday.BeforeSQL("a", "$3")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND a.direction = 'inbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND a.direction = 'outbound')
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
 		 WHERE `+strengthCounts+` AND a.archived_at IS NULL`+

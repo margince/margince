@@ -75,13 +75,13 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 		  FROM activity a
 		  JOIN activity_participant ap ON ap.activity_id = a.id AND ap.user_id = $%d
 		 WHERE a.id <> $%d AND a.archived_at IS NULL
-		   AND a.occurred_at < $%d -- occurred_at raw: the room's start, the window's edge
+		   AND %s
 		   AND %s
 		   AND EXISTS (SELECT 1 FROM activity_link l
 		                WHERE l.activity_id = a.id AND l.entity_type = 'contact' AND l.contact_id = ANY($%d))
 		   AND %s AND %s
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT 1`, mePos, roomPos, opensPos, happened, contactsPos, scope, within), args...).Scan(&last.At, &last.DateOnly)
+		 LIMIT 1`, mePos, roomPos, occurredday.BeforeSQL("a", fmt.Sprintf("$%d", opensPos)), happened, contactsPos, scope, within), args...).Scan(&last.At, &last.DateOnly)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Occurred{}, false, nil
 	}

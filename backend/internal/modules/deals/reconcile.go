@@ -201,7 +201,7 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 			  -- verbs; the predicate is the helper's, and a change to one
 			  -- is a change to both.
 			  AND a.audience = 'workspace'
-			  AND a.occurred_at >= $1
+			  AND %[5]s
 			  AND %[4]s
 			  AND (a.kind <> 'meeting' OR (%[1]s AND %[3]s))
 			ORDER BY a.occurred_at DESC, a.id DESC
@@ -214,7 +214,8 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 		storekit.MeetingIsOverSQL("a", "$3"),
 		OpenNextStepSQL("d.id", "$3", current),
 		relstrength.MeetingCountsSQL("a"),
-		occurredday.BegunSQL("a", "$3")), args, nil
+		occurredday.BegunSQL("a", "$3"),
+		occurredday.FromSQL("a", "$1")), args, nil
 }
 
 func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {

@@ -56,7 +56,7 @@ const filedUnderALiveContactSQL = `(NOT EXISTS (SELECT 1 FROM activity_link wl
 // timeline. requestOpenSQL, as owedSQL is the one relaxable not-sales gate.
 // Cheap tests come first, so most rows never reach the settlement subqueries.
 func withinWaitingHorizonSQL(asOf, days string) string {
-	return `(a.occurred_at >= ` + asOf + ` - make_interval(days => ` + days + `)
+	return `(` + occurredday.FromSQL("a", asOf+` - make_interval(days => `+days+`)`) + `
 	     OR (` + heldRequestSQL() + ` AND ` + requestOpenSQL + `))`
 }
 

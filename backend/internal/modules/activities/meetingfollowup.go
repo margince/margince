@@ -94,7 +94,7 @@ func (s *Store) queryMeetingFollowUps(
 		instant, g.content, g.links, arg(windowDays), AwaitingReplyLookbackDays,
 		g.later, relstrength.InteractionCountsSQL("later"), arg(readerOrNobody(ctx)),
 		messageSnoozeLiftedSQL(at, g.back), g.customer, AwaitingReplyScanCap,
-		meetingHeldSQL("a", at), addressable, maxActivityLinks, narrowed,
+		meetingHeldSQL("a", at), addressable, maxActivityLinks, narrowed, followUpFromSQL,
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading meetings the reader owes a follow-up: %w", err)
@@ -205,7 +205,7 @@ var meetingFollowUpsSQL = `
 	                      AND later.direction IS DISTINCT FROM 'inbound'
 	                      AND %[6]s
 	                      AND %[7]s
-	                      AND later.occurred_at >= ` + followUpFromSQL + `
+	                      AND later.occurred_at >= %[16]s -- occurred_at raw: a touch after the meeting, an ordering of rows
 	                      AND ` + occurredday.BegunSQL("later", "$%[1]d::timestamptz") + `)
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[10]s)
 	   AND NOT ` + readerSetAsideSQL("$%[8]d", "%[9]s") + `

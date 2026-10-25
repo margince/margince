@@ -76,26 +76,25 @@ const historyQuery = `
 	WHERE a.archived_at IS NULL
 	  AND a.kind <> 'task'
 	  AND a.id <> $%[4]d
-	  AND a.occurred_at < $%[5]d
-	  AND a.occurred_at >= $%[6]d
-	  AND %[10]s
+	  AND %[5]s
+	  AND %[9]s
 	  AND (a.kind <> 'meeting' OR a.meeting_status IS NULL OR a.meeting_status = 'held')
 	  AND (EXISTS (
 	         SELECT 1 FROM activity_participant ap
-	         WHERE ap.activity_id = a.id AND ap.contact_id = ANY($%[7]d))
+	         WHERE ap.activity_id = a.id AND ap.contact_id = ANY($%[6]d))
 	       OR EXISTS (
 	         SELECT 1 FROM activity_link pl
 	         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact'
-	           AND pl.contact_id = ANY($%[7]d)))
+	           AND pl.contact_id = ANY($%[6]d)))
 	  AND %[1]s
-	  AND %[8]s
+	  AND %[7]s
 	-- The id breaks a tie on the timestamp. Two conversations captured in the
 	-- same second are common (one sync writes a thread), and without this the
 	-- rows that survive the cap, the messages picked for excerpting and the
 	-- subject a thread is named after would all vary between reads of an
 	-- unchanged database.
 	ORDER BY a.occurred_at DESC, a.id DESC
-	LIMIT %[9]d`
+	LIMIT %[8]d`
 
 // readHistory returns the room's conversations, newest first.
 //
@@ -136,18 +135,18 @@ func (s *Service) readHistory(
 	roomPos := arg(room.ID)
 	// Before the room, and happened by now: a brief read weeks early must not fold
 	// in what comes before the room. A meeting counts once it took place, as in priormeetings.go.
-	opensPos := arg(room.Opens)
+	opens := fmt.Sprintf("$%d", arg(room.Opens))
 	happened := occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
 	reach := now
 	if room.Opens.Before(reach) {
 		reach = room.Opens
 	}
-	floorPos := arg(reach.AddDate(0, -historyMonths, 0))
+	floor := fmt.Sprintf("$%d", arg(reach.AddDate(0, -historyMonths, 0)))
 	attendeePos := arg(room.Room)
 	within := projectWithinPredicate("a", "hw", project, arg)
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(historyQuery,
-		scope, readable, dealPos, roomPos, opensPos, floorPos, attendeePos, within, historyCap, happened,
+		scope, readable, dealPos, roomPos, occurredday.WithinSQL("a", floor, opens), attendeePos, within, historyCap, happened,
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the account history: %w", err)

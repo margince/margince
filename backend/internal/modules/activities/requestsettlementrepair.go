@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -110,7 +111,7 @@ func settlementRepairItemTx(ctx context.Context, tx pgx.Tx, request ids.UUID, as
 	       AND written.after->>'` + settlementThroughCol + `' = s.judged_through_activity_id::text),
 	     EXISTS (SELECT 1 FROM activity r WHERE r.source_system = $4 AND r.source_activity_id = a.id
 	       AND ` + storekit.HumanWroteActivityClause("r") + `),
-	     a.occurred_at >= $3,
+	     ` + occurredday.FromSQL("a", "$3") + `,
 	     a.archived_at IS NULL AND a.audience = 'workspace' AND a.restricted_at IS NULL
 	       AND EXISTS (` + settlementAnswersSQL() + `)
 	   FROM activity_request_settlement s JOIN activity a ON a.id = s.request_activity_id

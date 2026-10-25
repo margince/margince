@@ -118,8 +118,7 @@ const dealScoreSQL = `
 		              -- coverage window; the upper is the cutoff, without which
 		              -- two contacts who first spoke to the deal on Monday would
 		              -- make the closed week read multi-threaded when it was not.
-		              AND act.occurred_at >= $%[4]d
-		              AND act.occurred_at < $%[2]d) >= $%[5]d),
+		              AND %[4]s) >= $%[5]d),
 		  (SELECT count(*) FROM open_deals o
 		    WHERE o.expected_close_date IS NOT NULL
 		      AND NOT o.close_date_provisional

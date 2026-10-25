@@ -31,7 +31,7 @@ func AssuranceSignalSubjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]a
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	query := fmt.Sprintf(`SELECT s.id::text, coalesce(c.owner_id::text, ''), c.id::text,
-  coalesce(covered.id::text, ''), source.occurred_at, source.occurred_at < $%[1]d, `+scoutBuyerSignal("s")+`
+  coalesce(covered.id::text, ''), source.occurred_at, source.occurred_at < $%[1]d, %[3]s -- occurred_at raw: the time a signal cites carries no precision
  FROM signal s JOIN company c ON c.id = s.resolved_company_id
  CROSS JOIN LATERAL (SELECT `+storekit.CitedActivityTime("s.evidence")+` AS occurred_at) source
  LEFT JOIN LATERAL (SELECT ds.id FROM deal_suggestion ds
@@ -40,7 +40,7 @@ func AssuranceSignalSubjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]a
  WHERE s.kind = 'new_opportunity' AND s.status = 'open' AND s.archived_at IS NULL
  AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) role_cite
  WHERE role_cite->>'commercial_role' IN ('supplier', 'partner', 'provider'))
- AND (source.occurred_at >= $%[1]d OR `+scoutBuyerSignal("s")+`)
+ AND (source.occurred_at >= $%[1]d OR %[3]s) -- occurred_at raw: the time a signal cites carries no precision
  AND s.visibility = 'workspace' AND c.archived_at IS NULL AND NOT c.is_anchor
  AND source.occurred_at <= $%[2]d -- occurred_at raw: the time a signal cites carries no precision
  AND coalesce(`+deals.SuggestionFloorExpr("c.id")+`, '-infinity'::timestamptz) < source.occurred_at -- occurred_at raw: past the suggestion floor, a window's lower edge
@@ -48,7 +48,7 @@ func AssuranceSignalSubjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]a
   WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
    WHERE ca.id = `+storekit.CitedActivityID("cite")+` AND `+workspaceEvidence("ca")+`))
  AND `+unlinkedCommercialMatter("s")+`
- ORDER BY s.id`, arg(now.Add(-dealScoutWindow)), arg(now))
+ ORDER BY s.id`, arg(now.Add(-dealScoutWindow)), arg(now), scoutBuyerSignal("s"))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading unlinked buying signals: %w", err)

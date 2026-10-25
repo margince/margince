@@ -121,7 +121,7 @@ func DayActivitiesComeTx(
 		   AND ((a.kind <> $1 AND a.occurred_at = $2 AND $4 < $2
 		         AND a.created_at < a.occurred_at -- occurred_at raw: written ahead of its time, a row the refold re-reads
 		         AND a.occurred_at > $3) -- occurred_at raw: past the bound of the walk, at the anchor of today in zone
-		     OR (a.kind = $1 AND a.occurred_at >= $4 AND a.occurred_at < $2))
+		     OR (a.kind = $1 AND `+occurredday.DatesSQL("a", "$4", "$2")+`))
 		   AND (a.occurred_at, a.id) > ($5, $6)
 		 ORDER BY a.occurred_at, a.id
 		 LIMIT $7`,

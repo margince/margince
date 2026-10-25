@@ -5,22 +5,21 @@
 
 package gates
 
-// Whether an activity has happened by a moment is asked of occurredday.
+// Whether an activity has happened by a moment, or falls in a period, is asked
+// of occurredday.
 //
 // A day entry is stored at noon UTC of its date. So `occurred_at <= now()`
 // calls a day entry dated today ahead until that noon. It calls a day meeting
-// held once the noon passes. occurredday.BegunSQL, MeetingTookPlaceSQL, HappenedSQL
-// and AheadSQL read the date in the installation zone. So an activity row's
-// occurred_at ordered against anything else is a finding. That is a bind, the
-// clock, a function of them, another column, or a bound Go joins on.
+// held once the noon passes. And `occurred_at >= $1 AND occurred_at < $2` over
+// local midnights puts a Sunday east of UTC+12 in the next week. BegunSQL,
+// MeetingTookPlaceSQL, HappenedSQL, AheadSQL and WithinSQL read the date in the
+// installation zone. So an activity row's occurred_at ordered against anything
+// else is a finding. That is a bind, the clock, a function of them, another
+// column, or a bound Go joins on. A row compared with a row,
+// `(occurred_at, id) > (x, y)`, is a keyset order, which neither question needs.
 //
-// `occurred_at >= x` is a window's lower edge unless x is the clock. A bare
-// `occurred_at < x` is "before x", and passes only beside a `>= y` on the same
-// column in one statement, the two edges of a period. A row compared with a
-// row, `(occurred_at, id) > (x, y)`, is a keyset order, which "has it happened" never needs.
-//
-// Some comparisons are not "has it happened": a window's edge, a retention age, a
-// walk's keyset bound, a clock-skew allowance. Each says so on its own line of
+// Some comparisons are neither: a retention age, a walk's keyset bound, a
+// clock-skew allowance, a row of another table. Each says so on its own line of
 // SQL, as `-- occurred_at raw: <reason>`, so a second comparison added to a
 // waived statement is a finding of its own.
 //
@@ -49,8 +48,6 @@ import (
 // aliasedColumn is occurred_at under its alias if any, past a cast.
 const aliasedColumn = `(?:\b([a-z_]\w*)\.)?\boccurred_at\b(?:\s*::\s*[a-z_]\w*)?`
 
-const clockWords = `(?:now\(\)|current_timestamp|current_date|localtimestamp|statement_timestamp\(\)|transaction_timestamp\(\)|clock_timestamp\(\))`
-
 var (
 	// occurredAtOwner is the one package allowed to compare occurred_at raw.
 	occurredAtOwner = filepath.Join("internal", "shared", "kernel", "occurredday")
@@ -62,18 +59,11 @@ var (
 	// orderBefore is an ordering operator before the column. An arrow, `=>` or
 	// `<>` is not one.
 	orderBefore = regexp.MustCompile(`(?:^|[^-=<>!])(<=|>=|<|>)\s*$`)
-	clockFirst  = regexp.MustCompile(`(?i)^[\s(]*` + clockWords)
-	clockLast   = regexp.MustCompile(`(?i)` + clockWords + `[\s)]*$`)
 	// tableAlias binds an alias to the table a `FROM`, `JOIN` or `UPDATE` names.
 	tableAlias = regexp.MustCompile(`(?i)\b(?:FROM|JOIN|UPDATE)\s+([a-z_]\w*)(?:\s+(?:AS\s+)?([a-z_]\w*))?`)
 	// rawOccurredAtWaiver is the marker and the reason it must carry.
 	rawOccurredAtWaiver = regexp.MustCompile(`--\s*occurred_at raw:\s*(\S.*)$`)
 )
-
-// flipped is the operator read with the column on its left.
-func flipped(op string) string {
-	return strings.NewReplacer("<", ">", ">", "<").Replace(op)
-}
 
 // sqlKeywords cannot be an alias: `FROM activity WHERE` binds none.
 var sqlKeywords = map[string]bool{
@@ -124,8 +114,9 @@ func judgeRawCompares(t *testing.T, found []rawCompare) {
 		switch {
 		case !compare.waived:
 			t.Errorf("%s compares an activity's occurred_at with a moment raw. A day entry is stored at its "+
-				"date's noon UTC, so ask occurredday.BegunSQL, MeetingTookPlaceSQL, HappenedSQL or AheadSQL. "+
-				"If it is a window, an age or a keyset bound, say so on its line: -- occurred_at raw: <reason>", compare.where)
+				"date's noon UTC, so ask occurredday.BegunSQL, MeetingTookPlaceSQL, HappenedSQL or AheadSQL, "+
+				"and a period WithinSQL, FromSQL or BeforeSQL. If it is an age or a keyset bound, say so on "+
+				"its line: -- occurred_at raw: <reason>", compare.where)
 		case compare.swallows:
 			t.Errorf("%s waives on the last line of its string, so the -- comment swallows any SQL joined after it; "+
 				"end the line inside the string", compare.where)
@@ -180,18 +171,10 @@ func comparesActivity(alias string, scopes ...tables) bool {
 	return true
 }
 
-// ordering is one ordering comparison of some row's occurred_at on a line,
-// read with the column on the operator's left.
-type ordering struct {
-	alias string
-	op    string
-	// againstClock says the other side is the statement's own clock.
-	againstClock bool
-}
-
-// orderingsIn reads every ordering comparison of occurred_at on one line.
-func orderingsIn(line string) []ordering {
-	var out []ordering
+// orderedAliases reads every ordering comparison of occurred_at on one line
+// and returns the alias each one orders, "" for a bare column.
+func orderedAliases(line string) []string {
+	var out []string
 	for _, at := range occurredAtColumn.FindAllStringSubmatchIndex(line, -1) {
 		alias := ""
 		for _, group := range []int{2, 4, 6} {
@@ -202,48 +185,25 @@ func orderingsIn(line string) []ordering {
 		if after := orderAfter.FindStringSubmatchIndex(line[at[1]:]); after != nil {
 			op := line[at[1]+after[2] : at[1]+after[3]]
 			if op != "<>" && op != "!=" {
-				out = append(out, ordering{alias: alias, op: op, againstClock: clockFirst.MatchString(line[at[1]+after[1]:])})
+				out = append(out, alias)
 			}
 			continue
 		}
-		if before := orderBefore.FindStringSubmatchIndex(line[:at[0]]); before != nil {
-			op := line[before[2]:before[3]]
-			out = append(out, ordering{alias: alias, op: flipped(op), againstClock: clockLast.MatchString(line[:before[2]])})
+		if orderBefore.MatchString(line[:at[0]]) {
+			out = append(out, alias)
 		}
 	}
 	return out
 }
 
-// asksWhetherHappened says an ordering reads as "has it happened by then".
-// A `<` is a period's upper edge when its statements also bound the column below.
-func asksWhetherHappened(found ordering, statements []string) bool {
-	switch found.op {
-	case "<=", ">":
-		return true
-	case ">=":
-		return found.againstClock
-	}
-	for _, statement := range statements {
-		for line := range strings.SplitSeq(statement, "\n") {
-			for _, other := range orderingsIn(line) {
-				if other.alias == found.alias && other.op == ">=" {
-					return false
-				}
-			}
-		}
-	}
-	return true
-}
-
 // linesComparing judges each line of text and returns the raw comparisons on
 // activity rows, scopes naming the tables nearest first.
-func linesComparing(where, text string, statements []string, scopes ...tables) []rawCompare {
+func linesComparing(where, text string, scopes ...tables) []rawCompare {
 	var out []rawCompare
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
-		holding := statementsHolding(line, statements)
-		for _, found := range orderingsIn(line) {
-			if !comparesActivity(found.alias, scopes...) || !asksWhetherHappened(found, holding) {
+		for _, alias := range orderedAliases(line) {
+			if !comparesActivity(alias, scopes...) {
 				continue
 			}
 			compare := rawCompare{where: where + ": " + strings.TrimSpace(line)}
@@ -256,27 +216,13 @@ func linesComparing(where, text string, statements []string, scopes ...tables) [
 	return out
 }
 
-// statementsHolding are the statements a line is part of.
-func statementsHolding(line string, statements []string) []string {
-	var out []string
-	if trimmed := strings.TrimSpace(line); trimmed != "" {
-		for _, statement := range statements {
-			if strings.Contains(statement, trimmed) {
-				out = append(out, statement)
-			}
-		}
-	}
-	return out
-}
-
 // rawOccurredAtCompares finds each raw as-of comparison of an activity row's
 // occurred_at in file's string literals.
 func rawOccurredAtCompares(path string, file *ast.File) []rawCompare {
 	var out []rawCompare
 	whole := tablesIn(gatekit.SQLStatementsOf(file)...)
 	for _, decl := range file.Decls {
-		statements := gatekit.SQLStatementsOf(decl)
-		declared := tablesIn(statements...)
+		declared := tablesIn(gatekit.SQLStatementsOf(decl)...)
 		ast.Inspect(decl, func(n ast.Node) bool {
 			lit, ok := n.(*ast.BasicLit)
 			if !ok || lit.Kind != token.STRING {
@@ -286,8 +232,7 @@ func rawOccurredAtCompares(path string, file *ast.File) []rawCompare {
 			if !isString {
 				return true
 			}
-			out = append(out, linesComparing(path, text, append([]string{text}, statements...),
-				tablesIn(text), declared, whole)...)
+			out = append(out, linesComparing(path, text, tablesIn(text), declared, whole)...)
 			return true
 		})
 	}
@@ -308,7 +253,7 @@ var (
 // sqlFile is one migration's path and text; sqlBody is a definition's.
 type sqlFile struct{ path, text string }
 
-type sqlBody struct{ where, text string }
+type sqlBody struct{ where, text, args string }
 
 func TestNoMigrationBodyAsksWhetherAnActivityHappenedRaw(t *testing.T) {
 	t.Parallel()
@@ -326,8 +271,13 @@ func TestNoMigrationBodyAsksWhetherAnActivityHappenedRaw(t *testing.T) {
 	}
 	comparing := 0
 	for _, files := range byDir {
-		for _, body := range liveDefinitions(files) {
-			if len(linesComparing(body.where, body.text, []string{body.text}, tablesIn(body.text))) > 0 {
+		bodies, overloads := liveDefinitions(files)
+		for _, overload := range overloads {
+			t.Errorf("%s: the census keys a definition on its name, so an overload would hide its sibling; "+
+				"drop the old one first or teach liveDefinitions the argument types", overload)
+		}
+		for _, body := range bodies {
+			if len(linesComparing(body.where, body.text, tablesIn(body.text))) > 0 {
 				comparing++
 			}
 			judgeRawCompares(t, bodyCompares(body))
@@ -340,8 +290,10 @@ func TestNoMigrationBodyAsksWhetherAnActivityHappenedRaw(t *testing.T) {
 }
 
 // liveDefinitions returns the function and view bodies one directory's
-// migrations leave in the schema, read in version order.
-func liveDefinitions(files []sqlFile) []sqlBody {
+// migrations leave in the schema, read in version order. It keys on the name,
+// and returns as overloads the definitions that replace a live one with other
+// arguments, which Postgres would keep beside it.
+func liveDefinitions(files []sqlFile) (bodies []sqlBody, overloads []string) {
 	slices.SortFunc(files, func(a, b sqlFile) int { return strings.Compare(a.path, b.path) })
 	live := map[string]sqlBody{}
 	for _, file := range files {
@@ -351,14 +303,43 @@ func liveDefinitions(files []sqlFile) []sqlBody {
 				delete(live, name)
 				continue
 			}
-			live[name] = sqlBody{where: file.path + " " + name, text: definitionBody(file.text[at[1]:], file.text[at[4]:at[5]])}
+			body := sqlBody{
+				where: file.path + " " + name,
+				text:  definitionBody(file.text[at[1]:], file.text[at[4]:at[5]]),
+				args:  argumentList(file.text[at[1]:]),
+			}
+			if earlier, ok := live[name]; ok && earlier.args != body.args {
+				overloads = append(overloads, body.where)
+			}
+			live[name] = body
 		}
 	}
-	out := make([]sqlBody, 0, len(live))
 	for _, body := range live {
-		out = append(out, body)
+		bodies = append(bodies, body)
 	}
-	return out
+	return bodies, overloads
+}
+
+// argumentList is the parenthesised list right after a definition's name,
+// lower-cased with its spacing folded, or "" for a view.
+func argumentList(rest string) string {
+	trimmed := strings.TrimLeft(rest, " \t\n")
+	if !strings.HasPrefix(trimmed, "(") {
+		return ""
+	}
+	depth := 0
+	for i, r := range trimmed {
+		switch r {
+		case '(':
+			depth++
+		case ')':
+			depth--
+		}
+		if depth == 0 {
+			return strings.Join(strings.Fields(strings.ToLower(trimmed[1:i])), " ")
+		}
+	}
+	return ""
 }
 
 // definitionBody is a function's dollar-quoted body, or a view's query up to
@@ -393,7 +374,7 @@ func bodyCompares(body sqlBody) []rawCompare {
 			text = strings.ReplaceAll(text, owned, " ")
 		}
 	}
-	return linesComparing(body.where, text, []string{text}, bound)
+	return linesComparing(body.where, text, bound)
 }
 
 // A live body is judged, a replaced or dropped one is not, and the owner's
@@ -416,12 +397,20 @@ func TestTheMigrationCensusReadsOnlyLiveBodies(t *testing.T) {
 		"dropped":               {[]sqlFile{{"m/1.up.sql", raw}, {"m/2.up.sql", "DROP FUNCTION IF EXISTS clock(uuid);"}}, 0},
 	} {
 		got := 0
-		for _, body := range liveDefinitions(c.files) {
+		bodies, _ := liveDefinitions(c.files)
+		for _, body := range bodies {
 			got += len(bodyCompares(body))
 		}
 		if got != c.want {
 			t.Errorf("%s: the census found %d raw comparisons, want %d", name, got, c.want)
 		}
+	}
+	overload := "CREATE FUNCTION clock(id uuid, at timestamptz) RETURNS timestamptz LANGUAGE sql AS $$ SELECT at $$;\n"
+	if _, found := liveDefinitions([]sqlFile{{"m/1.up.sql", raw}, {"m/2.up.sql", overload}}); len(found) != 1 {
+		t.Errorf("an overload replaced its sibling unseen: %v", found)
+	}
+	if _, found := liveDefinitions([]sqlFile{{"m/1.up.sql", raw}, {"m/2.up.sql", owned}}); len(found) != 0 {
+		t.Errorf("a replacement with the same arguments read as an overload: %v", found)
 	}
 }
 
@@ -430,27 +419,28 @@ func TestTheMigrationCensusReadsOnlyLiveBodies(t *testing.T) {
 func TestTheOccurredAtCensusSeesEachRawComparison(t *testing.T) {
 	t.Parallel()
 	for name, sql := range map[string]string{
-		"now on the right":       "SELECT 1 FROM activity a WHERE a.occurred_at <= now()",
-		"ahead of a bound":       "SELECT 1 FROM activity a WHERE a.occurred_at > $2",
-		"sprintf placeholder":    "SELECT 1 FROM activity a WHERE a.occurred_at <= $%[3]d",
-		"bound on the left":      "SELECT 1 FROM activity m WHERE $4::timestamptz >= m.occurred_at",
-		"bare column":            "SELECT 1 FROM activity WHERE occurred_at < now()",
-		"fragment of no table":   "AND x.occurred_at <= $%d",
-		"bound joined from Go":   "SELECT 1 FROM activity a WHERE a.occurred_at <= ",
-		"ahead joined from Go":   "SELECT 1 FROM activity a WHERE a.occurred_at > ",
-		"pgx named argument":     "SELECT 1 FROM activity a WHERE a.occurred_at <= @as_of",
-		"coalesce bound":         "SELECT 1 FROM activity a WHERE a.occurred_at <= coalesce($1, now())",
-		"greatest bound":         "SELECT 1 FROM activity a WHERE a.occurred_at > greatest($1, $2)",
-		"another column":         "SELECT 1 FROM activity a JOIN deal d ON a.occurred_at <= d.closed_at",
-		"column on the left":     "SELECT 1 FROM activity a JOIN deal d ON d.closed_at >= a.occurred_at",
-		"before a bound":         "SELECT 1 FROM activity a WHERE a.occurred_at < $1",
-		"before a named arg":     "SELECT 1 FROM activity a WHERE a.occurred_at < @before",
-		"before another column":  "SELECT 1 FROM activity a JOIN deal d ON a.occurred_at < d.closed_at",
-		"latest of them":         "SELECT 1 FROM activity a GROUP BY a.id HAVING max(a.occurred_at) <= $1",
-		"first in a coalesce":    "SELECT 1 FROM activity a WHERE coalesce(a.occurred_at, a.created_at) <= $1",
-		"cast to a date":         "SELECT 1 FROM activity a WHERE a.occurred_at::date <= current_date",
-		"from now on":            "SELECT 1 FROM activity a WHERE a.occurred_at >= now()",
-		"another alias's period": "SELECT 1 FROM activity a JOIN activity b ON b.id = a.id WHERE b.occurred_at >= $1 AND a.occurred_at < $2",
+		"now on the right":          "SELECT 1 FROM activity a WHERE a.occurred_at <= now()",
+		"ahead of a bound":          "SELECT 1 FROM activity a WHERE a.occurred_at > $2",
+		"sprintf placeholder":       "SELECT 1 FROM activity a WHERE a.occurred_at <= $%[3]d",
+		"bound on the left":         "SELECT 1 FROM activity m WHERE $4::timestamptz >= m.occurred_at",
+		"bare column":               "SELECT 1 FROM activity WHERE occurred_at < now()",
+		"fragment of no table":      "AND x.occurred_at <= $%d",
+		"bound joined from Go":      "SELECT 1 FROM activity a WHERE a.occurred_at <= ",
+		"ahead joined from Go":      "SELECT 1 FROM activity a WHERE a.occurred_at > ",
+		"pgx named argument":        "SELECT 1 FROM activity a WHERE a.occurred_at <= @as_of",
+		"coalesce bound":            "SELECT 1 FROM activity a WHERE a.occurred_at <= coalesce($1, now())",
+		"greatest bound":            "SELECT 1 FROM activity a WHERE a.occurred_at > greatest($1, $2)",
+		"another column":            "SELECT 1 FROM activity a JOIN deal d ON a.occurred_at <= d.closed_at",
+		"column on the left":        "SELECT 1 FROM activity a JOIN deal d ON d.closed_at >= a.occurred_at",
+		"before a bound":            "SELECT 1 FROM activity a WHERE a.occurred_at < $1",
+		"before a named arg":        "SELECT 1 FROM activity a WHERE a.occurred_at < @before",
+		"before another column":     "SELECT 1 FROM activity a JOIN deal d ON a.occurred_at < d.closed_at",
+		"latest of them":            "SELECT 1 FROM activity a GROUP BY a.id HAVING max(a.occurred_at) <= $1",
+		"first in a coalesce":       "SELECT 1 FROM activity a WHERE coalesce(a.occurred_at, a.created_at) <= $1",
+		"cast to a date":            "SELECT 1 FROM activity a WHERE a.occurred_at::date <= current_date",
+		"from now on":               "SELECT 1 FROM activity a WHERE a.occurred_at >= now()",
+		"a lower edge":              "SELECT 1 FROM activity a WHERE a.occurred_at >= $1",
+		"a lower edge after a cast": "SELECT 1 FROM activity a WHERE a.occurred_at::date >= $1",
 	} {
 		if got := rawOccurredAtCompares("seeded.go", parseSeed(t, sql)); len(got) != 1 || got[0].waived {
 			t.Errorf("%s: the census found %+v in %q, want one unwaived comparison", name, got, sql)
@@ -459,8 +449,6 @@ func TestTheOccurredAtCensusSeesEachRawComparison(t *testing.T) {
 	for name, sql := range map[string]string{
 		"another table":      "SELECT 1 FROM audit_log au WHERE au.occurred_at <= $1",
 		"another bare table": "DELETE FROM capture_trace WHERE occurred_at < now() - $1::interval",
-		"a period's edges":   "SELECT 1 FROM activity a WHERE a.occurred_at >= $1 AND a.occurred_at < $2",
-		"a lower edge":       "SELECT 1 FROM activity a WHERE a.occurred_at >= $1",
 		"not equal":          "SELECT 1 FROM activity a WHERE a.occurred_at <> now()",
 		"a keyset row":       "SELECT 1 FROM activity a WHERE (a.occurred_at, a.id) > ($1, $2)",
 		"a json arrow":       "SELECT a.after->>'x' FROM activity a WHERE a.after->>'at' = a.occurred_at::text",
@@ -469,9 +457,18 @@ func TestTheOccurredAtCensusSeesEachRawComparison(t *testing.T) {
 			t.Errorf("%s: the census flagged %+v in %q", name, got, sql)
 		}
 	}
+	for name, sql := range map[string]string{
+		"a period's edges":       "SELECT 1 FROM activity a WHERE a.occurred_at >= $1 AND a.occurred_at < $2",
+		"a period up to now":     "SELECT 1 FROM activity a WHERE a.occurred_at >= $1 AND a.occurred_at < now()",
+		"another alias's period": "SELECT 1 FROM activity a JOIN activity b ON b.id = a.id WHERE b.occurred_at >= $1 AND a.occurred_at < $2",
+	} {
+		if got := rawOccurredAtCompares("seeded.go", parseSeed(t, sql)); len(got) != 2 {
+			t.Errorf("%s: the census found %+v in %q, want both edges", name, got, sql)
+		}
+	}
 	joined := "package p\nfunc f(b string) string { return `SELECT 1 FROM activity a WHERE a.occurred_at >= ` + b + ` AND a.occurred_at < ` + b }\n"
-	if got := rawOccurredAtCompares("seeded.go", parseSource(t, joined)); len(got) != 0 {
-		t.Errorf("a period whose edges Go joins on was flagged: %+v", got)
+	if got := rawOccurredAtCompares("seeded.go", parseSource(t, joined)); len(got) != 2 {
+		t.Errorf("a period whose edges Go joins on was not flagged twice: %+v", got)
 	}
 	fragment := "package p\nconst q = `SELECT 1 FROM audit_log a WHERE `\nfunc f() string { return \" AND a.occurred_at <= \" }\n"
 	if got := rawOccurredAtCompares("seeded.go", parseSource(t, fragment)); len(got) != 0 {

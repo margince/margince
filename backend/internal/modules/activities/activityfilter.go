@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -250,23 +251,23 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	return where
 }
 
-// occurredWindowClauses bounds the time a row happened at. With DayDates set, an
-// instant keeps the window and a day entry is held to those dates.
+// occurredWindowClauses bounds the time a row happened at, a day entry by its
+// date (occurredday.WithinSQL). With DayDates set, an instant keeps the window
+// and a day entry is held to those dates.
 func occurredWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	var window []string
 	if in.OccurredAfter != nil {
-		window = append(window, sprintf("a.occurred_at >= $%d", arg(*in.OccurredAfter)))
+		window = append(window, occurredday.FromSQL("a", sprintf("$%d", arg(*in.OccurredAfter))))
 	}
 	if in.OccurredBefore != nil {
-		window = append(window, sprintf("a.occurred_at < $%d", arg(*in.OccurredBefore)))
+		window = append(window, occurredday.BeforeSQL("a", sprintf("$%d", arg(*in.OccurredBefore))))
 	}
 	if in.DayDates == nil {
 		return window
 	}
 	instant := strings.Join(append([]string{"a.occurred_precision = 'instant'"}, window...), " AND ")
-	day := sprintf("a.occurred_precision = 'day' AND a.occurred_at >= $%d AND a.occurred_at < $%d",
-		arg(in.DayDates.From), arg(in.DayDates.Before))
-	return []string{"((" + instant + ") OR (" + day + "))"}
+	day := occurredday.DatesSQL("a", sprintf("$%d", arg(in.DayDates.From)), sprintf("$%d", arg(in.DayDates.Before)))
+	return []string{"((" + instant + ") OR " + day + ")"}
 }
 
 // filtersOnContent reports whether the list narrows on fields a withheld row

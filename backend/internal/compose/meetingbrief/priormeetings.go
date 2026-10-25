@@ -105,7 +105,7 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 			arg(project.UUID))
 	}
 
-	rows, err := tx.Query(ctx, fmt.Sprintf(priorMeetingsQuery, scope, within, roomPos, startsPos,
+	rows, err := tx.Query(ctx, fmt.Sprintf(priorMeetingsQuery, scope, within, roomPos, occurredday.BeforeSQL("m", fmt.Sprintf("$%d", startsPos)),
 		occurredday.MeetingTookPlaceSQL("m", fmt.Sprintf("$%d", nowPos)), attendeePos, priorMeetingCap), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the earlier meetings: %w", err)
@@ -140,7 +140,7 @@ const priorMeetingsQuery = `
 	JOIN activity_participant mp ON mp.activity_id = m.id
 	WHERE m.kind = 'meeting' AND m.archived_at IS NULL
 	  AND m.id <> $%[3]d AND %[5]s
-	  AND m.occurred_at < $%[4]d -- occurred_at raw: the room's start, the window's edge
+	  AND %[4]s
 	  AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
 	  AND mp.contact_id = ANY($%[6]d)
 	  AND %[1]s
