@@ -162,7 +162,7 @@ export function entryFieldChanges(
 
 // An activity's time takes the precision stored beside it in the same image.
 // An image that carries no precision holds an instant.
-function precisionOf(
+export function precisionOf(
   image: Readonly<Record<string, unknown>>,
   field: string,
 ): OccurredPrecision | undefined {

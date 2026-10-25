@@ -8,10 +8,14 @@ import { EvidenceChip, FieldDiff, toEvidence } from "../../design-system/trust";
 import {
   type PluralTranslator,
   type Translator,
+  useLocale,
   usePlural,
   useT,
 } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 import { roleLabel } from "../../lib/roles.queries";
+import { precisionOf } from "../records/history.logic";
+import { type HistoryValueCtx, historyValue } from "../records/historyvalues";
 import { humanizeToken } from "./audit";
 import {
   type AuditLogEntry,
@@ -87,17 +91,20 @@ function AuditFieldFacts({
   keys,
 }: Readonly<{ entry: AuditLogEntry; keys: string[] }>) {
   const shape = changeShape(entry);
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const ctx: HistoryValueCtx = { currency: null, locale, zone };
   const value = (key: string): ReactNode => {
     if (shape === "changed") {
       return (
         <FieldDiff
-          oldValue={fieldValue(entry.before, key)?.text ?? null}
-          newValue={fieldValue(entry.after, key)?.text ?? null}
+          oldValue={auditValue(entry.before, key, ctx)?.text ?? null}
+          newValue={auditValue(entry.after, key, ctx)?.text ?? null}
         />
       );
     }
     const held = shape === "removed" ? entry.before : entry.after;
-    return <AuditValue value={fieldValue(held, key)} />;
+    return <AuditValue value={auditValue(held, key, ctx)} />;
   };
   return (
     <FactList
@@ -108,6 +115,24 @@ function AuditFieldFacts({
       }))}
     />
   );
+}
+
+// An activity's time reads as the History tab reads it, by the precision stored
+// beside it; every other value as stored.
+function auditValue(
+  image: AuditLogEntry["before"],
+  key: string,
+  ctx: HistoryValueCtx,
+): FieldValue | null {
+  const held = fieldValue(image, key);
+  const precision = precisionOf(image ?? {}, key);
+  if (!held || held.structured || !precision) {
+    return held;
+  }
+  return {
+    text: historyValue(key, held.text, ctx, precision) ?? held.text,
+    structured: false,
+  };
 }
 
 function AuditValue({ value }: Readonly<{ value: FieldValue | null }>) {
