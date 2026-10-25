@@ -6,9 +6,8 @@ Your own settings in Margince are the pages under **You** in Settings:
 **Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**,
 **Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
 Capture activity also carries one card that holds for the whole company: the
-company's rules for what capture keeps out, beside your own. Connections only
-shows the company's email sharing rule, on a row marked **Whole company**, and changes
-nothing for anyone else.
+company's rules for what capture keeps out, beside your own. Connections only shows the company's
+email sharing rule, on a row marked **Whole company**, and changes nothing for anyone else.
 
 For everything else, see [Settings](settings.md).
 

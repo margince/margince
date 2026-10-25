@@ -351,8 +351,8 @@ grows past it:
 One ladder for every screen, on the product's current breakpoints:
 
 - At 1400px the figures drop a size, and five readings stay in one row.
-- Under 1200px the readings wrap and the two columns stack. The details panel becomes a drawer over
-  the page, and the tab strip scrolls in its own box.
+- Under 1200px the readings wrap and the two columns stack, and the tab strip scrolls in its own box.
+  When the record row is under 900px wide, the details panel takes the full width above the feed.
 - Under 720px the head stacks (mark and name, facts, then primary + more), and readings go two per
   row. The spine and the map scroll from side to side in their own boxes.
 - At 390px the phone bar holds, and so does the rule that a page never scrolls to the side.
@@ -392,8 +392,8 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
   it reads "Back to app". The agent's orb stays at the foot.
 - **Top bar**: 48px, glass, with a hairline under it. The breadcrumb is on the left, the command
   field in the middle (`⌘K`), and the reader's monogram on the right. It is the app's one bar, and
-  every screen has it. Nothing of a record sits in it: the Details control is in the
-  page.
+  every screen has it. Nothing of a record sits in it: the record's head and details are in
+  the page.
 - **Record head**: a 56px mark, and the name in the display face with its badges on the same line.
   One line of facts sits under it, and the verbs sit on the right. The verbs are the record type's base actions,
   never the task of the day:
@@ -407,10 +407,9 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
   That verb is the move the call names ("Confirm the rate", "Reply on her thread"), inside What
   needs you, where its reason sits beside it. A lead is the one case apart: its Qualify is filled,
   because to qualify is the whole job of the record. The **more** button (a 36px square with an
-  outline and the three dots) holds Archive, Share, Merge and the rest. The **Details** control sits
-  at the right end of the tab row, in the page.
-- **Details panel**: 300px on the right of the reading, one pane, closed until the Details control
-  at the end of the tab row opens it. It holds Ask, and the fields as label and value rows. A
+  outline and the three dots) holds Archive, Share, Merge and the rest.
+- **Details panel**: a 340px card on the left, under the record head, always open. It stays in view
+  while the feed on the right scrolls. It holds Ask, and the fields as label and value rows. A
   value a machine read has the evidence underline, and an empty one has a lighter "Add …". It also
   holds the short lists that tell what the record is (contacts, seats, tags, the Deal Room, documents).
   The current product keeps its context column there, so a rep's hand does not move.
@@ -492,9 +491,8 @@ takes the product's own features back in small form: each one there, and none at
     indigo on hover. No free-text field until the answers are good enough to need one.
   - About: the lead sentence, one paragraph, its sources, and "Profile" for the rest.
   - Contacts as chips with a "+N".
-- **The details panel is hidden until asked**. The Details control at the end of the tab row opens it
-  on the right at 300px, with the fields, the contacts and the tags. It is the only thing on the
-  glance that starts closed.
+- **The details panel is always open**, on the left under the record head, with the fields, the
+  contacts and the tags. The feed sits on the right.
 - No zone numbers. Commercial and the rest of About are the deep overview, one click away, with the
   same panes.
 
@@ -713,8 +711,8 @@ claim from "an agent did this".
 ### The shell around every record
 
 The sidebar folds to a 64px icon rail, and that is the default. Labels come back on hover as
-tooltips, and the agent's orb stays at the foot. The details panel on the right of the reading opens
-from the Details control at the end of the tab row, and starts closed.
+tooltips, and the agent's orb stays at the foot. The details panel sits on the left, under the record
+head, and the feed sits on the right.
 
 ### The timeline, as the tool draws it
 
@@ -883,7 +881,7 @@ The primitives in the catalog keep their names and `props`; this is how each one
 | `StatCard` | The **reading card**: `--pane` with the hairline and a 20px corner, 138px tall. The eyebrow is its label, with the basis as words with a dotted underline at the end of the label. The figure is at 26px in the display face, tabular (down to 20px where five share a small row). The basis is at 12.5px at the foot. |
 | `FieldGrid` / `FieldRow` | The field row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, and the dotted evidence underline when a machine read it. |
 | `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 44px rows; hairlines; figures aligned right; the selected row on `--accentBg`. Edge to edge inside its zone. |
-| `RecordTabs` | Quiet: no rule under the strip; the open tab in `--ink` with a 2px accent underline; counts at 11px in `--ink4`; the Details control at the right end. |
+| `RecordTabs` | Quiet: no rule under the strip; the open tab in `--ink` with a 2px accent underline; counts at 11px in `--ink4`. |
 | `SegmentedControl` | `--bg3` track, the pressed part white on the resting shadow, 12px. |
 | `Modal` | White, `--r-lg` (20px) radius, `--shadow-pop`, a scrim of `rgba(24,24,27,.4)`. Five intents, each one a fixed width, but never wider than the glass: a confirm at 440px, a form at 600px, a drawer at 560px, a reading drawer at 880px, and the lightbox at 1240px. The drawers come in from the right with the same surface. On a phone a confirm stays a card over the scrim, and the rest become a full-screen sheet. On a desktop, a form, or a drawer with no bands whose body is one form stack followed by its action row, scrolls that stack, so the title and the actions stay put. A drawer with bands scrolls its body between its head and foot. |
 | `EmptyState` | Aligned left in its own zone, `--ink3`, one sentence and one verb. |

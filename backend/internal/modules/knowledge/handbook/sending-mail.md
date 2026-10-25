@@ -2,9 +2,8 @@
 <!-- describes: frontend/src/features/mail frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/compose/draftcore -->
 # Writing and sending mail
 
-[Capture](capture.md) is how mail comes **in**. This page is how it goes **out**:
-the composer, what Margince checks before a send goes out, and setting a send
-for later.
+[Capture](capture.md) is how mail comes **in**. This page is how it goes **out**: the composer,
+what Margince checks before a send goes out, and setting a send for later.
 
 Who may then read what you sent is a separate question, answered in
 [Who can see an email](who-can-see-an-email.md).

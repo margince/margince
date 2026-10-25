@@ -238,7 +238,7 @@ export const ACTIVITY_LINE: Readonly<
     "the certification lane grading this build's own answers — an operator's measurement, not a rep's work",
   ),
   deal_health: notDisplayed(
-    "declared in api/ai-tasks.yaml and not built: no site runs it, so nothing reports it yet",
+    "the deal page's status card answers under the reader's own eyes; a rail line would announce the card already on screen",
   ),
   nl_search: notDisplayed(
     "a plain-words filter answers in the builder the reader pressed it from, under their own eyes; a rail line would announce a result already on screen",

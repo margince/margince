@@ -6354,7 +6354,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overdueCommitments": "Cam kết quá hạn",
   "analytics.quietSince": "Im lặng từ",
   "analytics.nothingQuiet": "Không có dự án đang triển khai nào im lặng.",
-  "analytics.noProjectsYet": "Chưa có dự án nào. Deal đã chốt sẽ tạo dự án.",
+  "analytics.noProjectsYet":
+    "Chưa có dự án nào. Khi deal được chốt, dự án của deal chuyển sang “Đang triển khai”.",
   "analytics.coverageSub": "Tình trạng kết nối theo lần kiểm tra gần nhất.",
   "analytics.covSource": "Nguồn",
   "analytics.covState": "Trạng thái",
@@ -9179,7 +9180,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // whether a domain can name a company is a fact about the domain.
   "consumerMail.title": "Tên miền thư cá nhân",
   "consumerMail.sub":
-    "Thư từ các tên miền này tạo liên hệ nhưng không bao giờ tạo công ty. Margince có sẵn danh sách; thêm tên miền còn thiếu hoặc ghi đè mục sai.",
+    "Thư từ các tên miền này không bao giờ tạo công ty. Nếu bạn và người gửi chưa từng gửi thư cho nhau, họ chỉ trở thành liên hệ khi Margince đã đánh giá họ. Margince có sẵn danh sách; thêm tên miền còn thiếu hoặc ghi đè mục sai.",
   "consumerMail.addedTitle": "Đã thêm tại đây",
   "consumerMail.addTitle": "Thêm tên miền",
   "consumerMail.domainLabel": "Tên miền",

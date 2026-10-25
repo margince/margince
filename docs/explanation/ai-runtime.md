@@ -137,7 +137,8 @@ embeddings:    {provider: gemini}
   provider, model and endpoint. A refusal at that API then comes back on every rung. Boot and every saved
   routing document warn once per API and name its tasks. The router's own retry guard uses the same test, and
   upstream pins and the thinking level are not part of it. The sovereign profile sends every cloud rung to
-  `local_small`, so those ladders have one rung and draw no warning.
+  `local_large` when that tier has a binding, and to `local_small` when it has none. So those ladders have one
+  rung and draw no warning.
 - `/readyz` names the AI state (`configured` | `fake` | `unconfigured`). So an operator reads the gap
   off the boot log, not off a refused call at `3am`.
 - **The models that can serve a task** are the ladder plus its closure under `degrade_to`, and readers

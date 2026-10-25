@@ -129,7 +129,7 @@ it is about a colleague" says what the message is about.
 To change who can read mail captured from your mailbox in Margince, open **Settings → Connections**, open the mailbox, and change **Mail visibility**.
 1. Open the account menu, choose **Settings**, then **Connections**.
 2. Press the arrow at the end of the mailbox's row.
-3. Set **Mail visibility** to **Held until classified**, **Always held** or **Shared with the team**.
+3. Set **Mail visibility** to **Held until checked**, **Always held** or **Shared with the team**.
 4. When you narrow it, the **Apply to captured mail?** dialog offers **Also narrow captured mail**.
 5. Confirm with **Change mail visibility**.
 
@@ -141,7 +141,7 @@ Also called: mailbox privacy, mail posture, share my inbox.
 You set the mailbox posture at **Settings → Connections**, in each mailbox's
 settings, as **Mail visibility**.
 
-**Held until classified** is the default for every new mailbox. A message stays
+**Held until checked** is the default for every new mailbox. A message stays
 with whoever was on it until a model finds the thread to be plain business.
 Nothing is shared before a decision. So a model that is down or out of money
 leaves mail held, not open.

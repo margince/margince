@@ -181,7 +181,7 @@ must get the question later. Channel records skip it; see the end of this sectio
 | **T1** | Have we and this address sent mail to each other? | **Create the contact.** Wins over every rule below |
 | **T2** | Is this a mail system (DocuSign, SendGrid…)? | Keep the message, create no contact and no company |
 | **T2.5** | Did we already decide about this address? | Use that decision again. No new question, no model call |
-| **T3** | Is it a personal mail domain (`gmail.com`…)? | Create the contact, but no company |
+| **T3** | Is it a personal mail domain (`gmail.com`…)? | No company. The contact waits for the verdict engine, unless T1 or T2.5 already let it in |
 | **T4** | Nobody knows who this is | Create nothing yet. Write a row for the verdict engine |
 
 Notes on some tiers:
@@ -247,7 +247,7 @@ account the erase list never named.
 
 ## 4. The verdict engine
 
-The rows that T4 created are processed every hour, per workspace.
+The rows that T3 and T4 wrote are processed every 10 minutes, in one pass that walks every workspace.
 
 **How the work is claimed.** Workers claim rows 8 at a time with a token and a time limit. So many workers
 can run at once, and a worker that fails before it ends leaves no row claimed for good. Each decision
@@ -420,7 +420,7 @@ path that later deletes content, and only after the undo window.
 | Setting | Where | Controls |
 |---|---|---|
 | Own mail domains | Capture settings (admins write, every user reads) | Which messages count as internal, and so are dropped |
-| Personal mail domains | `POST /v1/capture/consumer-mail-domains`: added domains and exceptions on top of a built-in list of ~8,700 domains | T3: create a contact but no company |
+| Personal mail domains | `POST /v1/capture/consumer-mail-domains`: added domains and exceptions on top of a built-in list of ~8,700 domains | T3: no company, and the contact waits for the verdict engine |
 | `auto_enrich` | `PATCH /v1/capture/settings` | Whether new companies get more data on their own |
 | Approved sender domains | Contacts settings | Lets an admin approve a domain a verdict blocked |
 
@@ -524,7 +524,7 @@ Say `acme.com` is a registered own domain, and the client is `dana@client.io`.
 | …score below 0.7 twice | `unsure`: a proposal goes to the review queue. Rejecting it changes nothing |
 | A DocuSign mail comes in | Message kept, **T2**: no contact, and `eu.docusign.net` never becomes a company |
 | A newsletter from someone you have emailed | **T1 keeps them.** A known contact is not a mail system |
-| A first-time sender at `gmail.com` | **T3**: contact created, no company |
+| A first-time sender at `gmail.com` | **T3**: no company. No contact until the verdict engine answers |
 | Someone mails you from 60 new addresses on one domain | The first 50 get queued. The rest come in with no decision, and a `capture_deferral_capped` log row |
 | The same message is read twice | Nothing happens the second time |
 | A user's permissions were made smaller after they connected | Their next pull runs with the smaller permissions |

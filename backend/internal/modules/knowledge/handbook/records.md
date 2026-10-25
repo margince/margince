@@ -26,8 +26,7 @@ Also called: prospect versus opportunity.
 ### What is the difference between a contact and a company?
 A contact in Margince is a single human you do business with. A company is the
 business they work for, or that you work with. A contact is linked to a company through a job link. That link is not required: a contact with no employer is still a contact.
-Also called: account, client or
-customer for a company.
+Also called: account, client or customer for a company.
 
 ## What connects to what
 
@@ -111,7 +110,7 @@ To merge two duplicate contacts in Margince, open the contact you want to remove
 1. Search for the other contact and pick it under **Select record to keep**.
 2. Read the question: "Merge {source} into {target}? This archives {source}."
 3. Choose **Merge**. Margince opens the contact you kept.
-The contact you merged away is archived, not deleted. Leads have no merge; deals have no merge either.
+The contact you merged away is archived, not deleted. A lead has no **Merge** of its own. When two leads show on the duplicate list, choose the one to keep, and Margince merges the other into it. Deals have no merge.
 
 Anyone the merged-away contact was shared with can open the contact you kept. Of their two shares, the higher access stays.
 Also called: combine, deduplicate, remove a duplicate.

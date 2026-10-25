@@ -6576,7 +6576,8 @@ export const en = {
   "analytics.overdueCommitments": "Overdue commitments",
   "analytics.quietSince": "Quiet since",
   "analytics.nothingQuiet": "No project in delivery has gone quiet.",
-  "analytics.noProjectsYet": "No projects yet. A won deal creates one.",
+  "analytics.noProjectsYet":
+    "No projects yet. A won deal moves its project to Delivering.",
   "analytics.coverageSub": "Connection health from the latest check.",
   "analytics.covSource": "Source",
   "analytics.covState": "State",
@@ -9486,7 +9487,7 @@ export const en = {
   // whether a domain can name a company is a fact about the domain.
   "consumerMail.title": "Consumer mail domains",
   "consumerMail.sub":
-    "Mail from these domains creates the contact but never a company. Margince ships a list; add a missing domain or override a wrong one.",
+    "Mail from these domains never makes a company. Unless you and the sender have mailed each other, they become a contact only once Margince has judged them. Margince ships a list; add a missing domain or override a wrong one.",
   "consumerMail.addedTitle": "Added here",
   "consumerMail.addTitle": "Add domain",
   "consumerMail.domainLabel": "Domain",

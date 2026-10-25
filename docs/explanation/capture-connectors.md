@@ -150,9 +150,9 @@ answers `501`, and does not store a credential in some other place. Disconnect i
 the sealed secret, so removing a connection removes the credential with the row. The worker moves any old
 rows with `auth` bytes into the vault at boot (it can run twice safely).
 
-## How records come in: four ways
+## How records come in: five ways
 
-A connector's records reach the CRM through one of four paths, and all of them end at the same Sink:
+A connector's records reach the CRM through one of five paths, and all of them end at the same Sink:
 
 1. **A bounded backfill, with a preview before spend.** On connect, a `Backfiller` fills the CRM
    *back in time* over a window the user picks.
@@ -161,7 +161,10 @@ A connector's records reach the CRM through one of four paths, and all of them e
    - Together they are the consent surface, shown *before* anything runs. `StartBackfill` queues a job
      the worker walks one page per tick.
    - It commits the cursor per page, so after a failure it resumes where it stopped. A window can
-     **only grow** (`3m` → `6m` → `12m`); a cancel keeps every row already captured.
+     **only grow**; a cancel keeps every row already captured.
+   - Windows run from 3 to 120 months (`capture.BackfillWindowMonths`).
+     `MARGINCE_CAPTURE_MAX_BACKFILL_MONTHS` caps them for the whole installation; the default `0` sets no
+     cap.
 2. **The sync of new mail: the sweep.** The dispatcher of the worker (every `30s`) selects **due**
    connections (`status IN ('connected','error')` AND `next_sync_at ≤ now`). It runs one `SyncOnce` for
    each. The timing sits in the `capture_sync_state` side table (`next_sync_at = success + 2m`).
@@ -192,6 +195,10 @@ A connector's records reach the CRM through one of four paths, and all of them e
      endpoint**.
    - There is no backfill: the Bot API has no history endpoint. Connecting one:
      [how-to/connect-telegram.md](../how-to/connect-telegram.md).
+5. **A record an extension unit hands in.** A unit under `extensions/` calls `Ingest`, and
+   `compose/extingress.go` turns the record into the same shape a core connector gives the Sink. It
+   checks what the unit declared and the member's own rights, and writes nothing itself. The checks are in
+   [ingress-gate-and-auto-capture.md](ingress-gate-and-auto-capture.md#1-the-ingress-gate).
 
 The sync of new mail moves *forward* from the watermark set at connect time; a backfill pages *back* on its
 own token. They never conflict, and the capture key makes any overlap a no-op.
@@ -245,8 +252,7 @@ every send by name until it is connected again.
 The sync of new mail walks the **history API** from a `historyId` watermark. A stale watermark
 (`ErrHistoryGone`; Gmail ends it about once a week) falls back to a bounded list again, not a full
 scan. It implements both optional seam types. Its `Watcher` is the 7 day Pub/Sub push watch, which the worker
-renews every `6h`, `48h` before it expires. Its `Backfiller` offers windows of 3, 6 or 12 months that can
-only grow.
+renews every `6h`, `48h` before it expires. Its `Backfiller` offers the windows above, which can only grow.
 
 **To run:** a Google OAuth app + the vault key. A Pub/Sub topic is optional (without it, capture runs on
 the 2 minute poll).
@@ -361,7 +367,9 @@ connection** footer. The roster manages an existing connection.
 OAuth2 to Google with `calendar.readonly`. It **uses the same Google OAuth app as Gmail**, but as its
 *own* authorization that asks for the calendar scope alone. It sets no `include_granted_scopes`, so the
 grant to read mail never leaks into this credential. The sync of new mail uses a `syncToken`. A stale token
-(`ErrSyncTokenGone`) starts it again. No push, no backfill.
+(`ErrSyncTokenGone`) starts it again. No push, and no `Backfiller`. The first sync takes a full list
+that reaches 90 days back. Every pull keeps only meetings up to 365 days ahead. The connector takes a
+full list again after 30 days, so a later meeting comes in once it is within a year.
 
 **To run:** the *same* Google app as Gmail, with the calendar scope turned on and a
 `/connectors/gcal/callback` redirect URI added, + the vault key.

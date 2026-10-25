@@ -358,7 +358,7 @@ everyone, and only an administrator may change one of those. A rule a member add
 member. "Applies from the next message. Messages already captured stay."
 
 **Consumer mail domains** (Settings → Capture rules): which domains count as personal mailboxes.
-"Mail from a consumer mailbox creates the contact but never a company."
+Mail from one of them never makes a company. Unless you and the sender have mailed each other, they become a contact only once Margince has judged them.
 
 **Refused domains** (Settings → Capture rules): the domains this installation will not create a
 company for. Each shows what decided it: an AI model, a fixed rule, or a human. Letting a domain
@@ -383,10 +383,10 @@ what Margince decided about each. That is a contact, a role mailbox, an
 automated tool, a newsletter, an advisor, or personal. You can change any of
 them.
 
-**Mark as business** lets a sender back in; **Exclude** destroys what they sent
-into your mailbox and stops the next message. A later verdict never writes over
-a decision you make. **Waiting on a decision**, under the list, names the
-contacts only you see until their sender is decided. An administrator sees only
+**Mark as business** lets a sender back in; **Exclude** destroys what they sent into your
+mailbox. Mail they send later still comes in, and Margince then hides it and destroys it too.
+A later verdict never writes over a decision you make. **Waiting on a decision**, under the
+list, names the contacts only you see until their sender is decided. An administrator sees only
 how many there are.
 
 **Held threads** (Settings → Capture activity): the threads your mailbox is holding

@@ -102,8 +102,11 @@ describe("the delivery section", () => {
     expect(link.getAttribute("href")).toBe("#/projects/p9");
     expect(screen.queryByText("2026-08-20T09:00:00Z")).toBeNull();
     expect(
-      (await screen.findAllByText("No projects yet. A won deal creates one."))
-        .length,
+      (
+        await screen.findAllByText(
+          "No projects yet. A won deal moves its project to Delivering.",
+        )
+      ).length,
     ).toBe(2);
   });
 });

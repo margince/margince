@@ -222,7 +222,7 @@ progress bar fills, the import is finished but the AI work is not. Sorting runs
 every hour and enrichment every day after that.
 
 **Imported mail starts out held.** A new mailbox is *Held until
-classified*, so importing five years of mail does not show it to your
+checked*, so importing five years of mail does not show it to your
 colleagues. Each thread stays with whoever was on it until a sorting model
 judges it ordinary business. The same holds for contacts the import creates. A
 contact from a thread that nothing has judged yet is yours alone until the

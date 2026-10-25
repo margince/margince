@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package ai owns the model runtime behind the shared/ports/model seam:
-// the provider adapters (Anthropic cloud-frontier BYOK, Ollama local,
-// and the deterministic offline fake every test drives), the
+// Package ai owns the model runtime behind the shared/ports/model seam. It
+// holds the provider adapters, which providerRegistry lists. It holds the
 // SelectBrain factory that turns config into a Client, and the
 // credential SecretStripper that runs over every outbound payload.
 //

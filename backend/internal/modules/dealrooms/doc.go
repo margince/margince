@@ -12,7 +12,7 @@
 // see in August?" never depends on what the deal says today. That is what makes
 // a public edge safe to serve at all: it reads a release, never the live deal.
 //
-// WHAT IS BUILT TODAY is the seller's half: the room, its lifecycle, its
+// The seller's half is the room, its lifecycle, its
 // releases, and the contacts admitted to it. A room reads and writes through the
 // SELLER's authority, which it takes from the parent deal — deal_room carries no
 // owner of its own, so every read joins deal and applies that row-scope clause,
@@ -23,18 +23,13 @@
 // credential and takes access away; all four are human-only, because deciding
 // which outsider reads a deal's material is not a judgement an agent makes.
 //
-// WHAT IS NOT BUILT is the buyer's own half: the credential EXCHANGE and the
-// room-scoped session it produces. deal_room_session has a table and no Go code.
-// When that lands, the session must be resolved fresh on every request, because
-// a cached one would keep answering after the seller withdrew access.
-//
-// That slice carries one constraint worth stating before it is written, since
-// getting it wrong is not recoverable by review: platform/auth's object and
-// row-scope helpers admit a system principal UNCONDITIONALLY, so a buyer request
-// leaning on them would hold the run of the workspace. Its authority has to come
-// from the session, through store methods carrying a mandatory room predicate,
-// with a fitness test over the whole public-reachable call graph — not a comment
-// like this one.
+// The buyer's half is the credential exchange and the room-scoped session it
+// opens (store_public*.go, handlers_public.go). The session is resolved again
+// on every request, so access the seller withdrew stops at the next request.
+// platform/auth admits a system principal without a check, so the buyer path
+// never calls it. Each buyer store method carries the session's room as a SQL
+// predicate instead. TestPublicHandlersReachOnlyTheSessionScopedStore and
+// TestSessionScopedStoreNeverConsultsTheSeatGates hold that boundary.
 //
 // Tables owned: docs/reference/entity-model/dealrooms.md.
 package dealrooms

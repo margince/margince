@@ -77,9 +77,10 @@ it, after the caller has already decided to write.
 
 ## The dispatcher and its gates
 
-One dispatcher try is `Dispatcher.DispatchWithWait`, and the order is authority → what files the
-provider can carry → file check → seat → consent → pace → send. Gates and policies are different
-tools because they state different facts:
+One dispatcher try is `Dispatcher.DispatchWithWait`, and the order is authority (the provider scope)
+→ seat → the authority the delivery claims → consent → what files the provider can carry → file
+check → jurisdiction → pace → retry limit → send. Gates and policies are different tools because
+they state different facts:
 
 - **A gate says never.** Waiting never repairs a revoked grant, so gates are written into the code,
   fixed, and not something you set.
@@ -266,15 +267,15 @@ The text at the end of the mail uses the language of the message above it. That 
 the body, then the subject, then the installation's own language, then English. Nothing records the
 recipient's own choice. The pages a link opens carry a language switch, which is the way back.
 
-### Confirm first for agents; a human's own action is its own approval
+### Agents send on their own authority
 
-Both send operations declare `tier: confirmation_required` (🟡) in the contract's `x-mcp-tool`
-extension, and both take an `X-Approval-Token` header. The composition layer's gate for agent actions
-reads that tier off the contract and enforces it **before** the request reaches the handler. An agent
-caller repeats the call with the approval's id in that header once a human approves it. A human
-caller's own call is itself the approval.
-That is the same 🟡 machine the approvals module runs for every other action that asks first; see
-[agent-surface.md](agent-surface.md).
+All three send operations (`sendEmail`, `sendCompanyEmail`, `sendMessage`) declare
+`tier: auto_execute` and `scope: send` in the contract's `x-mcp-tool` extension. The gate for agent
+actions (`auth.Gate.Admit`) checks that scope before the request reaches the handler. A passport
+without `send` is refused there, and nothing is staged for a human to approve.
+
+A passport with `send` acts on the seat, grants and row scope of the human who gave it. So an agent
+can send only what that human could send in the app. See [agent-surface.md](agent-surface.md).
 
 ### Pace: the policies that wait
 
