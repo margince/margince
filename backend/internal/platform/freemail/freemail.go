@@ -118,18 +118,19 @@ func normalize(domain string) string {
 }
 
 // CarveOutKey returns the form a carve-out is stored and matched under.
-// That is the subdomain baseline entry the domain falls under, because the
-// matcher compares a carve-out to the entry as written. Otherwise it is the
-// registrable domain, as Hostname gives it.
+// A host at or below a subdomain baseline entry is kept as typed.
+// The carve-out then reaches only that host, never its siblings under the entry.
+// Otherwise it is the registrable domain, as Hostname gives it.
 func CarveOutKey(domain string) (string, bool) {
 	base, ok := Hostname(domain)
 	if !ok {
 		return "", false
 	}
 	pinned := baseline()
-	for candidate := normalize(domain); candidate != base; {
+	host := normalize(domain)
+	for candidate := host; candidate != base; {
 		if _, hit := pinned[candidate]; hit {
-			return candidate, true
+			return host, true
 		}
 		_, rest, found := strings.Cut(candidate, ".")
 		if !found {

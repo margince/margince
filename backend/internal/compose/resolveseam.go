@@ -21,12 +21,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // entityResolver adapts the contacts store's batch resolve to the tool seam.
 func entityResolver(pool *pgxpool.Pool) agents.EntityResolver {
-	store := contacts.NewStore(InstallationDB(pool))
+	// The workspace's own consumer-mail list, so a private address never resolves to a company.
+	store := contacts.NewStore(InstallationDB(pool)).WithConsumerMail(capture.MatcherTx)
 	return func(ctx context.Context, in []agents.ResolveCandidate) ([]agents.ResolveOutcome, error) {
 		candidates := make([]contacts.ResolveCandidate, 0, len(in))
 		for _, c := range in {

@@ -209,8 +209,16 @@ func TestCarveOutKeyKeepsASubdomainBaselineEntryAsWritten(t *testing.T) {
 	if !ok || key != entry {
 		t.Fatalf("CarveOutKey(%q) = %q, %v; want the entry itself", entry, key, ok)
 	}
-	if deeper, _ := CarveOutKey("x." + entry); deeper != entry {
-		t.Errorf("a host under the entry must carve out the entry, got %q", deeper)
+	deeper, _ := CarveOutKey("x." + entry)
+	if deeper != "x."+entry {
+		t.Errorf("a host under the entry must be carved out as typed, got %q", deeper)
+	}
+	narrow := New(nil, []string{deeper})
+	if narrow.IsConsumer("x." + entry) {
+		t.Errorf("the carved-out host %q must no longer be consumer mail", "x."+entry)
+	}
+	if !narrow.IsConsumer("y."+entry) || !narrow.IsConsumer(entry) {
+		t.Errorf("carving out %q must leave its sibling and the entry %q consumer mail", "x."+entry, entry)
 	}
 	if New(nil, []string{key}).IsConsumer(entry) {
 		t.Errorf("%q must no longer be consumer mail", entry)
