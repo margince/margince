@@ -235,24 +235,28 @@ func TestACreateAndADemoteOverOneContactDoNotDeadlock(t *testing.T) {
 	lead, contact := promotedPair(t, e, "Ilse Verwaltung", "ilse@kanzlei.test")
 
 	release, holderPID := pinRow(t, holdContactRow, contact.UUID)
-	outcomes := make(chan error, racers)
+	type outcome struct {
+		writer string
+		err    error
+	}
+	outcomes := make(chan outcome, racers)
 	var announceReturn sync.Once
 	firstReturned := make(chan struct{})
-	report := func(err error) {
+	report := func(writer string, err error) {
 		announceReturn.Do(func() { close(firstReturned) })
-		outcomes <- err
+		outcomes <- outcome{writer, err}
 	}
 
 	go func() {
 		_, err := e.Contacts.DemoteLead(e.Admin(), lead, "not a real opportunity")
-		report(err)
+		report("demote", err)
 	}()
 	go func() {
 		_, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 			FullName: new("Ilse Again"), Source: "manual",
 			OwnerID: userIDPtr(&e.Rep1), FromContactID: &contact,
 		})
-		report(err)
+		report("create", err)
 	}()
 
 	waitUntilQueueIs(t, racers, holderPID, firstReturned,
@@ -262,9 +266,31 @@ func TestACreateAndADemoteOverOneContactDoNotDeadlock(t *testing.T) {
 			"reaches its second row without holding the contact, which is the order a cycle needs")
 	release()
 
+	// Which of the two wins the row is the lock queue's business. The outcomes
+	// are read per writer and neither order is required.
+	//
+	// What both orders owe is an answer. A cycle aborts one with 40P01, and a
+	// stopped statement carries 57014. Either leaves a caller a 5xx where a
+	// serialized race owes them a refusal or a lead.
+	//
+	// Whichever runs second re-reads the contact under the same lock. So the
+	// demote-first order refuses the create by ensureContactStillLive, which is
+	// the shape seen here and not a requirement.
+	settled := 0
 	for range racers {
-		if err := <-outcomes; storekit.IsDeadlock(err) {
-			t.Fatalf("a create and a demote over one contact deadlocked: %v", err)
+		got := <-outcomes
+		switch {
+		case storekit.IsDeadlock(got.err):
+			t.Fatalf("the %s was aborted in a cycle with the other writer: %v", got.writer, got.err)
+		case storekit.IsQueryCanceled(got.err):
+			t.Fatalf("the %s had its statement stopped rather than being serialized: %v",
+				got.writer, got.err)
+		case got.err == nil:
+			settled++
 		}
+	}
+	if settled == 0 {
+		t.Fatal("neither the create nor the demote came through, so the two did not serialize: " +
+			"one of them owes an answer whichever took the contact first")
 	}
 }
