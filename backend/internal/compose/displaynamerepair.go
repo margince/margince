@@ -29,25 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// repairInitialsNamesTx shows the local part in place of the initials capture
-// read as a name ("Dv" for dv@), up to limit contacts, adding to repaired.
-func repairInitialsNamesTx(ctx context.Context, tx pgx.Tx, limit int, repaired *int) error {
-	named, err := contacts.InitialsNamedDisplayNamesTx(ctx, tx, limit)
-	if err != nil {
-		return err
-	}
-	for _, candidate := range named {
-		moved, err := contacts.RefreshDisplayNameTx(ctx, tx, candidate.ID)
-		if err != nil {
-			return err
-		}
-		if moved {
-			*repaired++
-		}
-	}
-	return nil
-}
-
 // repairStaleDisplayNamesBatch puts the learned name on the page for up to limit
 // contacts whose display still shows what a machine first guessed.
 func repairStaleDisplayNamesBatch(ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger) (int, error) {
@@ -76,7 +57,7 @@ func repairStaleDisplayNamesBatch(ctx context.Context, pool *pgxpool.Pool, limit
 				repaired++
 			}
 		}
-		return repairInitialsNamesTx(ctx, tx, limit, &repaired)
+		return nil
 	})
 	if err != nil {
 		return 0, err

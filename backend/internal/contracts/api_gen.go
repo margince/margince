@@ -27607,10 +27607,10 @@ type ApproveRequest struct {
 type AssignLeadOutcome struct {
 	LeadId openapi_types.UUID `json:"lead_id"`
 
-	// Outcome `assigned` moved the lead — including one already owned by the destination, which still
-	// takes a version and an audit row rather than being quietly skipped: the writer records
-	// the assignment as an act, so a re-run says what it did rather than claiming it did
-	// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+	// Outcome `assigned` means the lead now belongs to the destination. A lead already owned by the
+	// destination is not written: it keeps its version and gains no audit row, exactly as a
+	// single update that changes nothing, and the result carries the version it already had.
+	// `forbidden` is a lead the caller may not hand on. `conflict` is a version that
 	// no longer holds.
 	//
 	// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
@@ -27623,10 +27623,10 @@ type AssignLeadOutcome struct {
 	Version *int64 `json:"version,omitempty"`
 }
 
-// AssignLeadOutcomeKind `assigned` moved the lead — including one already owned by the destination, which still
-// takes a version and an audit row rather than being quietly skipped: the writer records
-// the assignment as an act, so a re-run says what it did rather than claiming it did
-// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+// AssignLeadOutcomeKind `assigned` means the lead now belongs to the destination. A lead already owned by the
+// destination is not written: it keeps its version and gains no audit row, exactly as a
+// single update that changes nothing, and the result carries the version it already had.
+// `forbidden` is a lead the caller may not hand on. `conflict` is a version that
 // no longer holds.
 //
 // `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the

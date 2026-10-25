@@ -75,15 +75,7 @@ var nameParticles = map[string]bool{
 // an address, in that order of authority: what the sender calls themselves
 // beats what their mailbox is called.
 func ParseContactName(displayName, email string) ParsedName {
-	// Both inputs are untrusted header text. Bidi controls are removed before
-	// anything else: they are invisible, they survive every other transform,
-	// and left in `full_name` they make the stored string render as a name it
-	// is not: a right-to-left override before "htimS" makes it display as "Smith".
-	displayName = stripBidiControls(displayName)
-	if tooLongToBeAName(displayName) {
-		displayName = ""
-	}
-	if parsed, ok := parseDisplayName(displayName); ok {
+	if parsed, ok := headerName(displayName); ok {
 		return parsed
 	}
 	if tooLongToBeAName(email) {
@@ -112,6 +104,19 @@ func ParseContactName(displayName, email string) ParsedName {
 // it exists so that a path which somehow gets there writes a row a human can
 // see and fix rather than failing a NOT NULL constraint deep in a transaction.
 const unknownContactName = "Unknown sender"
+
+// headerName is what ParseContactName reads from a header display name. It
+// reports false when the header names nobody, so the address decides.
+func headerName(displayName string) (ParsedName, bool) {
+	// Header text is untrusted. Bidi controls go first, because they are
+	// invisible and survive every other transform. Left in `full_name`, a
+	// right-to-left override before "htimS" makes it display as "Smith".
+	displayName = stripBidiControls(displayName)
+	if tooLongToBeAName(displayName) {
+		return ParsedName{}, false
+	}
+	return parseDisplayName(displayName)
+}
 
 // parseDisplayName reads the RFC 5322 display name. It reports false when the
 // header carries nothing usable, so the caller falls through to the address.

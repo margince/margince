@@ -44,10 +44,19 @@ const initialsMaxLetters = 2
 const maxInitialsDisplayLen = maxNameTokens*initialsMaxLetters + maxNameTokens - 1
 
 // initialsDisplayReplacement answers the local part that should replace a
-// stored full name, only when that name equals the guess capture made from the
-// address alone. A header name that reads "Dv" never equals the
-// guess for a different address, and a typed name never equals it at all.
-func initialsDisplayReplacement(fullName, email string) (string, bool) {
+// stored full name. It does so only when capture derived that name from the
+// address. At least one header was read, none named the address, and the name
+// equals the guess. A header "DV" folds to the same "Dv", so the
+// string alone proves nothing.
+func initialsDisplayReplacement(fullName string, headerNames []string, email string) (string, bool) {
+	if len(headerNames) == 0 {
+		return "", false
+	}
+	for _, header := range headerNames {
+		if _, named := headerName(header); named {
+			return "", false
+		}
+	}
 	local, tokens, ok := readableLocalPart(email)
 	if !ok || !readsAsInitials(tokens) || fullName != addressGuessName(tokens) {
 		return "", false

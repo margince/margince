@@ -226,6 +226,8 @@ func TestInviteUserHandlerEmailsTheSetPasswordLink(t *testing.T) {
 	e := setupRevocationEnv(t, "invite-mail")
 	mail := &capturedMail{}
 	h := NewHandlers(e.svc).WithPasswordReset(mail).WithPasswordLinkBase("https://crm.example.test")
+	sent := make(chan struct{})
+	h.resetSendStarted = func() { close(sent) }
 
 	ctx := withIdentity(e.wsCtx(e.admin), e.admin)
 	body := `{"email":"invited@acme.test","display_name":"Invited Rep","role":"rep"}`
@@ -234,6 +236,7 @@ func TestInviteUserHandlerEmailsTheSetPasswordLink(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("invite status = %d, want 201: %s", rec.Code, rec.Body)
 	}
+	<-sent
 
 	if mail.sent != 1 || mail.to != "invited@acme.test" {
 		t.Fatalf("mail = %+v, want one message to the invited address", mail)

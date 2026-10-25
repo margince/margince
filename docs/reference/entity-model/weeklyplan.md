@@ -47,7 +47,7 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 
 ## weekly_plan_commitment
 
-17 columns · primary key `(id)` · referenced by 0 foreign keys
+23 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -56,8 +56,14 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 | `due_on` | `date` |  |  |
 | `help_requested` | `text`, default `''::text` | yes | What the rep needs from their lead, absent when they have asked nothing. |
 | `label` | `text` | yes | At most 500 characters. |
+| `linked_company_id` | `uuid` |  | Points at `company.id`. |
+| `linked_contact_id` | `uuid` |  | Points at `contact.id`. |
+| `linked_deal_id` | `uuid` |  | Points at `deal.id`. |
+| `linked_lead_id` | `uuid` |  | Points at `lead.id`. |
+| `linked_project_id` | `uuid` |  | Points at `project.id`. |
 | `linked_record_id` | `uuid` |  |  |
 | `linked_record_type` | `text` |  | One of `deal`, `lead`, `contact`, `company`, `project`. |
+| `linked_record_unkeyed` | `boolean`, default `false` | yes |  |
 | `manager_response` | `text`, default `''::text` | yes | What the lead answered, absent until they have. |
 | `manager_user_id` | `uuid` |  | Points at `app_user.id`. |
 | `plan_id` | `uuid` | yes | Points at `weekly_plan.id`. |
@@ -73,6 +79,11 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `linked_company_id` | `company` | deleting the parent keeps this row and clears the link |
+| `linked_contact_id` | `contact` | deleting the parent keeps this row and clears the link |
+| `linked_deal_id` | `deal` | deleting the parent keeps this row and clears the link |
+| `linked_lead_id` | `lead` | deleting the parent keeps this row and clears the link |
+| `linked_project_id` | `project` | deleting the parent keeps this row and clears the link |
 | `manager_user_id` | `app_user` | the parent cannot be deleted while this row points at it |
 | `plan_id` | `weekly_plan` | deleting the parent deletes this row |
 
@@ -84,6 +95,12 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 - `weekly_plan_commitment_label_present`: `CHECK ((btrim(label) <> ''))`
 - `weekly_plan_commitment_link_type_check`: `CHECK (((linked_record_type IS NULL) OR (linked_record_type = ANY (ARRAY['deal', 'lead', 'contact', 'company', 'project']))))`
 - `weekly_plan_commitment_link_whole`: `CHECK (((linked_record_type IS NULL) = (linked_record_id IS NULL)))`
+- `weekly_plan_commitment_linked_company_id_bound`: `CHECK ((linked_record_unkeyed OR (NOT (linked_company_id IS DISTINCT FROM CASE WHEN (linked_record_type = 'company') THEN linked_record_id ELSE NULL::uuid END))))`
+- `weekly_plan_commitment_linked_contact_id_bound`: `CHECK ((linked_record_unkeyed OR (NOT (linked_contact_id IS DISTINCT FROM CASE WHEN (linked_record_type = 'contact') THEN linked_record_id ELSE NULL::uuid END))))`
+- `weekly_plan_commitment_linked_deal_id_bound`: `CHECK ((linked_record_unkeyed OR (NOT (linked_deal_id IS DISTINCT FROM CASE WHEN (linked_record_type = 'deal') THEN linked_record_id ELSE NULL::uuid END))))`
+- `weekly_plan_commitment_linked_lead_id_bound`: `CHECK ((linked_record_unkeyed OR (NOT (linked_lead_id IS DISTINCT FROM CASE WHEN (linked_record_type = 'lead') THEN linked_record_id ELSE NULL::uuid END))))`
+- `weekly_plan_commitment_linked_project_id_bound`: `CHECK ((linked_record_unkeyed OR (NOT (linked_project_id IS DISTINCT FROM CASE WHEN (linked_record_type = 'project') THEN linked_record_id ELSE NULL::uuid END))))`
+- `weekly_plan_commitment_linked_record_shape`: `CHECK ((linked_record_unkeyed OR (linked_record_id IS NULL) OR (num_nonnulls(linked_deal_id, linked_lead_id, linked_contact_id, linked_company_id, linked_project_id) = 1)))`
 - `weekly_plan_commitment_response_bound`: `CHECK ((length(manager_response) <= 2000))`
 - `weekly_plan_commitment_response_whole`: `CHECK ((((btrim(manager_response) = '') = (manager_user_id IS NULL)) AND ((manager_user_id IS NULL) = (responded_at IS NULL))))`
 - `weekly_plan_commitment_state_check`: `CHECK ((state = ANY (ARRAY['open', 'done', 'missed', 'dropped'])))`
@@ -92,5 +109,14 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 **Indexes**
 
 - `idx_weekly_plan_commitment_help`: `btree (plan_id) WHERE (btrim(help_requested) <> '')`
+- `idx_weekly_plan_commitment_linked_company`: `btree (linked_company_id) WHERE (linked_company_id IS NOT NULL)`
+- `idx_weekly_plan_commitment_linked_contact`: `btree (linked_contact_id) WHERE (linked_contact_id IS NOT NULL)`
+- `idx_weekly_plan_commitment_linked_deal`: `btree (linked_deal_id) WHERE (linked_deal_id IS NOT NULL)`
+- `idx_weekly_plan_commitment_linked_lead`: `btree (linked_lead_id) WHERE (linked_lead_id IS NOT NULL)`
+- `idx_weekly_plan_commitment_linked_project`: `btree (linked_project_id) WHERE (linked_project_id IS NOT NULL)`
 - `idx_weekly_plan_commitment_plan`: `btree (plan_id, "position", created_at)`
 - `weekly_plan_commitment_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `trg_weekly_plan_commitment_linked_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_weekly_plan_commitment_linked_keys()`

@@ -13,8 +13,6 @@ import type { MessageKey } from "./en";
 //   - "tổ chức" is never the registered legal entity — that sense is
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
-// Annotated, not inferred: the inferred literal type of a catalog this size is
-// past what tsc will serialize (TS7056).
 export const vi: Readonly<Record<MessageKey, string>> = {
   "homeRepair.taskPermission":
     "Cần quyền lưu trữ hoạt động để lưu trữ các công việc đã xem xét.",

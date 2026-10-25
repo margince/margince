@@ -1069,13 +1069,16 @@ The 43 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## user_record_view
 
-5 columns · primary key `(id)` · referenced by 0 foreign keys
+8 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `entity_company_id` | `uuid` |  | Points at `company.id`. |
+| `entity_contact_id` | `uuid` |  | Points at `contact.id`. |
 | `entity_id` | `uuid` | yes |  |
 | `entity_type` | `text` | yes | One of `company`, `contact`. |
+| `entity_unkeyed` | `boolean`, default `false` | yes |  |
 | `last_viewed_at` | `timestamp with time zone` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 
@@ -1083,17 +1086,28 @@ The 43 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `entity_company_id` | `company` | deleting the parent deletes this row |
+| `entity_contact_id` | `contact` | deleting the parent deletes this row |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
 
+- `user_record_view_entity_company_id_bound`: `CHECK ((entity_unkeyed OR (NOT (entity_company_id IS DISTINCT FROM CASE WHEN (entity_type = 'company') THEN entity_id ELSE NULL::uuid END))))`
+- `user_record_view_entity_contact_id_bound`: `CHECK ((entity_unkeyed OR (NOT (entity_contact_id IS DISTINCT FROM CASE WHEN (entity_type = 'contact') THEN entity_id ELSE NULL::uuid END))))`
+- `user_record_view_entity_shape`: `CHECK ((entity_unkeyed OR (num_nonnulls(entity_company_id, entity_contact_id) = 1)))`
 - `user_record_view_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['company', 'contact'])))`
 - `user_record_view_user_id_entity_type_entity_id_key`: `UNIQUE (user_id, entity_type, entity_id)`
 
 **Indexes**
 
+- `idx_user_record_view_entity_company`: `btree (entity_company_id) WHERE (entity_company_id IS NOT NULL)`
+- `idx_user_record_view_entity_contact`: `btree (entity_contact_id) WHERE (entity_contact_id IS NOT NULL)`
 - `user_record_view_pkey`: `unique, btree (id)`
 - `user_record_view_user_id_entity_type_entity_id_key`: `unique, btree (user_id, entity_type, entity_id)`
+
+**Triggers**
+
+- `trg_user_record_view_entity_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_user_record_view_entity_keys()`
 
 ## weekly_review
 

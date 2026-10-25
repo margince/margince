@@ -122,6 +122,7 @@ backend/internal/modules/consent/preference.go core 0217
 backend/internal/modules/contacts/company_computed.go core 0217
 backend/internal/modules/contacts/companyarchive.go migration 0083
 backend/internal/modules/contacts/companylinkedin_test.go migration 0191
+backend/internal/modules/contacts/displaynameorigin.go core 1792896243
 backend/internal/modules/contacts/emailsignature.go core 0235
 backend/internal/modules/contacts/geocode.go migration 0217
 backend/internal/modules/contacts/merge_company.go migration 1787320003
