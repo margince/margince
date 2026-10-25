@@ -36,36 +36,9 @@ type charsetCandidate struct {
 }
 
 func repairMailCharsetsBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-	if err := auth.RequireSystem(ctx); err != nil {
-		return datatask.BatchOut{}, err
-	}
-	after, err := datatask.UUIDCursor(in.Cursor)
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	rows, err := tx.Query(ctx, `SELECT a.id, a.version, a.subject, a.body, a.body_completeness, rc.payload `+charsetDamagedMailScope+`
-		AND a.id > @charset_after ORDER BY a.id LIMIT @charset_limit FOR UPDATE OF a`,
-		pgx.NamedArgs{"charset_after": after, "charset_limit": in.Limit})
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	candidates, err := pgx.CollectRows(rows, pgx.RowToStructByPos[charsetCandidate])
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	scanned := make([]ids.UUID, 0, len(candidates))
-	changed := 0
-	for _, candidate := range candidates {
-		scanned = append(scanned, candidate.ID)
-		repaired, err := repairMailCharset(ctx, tx, candidate)
-		if err != nil {
-			return datatask.BatchOut{}, err
-		}
-		if repaired {
-			changed++
-		}
-	}
-	return datatask.AdvanceUUID(in, scanned, changed)
+	return walkUUIDBatch(ctx, tx, in, `SELECT a.id, a.version, a.subject, a.body, a.body_completeness, rc.payload `+charsetDamagedMailScope+`
+		AND a.id > @page_after ORDER BY a.id LIMIT @page_limit FOR UPDATE OF a`,
+		func(c charsetCandidate) ids.UUID { return c.ID }, repairMailCharset)
 }
 
 // repairMailCharset writes the subject and body the stored original yields now.
