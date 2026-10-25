@@ -272,6 +272,19 @@ describe("leadFigures", () => {
     expect(instant[1].value).toBe("10 Aug");
   });
 
+  // Stored at noon UTC, a day touch dated today lies ahead of a 10:00 reading.
+  it("reads a stored day touch dated today before its stored noon", () => {
+    const figures = leadFigures(
+      lead({
+        last_activity_at: "2026-08-13T12:00:00Z",
+        last_activity_precision: "day",
+      }),
+      [],
+      ctx,
+    );
+    expect(figures[1].value).toBe("13 Aug");
+  });
+
   it("ignores a stored last activity that lies ahead of the reading", () => {
     const figures = leadFigures(
       lead({ last_activity_at: "2026-08-15T09:00:00Z" }),

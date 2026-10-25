@@ -11,6 +11,7 @@ import {
   type ActivityMoment,
   activityDay,
   activityDaysAway,
+  activityHasBegun,
   activityIsAhead,
   type OccurredPrecision,
 } from "../../format/activitywhen";
@@ -252,7 +253,10 @@ export function leadFigures(
   const { t } = ctx;
   return [
     firstResponseFigure(lead, ctx),
-    lastTouchFigure(lastTouchAt(lead, activities, ctx.asOf, wholeHistory), ctx),
+    lastTouchFigure(
+      lastTouchAt(lead, activities, ctx.asOf, ctx.record, wholeHistory),
+      ctx,
+    ),
     meetingFigure(nextBookedMeeting(activities, ctx.asOf, ctx.record), ctx),
     {
       key: "company",
@@ -269,24 +273,28 @@ export function leadFigures(
 /**
  * When the lead was last touched, as of `asOf`: the newest row that moves last
  * activity by then. The stored field stands in only for a cut page with no
- * such row.
+ * such row. It names no kind, so it stands once it has begun in `record`.
  */
 function lastTouchAt(
   lead: Lead,
   activities: readonly Activity[],
   asOf: string,
+  record: string,
   wholeHistory: boolean,
 ): ActivityMoment | undefined {
   const now = Date.parse(asOf);
   const happened = activities
-    .filter((row) => movesLastActivity(row, now))
+    .filter((row) => movesLastActivity(row, now, record))
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))[0];
   if (happened) {
     return { at: happened.occurred_at, precision: happened.occurred_precision };
   }
   const stored = lead.last_activity_at;
-  return !wholeHistory && stored && Date.parse(stored) <= now
-    ? { at: stored, precision: lead.last_activity_precision ?? "instant" }
+  const precision = lead.last_activity_precision ?? "instant";
+  return !wholeHistory &&
+    stored &&
+    activityHasBegun(stored, precision, now, record)
+    ? { at: stored, precision }
     : undefined;
 }
 
