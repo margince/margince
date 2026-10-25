@@ -12,6 +12,7 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -83,6 +84,11 @@ func seedBusyAccount(ctx context.Context, t *testing.T, tx pgx.Tx, busy ids.UUID
 	}
 }
 
+// attachmentKey is an index condition that pins attachment to a value: an
+// equality or an `= ANY` on its id, its parent's id or its account. A range or
+// an inequality on those columns still walks the table.
+var attachmentKey = regexp.MustCompile(`[( ](?:entity_id|company_id|id) = `)
+
 func TestABusyAccountsDocumentsListStartsFromTheAccount(t *testing.T) {
 	e := setupPromises(t)
 	ctx := context.Background()
@@ -123,8 +129,7 @@ func TestABusyAccountsDocumentsListStartsFromTheAccount(t *testing.T) {
 			return
 		}
 		attachmentReads++
-		keyed := strings.Contains(n.IndexCond, "entity_id") || strings.Contains(n.IndexCond, "company_id") ||
-			strings.Contains(n.IndexCond, "(id = ")
+		keyed := attachmentKey.MatchString(n.IndexCond)
 		if n.NodeType == "Seq Scan" || (n.IndexName != "" && !keyed) {
 			unkeyedReads++
 			t.Logf("unkeyed attachment read: %s %s %s", n.NodeType, n.IndexName, n.IndexCond)

@@ -56,13 +56,18 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (map[ids.UUID]emailParties, error) {
 	args := []any{messages}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
-	if err != nil {
-		return nil, err
-	}
-	contactJoin := `LEFT JOIN contact p ON p.id = ap.contact_id AND p.archived_at IS NULL`
-	if scope != "" {
-		contactJoin += ` AND (` + scope + `)`
+	// Row scope assumes the object grant. A reader without contact read keeps
+	// the header's own address and name, and learns no contact behind them.
+	contactJoin := `LEFT JOIN contact p ON false`
+	if auth.ReadGranted(ctx, "contact") {
+		scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
+		if err != nil {
+			return nil, err
+		}
+		contactJoin = `LEFT JOIN contact p ON p.id = ap.contact_id AND p.archived_at IS NULL`
+		if scope != "" {
+			contactJoin += ` AND (` + scope + `)`
+		}
 	}
 	// Three sources for one name, in the order of how much this installation
 	// knows the contact. The contact record first — it is ours and it is

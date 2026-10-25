@@ -35037,6 +35037,7 @@ export interface components {
         DealDocument: {
             attachment: components["schemas"]["Attachment"];
             hidden: boolean;
+            /** @description Deprecated: read attachment.origin, which names the mail's sender rather than its counterparty and is gated like every Documents list. Kept for older clients. */
             origin?: components["schemas"]["DealDocumentOrigin"];
         };
         /** @description Where a captured file came from. Present for a file that arrived with a message linked to the deal; absent for a file uploaded on the deal. */

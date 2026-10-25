@@ -51,8 +51,9 @@ func mailsOf(files []crmcontracts.Attachment) []ids.UUID {
 	return mails
 }
 
-// mailOrigins reads the origin of each live mail the caller may read. A mail
-// outside the caller's content gate has no entry.
+// mailOrigins reads the origin of each live email or chat message the caller
+// may read. A meeting, call, note or task names no origin, and neither does a
+// mail outside the caller's content gate.
 func mailOrigins(ctx context.Context, tx pgx.Tx, mails []ids.UUID) (map[ids.UUID]*crmcontracts.AttachmentOrigin, error) {
 	out := make(map[ids.UUID]*crmcontracts.AttachmentOrigin, len(mails))
 	if len(mails) == 0 {
@@ -72,7 +73,8 @@ func mailOrigins(ctx context.Context, tx pgx.Tx, mails []ids.UUID) (map[ids.UUID
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, sprintf(`SELECT a.id, a.kind, a.subject, a.occurred_at FROM activity a
-		 WHERE a.id = ANY($%d) AND a.archived_at IS NULL AND %s`, set, orUnbounded(content)), args...)
+		 WHERE a.id = ANY($%d) AND a.kind IN ('%s', '%s') AND a.archived_at IS NULL AND %s`,
+		set, crmcontracts.ActivityKindEmail, crmcontracts.ActivityKindMessage, orUnbounded(content)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading where the files came from: %w", err)
 	}
