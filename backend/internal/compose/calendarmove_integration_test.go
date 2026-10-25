@@ -158,10 +158,10 @@ func TestTheirReplyEndsTheWaitOnlyWhenTheReaderMayReadIt(t *testing.T) {
 	}
 }
 
-// Our own invitation captured before calendar_method existed reads as plain
-// mail waiting for their reply until the pass reads its method back. The
-// outbound walk keeps its own place: an inbound marker newer than our mail
-// must not make the walk skip it.
+// Our own invitation captured before calendar_method existed waits on nobody,
+// before the pass reads its method back and after. A plain legacy mail beside
+// it still waits. The outbound walk keeps its own place: an inbound marker
+// newer than our mail must not make the walk skip it.
 func TestTheBackfillReadsTheMethodOfOurOwnLegacyInvitation(t *testing.T) {
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
@@ -174,15 +174,21 @@ func TestTheBackfillReadsTheMethodOfOurOwnLegacyInvitation(t *testing.T) {
 
 	invitation := o.captureAs(t, invitationMail(o.seat, "pat@customer.example", "REQUEST", o.now.Add(-3*time.Hour)), true)
 	o.asCapturedBeforeTheColumn(t, invitation, 3*time.Hour)
-	if got := o.move(t, invitation); got != crmcontracts.EmailSummaryMoveWaitingForThem {
-		t.Fatalf("the legacy invitation reads %q, want waiting_for_them before the pass", got)
+	plain := o.weWrite(t, owedMail{to: "pat@customer.example", subject: "The quote", at: o.now.Add(-4 * time.Hour)})
+	o.asCapturedBeforeTheColumn(t, plain, 4*time.Hour)
+	for message, want := range map[ids.UUID]crmcontracts.EmailSummaryMove{
+		invitation: crmcontracts.EmailSummaryMoveNone, plain: crmcontracts.EmailSummaryMoveWaitingForThem,
+	} {
+		if got := o.move(t, message); got != want {
+			t.Fatalf("before the pass, legacy mail %s reads %q, want %q", message, got, want)
+		}
 	}
-	if got := o.offeredByTheWalk(t); got != 1 {
-		t.Fatalf("the walk offers %d messages before the pass, want our one invitation", got)
+	if got := o.offeredByTheWalk(t); got != 2 {
+		t.Fatalf("the walk offers %d messages before the pass, want our two legacy mails", got)
 	}
 
-	if n := runCalendarMethodBackfill(t, o, nil); n != 1 {
-		t.Fatalf("the pass settled %d messages, want our one invitation", n)
+	if n := runCalendarMethodBackfill(t, o, nil); n != 2 {
+		t.Fatalf("the pass settled %d messages, want our two legacy mails", n)
 	}
 	if got := o.calendarMethod(t, invitation); got != "REQUEST" {
 		t.Fatalf("the pass stored calendar method %q, want REQUEST", got)
@@ -197,6 +203,9 @@ func TestTheBackfillReadsTheMethodOfOurOwnLegacyInvitation(t *testing.T) {
 	}
 	if got := o.move(t, invitation); got != crmcontracts.EmailSummaryMoveNone {
 		t.Errorf("our invitation reads %q once its method was read back, want none", got)
+	}
+	if got := o.move(t, plain); got != crmcontracts.EmailSummaryMoveWaitingForThem {
+		t.Errorf("the plain legacy mail reads %q once checked, want waiting_for_them", got)
 	}
 	if n := runCalendarMethodBackfill(t, o, nil); n != 0 {
 		t.Errorf("a second pass settled %d messages, want none", n)

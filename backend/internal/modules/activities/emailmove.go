@@ -23,9 +23,9 @@ type EmailRowState struct {
 
 // EmailStatesFor reads obligation and delivery after the caller's content
 // gate. "Needs reply" is owedSQL and "waiting for them" is
-// awaitingTheirAnswerSQL. The waiting and follow-up lanes start from the same
-// two, so a badge and a lane row agree on whose move it is. A captured
-// reminder's completion settles its source request.
+// awaitingTheirAnswerSQL for a mail the reader sent. The waiting and follow-up
+// lanes start from the same two, so a badge and a lane row agree on whose move
+// it is. A captured reminder's completion settles its source request.
 func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map[ids.UUID]EmailRowState, error) {
 	if len(activityIDs) == 0 {
 		return map[ids.UUID]EmailRowState{}, nil
@@ -33,6 +33,9 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wanted := arg(activityIDs)
+	// Only the seat stamp: the reader's hand-typed addresses live with capture,
+	// which this page read cannot reach, so such a mail reads none, never theirs.
+	sentByReader := sentByReaderSQL(fmt.Sprintf("$%d", arg(readerOrNobody(ctx))), fmt.Sprintf("$%d", arg([]string{})))
 	laterContent, err := auth.ActivityContentClause(ctx, "later", arg)
 	if err != nil {
 		return nil, err
@@ -41,7 +44,7 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map
  delivery.sent_at, delivery.bounced_at, delivery.bounce_reason, coalesce(delivery.attachments, '[]'::jsonb),
  CASE WHEN coalesce(`+owedSQL("now()", neverRelaxed, neverRelaxed, neverRelaxed)+`, false)
    THEN '`+string(crmcontracts.EmailSummaryMoveNeedsReply)+`'
-   WHEN coalesce(`+awaitingTheirAnswerSQL("now()", laterContent)+`, false)
+   WHEN coalesce(`+awaitingTheirAnswerSQL("now()", sentByReader, laterContent)+`, false)
    THEN '`+string(crmcontracts.EmailSummaryMoveWaitingForThem)+`'
    ELSE '`+string(crmcontracts.EmailSummaryMoveNone)+`' END, `+openRequestReminderSQL+`
  FROM activity a LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id

@@ -81,11 +81,12 @@ var outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL
 // calendarResponseSQL is an attendee answering an invitation (REPLY, COUNTER,
 // DECLINECOUNTER); calendarInvitationSQL is the organizer's invitation, update
 // or cancellation. Either is owed an answer only when confirmed: "Declined"
-// and "Invitation: Kickoff" wait on nobody's written reply.
+// and "Invitation: Kickoff" wait on nobody's written reply. A mail the
+// calendar-method re-read has not checked yet reads as one too.
 var (
 	calendarResponseSQL   = calendarMethodInSQL(calendarmethod.Responses())
 	calendarInvitationSQL = calendarMethodInSQL(calendarmethod.Invitations())
-	calendarCopySQL       = "(" + calendarResponseSQL + " OR " + calendarInvitationSQL + ")"
+	calendarCopySQL       = "(" + calendarResponseSQL + " OR " + calendarInvitationSQL + " OR " + calendarUncheckedSQL + ")"
 )
 
 func calendarMethodInSQL(methods []string) string {

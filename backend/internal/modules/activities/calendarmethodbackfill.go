@@ -35,6 +35,16 @@ const (
 // after it ran was read by capture, so only older mail is the pass's to read.
 const CalendarMethodMigration = "1791793531"
 
+// calendarUncheckedSQL is a mail on alias a captured before calendar_method
+// existed that may carry a calendar part and that the re-read has not checked
+// yet. Its NULL says nothing, so it is not read as human mail until checked.
+var calendarUncheckedSQL = `(a.kind = 'email' AND a.calendar_method IS NULL
+ AND a.has_calendar_part IS NOT FALSE
+ AND a.created_at < coalesce((SELECT m.applied_at FROM schema_migrations_core m
+   WHERE m.version = '` + CalendarMethodMigration + `'), '-infinity'::timestamptz)
+ AND NOT EXISTS (SELECT 1 FROM activity_calendar_method_backfill checked
+   WHERE checked.activity_id = a.id))`
+
 // CalendarMethodCandidate is one mail captured before calendar_method existed,
 // not yet checked by the re-read.
 type CalendarMethodCandidate struct {
