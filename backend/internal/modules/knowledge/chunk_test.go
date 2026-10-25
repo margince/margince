@@ -317,3 +317,13 @@ func TestACommentInsideALineStaysText(t *testing.T) {
 		}
 	}
 }
+
+func TestACommentOverSeveralLinesKeepsTheLineCount(t *testing.T) {
+	got := ChunkText("<!--\n  a note\n  over lines\n-->\n# Title\n\nBody.\n")
+	if len(got) != 1 {
+		t.Fatalf("got %d chunks, want 1", len(got))
+	}
+	if got[0].StartLine != 1 || !strings.Contains(got[0].Text, "# Title") {
+		t.Fatalf("a comment over several lines moved the text: StartLine %d, %q", got[0].StartLine, got[0].Text)
+	}
+}

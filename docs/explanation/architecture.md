@@ -50,7 +50,8 @@ What each directory owns, and the rule that goes with it:
     rule set).
   - A module never imports a sibling; if feature A needs B, compose puts the edge in. A module writes
     only the tables it owns, declared in `tableOwners` (`backend/gates/tableownerregistry_test.go`) and
-    gated by `backend/gates/tableownership_test.go`. Each module follows one of
+    gated by `backend/gates/tableownership_test.go`. Its `doc.go` names its page in the
+    [entity model](../reference/entity-model/README.md), which is built from that map. Each module follows one of
     [the two spine shapes](#the-two-spine-shapes).
 - `internal/compose/`: the compose layer that every process role shares. It holds the contract HTTP
   surface, the composite `datasource.SystemOfRecordProvider`, and the MCP registry + approvals adapter.
@@ -100,9 +101,7 @@ imports (the inside of the `aicert` package) means it moves and versions with th
 through `internal/compose` and meant to run as a server or job, it gets a `cmd/<role>`. If it is a tool
 around one package, it stays with that package.
 
-To place a new feature: add `internal/modules/<name>/` (flat), and give it a `doc.go` whose
-`Tables owned:` line names its page in the [entity model](../reference/entity-model/README.md). Follow one spine shape, and wire any need that crosses modules as a `compose`
-adapter, never a sibling import.
+To place a new feature, follow [add-a-module.md](../how-to/add-a-module.md).
 
 ## The two spine shapes
 

@@ -35,10 +35,22 @@ The handbook (`docs/handbook/`) and `user-guide/` are for those who use Margince
 the words on the screen. Server, transaction, row, token, an API path or a permission key appears only when the
 reader must type it. One handbook page owns a topic, and the others link to it.
 
-## A fact the code owns is linked, and a story names its code
+## A list the code owns is linked, and a page names the code it describes
 
-A list the code already holds (tables, tiers, job schedules, settings) is not typed into a page. Link the
-generated page that lists it; the [entity model](entity-model/README.md) is the one list of tables.
+### Link a whole list
+
+A page never types a whole list the code holds: every table, every job, every setting. It links the
+page that lists them, and the code keeps that page true:
+
+- tables: the [entity model](entity-model/README.md), the one list of tables and their owners;
+- settings: [configuration.md](configuration.md);
+- a list with no generated page, such as jobs or AI tasks: the file that declares it
+  (`backend/api/jobs.yaml`, `backend/api/ai-tasks.yaml`).
+
+A page may still state one value that its explanation needs, such as one job's schedule. Then its
+`describes:` line names the file that sets that value, so a change to the value asks about the page.
+
+### Name the code a page describes
 
 An explanation or handbook page states how the product behaves, so it names the code that decides that
 behaviour in one line above its title:
@@ -49,10 +61,24 @@ behaviour in one line above its title:
 # How a message goes out
 ```
 
-`docsdescribes_test.go` checks that each path exists. `make docs-describing` lists the pages whose code
-a branch changes, and the pull request answers each one with `still true` or `updated`. Name the files
-whose change would make the page false, not every file it mentions. The knowledge chunker leaves a
-line that is only an HTML comment out of a passage, so **Ask your documents** never quotes it.
+Name the files whose change would make the page false, not every file it mentions. A folder path
+matches every file under it. `docsdescribes_test.go` checks that each path exists. A `README.md`
+page needs no line.
+
+The knowledge chunker (`backend/internal/modules/knowledge/chunk.go`) leaves a whole-line HTML comment
+out of every passage, so **Ask your documents** never quotes this line.
+
+### Answer for each page in the pull request
+
+`make docs-describing` lists the pages whose named code a branch changes, and `docs-describing.yml`
+asks the same on the pull request. The pull request body answers each page on a line of its own:
+
+```markdown
+- docs/<folder>/<page>.md: still true
+- docs/<folder>/<page>.md: updated
+```
+
+A page the pull request edits counts as answered.
 
 ## What the gate holds
 

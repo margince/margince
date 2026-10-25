@@ -5,12 +5,11 @@
 
 package integration
 
-// The E03 offer engine end-to-end (B-E03.16–.20): rate-card products
-// with snapshot semantics, server-computed money totals that reject any
-// client-supplied total, the draft→sent→accepted/rejected lifecycle with
-// FX honesty at send and the deal-amount sync at accept, revision
-// versioning, and the ADR-0055 🟡 governance of send for agent
-// principals.
+// The offer engine end to end. Rate-card products keep snapshot semantics,
+// and server-computed money totals reject any client-supplied total.
+// The draft→sent→accepted/rejected lifecycle fixes FX at send and syncs the
+// deal amount at accept. Revisions are versioned, and the send of an offer is
+// human-only, so it refuses agent principals.
 
 import (
 	"context"

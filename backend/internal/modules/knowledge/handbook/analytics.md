@@ -212,8 +212,8 @@ The **Delivery** section of Analytics holds the project reports.
 
 **Projects inactive for 30 days**: project, phase, quiet since.
 
-When there is nothing, the page says which nothing it means: "No projects yet.
-A won deal moves its project to Delivering." or "No project in delivery has gone quiet."
+When there is nothing, the page says which nothing it means: "No projects yet. Create one under
+Projects with New project. A won deal moves its project to Delivering." or "No project in delivery has gone quiet."
 
 ## Data coverage
 

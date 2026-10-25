@@ -340,8 +340,8 @@ not own**. The list: `contact`, `contact_email`/`_phone`/`_social`, `contact_cha
 `lead`, `activity`, `activity_participant`, `graph_interaction_edge`, `linkedin_connection`,
 `comms_outbound`, `deal`, `attachment`, `embedding`, `raw_capture`, `field_provenance`,
 `preference_token`, `capture_pending_counterparty`, `voice_learning_signal`, `ai_call` and
-`ai_call_payload`. The agreed list is the cross-writer map in `backend/gates/tableownership_test.go`,
-which gates it. That file, not this page, is the authority.
+`ai_call_payload`. The agreed list is the cross-writer map `crossStoreWrites` in
+`backend/gates/tableownershipwaivers_test.go`, and `backend/gates/tableownership_test.go` gates it. That file, not this page, is the authority.
 
 Four of those show *why* nothing else can reach them:
 
@@ -360,7 +360,7 @@ record. To route each delete through the module that owns the table would give u
 promise.
 
 Privacy's deletes are one of the agreed cross-writer exceptions to "a module writes only its own
-tables." Every such write is **agreed per table** in `backend/gates/tableownership_test.go`, with a
+tables." Every such write is **agreed per table** in `backend/gates/tableownershipwaivers_test.go`, with a
 reason that stands alone. A waiver with no reason, or an out-of-date one, fails the test. See
 [reference/modules.md](../reference/modules.md) for the map of who owns what and
 [write-backbone.md](write-backbone.md) for the write shape these deletes still follow.
@@ -533,5 +533,5 @@ version the build sends.
 | A website lead's notice | `internal/modules/consent/leadnotice.go` (`lead_privacy_notice`), `internal/compose/siteleadnotice.go`, `internal/modules/privacy/erasure_untoldlead.go` |
 | Decision counters | `internal/modules/consent/decisioncounter.go`, exported by `internal/compose/authzmetrics.go` |
 | The engine-and-gate report | `internal/modules/consent/authorizedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
-| Cross-store agreement | `backend/gates/tableownership_test.go` |
+| Cross-store agreement | `backend/gates/tableownershipwaivers_test.go` |
 | Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/de/` |

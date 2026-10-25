@@ -9,18 +9,21 @@ Use this page to add a new **capability** (a module) or a **link between two mod
 ## Add a new module
 
 1. **Create the flat package** `backend/internal/modules/<name>/` with a `doc.go`.
-   In `doc.go`, state the module's job in one line, then the line
-   `// Tables owned: docs/reference/entity-model/<name>.md.` That generated page is the list; the
-   `doc.go` never copies it (`tablelistpointer_test.go`).
+   In `doc.go`, state the module's job in one line.
    Choose one shape: *Handlers→Store* (CRUD) or *Handlers→Service* (engine).
    [reference/modules.md](../reference/modules.md) lists the modules that exist.
-2. **Add its migrations** ([apply-migrations.md](apply-migrations.md)) and give every new table its
-   owner in `tableOwners` (`backend/gates/tableownerregistry_test.go`).
+2. **Add its migrations and its tables**, in the order of [apply-migrations.md](apply-migrations.md#write-a-migration).
+   First the migration, then `head_catalog.txt`, then one line per table in `tableOwners`.
+   Such a line reads `"my_table": "internal/modules/<name>",`.
+   Last, build the table list again.
+   A module that owns tables then names its page in `doc.go`, and never copies the list.
+   `tablelistpointer_test.go` asks for this line: `// Tables owned: docs/reference/entity-model/<name>.md.`
 3. **Add its contract operations** and run `make gen` ([add-an-endpoint.md](add-an-endpoint.md)).
    Each operation answers 501 until you wire it.
-4. **Put the handler set in `Server`** (`backend/internal/compose/server.go`).
-   Add a type name (`fooHandlers = foo.Handlers`) and add the field to the `Server` struct.
-   Then build it in `newServer` (`fooHandlers: foo.NewHandlers(pool)`).
+4. **Put the handler set in `Server`.** The parts sit in three files in `backend/internal/compose/`.
+   Add a type name (`fooHandlers = foo.Handlers`) in `handlersets.go`.
+   Add the field to the `Server` struct in `serverinventory.go`.
+   Then build it in `newServer` in `server.go` (`fooHandlers: foo.NewHandlers(pool)`).
    Your methods then hide the generated 501 stubs, so you write no routes.
 5. **Import only `shared`, `platform` and the generated contract.**
    Never import another module: `arch-lint` fails that import.

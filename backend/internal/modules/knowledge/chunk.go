@@ -25,8 +25,9 @@ const overlapChars = 120
 
 // authorNoteLine is a line that is wholly an HTML comment. A rendered page never
 // shows one, so an answer quoting it quotes what the reader cannot see. It is
-// blanked rather than cut so StartLine still counts the page's own lines.
-var authorNoteLine = regexp.MustCompile(`(?m)^[ \t]*<!--(?:[^-]|-[^-])*-->[ \t]*$`)
+// blanked rather than cut so StartLine still counts the page's own lines. A
+// comment over several lines stays text, since blanking it would cut lines.
+var authorNoteLine = regexp.MustCompile(`(?m)^[ \t]*<!--(?:[^-\n]|-[^-\n])*-->[ \t]*$`)
 
 // Chunk is one embeddable span of a document, in document order.
 type Chunk struct {

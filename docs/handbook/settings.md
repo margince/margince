@@ -182,13 +182,13 @@ The Capture rules page in Settings (group **Data**) decides what comes into the 
 
 **Mail sharing and sync**, at the top: whether captured mail is shared with colleagues, and how often each mailbox syncs. It holds for everybody, so it lives here. Your own **Connections** page shows the current sharing setting on a row marked **Whole company**.
 
+The same card holds **Held threads reviewed per run**. A mailbox set to *Held until checked* holds its mail until Margince has checked the thread ([Who can see an email](who-can-see-an-email.md)). This setting says how many held threads one review run looks at, from 1 to 200. The default is 40, and the rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the run schedule, which System health sets.
+
 **Own email domains** are the domains that belong to this company. Mail between colleagues is not stored for anyone, including you. Take note: no mailbox offers again the mail skipped while a domain is on this list.
 
 **Enrichment.** Whether Margince fills in facts on captured companies by itself.
 
-**Mail privacy review.** A mailbox set to *Held until checked* holds its mail until Margince has judged the thread ([Who can see an email](who-can-see-an-email.md)). This setting says how many held threads one review run looks at, from 1 to 200. The default is 40, and the rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the review schedule.
-
-**Consumer mail domains.** Which domains count as private mailboxes. Mail from one of them never makes a company. Unless you and the sender have mailed each other, they become a contact only once Margince has judged them. Margince comes with the list; you can add a missing domain or change a wrong entry.
+**Consumer mail domains.** Which domains count as personal mailboxes, such as a free mail service. Margince comes with the list; you can add a missing domain or change a wrong entry. What happens to mail from them is in [Capture](capture.md#who-the-message-belongs-to).
 
 **Refused domains.** Which domains this installation will not make a company for, and what decided each one: a model result, an automatic rule, or a human. Letting a domain back in makes Margince decide again whether it is a company.
 

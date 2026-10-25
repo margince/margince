@@ -122,9 +122,9 @@ review on its own.
    nothing else to go on. An empty one, or one worked out in code, fails `make gen` and the start, so a unit without it never
    reaches an install.
 
-   **Import only `backend/pkg/**` packages that carry `//margince:extension-surface`**. Today those are
-   `pkg/extension`, `pkg/extension/jurisdiction`, `pkg/extension/crm`, `pkg/extension/messaging`,
-   `pkg/extension/subjectrights`, `pkg/extension/compliancedocs` and `pkg/extension/accounting`. Any import of `internal/**`,
+   **Import only `backend/pkg/**` packages that carry `//margince:extension-surface`**.
+   [extensibility.md](../explanation/extensibility.md#2-the-public-surface-and-the-mark-that-gates-it) lists them,
+   and `grep -rl margince:extension-surface backend/pkg` finds them in the tree. Any import of `internal/**`,
    `cmd/**`, a `pkg` package with no mark, the `composition` module or another extension fails the `arch` test.
    The compiler already keeps `internal/**` out of reach, and the test holds the rest.
 

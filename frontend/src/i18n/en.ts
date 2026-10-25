@@ -3771,7 +3771,7 @@ export const en = {
   "compose.reason.posture": "Held by your setting",
   "compose.reason.workspaceFloor": "Held by the company",
   "compose.reason.noRecord": "Held: no record",
-  "compose.reason.pendingVerdict": "Held until classified",
+  "compose.reason.pendingVerdict": "Held until checked",
   "compose.reason.manual": "Kept private",
   "compose.reason.verdict": "Held by classification",
   "compose.reason.counterparty": "Held: counterparty mail",
@@ -6577,7 +6577,7 @@ export const en = {
   "analytics.quietSince": "Quiet since",
   "analytics.nothingQuiet": "No project in delivery has gone quiet.",
   "analytics.noProjectsYet":
-    "No projects yet. A won deal moves its project to Delivering.",
+    "No projects yet. Create one under Projects with New project. A won deal moves its project to Delivering.",
   "analytics.coverageSub": "Connection health from the latest check.",
   "analytics.covSource": "Source",
   "analytics.covState": "State",
@@ -9487,7 +9487,7 @@ export const en = {
   // whether a domain can name a company is a fact about the domain.
   "consumerMail.title": "Consumer mail domains",
   "consumerMail.sub":
-    "Mail from these domains never makes a company. Unless you and the sender have mailed each other, they become a contact only once Margince has judged them. Margince ships a list; add a missing domain or override a wrong one.",
+    "Domains of personal mailboxes. Mail from them never makes a company. The sender becomes a contact at once only if someone at your company has mailed back and forth with them or met them, or an earlier decision let them in. Otherwise they become one once Margince has sorted them. Margince ships a list; add a missing domain or override a wrong one.",
   "consumerMail.addedTitle": "Added here",
   "consumerMail.addTitle": "Add domain",
   "consumerMail.domainLabel": "Domain",

@@ -225,8 +225,8 @@ every hour and enrichment every day after that.
 checked*, so importing five years of mail does not show it to your
 colleagues. Each thread stays with whoever was on it until a sorting model
 judges it ordinary business. The same holds for contacts the import creates. A
-contact from a thread that nothing has judged yet is yours alone until the
-verdict clears it.
+contact from a thread that nothing has judged yet is yours alone until
+Margince has sorted the thread.
 
 Once an import finishes, check two places:
 **Senders**, for what was decided about each address it found, and **Held

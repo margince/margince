@@ -69,10 +69,7 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
    A schema test reads the live schema and fails a table that declares a policy.
 3. **Keep each enum in step.** A Go enum may mirror a new `CHECK (col IN (...))`.
    Then add the value to that Go `const` set too, or `enumsync_test.go` fails.
-4. **Reach the erase and SAR paths** if the table holds personal data (`piicoverage_test.go`).
-   Give the table its owner in `tableOwners` (`backend/gates/tableownerregistry_test.go`), then regenerate
-   the entity model: `cd backend && go test ./gates -run EntityModel -update-entity-model`.
-5. **`SET LOCAL lock_timeout` limits the wait, never the hold.**
+4. **`SET LOCAL lock_timeout` limits the wait, never the hold.**
    It limits how long a statement waits for a lock before it gives up.
    Once the statement has the lock, it holds it until the transaction ends.
 
@@ -97,7 +94,23 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
    `1787968162_a_brief_names_the_currency_it_normalized_against.up.sql` and
    `1787968163_the_brief_currency_check_is_validated.up.sql` are the worked pair. The second one explains
    why it is a file of its own.
-6. **Apply and check.** Run `make migrate`, then `make check` or `make test-integration`.
+5. **Reach the erase and SAR paths** if the table holds personal data (`piicoverage_test.go`).
+6. **Record the schema the migrations build.** Run `make db-up`, then run this from `backend/`:
+
+   ```sh
+   go test -tags integration ./migrations -run TestMigrationsBuildTheCommittedSchema -update-catalog
+   ```
+
+   It writes `backend/migrations/testdata/head_catalog.txt` again. Commit that file with the migration.
+   The test reads the database from `MARGINCE_TEST_DSN`, which `backend/Makefile` sets for its own targets.
+7. **Give each new table its owner** in `tableOwners` (`backend/gates/tableownerregistry_test.go`).
+   Each entry is one line, such as `"my_table": "internal/modules/<name>",`.
+8. **Rebuild the [table list](../reference/entity-model/README.md).** It reads `head_catalog.txt` and
+   `tableOwners`, so it comes last: `cd backend && go test ./gates -run EntityModel -update-entity-model`.
+   A module that owned no table before now needs the line
+   `// Tables owned: docs/reference/entity-model/<name>.md.` in its `doc.go`.
+   `<name>` is the name of the module's directory.
+9. **Apply and check.** Run `make migrate`, then `make check` or `make test-integration`.
 
 Schema that only a fork needs goes in `backend/migrations/custom/`. It has its own tracking table and
 applies after core. Its files are named `YYYYMMDDHHMMSS` and its columns start with `x_`. It stays as it is

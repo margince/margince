@@ -3776,7 +3776,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.reason.posture": "Durch deine Einstellung zurückgehalten",
   "compose.reason.workspaceFloor": "Durch das Unternehmen zurückgehalten",
   "compose.reason.noRecord": "Zurückgehalten: kein Datensatz",
-  "compose.reason.pendingVerdict": "Bis zur Einstufung zurückgehalten",
+  "compose.reason.pendingVerdict": "Bis zur Prüfung zurückgehalten",
   "compose.reason.manual": "Privat gehalten",
   "compose.reason.verdict": "Durch Einstufung zurückgehalten",
   "compose.reason.counterparty": "Zurückgehalten: E-Mail mit der Gegenseite",
@@ -6532,7 +6532,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.quietSince": "Ruhig seit",
   "analytics.nothingQuiet": "Kein Projekt in Umsetzung ist verstummt.",
   "analytics.noProjectsYet":
-    "Noch keine Projekte. Ein gewonnener Deal setzt sein Projekt auf „In Umsetzung“.",
+    "Noch keine Projekte. Lege unter Projekte mit „Neues Projekt“ eines an. Ein gewonnener Deal setzt sein Projekt auf „In Umsetzung“.",
   "analytics.coverageSub": "Verbindungsstatus bei der letzten Prüfung.",
   "analytics.covSource": "Quelle",
   "analytics.covState": "Status",
@@ -9435,7 +9435,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Die Consumer-Mail-Liste des Workspace (CAP-PARAM-5).
   "consumerMail.title": "Freemail-Domains",
   "consumerMail.sub":
-    "E-Mails von diesen Domains erstellen nie ein Unternehmen. Solange du und der Absender euch nicht geschrieben habt, wird er erst zum Kontakt, wenn Margince ihn eingeschätzt hat. Margince liefert eine Liste mit. Ergänze eine fehlende Domain oder übersteuere einen falschen Eintrag.",
+    "Domains privater Postfächer. E-Mails von diesen Domains erstellen nie ein Unternehmen. Eine Adresse von dort wird sofort zum Kontakt, wenn jemand aus deinem Unternehmen mit ihr E-Mails ausgetauscht oder einen Termin hatte oder eine frühere Entscheidung sie zugelassen hat. Sonst geschieht das erst, wenn Margince die Adresse eingeordnet hat. Margince liefert eine Liste mit. Ergänze eine fehlende Domain oder übersteuere einen falschen Eintrag.",
   "consumerMail.addedTitle": "Hier hinzugefügt",
   "consumerMail.addTitle": "Domain hinzufügen",
   "consumerMail.domainLabel": "Domain",

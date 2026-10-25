@@ -73,8 +73,9 @@ word on what the product does now, so check it before a change of yours trusts a
 one you checked in the code; history goes in git. A new page goes in the folder its one job
 names, in that page's table "One job per page". What a user of the app sees goes in `docs/handbook/`,
 never in `reference/` or `how-to/`, which are for those who build or run Margince.
+
 A list the code holds is linked, never typed again. An explanation or handbook page names its code
-in a `describes:` line, and a PR that changes that code says whether the page still holds
+in a `describes:` line. A PR that changes that code says whether the page still holds
 (`make docs-describing`).
 
 **A red `main` is claimed once.** Before you look into a failure that is not yours, run
@@ -188,9 +189,11 @@ The DAG is `shared → platform → modules → compose → cmd`, and three tool
 
 1. **A module never imports a sibling or `compose`.** If A needs B,
    `compose` injects the edge.
-2. **A module writes only the tables it owns**, declared in `tableOwners` and gated
-   by `backend/gates/tableownership_test.go`. The generated entity model is the one list;
-   a `doc.go` points to it and never copies it.
+2. **A module writes only the tables it owns.** `tableOwners`
+   (`backend/gates/tableownerregistry_test.go`) declares the owner, and
+   `backend/gates/tableownership_test.go` holds the writes to it. The pages in
+   `docs/reference/entity-model/` are built from that map. A `doc.go` names its page
+   and never copies the list.
 3. **Two module shapes, and only two**: *Handlers→Store* for CRUD modules,
    *Handlers→Service* for engine modules. Do not make up a third.
 4. **`internal/contracts/` and `*_gen.go` are generated** from

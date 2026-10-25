@@ -513,7 +513,8 @@ Graph details beyond the card (the strength model, the warm intro resolver, our 
 ## View state is not record fact
 
 Three tables behind this page live in a `compose` subpackage each, and all three are written **without an audit
-row or outbox event**. This is the ruling for saved views, gated by `backend/gates/tableownership_test.go`:
+row or outbox event**. This is the ruling for saved views. The waivers in `backend/gates/moduleaudits_test.go` hold the missing
+audit row, and `backend/gates/tableownerregistry_test.go` names each owner:
 
 | Table | Owner | What it is |
 |---|---|---|

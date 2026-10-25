@@ -129,18 +129,19 @@ report. It reads its evidence from the environment, so a fixture can drive every
 
 ## `docs-describing.yml`
 
-What starts it: `opened`, `reopened`, `edited`, `synchronize` and `ready_for_review`. Each page in
-`docs/explanation/` and `docs/handbook/` names its code in a `<!-- describes: -->` line above its title,
-and `docsdescribes_test.go` checks that every path in it exists. This workflow lists the pages whose
-paths the pull request changes. The body answers each one on its own line:
-`- docs/handbook/capture.md: still true`, or `updated`. A page the pull request edits counts as
-answered.
+What starts it: `opened`, `reopened`, `edited`, `synchronize` and `ready_for_review`. The rule it asks
+about, and the form of each answer, are in
+[docs-prose-style.md](docs-prose-style.md#a-list-the-code-owns-is-linked-and-a-page-names-the-code-it-describes).
+This workflow lists the explanation and handbook pages whose `describes:` paths the pull request changes.
+Then it looks for an answer to each one in the body.
 
 A check cannot tell that a sentence stopped being true. The answer is a human's, and the workflow asks
 for it where the reviewer reads. It warns and never fails, for the same reason as
 `closing-declaration.yml`, and deletes its comment once every page is answered. A failed query for the
-changed files stops without a comment.
-[`scripts/check-docs-describing.sh`](../../scripts/check-docs-describing.sh) makes the report. It reads
+changed files stops without a comment. On a pull request from a fork, the token cannot write a comment,
+so the report is only in the job summary.
+
+The report comes from [`scripts/check-docs-describing.sh`](../../scripts/check-docs-describing.sh). It reads
 its evidence from the environment, so a fixture can drive every case (`make test-docs-describing`).
 `make docs-describing` prints the same list for a local branch.
 

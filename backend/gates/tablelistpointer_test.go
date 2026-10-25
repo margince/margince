@@ -11,8 +11,8 @@ package gates
 // copies that list.
 //
 // The page is rendered from tableOwners, so it cannot drift; a typed copy in a
-// doc.go did, by up to seventeen tables. It reads the phrase, so a list written
-// as "this module keeps a, b and c" passes.
+// doc.go did, by up to seventeen tables. It reads the phrase in // comments, so
+// a /* */ block or a list written as "this module keeps a, b and c" passes.
 
 import (
 	"os"
@@ -30,9 +30,9 @@ var tableListPointer = regexp.MustCompile(`Tables owned: docs/reference/entity-m
 // prose about other packages and stays legal.
 var tableListPhrase = regexp.MustCompile(`(?i)\btables owned\s*:|^\s*#\s*tables owned\b|\balso owned\s*:`)
 
-// tableListRoots are the Go trees whose comments describe table ownership:
-// the backend's own packages and the extension units beside it.
-var tableListRoots = []string{"internal", "../extensions"}
+// tableListRoots are the Go trees whose tables tableOwners holds. An extension
+// unit's tables come from its own migrations and are not in the entity model.
+var tableListRoots = []string{"internal"}
 
 func TestTableOwnershipCommentsPointAtTheEntityModel(t *testing.T) {
 	t.Parallel()

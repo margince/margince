@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/partslim backend/internal/modules/capture/partslimstore.go backend/internal/compose/jobs_partslim.go backend/internal/modules/capture/sinkraw.go backend/internal/compose/sarrestore.go backend/internal/modules/privacy/erasure_attachments.go -->
+<!-- describes: backend/internal/modules/capture/partslim backend/internal/modules/capture/partslimstore.go backend/internal/compose/jobs_partslim.go backend/internal/compose/jobs_storedobject.go backend/internal/modules/capture/sinkraw.go backend/internal/compose/sarrestore.go backend/internal/modules/privacy/erasure_attachments.go -->
 # raw_capture part slimming: what the stored original promises
 
 `raw_capture` holds the provider's original for every captured message. Without slimming it would
@@ -39,7 +39,7 @@ writes `rec.Raw` (the whole `RFC822` message) inside the capture transaction. `c
 then gets the same attachment bytes ready for the object store. `activities/capturedfiles.go` puts
 them there before the row that records them (*"ORDER IS THE DESIGN"*).
 
-So without slimming, every attachment sits in `raw_capture` a second time as `base64`, which takes 4
+Without slimming, every attachment sits in `raw_capture` a second time as `base64`, which takes 4
 bytes for every 3 of the file. The `base64` of a file that is already compressed (PDF, ZIP, JPEG) does
 not compress again. So the copy costs full price in the database files, in every full database copy,
 in every `pg_dump` and in every `VACUUM`.
@@ -61,8 +61,7 @@ the only copy is removed.
 
 ## Why match bytes, and not parse the MIME
 
-Reading the message with `go-message` and writing it out again is not safe for this table, for
-these reasons:
+Reading the message with `go-message` and writing it out again is not safe for this table:
 
 - `go-message` **decodes on read and encodes again on write**. `base64` comes back with lines of its
   own length (76). Header fields inside a part written again change order. The `charset` of the text
@@ -78,8 +77,8 @@ against the attachment row. `partslim` encodes those bytes and looks for the enc
 payload. If they show up **once**, those bytes are cut out and the rest of the payload is copied as
 it is. If they do not show up, or show up more than once, nothing is removed.
 
-The sweep refuses a part whose encoding shows up more than once, such as a signature image that shows
-up again in the replies below the message. Bytes cannot tell one copy from another. Such images are
+The sweep refuses a part whose encoding shows up more than once. A signature image is one example: it
+shows up again in the replies below the message. Bytes cannot tell one copy from another. Such images are
 small next to the attachments of many MB that the sweep is for. Refusing them means the sweep never
 cuts bytes it cannot prove.
 

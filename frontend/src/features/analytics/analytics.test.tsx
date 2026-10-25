@@ -104,7 +104,7 @@ describe("the delivery section", () => {
     expect(
       (
         await screen.findAllByText(
-          "No projects yet. A won deal moves its project to Delivering.",
+          "No projects yet. Create one under Projects with New project. A won deal moves its project to Delivering.",
         )
       ).length,
     ).toBe(2);

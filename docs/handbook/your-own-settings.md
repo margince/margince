@@ -389,7 +389,7 @@ default each row names the sender and a short subject. If your installation
 turned this off, the page says so above the rows.
 
 **Senders.** Every address your mailbox brought in, what was decided about
-each, and your own answer where there is one. Only you see this list.
+each, and your own answer where there is one. Only you see this list. **Exclude** on a sender destroys their mail. Margince still receives what they send later, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored.
 
 ### Why did an email not show up in Margince?
 To find out why an email did not show up in Margince, open Settings → **Capture activity** and look in **Messages** for the last 24 hours.

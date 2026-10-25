@@ -350,10 +350,9 @@ func sendCtx() context.Context {
 	})
 }
 
-// Both outbound verbs were advertised as confirm-first and could not be
-// confirmed: Registry.Invoke stages only a tool that implements StageInfo, and
-// neither did, so the refusal came back bare and no approval was ever minted.
-// A 🟡 tool a human can never say yes to is a tool that does not work.
+// A tier floor makes both outbound verbs confirm first. Registry.Invoke stages
+// only a tool that implements StageInfo, so each verb must implement it.
+// Otherwise the refusal comes back bare and no approval is minted.
 func TestRefusedOutboundCallsReachTheInbox(t *testing.T) {
 	anchor, deal := ids.NewV7(), ids.NewV7()
 	for _, tc := range []struct {

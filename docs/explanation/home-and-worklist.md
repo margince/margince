@@ -140,7 +140,7 @@ mail alike:
 
 - A customer's promise is filed as a claim on their contact and watched. It never becomes a task, since nobody here can do it. `GET /deals/{id}/commitments` lists the open ones for the deal's account.
 - A named colleague's promise becomes their task. At or above `CommitmentTaskConfidence` (0.85) the task is written at once, captured by the extractor's `agent:` principal. Below it the promise is staged as a `commitment_task` proposal.
-- A promise no colleague can be given stays as the open claim on the contact. No task or proposal is made for anyone.
+- If no colleague can take the promise as a task, it stays an open claim on the contact. No task or proposal is made. This happens when nobody is named, when the named seat is an agent or has left, or when they may not read the private mail.
 - In private mail, `PrivateTo` keeps the promise with its owner, and the task is readable by its holder alone.
 
 `commitmentmeaning.go` checks what the words ask someone to do before the dispatcher creates work.

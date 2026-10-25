@@ -352,7 +352,7 @@ One ladder for every screen, on the product's current breakpoints:
 
 - At 1400px the figures drop a size, and five readings stay in one row.
 - Under 1200px the readings wrap and the two columns stack, and the tab strip scrolls in its own box.
-  When the record row is under 900px wide, the details panel takes the full width above the feed.
+  When the record row is under 900px wide, the details panel takes the full width above the sheet.
 - Under 720px the head stacks (mark and name, facts, then primary + more), and readings go two per
   row. The spine and the map scroll from side to side in their own boxes.
 - At 390px the phone bar holds, and so does the rule that a page never scrolls to the side.
@@ -409,7 +409,7 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
   because to qualify is the whole job of the record. The **more** button (a 36px square with an
   outline and the three dots) holds Archive, Share, Merge and the rest.
 - **Details panel**: a 340px card on the left, under the record head, always open. It stays in view
-  while the feed on the right scrolls. It holds Ask, and the fields as label and value rows. A
+  while the sheet on the right scrolls. It holds Ask, and the fields as label and value rows. A
   value a machine read has the evidence underline, and an empty one has a lighter "Add …". It also
   holds the short lists that tell what the record is (contacts, seats, tags, the Deal Room, documents).
   The current product keeps its context column there, so a rep's hand does not move.
@@ -474,7 +474,8 @@ takes the product's own features back in small form: each one there, and none at
   - **Every reading is a door**: the card opens the tab page that holds its rows. Open pipeline →
     Deals, Invoiced → Finance, Conversation and Last touch → History, Next → Tasks. The evidence
     chip does not.
-  - When the details panel is open, they get smaller, to 21px figures, and never wrap.
+  - Beside the 340px details card, a record page shows them with `StatStrip density="plate"`: 16px
+    figures at medium weight.
 - **The 360 as the first pane**, full width, on the same hairline as every other pane. It carries the
   record's name and "· 360" as the pane title, and the agent's word at 34px. Beside the word is one
   sentence whose claims are sources you can hover. The chip sits in the line on the agent's tint, and
@@ -492,7 +493,7 @@ takes the product's own features back in small form: each one there, and none at
   - About: the lead sentence, one paragraph, its sources, and "Profile" for the rest.
   - Contacts as chips with a "+N".
 - **The details panel is always open**, on the left under the record head, with the fields, the
-  contacts and the tags. The feed sits on the right.
+  contacts and the tags. The sheet sits on the right.
 - No zone numbers. Commercial and the rest of About are the deep overview, one click away, with the
   same panes.
 
@@ -712,7 +713,7 @@ claim from "an agent did this".
 
 The sidebar folds to a 64px icon rail, and that is the default. Labels come back on hover as
 tooltips, and the agent's orb stays at the foot. The details panel sits on the left, under the record
-head, and the feed sits on the right.
+head, and the sheet sits on the right.
 
 ### The timeline, as the tool draws it
 
@@ -960,7 +961,7 @@ the features a new look must not drop. The order:
       something says "Margince suggests", but never over the answer that nothing needs doing. A
       staged change carries a `--aiMed` dashed edge until a human accepts it.
 - [ ] A withheld section says "Hidden from you"; an empty one says what to do.
-- [ ] Checked in both themes, and with the sidebar and the details panel folded.
+- [ ] Checked in both themes, with the sidebar folded, and under 900px, where the details panel stacks above the sheet.
 - [ ] The page carries every section the current screen draws (section 7), or says which it dropped
       and why.
 - [ ] Every control is from `frontend/src/design-system/`; the catalog table names anything new.

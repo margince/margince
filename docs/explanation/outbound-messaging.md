@@ -77,9 +77,20 @@ it, after the caller has already decided to write.
 
 ## The dispatcher and its gates
 
-One dispatcher try is `Dispatcher.DispatchWithWait`, and the order is authority (the provider scope)
-→ seat → the authority the delivery claims → consent → what files the provider can carry → file
-check → jurisdiction → pace → retry limit → send. Gates and policies are different tools because
+One dispatcher try is `Dispatcher.DispatchWithWait`. It runs in this order:
+
+1. authority (the provider scope);
+2. seat;
+3. the authority the delivery claims;
+4. consent;
+5. what files the provider can carry;
+6. file check;
+7. jurisdiction;
+8. pace;
+9. retry limit;
+10. send.
+
+Gates and policies are different tools because
 they state different facts:
 
 - **A gate says never.** Waiting never repairs a revoked grant, so gates are written into the code,
@@ -275,7 +286,8 @@ actions (`auth.Gate.Admit`) checks that scope before the request reaches the han
 without `send` is refused there, and nothing is staged for a human to approve.
 
 A passport with `send` acts on the seat, grants and row scope of the human who gave it. So an agent
-can send only what that human could send in the app. See [agent-surface.md](agent-surface.md).
+can send only what that human could send in the app. See
+[authorization.md](authorization.md#what-a-passport-is).
 
 ### Pace: the policies that wait
 
@@ -562,18 +574,19 @@ sending.
 | The send half of the voice learning work | `backend/internal/modules/ai/voice_sendoutcome.go` |
 | Composition: the stager, the send job, the resolver, the two Gmail scopes | `backend/internal/compose/commsjobs.go`, `comms.go`, `capture.go` |
 | The tables | `comms_outbound` (`backend/migrations/core/0001_baseline.up.sql`, with the `comms_outbound_shape` constraint and the "sending now" mark) |
-| The REST contract | `backend/api/crm.yaml` (`/activities/{id}/send-email`, `/activities/{id}/send-message`) |
+| The REST contract | `backend/api/crm.yaml` (`/activities/{id}/send-email`, `/emails`, `/activities/{id}/send-message`) |
 | The job declaration | `backend/api/jobs.yaml` (`comms_send_email`) |
 
 ## Where to go next
 
-- The way in (the connector seam, the one Sink, the three ways mail comes in):
+- The way in (the connector seam, the one Sink, the five ways records come in):
   [capture-connectors.md](capture-connectors.md).
 - Binding the channel this path replies on: [how-to/connect-telegram.md](../how-to/connect-telegram.md).
 - Connecting a mailbox to send from: [how-to/connect-a-mailbox.md](../how-to/connect-a-mailbox.md).
 - The consent model, the purposes, and erase under GDPR article 17:
   [privacy-and-consent.md](privacy-and-consent.md).
-- The 🟡 confirm-first machine both send actions declare: [agent-surface.md](agent-surface.md).
+- How the gate checks a passport's `send` scope before a send runs:
+  [authorization.md](authorization.md#what-a-passport-is).
 - The write shape and the outbox bus every row here commits through: [write-backbone.md](write-backbone.md).
 - The other governed way out, outbound webhooks: [outbound-webhooks.md](outbound-webhooks.md).
 - What every module owns, `comms` included: [reference/modules.md](../reference/modules.md).

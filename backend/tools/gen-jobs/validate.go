@@ -29,8 +29,8 @@ const (
 	optsArgs   = "args"
 	optsCaller = "caller"
 
-	// cadenceOnDemand is the explicit spelling for the one dispatcher a
-	// human's confirm enqueues rather than a clock. It is a declaration and
+	// cadenceOnDemand is the explicit spelling for a kind that a caller
+	// enqueues rather than a clock. It is a declaration and
 	// not an omission for the reason every other field here is required: an
 	// absent cadence reads as a schedule somebody forgot, and the whole point
 	// of the file is that nothing about a job is left to be inferred.
