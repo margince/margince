@@ -109,6 +109,16 @@ func TestCardPhotoReaderTurnsEachOutcomeIntoARefusalAClientCanAct(t *testing.T) 
 		t.Errorf("a vCard sent as a photo: code = %s", got)
 	}
 
+	heic := &cardLane{carries: []string{"image/heic", "image/png"}}
+	_, err = cardPhotoReader(heic)(context.Background(), []byte("\x00\x00\x00\x18ftypheic\x00\x00\x00\x00"))
+	var refusal *contacts.CardPhotoRefusal
+	if got := code(err); got != "unsupported_type" || heic.calls != 0 {
+		t.Errorf("a HEIC photo: code = %s, calls = %d, want unsupported_type and no model call", got, heic.calls)
+	}
+	if errors.As(err, &refusal) && !strings.Contains(refusal.Message, "JPEG or PNG") {
+		t.Errorf("message = %q, want it to say to save the photo as JPEG or PNG", refusal.Message)
+	}
+
 	textOnly := &cardLane{}
 	_, err = cardPhotoReader(textOnly)(context.Background(), photo)
 	if got := code(err); got != "not_readable" || textOnly.calls != 0 {

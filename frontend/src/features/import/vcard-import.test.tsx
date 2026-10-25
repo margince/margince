@@ -277,8 +277,19 @@ describe("VCardImport", () => {
     const input = screen
       .getByTestId("vcard-import-file")
       .querySelector("input[type=file]");
-    expect(input).toHaveAttribute("accept", expect.stringContaining(".heic"));
     expect(input).toHaveAttribute("accept", expect.stringContaining(".vcf"));
+    expect(input).toHaveAttribute(
+      "accept",
+      expect.stringContaining("image/jpeg"),
+    );
+    expect(input).toHaveAttribute(
+      "accept",
+      expect.stringContaining("image/png"),
+    );
+    expect(input).not.toHaveAttribute(
+      "accept",
+      expect.stringMatching(/heic|heif/i),
+    );
   });
 });
 
@@ -290,7 +301,8 @@ describe("isCardPhoto", () => {
     expect(isCardPhoto(new File([""], "a.jpg", { type: "image/jpeg" }))).toBe(
       true,
     );
-    // A phone's HEIC often carries no content type at all.
+    // A HEIC dragged in still goes to the photo endpoint, which says to save it
+    // as JPEG or PNG. It often carries no content type at all.
     expect(isCardPhoto(new File([""], "IMG_1.HEIC", { type: "" }))).toBe(true);
   });
 

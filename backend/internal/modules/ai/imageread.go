@@ -21,7 +21,7 @@ import (
 var ErrReadRefused = errors.New("ai: the reading could not be used")
 
 // ErrImageTooLarge is the refusal of an image over imagenorm.MaxReadImageBytes,
-// as received or once converted. It is always wrapped in ErrReadRefused. A
+// as received. It is always wrapped in ErrReadRefused. A
 // larger image is refused and never cut, because half a card read confidently
 // is worse than none.
 var ErrImageTooLarge = errors.New("ai: the image is too large to read")
@@ -67,7 +67,7 @@ type ImageReading struct {
 // the validator. Three outcomes stay apart. They are a reply,
 // *ImageNotCarriedError and ErrReadRefused. Any other error is the lane's.
 func ReadImage(ctx context.Context, lane ImageLane, in ImageReading) (json.RawMessage, error) {
-	img, err := PrepareImage(ctx, lane.AttachmentMIMEs(), in.Image)
+	img, err := PrepareImage(lane.AttachmentMIMEs(), in.Image)
 	if err != nil {
 		return nil, err
 	}
@@ -108,41 +108,17 @@ func ImageRequest(in ImageReading, img model.Attachment) model.Request {
 	}
 }
 
-// heicToJPEG is the conversion PrepareImage runs, replaceable in a test that
-// must produce a conversion larger than the bound.
-var heicToJPEG = imagenorm.HEICToJPEG
-
 // PrepareImage is the one policy for handing an image to a model lane. It
-// bounds the bytes and checks carriage before it turns HEIC or HEIF into JPEG.
-// A lane that reads no images never costs a decode. The JPEG is bounded
-// again, because the conversion decides its size.
-//
-// HEIC is converted even for a lane that declares it. A wildcard declaration
-// admits HEIC with no decoder behind it, and every image lane reads JPEG.
-func PrepareImage(ctx context.Context, carried []string, img model.Attachment) (model.Attachment, error) {
+// bounds the bytes and checks that the lane carries the type. The server
+// decodes no HEIC or HEIF, so a lane that declares them receives them as sent.
+func PrepareImage(carried []string, img model.Attachment) (model.Attachment, error) {
 	if len(img.Bytes) > imagenorm.MaxReadImageBytes {
 		return model.Attachment{}, fmt.Errorf("%w: %w", ErrReadRefused, ErrImageTooLarge)
 	}
-	if !isHEIF(img.Bytes) {
-		if !model.CarriesMIME(carried, img.MIME) {
-			return model.Attachment{}, &ImageNotCarriedError{MIME: img.MIME}
-		}
-		return img, nil
-	}
-	if !model.CarriesMIME(carried, mimeJPEG) {
+	if !model.CarriesMIME(carried, img.MIME) {
 		return model.Attachment{}, &ImageNotCarriedError{MIME: img.MIME}
 	}
-	jpeg, err := heicToJPEG(ctx, img.Bytes)
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return model.Attachment{}, err
-	}
-	if err != nil {
-		return model.Attachment{}, fmt.Errorf("%w: %w", ErrReadRefused, model.ErrAttachmentMislabelled)
-	}
-	if len(jpeg) > imagenorm.MaxReadImageBytes {
-		return model.Attachment{}, fmt.Errorf("%w: %w once converted", ErrReadRefused, ErrImageTooLarge)
-	}
-	return model.Attachment{MIME: mimeJPEG, Bytes: jpeg, Name: img.Name}, nil
+	return img, nil
 }
 
 // RefusedReading maps three answers onto ErrReadRefused. One is a binding
@@ -163,8 +139,9 @@ func RefusedReading(err error) error {
 }
 
 // SniffImage names the image type of the bytes from their magic. It reports
-// false for anything but JPEG, PNG, GIF, WebP, HEIC and HEIF. The caller's
-// claim about the type is not an input. The bytes decide.
+// false for anything but JPEG, PNG, GIF, WebP, HEIC and HEIF. HEIC and HEIF are
+// named so a caller can refuse them with a clear message: nothing here decodes
+// them. The caller's claim about the type is not an input. The bytes decide.
 func SniffImage(body []byte) (mime string, ok bool) {
 	if isHEIF(body) {
 		return mimeHEIC, true
@@ -177,11 +154,17 @@ func SniffImage(body []byte) (mime string, ok bool) {
 	}
 }
 
-// CarriesImage reports whether mime is a photo type a reading accepts, which is
-// the set SniffImage names.
+// IsHEIFType reports whether mime is HEIC or HEIF, which no reading here
+// decodes.
+func IsHEIFType(mime string) bool {
+	kind := mediaKind(mime)
+	return kind == mimeHEIC || kind == mimeHEIF
+}
+
+// CarriesImage reports whether mime is a photo type the image policy reads.
 func CarriesImage(mime string) bool {
 	switch mediaKind(mime) {
-	case mimeJPEG, mimePNG, mimeGIF, mimeWebP, mimeHEIC, mimeHEIF:
+	case mimeJPEG, mimePNG, mimeGIF, mimeWebP:
 		return true
 	default:
 		return false

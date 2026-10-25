@@ -7,7 +7,7 @@ package compose
 //
 // This file owns the question put to the model and what may come back.
 // ai.ReadImage owns the shared image steps. ai.PrepareImage, which document
-// extraction uses too, bounds, converts and checks carriage. What leaves here are cards
+// extraction uses too, bounds the bytes and checks carriage. What leaves here are cards
 // marked ModelRead. The contacts module never writes such a card; it reports
 // it for approval, so a misread name needs a human before it is a record.
 
@@ -184,10 +184,16 @@ func cardChannels(values []string, keep func(string) bool) []contacts.VCardChann
 func cardPhotoReader(lane ai.ImageLane) contacts.CardPhotoReader {
 	return func(ctx context.Context, photo []byte) ([]contacts.VCardEntry, error) {
 		mime, ok := ai.SniffImage(photo)
+		if ai.IsHEIFType(mime) {
+			return nil, &contacts.CardPhotoRefusal{
+				Code:    "unsupported_type",
+				Message: "HEIC and HEIF photos are not supported. Export or save the photo as JPEG or PNG and upload that.",
+			}
+		}
 		if !ok {
 			return nil, &contacts.CardPhotoRefusal{
 				Code:    "unsupported_type",
-				Message: "Send a JPEG, PNG, GIF, WebP, HEIC or HEIF photo.",
+				Message: "Send a JPEG, PNG, GIF or WebP photo. Export or save HEIC photos as JPEG or PNG first.",
 			}
 		}
 		cards, dropped, err := readCardPhoto(ctx, lane, photo, mime)

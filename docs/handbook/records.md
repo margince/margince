@@ -67,6 +67,7 @@ To add a contact quickly in Margince, open **Contacts** and choose **Quick captu
 - **Quick capture** asks for **Full name** (required), **Title**, **Company**, **LinkedIn**, **Email** and **Phone**, and confirms with "{name} saved"; the form stays open.
 - The **Company** box in Quick capture lists the companies that match what you type: pick one to link it. A name you do not pick creates a new company.
 - **Import vCards** opens **Import business cards**: choose **Select file or photo** for a **vCard file or card photo**. Each card is Added, Missing fields added, Possible duplicate, Waiting for approval or Skipped. A model reads a photo of up to 20 cards, so every card from a photo waits for your approval. A photo card whose email is already a contact is Skipped.
+- A card photo must be a JPEG or PNG. An iPhone converts it automatically when you pick it. A photo in another format is refused until you save it as JPEG or PNG.
 Also called: import contacts, upload a .vcf, scan a business card, import cards from a photo.
 
 ### How do I edit a contact?

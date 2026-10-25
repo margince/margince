@@ -1606,10 +1606,9 @@ paths:
         its email already belongs to a contact; a card read from a photo never changes an
         existing contact. A photo that shows more than 20 cards is refused whole.
 
-        JPEG, PNG, GIF, WebP, HEIC and HEIF are accepted. HEIC and HEIF are converted to JPEG on
-        the server before the model reads them, so every model binding can read them. A photo
-        larger than 8,388,608 bytes is refused with `413` before it is read. `422` with code
-        `too_large` means the photo was larger than that once converted. The reading runs inside
+        JPEG, PNG, GIF and WebP are accepted. HEIC and HEIF are refused with `422` and code
+        `unsupported_type`; the photo must be saved as JPEG or PNG first. A photo larger than
+        8,388,608 bytes is refused with `413` before it is read. The reading runs inside
         the request. `422` with code `no_cards` means the photo shows no business card, and `422`
         with `not_readable` means the configured model cannot read photos or the reply could not
         be used. `501` means the installation has no model configured.

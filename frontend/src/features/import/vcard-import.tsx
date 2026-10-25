@@ -38,7 +38,8 @@ const OUTCOMES: Readonly<
 };
 
 /** The photo types a card reading takes: the attachment types that are pictures
- * a model reads, without TIFF, which no binding carries. Each must stay one the
+ * a model reads. TIFF is left out because no binding carries it, and HEIC and
+ * HEIF because the server does not decode them. Each must stay one the
  * attachment mirror accepts, which the unit test holds. */
 export const CARD_PHOTO_EXTENSIONS = [
   ".png",
@@ -46,19 +47,32 @@ export const CARD_PHOTO_EXTENSIONS = [
   ".jpeg",
   ".gif",
   ".webp",
-  ".heic",
-  ".heif",
 ] as const satisfies readonly (typeof ACCEPTED_ATTACHMENT_EXTENSIONS)[number][];
 
-const ACCEPT_ATTR = [".vcf", "text/vcard", ...CARD_PHOTO_EXTENSIONS].join(",");
+/** HEIC and HEIF are left out of the picker so an iPhone converts the photo to
+ * JPEG when it is picked. A file dragged in still goes to the photo endpoint,
+ * which refuses it with the instruction to save it as JPEG or PNG. */
+const UNSERVED_PHOTO_EXTENSIONS = [".heic", ".heif"] as const;
 
-/** isCardPhoto picks the endpoint from the file itself. A phone's HEIC often
+const ACCEPT_ATTR = [
+  ".vcf",
+  "text/vcard",
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  ...CARD_PHOTO_EXTENSIONS,
+].join(",");
+
+/** isCardPhoto picks the endpoint from the file itself. A phone's photo often
  * arrives with no content type, so the extension decides as well. */
 export function isCardPhoto(file: File): boolean {
   const name = file.name.toLowerCase();
   return (
     file.type.startsWith("image/") ||
-    CARD_PHOTO_EXTENSIONS.some((extension) => name.endsWith(extension))
+    [...CARD_PHOTO_EXTENSIONS, ...UNSERVED_PHOTO_EXTENSIONS].some((extension) =>
+      name.endsWith(extension),
+    )
   );
 }
 

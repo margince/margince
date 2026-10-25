@@ -8,9 +8,7 @@ import (
 	"context"
 	"errors"
 	"image"
-	"image/jpeg"
 	"image/png"
-	"os"
 	"strings"
 	"testing"
 
@@ -45,15 +43,6 @@ func pngBytes(t *testing.T) []byte {
 	return buf.Bytes()
 }
 
-func heicFixture(t *testing.T) []byte {
-	t.Helper()
-	b, err := os.ReadFile("../../platform/imagenorm/testdata/card.heic")
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b
-}
-
 func reading(img model.Attachment) ImageReading {
 	return ImageReading{Image: img, System: "read", Instruction: "go", Schema: []byte(`{}`), Validate: okReply}
 }
@@ -67,32 +56,6 @@ func TestReadImageNamesATextOnlyBindingWithoutCallingTheModel(t *testing.T) {
 	}
 	if lane.calls != 0 {
 		t.Fatalf("the model was called %d times for a type its binding cannot carry", lane.calls)
-	}
-}
-
-func TestReadImageConvertsHEICToJPEGSoABindingWithoutHEICCanRead(t *testing.T) {
-	lane := &imageLane{carries: []string{mimeJPEG}, reply: `{"ok":true}`}
-	raw, err := ReadImage(context.Background(), lane, reading(model.Attachment{MIME: mimeHEIC, Bytes: heicFixture(t)}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(raw) != `{"ok":true}` {
-		t.Errorf("reply = %s", raw)
-	}
-	sent := lane.got.Attachments
-	if len(sent) != 1 || sent[0].MIME != mimeJPEG {
-		t.Fatalf("sent attachments = %+v, want one image/jpeg", sent)
-	}
-	if _, err := jpeg.Decode(bytes.NewReader(sent[0].Bytes)); err != nil {
-		t.Fatalf("the part sent to the model is not a JPEG: %v", err)
-	}
-}
-
-func TestReadImageRefusesAHEICThatDoesNotDecode(t *testing.T) {
-	lane := &imageLane{carries: []string{mimeJPEG}, reply: `{}`}
-	_, err := ReadImage(context.Background(), lane, reading(model.Attachment{MIME: mimeHEIC, Bytes: heicFixture(t)[:200]}))
-	if !errors.Is(err, ErrReadRefused) || lane.calls != 0 {
-		t.Fatalf("err = %v, calls = %d, want a refusal before any call", err, lane.calls)
 	}
 }
 
@@ -126,20 +89,6 @@ func TestReadImageRefusesAnImageOverTheBound(t *testing.T) {
 	}
 }
 
-func TestReadImageRefusesAConversionOverTheBound(t *testing.T) {
-	convert := heicToJPEG
-	t.Cleanup(func() { heicToJPEG = convert })
-	heicToJPEG = func(context.Context, []byte) ([]byte, error) {
-		return make([]byte, imagenorm.MaxReadImageBytes+1), nil
-	}
-	lane := &imageLane{carries: []string{mimeJPEG}, reply: `{}`}
-
-	_, err := ReadImage(context.Background(), lane, reading(model.Attachment{MIME: mimeHEIC, Bytes: heicFixture(t)}))
-	if !errors.Is(err, ErrImageTooLarge) || lane.calls != 0 {
-		t.Fatalf("err = %v, calls = %d, want ErrImageTooLarge before any call", err, lane.calls)
-	}
-}
-
 func TestImageRequestTellsTheModelThePrintHasNoAuthority(t *testing.T) {
 	img := model.Attachment{MIME: mimePNG, Bytes: pngBytes(t)}
 	req := ImageRequest(reading(img), img)
@@ -158,7 +107,7 @@ func TestSniffImageDecidesFromTheBytes(t *testing.T) {
 		want string
 	}{
 		"png":  {pngBytes(t), mimePNG},
-		"heic": {heicFixture(t), mimeHEIC},
+		"heic": {[]byte("\x00\x00\x00\x18ftypheic\x00\x00\x00\x00"), mimeHEIC},
 		"text": {[]byte("BEGIN:VCARD"), ""},
 	}
 	for name, c := range cases {
@@ -166,14 +115,5 @@ func TestSniffImageDecidesFromTheBytes(t *testing.T) {
 		if got != c.want || ok != (c.want != "") {
 			t.Errorf("%s: got %q ok=%v, want %q", name, got, ok, c.want)
 		}
-	}
-}
-
-func TestReadImageChecksCarriageBeforeDecodingAHEIC(t *testing.T) {
-	lane := &imageLane{}
-	undecodable := heicFixture(t)[:200]
-	_, err := ReadImage(context.Background(), lane, reading(model.Attachment{MIME: mimeHEIC, Bytes: undecodable}))
-	if _, ok := errors.AsType[*ImageNotCarriedError](err); !ok {
-		t.Fatalf("err = %v, want ImageNotCarriedError before any decode is tried", err)
 	}
 }

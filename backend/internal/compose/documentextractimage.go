@@ -4,7 +4,6 @@
 package compose
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -18,9 +17,9 @@ import (
 // image policy a card photo takes as well. Each refusal becomes the detail a
 // rep reads on the panel.
 func (d *DocumentExtractor) imageSource(
-	ctx context.Context, meta crmcontracts.Attachment, mime string, bytes []byte,
+	meta crmcontracts.Attachment, mime string, bytes []byte,
 ) (documentSource, string, error) {
-	img, err := ai.PrepareImage(ctx, d.brain.AttachmentMIMEs(),
+	img, err := ai.PrepareImage(d.brain.AttachmentMIMEs(),
 		model.Attachment{MIME: mime, Bytes: bytes, Name: meta.Filename})
 	var notCarried *ai.ImageNotCarriedError
 	switch {
@@ -28,8 +27,6 @@ func (d *DocumentExtractor) imageSource(
 		return documentSource{}, fmt.Sprintf(documentWords.UnsupportedType.In(d.said.Lang()), mime), nil
 	case errors.Is(err, ai.ErrImageTooLarge):
 		return documentSource{}, fmt.Sprintf(documentWords.Bytes.In(d.said.Lang()), imagenorm.MaxReadImageBytes>>20), nil
-	case errors.Is(err, model.ErrAttachmentMislabelled):
-		return documentSource{}, documentWords.Mislabelled.In(d.said.Lang()), nil
 	case err != nil:
 		return documentSource{}, "", err
 	}
