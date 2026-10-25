@@ -9159,7 +9159,7 @@ export const en = {
   "aiHealth.answering": "Responding",
   "aiHealth.notAnswering": "Not responding",
   "aiHealth.laneNeedsKey":
-    "Saved, but not running: {provider} holds no key, so the previous model keeps answering. Set {env}.",
+    "{provider} holds no key, so the saved binding is not running and the previous model keeps answering. Set {env}.",
   "aiHealth.callCounts_one": "{count} call, {failures} failed",
   "aiHealth.callCounts_other": "{count} calls, {failures} failed",
   "heldThreads.title": "Held threads",

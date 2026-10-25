@@ -9102,7 +9102,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiHealth.answering": "Antwortet",
   "aiHealth.notAnswering": "Antwortet nicht",
   "aiHealth.laneNeedsKey":
-    "Gespeichert, aber nicht aktiv: {provider} hat keinen Schlüssel, daher antwortet weiterhin das vorherige Modell. Setze {env}.",
+    "{provider} hat keinen Schlüssel, daher ist die gespeicherte Bindung nicht aktiv und das vorherige Modell antwortet weiterhin. Setze {env}.",
   "aiHealth.callCounts_one": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "aiHealth.callCounts_other": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "heldThreads.title": "Zurückgehaltene Threads",
