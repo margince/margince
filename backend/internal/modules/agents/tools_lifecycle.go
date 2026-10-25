@@ -39,6 +39,7 @@ func RegisterLifecycleTools(
 	disqualifier LeadDisqualifier,
 	demoter LeadDemoter,
 	advancer ProjectPhaseAdvancer,
+	partners PartnerSetUp,
 ) {
 	r.Register(relinkActivity{relinker: relinker, p: p, language: r.language})
 	r.Register(relinkThread{relinker: relinker})
@@ -46,6 +47,7 @@ func RegisterLifecycleTools(
 	r.Register(disqualifyLead{p: p, disqualifier: disqualifier, language: r.language})
 	r.Register(demoteLead{p: p, demoter: demoter, language: r.language})
 	r.Register(advanceProjectPhase{p: p, advancer: advancer, language: r.language})
+	r.Register(setUpPartner{p: p, partners: partners, language: r.language})
 }
 
 // ActivityRelinker moves an activity's typed link onto a record, idempotently

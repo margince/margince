@@ -92,6 +92,7 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/contacts": {
 		{Name: "captured_by_kind", Values: []string{"human", "agent", "connector", "system"}, Array: false, Explode: true},
+		{Name: "relationship_mark", Values: []string{"vendor_marketing", "any"}, Array: false, Explode: true},
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
 	},
 	"GET /v1/context-search": {

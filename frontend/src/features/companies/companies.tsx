@@ -10,6 +10,7 @@ import {
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
+import { COMPANY_TABS, type CompanyTab } from "../../lib/companytab";
 import { unwrap } from "../../lib/problem";
 import { scrollPageToTop } from "../../lib/reveal";
 import { useAddressedTab } from "../records/recordtab";
@@ -17,12 +18,7 @@ import { CompanyPage } from "./companies.page";
 import { useAcknowledgeCompanyView, useCompany360 } from "./company360";
 import { hasFinance } from "./companyfinance";
 import { wholeCount } from "./companyrailshared";
-import {
-  COMPANY_TABS,
-  type CompanyTab,
-  REFUSED_WHEN_ARCHIVED,
-  useShownCompanyTab,
-} from "./companytab";
+import { REFUSED_WHEN_ARCHIVED, useShownCompanyTab } from "./companytab";
 
 export { CompaniesScreen } from "./companies.list";
 export { profileFieldLabel } from "./companies.profile";

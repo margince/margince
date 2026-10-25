@@ -29,12 +29,15 @@ type Counterparty struct {
 
 // PayloadOwnedKinds is the census of kinds whose persisted payload names their
 // responsible member. Consumers derive their staging/read parity checks here.
-func PayloadOwnedKinds() []string { return []string{KindCounterparty, KindCommitmentTask} }
+func PayloadOwnedKinds() []string {
+	return []string{KindCounterparty, KindCommitmentTask, KindContactShare}
+}
 
 // PayloadOwned distinguishes payload ownership from on_behalf_of ownership.
 func PayloadOwned(kind string) bool { return slices.Contains(PayloadOwnedKinds(), kind) }
 
 // Owner returns zero for absent or malformed ownership, which admits no reader.
+// Every kind but a commitment names its owner under `owner_id`.
 func Owner(kind string, body json.RawMessage) ids.UUID {
 	if kind == KindCommitmentTask {
 		owner, _ := CommitmentAskedOf(body)

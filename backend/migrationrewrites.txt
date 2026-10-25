@@ -20,3 +20,6 @@
 1792781565_a_settlement_names_the_evidence_it_read.up.sql | * | the procedural bodies are trigger functions that take advisory locks and write no row; the migration adds two empty columns and changes no existing row
 1792842045_an_introduction_can_be_recorded_after_the_fact.down.sql | intro_request | only recorded introductions are deleted, each typed by hand by a colleague, so the set is a handful of rows per contact
 1792842046_a_recorded_introduction_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792863000_every_sender_may_direct_a_send.up.sql | role | updates only the fixed set of system roles, at most three rows per workspace
+1792863000_every_sender_may_direct_a_send.down.sql | role | updates only the fixed set of system roles, at most three rows per workspace
+1792887435_the_sender_kind_check_knows_vendor_pitch.down.sql | capture_pending_counterparty | runs only on a rollback and rewrites only rows judged vendor_pitch since the upgrade, one per sender address

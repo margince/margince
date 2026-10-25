@@ -1,0 +1,43 @@
+import type { Route } from "./router";
+
+// The account record's tabs, and the ONE way to address one.
+//
+// They live apart from the page that draws them, as the contact's do in
+// lib/contacttab.ts. `navigate` takes `id2` as a bare string, so
+// a call site that names a tab by hand keeps an id that a rename removed. The
+// router then falls back to Overview, and nothing says so. `companyTabRoute` is typed on `CompanyTab`, so
+// the next rename fails to compile instead.
+
+/**
+ * The account's tabs, in the order the strip draws them. URL-addressable, so a
+ * tab survives a reload and can be linked to — the same promise the contact
+ * page has had, on the record a rep opens most.
+ *
+ * The order is the order a rep reads an account in: what is true of it now,
+ * what has happened, who is on it, what is open commercially, what is owed,
+ * and the reference material last.
+ *
+ * Partner and Finance are in the list but not always on the strip: one renders
+ * a commercial arrangement most accounts do not have, the other money on an
+ * account nobody has ever invoiced, and `companyTabsFor` decides. An address
+ * naming either is still honoured, which is what keeps the overflow menu's
+ * route to a first partner row open.
+ */
+export const COMPANY_TABS = [
+  "overview",
+  "timeline",
+  "contacts",
+  "deals",
+  "tasks",
+  "finance",
+  "documents",
+  "profile",
+  "partner",
+] as const;
+
+export type CompanyTab = (typeof COMPANY_TABS)[number];
+
+/** companyTabRoute addresses one tab of one account. */
+export function companyTabRoute(id: string, tab: CompanyTab): Route {
+  return { screen: "companies", id, id2: tab };
+}

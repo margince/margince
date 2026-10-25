@@ -65,24 +65,27 @@ const (
 // UserAgent names this software to the geocoding service.
 const UserAgent = outbound.GeocodeHeader
 
-// ErrNotConfigured says this deployment has no geocoder. It is a REFUSAL, not
-// a failure: an offline or demo installation geocodes nothing on purpose, and
-// the caller records that rather than retrying.
-var ErrNotConfigured = errors.New("geocode: no geocoding provider is configured")
+// ErrNotConfigured says the operator turned geocoding off. It is a REFUSAL, not
+// a failure: the caller records that rather than retrying.
+var ErrNotConfigured = errors.New("geocode: geocoding is switched off")
 
-// Configured answers whether an installation that read MARGINCE_GEOCODE_BASE_URL
-// into baseURL geocodes at all — the ONE predicate both processes that read
-// that variable must agree on (the worker to build a client, the api to decide
-// whether to queue a lookup for one).
-//
-// It differs from what NewNominatim itself does with baseURL: NewNominatim
-// treats "" as a request for the public service, because a caller that already
-// decided to build a client has no unconfigured case left to express. This is
-// that earlier decision, made once so it cannot read differently on either side
-// of the wire — which is exactly how the two roles came to disagree, one
-// queueing lookups the other would never answer.
-func Configured(baseURL string) bool {
-	return baseURL != ""
+// OffSetting is the value of MARGINCE_GEOCODE_BASE_URL that switches geocoding
+// off; "public" and an unset value both mean the public service.
+const OffSetting = "off"
+
+// Resolve is the single reading of MARGINCE_GEOCODE_BASE_URL. The worker builds
+// a client from baseURL, and the api queues a lookup only when on is true.
+// Unset means on, with the public service, so a fresh install geocodes at the
+// paced rate. Only an explicit "off" disables it.
+func Resolve(setting string) (baseURL string, on bool) {
+	switch trimmed := strings.TrimSpace(setting); trimmed {
+	case "", "public":
+		return PublicBaseURL, true
+	case OffSetting:
+		return "", false
+	default:
+		return trimmed, true
+	}
 }
 
 // Nominatim is the OSM client.

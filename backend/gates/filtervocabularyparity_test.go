@@ -57,7 +57,6 @@ const exists = "search declares no `exists` operator at all — its vocabulary i
 // a new type on either surface joins them silently.
 var unpairedKinds = gatekit.Waive(map[string]string{
 	"KindTimestamp": "search separates a timestamp from a date; storekit's FieldDate covers both, so there is no distinct storekit type to compare this against. The operators it carries are identical to KindDate's, which FieldDate is already compared with.",
-	"KindGeo":       "a geo field admits only within_radius, an operator storekit has no compiler for at all. There is nothing to compare: the difference is the whole type, not an operator within it.",
 })
 
 // gatekit:fixture the declared pairing between the two vocabularies' type names
@@ -76,6 +75,8 @@ var correspondingTypes = map[string]string{
 	// than a different question — so the two surfaces are comparable, and the
 	// operator difference below is the real one.
 	"FieldDomain": "KindText",
+	// Both declare only within_radius, and both compile it through geocode.Within.
+	"FieldDistance": "KindGeo",
 }
 
 // declaredDifferences ratifies each operator one surface offers and the other

@@ -182,7 +182,13 @@ func writeRelationshipInTx(
 	if out, err = insertRelationshipRow(ctx, tx, in, capturedBy); err != nil {
 		return out, mapRelationshipConstraint(err, in.Kind)
 	}
-	return out, emitRelationshipChange(ctx, tx, "create", nil, out)
+	if err := emitRelationshipChange(ctx, tx, "create", nil, out); err != nil {
+		return out, err
+	}
+	if in.Kind == employmentKind && in.ContactID != nil {
+		return out, fileEmployerTwins(ctx, tx, *in.ContactID, capturedBy)
+	}
+	return out, nil
 }
 
 // lockEmploymentClocks takes the last-activity locks an employment's triggers

@@ -53,25 +53,61 @@ func FileOnDealIfUnfiledTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, de
 	return DealFilingAlreadyFiled, nil
 }
 
-// RetractMachineDealTx takes one deal link off an activity, under its row
-// lock, only while no human or agent ever filed the activity on a deal. It
-// writes the audit row with the evidence given and the relink event, as the
-// filing did. It answers whether the link came off.
+// FileOnLeadTx is the automatic lead filing: the guarded relink write of one
+// lead link, with its audit row, the evidence given and the relink event. It
+// answers whether the link landed. A link already there, a row gone or a writer
+// refused all answer false.
+func FileOnLeadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, lead ids.UUID, evidence map[string]any) (bool, error) {
+	in := RelinkActivityInput{EntityType: linkEntityLead, EntityID: lead, evidence: evidence}
+	wrote, _, err := relinkActivityRow(ctx, tx, id, in, linkColumn(linkEntityLead))
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return false, nil
+	}
+	return wrote, err
+}
+
+// RetractMachineLeadTx takes one lead link off an activity, only while no human
+// or agent ever filed the activity under that lead or took it off.
+func RetractMachineLeadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, lead ids.UUID, evidence map[string]any) (bool, error) {
+	human := filingByHand{sql: provenance.HumanLeadFilingSQL("$1", "$2::uuid"), args: []any{id, lead}}
+	return retractMachineLinkTx(ctx, tx, id, linkEntityLead, lead, human, evidence)
+}
+
+// RetractMachineDealTx takes one deal link off an activity, only while no human
+// or agent ever filed the activity on a deal.
 func RetractMachineDealTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any) (bool, error) {
+	human := filingByHand{sql: provenance.HumanDealFilingSQL("$1"), args: []any{id}}
+	return retractMachineLinkTx(ctx, tx, id, linkEntityDeal, deal, human, evidence)
+}
+
+// filingByHand is the provenance test that a human or an agent filed the
+// activity, with its arguments.
+type filingByHand struct {
+	sql  string
+	args []any
+}
+
+// retractMachineLinkTx takes one automatic link off under the activity's row
+// lock, unless the human test finds a human's filing. It writes the audit row with the evidence given and the relink event,
+// as the filing did, and answers whether the link came off.
+func retractMachineLinkTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, entityType string, target ids.UUID, human filingByHand, evidence map[string]any,
+) (bool, error) {
 	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return false, nil
 		}
 		return false, err
 	}
-	var human bool
-	if err := tx.QueryRow(ctx, `SELECT `+provenance.HumanDealFilingSQL("$1"), id).Scan(&human); err != nil {
-		return false, fmt.Errorf("activities: reading who filed the activity on a deal: %w", err)
+	var filedByHand bool
+	if err := tx.QueryRow(ctx, `SELECT `+human.sql, human.args...).Scan(&filedByHand); err != nil {
+		return false, fmt.Errorf("activities: reading who filed the activity under a %s: %w", entityType, err)
 	}
-	if human {
+	if filedByHand {
 		return false, nil
 	}
-	tag, err := tx.Exec(ctx, `DELETE FROM activity_link WHERE activity_id = $1 AND entity_type = 'deal' AND deal_id = $2`, id, deal)
+	tag, err := tx.Exec(ctx, storekit.SQLf(`DELETE FROM activity_link WHERE activity_id = $1 AND entity_type = $2 AND %s = $3`,
+		linkColumn(entityType)), id, entityType, target)
 	if err != nil || tag.RowsAffected() == 0 {
 		return false, err
 	}
@@ -79,12 +115,12 @@ func RetractMachineDealTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dea
 		return false, err
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID,
-		map[string]any{fieldEntityType: linkEntityDeal, fieldEntityID: deal}, nil, evidence)
+		map[string]any{fieldEntityType: entityType, fieldEntityID: target}, nil, evidence)
 	if err != nil {
 		return false, err
 	}
 	return true, storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
-		ChangedFields: relinkedChangedFields(linkEntityDeal, deal),
+		ChangedFields: relinkedChangedFields(entityType, target),
 	})
 }
 

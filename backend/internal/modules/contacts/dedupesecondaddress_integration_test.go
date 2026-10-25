@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -360,7 +361,7 @@ func (e *dedupeEnv) beginHeldAddressCreate(t *testing.T, name, email string) (pg
 		t.Fatalf("insert the in-flight contact: %v", err)
 	}
 	if err := insertContactEmails(ctx, tx, ids.From[ids.WorkspaceKind](e.ws), id, "manual", "human:x",
-		[]ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}}); err != nil {
+		[]ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}}, storekit.RefuseErased); err != nil {
 		t.Fatalf("insert the in-flight address: %v", err)
 	}
 	return tx, id, pid

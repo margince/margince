@@ -29,6 +29,9 @@ import (
 // and a typo in any of them would silently ask for a grant nobody holds.
 const objectActivity = "activity"
 
+// objectPartner is the RBAC object a partner program write is governed by.
+const objectPartner = "partner"
+
 // objectDeal is the RBAC object a stage move is governed by. Spelled here
 // rather than imported, for targetImportRun's reason: approvals may not import
 // a module it governs.
@@ -162,6 +165,10 @@ var decisionGrants = map[string][]grantRequirement{
 	// such pointer. The store gates it on `tag.update` (collections/tagvocab.go
 	// MergeTags), so deciding takes that grant, for disqualify_lead's reason.
 	"merge_tags": {{targetTag, principal.ActionUpdate}},
+	// A set-up writes the partner row and adds `partner` to the company's
+	// relationship types (contacts/partner.go UpsertPartner), which takes both
+	// update grants. Deciding takes the grants the write takes.
+	"set_up_partner": {{tableCompany, principal.ActionUpdate}, {objectPartner, principal.ActionUpdate}},
 	// Retiring a word is gated on `tag.delete` (collections/tags.go ArchiveTag),
 	// so a floored archive is decided on that grant.
 	"archive_tag": {{targetTag, principal.ActionDelete}},
@@ -241,6 +248,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// the domain is free-mail, the company behind them — so deciding it
 	// needs both create grants, exactly as if the approver had typed them in.
 	approvalsubject.KindCounterparty: {{tableContact, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
+	// Accepting a contact_share request shares the contact with the colleague
+	// who asked, which is the grant the Share button itself requires.
+	approvalsubject.KindContactShare: {{tableContact, principal.ActionUpdate}},
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
 	// refused to create beside its near-match) creates the contact; when the
 	// card names an employer, also the employment edge (relationship create

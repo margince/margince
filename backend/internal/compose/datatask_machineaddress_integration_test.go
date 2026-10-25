@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -70,6 +71,7 @@ func TestTheMachineAddressTaskTagsOnlyMachineContactsAndReplaysSafely(t *testing
 	receipts := machineAddressContact(t, e, conn, "Expense Receipts", "receipts@machine-task.test")
 	noreply := machineAddressContact(t, e, conn, "Signing Service", "signing-noreply@machine-task.test")
 	anna := machineAddressContact(t, e, conn, "Anna Notify Weber", "anna.notify.weber@machine-task.test")
+	docsReply := machineAddressContact(t, e, conn, "D", "d+"+strings.Repeat("aorgb9", 34)+"@docs.google.com")
 	// A user who already coined the word keeps it: the task files under theirs.
 	if _, err := conn.Exec(ctx, `INSERT INTO tag (name) VALUES ($1)`, machineAddressTag); err != nil {
 		t.Fatal(err)
@@ -79,7 +81,7 @@ func TestTheMachineAddressTaskTagsOnlyMachineContactsAndReplaysSafely(t *testing
 	task.Steps[0].Limit = 1
 	runMachineAddressTask(ctx, t, e, task)
 
-	for name, id := range map[string]ids.UUID{"receipts@": receipts, "signing-noreply@": noreply} {
+	for name, id := range map[string]ids.UUID{"receipts@": receipts, "signing-noreply@": noreply, "d+token@": docsReply} {
 		if got := machineTagged(t, e, id); got != 1 {
 			t.Errorf("%s contact carries the tag %d times, want once", name, got)
 		}
@@ -93,7 +95,7 @@ func TestTheMachineAddressTaskTagsOnlyMachineContactsAndReplaysSafely(t *testing
 	if got := e.WsCount(t, `SELECT count(*) FROM contact WHERE archived_at IS NOT NULL`); got != 0 {
 		t.Errorf("the task archived %d contacts, want none", got)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'tag' AND after ? 'applied' AND evidence ? $1`, machineAddressTaggedBy); got != 2 {
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'tag' AND after ? 'applied' AND evidence ? $1`, machineAddressTaggedBy); got != 3 {
 		t.Errorf("tagging audit rows = %d, want one per tagged contact, each naming the run", got)
 	}
 
@@ -164,5 +166,26 @@ func TestTheMachineAddressTaskRollsItsTagsBackWithItsProgress(t *testing.T) {
 	}
 	if _, err := datatask.UUIDCursor([]byte(`"not-a-uuid"`)); err == nil {
 		t.Error("a malformed cursor was read as a position")
+	}
+}
+
+// An installation that finished version 1 keeps its ledger row. Only a higher
+// version restarts the cursor, so the contacts the first run missed get tagged.
+func TestTheMachineAddressTaskRunsAgainOverAFinishedFirstVersion(t *testing.T) {
+	e := integration.Setup(t)
+	conn := integration.OwnerConn(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+
+	finished := machineAddressDataTask()
+	finished.Version = 1
+	runMachineAddressTask(ctx, t, e, finished)
+	token := machineAddressContact(t, e, conn, "D", "d+"+strings.Repeat("aorgb9", 34)+"@docs.google.com")
+	if got := machineTagged(t, e, token); got != 0 {
+		t.Fatalf("contact tagged before the second run: %d", got)
+	}
+
+	runMachineAddressTask(ctx, t, e, machineAddressDataTask())
+	if got := machineTagged(t, e, token); got != 1 {
+		t.Errorf("token-address contact carries the tag %d times after the version bump, want once", got)
 	}
 }

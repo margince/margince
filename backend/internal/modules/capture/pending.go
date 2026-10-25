@@ -98,6 +98,8 @@ const (
 	// `personal` — but it is the OWNER's, and a colleague reading it is the
 	// disclosure this kind exists to prevent.
 	KindAdvisor = "advisor"
+	// KindVendorPitch is a named human selling the business something unasked.
+	KindVendorPitch = "vendor_pitch"
 )
 
 // PendingMaxAttempts bounds the verdict retries (ADR-0072 §5: retries=2). A row

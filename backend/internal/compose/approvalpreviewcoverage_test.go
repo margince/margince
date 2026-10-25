@@ -76,6 +76,7 @@ func TestCommercialPreviewAccountsForEveryGovernedKind(t *testing.T) {
 		"update_record":         `{"fields":{"owner_id":null}}`,
 		"assign_owner":          `{"owner_id":null}`,
 		"lifecycle_change":      `{"proposed_lifecycle":"former_customer"}`,
+		"set_up_partner":        `{"partner_role":"hosting"}`,
 	}
 	seen := map[string]bool{}
 	for _, kind := range approvals.StageableKinds() {
@@ -90,7 +91,7 @@ func TestCommercialPreviewAccountsForEveryGovernedKind(t *testing.T) {
 		if err != nil || supported != expected {
 			t.Errorf("governed kind %s: covered=%v, want %v; %v", kind, supported, expected, err)
 		}
-		if expected && kind != "merge_tags" && kind != "archive_record" && kind != "emit_flow_event" && kind != "create_record" && kind != "relink_activity" && kind != "relink_activities" && kind != "relink_thread" && kind != "promote_lead" && kind != "demote_lead" && kind != "send_message" && kind != "invite_meeting" && kind != "book_meeting" && kind != "enrich" && kind != previewSendEmail && kind != previewSendCompanyEmail && len(changes) == 0 {
+		if expected && kind != "merge_tags" && kind != operationSetUpPartner && kind != "archive_record" && kind != "emit_flow_event" && kind != "create_record" && kind != "relink_activity" && kind != "relink_activities" && kind != "relink_thread" && kind != "promote_lead" && kind != "demote_lead" && kind != "send_message" && kind != "invite_meeting" && kind != "book_meeting" && kind != "enrich" && kind != previewSendEmail && kind != previewSendCompanyEmail && len(changes) == 0 {
 			t.Errorf("governed kind %s has no commercial effect", kind)
 		}
 		seen[kind] = true

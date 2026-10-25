@@ -292,14 +292,13 @@ func TestTheChokepointRefusalHidesARecordTheCallerCannotRead(t *testing.T) {
 		})
 		return cerr
 	})
-	var dup *DuplicateEmailError
-	if !errors.As(err, &dup) {
-		t.Fatalf("refusal = %v, want DuplicateEmailError", err)
+	// Still refused, because the duplicate is real. The held refusal carries no
+	// pointer to a record this caller was never allowed to read.
+	if _, held := errors.AsType[*ContactHeldByColleagueError](err); !held {
+		t.Fatalf("refusal = %v, want ContactHeldByColleagueError", err)
 	}
-	// Still refused — the duplicate is real — but with no pointer to a record
-	// this caller was never allowed to read.
-	if !dup.ExistingID.IsZero() {
-		t.Fatalf("refusal disclosed %s to a caller who cannot read it", dup.ExistingID)
+	if _, dup := errors.AsType[*DuplicateEmailError](err); dup {
+		t.Fatalf("refusal %v answers as a duplicate the caller could open", err)
 	}
 }
 

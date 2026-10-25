@@ -161,6 +161,19 @@ func foldedNameKey(s string) string {
 	return collapseSpaces(strings.ReplaceAll(normalizeName(s), "'", ""))
 }
 
+// companyNamesAreTheSame answers whether two names are one name. Only case,
+// accents and spacing are folded. A legal suffix stays, for the reason
+// CompanyCandidateScore.ExactName gives.
+func companyNamesAreTheSame(left, right string) bool {
+	l, r := foldedNameKey(left), foldedNameKey(right)
+	return l != "" && l == r
+}
+
+// collapseSpaces reduces every run of whitespace to one space. A name read off
+// a web page carries the spacing of its markup, and "Baqend  GmbH" is not a
+// different company from "Baqend GmbH".
+func collapseSpaces(s string) string { return strings.Join(strings.Fields(s), " ") }
+
 // umlautDigraphs writes ä, ö and ü the way German does without them.
 var umlautDigraphs = strings.NewReplacer("ä", "ae", "ö", "oe", "ü", "ue", "Ä", "Ae", "Ö", "Oe", "Ü", "Ue")
 

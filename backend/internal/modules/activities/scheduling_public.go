@@ -27,6 +27,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -82,7 +83,7 @@ func SeedBookingPageTx(ctx context.Context, tx pgx.Tx, hostUserID ids.UserID) (s
 // ContactEnsurer is the contacts seam of the public capture path (compose
 // injects it — activities never imports a sibling).
 type ContactEnsurer interface {
-	EnsureContactByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error)
+	EnsureContactByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, error)
 }
 
 // BookingConsent is the CaptureConsent passthrough: the purpose and the
@@ -371,7 +372,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 
 // ensureBooker is the contact the booking lands on, or the refusal written.
 func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, req crmcontracts.BookPublicMeetingJSONRequestBody) (ids.UUID, bool) {
-	contactID, err := h.publicContacts.EnsureContactByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking")
+	contactID, err := h.publicContacts.EnsureContactByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking", storekit.AdmitSelfBooking)
 	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
 		// The contacts store names its own field; this form's address is booker.email.
 		httperr.Write(w, r, httperr.Validation("booker.email", badValue.Code, badValue.Message))

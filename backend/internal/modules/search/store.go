@@ -144,6 +144,9 @@ type Page struct {
 	// TypesWithMore is non-nil on a grouped page alone: the types that matched
 	// more hits than PerType let it carry, in searchBranches order.
 	TypesWithMore []string
+	// NearMatches is set only when NearMatches was asked for and a plain first
+	// page found nothing: names spelt close to the query, never hits.
+	NearMatches []NearMatch
 }
 
 type Input struct {
@@ -162,6 +165,9 @@ type Input struct {
 	// through a company the query matches. GET /v1/search and search_records ask
 	// for it; the retrieval and plan lanes keep matching by own text alone.
 	WithEmployees bool
+	// NearMatches asks an empty first page to offer close names. Anchor
+	// resolution and retrieval leave it unset: they must never resolve to a guess.
+	NearMatches bool
 }
 
 // maxQueryWords bounds the words one query may hold. The employer arm binds a
@@ -244,6 +250,11 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return err
 		}
 		page = shape.page(hits)
+		if wantsNearMatches(in, query, page) {
+			if page.NearMatches, err = nearMatches(ctx, tx, types, query); err != nil {
+				return err
+			}
+		}
 		if err := noteCaptureWithheld(ctx, tx, types); err != nil {
 			return err
 		}

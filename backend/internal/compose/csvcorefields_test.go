@@ -119,7 +119,7 @@ func TestAFileLinkedInURLReplacesOnlyThatSocialHandle(t *testing.T) {
 // written before the rule to it.
 func TestACsvUpdateCarriesAStoredLegacyCountryForward(t *testing.T) {
 	city := "Berlin"
-	merged, changed, err := addressMergedOnto([]byte(`{"address":{"city":"Bonn","country":"Germany"}}`), &crmcontracts.Address{City: &city})
+	merged, changed, err := addressMergedOnto([]byte(`{"address":{"city":"Bonn","country":"Germany"}}`), &crmcontracts.Address{City: &city}, map[string]string{"address.city": city})
 	if err != nil || !changed || merged.Country == nil || *merged.Country != "Germany" || *merged.City != "Berlin" {
 		t.Fatalf("merged = %+v (changed %v, err %v), want Berlin with the stored country kept", merged, changed, err)
 	}

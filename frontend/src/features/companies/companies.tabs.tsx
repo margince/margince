@@ -8,6 +8,7 @@ import { Card, EmptyState, Skeleton } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import type { CompanyTab } from "../../lib/companytab";
 import type { OpenReceipt } from "../records/record360";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import type { Company, Company360View } from "./companies";
@@ -19,7 +20,6 @@ import {
 import { NewDealAction } from "./companyactions";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyProjectsPanel } from "./companyprojects";
-import type { CompanyTab } from "./companytab";
 import { CompanyTasksFinds } from "./companytasksfinds";
 import { CompanyTaskTable } from "./companytaskstable";
 import "./company360.css";

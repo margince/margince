@@ -15,6 +15,7 @@
 // relationship_nudge_dismissal, sdr_handoff, sdr_handoff_event,
 // sdr_handoff_reason.
 // Also owned: company_domain_disposition, company_domain_question_reader, lead_origin.
+// dedupe_scan_state is where the nightly duplicate scan stopped (dedupescan.go).
 // It also owns legal_entity and legal_entity_member. A legal entity is a company
 // the installation trades as. It lives beside the anchor company, because the
 // default entity reads its identity from it. legal_entity_member is which entity

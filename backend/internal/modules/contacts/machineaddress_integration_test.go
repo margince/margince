@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -119,9 +120,9 @@ func TestEnsureContactByEmailRefusesASendingSystemsAddressEvenWhenAContactHoldsI
 	ctx := e.as()
 	legacyMachineContact(ctx, t, e, sendingSystemAddress)
 
-	_, err := e.store.EnsureContactByEmail(ctx, "Signing", sendingSystemAddress, "public_booking")
+	_, err := e.store.EnsureContactByEmail(ctx, "Signing", sendingSystemAddress, "public_booking", storekit.RefuseErased)
 	requireMachineAddressFault(t, err)
-	if _, err := e.store.EnsureContactByEmail(ctx, "Notifications", "notifications@machine.test", "public_booking"); err == nil {
+	if _, err := e.store.EnsureContactByEmail(ctx, "Notifications", "notifications@machine.test", "public_booking", storekit.RefuseErased); err == nil {
 		t.Error("a booking from notifications@ minted a contact")
 	}
 }

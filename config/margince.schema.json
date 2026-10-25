@@ -943,7 +943,7 @@
       }
     },
     "geocode_base_url": {
-      "description": "Nominatim base URL, or public; set it on the api and the worker together, or a lookup is never queued.",
+      "description": "Nominatim base URL; unset or public uses the public service, off stops the lookup of map points; give the api and the worker the same value, or a lookup is never queued.",
       "type": [
         "string",
         "null"

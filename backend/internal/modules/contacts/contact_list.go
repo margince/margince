@@ -44,6 +44,10 @@ type ListContactsInput struct {
 	CapturedByKind *string
 	// AiWritten filters on whether an AI wrote into the record (§3a).
 	AiWritten *bool
+	// RelationshipMark is "vendor_marketing" for only the marked contacts and
+	// "any" for marked and unmarked alike. Unset leaves marked contacts out,
+	// unless Query is set: a text search still finds them.
+	RelationshipMark *string
 	// Sort is the contract's sort spec, validated against the core
 	// vocabulary below plus the workspace's active cf_ columns.
 	Sort *string
@@ -208,6 +212,9 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 			where, err := shared.clauses(ctx, active, sorted, arg)
 			if err != nil {
 				return nil, err
+			}
+			if clause := relationshipMarkClause(in, arg); clause != "" {
+				where = append(where, clause)
 			}
 			if clause := contactTagClause(ctx, in.TagIDs, in.TagMode, arg); clause != "" {
 				where = append(where, clause)

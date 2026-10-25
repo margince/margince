@@ -276,6 +276,9 @@ func (d *DocumentExtractor) sourceFor(
 			maxDocumentBytes>>20,
 		), nil
 	}
+	if ai.CarriesImage(mime) {
+		return d.imageSource(meta, mime, bytes)
+	}
 	src, detail := d.laneFor(ctx, meta, mime, bytes)
 	return src, detail, nil
 }
@@ -428,25 +431,10 @@ func (d *DocumentExtractor) ask(ctx context.Context, src documentSource) ([]extr
 	// putting `Aufhebungsvertrag_final.pdf` on a colleague's screen.
 	resp, err := ai.Ask(ai.WithSubject(ctx, src.Parent, ""), d.brain, req, validate)
 	if err != nil {
-		if errors.Is(err, model.ErrAttachmentUnsupported) {
-			// The binding declared it carries this type and then refused it on
-			// the wire. That is the two halves of one declaration disagreeing,
-			// which is a configuration fault rather than a fault of this
-			// document — so it is refused, not retried.
-			return nil, fmt.Errorf("%w: the model refused a document type its binding declares it carries: %w",
-				errRefusedDocument, err)
-		}
-		if errors.Is(err, model.ErrAttachmentMislabelled) {
-			// The bytes are not the kind the stored content type says. That is a
-			// fault of this DOCUMENT rather than of the binding — every model
-			// would read the same bytes the same way — so it is refused here
-			// like an unreadable one, and the run says which file it could not
-			// read instead of answering about a document nothing decoded.
-			return nil, fmt.Errorf("%w: this document's bytes are not the type it is stored as: %w",
-				errRefusedDocument, err)
-		}
-		if ai.ModelDeclined(err) {
-			return nil, fmt.Errorf("%w: %w", errRefusedDocument, err)
+		// A refusal of the bytes or of the reply will repeat on a retry, so it
+		// closes the reading. Any other error is the lane's and is retried.
+		if refused := ai.RefusedReading(err); errors.Is(refused, ai.ErrReadRefused) {
+			return nil, fmt.Errorf("%w: %w", errRefusedDocument, refused)
 		}
 		return nil, err
 	}

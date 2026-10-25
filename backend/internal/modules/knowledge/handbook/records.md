@@ -66,8 +66,9 @@ Also called: create a contact, add someone to the CRM, new customer contact.
 To add a contact quickly in Margince, open **Contacts** and choose **Quick capture**. To add many from a card file, choose **Import vCards**.
 - **Quick capture** asks for **Full name** (required), **Title**, **Company**, **LinkedIn**, **Email** and **Phone**, and confirms with "{name} saved"; the form stays open.
 - The **Company** box in Quick capture lists the companies that match what you type: pick one to link it. A name you do not pick creates a new company.
-- **Import vCards** asks for a **vCard file**: choose **Select .vcf file**. Each card is reported as Added, Missing fields added, Possible duplicate or Skipped.
-Also called: import contacts, upload a .vcf.
+- **Import vCards** opens **Import business cards**: choose **Select file or photo** for a **vCard file or card photo**. Each card is Added, Missing fields added, Possible duplicate, Waiting for approval or Skipped. A model reads a photo of up to 20 cards, so every card from a photo waits for your approval. A photo card whose email is already a contact is Skipped.
+- A card photo must be a JPEG or PNG. An iPhone converts it automatically when you pick it. A photo in another format is refused until you save it as JPEG or PNG.
+Also called: import contacts, upload a .vcf, scan a business card, import cards from a photo.
 
 ### How do I edit a contact?
 To edit a contact in Margince, open it and click the value to change in the **Details** panel next to the record. There is no Edit button: each field changes in place.
@@ -197,6 +198,8 @@ To merge two duplicate companies in Margince, open the company you want to remov
 The company you merged away is archived, not deleted. You cannot merge an archived company.
 
 Anyone the merged-away company was shared with can open the company you kept. Of their two shares, the higher access stays. Margince lists two companies as a possible duplicate when one has a domain under the other's, such as `cloud.example.com` under `example.com`. It never merges them by itself.
+
+Margince also lists two companies whose names are the same once the legal form is left out, such as "Fabrikam GmbH" and "Fabrikam". Two names that are only close, such as "Fabrikam GmbH" and "Fabrikam Cloud Services", need one more fact in common. That fact is an address, a phone number or a contact who works at both.
 Also called: combine companies, deduplicate accounts.
 
 ### How do I stop a company coming back from email?

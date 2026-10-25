@@ -217,8 +217,8 @@ func TestTheRecheckClosesLeadAndCompanyPairsTheRuleNoLongerFiles(t *testing.T) {
 	}
 }
 
-// An end archived after filing cannot be scored, so the pass leaves the pair for
-// a reviewer instead of guessing.
+// A contact or lead end archived after filing cannot be scored, so the pass
+// leaves the pair for a reviewer instead of guessing.
 func TestTheRecheckKeepsAPairWithAnArchivedEnd(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
@@ -232,8 +232,6 @@ func TestTheRecheckKeepsAPairWithAnArchivedEnd(t *testing.T) {
 	leadA := e.plainLead(ctx, t, "Alex Johnson", "alex.johnson@gone-leads.test")
 	leadPair := e.fileOldRulePair(ctx, t, entityLead,
 		leadA, e.plainLead(ctx, t, "Alex Meyer", "alex.meyer@gone-leads.test"), 0.88)
-	companyA := e.plainCompany(ctx, t, "Northwind Traders")
-	companyPair := e.fileOldRulePair(ctx, t, entityCompany, companyA, e.plainCompany(ctx, t, "Contoso Pharma"), 0.8)
 
 	if _, err := e.store.ArchiveContact(ctx, ids.From[ids.ContactKind](leftGoneA), nil); err != nil {
 		t.Fatalf("archive contact: %v", err)
@@ -244,16 +242,13 @@ func TestTheRecheckKeepsAPairWithAnArchivedEnd(t *testing.T) {
 	if _, err := e.store.DisqualifyLead(ctx, ids.From[ids.LeadKind](leadA), DisqualifyLeadInput{}); err != nil {
 		t.Fatalf("disqualify lead: %v", err)
 	}
-	if _, err := e.store.ArchiveCompany(ctx, ids.From[ids.CompanyKind](companyA), nil); err != nil {
-		t.Fatalf("archive company: %v", err)
-	}
 
 	if got := e.recheck(t); got.Closed != 0 {
 		t.Errorf("the pass closed %d pairs whose ends it cannot read, want 0", got.Closed)
 	}
 	for name, id := range map[string]ids.UUID{
 		"contact, left end archived": leftGone, "contact, right end archived": rightGone,
-		"lead": leadPair, "company": companyPair,
+		"lead": leadPair,
 	} {
 		if archived, _ := e.candidateState(ctx, t, id); archived {
 			t.Errorf("the %s pair was closed; the pass cannot score it", name)

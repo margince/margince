@@ -399,8 +399,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `change_state` | 0.89 | 8/9 | - | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list` |
 | `read_forecast` | 0.86 | 6/7 | - | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
-| `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `create_record` | 0.89 | 8/9 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `decide_approvals` | 0.86 | 6/7 | - | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
 

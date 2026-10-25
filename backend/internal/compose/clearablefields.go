@@ -39,7 +39,7 @@ import "slices"
 //
 //nolint:goconst // the rows are wire FIELD names and record types read as data; the constants goconst points at are other concepts that spell the same word — a report field, a filter param — and hiding these behind them would assert a correspondence this table exists to state on its own
 var clearableFields = map[string][]string{
-	"contact": {"first_name", "last_name", "title", "owner_id"},
+	"contact": {"first_name", "last_name", "title", "owner_id", "relationship_mark"},
 	"company": {
 		"legal_name", "description", "industry", "size_band",
 		"linkedin_url", "owner_id", "parent_company_id", "assess_against_entity_id",

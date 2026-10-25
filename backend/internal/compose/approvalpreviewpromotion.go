@@ -168,6 +168,13 @@ func (r approvalPreviewReader) promotionCarryDetails(ctx context.Context, plan c
 		}
 		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: field, Value: value})
 	}
+	if plan.WithheldActivities > 0 {
+		field := "promotion_move_withheld_activities"
+		if sourceOnly {
+			field = "creation_source_withheld_activities"
+		}
+		details = append(details, previewDetail(field, strconv.Itoa(plan.WithheldActivities)))
+	}
 	for _, state := range plan.Consent {
 		details = append(details, previewDetail("consent_purpose", state.PurposeLabel))
 		if sourceOnly {

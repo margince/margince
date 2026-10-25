@@ -59,6 +59,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["company_id", "history.field.company_id"],
   ["owner_id", "history.field.owner_id"],
   ["parent_company_id", "history.field.parent_company_id"],
+  ["relationship_mark", "history.field.relationship_mark"],
   ["partner_attribution", "history.field.partner_attribution"],
   ["partner_company_id", "history.field.partner_company_id"],
   ["phones", "history.field.phones"],

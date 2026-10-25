@@ -5,7 +5,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { SEARCH_HIT_KIND_KEY } from "../../app/searchkinds";
 import type { CreateField } from "../../components/create";
 import {
   Button,
@@ -26,6 +25,7 @@ import {
   searchByEntity,
 } from "../../lib/relationshipcandidates";
 import { KIND_LABELS } from "../../lib/relationshipkinds";
+import { SEARCH_HIT_KIND_KEY } from "../../lib/searchkinds";
 import "./candidatepicker.css";
 import "../../design-system/querystates.css";
 import "./relationships.css";

@@ -1629,6 +1629,13 @@ public.capture_alias_sighting.user_id uuid NOT NULL gen=- def=-
 public.capture_alias_sighting.value text NOT NULL gen=- def=-
 public.capture_alias_sighting_once_per_message CREATE UNIQUE INDEX capture_alias_sighting_once_per_message ON public.capture_alias_sighting USING btree (user_id, value, source)
 public.capture_alias_sighting_pkey CREATE UNIQUE INDEX capture_alias_sighting_pkey ON public.capture_alias_sighting USING btree (id)
+public.capture_answered_sweep_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_answered_sweep_cursor.after_contact_id uuid gen=- def=-
+public.capture_answered_sweep_cursor.capture_answered_sweep_cursor_one_row CHECK (singleton)
+public.capture_answered_sweep_cursor.capture_answered_sweep_cursor_pkey PRIMARY KEY (singleton)
+public.capture_answered_sweep_cursor.singleton boolean NOT NULL gen=- def=true
+public.capture_answered_sweep_cursor.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_answered_sweep_cursor_pkey CREATE UNIQUE INDEX capture_answered_sweep_cursor_pkey ON public.capture_answered_sweep_cursor USING btree (singleton)
 public.capture_auto_enrich_budget acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_auto_enrich_budget.budget_date date NOT NULL gen=- def=-
 public.capture_auto_enrich_budget.capture_auto_enrich_budget_pkey PRIMARY KEY (budget_date)
@@ -1841,7 +1848,7 @@ public.capture_pending_counterparty.backfill_id uuid gen=- def=-
 public.capture_pending_counterparty.capture_pending_counterparty_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.capture_pending_counterparty.capture_pending_counterparty_backfill_id_fkey FOREIGN KEY (backfill_id) REFERENCES capture_backfill(id) ON DELETE SET NULL
 public.capture_pending_counterparty.capture_pending_counterparty_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
-public.capture_pending_counterparty.capture_pending_counterparty_kind_check CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact'::text, 'role_mailbox'::text, 'company_sender'::text, 'newsletter'::text, 'transactional'::text, 'spam'::text, 'personal'::text, 'advisor'::text]))))
+public.capture_pending_counterparty.capture_pending_counterparty_kind_check CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact'::text, 'role_mailbox'::text, 'company_sender'::text, 'newsletter'::text, 'transactional'::text, 'spam'::text, 'personal'::text, 'advisor'::text, 'vendor_pitch'::text]))))
 public.capture_pending_counterparty.capture_pending_counterparty_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_pending_counterparty.capture_pending_counterparty_pkey PRIMARY KEY (id)
 public.capture_pending_counterparty.capture_pending_counterparty_proposal_id_fkey FOREIGN KEY (proposal_id) REFERENCES approval(id) ON DELETE SET NULL
@@ -3046,6 +3053,8 @@ public.contact.contact_narrowing_reason_only_when_owner CHECK (((narrowing_reaso
 public.contact.contact_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.contact.contact_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
 public.contact.contact_pkey PRIMARY KEY (id)
+public.contact.contact_relationship_mark_check CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'::text])))
+public.contact.contact_relationship_mark_set_by_pairs CHECK (((relationship_mark IS NULL) = (relationship_mark_set_by IS NULL)))
 public.contact.contact_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.contact.contact_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
 public.contact.contact_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -3065,6 +3074,8 @@ public.contact.owner_id uuid gen=- def=-
 public.contact.photo_object_key text gen=- def=-
 public.contact.photo_origin text gen=- def=-
 public.contact.quarantined_at timestamp with time zone gen=- def=-
+public.contact.relationship_mark text gen=- def=-
+public.contact.relationship_mark_set_by text gen=- def=-
 public.contact.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(full_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(full_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(title, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(title, ''::text))), 'B'::"char"))
 public.contact.source text NOT NULL gen=- def=-
 public.contact.source_author_id uuid gen=- def=-
@@ -4036,6 +4047,13 @@ public.dedupe_candidate.trg_dedupe_candidate_updated CREATE TRIGGER trg_dedupe_c
 public.dedupe_candidate.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.dedupe_candidate.version bigint NOT NULL gen=- def=1
 public.dedupe_candidate_pkey CREATE UNIQUE INDEX dedupe_candidate_pkey ON public.dedupe_candidate USING btree (id)
+public.dedupe_scan_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.dedupe_scan_state.dedupe_scan_state_pkey PRIMARY KEY (stream)
+public.dedupe_scan_state.dedupe_scan_state_stream_check CHECK ((stream = ANY (ARRAY['company'::text, 'company_domain'::text, 'contact'::text, 'contact_email'::text, 'contact_phone'::text])))
+public.dedupe_scan_state.scanned_through_at timestamp with time zone NOT NULL gen=- def=-
+public.dedupe_scan_state.scanned_through_id uuid NOT NULL gen=- def=-
+public.dedupe_scan_state.stream text NOT NULL gen=- def=-
+public.dedupe_scan_state_pkey CREATE UNIQUE INDEX dedupe_scan_state_pkey ON public.dedupe_scan_state USING btree (stream)
 public.email_signature acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.email_signature.archived_at timestamp with time zone gen=- def=-
 public.email_signature.body text NOT NULL gen=- def=-
@@ -4594,10 +4612,14 @@ public.idx_communication_suppression_contact CREATE INDEX idx_communication_supp
 public.idx_communication_suppression_lead CREATE INDEX idx_communication_suppression_lead ON public.communication_suppression USING btree (lead_id)
 public.idx_company_assess_against_entity CREATE INDEX idx_company_assess_against_entity ON public.company USING btree (assess_against_entity_id) WHERE (assess_against_entity_id IS NOT NULL)
 public.idx_company_created_keyset CREATE INDEX idx_company_created_keyset ON public.company USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_company_dedupe_scan CREATE INDEX idx_company_dedupe_scan ON public.company USING btree (updated_at, id) WHERE (archived_at IS NULL)
 public.idx_company_domain_company CREATE INDEX idx_company_domain_company ON public.company_domain USING btree (company_id)
+public.idx_company_domain_dedupe_scan CREATE INDEX idx_company_domain_dedupe_scan ON public.company_domain USING btree (updated_at, id)
 public.idx_company_domain_disposition_company CREATE INDEX idx_company_domain_disposition_company ON public.company_domain_disposition USING btree (company_id)
 public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_disposition_due ON public.company_domain_disposition USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_company_domain_trgm CREATE INDEX idx_company_domain_trgm ON public.company_domain USING gin (f_fold_apostrophes(lower(domain)) gin_trgm_ops) WHERE (archived_at IS NULL)
+public.idx_company_exact_legal_name_key CREATE INDEX idx_company_exact_legal_name_key ON public.company USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(legal_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
+public.idx_company_exact_name_key CREATE INDEX idx_company_exact_name_key ON public.company USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(display_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_company_fact_lookup CREATE INDEX idx_company_fact_lookup ON public.company_fact USING btree (category, field, value_key)
 public.idx_company_geocoded CREATE INDEX idx_company_geocoded ON public.company USING btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok'::text) AND (archived_at IS NULL))
 public.idx_company_import_display_name CREATE INDEX idx_company_import_display_name ON public.company USING btree (f_fold_import_name(display_name)) WHERE ((archived_at IS NULL) AND (merged_into_id IS NULL))
@@ -4620,9 +4642,11 @@ public.idx_consent_event_lead CREATE INDEX idx_consent_event_lead ON public.cons
 public.idx_contact_channel_identity_contact CREATE INDEX idx_contact_channel_identity_contact ON public.contact_channel_identity USING btree (contact_id)
 public.idx_contact_confirm_submission_token CREATE INDEX idx_contact_confirm_submission_token ON public.contact_confirm_submission USING btree (token_id)
 public.idx_contact_created_keyset CREATE INDEX idx_contact_created_keyset ON public.contact USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
+public.idx_contact_dedupe_scan CREATE INDEX idx_contact_dedupe_scan ON public.contact USING btree (updated_at, id) WHERE (archived_at IS NULL)
 public.idx_contact_email_base CREATE INDEX idx_contact_email_base ON public.contact_email USING btree (regexp_replace(lower(email), '^([^+@]+)\+[^@]*@'::text, '\1@'::text)) WHERE (archived_at IS NULL)
 public.idx_contact_email_contact CREATE INDEX idx_contact_email_contact ON public.contact_email USING btree (contact_id)
 public.idx_contact_email_correspondence CREATE INDEX idx_contact_email_correspondence ON public.contact_email USING btree (email) WHERE (from_correspondence AND (archived_at IS NULL))
+public.idx_contact_email_dedupe_scan CREATE INDEX idx_contact_email_dedupe_scan ON public.contact_email USING btree (updated_at, id)
 public.idx_contact_email_trgm CREATE INDEX idx_contact_email_trgm ON public.contact_email USING gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_contact_exact_digraph_name_key CREATE INDEX idx_contact_exact_digraph_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä'::text, 'ae'::text), 'ö'::text, 'oe'::text), 'ü'::text, 'ue'::text))), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_exact_name_key CREATE INDEX idx_contact_exact_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
@@ -4634,6 +4658,7 @@ public.idx_contact_name_keyset_desc CREATE INDEX idx_contact_name_keyset_desc ON
 public.idx_contact_name_trgm CREATE INDEX idx_contact_name_trgm ON public.contact USING gin (f_fold_apostrophes(lower(full_name)) gin_trgm_ops)
 public.idx_contact_owner CREATE INDEX idx_contact_owner ON public.contact USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_contact_phone_contact CREATE INDEX idx_contact_phone_contact ON public.contact_phone USING btree (contact_id)
+public.idx_contact_phone_dedupe_scan CREATE INDEX idx_contact_phone_dedupe_scan ON public.contact_phone USING btree (updated_at, id)
 public.idx_contact_search CREATE INDEX idx_contact_search ON public.contact USING gin (search_tsv)
 public.idx_contact_signature_enrich_state_activity CREATE INDEX idx_contact_signature_enrich_state_activity ON public.contact_signature_enrich_state USING btree (activity_id)
 public.idx_contact_updated_keyset CREATE INDEX idx_contact_updated_keyset ON public.contact USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
