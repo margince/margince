@@ -472,8 +472,8 @@ describe("the settings dialog's access changes", () => {
       await screen.findByRole("button", { name: "Manage room" }),
     );
     await user.type(
-      await screen.findByLabelText(/Access ends on/),
-      "2026-12-31",
+      await screen.findByRole("textbox", { name: /Access ends on/ }),
+      "31/12/2026{Enter}",
     );
     await user.click(screen.getByRole("radio", { name: /Closed/ }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
