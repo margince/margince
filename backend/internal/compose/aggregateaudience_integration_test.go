@@ -230,28 +230,6 @@ func seedLinkedContact(t *testing.T, e *integration.Env, email string) ids.UUID 
 	return id
 }
 
-func seedLinkedActivity(t *testing.T, e *integration.Env, contact ids.UUID, audience string) ids.UUID {
-	t.Helper()
-	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
-			                      source, captured_by, audience)
-			VALUES ($1, 'email', 'Betreff', 'body', 'inbound', 'gmail', $2,
-			        'gmail:'||$2, 'connector:gmail', $3)`,
-			id, "agg-"+id.String(), audience); err != nil {
-			return err
-		}
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_link (activity_id, entity_type, contact_id)
-			VALUES ($1, 'contact', $2)`, id, contact)
-		return err
-	}); err != nil {
-		t.Fatalf("seeding a linked activity: %v", err)
-	}
-	return id
-}
-
 func holdActivity(t *testing.T, e *integration.Env, id ids.UUID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
