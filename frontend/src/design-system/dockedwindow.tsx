@@ -44,6 +44,7 @@ function clamp(value: number, low: number, high: number) {
  */
 export function DockedWindow({
   title,
+  aside,
   state,
   onStateChange,
   onClose,
@@ -54,6 +55,16 @@ export function DockedWindow({
 }: Readonly<{
   /** Names the window and its folded bar; a heading, not a dialog title row. */
   title: string;
+  /**
+   * What the title names, beside it: the record this window's work belongs to.
+   *
+   * In the bar rather than in the content. The content is a writing surface
+   * with a floor under it, and a row above the fields comes out of that floor.
+   *
+   * The bar is also what a folded window keeps, so the reference survives the
+   * window being put away.
+   */
+  aside?: ReactNode;
   state: DockState;
   onStateChange: (next: DockState) => void;
   onClose: () => void;
@@ -243,6 +254,7 @@ export function DockedWindow({
           <Heading as="h2" size="xsmall" id={titleId} className="docked-title">
             {title}
           </Heading>
+          {aside}
           <IconAction
             label={t("common.minimize")}
             icon={<Minus aria-hidden="true" />}

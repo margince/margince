@@ -5978,6 +5978,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.filesTotal_other": "{count} Dateien · {size}",
   "compose.filesLimit": "Bis zu {most} Dateien pro Nachricht.",
   "compose.newEmailTo": "Neue E-Mail an {name}",
+  "compose.filedUnder": "Abgelegt unter",
   "compose.discardMessage": "Entwurf löschen",
   "compose.draftSaving": "Wird gespeichert…",
   "compose.earlierThreads_one": "{count} früherer Thread",

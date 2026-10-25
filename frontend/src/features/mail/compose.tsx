@@ -43,6 +43,7 @@ import type { EditSeed } from "./schedulededit";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
 import {
+  ComposeAbout,
   ComposeBody,
   ComposeFoot,
   ComposeFrame,
@@ -369,6 +370,13 @@ export function ComposeWindow({
       {open && (
         <ComposeFrame
           title={title}
+          aside={
+            <ComposeAbout
+              kind={entityType}
+              id={entityId}
+              name={records.recordName}
+            />
+          }
           onClose={savedDraft.requestClose}
           closeDisabled={sendPending}
           bodyId={bodyId}

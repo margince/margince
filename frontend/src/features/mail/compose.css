@@ -243,6 +243,33 @@
   margin: 0;
 }
 
+/* The record the message files under, named in the window's bar beside the
+ * title: muted, and the record itself a link. In the bar because the sheet
+ * below it is a writing surface with a floor, and a row above the fields comes
+ * out of that floor. It shrinks before the title does and never wraps, so a
+ * narrow window loses the label and keeps the name. */
+.compose-about {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+}
+
+.compose-about > .entity-link {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+  .compose-about-label {
+    display: none;
+  }
+}
+
 /* The sign-off a send appends, under the words: the server's text, in the
  * muted ink of something the reader does not edit. */
 .compose-signoff {
