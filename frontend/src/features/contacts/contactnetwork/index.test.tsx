@@ -865,7 +865,13 @@ describe("using a route from the picture", () => {
 describe("the handoff while the ask list is still being read", () => {
   it("says it is loading, not that nothing has started", async () => {
     renderTab(
-      { contact_id: CONTACT, nodes: [anchor], edges: [], routes: [] },
+      {
+        contact_id: CONTACT,
+        nodes: [anchor],
+        edges: [],
+        routes: [],
+        groups_omitted: [],
+      },
       "en",
       {},
       { asksPending: true },
