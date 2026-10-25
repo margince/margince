@@ -279,7 +279,7 @@ func namedSteward(current crmcontracts.DealRoom, in UpdateRoomInput) *ids.UserID
 		return nil
 	}
 	next := *in.StewardUserID
-	if current.StewardUserId != nil && current.StewardUserId.String() == next.UUID.String() {
+	if current.StewardUserId != nil && current.StewardUserId.String() == next.String() {
 		return nil
 	}
 	return next
