@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -98,9 +99,9 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			return err
 		}
 		insErr := tx.QueryRow(ctx,
-			`INSERT INTO app_user (email, password_hash, display_name, greeting_name, status)
-			 VALUES (lower($1), NULL, $2, $3, 'invited') RETURNING id`,
-			in.Email, in.DisplayName, in.GreetingName).Scan(&newUserID)
+			`INSERT INTO app_user (email, password_hash, display_name, greeting_name, status, email_domain_folded)
+			 VALUES (lower($1), NULL, $2, $3, 'invited', $4) RETURNING id`,
+			in.Email, in.DisplayName, in.GreetingName, owndomain.StoredOfAddress(in.Email)).Scan(&newUserID)
 		if storekit.IsUniqueViolation(insErr) {
 			return errEmailTaken
 		}

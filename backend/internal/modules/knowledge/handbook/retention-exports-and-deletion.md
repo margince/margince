@@ -50,13 +50,14 @@ Also called: remove a contact, hard delete, purge, wipe.
 To erase a contact on request, an admin opens **Settings → Privacy and retention**, chooses **Privacy** in the **Requests** panel and then **New request**.
 1. Set **Kind** to **Erasure** and pick the **Contact** (required).
 2. Set **Due**, then choose **Open request**.
-3. Choose the request in the list to open it, write the **Resolution** and choose **Fulfill**.
-4. Type ERASE in **Type ERASE to confirm** and choose **Erase and suppress**.
+3. Choose the request in the list to open it and write the **Resolution**.
+4. Fill **How the identity was checked** and choose **Fulfill**.
+5. Type ERASE in **Type ERASE to confirm** and choose **Erase and suppress**.
 This cannot be undone. A contact that the law says you must still keep is refused with **Blocked by legal hold**.
 Also called: right to be forgotten, Art. 17, delete my data, data subject request, DSR.
 
 ### How do I answer a data access request?
-To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution** and choose **Fulfill**.
+To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution**, fill **How the identity was checked** and choose **Fulfill**.
 
 Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
@@ -196,6 +197,8 @@ The list of privacy requests, **Settings → Privacy and retention → Requests 
 
 A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." To give a request back, set **Assignee** to **Unassigned**.
 
+To close a request you also fill **How the identity was checked**. If it could not be checked, the request can only be rejected. Fill **Requester’s email address** when the request came from an address that the subject reference does not name.
+
 **Margince works out the due date.** It counts from the day the request arrived, under the law chosen on **Settings → Governance → Jurisdiction**. With none chosen, it is one calendar month.
 
 Set **Received on** for a request you log late. You may choose an earlier due date, never a later one. The request then says which rule set its date.
@@ -203,6 +206,14 @@ Set **Received on** for a request you log late. You may choose an earlier due da
 **A closed request never opens again.** "Closed. A closed request cannot be reopened; a new concern needs a new request."
 
 If two colleagues open the same request, the second sees "Someone else decided this request first. Review its current state."
+
+### The proof of a closed request
+
+Closing a request keeps a proof of the answer. It holds the request number, the email address the request came from, and the day it arrived. It holds its kind, how the identity was checked, the result, who closed it and when. For an erasure it also holds how many records of each kind were erased. It holds no mail and no other contact data.
+
+The proof is kept for three years after the end of the year the request was closed. Margince deletes it in the first month of the year after that. The request then no longer names who asked, and its history no longer shows it either.
+
+If someone disputes the answer, open the closed request and choose **Record a complaint**. The proof is then kept past its date. Choose **Close the complaint** when it is settled. Margince deletes the proof at the start of the next year.
 
 ### Access requests
 

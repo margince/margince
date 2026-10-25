@@ -6,7 +6,7 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-44 columns · primary key `(id)` · referenced by 44 foreign keys
+44 columns · primary key `(id)` · referenced by 47 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -142,13 +142,14 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company_domain
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `company_id` | `uuid` | yes | Points at `company.id`. |
 | `domain` | `text` | yes | Lowercased, no scheme, no www. |
+| `domain_folded` | `text` |  |  |
 | `is_primary` | `boolean`, default `false` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
@@ -515,7 +516,7 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-34 columns · primary key `(id)` · referenced by 46 foreign keys
+34 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1141,7 +1142,7 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-40 columns · primary key `(id)` · referenced by 17 foreign keys
+40 columns · primary key `(id)` · referenced by 18 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

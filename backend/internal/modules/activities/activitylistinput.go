@@ -193,6 +193,12 @@ type ListActivitiesInput struct {
 	// row is reached, and the reader who most needs to see next week's deadline
 	// is exactly the reader who never does.
 	OpenAndDueAfter *time.Time
+	// RemindersDue narrows to the caller's own due reminders (taskreminder.go),
+	// newest reminder first. OrRemindersDue instead widens OpenAndDueBy with
+	// them, so the Worklist counts both in one statement. Both are
+	// content-gated, because a reminder offers the task to act on.
+	RemindersDue   bool
+	OrRemindersDue bool
 	// CustomFilters are the request's cf_ equality filters. They read content, so
 	// a row whose content the caller may not read drops out.
 	CustomFilters map[string]string

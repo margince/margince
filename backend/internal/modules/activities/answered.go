@@ -272,7 +272,7 @@ func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOw
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
 	   OR ` + acceptedRequestSQL + `)
 	 AND ((` + confirmedRequestSQL + `) OR NOT ` + machineSenderSQL + `)
-	 AND ((` + confirmedRequestSQL + `) OR NOT ` + calendarResponseSQL + `
+	 AND ((` + confirmedRequestSQL + `) OR NOT ` + calendarCopySQL + `
 	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
 	 AND ((` + requestIntentSQL + `)
 	   OR (NOT EXISTS (SELECT 1 FROM activity newer

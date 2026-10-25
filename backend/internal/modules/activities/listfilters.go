@@ -26,6 +26,7 @@ const (
 	filterOccurredAfter    = "occurred_after"
 	filterOccurredBefore   = "occurred_before"
 	filterWaitingReply     = "waiting_reply"
+	filterReminderDue      = "reminder_due"
 	filterIncludeArchived  = "include_archived"
 	filterSort             = "sort"
 )
@@ -51,6 +52,7 @@ var activityListFilters = storekit.FilterSet[ListActivitiesInput]{
 	filterOccurredAfter:    instantFilter(func(in *ListActivitiesInput, at *time.Time) { in.OccurredAfter = at }),
 	filterOccurredBefore:   instantFilter(func(in *ListActivitiesInput, at *time.Time) { in.OccurredBefore = at }),
 	filterWaitingReply:     storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.WaitingReply = *v }),
+	filterReminderDue:      storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.RemindersDue = *v }),
 	filterIncludeArchived:  storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.IncludeArchived = *v }),
 	filterSort:             storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.Sort = v }),
 }

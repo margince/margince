@@ -374,7 +374,10 @@ func (f attentionDealFacts) Figures(
 // store: every field here is one the activity already held and this seam once
 // dropped, and a copy that stops happening is invisible — the lane still
 // returns the right NUMBER of rows, each one just quietly missing a fact.
-func taskFromActivity(row crmcontracts.Activity) attention.Task {
+//
+// reader is whose reminder the row may be, zero for none. A row whose content
+// is withheld is never raised, as the reminder read leaves it out.
+func taskFromActivity(row crmcontracts.Activity, reader ids.UUID, asOf time.Time) attention.Task {
 	linkType, linkID := primaryLink(row)
 	task := attention.Task{
 		LeadResponseEscalation: row.SourceSystem != nil && *row.SourceSystem == leadSLATaskSource,
@@ -383,6 +386,7 @@ func taskFromActivity(row crmcontracts.Activity) attention.Task {
 		DueAt:                  row.DueAt,
 		LinkType:               linkType,
 		LinkID:                 linkID,
+		ReminderDue:            contentReadable(row) && activities.ReminderDueFor(row, reader, asOf),
 	}
 	if row.SourceActivityId != nil {
 		task.SourceActivityID = new(ids.UUID(*row.SourceActivityId))
@@ -403,6 +407,10 @@ func taskFromActivity(row crmcontracts.Activity) attention.Task {
 		task.Version = &version
 	}
 	return task
+}
+
+func contentReadable(row crmcontracts.Activity) bool {
+	return row.ContentState == nil || *row.ContentState != crmcontracts.ActivityContentStateWithheld
 }
 
 // attentionOverdue counts overdue tasks per assignee for the team board.
@@ -447,6 +455,8 @@ func (t attentionTasks) CountOpenForViewer(
 	if !ok {
 		return 0, nil
 	}
+	// The reminders the page lists ahead of the day are counted with it.
+	in.OrRemindersDue = scope == attention.TasksMine
 	return t.store.CountActivities(ctx, in)
 }
 

@@ -372,3 +372,36 @@ describe("NotificationSettingsCard", () => {
     ).not.toBeNull();
   });
 });
+
+describe("Browser notifications", () => {
+  function browserAnswering(permission: NotificationPermission) {
+    const requestPermission = vi.fn(async () => "granted" as const);
+    vi.stubGlobal("Notification", { permission, requestPermission });
+    vi.stubGlobal("fetch", backendFor(everyClass()).fetchMock);
+    return requestPermission;
+  }
+
+  it("asks the browser only when the reader presses Allow", async () => {
+    const requestPermission = browserAnswering("default");
+    render(<NotificationSettingsCard />);
+    const row = await screen.findByTestId("notification-browser");
+    expect(requestPermission).not.toHaveBeenCalled();
+
+    await userEvent.click(
+      within(row).getByRole("button", {
+        name: en["notifications.browser.allow"],
+      }),
+    );
+
+    expect(requestPermission).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers no Allow where the browser blocks notifications, and says how to change it", async () => {
+    browserAnswering("denied");
+    render(<NotificationSettingsCard />);
+    const row = await screen.findByTestId("notification-browser");
+
+    expect(within(row).queryByRole("button")).toBeNull();
+    expect(row).toHaveTextContent(en["notifications.browser.denied"]);
+  });
+});

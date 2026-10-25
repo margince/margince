@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -70,7 +71,7 @@ func (s *Sink) asSentFromOwnAddressTx(
 	}
 	recipient := rec.Participants[at].Email
 	rec.Participants = slices.Delete(slices.Clone(rec.Participants), at, at+1)
-	rec.Counterparty = cp.AsSentBySeat(recipient, domainOfAddress(recipient))
+	rec.Counterparty = cp.AsSentBySeat(recipient, owndomain.OfAddress(recipient))
 	fields.Direction = connector.DirectionOutbound
 	rec.Fields = fields
 	return rec, fields, nil

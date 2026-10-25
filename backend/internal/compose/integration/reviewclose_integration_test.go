@@ -167,7 +167,7 @@ func TestErasingTheRecipientEndsTheReview(t *testing.T) {
 	}
 	var dsrProblem map[string]any
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+request.ID,
-		AnyMap{"status": "fulfilled", "resolution": "erased on the subject's request"},
+		AnyMap{"status": "fulfilled", "resolution": "erased on the subject's request", "identity_check": "id_document"},
 		nil, &dsrProblem); status != http.StatusOK {
 		t.Fatalf("fulfilling the erasure case → %d, want 200: %v", status, dsrProblem)
 	}

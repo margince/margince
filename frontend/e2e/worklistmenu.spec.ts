@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { MENU_EDGE_GAP } from "../src/design-system/anchored";
 import { worklist } from "./mockapi/work";
 import { mockApi } from "./seed";
 
@@ -140,7 +141,7 @@ function openPanelShape(page: Page) {
           Math.round(line.getBoundingClientRect().height),
         ),
         scrolls: panel.scrollHeight > panel.clientHeight + 1,
-        inside: box.top >= 0 && box.bottom <= innerHeight,
+        inside: box.top >= 0 && box.bottom <= innerHeight && box.height > 0,
       };
     });
 }
@@ -176,13 +177,43 @@ test("a row menu taller than the window scrolls instead of squeezing", async ({
   const menu = page
     .getByRole("dialog")
     .getByRole("button", { name: /Weitere Aktionen für Price list/ });
-  await menu.evaluate((trigger) => trigger.scrollIntoView({ block: "center" }));
   await page.setViewportSize({ width: 1280, height: 360 });
-  await menu.evaluate((trigger) => trigger.scrollIntoView({ block: "center" }));
+  const CLEAR_OF_LANES = 4;
+  // The trigger sits CLEAR_OF_LANES below the sticky lanes, so the click's hit
+  // test reaches it and the click does not scroll it elsewhere.
+  const placed = await menu.evaluate((trigger, clear) => {
+    const body = trigger.closest(".drawer-body");
+    const lanes = body?.querySelector(".worklist-lanes");
+    if (!body || !lanes) {
+      throw new Error("the drawer body or its sticky lanes are missing");
+    }
+    body.scrollTop +=
+      trigger.getBoundingClientRect().top -
+      (lanes.getBoundingClientRect().bottom + clear);
+    return {
+      top: trigger.getBoundingClientRect().top,
+      wanted: lanes.getBoundingClientRect().bottom + clear,
+    };
+  }, CLEAR_OF_LANES);
+  expect(Math.abs(placed.top - placed.wanted)).toBeLessThanOrEqual(1);
   await menu.click();
+  const room = await menu.evaluate((trigger, gap) => {
+    const box = trigger.getBoundingClientRect();
+    return {
+      top: box.top,
+      above: box.top - 2 * gap,
+      below: innerHeight - box.bottom - 2 * gap,
+    };
+  }, MENU_EDGE_GAP);
+  expect(room.top).toBe(placed.top);
+  const menuHeight = await page
+    .locator(".overflow-menu-items:not([hidden])")
+    .evaluate((panel) => panel.scrollHeight);
   const shape = await openPanelShape(page);
   for (const line of shape.lines) {
     expect(line).toBeGreaterThanOrEqual(30);
   }
+  expect(room.above).toBeLessThan(menuHeight);
+  expect(room.below).toBeLessThan(menuHeight);
   expect(shape).toMatchObject({ scrolls: true, inside: true });
 });

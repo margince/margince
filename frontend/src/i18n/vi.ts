@@ -13,8 +13,6 @@ import type { MessageKey } from "./en";
 //   - "tổ chức" is never the registered legal entity — that sense is
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
-// Annotated, not inferred: the inferred literal type of a catalog this size is
-// past what tsc will serialize (TS7056).
 export const vi: Readonly<Record<MessageKey, string>> = {
   "homeRepair.taskPermission":
     "Cần quyền lưu trữ hoạt động để lưu trữ các công việc đã xem xét.",
@@ -1751,6 +1749,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.linkedin_rematch": "Đối chiếu dữ liệu nhập từ LinkedIn",
   "systemJob.list_checker": "Kiểm tra danh sách động",
   "systemJob.mail_draft_retention": "Dọn dẹp thư nháp",
+  "systemJob.privacy_request_proof_expiry":
+    "Dọn dẹp bằng chứng yêu cầu quyền riêng tư",
   "systemJob.waiting_horizon_refresh": "Đo thời gian phản hồi",
   "systemJob.meeting_delivery": "Gửi lời mời trên lịch",
   "systemJob.merge": "Gộp hồ sơ",
@@ -8145,6 +8145,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.empty":
     "Chưa có thông báo nào. Những gì cần báo cho bạn sẽ hiển thị ở đây.",
   "notifications.title": "Cách gửi theo loại",
+  "notifications.browser.label":
+    "Thông báo trình duyệt",
+  "notifications.browser.default":
+    "Khi lời nhắc của một việc bạn được giao đến giờ, trình duyệt có thể hiện thông báo trong lúc Margince đang mở ở một thẻ.",
+  "notifications.browser.granted":
+    "Đang bật. Lời nhắc đến giờ của việc bạn được giao hiện thành thông báo trình duyệt trong lúc Margince đang mở ở một thẻ. Để tắt, hãy chặn thông báo của trang này trong cài đặt trình duyệt.",
+  "notifications.browser.denied":
+    "Trình duyệt này đang chặn thông báo. Để cho phép, hãy đổi cài đặt thông báo của trang này trong cài đặt trình duyệt.",
+  "notifications.browser.unsupported":
+    "Trình duyệt này không hiện được thông báo. Lời nhắc đến giờ vẫn đứng đầu Trang chủ và Danh sách công việc của bạn.",
+  "notifications.browser.allow":
+    "Cho phép",
+  "reminder.notification.body":
+    "Đã đến giờ nhắc. Bấm để mở việc này.",
+  "reminder.notification.untitled":
+    "Lời nhắc việc",
   "notifications.sub":
     "Mọi thông báo vẫn nằm trong trung tâm thông báo, dù chọn gì ở đây.",
   "notifications.saveFailedFor": "Không thể lưu “{setting}”",
@@ -8231,6 +8247,23 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.assignee": "Người xử lý",
   "privacy.resolution": "Kết quả xử lý",
   "privacy.resolutionRequired": "Cần có câu trả lời để đóng yêu cầu.",
+  "privacy.identityCheck": "Cách xác minh danh tính",
+  "privacy.identityCheckHint":
+    "Được lưu trong bằng chứng của yêu cầu này đến ba năm sau khi kết thúc năm yêu cầu được đóng.",
+  "privacy.identityCheckPick": "Chọn cách",
+  "privacy.identityCheck.confirm_link": "Chủ thể dữ liệu đã dùng liên kết được gửi qua thư",
+  "privacy.identityCheck.address_on_file": "Yêu cầu đến từ địa chỉ có trong hồ sơ",
+  "privacy.identityCheck.id_document": "Đã xem giấy tờ tùy thân",
+  "privacy.identityCheck.in_person": "Đã gặp trực tiếp để xác minh",
+  "privacy.identityCheck.not_verified": "Không thể xác minh",
+  "privacy.requesterEmail": "Địa chỉ email đã gửi yêu cầu",
+  "privacy.requesterEmailHint":
+    "Không bắt buộc. Để trống nếu yêu cầu đến qua liên kết riêng của chủ thể dữ liệu hoặc đã ghi địa chỉ.",
+  "privacy.disputeOpen": "Có khiếu nại đang mở về yêu cầu này",
+  "privacy.disputeHint":
+    "Khi khiếu nại còn mở, bằng chứng của yêu cầu này được giữ quá thời hạn lưu trữ.",
+  "privacy.openDispute": "Ghi nhận khiếu nại",
+  "privacy.closeDispute": "Đóng khiếu nại",
   "privacy.movedOn":
     "Một thành viên khác đã quyết định yêu cầu này trước. Xem lại trạng thái hiện tại.",
   "privacy.inProgress": "Đang xử lý",
@@ -15608,6 +15641,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.category.relationships": "Liên hệ đã im lặng",
   "worklist.category.system": "Hệ thống",
   "worklist.because.pinned": "bạn đã ghim",
+  "worklist.because.reminder_due": "đã đến giờ nhắc của bạn",
   "worklist.because.non_buyer_request": "chưa xác định là việc của khách hàng",
   "worklist.because.buyer_wrote_last": "bên mua gửi tin sau cùng",
   "worklist.because.waiting_days": "đang chờ",

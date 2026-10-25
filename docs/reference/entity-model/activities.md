@@ -129,6 +129,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `activity_calendar_method_unread`: `btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email') AND (direction = 'inbound'))`
+- `activity_calendar_method_unread_outbound`: `btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email') AND (direction = 'outbound'))`
 - `activity_meeting_no_overlap`: `gist (host_user_id, tsrange(timezone('UTC', occurred_at), (timezone('UTC', occurred_at) + (( CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)::double precision * '00:00:01'::interval)), '[)')) WHERE ((kind = 'meeting') AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled'))`
 - `activity_pkey`: `unique, btree (id)`
 - `idx_activity_answer_mail`: `btree (counterparty_email, kind, occurred_at) WHERE ((direction = 'outbound') AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
@@ -193,13 +194,14 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_calendar_method_backfill
 
-4 columns · primary key `(activity_id)` · referenced by 0 foreign keys
+5 columns · primary key `(activity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_created_at` | `timestamp with time zone` | yes |  |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `checked_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `direction` | `text`, default `'inbound'::text` | yes | One of `inbound`, `outbound`. |
 | `outcome` | `text` | yes | One of `set`, `none`, `unreadable`. |
 
 **Points at**
@@ -210,12 +212,13 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Rules**
 
+- `activity_calendar_method_backfill_direction_check`: `CHECK ((direction = ANY (ARRAY['inbound', 'outbound'])))`
 - `activity_calendar_method_backfill_outcome_check`: `CHECK ((outcome = ANY (ARRAY['set', 'none', 'unreadable'])))`
 
 **Indexes**
 
 - `activity_calendar_method_backfill_pkey`: `unique, btree (activity_id)`
-- `activity_calendar_method_backfill_resume`: `btree (activity_created_at, activity_id)`
+- `activity_calendar_method_backfill_resume`: `btree (direction, activity_created_at, activity_id)`
 
 ## activity_clock_refold_mark
 
@@ -408,13 +411,14 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_participant
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `address` | `text` |  |  |
+| `address_domain_folded` | `text` |  |  |
 | `channel_user_id` | `text` |  |  |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `display_name` | `text` |  |  |

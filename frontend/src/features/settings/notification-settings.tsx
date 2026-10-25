@@ -6,6 +6,7 @@
 // write the calling seat's own rows. The classes are coarser than notice kinds.
 
 import { useId, useState } from "react";
+import { Button } from "../../design-system/button";
 import { describedByIds } from "../../design-system/describedby";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
@@ -15,6 +16,11 @@ import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  type BrowserNotificationPermission,
+  requestNotificationPermission,
+  useNotificationPermission,
+} from "../../lib/notificationpermission";
 import {
   type NotificationClass,
   type NotificationDelivery,
@@ -114,10 +120,59 @@ export function NotificationSettingsCard() {
       <PanelBody>
         <PanelIntro>{t("notifications.sub")}</PanelIntro>
       </PanelBody>
+      <SettingList bleed="settings">
+        <BrowserNotificationsRow
+          permission={useNotificationPermission()}
+          onAllow={() => void requestNotificationPermission()}
+        />
+      </SettingList>
       <QueryGate pendingLabel={t("notifications.title")} query={preferences}>
         {(list) => <DeliveryChoices rows={list.items} />}
       </QueryGate>
     </Panel>
+  );
+}
+
+const BROWSER_STATE: Readonly<
+  Record<BrowserNotificationPermission, MessageKey>
+> = {
+  default: "notifications.browser.default",
+  granted: "notifications.browser.granted",
+  denied: "notifications.browser.denied",
+  unsupported: "notifications.browser.unsupported",
+};
+
+/**
+ * Whether this browser shows a due task reminder as a notification. The
+ * browser holds the answer and is its off switch, so nothing is saved here.
+ * The ask happens on the click alone: a browser refuses one made on load.
+ */
+export function BrowserNotificationsRow({
+  permission,
+  onAllow,
+}: Readonly<{
+  permission: BrowserNotificationPermission;
+  onAllow: () => void;
+}>) {
+  const t = useT();
+  return (
+    <SettingRow
+      label={t("notifications.browser.label")}
+      description={t(BROWSER_STATE[permission])}
+      testId="notification-browser"
+      control={(control) =>
+        permission === "default" ? (
+          // Named by its own word, so the row's label stays the row's.
+          <Button
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            onClick={onAllow}
+          >
+            {t("notifications.browser.allow")}
+          </Button>
+        ) : null
+      }
+    />
   );
 }
 

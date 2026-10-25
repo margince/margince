@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -386,7 +387,7 @@ func (r *Registry) seedOwnDomainFromAccount(ctx context.Context, c connector.Con
 
 // seedDomainOfAddressTx records one mailbox's domain as a candidate own-domain.
 func seedDomainOfAddressTx(ctx context.Context, tx pgx.Tx, address string) error {
-	domain := domainOfAddress(bareAddress(address))
+	domain := owndomain.OfAddress(bareAddress(address))
 	if domain == "" {
 		return nil
 	}

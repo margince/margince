@@ -84,12 +84,17 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// status is not nullable, so a null there is refused rather than read as absent.
-	if err := httperr.RefuseNull(r, fieldStatus); err != nil {
-		writeConsentErr(w, r, err)
-		return
+	// Neither field is nullable, so a null there is refused rather than read as absent.
+	for _, field := range []string{fieldStatus, fieldDispute} {
+		if err := httperr.RefuseNull(r, field); err != nil {
+			writeConsentErr(w, r, err)
+			return
+		}
 	}
-	in := UpdateDSRInput{Resolution: req.Resolution, AssigneeID: idArg[ids.UserKind](req.AssigneeId)}
+	in := UpdateDSRInput{
+		Resolution: req.Resolution, AssigneeID: idArg[ids.UserKind](req.AssigneeId),
+		DisputeOpen: req.DisputeOpen, Proof: proofStatementOf(req),
+	}
 	for _, cleared := range httperr.ClearedFields(r) {
 		switch cleared {
 		case fieldAssigneeID:
@@ -123,7 +128,7 @@ func (h Handlers) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Reques
 				writeConsentErr(w, r, errors.New("consent: erasure fulfillment has no erase path wired"))
 				return
 			}
-			updated, err := h.store.FulfilErasure(r.Context(), ids.UUID(id), in, h.eraser.EraseContact)
+			updated, err := h.store.FulfilErasure(r.Context(), ids.UUID(id), in, h.eraser.EraseContactCounted)
 			if err != nil {
 				writeConsentErr(w, r, err)
 				return

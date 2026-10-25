@@ -2589,6 +2589,11 @@ paths:
           schema: {type: boolean}
           description: >-
             Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+        - name: reminder_due
+          in: query
+          schema: {type: boolean}
+          description: >-
+            Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out.
       responses:
         '200':
           description: A page of activities (newest first by default).
@@ -8366,7 +8371,10 @@ components:
           type: string
           enum: [needs_reply, waiting_for_them, none]
           description: |-
-            Whose move it is, derived from what this reader can see of the thread. `none` when
+            Whose move it is, derived from what this reader can see of the thread.
+            `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+            that is still the last word with them. A calendar invitation, update, cancellation
+            or answer is `none` unless someone confirmed it asks us something. `none` also when
             the question cannot be answered honestly — an unanswerable move is not a claim.
         display_status:
           $ref: '#/components/schemas/EmailAccessStatus'
@@ -14928,7 +14936,7 @@ components:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           description: How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
         due_at: {type: [string, 'null'], format: date-time, description: Task only.}
-        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only.'}
+        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         assignee_id: {type: [string, 'null'], format: uuid, description: Task only.}
         is_done: {type: boolean, default: false, description: Task only.}
         done_at: {type: [string, 'null'], format: date-time}
@@ -15209,7 +15217,7 @@ components:
           description: >-
             `day` when only the date is known: the date `occurred_at` names in its own offset is stored at noon UTC of that date, and its date is the UTC date. Omitted means `instant`. `day` without `occurred_at` is refused with 422.
         due_at: {type: [string, 'null'], format: date-time}
-        remind_at: {type: [string, 'null'], format: date-time, description: Task only.}
+        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         assignee_id: {type: [string, 'null'], format: uuid}
         host_user_id:
           type: string
@@ -15304,7 +15312,7 @@ components:
             How to read `occurred_at` from now on. A patch that sends `occurred_at` without this field sets `instant`, because a new time is a known time. `day` stores the date at noon UTC: the date `occurred_at` names in its own offset, or, sent alone, the date the stored instant falls on in the installation's zone. `instant` on a `day` activity needs `occurred_at` too, or the stored noon would read as a real 12:00, and is refused with 422.
         due_at: {type: [string, 'null'], format: date-time}
         assignee_id: {type: [string, 'null'], format: uuid}
-        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. The reminder scan fires on this.'}
+        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         is_done: {type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta.'}
         meeting_status:
           type: [string, 'null']

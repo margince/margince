@@ -4,8 +4,6 @@ import type { MessageKey } from "./en";
 // parity with en at compile time. i18n.test.ts re-checks it at runtime, so a
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
-// Annotated, not inferred: the inferred literal type of a catalog this size is
-// past what tsc will serialize (TS7056).
 export const de: Readonly<Record<MessageKey, string>> = {
   "homeRepair.taskPermission":
     "Zum Archivieren geprüfter Aufgaben brauchst du die Berechtigung, Aktivitäten zu archivieren.",
@@ -1800,6 +1798,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.linkedin_rematch": "Zuordnung des LinkedIn-Imports",
   "systemJob.list_checker": "Prüfung der Live-Listen",
   "systemJob.mail_draft_retention": "Bereinigung von E-Mail-Entwürfen",
+  "systemJob.privacy_request_proof_expiry":
+    "Bereinigung der Nachweise zu Datenschutzanfragen",
   "systemJob.waiting_horizon_refresh": "Messung der Antwortzeiten",
   "systemJob.meeting_delivery": "Versand von Kalendereinladungen",
   "systemJob.merge": "Zusammenführung von Datensätzen",
@@ -8385,6 +8385,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.empty":
     "Bisher ist nichts eingegangen. Was das Produkt dir mitteilt, erscheint hier.",
   "notifications.title": "Zustellung nach Typ",
+  "notifications.browser.label": "Browser-Benachrichtigungen",
+  "notifications.browser.default":
+    "Wenn eine Erinnerung an einer deiner Aufgaben fällig wird, kann der Browser sie zeigen, solange Margince in einem Tab offen ist.",
+  "notifications.browser.granted":
+    "An. Eine fällige Erinnerung an einer deiner Aufgaben erscheint als Browser-Benachrichtigung, solange Margince in einem Tab offen ist. Zum Ausschalten blockierst du Benachrichtigungen für diese Seite in den Einstellungen deines Browsers.",
+  "notifications.browser.denied":
+    "In diesem Browser blockiert. Um sie zu erlauben, änderst du die Benachrichtigungen für diese Seite in den Einstellungen deines Browsers.",
+  "notifications.browser.unsupported":
+    "Dieser Browser kann keine Benachrichtigungen zeigen. Eine fällige Erinnerung steht trotzdem oben auf deiner Home und in deiner Worklist.",
+  "notifications.browser.allow": "Zulassen",
+  "reminder.notification.body":
+    "Deine Erinnerung ist fällig. Klicke, um die Aufgabe zu öffnen.",
+  "reminder.notification.untitled": "Erinnerung an eine Aufgabe",
   "notifications.sub":
     "Jede Benachrichtigung bleibt auch unter „Benachrichtigungen“ erhalten, egal was du hier wählst.",
   "notifications.saveFailedFor": "„{setting}“ wurde nicht gespeichert",
@@ -8473,6 +8486,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.resolution": "Ergebnis",
   "privacy.resolutionRequired":
     "Eine Anfrage lässt sich erst abschließen, wenn ihre Antwort erfasst ist.",
+  "privacy.identityCheck": "Wie die Identität geprüft wurde",
+  "privacy.identityCheckHint":
+    "Wird im Nachweis dieser Anfrage aufbewahrt, bis drei Jahre nach dem Ende des Jahres, in dem sie abgeschlossen wird.",
+  "privacy.identityCheckPick": "Auswählen",
+  "privacy.identityCheck.confirm_link": "Der zugeschickte Link wurde genutzt",
+  "privacy.identityCheck.address_on_file":
+    "Die Anfrage kam von einer Adresse aus dem Datensatz",
+  "privacy.identityCheck.id_document": "Ein Ausweisdokument wurde gesehen",
+  "privacy.identityCheck.in_person": "Die Anfrage wurde persönlich gestellt",
+  "privacy.identityCheck.not_verified": "Die Identität ließ sich nicht prüfen",
+  "privacy.requesterEmail": "E-Mail-Adresse, von der die Anfrage kam",
+  "privacy.requesterEmailHint":
+    "Optional. Lass das Feld leer, wenn die Anfrage über den zugeschickten Link kam oder die Adresse nennt.",
+  "privacy.disputeOpen": "Zu dieser Anfrage ist eine Beschwerde offen",
+  "privacy.disputeHint":
+    "Solange eine Beschwerde offen ist, bleibt der Nachweis dieser Anfrage über die Aufbewahrungsfrist hinaus erhalten.",
+  "privacy.openDispute": "Beschwerde erfassen",
+  "privacy.closeDispute": "Beschwerde abschließen",
   "privacy.movedOn":
     "Jemand anders hat zuerst über diese Anfrage entschieden. Prüfe ihren aktuellen Stand.",
   "privacy.inProgress": "In Bearbeitung",
@@ -16018,6 +16049,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.category.relationships": "Ruhende Beziehung",
   "worklist.category.system": "System",
   "worklist.because.pinned": "von dir angeheftet",
+  "worklist.because.reminder_due": "deine Erinnerung ist fällig",
   "worklist.because.non_buyer_request": "nicht als Kundenanliegen bestätigt",
   "worklist.because.buyer_wrote_last":
     "die Käuferseite hat zuletzt geschrieben",

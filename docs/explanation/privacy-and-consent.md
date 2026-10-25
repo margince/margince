@@ -252,6 +252,32 @@ since rotated.
 - **A public fix or erasure opens a case.** A subject who types into a confirm link opens a
   `data_subject_request` in the same transaction. The case gets a reference number and the last day to answer it.
   No row is left behind for nobody to work.
+- **A closed case keeps a proof.** The transaction that closes a case writes one
+  `privacy_request_proof` row (`backend/internal/modules/consent/requestproof.go`). It records the
+  number, the address the request came from, the arrival date and the kind. It also records the
+  identity check, the result, the closer and the answer date. The proof holds no other contact
+  data, so an erasure leaves it standing. A `not_verified` check closes a case only as rejected.
+- **The erasure counts its own work.** `Eraser.EraseContactCounted` runs every step of the erasure on a
+  `tallyTx` (`backend/internal/modules/privacy/erasuretally.go`). It counts the rows each writing
+  statement touched, by table and verb, so a new arm is counted without a change here. A row two
+  statements touch counts twice. Objects outside the database, such as attachment files, are
+  named as not counted. The tombstone carries this account, and so does the proof.
+- **A request certifies its erasure once.** A replay of reason `dsr:<request-id>` runs the whole
+  erasure again, so text written about the subject since the first run goes too. It writes no
+  second tombstone or event, and answers the account the first tombstone carries. So a close that
+  failed after its erasure committed stores the first account when it is retried.
+- **A proof lasts three years past its year.** `ProofKeepUntil` dates it to the first day of the
+  year after that, with the year and that day both read in `installation.timezone`. The
+  `privacy_request_proof_expiry` job deletes it in the first month of that year, unless the case
+  has `dispute_open` set.
+- **Expiry takes the requester off the case.** The pass ends the case with the tombstone the
+  erasure writes on a subject's other cases (`RetireExpiredRightsCaseTx`), injected by compose. It
+  writes an `anonymize` audit row on the case. Every audit reader hides the images older than such
+  a row. So the reference copied into the audit row that opened the case is no longer shown.
+- **Old cases get a proof too.** A data task writes proofs for cases closed before proofs
+  existed. It takes the closer from the latest audit row that moved the case into its status. It
+  finds the erasure by its reason, since the case's own reference may be a tombstone. What no
+  record shows is marked `unknown`.
 
 ## What the engine reports about itself
 

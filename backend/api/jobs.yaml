@@ -1286,6 +1286,23 @@ kinds:
       answers not found, so nobody can find it to discard it — and a draft
       holds a subject's address and the words written to them.
 
+  privacy_request_proof_expiry:
+    role: worker
+    go_type: RequestProofExpiryArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 24h
+    reason: >-
+      Daily, and the pass deletes only in January: a proof is kept until the
+      start of the fourth year after the year its request was answered in, so
+      every proof of one year falls due on the same 1 January and the first
+      January pass deletes them. The later January passes find only proofs
+      whose dispute closed since. Outside January the pass returns without
+      reading anything. Each pass loops over capped batches until no due proof
+      is left.
+
   waiting_horizon_refresh:
     role: worker
     go_type: WaitingHorizonRefreshArgs

@@ -280,7 +280,7 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		row.Because = append(row.Because, reason("unassigned", nil))
 	}
 	row.Because = appendReadOnly(row)
-	return ranked{
+	out := ranked{
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
@@ -292,6 +292,14 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		// is a row a reader cannot make sense of.
 		ownerRef: ownerFromAssignee(item.AssigneeId),
 	}
+	// The reader asked to be reminded, so the reminder is the first thing the
+	// row says and the row leads the page.
+	if item.ReminderDue != nil && *item.ReminderDue {
+		out.item.Because = append([]crmcontracts.WorklistReason{reason("reminder_due", nil)}, out.item.Because...)
+		out.reminded = true
+		raiseToTop(&out)
+	}
+	return out
 }
 
 func waitingSubject(waiting WaitingCustomer) *crmcontracts.AttentionSubject {
