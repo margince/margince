@@ -433,8 +433,8 @@ func TestASendTheCcRuleAllowedIsAskedAgainAtTransmit(t *testing.T) {
 }
 
 // A relink repoints a participant row to another contact and leaves the
-// captured address, so the new contact earns no Cc standing at staging or
-// at transmit.
+// captured address. The new contact earns no Cc standing, at staging or at
+// transmit.
 func TestARelinkedCopiedParticipantTransfersNoStanding(t *testing.T) {
 	e := setupResolve(t)
 	e.capturedMail(t, "thread-relink", "cc", true)

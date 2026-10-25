@@ -166,7 +166,7 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 //
 // Participation is proved by the captured address alone. A relink repoints
 // p.contact_id to another contact while the address stays, so the mutable
-// contact link would carry the standing to the wrong person.
+// contact link would carry the standing to another contact.
 //
 // The thread key is the sender's References root, so it proves nothing alone.
 // The copying mail must come from a sender the receiving server authenticated.
