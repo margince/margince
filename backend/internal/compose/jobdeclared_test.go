@@ -501,6 +501,7 @@ var argsForKind = map[string]river.JobArgs{
 	AIBudgetResumeArgs{}.Kind():          AIBudgetResumeArgs{},
 	WebhookRetryArgs{}.Kind():            WebhookRetryArgs{},
 	GeocodeBackfillArgs{}.Kind():         GeocodeBackfillArgs{},
+	AddressCountryCheckArgs{}.Kind():     AddressCountryCheckArgs{},
 	TechnicalEnrichBackfillArgs{}.Kind(): TechnicalEnrichBackfillArgs{},
 	AgentSchedulerArgs{}.Kind():          AgentSchedulerArgs{},
 	AgentTaskRetentionArgs{}.Kind():      AgentTaskRetentionArgs{},

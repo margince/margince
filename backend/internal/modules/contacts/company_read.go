@@ -148,6 +148,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var ownerID, parentID, mergedInto *ids.UUID
 	var lifecycle string
 	var addr crmcontracts.Address
+	var resolvedCountry *string
 	var logoObjectKey *string
 	var linkedinURL *string
 	var version int64
@@ -159,6 +160,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	dests := []any{
 		&id, &o.DisplayName, &o.LegalName, &o.Description, &o.Industry, &o.SizeBand, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
+		&resolvedCountry,
 		&lifecycle, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Source, &o.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &o.IsAnchor,
@@ -187,6 +189,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	if a := addressOrNil(addr); a != nil {
 		o.Address = a
 	}
+	o.AddressCountryMismatch = addressCountryMismatch(addr.Country, resolvedCountry)
 	o.Version = &version
 	o.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	o.ImportedFrom = provenance.ImportedFrom(sourceSystem)

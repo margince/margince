@@ -278,6 +278,7 @@ func ensureContactEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids
 // function, the way leadColumns already composes its own two.
 var contactColumns = `id, full_name, first_name, last_name, title, owner_id, visibility,
 	address_line1, address_line2, address_city, address_region, address_postal_code, address_country,
+	address_country_resolved,
 	merged_into_id, converted_from_lead_id, source, captured_by,
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("contact") + `,
@@ -318,6 +319,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var id ids.UUID
 	var ownerID, mergedInto, fromLead *ids.UUID
 	var addr crmcontracts.Address
+	var resolvedCountry *string
 	var version int64
 	var visibility string
 	var sourceSystem, authorName, authorSeatName *string
@@ -327,6 +329,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	dests := []any{
 		&id, &p.FullName, &p.FirstName, &p.LastName, &p.Title, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
+		&resolvedCountry,
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt, &p.LegalHold,
@@ -350,6 +353,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	if a := addressOrNil(addr); a != nil {
 		p.Address = a
 	}
+	p.AddressCountryMismatch = addressCountryMismatch(addr.Country, resolvedCountry)
 	p.Version = &version
 	if mark != nil {
 		m := crmcontracts.ContactRelationshipMark(*mark)

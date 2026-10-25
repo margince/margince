@@ -29,9 +29,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 )
 
-// Point is a resolved location.
+// Point is a resolved location. CountryCode is the ISO 3166-1 alpha-2 code of
+// the country the place lies in, upper-case, or empty when the provider named none.
 type Point struct {
-	Lat, Lon float64
+	Lat, Lon    float64
+	CountryCode string
 }
 
 // Client resolves free text or a structured address to a point.
@@ -116,11 +118,14 @@ func NewNominatim(baseURL string, httpClient *http.Client) *Nominatim {
 }
 
 // nominatimResult is the one field set this package reads back. The service
-// returns a great deal more; taking only the coordinates keeps the parse
-// stable across its versions.
+// returns a great deal more; taking only the coordinates and the country code
+// keeps the parse stable across its versions.
 type nominatimResult struct {
-	Lat string `json:"lat"`
-	Lon string `json:"lon"`
+	Lat     string `json:"lat"`
+	Lon     string `json:"lon"`
+	Address struct {
+		CountryCode string `json:"country_code"`
+	} `json:"address"`
 }
 
 // Resolve asks the provider where a place is.
@@ -141,9 +146,10 @@ func (n *Nominatim) Resolve(ctx context.Context, query string) (Point, bool, err
 	}
 
 	endpoint := n.baseURL + "/search?" + url.Values{
-		"q":      {query},
-		"format": {"jsonv2"},
-		"limit":  {"1"},
+		"q":              {query},
+		"format":         {"jsonv2"},
+		"limit":          {"1"},
+		"addressdetails": {"1"},
 	}.Encode()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -189,7 +195,7 @@ func (n *Nominatim) Resolve(ctx context.Context, query string) (Point, bool, err
 	if !plausible(lat, lon) {
 		return Point{}, false, fmt.Errorf("geocode: the provider answered (%v, %v), which is not on the earth", lat, lon)
 	}
-	return Point{Lat: lat, Lon: lon}, true, nil
+	return Point{Lat: lat, Lon: lon, CountryCode: strings.ToUpper(results[0].Address.CountryCode)}, true, nil
 }
 
 // plausible rejects a coordinate outside the earth's own range.

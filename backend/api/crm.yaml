@@ -37653,6 +37653,20 @@ components:
         country: { type: [string, 'null'], description: 'ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.' }
       additionalProperties: true
 
+    AddressCountryMismatch:
+      type: object
+      description: >-
+        The stored address country does not fit the postal code and city. A background check
+        asks the geocoder for the postal code and city alone and compares the country they
+        resolve to with the stored one. The stored country is never changed. Editing the postal
+        code, city or country clears the result until the next check.
+      required: [resolved_country]
+      properties:
+        resolved_country:
+          type: string
+          pattern: '^[A-Z]{2}$'
+          description: ISO-3166 alpha-2 code of the country the postal code and city resolve to.
+
     Money:
       type: object
       description: Money as integer minor-units + ISO-4217 currency. Never a float.
@@ -38393,6 +38407,13 @@ components:
           additionalProperties: true
           description: '{ linkedin, twitter, github, ... }'
         address: { $ref: '#/components/schemas/Address' }
+        address_country_mismatch:
+          readOnly: true
+          description: >-
+            Present only when the stored address country differs from the country the postal
+            code and city resolve to. Absent when they agree, when the address has not been
+            checked yet, or when it carries no postal code, city or two-letter country.
+          allOf: [{ $ref: '#/components/schemas/AddressCountryMismatch' }]
         emails:
           type: array
           items: { $ref: '#/components/schemas/ContactEmail' }
@@ -38858,6 +38879,13 @@ components:
           type: [string, 'null']
           enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']
         address: { $ref: '#/components/schemas/Address' }
+        address_country_mismatch:
+          readOnly: true
+          description: >-
+            Present only when the stored address country differs from the country the postal
+            code and city resolve to. Absent when they agree, when the address has not been
+            checked yet, or when it carries no postal code, city or two-letter country.
+          allOf: [{ $ref: '#/components/schemas/AddressCountryMismatch' }]
         owner_id: { type: [string, 'null'], format: uuid }
         visibility:
           type: string

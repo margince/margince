@@ -1729,6 +1729,7 @@ export const en = {
   "systemJob.forecast_snapshot": "Daily forecast snapshot",
   "systemJob.geocode": "Company address lookup",
   "systemJob.geocode_backfill": "Address lookup backlog",
+  "systemJob.address_country_check": "Address country check",
   "systemJob.graph_edge": "Relationship strength update",
   "systemJob.graph_edge_reconcile": "Relationship strength update",
   "systemJob.handbook_corpus": "Handbook indexing",
@@ -5658,6 +5659,7 @@ export const en = {
   "create.industry": "Industry",
   "create.sizeBand": "Company size",
   "co.address.summary": "Address",
+  "co.address.countryMismatch": "Postal code and city are in {country}",
 
   "create.addressLine1": "Street and number",
   "create.addressLine2": "Address line 2",

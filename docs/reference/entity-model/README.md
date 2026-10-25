@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 325 |
-| Columns | 3838 |
+| Columns | 3843 |
 | Foreign keys | 531 |
 | Owning areas | 36 |
 
@@ -40,8 +40,8 @@ Ranked by how many foreign keys point at them.
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 30 | 141 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 34 | 45 |
-| [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 43 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 36 | 45 |
+| [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 43 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 65 | 38 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 25 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 40 | 17 |
@@ -221,7 +221,7 @@ erDiagram
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
-| [`company`](contacts.md#company) | contacts | 44 | 43 |
+| [`company`](contacts.md#company) | contacts | 46 | 43 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 10 | 0 |
 | [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 22 | 1 |
@@ -242,7 +242,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 10 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 34 | 45 |
+| [`contact`](contacts.md#contact) | contacts | 36 | 45 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 10 | 1 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |
@@ -305,7 +305,7 @@ erDiagram
 | [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 27 | 0 |
 | [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 26 | 2 |
 | [`fx_rate`](deals.md#fx_rate) | deals | 6 | 0 |
-| [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
+| [`geocode_cache`](contacts.md#geocode_cache) | contacts | 6 | 0 |
 | [`graph_contact_edge`](search.md#graph_contact_edge) | search | 6 | 0 |
 | [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 10 | 0 |
 | [`idempotency_key`](compose.md#idempotency_key) | compose | 10 | 0 |

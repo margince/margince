@@ -26657,6 +26657,11 @@ export interface components {
         } & {
             [key: string]: unknown;
         }) | null;
+        /** @description The stored address country does not fit the postal code and city. A background check asks the geocoder for the postal code and city alone and compares the country they resolve to with the stored one. The stored country is never changed. Editing the postal code, city or country clears the result until the next check. */
+        AddressCountryMismatch: {
+            /** @description ISO-3166 alpha-2 code of the country the postal code and city resolve to. */
+            resolved_country: string;
+        };
         /** @description Money as integer minor-units + ISO-4217 currency. Never a float. */
         Money: {
             /**
@@ -27218,6 +27223,8 @@ export interface components {
                 [key: string]: unknown;
             };
             address?: components["schemas"]["Address"];
+            /** @description Present only when the stored address country differs from the country the postal code and city resolve to. Absent when they agree, when the address has not been checked yet, or when it carries no postal code, city or two-letter country. */
+            readonly address_country_mismatch?: components["schemas"]["AddressCountryMismatch"];
             emails?: components["schemas"]["ContactEmail"][];
             /**
              * Format: email
@@ -27580,6 +27587,8 @@ export interface components {
             /** @enum {string|null} */
             size_band?: null | "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1001-5000" | "5000+";
             address?: components["schemas"]["Address"];
+            /** @description Present only when the stored address country differs from the country the postal code and city resolve to. Absent when they agree, when the address has not been checked yet, or when it carries no postal code, city or two-letter country. */
+            readonly address_country_mismatch?: components["schemas"]["AddressCountryMismatch"];
             /** Format: uuid */
             owner_id?: string | null;
             /**

@@ -25136,6 +25136,12 @@ type Address struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// AddressCountryMismatch The stored address country does not fit the postal code and city. A background check asks the geocoder for the postal code and city alone and compares the country they resolve to with the stored one. The stored country is never changed. Editing the postal code, city or country clears the result until the next check.
+type AddressCountryMismatch struct {
+	// ResolvedCountry ISO-3166 alpha-2 code of the country the postal code and city resolve to.
+	ResolvedCountry string `json:"resolved_country"`
+}
+
 // AdvanceDealRequest defines model for AdvanceDealRequest.
 type AdvanceDealRequest struct {
 	// LostReason Required if status=lost.
@@ -31386,8 +31392,11 @@ type CommunicationReviewState string
 // Company A company. Mirrors the `company` table.
 type Company struct {
 	// Address Structured postal address.
-	Address    *Address   `json:"address,omitempty"`
-	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	Address *Address `json:"address,omitempty"`
+
+	// AddressCountryMismatch Present only when the stored address country differs from the country the postal code and city resolve to. Absent when they agree, when the address has not been checked yet, or when it carries no postal code, city or two-letter country.
+	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
+	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
 
 	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Null means the main offering.
 	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
@@ -34412,8 +34421,11 @@ type ConsumerMailDomainListResponse struct {
 // Contact A contact. Mirrors the `contact` table.
 type Contact struct {
 	// Address Structured postal address.
-	Address    *Address   `json:"address,omitempty"`
-	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	Address *Address `json:"address,omitempty"`
+
+	// AddressCountryMismatch Present only when the stored address country differs from the country the postal code and city resolve to. Absent when they agree, when the address has not been checked yet, or when it carries no postal code, city or two-letter country.
+	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
+	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
 
 	// Author Who created this contact in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
@@ -64935,6 +64947,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["address_country_mismatch"]; found {
+		err = json.Unmarshal(raw, &a.AddressCountryMismatch)
+		if err != nil {
+			return fmt.Errorf("error reading 'address_country_mismatch': %w", err)
+		}
+		delete(object, "address_country_mismatch")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -65249,6 +65269,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AddressCountryMismatch != nil {
+		object["address_country_mismatch"], err = json.Marshal(a.AddressCountryMismatch)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'address_country_mismatch': %w", err)
+		}
+	}
+
 	if a.ArchivedAt != nil {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
@@ -65531,6 +65558,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["address_country_mismatch"]; found {
+		err = json.Unmarshal(raw, &a.AddressCountryMismatch)
+		if err != nil {
+			return fmt.Errorf("error reading 'address_country_mismatch': %w", err)
+		}
+		delete(object, "address_country_mismatch")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -65810,6 +65845,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.AddressCountryMismatch != nil {
+		object["address_country_mismatch"], err = json.Marshal(a.AddressCountryMismatch)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'address_country_mismatch': %w", err)
 		}
 	}
 

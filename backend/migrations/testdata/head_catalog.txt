@@ -728,6 +728,13 @@ public.activity_waiting_horizon.horizon_days integer NOT NULL gen=- def=-
 public.activity_waiting_horizon.measured_at timestamp with time zone NOT NULL gen=- def=-
 public.activity_waiting_horizon.singleton boolean NOT NULL gen=- def=true
 public.activity_waiting_horizon_pkey CREATE UNIQUE INDEX activity_waiting_horizon_pkey ON public.activity_waiting_horizon USING btree (singleton)
+public.address_country_check_goes_stale() secdef=false cfg=- acl=- 
+BEGIN
+  NEW.address_country_resolved := NULL;
+  NEW.address_country_checked_at := NULL;
+  RETURN NEW;
+END;
+
 public.advance_report_projection_authority() secdef=false cfg=- acl=- 
 BEGIN
  UPDATE report_projection_fence SET generation=generation+1 WHERE singleton;
@@ -2390,6 +2397,8 @@ public.communication_suppression_pkey CREATE UNIQUE INDEX communication_suppress
 public.company acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.company.address_city text gen=- def=-
 public.company.address_country text gen=- def=-
+public.company.address_country_checked_at timestamp with time zone gen=- def=-
+public.company.address_country_resolved text gen=- def=-
 public.company.address_line1 text gen=- def=-
 public.company.address_line2 text gen=- def=-
 public.company.address_postal_code text gen=- def=-
@@ -2452,6 +2461,7 @@ public.company.source text NOT NULL gen=- def=-
 public.company.source_author_id uuid gen=- def=-
 public.company.source_author_name text gen=- def=-
 public.company.source_system text gen=- def=-
+public.company.trg_company_address_country_check_stale CREATE TRIGGER trg_company_address_country_check_stale BEFORE UPDATE OF address_postal_code, address_city, address_country ON public.company FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION address_country_check_goes_stale()
 public.company.trg_company_geocode_stale CREATE TRIGGER trg_company_geocode_stale BEFORE UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country ON public.company FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_goes_stale()
 public.company.trg_company_no_cycle CREATE TRIGGER trg_company_no_cycle BEFORE INSERT OR UPDATE OF parent_company_id ON public.company FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()
 public.company.trg_company_updated CREATE TRIGGER trg_company_updated BEFORE UPDATE ON public.company FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -3037,6 +3047,8 @@ public.consent_text_version_published CREATE UNIQUE INDEX consent_text_version_p
 public.contact acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact.address_city text gen=- def=-
 public.contact.address_country text gen=- def=-
+public.contact.address_country_checked_at timestamp with time zone gen=- def=-
+public.contact.address_country_resolved text gen=- def=-
 public.contact.address_line1 text gen=- def=-
 public.contact.address_line2 text gen=- def=-
 public.contact.address_postal_code text gen=- def=-
@@ -3079,6 +3091,7 @@ public.contact.source_author_id uuid gen=- def=-
 public.contact.source_author_name text gen=- def=-
 public.contact.source_system text gen=- def=-
 public.contact.title text gen=- def=-
+public.contact.trg_contact_address_country_check_stale CREATE TRIGGER trg_contact_address_country_check_stale BEFORE UPDATE OF address_postal_code, address_city, address_country ON public.contact FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION address_country_check_goes_stale()
 public.contact.trg_contact_updated CREATE TRIGGER trg_contact_updated BEFORE UPDATE ON public.contact FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.contact.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.version bigint NOT NULL gen=- def=1
@@ -4455,6 +4468,7 @@ public.fx_rate.to_currency character(3) NOT NULL gen=- def=-
 public.fx_rate_pair_day CREATE UNIQUE INDEX fx_rate_pair_day ON public.fx_rate USING btree (from_currency, to_currency, rate_date)
 public.fx_rate_pkey CREATE UNIQUE INDEX fx_rate_pkey ON public.fx_rate USING btree (id)
 public.geocode_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.geocode_cache.country_code text gen=- def=-
 public.geocode_cache.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.geocode_cache.geocode_cache_pkey PRIMARY KEY (query)
 public.geocode_cache.lat double precision NOT NULL gen=- def=-

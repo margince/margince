@@ -6,13 +6,15 @@ The 45 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-44 columns · primary key `(id)` · referenced by 43 foreign keys
+46 columns · primary key `(id)` · referenced by 43 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `address_city` | `text` |  |  |
 | `address_country` | `text` |  |  |
+| `address_country_checked_at` | `timestamp with time zone` |  |  |
+| `address_country_resolved` | `text` |  |  |
 | `address_line1` | `text` |  |  |
 | `address_line2` | `text` |  |  |
 | `address_postal_code` | `text` |  |  |
@@ -111,6 +113,7 @@ The 45 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_delete_clears_deal_partner`: `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION deal_clear_partner_attribution_on_company_delete()`
 - `company_refuse_anchor_retirement`: `BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor FOR EACH ROW EXECUTE FUNCTION company_refuse_anchor_retirement()`
+- `trg_company_address_country_check_stale`: `BEFORE UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION address_country_check_goes_stale()`
 - `trg_company_geocode_stale`: `BEFORE UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_goes_stale()`
 - `trg_company_no_cycle`: `BEFORE INSERT OR UPDATE OF parent_company_id FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()`
 - `trg_company_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
@@ -490,13 +493,15 @@ The 45 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-34 columns · primary key `(id)` · referenced by 45 foreign keys
+36 columns · primary key `(id)` · referenced by 45 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `address_city` | `text` |  |  |
 | `address_country` | `text` |  |  |
+| `address_country_checked_at` | `timestamp with time zone` |  |  |
+| `address_country_resolved` | `text` |  |  |
 | `address_line1` | `text` |  |  |
 | `address_line2` | `text` |  |  |
 | `address_postal_code` | `text` |  |  |
@@ -568,6 +573,7 @@ The 45 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `trg_contact_address_country_check_stale`: `BEFORE UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION address_country_check_goes_stale()`
 - `trg_contact_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## contact_acquisition_evidence
@@ -1055,10 +1061,11 @@ The 45 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## geocode_cache
 
-5 columns · primary key `(query)` · referenced by 0 foreign keys
+6 columns · primary key `(query)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
+| `country_code` | `text` |  |  |
 | `lat` | `double precision` | yes |  |
 | `lon` | `double precision` | yes |  |
 | `provider` | `text` | yes |  |

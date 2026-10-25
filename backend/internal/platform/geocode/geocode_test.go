@@ -53,6 +53,24 @@ func TestAResolvedAddressCarriesItsCoordinates(t *testing.T) {
 	}
 }
 
+func TestAResolvedPlaceNamesItsCountryInUpperCase(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("addressdetails"); got != "1" {
+			t.Errorf("addressdetails = %q, want 1: without it the answer carries no country", got)
+		}
+		_, _ = w.Write([]byte(`[{"lat":"52.52","lon":"13.40","address":{"country_code":"de"}}]`))
+	}))
+	defer srv.Close()
+
+	point, ok, err := unpacedClient(srv.URL).Resolve(context.Background(), "10115 Berlin")
+	if err != nil || !ok {
+		t.Fatalf("resolving 10115 Berlin: ok=%v err=%v", ok, err)
+	}
+	if point.CountryCode != "DE" {
+		t.Errorf("CountryCode = %q, want DE", point.CountryCode)
+	}
+}
+
 // A coordinate off the earth is refused rather than stored.
 //
 // This is where a transposed lat/lon pair gets caught: a longitude in the

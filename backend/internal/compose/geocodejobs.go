@@ -284,7 +284,7 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeCompanyA
 	// re-ask the provider for every place, which is the policy breach the cache
 	// exists to prevent. A reader of river_job.errors should see it.
 	cacheErr := store.RememberPlace(wsCtx, address.Query, contacts.CachedPlace{
-		Lat: point.Lat, Lon: point.Lon, Provider: geocodeProvider,
+		Lat: point.Lat, Lon: point.Lon, Provider: geocodeProvider, CountryCode: point.CountryCode,
 	})
 	return jobs.FaultContext(wsCtx, errors.Join(
 		store.RecordGeocode(wsCtx, companyID, contacts.GeocodeOK, &point.Lat, &point.Lon, geocodeProvider, address.InputHash),
