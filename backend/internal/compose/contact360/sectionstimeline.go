@@ -228,6 +228,7 @@ func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool
 // a row off /activities answers, because it is read by the same list and
 // folded by the same scan.
 func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
+	forDraft := opts.WrittenByHumanOnly && order == byRecency
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)
@@ -242,7 +243,14 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	// this contact is still a row on the timeline — date, direction, kind —
 	// with its content withheld (content_state), not a gap the reader
 	// cannot tell from silence.
-	scope, err := activityDiscoverScope(ctx, arg)
+	gate := activityDiscoverScope
+	if forDraft {
+		// A draft reads content, so a row withheld from this reader must leave
+		// before the cap rather than occupy a slot the draft then discards.
+		gate = activityScope
+		extra += " AND " + relstrength.LoggedTouchHappenedSQL("a", bind(arg(s.now().UTC())))
+	}
+	scope, err := gate(ctx, arg)
 	if err != nil {
 		return nil, false, err
 	}

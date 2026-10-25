@@ -44,6 +44,15 @@ func InteractionCounts(kind, meetingStatus string, automatic AutomaticKind) bool
 	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus)) && automatic == ""
 }
 
+// LoggedTouchHappenedSQL admits every row that is not a note or meeting. It
+// admits a note or meeting only when it records contact that happened by now.
+// That means dated no later than now, and not canceled or a no-show.
+// draftcore.IsLoggedTouch is the same rule for a row held in Go.
+func LoggedTouchHappenedSQL(alias, now string) string {
+	return "(" + alias + ".kind NOT IN ('note', '" + kindMeeting + "') OR (" +
+		MeetingCountsSQL(alias) + " AND " + alias + ".occurred_at <= " + now + "))"
+}
+
 // MeetingTookPlaceSQL is a meeting that counts as contact we had: not called
 // off, and already started. A `booked` row stays booked after it happens,
 // because few users ever mark a meeting held.

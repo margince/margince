@@ -113,6 +113,12 @@ type ListActivitiesInput struct {
 	// preparing for an ERP meeting still wants the relationship's history;
 	// they do not want the datacentre migration.
 	WithinProjectID *ids.ProjectID
+	// ConversationAsOf keeps only the rows a drafting prompt can read at that
+	// instant, before the limit. The caller must be able to open the content.
+	// A note or meeting must record contact that happened
+	// (relstrength.LoggedTouchHappenedSQL). Rows cut after the fetch would
+	// spend the page and push real correspondence out of it.
+	ConversationAsOf *time.Time
 	// WrittenByHuman keeps only rows a human wrote (relstrength.WrittenByHumanSQL),
 	// before the limit, for a reader of correspondence such as a brief.
 	WrittenByHuman bool

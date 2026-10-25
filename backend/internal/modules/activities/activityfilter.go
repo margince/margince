@@ -13,6 +13,7 @@ package activities
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -114,6 +115,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	}
 	if in.WrittenByHuman {
 		where = append(where, relstrength.WrittenByHumanSQL("a"))
+	}
+	if in.ConversationAsOf != nil {
+		where = append(where, relstrength.LoggedTouchHappenedSQL("a", fmt.Sprintf("$%d", arg(*in.ConversationAsOf))))
 	}
 	if where, err = appendWaitingReplyClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
@@ -266,6 +270,6 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
-		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly || in.SourceActivityID != nil ||
+		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
 		in.RemindersDue || len(in.CustomFilters) > 0
 }

@@ -13,6 +13,7 @@ package leaddraft
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
@@ -44,7 +45,7 @@ type LeadReader interface {
 // else, and an interface carrying the filter struct would let it ask for
 // anything. compose binds the seam (compose/leaddraftseam.go).
 type ActivityLister interface {
-	ForLead(ctx context.Context, id ids.LeadID) ([]crmcontracts.Activity, error)
+	ForLead(ctx context.Context, id ids.LeadID, now time.Time) ([]crmcontracts.Activity, error)
 }
 
 // Request is the transport's body, narrowed to what the writer needs.
@@ -124,7 +125,7 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, nil, httperr.Validation("email", "missing",
 			"this lead has no email address on record, so there is nobody to write to")
 	}
-	activities, err := s.acts.ForLead(ctx, leadID)
+	activities, err := s.acts.ForLead(ctx, leadID, s.envelope.Now())
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
