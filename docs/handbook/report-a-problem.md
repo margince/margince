@@ -18,6 +18,7 @@ issue from that. Your own data stays out of it.
 
 Seeing data you should not see is a security problem.
 
-Mail it to the private address in [SECURITY.md](../../SECURITY.md). Never send
+Mail it to **security@gradion.com**, the private address the project's
+security policy names. Never send
 it to the address above, and never write it into a public issue. A problem mail
 can be sent on to somebody else; a security report must not be.
