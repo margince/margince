@@ -108,6 +108,13 @@ export function MergeAction<Survivor extends { id: string }>({
             searchTargets={searchOthers}
             onPick={setTarget}
             selected={target}
+            // The server refuses a survivor the caller cannot write.
+            // An omitted flag means not writable, so such a row says so here.
+            unavailableReason={(candidate) =>
+              candidate.writable !== true
+                ? t("merge.targetReadOnly")
+                : undefined
+            }
             disabled={mutation.isPending}
           />
           {target && (

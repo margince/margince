@@ -2386,6 +2386,8 @@ export const en = {
   // The picked record's detail line, so two look-alike names stay apart here too.
   "merge.confirmDetail":
     "Merge {source} into {target} ({detail})? This archives {source}.",
+  "merge.targetReadOnly":
+    "You can only read this record, so it cannot be kept.",
   "merge.submit": "Merge",
 
   "tab.overview": "Overview",

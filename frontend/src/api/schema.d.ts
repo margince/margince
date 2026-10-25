@@ -39430,6 +39430,8 @@ export interface components {
             id?: string;
             /** @description What to call this population on screen. */
             label: string;
+            /** @description Whether this caller may record a forecast call or issue a share about this population. Absent from a server that predates the field; a screen then offers the controls and the write route decides. */
+            assertable?: boolean;
         };
         /** @description What this caller may actually do, so a screen never offers a control the server will refuse. */
         AnalyticsCapabilities: {

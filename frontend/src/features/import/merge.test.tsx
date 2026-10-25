@@ -38,6 +38,7 @@ const searchRows = [
     employer: { company_id: "o-a", company_name: "Company A" },
     title: "CFO",
     primary_email: "anna.berg@example.com",
+    writable: true,
   },
   {
     id: "p-b",
@@ -45,10 +46,17 @@ const searchRows = [
     employer: { company_id: "o-b", company_name: "Company B" },
     title: null,
     primary_email: "a.berg@example.com",
+    writable: true,
   },
   // A reader who may not see the employment edge gets no employer. A contact
   // with no address gets a null one. Neither is drawn.
-  { id: "p-c", full_name: "Anna Bergmann", title: null, primary_email: null },
+  {
+    id: "p-c",
+    full_name: "Anna Bergmann",
+    title: null,
+    primary_email: null,
+    writable: true,
+  },
 ];
 
 // A merge that never answers holds the write in flight for as long as a test looks.

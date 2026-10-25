@@ -2369,6 +2369,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Gộp {source} vào {target}? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
   "merge.confirmDetail":
     "Gộp {source} vào {target} ({detail})? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
+  "merge.targetReadOnly":
+    "Bạn chỉ có quyền xem hồ sơ này nên không thể giữ lại.",
   "merge.submit": "Gộp",
 
   "tab.overview": "Tổng quan",

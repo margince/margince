@@ -317,6 +317,23 @@ describe("ForecastView", () => {
     expect(posted[0].period).toBe("week");
   });
 
+  it("offers no Update forecast for a scope the seat may not assert about", async () => {
+    vi.stubGlobal("fetch", forecastStub({}));
+    render(
+      <ForecastView
+        selection={{
+          scope: { kind: "team", id: "t-9", label: "South", assertable: false },
+        }}
+        canSubmit
+      />,
+    );
+
+    await screen.findByRole("button", { name: /^Week$/i });
+    expect(
+      screen.queryByRole("button", { name: /Update forecast/i }),
+    ).toBeNull();
+  });
+
   it("posts the amount and the note the author typed", async () => {
     const posted: Record<string, unknown>[] = [];
     vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));

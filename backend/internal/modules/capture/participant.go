@@ -69,6 +69,7 @@ func stampCaptureParticipants(
 	kind string,
 	direction string,
 	counterparty connector.Counterparty,
+	us workspaceParties,
 ) error {
 	// The same kinds the hand-logged path accepts. Without this a captured note
 	// becomes a conversation while an identical hand-logged one does not, and
@@ -90,14 +91,10 @@ func stampCaptureParticipants(
 	// erasure lookup both match without a runtime case fold.
 	address := strings.ToLower(strings.TrimSpace(counterparty.Email))
 	// Never the owner's OWN address as the other end. Mail the owner sent from
-	// an alias arrives with that alias as its counterparty, and stamping it
-	// would record the owner at both ends of their own message. A colleague's
-	// address stays: their participant row is how they read held mail.
-	self, err := ownerIdentitiesTx(ctx, tx)
-	if err != nil {
-		return err
-	}
-	if self.Covers(address) {
+	// an alias arrives with that alias as its counterparty. Stamping it would
+	// put the owner at both ends of their own message. A seat's address
+	// is no outside party either. The caller read it under the claim lock the ladder takes.
+	if us.self.Covers(address) {
 		address = ""
 	}
 	var channelUserID string
@@ -105,7 +102,7 @@ func stampCaptureParticipants(
 		channelUserID = strings.TrimSpace(counterparty.ChannelIdentity.ChannelUserID)
 	}
 	if address != "" || channelUserID != "" {
-		if err := insertCounterpartyParticipant(ctx, tx, activityID, theirRole, kind, counterparty, address, channelUserID, ownerUserID); err != nil {
+		if err := insertCounterpartyParticipant(ctx, tx, activityID, theirRole, kind, counterparty, address, channelUserID, ownerUserID, us); err != nil {
 			return fmt.Errorf("capture: stamping the counterparty as a participant: %w", err)
 		}
 	}
