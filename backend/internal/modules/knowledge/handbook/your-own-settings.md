@@ -34,6 +34,10 @@ Also called: save settings, changes not saved, undo changes.
 To change your notifications in Margince, open Settings → **Notifications**.
 1. Under **Delivery by kind**, pick how each kind reaches you: **Off**, **In the app**, **Email** or **Daily digest**. Not every kind offers every choice.
 2. Under **Email summaries**, set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
+3. Under **Browser notifications**, press **Allow**, then allow it in the browser's own question.
+   The browser then shows a due reminder on one of your tasks while Margince is open in a tab.
+   To turn it off, block notifications for this site in your browser settings. If the browser
+   blocks them, the row says so and offers no **Allow**.
 
 Every notice also stays in the notification center under the bell, whatever you pick. **Nudges from colleagues** cannot be turned off. The brief and the review always appear on **Home**, and what you still need to do waits on your Worklist there.
 
@@ -46,7 +50,7 @@ An empty week with no work to follow up means no email is sent. A team email ope
 the selected team and week. If part of the report could not be read, the email
 says so rather than counting missing information as zero.
 
-Also called: email notifications, turn off emails, alerts, daily digest.
+Also called: email notifications, turn off emails, alerts, daily digest, browser notifications.
 
 ## Account
 

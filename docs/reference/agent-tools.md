@@ -4,8 +4,8 @@
 An agent in Margince acts for the human who gave it a **passport**, the credential an agent carries
 ([how to make one](../how-to/mint-a-passport.md)). It can only do what that human could do alone.
 
-Most tools run at once. Three actions always wait for a human to approve them: `merge` on `change_tags`, `invite` on
-`schedule_meeting`, and `enrich`. A few more wait only in some cases, such as moving a deal to `won` or `lost`. These
+Most tools run at once. Four actions always wait for a human to approve them: `merge` on `change_tags`, `invite` on
+`schedule_meeting`, `set_up_partner` on `change_state`, and `enrich`. A few more wait only in some cases, such as moving a deal to `won` or `lost`. These
 are `update_record`, `move_deal` on `change_state`, and the two relink actions on `change_activities`. A waiting call
 changes nothing until a human approves it in the CRM. The agent then repeats the call with the approval's ID.
 
@@ -69,7 +69,7 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 | `change_activities` | dynamic | `write` | no | 🔀 Log, plan and file activities <details><summary>actions</summary>`attach` (`attach_document`, 🟢) `log` (`log_activity`, 🟢) `relink` (`relink_activity`, dynamic) `relink_many` (`relink_activities`, dynamic) `task` (`create_task`, 🟢)</details> |
 | `change_lists` | 🟢 | `write` | no | Make and change lists |
 | `change_record_parts` | 🟢 | `write` | no | Change the parts of a record |
-| `change_state` | dynamic | `write` | no | 🔀 Move a lead, deal or project on <details><summary>actions</summary>`demote` (`demote_lead`, 🟢) `disqualify` (`disqualify_lead`, 🟢) `move_deal` (`progress_deal`, dynamic) `move_project` (`advance_project_phase`, 🟢) `promote` (`promote_lead`, 🟢) `qualify` (`qualify_lead`, 🟢)</details> |
+| `change_state` | dynamic | `write` | no | 🔀 Move a lead, deal, project or partner <details><summary>actions</summary>`demote` (`demote_lead`, 🟢) `disqualify` (`disqualify_lead`, 🟢) `move_deal` (`progress_deal`, dynamic) `move_project` (`advance_project_phase`, 🟢) `promote` (`promote_lead`, 🟢) `qualify` (`qualify_lead`, 🟢) `set_up_partner` (`set_up_partner`, 🟡)</details> |
 | `change_tags` | dynamic | `write` | no | 🔀 Change tags <details><summary>actions</summary>`apply` (`apply_tag`, 🟢) `archive` (`archive_tag`, 🟢) `create` (`create_tag`, 🟢) `merge` (`merge_tags`, 🟡) `remove` (`remove_tag`, 🟢) `update` (`update_tag`, 🟢)</details> |
 | `commit_import` | 🟢 | `write` | no | Commit an import |
 | `create_record` | 🟢 | `write` | no | Create a record |

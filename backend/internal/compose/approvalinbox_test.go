@@ -136,6 +136,8 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 		// folds the message's fields onto that lead. It writes one record and
 		// puts nothing on the wire.
 		"merge_records": true,
+		// Accepting a share request writes one record grant.
+		"contact_share": true,
 	}
 	kinds := decidingApprovalsService(nil, SendPath{}, nil).EffectKinds()
 	if len(kinds) == 0 {

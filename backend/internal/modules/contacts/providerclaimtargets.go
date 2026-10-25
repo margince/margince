@@ -93,6 +93,9 @@ func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.U
 	if err := lockContactForAttach(ctx, tx, subject); err != nil {
 		return ids.UUID{}, false, err
 	}
+	if seat, err := contactIsSeatTx(ctx, tx, contactID); err != nil || seat {
+		return ids.UUID{}, false, err
+	}
 	var edgeID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by)
@@ -112,6 +115,9 @@ func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.U
 		return ids.UUID{}, false, fmt.Errorf("contacts: linking a contact to a bought employer: %w", err)
 	}
 	if err := auditCapturedEmployment(ctx, tx, edgeID, subject, companyID, relationshipOriginProvider); err != nil {
+		return ids.UUID{}, false, err
+	}
+	if err := fileEmployerTwins(ctx, tx, subject, connectorCapturedBy(providerName)); err != nil {
 		return ids.UUID{}, false, err
 	}
 	return edgeID, true, nil

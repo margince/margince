@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
@@ -406,61 +405,6 @@ func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.Up
 		OwnerID:      ownerFrom(changed, typed),
 		CustomFields: customFieldsFrom(changed, typed),
 	}
-}
-
-func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontracts.Address, bool, error) {
-	if mapped == nil {
-		return nil, false, nil
-	}
-	var record struct {
-		Address *crmcontracts.Address `json:"address"`
-	}
-	if err := json.Unmarshal(current, &record); err != nil {
-		return nil, false, fmt.Errorf("import: reading the stored address: %w", err)
-	}
-	if record.Address == nil {
-		return mapped, true, nil
-	}
-	merged := *record.Address
-	if mapped.Line1 != nil {
-		merged.Line1 = mapped.Line1
-	}
-	if mapped.Line2 != nil {
-		merged.Line2 = mapped.Line2
-	}
-	if mapped.City != nil {
-		merged.City = mapped.City
-	}
-	if mapped.Region != nil {
-		merged.Region = mapped.Region
-	}
-	if mapped.PostalCode != nil {
-		merged.PostalCode = mapped.PostalCode
-	}
-	if mapped.Country != nil {
-		merged.Country = mapped.Country
-	}
-	return &merged, true, nil
-}
-
-// addressFrom collects the mapped `address.*` columns into the one nested
-// value both the create and the patch input take. Absent when the file mapped
-// none, so a company with no address column is not handed an empty address —
-// which the update path would read as an instruction to clear one.
-func addressFrom(fields map[string]string) *crmcontracts.Address {
-	addr := crmcontracts.Address{
-		Line1:      importString(fields, "address.line1"),
-		Line2:      importString(fields, "address.line2"),
-		City:       importString(fields, "address.city"),
-		Region:     importString(fields, "address.region"),
-		PostalCode: importString(fields, "address.postal_code"),
-		Country:    importString(fields, fieldAddressCountry),
-	}
-	if addr.Line1 == nil && addr.Line2 == nil && addr.City == nil &&
-		addr.Region == nil && addr.PostalCode == nil && addr.Country == nil {
-		return nil
-	}
-	return &addr
 }
 
 // checkedString is a core cell in the spelling checkRow gave it, or the

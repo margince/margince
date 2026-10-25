@@ -384,3 +384,32 @@ describe("the root the builder holds", () => {
     expect(rootGroup(group)).toBe(group);
   });
 });
+
+describe("a within_radius operand", () => {
+  const stored = {
+    field: "location",
+    op: "within_radius",
+    value: { lat: 48.7758, lon: 9.1829, radius_km: 50, label: "Stuttgart" },
+  };
+
+  it("round-trips through decode and encode, as the API accepts it", () => {
+    const restored = decode({ and: [stored] });
+
+    expect(restored).not.toBeNull();
+    expect(isComplete(restored as Node)).toBe(true);
+    expect(encode(restored as Node)).toEqual({ and: [stored] });
+  });
+
+  it("is refused when the point or the distance is not usable", () => {
+    for (const value of [
+      { lat: 48, lon: 9 },
+      { lat: 48, lon: 9, radius_km: 0 },
+      { lat: "48", lon: 9, radius_km: 5 },
+      { lat: 48, lon: 9, radius_km: 5, unit: "miles" },
+    ]) {
+      expect(
+        decode({ field: "location", op: "within_radius", value }),
+      ).toBeNull();
+    }
+  });
+});

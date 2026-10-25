@@ -84,7 +84,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "status", Values: []string{"draft", "active", "expired", "cancelled", "superseded"}, Array: false, Explode: true},
 	},
 	"GET /v1/companies/{id}/documents": {
-		{Name: "category", Values: []string{"contract", "offer", "legal", "email_attachment", "message_attachment", "other"}, Array: false, Explode: true},
+		{Name: "category", Values: []string{"contract", "offer", "legal", "email_attachment", "message_attachment", "other", "link"}, Array: false, Explode: true},
 		{Name: "doc_state", Values: []string{"draft", "current", "final", "superseded"}, Array: false, Explode: true},
 	},
 	"GET /v1/companies/{id}/hierarchy-rollup": {
@@ -92,6 +92,7 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/contacts": {
 		{Name: "captured_by_kind", Values: []string{"human", "agent", "connector", "system"}, Array: false, Explode: true},
+		{Name: "relationship_mark", Values: []string{"vendor_marketing", "any"}, Array: false, Explode: true},
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
 	},
 	"GET /v1/context-search": {
@@ -119,7 +120,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
 	},
 	"GET /v1/deals/{id}/documents": {
-		{Name: "category", Values: []string{"contract", "offer", "legal", "email_attachment", "message_attachment", "other"}, Array: false, Explode: true},
+		{Name: "category", Values: []string{"contract", "offer", "legal", "email_attachment", "message_attachment", "other", "link"}, Array: false, Explode: true},
 	},
 	"GET /v1/deals/{id}/offers": {
 		{Name: "status", Values: []string{"draft", "sent", "accepted", "rejected", "expired", "superseded"}, Array: false, Explode: true},

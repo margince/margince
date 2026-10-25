@@ -393,6 +393,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.acquiredAt": "Erfasst am",
   "approval.preview.promotedLead": "Zu übernehmender Lead",
   "approval.preview.sourceActivity": "Verlauf dieses Quell-Leads",
+  "approval.preview.sourceWithheldActivities":
+    "Weiterer Verlauf dieses Quell-Leads, den du nicht lesen kannst",
   "approval.preview.sourceConsent": "Einwilligung dieses Quell-Leads",
   "approval.preview.channelPosition": "Position in der Liste",
   "approval.preview.emailCorrespondence":
@@ -413,6 +415,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.precisionMonth": "Nur Monat",
   "approval.preview.mergeTags":
     "Das Quell-Tag auf den gezeigten Datensätzen durch das verbleibende Tag ersetzen. Wenn beide Tags vorhanden sind, nur die doppelte Quell-Zuordnung entfernen. Das Quell-Tag archivieren und seinen Namen zur erneuten Verwendung freigeben; er bleibt nicht als Alias erhalten.",
+  "approval.preview.partnerTierUnset":
+    "Margenstufe: nicht gesetzt. Ein Mensch legt sie im Partner-Tab des Unternehmens fest.",
   "approval.preview.mergeTagSource": "Zu entfernendes Tag",
   "approval.preview.mergeTagTarget": "Verbleibendes Tag",
   "approval.preview.mergeTagMove": "Datensatz, der das verbleibende Tag erhält",
@@ -621,6 +625,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Zum Kontakt zu verschiebende Aktivität",
   "approval.preview.promotionDuplicateActivity":
     "Aktivität bereits am Kontakt; Lead-Verknüpfung entfernen",
+  "approval.preview.promotionWithheldActivities":
+    "Weitere mitverschobene Aktivitäten, die du nicht lesen kannst",
   "approval.preview.promotionConsentBefore":
     "Einwilligung vor der Qualifizierung",
   "approval.preview.promotionRestriction": "Zu übernehmende Einschränkung",
@@ -1775,6 +1781,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.forecast_snapshot": "Täglicher Prognose-Snapshot",
   "systemJob.geocode": "Adresssuche für Unternehmen",
   "systemJob.geocode_backfill": "Nachholen der Adresssuche",
+  "systemJob.address_country_check": "Abgleich des Adresslands",
   "systemJob.graph_edge": "Aktualisierung der Beziehungsstärke",
   "systemJob.graph_edge_reconcile": "Aktualisierung der Beziehungsstärke",
   "systemJob.handbook_corpus": "Indexierung des Handbuchs",
@@ -1836,6 +1843,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.capture_counterparty_verdict": "Prüfung der Absendeadressen",
   "agentJob.coldstart": "Erstansprache",
   "agentJob.company_name_promotion": "Aktualisierung des Firmennamens",
+  "agentJob.contact_share": "Anfrage zum Teilen eines Kontakts",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website-Analyse",
@@ -2117,6 +2125,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.vat_status": "USt-Status",
   "history.field.visibility": "Sichtbarkeit",
   "history.field.parent_company_id": "Muttergesellschaft",
+  "history.field.relationship_mark": "Beziehungsmarkierung",
   "history.field.partner_attribution": "Partnerzuordnung",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Projekt",
@@ -2217,6 +2226,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kontakte, Unternehmen, Deals, Projekte, Produkte, Aktivitäten, Leads durchsuchen…",
   "search.prompt": "Gib einen Suchbegriff ein.",
   "search.empty": "Keine Treffer für „{q}“.",
+  "search.nearMatches": "Meintest du:",
   "search.group.contact": "Kontakte",
   "search.group.company": "Unternehmen",
   "search.group.deal": "Deals",
@@ -2575,6 +2585,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Datensatz wurde geändert, nachdem du ihn geöffnet hast. Lade ihn neu, um die Änderung zu sehen, und nimm deine dann erneut vor.",
   "common.duplicate.email":
     "Die E-Mail-Adresse wurde hier nicht gespeichert, da ein anderer Kontakt oder Lead sie schon hat.",
+  "common.heldByColleague": "Ein anderes Mitglied hat diesen Kontakt schon.",
+  "common.heldByColleague.asked":
+    "Ein anderes Mitglied hat diesen Kontakt schon. Margince hat es gebeten, ihn mit dir zu teilen.",
   "common.duplicate.domain":
     "Die Domain wurde hier nicht gespeichert, da ein anderes Unternehmen sie schon hat.",
   "common.duplicate.linkedinUrl":
@@ -3498,6 +3511,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.merge_records": "Datensätze zusammenführen",
   "approval.kind.merge_tags": "Tags zusammenführen",
   "approval.kind.archive_tag": "Tag stilllegen",
+  "approval.kind.set_up_partner": "Partnerprogramm einrichten",
   "approval.kind.change_record_parts": "Teile eines Datensatzes ändern",
   "approval.kind.update_record": "Datensatz aktualisieren",
   "approval.kind.create_record": "Datensatz erstellen",
@@ -3513,6 +3527,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.linkedin_match": "LinkedIn-Treffer",
   "approval.kind.site_lead": "Kontakt von der Website erstellen",
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
+  "approval.kind.contact_share": "Kontakt teilen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
@@ -5542,11 +5557,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.saving": "Wird erstellt…",
   "create.contact": "Neuer Kontakt",
   "vcardImport.action": "vCards importieren",
-  "vcardImport.title": "vCards importieren",
-  "vcardImport.fileLabel": "vCard-Datei",
+  "vcardImport.title": "Visitenkarten importieren",
+  "vcardImport.fileLabel": "vCard-Datei oder Kartenfoto",
   "vcardImport.whichFile":
-    "Eine .vcf-Datei, das Exportformat für Kontakte aus Telefonen und E-Mail-Programmen. Eine Karte stammt vom Kontakt selbst, daher brauchen importierte Karten keine Freigabe.",
-  "vcardImport.choose": ".vcf-Datei auswählen",
+    "Eine .vcf-Datei, das Exportformat für Kontakte aus Telefonen und E-Mail-Programmen, oder ein Foto von einer oder mehreren Visitenkarten. Eine vCard stammt vom Kontakt selbst, daher brauchen importierte vCards keine Freigabe. Ein Foto liest ein Modell und kann sich irren, deshalb wartet jede aus einem Foto gelesene Karte auf deine Freigabe.",
+  "vcardImport.choose": "Datei oder Foto auswählen",
   "vcardImport.working": "Karten werden gelesen…",
   "vcardImport.back": "Zurück zu den Kontakten",
   "vcardImport.noCards": "Die Datei enthält keine Karten.",
@@ -5555,6 +5570,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "vcardImport.outcome.created": "Hinzugefügt",
   "vcardImport.outcome.updated": "Fehlende Felder ergänzt",
   "vcardImport.outcome.needsReview": "Mögliches Duplikat",
+  "vcardImport.outcome.proposed": "Wartet auf Freigabe",
   "vcardImport.outcome.skipped": "Übersprungen",
   "create.quickCapture": "Schnellerfassung",
   "create.quickCaptureSaved": "{name} gespeichert",
@@ -5574,6 +5590,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.industry": "Branche",
   "create.sizeBand": "Unternehmensgröße",
   "co.address.summary": "Adresse",
+  "co.address.countryMismatch": "Postleitzahl und Ort liegen in {country}",
 
   "create.addressLine1": "Straße und Hausnummer",
   "create.addressLine2": "Adresszusatz",
@@ -5795,6 +5812,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "docs.category.email": "E-Mail-Anhang",
   "docs.category.message": "Nachrichtenanhang",
   "docs.category.other": "Sonstiges",
+  "docs.category.link": "Gesendete Links",
   "files.title": "Dateien",
   "files.empty":
     "Noch keine Dateien an diesem Deal. Lade eine Datei hoch oder verknüpfe eine E-Mail mit Anhang.",
@@ -6144,13 +6162,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unanswered":
     "Die Versandprüfung konnte nicht abgeschlossen werden. Beim Senden wird die Prüfung erneut ausgeführt.",
   "sendPermission.reason.objected":
-    "Die empfangende Person hat dem Marketing widersprochen. Das kann hier niemand aufheben, auch kein Admin.",
+    "Die empfangende Person hat dem Marketing widersprochen. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
   "sendPermission.reason.withdrawn":
-    "Die empfangende Person hat ihre Einwilligung widerrufen. Das kann hier niemand aufheben, auch kein Admin.",
+    "Die empfangende Person hat ihre Einwilligung widerrufen. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
   "sendPermission.reason.restricted":
-    "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Das kann hier niemand aufheben, auch kein Admin.",
+    "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
   "sendPermission.reason.askedUsToStop":
-    "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Das kann hier niemand aufheben, auch kein Admin.",
+    "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
   "sendPermission.reason.bounced":
     "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
   "sendPermission.reason.tooMany":
@@ -7686,6 +7704,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du darfst dieses Mitglied nicht als verantwortlich eintragen, daher bist du für seine Zeilen verantwortlich.",
   "import.reason.owner_unknown":
     "Kein Mitglied hat diese E-Mail-Adresse, daher bist du verantwortlich; ein Lead bleibt nicht zugewiesen. Betroffene Zeilen: {rows}.",
+  "import.reason.address_erased":
+    "Wer diese E-Mail-Adresse besitzt, hat die Löschung verlangt und darf nicht erneut gespeichert werden, daher wurde die Zeile nicht importiert.",
+  "import.reason.address_not_split":
+    "Die Adresse ließ sich nicht in Straße, Postleitzahl und Ort aufteilen, daher bleibt sie in der ersten Adresszeile.",
   "import.reason.phone_needs_country":
     "„{value}“ braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
   "import.reason.record_archived":
@@ -8354,6 +8376,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.empty":
     "Bisher ist nichts eingegangen. Was das Produkt dir mitteilt, erscheint hier.",
   "notifications.title": "Zustellung nach Typ",
+  "notifications.browser.label": "Browser-Benachrichtigungen",
+  "notifications.browser.default":
+    "Wenn eine Erinnerung an einer deiner Aufgaben fällig wird, kann der Browser sie zeigen, solange Margince in einem Tab offen ist.",
+  "notifications.browser.granted":
+    "An. Eine fällige Erinnerung an einer deiner Aufgaben erscheint als Browser-Benachrichtigung, solange Margince in einem Tab offen ist. Zum Ausschalten blockierst du Benachrichtigungen für diese Seite in den Einstellungen deines Browsers.",
+  "notifications.browser.denied":
+    "In diesem Browser blockiert. Um sie zu erlauben, änderst du die Benachrichtigungen für diese Seite in den Einstellungen deines Browsers.",
+  "notifications.browser.unsupported":
+    "Dieser Browser kann keine Benachrichtigungen zeigen. Eine fällige Erinnerung steht trotzdem oben auf deiner Home und in deiner Worklist.",
+  "notifications.browser.allow": "Zulassen",
+  "reminder.notification.body":
+    "Deine Erinnerung ist fällig. Klicke, um die Aufgabe zu öffnen.",
+  "reminder.notification.untitled": "Erinnerung an eine Aufgabe",
   "notifications.sub":
     "Jede Benachrichtigung bleibt auch unter „Benachrichtigungen“ erhalten, egal was du hier wählst.",
   "notifications.saveFailedFor": "„{setting}“ wurde nicht gespeichert",
@@ -11272,6 +11307,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "companyTriage.checkedAt": "geprüft {when}",
   "pipeline.reason.no_named_reader":
     "dieser Thread hat keine Lesenden, an die sich ein Befund richten ließe",
+  "pipeline.reason.from_sending_systems":
+    "dieser Thread enthält nur E-Mails von Systemen, etwa Benachrichtigungen, und wird nicht gelesen",
   "pipeline.reason.transport_not_read":
     "dieser Schritt liest nur E-Mails, und die Nachricht kam über einen anderen Kanal",
   "pipeline.reason.sender_undecided":
@@ -14215,6 +14252,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du stehst im Austausch mit {through} im selben Unternehmen.",
   "contact.graph.noRoute":
     "Im Unternehmen steht noch niemand im Austausch mit diesem Kontakt oder dessen Unternehmen.",
+  "contact.network.captureGap_one":
+    "{names} steht in den Threads dieses Kontakts und hat kein Postfach verbunden, daher kann spätere Post hier fehlen.",
+  "contact.network.captureGap_other":
+    "{names} stehen in den Threads dieses Kontakts und haben kein Postfach verbunden, daher kann spätere Post hier fehlen.",
+  "contact.network.captureGapInvited": "{name} (noch nicht angemeldet)",
   "contact.graph.noDirect":
     "Im Unternehmen hat noch niemand mit diesem Kontakt korrespondiert.",
   "contact.graph.sideColumn": "Vorstellungen und Veränderungen",
@@ -14965,6 +15007,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.created_at": "Erstellt",
   "filters.field.hosting_provider": "Hosting",
   "filters.field.last_activity_at": "Letzte Aktivität",
+  "filters.field.location": "Standort",
   "filters.field.mail_provider": "E-Mail-System",
   "filters.field.operated_service": "Betriebener Dienst",
   "filters.field.owner_team_id": "Verantwortliches Team",
@@ -14999,6 +15042,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.op.atLeast": "ist mindestens",
   "filters.op.lessThan": "ist kleiner als",
   "filters.op.atMost": "ist h\u00f6chstens",
+  "filters.op.withinRadius": "liegt im Umkreis von",
+  "filters.sentence.radiusOf": "{km} km um {place}",
   "filters.join.and": "und",
   "filters.join.or": "oder",
   "filters.sentence.clause": "{field} {op} {value}",
@@ -15977,6 +16022,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.category.relationships": "Ruhende Beziehung",
   "worklist.category.system": "System",
   "worklist.because.pinned": "von dir angeheftet",
+  "worklist.because.reminder_due": "deine Erinnerung ist fällig",
   "worklist.because.non_buyer_request": "nicht als Kundenanliegen bestätigt",
   "worklist.because.buyer_wrote_last":
     "die Käuferseite hat zuletzt geschrieben",

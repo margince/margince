@@ -11,6 +11,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -40,6 +41,70 @@ func StaleDisplayNamesTx(ctx context.Context, tx pgx.Tx, limit int) ([]ids.Conta
 	return captureGuessedDisplayNamesTx(ctx, tx, nil, nil, repairRule, limit)
 }
 
+// initialsNamedPageSize is how many capture-named contacts one read of the
+// initials selector examines.
+const initialsNamedPageSize = 200
+
+// InitialsDisplayName is a contact whose display is capture's guess from an
+// address that only spells initials, with the local part that should replace it.
+type InitialsDisplayName struct {
+	ID       ids.ContactID
+	FullName string
+	Proposed string
+}
+
+// InitialsNamedDisplayNamesTx answers up to limit contacts whose display name is
+// only the guess capture made from an initials-only address ("Dv" for dv@). It
+// is read-only, so it is also the preview of what the repair writes. It pages
+// the shared statement by id until it has limit accepted contacts or runs out,
+// so contacts it declines cannot starve the page.
+func InitialsNamedDisplayNamesTx(ctx context.Context, tx pgx.Tx, limit int) ([]InitialsDisplayName, error) {
+	var accepted []InitialsDisplayName
+	var after *ids.ContactID
+	for len(accepted) < limit {
+		rule := displayRule{unsplitMaxLen: maxInitialsDisplayLen, after: after}
+		page, err := captureGuessedDisplayNamesTx(ctx, tx, nil, nil, rule, initialsNamedPageSize)
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range page {
+			candidate, ok, err := initialsCandidateTx(ctx, tx, id)
+			if err != nil {
+				return nil, err
+			}
+			if ok && len(accepted) < limit {
+				accepted = append(accepted, candidate)
+			}
+		}
+		if len(page) < initialsNamedPageSize {
+			break
+		}
+		after = &page[len(page)-1]
+	}
+	return accepted, nil
+}
+
+// initialsCandidateTx reads one contact's display and live address and applies
+// initialsDisplayReplacement.
+func initialsCandidateTx(ctx context.Context, tx pgx.Tx, id ids.ContactID) (InitialsDisplayName, bool, error) {
+	var fullName, email string
+	err := tx.QueryRow(ctx, `
+		SELECT p.full_name, e.email
+		  FROM contact p
+		  JOIN LATERAL (SELECT e.email FROM contact_email e
+		                 WHERE e.contact_id = p.id AND e.archived_at IS NULL`+
+		ReachableEmailOrder+` LIMIT 1) e ON true
+		 WHERE p.id = $1`, id).Scan(&fullName, &email)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return InitialsDisplayName{}, false, nil
+	}
+	if err != nil {
+		return InitialsDisplayName{}, false, fmt.Errorf("contacts: reading the address contact %s shows: %w", id, err)
+	}
+	proposed, ok := initialsDisplayReplacement(fullName, email)
+	return InitialsDisplayName{ID: id, FullName: fullName, Proposed: proposed}, ok, nil
+}
+
 // displayNameIsStaleTx is StaleDisplayNamesTx asked about one contact.
 func displayNameIsStaleTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (bool, error) {
 	found, err := captureGuessedDisplayNamesTx(ctx, tx, &contactID, nil, repairRule, 1)
@@ -66,7 +131,14 @@ func displayNameIsCapturesGuessTx(ctx context.Context, tx pgx.Tx, contactID ids.
 // displayRule says which question captureGuessedDisplayNamesTx answers.
 // needPair is the repair's rule that it never writes one half.
 // keepWhenPairShown keeps a display that already holds both halves.
-type displayRule struct{ needPair, keepWhenPairShown bool }
+// unsplitMaxLen, when above zero, offers only contacts with no split columns and
+// a display no longer than that.
+// after is the keyset the page resumes from.
+type displayRule struct {
+	needPair, keepWhenPairShown bool
+	unsplitMaxLen               int
+	after                       *ids.ContactID
+}
 
 var (
 	repairRule    = displayRule{needPair: true, keepWhenPairShown: true}
@@ -102,6 +174,9 @@ func captureGuessedDisplayNamesTx(
 		              btrim(coalesce($8::text, p.last_name, '')) AS last) n
 		 WHERE ($1::uuid IS NULL OR p.id = $1)
 		   AND `+captureorigin.ContactSQL("$2", "$3", "$4")+`
+		   AND ($12 = 0 OR (p.first_name IS NULL AND p.last_name IS NULL
+		                    AND char_length(p.full_name) <= $12))
+		   AND ($13::uuid IS NULL OR p.id > $13)
 		   AND (NOT $5 OR (n.first <> '' AND n.last <> ''))
 		   AND NOT ($10 AND n.first <> '' AND n.last <> ''
 		            AND strpos(lower(p.full_name), lower(n.first)) > 0
@@ -115,7 +190,8 @@ func captureGuessedDisplayNamesTx(
 		 ORDER BY p.id
 		 LIMIT $6`,
 		only, CaptureVerdictActor, CaptureAcceptActor, vcardSource, rule.needPair, limit,
-		first, last, DisplayNameRepairActor, rule.keepWhenPairShown, enrichCapturedBy)
+		first, last, DisplayNameRepairActor, rule.keepWhenPairShown, enrichCapturedBy,
+		rule.unsplitMaxLen, rule.after)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading whose display name a contact carries: %w", err)
 	}

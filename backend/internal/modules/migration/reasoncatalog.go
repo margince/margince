@@ -16,6 +16,7 @@ const (
 	ReasonDuplicateEmail             ReasonCode = "duplicate_email"
 	ReasonContactUnnamed             ReasonCode = "contact_unnamed"
 	ReasonContactEmailHeld           ReasonCode = "contact_email_held"
+	ReasonAddressErased              ReasonCode = "address_erased"
 	ReasonCompanyNameEmpty           ReasonCode = "company_name_empty"
 	ReasonDomainHeld                 ReasonCode = "domain_held"
 	ReasonLinkedinHeld               ReasonCode = "linkedin_held"
@@ -43,6 +44,7 @@ const (
 	ReasonFieldInactive              ReasonCode = "field_inactive"
 	ReasonValueUnreadable            ReasonCode = "value_unreadable"
 	ReasonPhoneNeedsCountry          ReasonCode = "phone_needs_country"
+	ReasonAddressNotSplit            ReasonCode = "address_not_split"
 	ReasonValueRefused               ReasonCode = "value_refused"
 	ReasonOptionNotAllowed           ReasonCode = "option_not_allowed"
 	ReasonOptionNotInList            ReasonCode = "option_not_in_list"
@@ -134,6 +136,11 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.English:    "This email address is already held in the CRM, so the row cannot create a second contact under it.",
 		textlang.German:     "Diese E-Mail-Adresse ist im CRM bereits vergeben, daher kann die Zeile keinen zweiten Kontakt damit anlegen.",
 		textlang.Vietnamese: "Địa chỉ email này đã có trong CRM nên hàng không thể tạo liên hệ thứ hai với nó.",
+	}},
+	ReasonAddressErased: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "Whoever owns this email address asked to be erased and not to be stored again, so the row was not imported.",
+		textlang.German:     "Wer diese E-Mail-Adresse besitzt, hat die Löschung verlangt und darf nicht erneut gespeichert werden, daher wurde die Zeile nicht importiert.",
+		textlang.Vietnamese: "Chủ của địa chỉ email này đã yêu cầu xóa và không được lưu lại, nên hàng không được nhập.",
 	}},
 	ReasonCompanyNameEmpty: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "The mapped display_name is empty, so the row names no company.",
@@ -264,6 +271,11 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.English:    "“{value}” cannot be read.",
 		textlang.German:     "{value:q} kann nicht gelesen werden.",
 		textlang.Vietnamese: "Không đọc được {value:q}.",
+	}},
+	ReasonAddressNotSplit: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "Address could not be split into street, postal code and city, so it stays in the first address line.",
+		textlang.German:     "Die Adresse ließ sich nicht in Straße, Postleitzahl und Ort aufteilen, daher bleibt sie in der ersten Adresszeile.",
+		textlang.Vietnamese: "Không tách được địa chỉ thành đường, mã bưu chính và thành phố nên địa chỉ vẫn nằm ở dòng địa chỉ đầu tiên.",
 	}},
 	ReasonPhoneNeedsCountry: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” needs its country code, like +49 30 1234567.",

@@ -35,7 +35,7 @@ func relinkAdmittedRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 }
 
 // deleteVisibleLinksOfType drops the activity's links of one entity type and
-// answers the contact ids that delete actually displaced. Those ids come from
+// answers the entity ids that delete actually removed. Those ids come from
 // the delete ITSELF. Inferring them instead — "whoever is a participant but no
 // longer linked" — sweeps up participants that were never linked in the first
 // place, and repoints conversations the correction never mentioned.
@@ -65,14 +65,14 @@ func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, "DELETE FROM activity_link WHERE "+predicate+" RETURNING contact_id", args...)
+	rows, err := tx.Query(ctx, storekit.SQLf("DELETE FROM activity_link WHERE %s RETURNING %s", predicate, column), args...)
 	if err != nil {
 		return nil, err
 	}
-	// Every id this delete actually removed. A link row of another
-	// entity type returns NULL here and contributes nothing.
+	// Every id this delete actually removed: the audit row's restore image,
+	// and for contacts the set whose participants are repointed.
 	displaced, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (ids.UUID, error) {
-		var pid *ids.UUID
+		var pid *ids.UUID // NULL for a link row of another entity type
 		if err := r.Scan(&pid); err != nil {
 			return ids.Nil, err
 		}

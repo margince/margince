@@ -324,8 +324,15 @@ func (s *Store) updateRelationshipInTx(
 			return out, err
 		}
 	}
-	return out, emitRelationshipChangeWithEvidence(ctx, tx, "update",
-		relationshipFieldImage(current), out, in.Evidence)
+	if err := emitRelationshipChangeWithEvidence(ctx, tx, "update",
+		relationshipFieldImage(current), out, in.Evidence); err != nil {
+		return out, err
+	}
+	if out.Kind == employmentKind && out.ContactID != nil &&
+		(in.IsCurrentPrimary != nil || in.EndedAt != nil || in.EmploymentStatus != nil) {
+		return out, fileEmployerTwins(ctx, tx, *out.ContactID, capturedBy)
+	}
+	return out, nil
 }
 
 // RefuseArchiveRelationship answers every authority refusal
@@ -426,7 +433,17 @@ func (s *Store) archiveRelationshipWithEvidence(ctx context.Context, id ids.UUID
 				return err
 			}
 		}
-		return emitRelationshipChangeWithEvidence(ctx, tx, "archive", nil, out, evidence)
+		if err := emitRelationshipChangeWithEvidence(ctx, tx, "archive", nil, out, evidence); err != nil {
+			return err
+		}
+		if out.Kind != employmentKind || out.ContactID == nil {
+			return nil
+		}
+		capturedBy, err := storekit.CapturedBy(ctx)
+		if err != nil {
+			return err
+		}
+		return fileEmployerTwins(ctx, tx, *out.ContactID, capturedBy)
 	})
 	return out, err
 }

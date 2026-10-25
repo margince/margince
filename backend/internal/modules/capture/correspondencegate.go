@@ -259,27 +259,40 @@ func wroteBackTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 		return false, nil
 	}
 	var replied bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1
-		    FROM activity inbound
-		   WHERE inbound.counterparty_email = $1
-		     AND inbound.direction = 'inbound'
-		     AND NOT inbound.bulk_mail_attested
-		     AND inbound.thread_key <> ''
-		     AND `+auth.ActivityAvailableClause("inbound")+`
-		     AND EXISTS (
-		           SELECT 1
-		             FROM activity ours
-		            WHERE ours.thread_key = inbound.thread_key
-		              AND ours.counterparty_email = $1
-		              AND ours.kind = inbound.kind
-		              AND ours.counterparty_outbound_attested
-		              AND `+auth.ActivityAvailableClause("ours")+`))`,
-		normalized).Scan(&replied); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT `+wroteBack(), normalized).Scan(&replied); err != nil {
 		return false, fmt.Errorf("capture: reading whether the address wrote back: %w", err)
 	}
 	return replied, nil
+}
+
+// wroteBack is wroteBackTx's question, with $1 the folded address.
+func wroteBack() string {
+	return `EXISTS (
+		SELECT 1 FROM activity inbound
+		 WHERE ` + answeredExchange("inbound", "$1") + `
+		   AND ` + auth.ActivityAvailableClause("inbound") + `)`
+}
+
+// answeredExchange is an exchange. The message at alias is an inbound, non-bulk
+// reply from address. Its thread holds attested mail of the same kind that
+// this workspace sent to the same address. wroteBack and the publication
+// evidence (addressAnswered) both start from it; only the second adds the
+// holds. address is a placeholder or column, never request text.
+//
+// Held by: TestBothExchangeQuestionsAreBuiltFromOnePredicate
+// (backend/internal/modules/capture/answeredexchange_test.go)
+func answeredExchange(alias, address string) string {
+	return fmt.Sprintf(`%[1]s.counterparty_email = %[2]s
+		   AND %[1]s.direction = 'inbound'
+		   AND NOT %[1]s.bulk_mail_attested
+		   AND %[1]s.thread_key <> ''
+		   AND EXISTS (
+		         SELECT 1 FROM activity ours
+		          WHERE ours.thread_key = %[1]s.thread_key
+		            AND ours.counterparty_email = %[2]s
+		            AND ours.kind = %[1]s.kind
+		            AND ours.counterparty_outbound_attested
+		            AND `, alias, address) + auth.ActivityAvailableClause("ours") + `)`
 }
 
 // wroteOnTwoThreadsTx reports whether this workspace has written to the address

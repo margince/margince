@@ -283,6 +283,10 @@ var contextTargetKinds = map[string]string{
 		"disposition; it never writes the activity. Pinning bound the answer to a row " +
 		"that relinking, a participant correction or a subject fix bumps — every one of " +
 		"which is ordinary inbox work on the very message the question is about.",
+	approvalsubject.KindContactShare: "A share request is filed under the CONTACT it asks for, " +
+		"because that is the record its owner decides about. The effect writes a record " +
+		"grant and never the contact's own fields. Pinning bound the answer to a row that " +
+		"every edit and every captured message bumps while the request waits in the inbox.",
 	kindCommitmentTask: "A promise read out of a conversation is filed under the ACTIVITY " +
 		"it was said in — the message or the meeting — because those words are the evidence " +
 		"a human judges it on. The effect CREATES a task activity and never writes the " +

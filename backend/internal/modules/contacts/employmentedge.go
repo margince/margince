@@ -91,6 +91,9 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, contactID.String()); err != nil {
 		return err
 	}
+	if seat, err := contactIsSeatTx(ctx, tx, contactID.UUID); err != nil || seat {
+		return err
+	}
 	var edgeID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by, first_observed_at)
@@ -110,7 +113,10 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err != nil {
 		return fmt.Errorf("contacts: insert employment edge: %w", err)
 	}
-	return auditCapturedEmployment(ctx, tx, edgeID, contactID, companyID, relationshipOriginCapture)
+	if err := auditCapturedEmployment(ctx, tx, edgeID, contactID, companyID, relationshipOriginCapture); err != nil {
+		return err
+	}
+	return fileEmployerTwins(ctx, tx, contactID, in.CapturedBy)
 }
 
 // adoptDispositionForCompany settles a domain onto the company that already

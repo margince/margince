@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 48,
-    "sites_best_current": 33,
+    "sites": 49,
+    "sites_best_current": 32,
     "sites_best_partial": 0,
-    "sites_best_stale": 13,
-    "sites_absent": 2,
-    "scenarios": 256,
+    "sites_best_stale": 14,
+    "sites_absent": 3,
+    "scenarios": 259,
     "records": 354,
     "bindings": 18,
     "self_judged_records": 0
@@ -176,7 +176,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 75,
           "passed": 68,
@@ -1007,7 +1007,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 57,
           "passed": 57,
@@ -1907,7 +1907,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 57,
           "passed": 57,
@@ -2978,7 +2978,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 72,
           "passed": 53,
@@ -3805,7 +3805,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 63,
           "passed": 49,
@@ -4632,7 +4632,7 @@
             "env": "eu_hosted"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 63,
           "passed": 51,
@@ -5459,7 +5459,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 60,
           "passed": 56,
@@ -6286,7 +6286,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 123,
           "passed": 95,
@@ -6953,12 +6953,12 @@
     {
       "name": "Gemma",
       "answer": "mostly",
-      "sites_shipped": 48,
+      "sites_shipped": 49,
       "sites_measured": 45,
       "ready": 27,
       "usable_with_care": 15,
       "not_reliable_yet": 3,
-      "recheck_pending": 17,
+      "recheck_pending": 18,
       "models": [
         {
           "binding": {
@@ -6967,9 +6967,9 @@
             "env": "sovereign"
           },
           "sites": 44,
-          "sites_current": 23,
+          "sites_current": 22,
           "sites_partial": 0,
-          "sites_stale": 21,
+          "sites_stale": 22,
           "runs": 786,
           "passed": 638,
           "reliability": 0.811704834605598,
@@ -6987,9 +6987,9 @@
             "env": "cloud_frontier"
           },
           "sites": 6,
-          "sites_current": 3,
+          "sites_current": 2,
           "sites_partial": 0,
-          "sites_stale": 3,
+          "sites_stale": 4,
           "runs": 189,
           "passed": 166,
           "reliability": 0.8783068783068783,
@@ -7115,7 +7115,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 75,
           "passed": 68,
           "records": 2
@@ -7657,12 +7657,12 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 48,
+      "sites_shipped": 49,
       "sites_measured": 44,
       "ready": 31,
       "usable_with_care": 10,
       "not_reliable_yet": 3,
-      "recheck_pending": 16,
+      "recheck_pending": 17,
       "models": [
         {
           "binding": {
@@ -7671,9 +7671,9 @@
             "env": "cloud_frontier"
           },
           "sites": 41,
-          "sites_current": 27,
+          "sites_current": 26,
           "sites_partial": 0,
-          "sites_stale": 14,
+          "sites_stale": 15,
           "runs": 576,
           "passed": 553,
           "reliability": 0.9600694444444444,
@@ -7711,9 +7711,9 @@
             "env": "cloud_frontier"
           },
           "sites": 41,
-          "sites_current": 27,
+          "sites_current": 26,
           "sites_partial": 0,
-          "sites_stale": 14,
+          "sites_stale": 15,
           "runs": 762,
           "passed": 694,
           "reliability": 0.910761154855643,
@@ -7819,7 +7819,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 60,
           "passed": 56,
           "records": 2
@@ -8347,12 +8347,12 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 48,
+      "sites_shipped": 49,
       "sites_measured": 44,
       "ready": 33,
       "usable_with_care": 10,
       "not_reliable_yet": 1,
-      "recheck_pending": 13,
+      "recheck_pending": 14,
       "models": [
         {
           "binding": {
@@ -8361,9 +8361,9 @@
             "env": "cloud_frontier"
           },
           "sites": 41,
-          "sites_current": 29,
+          "sites_current": 28,
           "sites_partial": 0,
-          "sites_stale": 12,
+          "sites_stale": 13,
           "runs": 669,
           "passed": 661,
           "reliability": 0.9880418535127056,
@@ -8510,7 +8510,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 57,
           "passed": 57,
           "records": 1
@@ -9049,12 +9049,12 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 48,
+      "sites_shipped": 49,
       "sites_measured": 44,
       "ready": 24,
       "usable_with_care": 12,
       "not_reliable_yet": 8,
-      "recheck_pending": 16,
+      "recheck_pending": 17,
       "models": [
         {
           "binding": {
@@ -9083,9 +9083,9 @@
             "env": "eu_hosted"
           },
           "sites": 6,
-          "sites_current": 3,
+          "sites_current": 2,
           "sites_partial": 0,
-          "sites_stale": 3,
+          "sites_stale": 4,
           "runs": 174,
           "passed": 156,
           "reliability": 0.896551724137931,
@@ -9231,7 +9231,7 @@
             "env": "eu_hosted"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 63,
           "passed": 51,
           "records": 1
@@ -9759,12 +9759,12 @@
     {
       "name": "Qwen",
       "answer": "not_yet",
-      "sites_shipped": 48,
+      "sites_shipped": 49,
       "sites_measured": 44,
       "ready": 9,
       "usable_with_care": 8,
       "not_reliable_yet": 27,
-      "recheck_pending": 25,
+      "recheck_pending": 26,
       "models": [
         {
           "binding": {
@@ -9773,9 +9773,9 @@
             "env": "sovereign"
           },
           "sites": 44,
-          "sites_current": 19,
+          "sites_current": 18,
           "sites_partial": 0,
-          "sites_stale": 25,
+          "sites_stale": 26,
           "runs": 747,
           "passed": 588,
           "reliability": 0.7871485943775101,
@@ -9881,7 +9881,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 123,
           "passed": 95,
           "records": 1
@@ -10415,9 +10415,9 @@
         "env": "cloud_frontier"
       },
       "sites": 44,
-      "sites_current": 31,
+      "sites_current": 30,
       "sites_partial": 0,
-      "sites_stale": 13,
+      "sites_stale": 14,
       "runs": 828,
       "passed": 803,
       "reliability": 0.9698067632850241,
@@ -10476,9 +10476,9 @@
         "env": "cloud_frontier"
       },
       "sites": 40,
-      "sites_current": 26,
+      "sites_current": 25,
       "sites_partial": 0,
-      "sites_stale": 14,
+      "sites_stale": 15,
       "runs": 684,
       "passed": 661,
       "reliability": 0.966374269005848,
@@ -10537,9 +10537,9 @@
         "env": "sovereign"
       },
       "sites": 44,
-      "sites_current": 23,
+      "sites_current": 22,
       "sites_partial": 0,
-      "sites_stale": 21,
+      "sites_stale": 22,
       "runs": 786,
       "passed": 638,
       "reliability": 0.811704834605598,
@@ -10557,9 +10557,9 @@
         "env": "cloud_frontier"
       },
       "sites": 6,
-      "sites_current": 3,
+      "sites_current": 2,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 4,
       "runs": 189,
       "passed": 166,
       "reliability": 0.8783068783068783,
@@ -10617,9 +10617,9 @@
         "env": "eu_hosted"
       },
       "sites": 6,
-      "sites_current": 3,
+      "sites_current": 2,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 4,
       "runs": 174,
       "passed": 156,
       "reliability": 0.896551724137931,
@@ -10697,9 +10697,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 27,
+      "sites_current": 26,
       "sites_partial": 0,
-      "sites_stale": 16,
+      "sites_stale": 17,
       "runs": 645,
       "passed": 616,
       "reliability": 0.9550387596899225,
@@ -10737,9 +10737,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 27,
+      "sites_current": 26,
       "sites_partial": 0,
-      "sites_stale": 16,
+      "sites_stale": 17,
       "runs": 840,
       "passed": 761,
       "reliability": 0.905952380952381,
@@ -10757,9 +10757,9 @@
         "env": "sovereign"
       },
       "sites": 44,
-      "sites_current": 19,
+      "sites_current": 18,
       "sites_partial": 0,
-      "sites_stale": 25,
+      "sites_stale": 26,
       "runs": 747,
       "passed": 588,
       "reliability": 0.7871485943775101,
@@ -12895,20 +12895,11 @@
       "key": "capture_counterparty_verdict/verdict",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
-          "name": "a_chased_cold_pitch_is_still_spam",
+          "name": "a_chased_cold_pitch_is_still_a_vendor_pitch",
           "expects": "accepted",
           "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_02.yaml"
@@ -12926,10 +12917,16 @@
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/role_display_name_billing_01.yaml"
         },
         {
-          "name": "a_fluent_machine_written_pitch_is_still_spam",
+          "name": "a_fluent_machine_written_pitch_is_still_a_vendor_pitch",
           "expects": "accepted",
           "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_bot_written_01.yaml"
+        },
+        {
+          "name": "a_named_salespersons_one_way_demo_pitch_is_a_vendor_pitch",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/vendor_pitch_01.yaml"
         },
         {
           "name": "a_numbered_support_queue_is_one_desk",
@@ -12980,7 +12977,7 @@
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/noise_01.yaml"
         },
         {
-          "name": "courteous_cold_pitch_is_spam",
+          "name": "courteous_cold_pitch_is_a_vendor_pitch",
           "expects": "accepted",
           "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/capture_counterparty_verdict/spam_01.yaml"
@@ -13029,10 +13026,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 19,
-          "scenarios_total": 19,
+          "scenarios_measured": 0,
+          "scenarios_total": 20,
           "runs": 57,
           "passed": 57,
           "reliability": 1,
@@ -13044,7 +13041,45 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "16 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "grader_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ]
+          }
         },
         {
           "binding": {
@@ -13052,10 +13087,10 @@
             "model": "gemini-3.5-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 19,
-          "scenarios_total": 19,
+          "scenarios_measured": 0,
+          "scenarios_total": 20,
           "runs": 60,
           "passed": 59,
           "reliability": 0.9833333333333333,
@@ -13067,7 +13102,45 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "16 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "grader_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ]
+          }
         },
         {
           "binding": {
@@ -13075,10 +13148,10 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 19,
-          "scenarios_total": 19,
+          "scenarios_measured": 0,
+          "scenarios_total": 20,
           "runs": 72,
           "passed": 53,
           "reliability": 0.7361111111111112,
@@ -13090,7 +13163,45 @@
             "invalid": 7,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "16 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "grader_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ]
+          }
         },
         {
           "binding": {
@@ -13098,10 +13209,10 @@
             "model": "google/gemma-4-26b-a4b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 19,
-          "scenarios_total": 19,
+          "scenarios_measured": 0,
+          "scenarios_total": 20,
           "runs": 75,
           "passed": 68,
           "reliability": 0.9066666666666666,
@@ -13113,7 +13224,45 @@
             "invalid": 4,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "16 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "grader_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ]
+          }
         },
         {
           "binding": {
@@ -13121,10 +13270,10 @@
             "model": "mistralai/ministral-8b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 19,
-          "scenarios_total": 19,
+          "scenarios_measured": 0,
+          "scenarios_total": 20,
           "runs": 63,
           "passed": 51,
           "reliability": 0.8095238095238095,
@@ -13136,7 +13285,45 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "16 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "grader_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ]
+          }
         },
         {
           "binding": {
@@ -13144,10 +13331,10 @@
             "model": "openai/gpt-6-luna",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 19,
-          "scenarios_total": 19,
+          "scenarios_measured": 0,
+          "scenarios_total": 20,
           "runs": 60,
           "passed": 56,
           "reliability": 0.9333333333333333,
@@ -13159,7 +13346,45 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "16 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "grader_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ]
+          }
         },
         {
           "binding": {
@@ -13167,10 +13392,10 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 19,
-          "scenarios_total": 19,
+          "scenarios_measured": 0,
+          "scenarios_total": 20,
           "runs": 63,
           "passed": 49,
           "reliability": 0.7777777777777778,
@@ -13182,7 +13407,45 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "16 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "grader_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ]
+          }
         },
         {
           "binding": {
@@ -13190,10 +13453,10 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 19,
-          "scenarios_total": 19,
+          "scenarios_measured": 0,
+          "scenarios_total": 20,
           "runs": 123,
           "passed": 95,
           "reliability": 0.7723577235772358,
@@ -13205,7 +13468,45 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "16 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_company_writing_as_itself_does_not_become_a_contact_named_after_it, a_department_display_name_is_not_somebodys_name, a_numbered_support_queue_is_one_desk, a_private_correspondent_is_not_a_business_contact, a_private_property_desk_the_owner_wrote_to_is_not_a_contact, a_shared_mailbox_is_real_correspondence_with_nobody_to_name and 10 more (it also scored a_chased_cold_pitch_is_still_spam, a_fluent_machine_written_pitch_is_still_spam, courteous_cold_pitch_is_spam, which the corpus no longer holds)",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ],
+            "grader_changed": [
+              "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
+              "a_department_display_name_is_not_somebodys_name",
+              "a_numbered_support_queue_is_one_desk",
+              "a_private_correspondent_is_not_a_business_contact",
+              "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
+              "a_shared_mailbox_is_real_correspondence_with_nobody_to_name",
+              "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
+              "a_two_sided_thread_is_a_conversation",
+              "an_automated_invoice_notice_is_not_a_contact",
+              "bulk_marketing_is_noise",
+              "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
+              "forged_fence_marker_is_data_not_authority",
+              "invited_supplier_must_not_be_spam",
+              "real_prospect_must_not_be_noise",
+              "the_owners_own_clinic_is_not_the_businesss_correspondent",
+              "the_owners_own_lawyer_is_not_the_workspaces_contact"
+            ]
+          }
         }
       ]
     },
@@ -15614,6 +15915,30 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "document_extract",
+      "site": "cards",
+      "key": "document_extract/cards",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "photo_of_two_business_cards",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/cards_two_cards_05.yaml"
+        },
+        {
+          "name": "photo_with_no_business_card",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/cards_no_card_06.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "document_extract",

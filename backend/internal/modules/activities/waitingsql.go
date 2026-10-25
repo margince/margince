@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
 // waitingContactRank orders the contacts one message is filed under so the
@@ -277,7 +278,8 @@ var waitingRepliesSQL = `
 	   AND (%[12]s OR EXISTS (
 	         SELECT 1 FROM activity_link sales
 	          WHERE sales.activity_id = a.id
-	            AND (sales.contact_id IS NOT NULL
+	            AND ((sales.contact_id IS NOT NULL AND EXISTS (
+	                    SELECT 1 FROM contact sc WHERE sc.id = sales.contact_id AND ` + relationshipmark.NotMarkedSQL("sc") + `))
 	              OR sales.company_id IS NOT NULL
 	              OR EXISTS (SELECT 1 FROM deal d
 	                          WHERE d.id = sales.deal_id AND ( %[6]s OR (d.archived_at IS NULL AND (` + requestCandidateSQL + `))))

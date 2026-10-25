@@ -61,13 +61,13 @@ func TestSplitScrapedAddressFindsEachPart(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		got, ok := splitScrapedAddress(tc.raw)
+		got, ok := SplitAddressText(tc.raw)
 		if !ok {
-			t.Errorf("splitScrapedAddress(%q) refused an address with a street, postal code and city", tc.raw)
+			t.Errorf("SplitAddressText(%q) refused an address with a street, postal code and city", tc.raw)
 			continue
 		}
 		if got, want := addressPartsOf(got), addressPartsOf(tc.want); got != want {
-			t.Errorf("splitScrapedAddress(%q)\n got %q\nwant %q", tc.raw, got, want)
+			t.Errorf("SplitAddressText(%q)\n got %q\nwant %q", tc.raw, got, want)
 		}
 	}
 }
@@ -90,8 +90,8 @@ func TestSplitScrapedAddressRefusesWhatItWouldHaveToGuess(t *testing.T) {
 		"Example Road 1600 Building 12345 Example City",
 		"Example Street 1 12345",
 	} {
-		if got, ok := splitScrapedAddress(raw); ok || addressPartsOf(got) != addressPartsOf(crmcontracts.Address{}) {
-			t.Errorf("splitScrapedAddress(%q) = %s, true; want a refusal with nothing filled", raw, fmt.Sprint(addressPartsOf(got)))
+		if got, ok := SplitAddressText(raw); ok || addressPartsOf(got) != addressPartsOf(crmcontracts.Address{}) {
+			t.Errorf("SplitAddressText(%q) = %s, true; want a refusal with nothing filled", raw, fmt.Sprint(addressPartsOf(got)))
 		}
 	}
 }
@@ -107,4 +107,20 @@ func addressPartsOf(a crmcontracts.Address) [6]string {
 		}
 	}
 	return out
+}
+
+func TestAnUnreviewedSplitNeedsTheStreetSetApartFromThePostalCode(t *testing.T) {
+	if _, ok := SplitAddressText("Highway 1234 Dallas"); !ok {
+		t.Fatal("the reviewed rule refused a run-on address it reads today")
+	}
+	for raw, want := range map[string]bool{
+		"Highway 1234 Dallas":                      false,
+		"Example Street 4 12345 Example City":      true,
+		"Highway\n1234 Dallas":                     true,
+		"Example Street 4\n12345 Example City\nDE": true,
+	} {
+		if _, ok := splitAddressBy(raw, splitWithStreetEvidence); ok != want {
+			t.Errorf("%q: split = %v, want %v", raw, ok, want)
+		}
+	}
 }

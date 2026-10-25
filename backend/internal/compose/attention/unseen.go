@@ -239,6 +239,10 @@ const (
 func plannedWindowAtCap(lane []crmcontracts.AttentionItem) bool {
 	var today, upcoming int
 	for _, item := range lane {
+		// The reminder read is never cut, so its rows say nothing of either cap.
+		if reminded(item) {
+			continue
+		}
 		if isUpcoming(item.DueGroup) {
 			upcoming++
 			continue

@@ -5,6 +5,7 @@ import { EmptyState } from "../../design-system/atoms";
 import { liveProjects } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import type { CompanyTab } from "../../lib/companytab";
 import { useRecordZone } from "../../lib/recordzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ComposeModal } from "../mail/compose";
@@ -25,7 +26,6 @@ import { CompanyContractsCard } from "./companycontracts";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
-import type { CompanyTab } from "./companytab";
 import "./company360.css";
 import "./companytabs.css";
 

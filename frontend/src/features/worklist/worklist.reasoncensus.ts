@@ -21,6 +21,7 @@ import type { WorklistReason } from "./worklist.queries";
 // than discovered on screen.
 export const KNOWN_REASONS = {
   pinned: true,
+  reminder_due: true,
   buyer_wrote_last: true,
   non_buyer_request: true,
   waiting_days: true,

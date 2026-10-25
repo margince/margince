@@ -251,7 +251,7 @@ func exactContactOwners(ctx context.Context, tx pgx.Tx, c ResolveCandidate) ([]R
 		keep(hits, LaneEmail, true)
 	}
 	for _, phone := range c.Phones {
-		hits, err := exactContactByPhone(ctx, tx, []string{phone})
+		hits, err := exactContactByPhone(ctx, tx, []string{phone}, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -306,6 +306,7 @@ func resolveCompany(ctx context.Context, tx pgx.Tx, c ResolveCandidate, consumer
 		DisplayName: c.Name,
 		LegalName:   c.LegalName,
 		Domains:     domains,
+		Phones:      c.Phones,
 	})
 	if err != nil {
 		return ResolveOutcome{}, err

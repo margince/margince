@@ -393,6 +393,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.acquiredAt": "Ngày thu thập",
   "approval.preview.promotedLead": "Lead sẽ chuyển đổi",
   "approval.preview.sourceActivity": "Lịch sử gắn với lead nguồn này",
+  "approval.preview.sourceWithheldActivities":
+    "Lịch sử khác của lead nguồn này mà bạn không thể đọc",
   "approval.preview.sourceConsent": "Đồng ý của lead nguồn này",
   "approval.preview.channelPosition": "Vị trí trong danh sách",
   "approval.preview.emailCorrespondence": "Địa chỉ được coi là đã có trao đổi",
@@ -412,6 +414,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.precisionMonth": "Chỉ tháng",
   "approval.preview.mergeTags":
     "Thay nhãn nguồn trên các bản ghi được hiển thị bằng nhãn giữ lại. Nếu đã có cả hai nhãn, chỉ xóa gán nhãn nguồn trùng lặp. Lưu trữ nhãn nguồn và cho phép dùng lại tên; tên không được giữ làm bí danh.",
+  "approval.preview.partnerTierUnset":
+    "Bậc biên lợi nhuận: chưa đặt. Một thành viên đặt bậc này ở tab Đối tác của công ty.",
   "approval.preview.mergeTagSource": "Nhãn sẽ xóa",
   "approval.preview.mergeTagTarget": "Nhãn giữ lại",
   "approval.preview.mergeTagMove": "Bản ghi sẽ nhận nhãn giữ lại",
@@ -613,6 +617,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionMoveActivity": "Hoạt động sẽ chuyển sang liên hệ",
   "approval.preview.promotionDuplicateActivity":
     "Hoạt động đã có ở liên hệ; bỏ liên kết lead",
+  "approval.preview.promotionWithheldActivities":
+    "Các hoạt động khác cũng được chuyển mà bạn không thể đọc",
   "approval.preview.promotionConsentBefore": "Sự đồng ý trước khi chuyển đổi",
   "approval.preview.promotionRestriction": "Hạn chế sẽ chuyển sang",
   "approval.preview.promotionRestrictionAuthority": "Hạn chế được ghi nhận bởi",
@@ -1726,6 +1732,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.forecast_snapshot": "Ảnh chụp dự báo hằng ngày",
   "systemJob.geocode": "Tra cứu địa chỉ công ty",
   "systemJob.geocode_backfill": "Tra cứu địa chỉ còn tồn đọng",
+  "systemJob.address_country_check": "Kiểm tra quốc gia của địa chỉ",
   "systemJob.graph_edge": "Cập nhật độ mạnh của quan hệ",
   "systemJob.graph_edge_reconcile": "Cập nhật độ mạnh của quan hệ",
   "systemJob.handbook_corpus": "Lập chỉ mục sổ tay",
@@ -1786,6 +1793,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentJob.capture_counterparty_verdict": "Kiểm tra bên gửi thư",
   "agentJob.coldstart": "Tiếp cận đầu tiên",
   "agentJob.company_name_promotion": "Cập nhật tên công ty",
+  "agentJob.contact_share": "Yêu cầu chia sẻ liên hệ",
   "agentJob.deal_scout": "Trinh sát deal",
   "agentJob.dealscout": "Trinh sát deal",
   "agentJob.deepread": "Trình đọc trang web",
@@ -2048,6 +2056,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.vat_status": "Trạng thái VAT",
   "history.field.visibility": "Phạm vi hiển thị",
   "history.field.parent_company_id": "Công ty mẹ",
+  "history.field.relationship_mark": "Nhãn quan hệ",
   "history.field.partner_attribution": "Ghi công đối tác",
   "history.field.partner_company_id": "Đối tác",
   "history.field.project_id": "Dự án",
@@ -2148,6 +2157,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm liên hệ, công ty, deal, dự án, sản phẩm, hoạt động, lead…",
   "search.prompt": "Nhập từ khóa tìm kiếm.",
   "search.empty": "Không có kết quả cho “{q}”.",
+  "search.nearMatches": "Có phải bạn muốn tìm:",
   "search.group.contact": "Liên hệ",
   "search.group.company": "Công ty",
   "search.group.deal": "Deal",
@@ -2500,6 +2510,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hồ sơ này đã thay đổi sau khi bạn mở. Tải lại để xem thay đổi, rồi thực hiện lại thao tác.",
   "common.duplicate.email":
     "Một liên hệ hoặc lead khác đã có địa chỉ email này, nên email chưa được lưu ở đây.",
+  "common.heldByColleague":
+    "Một đồng nghiệp đã có liên hệ này.",
+  "common.heldByColleague.asked":
+    "Một đồng nghiệp đã có liên hệ này. Margince đã đề nghị họ chia sẻ liên hệ với bạn.",
   "common.duplicate.domain":
     "Một công ty khác đã có tên miền này, nên tên miền chưa được lưu ở đây.",
   "common.duplicate.linkedinUrl":
@@ -3403,6 +3417,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.merge_records": "Gộp hồ sơ",
   "approval.kind.merge_tags": "Gộp thẻ",
   "approval.kind.archive_tag": "Ngừng dùng thẻ",
+  "approval.kind.set_up_partner": "Thiết lập chương trình đối tác",
   "approval.kind.change_record_parts": "Thay đổi các phần của hồ sơ",
   "approval.kind.update_record": "Cập nhật hồ sơ",
   "approval.kind.create_record": "Tạo hồ sơ",
@@ -3418,6 +3433,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.linkedin_match": "Đối chiếu LinkedIn",
   "approval.kind.site_lead": "Thêm liên hệ từ trang web",
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
+  "approval.kind.contact_share": "Chia sẻ liên hệ",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn vòng đời",
@@ -5399,11 +5415,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.saving": "Đang tạo…",
   "create.contact": "Liên hệ mới",
   "vcardImport.action": "Nhập vCard",
-  "vcardImport.title": "Nhập vCard",
-  "vcardImport.fileLabel": "Tệp vCard",
+  "vcardImport.title": "Nhập danh thiếp",
+  "vcardImport.fileLabel": "Tệp vCard hoặc ảnh danh thiếp",
   "vcardImport.whichFile":
-    "Tệp .vcf, định dạng xuất danh bạ của điện thoại và ứng dụng thư. Danh thiếp do chính chủ cung cấp, nên danh thiếp nhập vào không cần qua bước duyệt.",
-  "vcardImport.choose": "Chọn tệp .vcf",
+    "Tệp .vcf, định dạng xuất danh bạ của điện thoại và ứng dụng thư, hoặc ảnh chụp một hay nhiều danh thiếp. vCard do chính chủ cung cấp, nên vCard nhập vào không cần qua bước duyệt. Ảnh do mô hình đọc và có thể sai, nên mỗi danh thiếp đọc từ ảnh đều chờ bạn duyệt.",
+  "vcardImport.choose": "Chọn tệp hoặc ảnh",
   "vcardImport.working": "Đang đọc danh thiếp…",
   "vcardImport.back": "Quay lại Liên hệ",
   "vcardImport.noCards": "Tệp này không chứa danh thiếp nào.",
@@ -5411,6 +5427,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "vcardImport.outcome.created": "Đã thêm",
   "vcardImport.outcome.updated": "Đã thêm trường còn thiếu",
   "vcardImport.outcome.needsReview": "Có thể là bản trùng",
+  "vcardImport.outcome.proposed": "Đang chờ duyệt",
   "vcardImport.outcome.skipped": "Đã bỏ qua",
   "create.quickCapture": "Ghi nhanh",
   "create.quickCaptureSaved": "Đã lưu {name}",
@@ -5430,6 +5447,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.industry": "Ngành",
   "create.sizeBand": "Quy mô công ty",
   "co.address.summary": "Địa chỉ",
+  "co.address.countryMismatch": "Mã bưu chính và thành phố thuộc {country}",
 
   "create.addressLine1": "Số nhà và tên đường",
   "create.addressLine2": "Địa chỉ dòng 2",
@@ -5643,6 +5661,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.category.email": "Tệp đính kèm email",
   "docs.category.message": "Tệp đính kèm tin nhắn",
   "docs.category.other": "Khác",
+  "docs.category.link": "Liên kết đã gửi",
   "files.title": "Tệp",
   "files.empty":
     "Chưa có tệp nào trên deal này. Tải lên một tệp, hoặc liên kết một email có tệp đính kèm.",
@@ -5981,13 +6000,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unanswered":
     "Lần kiểm tra trước khi gửi chưa hoàn tất. Khi gửi sẽ kiểm tra lại.",
   "sendPermission.reason.objected":
-    "Người nhận đã phản đối tin tiếp thị. Không ai ở đây có thể gỡ hạn chế này, kể cả quản trị viên.",
+    "Người nhận đã phản đối tin tiếp thị. Chỉ quản trị viên mới có thể vẫn gửi, từng thư một.",
   "sendPermission.reason.withdrawn":
-    "Người nhận đã rút lại sự đồng ý. Không ai ở đây có thể gỡ hạn chế này, kể cả quản trị viên.",
+    "Người nhận đã rút lại sự đồng ý. Chỉ quản trị viên mới có thể vẫn gửi, từng thư một.",
   "sendPermission.reason.restricted":
-    "Dữ liệu của người nhận đang bị hạn chế xử lý. Không ai ở đây có thể gỡ hạn chế này, kể cả quản trị viên.",
+    "Dữ liệu của người nhận đang bị hạn chế xử lý. Chỉ quản trị viên mới có thể vẫn gửi, từng thư một.",
   "sendPermission.reason.askedUsToStop":
-    "Người nhận đã yêu cầu không được liên hệ. Không ai ở đây có thể gỡ hạn chế này, kể cả quản trị viên.",
+    "Người nhận đã yêu cầu không được liên hệ. Chỉ quản trị viên mới có thể vẫn gửi, từng thư một.",
   "sendPermission.reason.bounced":
     "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
   "sendPermission.reason.tooMany":
@@ -7458,6 +7477,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không thể đặt thành viên này làm người chịu trách nhiệm nên bạn trở thành người chịu trách nhiệm các hàng của họ.",
   "import.reason.owner_unknown":
     "Không có thành viên nào có email này nên bạn trở thành người chịu trách nhiệm; lead vẫn chưa giao. Số hàng nêu email này: {rows}.",
+  "import.reason.address_erased":
+    "Chủ của địa chỉ email này đã yêu cầu xóa và không được lưu lại, nên hàng không được nhập.",
+  "import.reason.address_not_split":
+    "Không tách được địa chỉ thành đường, mã bưu chính và thành phố nên địa chỉ vẫn nằm ở dòng địa chỉ đầu tiên.",
   "import.reason.phone_needs_country":
     "“{value}” cần mã quốc gia, ví dụ +49 30 1234567.",
   "import.reason.record_archived":
@@ -8113,6 +8136,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.empty":
     "Chưa có thông báo nào. Những gì cần báo cho bạn sẽ hiển thị ở đây.",
   "notifications.title": "Cách gửi theo loại",
+  "notifications.browser.label":
+    "Thông báo trình duyệt",
+  "notifications.browser.default":
+    "Khi lời nhắc của một việc bạn được giao đến giờ, trình duyệt có thể hiện thông báo trong lúc Margince đang mở ở một thẻ.",
+  "notifications.browser.granted":
+    "Đang bật. Lời nhắc đến giờ của việc bạn được giao hiện thành thông báo trình duyệt trong lúc Margince đang mở ở một thẻ. Để tắt, hãy chặn thông báo của trang này trong cài đặt trình duyệt.",
+  "notifications.browser.denied":
+    "Trình duyệt này đang chặn thông báo. Để cho phép, hãy đổi cài đặt thông báo của trang này trong cài đặt trình duyệt.",
+  "notifications.browser.unsupported":
+    "Trình duyệt này không hiện được thông báo. Lời nhắc đến giờ vẫn đứng đầu Trang chủ và Danh sách công việc của bạn.",
+  "notifications.browser.allow":
+    "Cho phép",
+  "reminder.notification.body":
+    "Đã đến giờ nhắc. Bấm để mở việc này.",
+  "reminder.notification.untitled":
+    "Lời nhắc việc",
   "notifications.sub":
     "Mọi thông báo vẫn nằm trong trung tâm thông báo, dù chọn gì ở đây.",
   "notifications.saveFailedFor": "Không thể lưu “{setting}”",
@@ -10944,6 +10983,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "companyTriage.checkedAt": "đã kiểm tra {when}",
   "pipeline.reason.no_named_reader":
     "chuỗi thư này không có thành viên nào để nhận phát hiện",
+  "pipeline.reason.from_sending_systems":
+    "chuỗi thư này chỉ có thư từ hệ thống gửi, như thông báo, nên không được đọc",
   "pipeline.reason.transport_not_read":
     "bước này chỉ đọc email, còn tin nhắn đến qua kênh khác",
   "pipeline.reason.sender_undecided":
@@ -13833,6 +13874,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.graph.routeViaYou": "Bạn trao đổi với {through} ở cùng công ty.",
   "contact.graph.noRoute":
     "Chưa ai trong công ty trao đổi với liên hệ này hoặc công ty của họ.",
+  "contact.network.captureGap_one":
+    "{names} có trong các cuộc trao đổi với liên hệ này nhưng chưa kết nối hộp thư, nên thư về sau có thể bị thiếu.",
+  "contact.network.captureGap_other":
+    "{names} có trong các cuộc trao đổi với liên hệ này nhưng chưa kết nối hộp thư, nên thư về sau có thể bị thiếu.",
+  "contact.network.captureGapInvited": "{name} (chưa đăng nhập)",
   "contact.graph.noDirect": "Chưa ai trong công ty trao đổi với liên hệ này.",
   "contact.graph.sideColumn": "Giới thiệu và thay đổi",
   "contact.graph.recordWorksWith": "Theo hồ sơ: làm việc cùng {name}",
@@ -14555,6 +14601,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.field.created_at": "Ngày tạo",
   "filters.field.hosting_provider": "Nhà cung cấp máy chủ",
   "filters.field.last_activity_at": "Hoạt động gần nhất",
+  "filters.field.location": "Vị trí",
   "filters.field.mail_provider": "Hệ thống thư",
   "filters.field.operated_service": "Dịch vụ vận hành",
   "filters.field.owner_team_id": "Nhóm chịu trách nhiệm",
@@ -14589,6 +14636,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.op.atLeast": "\u00edt nh\u1ea5t l\u00e0",
   "filters.op.lessThan": "nh\u1ecf h\u01a1n",
   "filters.op.atMost": "nhi\u1ec1u nh\u1ea5t l\u00e0",
+  "filters.op.withinRadius": "n\u1eb1m trong b\u00e1n k\u00ednh",
+  "filters.sentence.radiusOf": "{km} km quanh {place}",
   "filters.join.and": "và",
   "filters.join.or": "hoặc",
   "filters.sentence.clause": "{field} {op} {value}",
@@ -15566,6 +15615,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.category.relationships": "Liên hệ đã im lặng",
   "worklist.category.system": "Hệ thống",
   "worklist.because.pinned": "bạn đã ghim",
+  "worklist.because.reminder_due": "đã đến giờ nhắc của bạn",
   "worklist.because.non_buyer_request": "chưa xác định là việc của khách hàng",
   "worklist.because.buyer_wrote_last": "bên mua gửi tin sau cùng",
   "worklist.because.waiting_days": "đang chờ",

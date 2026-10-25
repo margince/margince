@@ -136,6 +136,8 @@ func attachedDocument(att crmcontracts.Attachment) agents.AttachedDocument {
 		Checksum:     orZero(att.Checksum),
 		CapturedBy:   orZero(att.CapturedBy),
 		CreatedAt:    att.CreatedAt,
+		Category:     string(orZero(att.Category)),
+		URL:          orZero(att.Url),
 		ContractID:   (*ids.UUID)(att.ContractId),
 	}
 }

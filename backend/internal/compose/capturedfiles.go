@@ -105,3 +105,19 @@ func (k capturedFileKeeper) RecordWithheld(
 		Category:   from.Category,
 	}, withheld)
 }
+
+func (k capturedFileKeeper) RecordLinks(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	from capture.FileSource, links []capture.MailLink,
+) error {
+	owned := make([]activities.CapturedLink, 0, len(links))
+	for _, link := range links {
+		owned = append(owned, activities.CapturedLink{URL: link.URL, Text: link.Text})
+	}
+	return k.store.RecordCapturedLinks(ctx, tx, activityID, activities.CapturedFileSource{
+		System:     from.System,
+		MessageID:  from.MessageID,
+		CapturedBy: from.CapturedBy,
+		Category:   from.Category,
+	}, owned)
+}

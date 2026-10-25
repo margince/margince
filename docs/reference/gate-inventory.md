@@ -225,6 +225,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `approvalsummarycopy_test.go` | H1 | An approval's summary is written through a per-language copy table, never as an English sentence in product code. |
 | `assigneeeligibility_test.go` | H2 | A seat's fitness to receive work has one spelling, wherever it is asked. |
 | `assurancerules_test.go` | H3 | Every assurance rule proves both halves of its judgement. |
+| `attachmentlinkreaders_test.go` | H1 | A document link row has no bytes and an empty storage\_key. |
 | `audiencereaders_test.go` | H2 | A message's audience says who may read its content. |
 | `audienceretractioncallers_test.go` | H3 | activities.RetractDerivedForActivityTx documents that it is not atomic with the narrowing it follows, and the sentence is only true while every caller is an async consumer reacting to a committed audience change. |
 | `auditbeforeimage_test.go` | H2 | An audited update says what it changed from. |
@@ -275,6 +276,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `docslinktargets_test.go` | H3 | Every relative link under docs/ points at a file that exists. |
 | `docsnamedthings_test.go` | H2 | A page that tells the reader to run a make target, set an environment variable or follow a contribution rule is a claim about the tree. |
 | `docsreachability_test.go` | H3 | Every page under docs/ is reachable by following links from docs/README.md. |
+| `documentreaders_test.go` | H1 | Every list of attachments in internal/modules/activities answers "which files does this record hold" through activities.documentMembership. |
 | `doitokenexposure_test.go` | H2 | The plaintext confirm token goes into the mail body and nowhere else. |
 | `draftlanguageevidence_test.go` | H2 | Every draft route reads its language from the same evidence. |
 | `draftreplyreader_test.go` | H2 | A {subject, body} model reply has one reader. |
@@ -395,6 +397,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `sendcontext_test.go` | H2 | Every send says why it is being sent. |
 | `sendcontextvalidation_test.go` | H3 | Every door that builds a send input runs the claim through the shared validator. |
 | `sendinghumanreaders_test.go` | H2 | principal.SendingHuman has one reader, and it answers one question. |
+| `sendingsystemmail_test.go` | H2 | A query that reads captured mail through the company reach set must leave out mail from a sending system. |
 | `settingreaders_test.go` | H2 | `setting` carries neither row-level security nor a row-scope clause. |
 | `settingscatalog_test.go` | H3 | Every registered setting key is unique, well-formed and governed, names the module that declares it, and does not also exist in margince.yaml's runtime surface. |
 | `singleliteralcheck_test.go` | H2 | A CHECK that admits one value and no other is a discriminator or it is nothing. |
@@ -432,6 +435,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contactscrub_test.go` | H2 | Erasing a contact and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |
 | `dedupespine_test.go` | H2 | Every INSERT site for contacts, companies and leads is derived from the tree and must ask the duplicate-matching engine with full inputs. |
 | `effectredemption_test.go` | H2 | Every approval effect redeems the approval it ran. |
+| `erasuresuppressionreach_test.go` | H2 | Every writer of an address or channel account asks the erasure list. |
 | `gopinsrenovatereach_test.go` | H3 | Every Go pin this tree holds is one Renovate can move, and it moves them together. |
 | `importheavywork_test.go` | H2 | An import's rows are written only by the worker. |
 | `liveprobelock_test.go` | H2 | A live-probed write of a held row locks its subject. |
@@ -469,6 +473,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `noopifmatch_test.go` | H2 | An update that skips its write because nothing changes still answers the If-Match. |
 | `positionalrowscan_test.go` | H2 | A positional row mapping may only target a struct its own package declares. |
 | `promptversionderived_test.go` | H2 | A cached answer is keyed by a fingerprint, and the fingerprint has to move when the prompt that produced the answer moves. |
+| `relationshipmarkvocabulary_test.go` | H1 | The relationship mark is spelled twice: relationshipmark.Values() and the column's CHECK. |
 | `replyverdictvocabulary_test.go` | H1 | The reply verdict is spelled in three places, and they have to agree. |
 | `resetwireshape_test.go` | H2 | The reset-data 200 body has the keys the contract's required list names, in the hand-written resetDataResponse struct. |
 | `retentionseedcoverage_test.go` | H1 | Every scope the retention engine can act on ships a default, or says why not. |

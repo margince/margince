@@ -494,7 +494,7 @@ func bothDoorsRegistry(staging agents.Approvals) *agents.Registry {
 		}))
 	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil, nil, nil, nil)
 	agents.RegisterEnrichTool(reg, channelAnchor{}, nil)
-	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil, nil)
+	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil, nil, nil)
 	agents.RegisterCommsTools(reg, bothDoorsComms{}, channelAnchor{})
 	agents.RegisterMeetingInvitationTool(reg, bothDoorsComms{}, channelAnchor{})
 	agents.RegisterImportTools(reg, bothDoorsImports{})

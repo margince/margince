@@ -32,6 +32,18 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 	mixed := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{
 		refused(commsauthz.ReasonNoEvidence), refused(commsauthz.ReasonHardBounce),
 	}}
+	objected := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonObjection)}}
+	holdsTheGrant := func(roleKeys ...string) principal.Principal {
+		return principal.Principal{
+			Type: principal.PrincipalHuman,
+			Permissions: principal.Permissions{
+				RoleKeys: roleKeys,
+				Objects: map[string]principal.ObjectGrant{
+					consent.EntityCommunicationException: {Create: true},
+				},
+			},
+		}
+	}
 	bounced := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonHardBounce)}}
 
 	for _, tc := range []struct {
@@ -69,6 +81,15 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 				},
 			},
 			review: held, want: []string{"direct_send"},
+		},
+		{
+			// The grant every sender holds does not reach a contact's own stop.
+			name: "a rep holding the grant, refused for an objection", actor: holdsTheGrant("rep"),
+			review: objected,
+		},
+		{
+			name: "an admin, refused for an objection", actor: holdsTheGrant("admin"),
+			review: objected, want: []string{"direct_send"},
 		},
 		{
 			// Holding the grant does not conjure a message to send. A refusal

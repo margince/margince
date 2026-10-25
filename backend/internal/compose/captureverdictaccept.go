@@ -172,6 +172,11 @@ func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *contacts.Sto
 	if err != nil {
 		return "", err
 	}
+	// A seat's address keeps `real` for the reason correctRefusedVerdict gives.
+	if created.SeatAddress {
+		return "", pending.ResolveReviewedAs(ctx, tx, proposal.DispositionID,
+			capture.PendingStatusReal, capture.KindContact, seatAddressReason)
+	}
 	// An address erased while the offer sat in the inbox creates nothing, and
 	// the ledger says so rather than reporting `real` for a contact who does not
 	// exist — the same correction the machine verdict makes.

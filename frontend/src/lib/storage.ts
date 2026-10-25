@@ -89,6 +89,13 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  // The task reminders this browser has shown as a notification, so each is
+  // shown once across its tabs. Seat: the next seat to sign in starts afresh.
+  taskRemindersShown: {
+    name: "margince.taskReminders.shown",
+    area: "local",
+    lifetime: "seat",
+  },
 } as const satisfies Record<string, Declared>;
 
 type Registered = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

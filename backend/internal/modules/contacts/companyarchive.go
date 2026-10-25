@@ -202,6 +202,7 @@ func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now 
 // A var rather than a const, for the reason contactColumns is one.
 var companyColumns = `id, display_name, legal_name, description, industry, size_band, owner_id, visibility,
 	address_line1, address_line2, address_city, address_region, address_postal_code, address_country,
+	` + addressCountriesSQL("company") + `,
 	lifecycle, parent_company_id, merged_into_id, logo_object_key, linkedin_url, source, captured_by,
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL(companyEntity) + `,

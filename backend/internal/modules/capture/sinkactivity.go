@@ -299,8 +299,13 @@ func (s *Sink) finishNewActivity(
 	// resolved on the participant rows, so the links come from there — BEFORE
 	// the audience limiter, which decides what a link-less record is born as.
 	derivedLinks := 0
+	// Mail private to this seat goes on no lead, as it creates no contact.
+	private, _, err := messageIsPrivateTx(ctx, tx, rec, fields)
+	if err != nil {
+		return counterpartyDecision{}, err
+	}
 	if fields.Kind == meetingKind {
-		derivedLinks, err = s.linkResolvedMeetingParticipants(ctx, tx, id, len(rec.Links))
+		derivedLinks, err = s.linkResolvedMeetingParticipants(ctx, tx, id, len(rec.Links), private)
 		if err != nil {
 			return counterpartyDecision{}, err
 		}
@@ -320,7 +325,7 @@ func (s *Sink) finishNewActivity(
 	// hold. The meeting arm feeds the count because an attendee link means a
 	// record stands behind the meeting; a cc'd contact is not that claim.
 	if fields.Kind != meetingKind && decision.traceOutcome != TraceSuppressed {
-		if err := s.linkResolvedMailParticipants(ctx, tx, id, len(rec.Links)); err != nil {
+		if err := s.linkResolvedMailParticipants(ctx, tx, id, len(rec.Links), private); err != nil {
 			return counterpartyDecision{}, err
 		}
 	}

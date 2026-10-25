@@ -3,7 +3,10 @@
 
 package mailidentity
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestHasMachineLocalpartReadsOnlyTheLocalPart(t *testing.T) {
 	t.Parallel()
@@ -57,6 +60,30 @@ func TestDeliverySystemSendersAreRecognizedInTheShapesTheyArriveIn(t *testing.T)
 	for _, addr := range keeps {
 		if IsDeliverySystemSender(addr) {
 			t.Errorf("%s was dropped as delivery-system mail — a real sender is behind it", addr)
+		}
+	}
+}
+
+func TestNotificationAddressesAreSendingSystemsButHumansAtTheBaseDomainAreNot(t *testing.T) {
+	t.Parallel()
+	token := strings.Repeat("aorgB9", 34)
+	for address, want := range map[string]bool{
+		"d+" + token + "@docs.google.com":               true,
+		"D+" + token + "@DOCS.GOOGLE.COM":               true,
+		"d+" + token + "@example.com":                   true,
+		"drive-shares-dm-noreply@drive.google.com":      true,
+		"someone@calendar.google.com":                   true,
+		"anna@google.com":                               false,
+		"anna@example.com":                              false,
+		"anna+invoices@example.com":                     false,
+		"a+" + strings.Repeat("x", 31) + "@example.com": false,
+		"ab+" + token + "@example.com":                  false,
+	} {
+		if got := HasMachineLocalpart(address); got != want {
+			t.Errorf("HasMachineLocalpart(%.40q) = %v, want %v", address, got, want)
+		}
+		if got := IsMachineAddress(address); got != want {
+			t.Errorf("IsMachineAddress(%.40q) = %v, want %v", address, got, want)
 		}
 	}
 }

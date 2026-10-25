@@ -26,7 +26,7 @@ const (
 	TaskCorpusAsk Task = "corpus_ask"
 	// TaskDealHealth is deal_status — the deal page's one written card: where the deal stands, what could lose it, and why the recommended move is the right one. The model reads the deal's own facts (its fields, its health factors with the sentence behind each, its timeline, its open tasks and its Deal Room conversation — all assembled under the CALLER's row scope, with a withheld row contributing its date but not its words) and writes the sentences. The VERB never moves: which action the card offers is decided by rules from records and handed to the model in recommended_move, so a reader clicking Draft the reply reaches the mail the rules picked. A missing lane, an over-budget call or a reply the grounding filter refuses degrades to the same card composed deterministically, with generated_by saying so. The card is CACHED per reader on a fingerprint of its input plus the prompt and routing versions, so a deal nobody touched costs one call ever.
 	TaskDealHealth Task = "deal_health"
-	// TaskDocumentExtract is read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it.
+	// TaskDocumentExtract is read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it. The `cards` site reads a PHOTO of business cards instead, on the same ladder and the same carriage declaration, for the contact import: an importer waits on it in the request, and the result goes to the approval queue, never to a contact.
 	TaskDocumentExtract Task = "document_extract"
 	// TaskDraftReply is Five sites, one task: the reply to an activity, the contact page's composer, the company page's first-touch outbound, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site and the two composers each have two system variants (voice-enabled and plain), selected per call from the sender's Voice DNA state — a variant, not a site of its own.
 	TaskDraftReply Task = "draft_reply"
@@ -182,7 +182,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "9baa1796e46cf639d81d1ea1323081c1344d83dd6bdb8772e40689d01ec354d3"
+const TaskContractHash = "0cca81cf1bd83d49b342b0b8ef8501fe8bf4d93caa059221949f426ceef3438b"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -433,6 +433,7 @@ var taskSites = map[Task][]Site{
 	},
 	TaskDocumentExtract: {
 		{Name: "fields", Kind: "one_shot"},
+		{Name: "cards", Kind: "one_shot"},
 	},
 	TaskDraftReply: {
 		{Name: "reply", Kind: "one_shot"},

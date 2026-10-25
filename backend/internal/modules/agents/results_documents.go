@@ -20,6 +20,11 @@ type AttachedDocument struct {
 	Checksum     string    `json:"checksum"`
 	CapturedBy   string    `json:"captured_by"`
 	CreatedAt    time.Time `json:"created_at"`
+	// Category is what kind of document this is; "link" is a document link a
+	// mail carried, which has no bytes.
+	Category string `json:"category,omitempty"`
+	// URL is the address of a link, absent for a file.
+	URL string `json:"url,omitempty"`
 	// ContractID is the agreement the file was filed against, absent for none.
 	ContractID *ids.UUID `json:"contract_id,omitempty"`
 }

@@ -3,9 +3,9 @@
 
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-import { ENTITY, type EntityKind, isEntityKind } from "../lib/entity";
-import type { Route } from "../lib/router";
-import { settingsHref } from "../lib/settingsrouting";
+import { ENTITY, type EntityKind, isEntityKind } from "./entity";
+import type { Route } from "./router";
+import { settingsHref } from "./settingsrouting";
 
 // What a search hit IS to the two surfaces that draw one — the ⌘K palette and
 // the results screen — spelled once.

@@ -275,6 +275,7 @@ The 19 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
+- `communication_suppression_carried_from_ix`: `btree (carried_from) WHERE (carried_from IS NOT NULL)`
 - `communication_suppression_live_address`: `btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL))`
 - `communication_suppression_one_live_bounce`: `unique, btree (lower(address)) WHERE ((kind = 'hard_bounce') AND (address IS NOT NULL) AND (revoked_at IS NULL))`
 - `communication_suppression_pkey`: `unique, btree (id)`
@@ -700,6 +701,7 @@ The 19 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `idx_preference_token_contact`: `btree (contact_id)`
+- `preference_token_contact_email_ix`: `btree (contact_email_id) WHERE (contact_email_id IS NOT NULL)`
 - `preference_token_pkey`: `unique, btree (id)`
 - `preference_token_token_key`: `unique, btree (token)`
 - `uq_preference_token_contact_address`: `unique, btree (contact_id, contact_email_id) NULLS NOT DISTINCT WHERE (revoked_at IS NULL)`

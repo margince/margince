@@ -19,7 +19,8 @@
         "move_deal": "progress_deal",
         "move_project": "advance_project_phase",
         "promote": "promote_lead",
-        "qualify": "qualify_lead"
+        "qualify": "qualify_lead",
+        "set_up_partner": "set_up_partner"
       }
     },
     "change_tags": {

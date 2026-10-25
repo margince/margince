@@ -11,7 +11,8 @@ var searchRecordsCopy = toolCopy{
 	Purpose: "Find records by the words they carry, best match first: contacts, companies, deals, " +
 		"leads and projects, and products, offer templates or activity when you name them.",
 	Limits: "It needs words in q. It searches the timeline (message bodies, call notes, meetings) " +
-		"only when you name activity.",
+		"only when you name activity. When nothing matches, near_matches may list up to five " +
+		"records whose names are spelt close to q; they are suggestions, not matches.",
 	Instead: "Use list_records to list records without words or by a condition, read_record when " +
 		"you already hold the record's id, and run_report when the question is a count, a total " +
 		"or a breakdown rather than a set of records.",
@@ -73,9 +74,13 @@ var createRecordCopy = toolCopy{
 		"the same as one a human types in." + pastDayNeedsATime,
 	Instead: "Search first when the record might already exist — a second copy of a contact or " +
 		"company is a problem that then needs resolve_duplicates to undo. A record that shares only " +
-		"a name, with a different email, phone or employer, is not proof of a duplicate: create " +
-		"it — the create files the pair for review, and you report the pair as filed, unresolved " +
-		"until the reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
+		"a name, with a different email, phone or employer, is not proof of a duplicate. When the " +
+		"search finds a contact with the same name at the same employer, ask the human whether " +
+		"it is the same contact before you link anything to it; two colleagues can share a name. " +
+		"Giving a contact its employer by creating an employment relationship files " +
+		"any same-name contact at that employer for review: the result carries it as " +
+		"duplicate_candidates, and you report the pair as filed, unresolved until the " +
+		"reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
 		"a CSV — go through preview_import, which checks " +
 		"every row and writes nothing; creating them one by one skips that check.",
 	Retain: "The new record's id comes back in the result; keep it for anything that links to it. " +

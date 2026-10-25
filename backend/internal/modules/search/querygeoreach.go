@@ -18,6 +18,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/geocode"
 )
 
 // geocodeReach is what the caller could have matched, had the radius been wide
@@ -68,7 +70,7 @@ const (
 // capability by using it, and pre-checking would put a count in front of every
 // radius call to say something the rows themselves say.
 func (e *QueryExecutor) anythingLocated(ctx context.Context, target string) (geocodeReach, error) {
-	columns, locatable := geoCapableTargets[target]
+	columns, locatable := geocode.ColumnsFor(target)
 	if !locatable {
 		// bindGeo already refused this plan with its own note, so nothing here
 		// is owed a second one.
@@ -96,9 +98,9 @@ func (e *QueryExecutor) anythingLocated(ctx context.Context, target string) (geo
 		return reachUnanswerable, nil
 	}
 	// Every identifier is a compile-time literal off the branch and
-	// geoCapableTargets; the status value and the scope's terms bind as
+	// the geocode package's column map; the status value and the scope's terms bind as
 	// parameters.
-	where := []string{"t.archived_at IS NULL", fmt.Sprintf("t.%s = $%d", columns.Status, arg(geoResolvedStatus))}
+	where := append([]string{"t.archived_at IS NULL"}, geocode.LocatedSQL("t", columns, arg)...)
 	if narrowing := branch.narrowing("t"); narrowing != "" {
 		where = append(where, narrowing)
 	}

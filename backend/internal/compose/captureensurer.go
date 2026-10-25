@@ -102,6 +102,9 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 		OwnerScoped:     true,
 		NarrowedBecause: contacts.NarrowedAwaitingVerdict,
 	})
+	if errors.Is(err, contacts.ErrCounterpartyIsSeat) {
+		return capture.EnsureOutcome{}, nil
+	}
 	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		// A13: the erased address stays dead — a deliberate no-op, not a
 		// fault for the reconcile queue, and nothing was created to count.
@@ -138,7 +141,7 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 // PublishAnsweredContactsWorkspace makes any promotion this one loses.
 func (p contactsEnsurer) promoteOnReply(ctx context.Context, in capture.EnsureRequest, contactID ids.ContactID) {
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-		return publishAnsweredTx(ctx, tx, p.store, contactID, in.OwnerID, in.Email)
+		return publishAnsweredTx(ctx, tx, p.store, contactID, in.Email)
 	})
 	if err != nil {
 		p.log.ErrorContext(ctx, "capture: publishing a contact on their reply failed",

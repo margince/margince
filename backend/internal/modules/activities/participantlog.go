@@ -35,6 +35,7 @@ const (
 	linkEntityContact  = "contact"
 	linkEntityCompany  = "company"
 	linkEntityDeal     = "deal"
+	linkEntityLead     = "lead"
 	linkEntityActivity = "activity"
 	linkEntityProject  = "project"
 )

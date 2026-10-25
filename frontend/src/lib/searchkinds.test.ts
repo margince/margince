@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { parseHash, type Route, routeHash } from "../lib/router";
+import { parseHash, type Route, routeHash } from "./router";
 import {
   groupSearchHits,
   SEARCH_ACTIVITY_SEGMENT,

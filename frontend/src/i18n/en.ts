@@ -379,6 +379,8 @@ export const en = {
   "approval.preview.acquiredAt": "Acquired on",
   "approval.preview.promotedLead": "Lead to promote",
   "approval.preview.sourceActivity": "History linked to this source lead",
+  "approval.preview.sourceWithheldActivities":
+    "Further history on this source lead you cannot read",
   "approval.preview.sourceConsent": "Consent on this source lead",
   "approval.preview.channelPosition": "Position in list",
   "approval.preview.emailCorrespondence":
@@ -399,6 +401,8 @@ export const en = {
   "approval.preview.precisionMonth": "Month only",
   "approval.preview.mergeTags":
     "Replace the source tag on the shown records with the surviving tag. Where both tags are present, remove only the duplicate source assignment. Archive the source tag and release its name for reuse; it is not retained as an alias.",
+  "approval.preview.partnerTierUnset":
+    "Margin tier: not set. A human sets it on the company’s Partner tab.",
   "approval.preview.mergeTagSource": "Tag to remove",
   "approval.preview.mergeTagTarget": "Tag to keep",
   "approval.preview.mergeTagMove": "Record that gains the surviving tag",
@@ -601,6 +605,8 @@ export const en = {
   "approval.preview.promotionMoveActivity": "Activity to move to contact",
   "approval.preview.promotionDuplicateActivity":
     "Activity already on contact; remove lead link",
+  "approval.preview.promotionWithheldActivities":
+    "Further activities that move, which you cannot read",
   "approval.preview.promotionConsentBefore":
     "Contact consent before qualification",
   "approval.preview.promotionRestriction": "Restriction to carry",
@@ -1723,6 +1729,7 @@ export const en = {
   "systemJob.forecast_snapshot": "Daily forecast snapshot",
   "systemJob.geocode": "Company address lookup",
   "systemJob.geocode_backfill": "Address lookup backlog",
+  "systemJob.address_country_check": "Address country check",
   "systemJob.graph_edge": "Relationship strength update",
   "systemJob.graph_edge_reconcile": "Relationship strength update",
   "systemJob.handbook_corpus": "Handbook indexing",
@@ -1783,6 +1790,7 @@ export const en = {
   "agentJob.capture_counterparty_verdict": "Mail sender check",
   "agentJob.coldstart": "First approach",
   "agentJob.company_name_promotion": "Company name update",
+  "agentJob.contact_share": "Contact share request",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website reader",
@@ -2045,6 +2053,7 @@ export const en = {
   "history.field.vat_status": "VAT status",
   "history.field.visibility": "Visibility",
   "history.field.parent_company_id": "Parent company",
+  "history.field.relationship_mark": "Relationship mark",
   "history.field.partner_attribution": "Partner attribution",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
@@ -2166,6 +2175,7 @@ export const en = {
     "Search contacts, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Enter a search term.",
   "search.empty": "No matches for “{q}”.",
+  "search.nearMatches": "Did you mean:",
   "search.group.contact": "Contacts",
   "search.group.company": "Companies",
   "search.group.deal": "Deals",
@@ -2535,6 +2545,9 @@ export const en = {
     "This record changed after you opened it. Reload it to see the change, then make yours again.",
   "common.duplicate.email":
     "Another contact or lead already has this email address, so it was not saved here.",
+  "common.heldByColleague": "A colleague already has this contact.",
+  "common.heldByColleague.asked":
+    "A colleague already has this contact. Margince asked them to share it with you.",
   "common.duplicate.domain":
     "Another company already has this domain, so it was not saved here.",
   "common.duplicate.linkedinUrl":
@@ -3504,6 +3517,7 @@ export const en = {
   "approval.kind.merge_records": "Merge records",
   "approval.kind.merge_tags": "Merge tags",
   "approval.kind.archive_tag": "Retire a tag",
+  "approval.kind.set_up_partner": "Set up a partner program",
   "approval.kind.change_record_parts": "Change a record’s parts",
   "approval.kind.update_record": "Update record",
   "approval.kind.create_record": "Create record",
@@ -3519,6 +3533,7 @@ export const en = {
   "approval.kind.linkedin_match": "LinkedIn match",
   "approval.kind.site_lead": "Add contact from website",
   "approval.kind.capture_counterparty": "Add contact from mail",
+  "approval.kind.contact_share": "Share a contact",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",
@@ -5612,11 +5627,11 @@ export const en = {
   // what it says. The label names the ACT, not the source, because the same
   // form takes a conference badge and a business card.
   "vcardImport.action": "Import vCards",
-  "vcardImport.title": "Import vCards",
-  "vcardImport.fileLabel": "vCard file",
+  "vcardImport.title": "Import business cards",
+  "vcardImport.fileLabel": "vCard file or card photo",
   "vcardImport.whichFile":
-    "A .vcf file, the contact export format of phones and mail clients. A card comes from its owner, so imported cards skip approval.",
-  "vcardImport.choose": "Select .vcf file",
+    "A .vcf file, the contact export format of phones and mail clients, or a photo of one or more business cards. A vCard comes from its owner, so imported vCards skip approval. A photo is read by a model and can be wrong, so every card read from a photo waits for your approval.",
+  "vcardImport.choose": "Select file or photo",
   "vcardImport.working": "Reading cards…",
   "vcardImport.back": "Back to contacts",
   "vcardImport.noCards": "The file contains no cards.",
@@ -5624,6 +5639,7 @@ export const en = {
   "vcardImport.outcome.created": "Added",
   "vcardImport.outcome.updated": "Missing fields added",
   "vcardImport.outcome.needsReview": "Possible duplicate",
+  "vcardImport.outcome.proposed": "Waiting for approval",
   "vcardImport.outcome.skipped": "Skipped",
   "create.quickCapture": "Quick capture",
   "create.quickCaptureSaved": "{name} saved",
@@ -5643,6 +5659,7 @@ export const en = {
   "create.industry": "Industry",
   "create.sizeBand": "Company size",
   "co.address.summary": "Address",
+  "co.address.countryMismatch": "Postal code and city are in {country}",
 
   "create.addressLine1": "Street and number",
   "create.addressLine2": "Address line 2",
@@ -5858,6 +5875,7 @@ export const en = {
   "docs.category.email": "Email attachment",
   "docs.category.message": "Message attachment",
   "docs.category.other": "Other",
+  "docs.category.link": "Links sent",
   "files.title": "Files",
   "files.empty":
     "No files on this deal yet. Upload a file, or link an email with an attachment.",
@@ -6197,13 +6215,13 @@ export const en = {
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
-    "The recipient objected to marketing. No one here can lift this, including an administrator.",
+    "The recipient objected to marketing. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.withdrawn":
-    "The recipient withdrew consent. No one here can lift this, including an administrator.",
+    "The recipient withdrew consent. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.restricted":
-    "The recipient’s data is under a processing restriction. No one here can lift this, including an administrator.",
+    "The recipient’s data is under a processing restriction. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.askedUsToStop":
-    "The recipient asked not to be contacted. No one here can lift this, including an administrator.",
+    "The recipient asked not to be contacted. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.tooMany":
@@ -7761,6 +7779,10 @@ export const en = {
     "You cannot make this user an owner, so you become the owner of their rows.",
   "import.reason.owner_unknown":
     "No user has this email, so you become the owner; a lead stays unassigned. Rows naming it: {rows}.",
+  "import.reason.address_erased":
+    "Whoever owns this email address asked to be erased and not to be stored again, so the row was not imported.",
+  "import.reason.address_not_split":
+    "Address could not be split into street, postal code and city, so it stays in the first address line.",
   "import.reason.phone_needs_country":
     "“{value}” needs its country code, like +49 30 1234567.",
   "import.reason.record_archived":
@@ -8424,6 +8446,18 @@ export const en = {
   "notifications.empty":
     "Nothing has come in yet. What the product tells you about arrives here.",
   "notifications.title": "Delivery by kind",
+  "notifications.browser.label": "Browser notifications",
+  "notifications.browser.default":
+    "When a reminder on one of your tasks comes due, the browser can show it while Margince is open in a tab.",
+  "notifications.browser.granted":
+    "On. A due reminder on one of your tasks shows as a browser notification while Margince is open in a tab. To turn it off, block notifications for this site in your browser settings.",
+  "notifications.browser.denied":
+    "Blocked in this browser. To allow them, change the notification setting for this site in your browser settings.",
+  "notifications.browser.unsupported":
+    "This browser cannot show notifications. A due reminder still leads your Home and your Worklist.",
+  "notifications.browser.allow": "Allow",
+  "reminder.notification.body": "Your reminder is due. Click to open the task.",
+  "reminder.notification.untitled": "Task reminder",
   "notifications.sub":
     "Every notice also stays in your notification center, whatever you choose here.",
   "notifications.saveFailedFor": "“{setting}” was not saved",
@@ -11315,6 +11349,8 @@ export const en = {
   "companyTriage.checkedAt": "checked {when}",
   "pipeline.reason.no_named_reader":
     "this thread has no reader a finding could be addressed to",
+  "pipeline.reason.from_sending_systems":
+    "this thread holds only mail from sending systems, such as notifications, which is not read",
   "pipeline.reason.transport_not_read":
     "this step reads email only, and the message arrived by another channel",
   "pipeline.reason.sender_undecided":
@@ -14163,6 +14199,11 @@ export const en = {
     "You correspond with {through} at the same company.",
   "contact.graph.noRoute":
     "No one in the company corresponds with this contact or their company yet.",
+  "contact.network.captureGap_one":
+    "{names} is on this contact’s threads and has not connected a mailbox, so later mail may be missing here.",
+  "contact.network.captureGap_other":
+    "{names} are on this contact’s threads and have not connected a mailbox, so later mail may be missing here.",
+  "contact.network.captureGapInvited": "{name} (has not signed in yet)",
   "contact.graph.noDirect":
     "No one in the company has corresponded with this contact.",
   // Names the column beside the graph, for a reader who lands in it from the
@@ -14928,6 +14969,7 @@ export const en = {
   "filters.field.created_at": "Created",
   "filters.field.hosting_provider": "Hosting",
   "filters.field.last_activity_at": "Last activity",
+  "filters.field.location": "Location",
   "filters.field.mail_provider": "Mail system",
   "filters.field.operated_service": "Operated service",
   "filters.field.owner_team_id": "Owner team",
@@ -14962,6 +15004,8 @@ export const en = {
   "filters.op.atLeast": "is at least",
   "filters.op.lessThan": "is less than",
   "filters.op.atMost": "is at most",
+  "filters.op.withinRadius": "is within",
+  "filters.sentence.radiusOf": "{km} km of {place}",
   "filters.join.and": "and",
   "filters.join.or": "or",
   "filters.sentence.clause": "{field} {op} {value}",
@@ -15913,6 +15957,7 @@ export const en = {
   "worklist.category.relationships": "Quiet relationship",
   "worklist.category.system": "System",
   "worklist.because.pinned": "pinned by you",
+  "worklist.because.reminder_due": "your reminder is due",
   "worklist.because.non_buyer_request": "not established as customer work",
   "worklist.because.buyer_wrote_last": "buyer wrote last",
   "worklist.because.waiting_days": "waiting",

@@ -167,20 +167,10 @@ func (s *Store) RecordCapturedFiles(
 	if err := refuseUnderivedCategory(from); err != nil {
 		return err
 	}
-	account, filed, err := accountForCapturedActivity(ctx, tx, activityID)
-	if err != nil {
-		return err
-	}
-	// A message filed against no company writes NULL, which is what keeps the
-	// file out of every account library rather than in the wrong one.
-	var rollUp *ids.UUID
-	if filed {
-		rollUp = &account
-	}
 	for _, file := range staged {
 		checksum := file.checksum
 		row := capturedFileRow{id: file.id, file: file.file, byteSize: len(file.file.Body), key: file.key, checksum: &checksum}
-		if err := insertCapturedAttachment(ctx, tx, activityID, rollUp, from, row); err != nil {
+		if err := insertCapturedAttachment(ctx, tx, activityID, from, row); err != nil {
 			return err
 		}
 		// On the CALLER's transaction, the one that just gave the key a row:
@@ -202,6 +192,36 @@ type capturedFileRow struct {
 	key      string
 	checksum *string
 	withheld bool
+	// url is set for a document link, which has no bytes: the row is a pointer.
+	url *string
+}
+
+// sizeColumn is the byte_size to store: a link has no size, so none rather than 0.
+func (r capturedFileRow) sizeColumn() *int {
+	if r.url != nil {
+		return nil
+	}
+	return &r.byteSize
+}
+
+// auditImage is the metadata an audit row holds for a captured file. A link
+// carries its host and never its address, because a share link can hold an
+// access key.
+//
+//craft:ignore naked-any the audit image is the open JSON object storekit.Audit takes
+func (r capturedFileRow) auditImage(activityID ids.ActivityID, from CapturedFileSource) map[string]any {
+	image := map[string]any{
+		fieldEntityType:    linkEntityActivity,
+		"entity_id":        activityID.String(),
+		fieldCategory:      from.Category,
+		"byte_size":        r.sizeColumn(),
+		"source_system":    from.System,
+		fieldBytesWithheld: r.withheld,
+	}
+	if r.url != nil {
+		image["url_host"] = linkHostOf(*r.url)
+	}
+	return image
 }
 
 // No allowlist here, unlike UploadAttachment: a sender's file is evidence of what
@@ -215,25 +235,25 @@ type capturedFileRow struct {
 //
 // Held by TestACapturedFileEmitsNoAttachmentEventOfItsOwn.
 func insertCapturedAttachment(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, account *ids.UUID,
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from CapturedFileSource, row capturedFileRow,
 ) error {
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO attachment (
 			id, entity_type, entity_id, filename, content_type,
 			byte_size, storage_key, checksum, source, captured_by,
-			category, company_id, activity_id,
-			external_source_id, external_part_id, declared_type, bytes_withheld)
+			category, activity_id,
+			external_source_id, external_part_id, declared_type, bytes_withheld, url)
 		VALUES ($1, 'activity', $2, $3, $4,
 		        $5, $6, $7, $8, $9,
-		        $10, $11, $2,
-		        $12, $13, $14, $15)
+		        $10, $2,
+		        $11, $12, $13, $14, $15)
 		ON CONFLICT (external_source_id, external_part_id)
 		  WHERE external_source_id IS NOT NULL DO NOTHING`,
 		row.id, activityID, row.file.Filename, nullIfEmpty(row.file.ContentType),
-		row.byteSize, row.key, row.checksum, from.System, from.CapturedBy,
-		from.Category, account, providerMessageKey(from), row.file.PartID,
-		nullIfEmpty(row.file.DeclaredType), row.withheld)
+		row.sizeColumn(), row.key, row.checksum, from.System, from.CapturedBy,
+		from.Category, providerMessageKey(from), row.file.PartID,
+		nullIfEmpty(row.file.DeclaredType), row.withheld, row.url)
 	if err != nil {
 		return fmt.Errorf("record a captured file: %w", err)
 	}
@@ -246,14 +266,7 @@ func insertCapturedAttachment(
 	// Every mutation leaves an audit row. The image is metadata only — never
 	// the bytes and never anything a sender wrote beyond the name we already
 	// sanitized — matching how a captured activity is audited (ADR-0072/A118).
-	if _, err := storekit.Audit(ctx, tx, "create", "attachment", row.id, nil, map[string]any{
-		"entity_type":      linkEntityActivity,
-		"entity_id":        activityID.String(),
-		"category":         from.Category,
-		"byte_size":        row.byteSize,
-		"source_system":    from.System,
-		fieldBytesWithheld: row.withheld,
-	}); err != nil {
+	if _, err := storekit.Audit(ctx, tx, "create", "attachment", row.id, nil, row.auditImage(activityID, from)); err != nil {
 		return fmt.Errorf("audit a captured file: %w", err)
 	}
 	return nil
@@ -296,42 +309,4 @@ func refuseUnderivedCategory(from CapturedFileSource) error {
 // there can collide with a real mailbox's files.
 func providerMessageKey(from CapturedFileSource) string {
 	return from.System + ":" + from.MessageID
-}
-
-// accountForCapturedActivity resolves the account roll-up for a captured file.
-//
-// The roll-up exists so a company's document library is one indexed read rather
-// than a union over every polymorphic parent. It is NOT what authorizes the
-// file — that stays the activity, which owns its own visibility — so a message
-// filed against nobody rolls up to nothing, and its file is reachable from the
-// timeline alone until a relink gives it an account.
-func accountForCapturedActivity(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-) (ids.UUID, bool, error) {
-	// A direct company link first, then the company behind a linked deal. The
-	// order is the point: a message linked to both names one company either way,
-	// and preferring the direct link means the roll-up does not move if the deal
-	// is later re-parented.
-	var account ids.UUID
-	err := tx.QueryRow(ctx, `
-		SELECT company_id FROM (
-			SELECT link.company_id, 0 AS rank
-			  FROM activity_link link
-			 WHERE link.activity_id = $1 AND link.entity_type = 'company'
-			UNION ALL
-			SELECT d.company_id, 1 AS rank
-			  FROM activity_link link
-			  JOIN deal d ON d.id = link.deal_id
-			 WHERE link.activity_id = $1 AND link.entity_type = 'deal'
-			   AND d.company_id IS NOT NULL
-		) candidates
-		 ORDER BY rank, company_id
-		 LIMIT 1`, activityID).Scan(&account)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ids.UUID{}, false, nil
-		}
-		return ids.UUID{}, false, fmt.Errorf("resolve the account a captured file belongs to: %w", err)
-	}
-	return account, true, nil
 }

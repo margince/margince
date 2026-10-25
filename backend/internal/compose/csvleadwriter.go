@@ -47,6 +47,9 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row, typed ma
 	if linkedInClaimed(err) {
 		return skippedFor(linkedInClaimedWhy), nil
 	}
+	if refusedAsErased(err) {
+		return skippedFor(addressErasedWhy), nil
+	}
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}

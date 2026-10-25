@@ -14,6 +14,7 @@ import {
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { attachmentAnchor } from "../../lib/attachmentlink";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
@@ -45,6 +46,7 @@ const CATEGORY_LABELS: Record<Category, MessageKey> = {
   email_attachment: "docs.category.email",
   message_attachment: "docs.category.message",
   other: "docs.category.other",
+  link: "docs.category.link",
 };
 
 // The cuts always offered, and the two a contact's files seldom carry, which
@@ -55,7 +57,11 @@ const STEADY_CUTS: readonly Category[] = [
   "email_attachment",
   "other",
 ];
-const RARE_CUTS: readonly Category[] = ["message_attachment", "contract"];
+const RARE_CUTS: readonly Category[] = [
+  "message_attachment",
+  "contract",
+  "link",
+];
 
 const STATE_LABELS: Record<DocState, MessageKey> = {
   draft: "docs.state.draft",
@@ -234,11 +240,7 @@ function FilesTable({ files }: Readonly<{ files: readonly Attachment[] }>) {
       grow: true,
       fold: "title",
       render: (file) => (
-        <a
-          className="link-button"
-          href={`/v1/attachments/${file.id}`}
-          download={file.filename}
-        >
+        <a className="link-button" {...attachmentAnchor(file)}>
           {file.title || file.filename}
         </a>
       ),

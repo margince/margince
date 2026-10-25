@@ -40,6 +40,7 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
     "approval.preview.archivePromoteEmployer",
   archive_relationship_no_primary: "approval.preview.archiveNoPrimary",
   merge_tags_release_source: "approval.preview.mergeTags",
+  partner_margin_tier_unset: "approval.preview.partnerTierUnset",
   archive_company_detach_scope: "approval.preview.archiveCompany",
   archive_contact_detach_scope: "approval.preview.archiveContact",
   archive_project_detach_scope: "approval.preview.archiveProject",
