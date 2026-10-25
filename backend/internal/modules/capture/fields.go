@@ -57,8 +57,8 @@ type ActivityFields struct {
 	// copy of (asSentByColleagueTx); zero for every other record.
 	SentByColleague ids.UUID
 	// InvitationFromSeat is the seat who sent an invitation this mailbox
-	// received (asSentByColleagueTx). The invitation stays received mail; only
-	// its From participant names the seat. Zero for every other record.
+	// received (asSentByColleagueTx), stored as activity.invitation_sender. It
+	// names an author only: no participant row, so it grants no reading.
 	InvitationFromSeat ids.UUID
 
 	// Envelope is what the mail parser read about addressing and links; nil

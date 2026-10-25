@@ -4,12 +4,14 @@
 package activities
 
 // Who wrote an activity. Every surface that names a speaker reads this one
-// statement: direction is not authorship, and a mail that came in was written
-// by its From party, who is often not the contact whose page shows it.
+// statement, because direction is not authorship. A mail that came in was
+// written by its From party, often not the contact whose page shows it.
 
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -35,7 +37,11 @@ func WithMessageVoices(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 	if err != nil {
 		return err
 	}
-	seats, err := seatNamesFor(ctx, tx, loggingSeatsOf(page))
+	invitedBy, err := invitationSendersOf(ctx, tx, readable)
+	if err != nil {
+		return err
+	}
+	seats, err := seatNamesFor(ctx, tx, append(loggingSeatsOf(page), slices.Collect(maps.Values(invitedBy))...))
 	if err != nil {
 		return err
 	}
@@ -49,6 +55,9 @@ func WithMessageVoices(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 			continue
 		}
 		author := authorOf(page[i], parties[ids.UUID(page[i].Id)], seats)
+		if seat, ok := invitedBy[ids.UUID(page[i].Id)]; ok {
+			author = seatAuthor(seat, seats)
+		}
 		if author != nil && author.UserId != nil && reader != ids.Nil && ids.UUID(*author.UserId) == reader {
 			author.IsReader = true
 		}
@@ -175,6 +184,27 @@ func loggingSeatsOf(page []crmcontracts.Activity) []ids.UUID {
 		}
 	}
 	return out
+}
+
+// invitationSendersOf is the seat capture recorded as the sender of each
+// invitation on the page. It is a column no reading gate looks at, so naming
+// the colleague never widens who may read the copy.
+func invitationSendersOf(ctx context.Context, tx pgx.Tx, readable []ids.UUID) (map[ids.UUID]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT id, invitation_sender FROM activity
+		 WHERE id = ANY($1) AND invitation_sender IS NOT NULL`, readable)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading who sent the invitations of a page: %w", err)
+	}
+	senders, err := pgx.CollectRows(rows, pgx.RowToStructByPos[struct{ Activity, Seat ids.UUID }])
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading who sent the invitations of a page: %w", err)
+	}
+	out := make(map[ids.UUID]ids.UUID, len(senders))
+	for _, sender := range senders {
+		out[sender.Activity] = sender.Seat
+	}
+	return out, nil
 }
 
 // seatNamesFor reads each seat's name. No liveness filter: who wrote a row in

@@ -244,9 +244,8 @@ func speakerKind(act ActIn) string {
 }
 
 // The two moves that mean somebody still owes something. DERIVED from the
-// contract's own enum rather than re-spelled, the way SpeakerFor reads the
-// speakers beside it: a rename upstream fails to compile here instead of
-// silently making every message read as settled.
+// contract's own enum rather than re-spelled. A rename upstream fails to
+// compile here instead of silently making every message read as settled.
 const (
 	moveNeedsReply     = string(crmcontracts.EmailSummaryMoveNeedsReply)
 	moveWaitingForThem = string(crmcontracts.EmailSummaryMoveWaitingForThem)

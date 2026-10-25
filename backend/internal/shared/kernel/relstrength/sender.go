@@ -24,8 +24,6 @@ import "fmt"
 //
 // contact and activity are SQL expressions the caller supplies, such as a bind
 // parameter ("$3") or a correlated column ("p.id"), and the activity's alias.
-// It is a format string, not a builder function, because the census of
-// unbounded record references reads one function at a time.
 func SenderSQL(contact, activity string) string {
 	return fmt.Sprintf(senderSQL, contact, activity, ParticipantNamesSQL(contact, "ap"))
 }

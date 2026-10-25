@@ -7,6 +7,7 @@ package capture
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -66,6 +67,17 @@ func TestAColleaguesInvitationNamesTheColleagueAsItsAuthor(t *testing.T) {
 	if author := listedAuthor(t, e, e.Rep1, "invite-unauth@search.test"); author != nil &&
 		author.Kind == crmcontracts.ActivityAuthorKindColleague {
 		t.Errorf("an unauthenticated invitation names colleague %+v; a sender types From", author)
+	}
+
+	// Naming the author grants nothing: the colleague reads the credited copy
+	// as they read its uncredited twin, and is on neither as a party.
+	credited, uncredited := activityIDOf(t, e, "invite-1@search.test"), activityIDOf(t, e, "invite-unauth@search.test")
+	if readsContent(t, e, e.Rep3, credited) != readsContent(t, e, e.Rep3, uncredited) {
+		t.Error("naming the colleague as author changed whether they may read the invitation")
+	}
+	if n := countRows(t, e, fmt.Sprintf(`SELECT count(*) FROM activity_participant
+		WHERE activity_id IN ('%s', '%s') AND user_id = '%s'`, credited, uncredited, e.Rep3)); n != 0 {
+		t.Errorf("the colleague is a party on %d invitation rows; a party row is read as attendance and as an edge", n)
 	}
 }
 

@@ -132,10 +132,7 @@ func stampMessageEnds(
 		return err
 	}
 	if fields.SentByColleague.IsZero() {
-		if err := stampCaptureParticipants(ctx, tx, id, seat, fields.Kind, fields.Direction, counterparty, us); err != nil {
-			return err
-		}
-		return stampInvitationSender(ctx, tx, id, fields.InvitationFromSeat, counterparty.Email)
+		return stampCaptureParticipants(ctx, tx, id, seat, fields.Kind, fields.Direction, counterparty, us)
 	}
 	if err := stampCaptureParticipants(ctx, tx, id, fields.SentByColleague, fields.Kind, fields.Direction, counterparty, us); err != nil {
 		return err
@@ -145,19 +142,6 @@ func stampMessageEnds(
 	}
 	if err := insertParticipant(ctx, tx, id, roleTo, &seat, nil, "", ""); err != nil {
 		return fmt.Errorf("capture: stamping the seat that held a colleague's mail: %w", err)
-	}
-	return nil
-}
-
-// stampInvitationSender names the colleague who sent an invitation on its From
-// party, which capture otherwise leaves out because a seat's address is no
-// outside party.
-func stampInvitationSender(ctx context.Context, tx pgx.Tx, id ids.ActivityID, sender ids.UUID, address string) error {
-	if sender.IsZero() {
-		return nil
-	}
-	if err := insertParticipant(ctx, tx, id, roleFrom, &sender, nil, foldAddress(address), ""); err != nil {
-		return fmt.Errorf("capture: stamping the colleague who sent an invitation: %w", err)
 	}
 	return nil
 }

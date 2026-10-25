@@ -18,13 +18,8 @@ import (
 // whether everyone here can read it.
 //
 // ONE entry point rather than a pass per fact, because they are one
-// obligation. Both are content, both are read once for the whole page, both
-// are refused on a withheld row — and a page that picked up one and not the
-// other would show a parked message as though it had gone.
-//
-// Who wrote each readable row (WithMessageVoices) rides the same entry point,
-// so no reader of a page gets a row without its author. Beyond that, no
-// statements at all when the page carries no readable email.
+// obligation. Each is read once per page and refused on a withheld row. Who
+// wrote each row rides it too (WithMessageVoices).
 func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
 	if err := WithMessageVoices(ctx, tx, page); err != nil {
 		return err

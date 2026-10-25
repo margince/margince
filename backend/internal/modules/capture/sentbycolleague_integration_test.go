@@ -236,8 +236,11 @@ func TestAColleaguesInvitationIsCreditedToTheColleague(t *testing.T) {
 	if got.direction != connector.DirectionInbound || got.colleague != nil {
 		t.Errorf("stored as %s with sent_by_colleague %v, want the received invitation it is", got.direction, got.colleague)
 	}
-	if got.fromUser == nil || *got.fromUser != colleague {
-		t.Errorf("the From participant is %v, want the colleague %v who organised it", got.fromUser, colleague)
+	if got.fromUser != nil {
+		t.Errorf("the From participant names seat %v; a participant row would let the author read the copy", got.fromUser)
+	}
+	if sender := invitationSenderOf(ctx, t, db, "invite-1"); sender == nil || *sender != colleague {
+		t.Errorf("invitation_sender is %v, want the colleague %v who organised it", sender, colleague)
 	}
 
 	unauth := colleagueCopy("invite-unauth", "sam@acme.com")
@@ -246,9 +249,20 @@ func TestAColleaguesInvitationIsCreditedToTheColleague(t *testing.T) {
 	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, unauth)); err != nil {
 		t.Fatalf("Upsert: %v", err)
 	}
-	if got := storedMailFor(ctx, t, db, "invite-unauth"); got.fromUser != nil {
-		t.Errorf("an unauthenticated invitation credited seat %v; a sender types From", got.fromUser)
+	if sender := invitationSenderOf(ctx, t, db, "invite-unauth"); sender != nil {
+		t.Errorf("an unauthenticated invitation credited seat %v; a sender types From", sender)
 	}
+}
+
+func invitationSenderOf(ctx context.Context, t *testing.T, db *database.DB, sourceID string) *ids.UUID {
+	t.Helper()
+	var sender *ids.UUID
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT invitation_sender FROM activity WHERE source_id = $1`, sourceID).Scan(&sender)
+	}); err != nil {
+		t.Fatalf("reading the invitation's sender: %v", err)
+	}
+	return sender
 }
 
 // capturedAs is rec as the seat's own connector hands it to the sink: the
