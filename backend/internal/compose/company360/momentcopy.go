@@ -22,7 +22,7 @@ var momentWords = struct {
 	OpenTaskList   langcopy.Phrase
 }{
 	TaskUndated:    langcopy.Phrase{En: "Open task with no due date. Stays open until somebody does it or closes it.", De: "Offene Aufgabe ohne Fälligkeitsdatum. Sie bleibt offen, bis jemand sie erledigt oder schließt.", Vi: "Nhiệm vụ đang mở chưa có hạn. Nhiệm vụ vẫn mở cho đến khi có người thực hiện hoặc đóng lại."},
-	OweThem:        langcopy.Phrase{En: "You owe them: %s", De: "Sie schulden ihnen: %s", Vi: "Việc đã hứa với họ: %s"},
+	OweThem:        langcopy.Phrase{En: "You owe them: %s", De: "Sie schulden ihnen: %s", Vi: "Bạn cần thực hiện cho họ: %s"},
 	OweNamed:       langcopy.Phrase{En: "You owe %s: %s", De: "Sie schulden %s: %s", Vi: "Bạn cần thực hiện cho %s: %s"},
 	PromiseUndated: langcopy.Phrase{En: "Promised with no due date. Stays open until somebody does it or closes it.", De: "Zugesagt ohne Fälligkeitsdatum. Die Zusage bleibt offen, bis jemand sie erfüllt oder schließt.", Vi: "Đã cam kết nhưng chưa có hạn. Cam kết vẫn mở cho đến khi có người thực hiện hoặc đóng lại."},
 	NothingOwed:    langcopy.Phrase{En: "Nothing is owed to this account", De: "Keine offenen Zusagen gegenüber diesem Unternehmen", Vi: "Không có cam kết nào chưa thực hiện với công ty này"},

@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { reloadReportingFigures } from "../analytics/reporting.queries";
+import { reloadReportingFigures } from "../../lib/reportingfigures";
 
 // Reads whose sentences the server writes in the caller's display language.
 // They stay cached in the old language until a language change reloads them.

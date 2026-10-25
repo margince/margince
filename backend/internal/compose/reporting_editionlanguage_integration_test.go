@@ -6,7 +6,6 @@
 package compose
 
 import (
-	"context"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -17,9 +16,8 @@ import (
 func TestAnEditionIsWrittenInTheBaseLanguageWhileTheOwnersLiveReadIsInTheirs(t *testing.T) {
 	q := newQuestionEditions(t)
 	owner, _ := principal.Actor(q.human)
-	if _, err := q.e.Pool.Exec(context.Background(), `UPDATE app_user SET locale = 'de' WHERE id = $1`, owner.UserID); err != nil {
-		t.Fatal(err)
-	}
+	owner.Locale = "de"
+	q.human = principal.WithActor(q.human, owner)
 
 	edition := q.send(t)
 	if got := edition.Evaluation.Context.ProseLanguage; got == nil || *got != "en" {

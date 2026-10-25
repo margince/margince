@@ -110,6 +110,10 @@ type Principal struct {
 	OnBehalfOf   ids.UUID // the human authority behind an agent/connector action; zero otherwise
 	Scopes       ScopeSet // effective = Passport scopes ∩ granting human's RBAC ("agent ≤ human")
 
+	// Locale is the display language a human chose, empty when they never did.
+	// It rides the principal so wording written for the caller needs no query.
+	Locale string
+
 	// SeatType is the licensing ceiling of the human behind the call — for
 	// an agent it is the granting human's seat, since "agent ≤ human"
 	// (A62/ADR-0047). Empty for the system principal (unbounded by seat).

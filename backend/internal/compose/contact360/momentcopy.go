@@ -89,7 +89,7 @@ var momentWords = struct {
 	OpenTask:          langcopy.Phrase{En: "an open task", De: "eine offene Aufgabe", Vi: "một nhiệm vụ đang mở"},
 	Write:             langcopy.Phrase{En: "Write to them", De: "Nachricht schreiben", Vi: "Viết cho họ"},
 	TeamOwes:          langcopy.Phrase{En: "Your team owes them: %s", De: "Ihr Team schuldet ihnen: %s", Vi: "Nhóm của bạn cần thực hiện cho họ: %s"},
-	YouOwe:            langcopy.Phrase{En: "You owe them: %s", De: "Sie schulden ihnen: %s", Vi: "Việc đã hứa với họ: %s"},
+	YouOwe:            langcopy.Phrase{En: "You owe them: %s", De: "Sie schulden ihnen: %s", Vi: "Bạn cần thực hiện cho họ: %s"},
 	TaskUndated:       langcopy.Phrase{En: "Task from %s with no due date.", De: "Aufgabe vom %s ohne Fälligkeitsdatum.", Vi: "Nhiệm vụ từ ngày %s chưa có hạn."},
 	PromisedToday:     langcopy.Phrase{En: "Promised for a date earlier today.", De: "Für einen früheren Zeitpunkt heute zugesagt.", Vi: "Đã cam kết thực hiện vào thời điểm trước đó trong hôm nay."},
 	PromisedAgo:       langcopy.Phrase{En: "Promised for a date %d days ago.", De: "Für einen Termin vor %d Tagen zugesagt.", Vi: "Đã cam kết thực hiện cách đây %d ngày."},

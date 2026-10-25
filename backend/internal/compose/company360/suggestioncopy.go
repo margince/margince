@@ -37,7 +37,7 @@ var suggestionWords = struct {
 	OriginOpenDeal:      langcopy.Phrase{En: "Open deal", De: "Offener Deal", Vi: "Giao dịch đang mở"},
 	OriginContractEnded: langcopy.Phrase{En: "Read from their correspondence", De: "Aus ihrer Korrespondenz", Vi: "Trích từ thư trao đổi của họ"},
 	NoReplyReason:       langcopy.Phrase{En: "You reached out %d days ago and nobody has come back.", De: "Ihr letzter Kontakt liegt %d Tage zurück, ohne Antwort.", Vi: "Bạn đã liên hệ cách đây %d ngày nhưng chưa nhận được phản hồi."},
-	NoReplyTitle:        langcopy.Phrase{En: "Follow up: no reply in %d days", De: "Nachfassen: seit %d Tagen keine Antwort", Vi: "Liên hệ lại: chưa có phản hồi sau %d ngày"},
+	NoReplyTitle:        langcopy.Phrase{En: "Follow up: no reply in %d days", De: "Nachfassen: seit %d Tagen keine Antwort", Vi: "Theo dõi: chưa có phản hồi sau %d ngày"},
 	StalledReason:       langcopy.Phrase{En: "%q has had no activity long enough to count as stalled.", De: "Bei %q gab es so lange keine Aktivität, dass der Deal als festgefahren gilt.", Vi: "%q không có hoạt động trong thời gian đủ lâu để được coi là đình trệ."},
 	StalledTitle:        langcopy.Phrase{En: "Move %q — stalled", De: "%q voranbringen – festgefahren", Vi: "Thúc đẩy %q – đang đình trệ"},
 	ConflictReason:      langcopy.Phrase{En: "Their correspondence says the contract ended, but this account is still filed as %s.", De: "Laut Korrespondenz ist der Vertrag beendet, aber dieses Unternehmen wird noch als %s geführt.", Vi: "Thư trao đổi cho biết hợp đồng đã kết thúc, nhưng công ty này vẫn được ghi nhận là %s."},

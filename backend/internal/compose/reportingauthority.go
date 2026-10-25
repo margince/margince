@@ -30,15 +30,6 @@ func accountableHuman(ctx context.Context, users *identity.Service, workspace, u
 	return principal.WithCorrelationID(human, ids.NewV7()), nil
 }
 
-// publicationRunKey marks a context built for a scheduled edition. The edition
-// is stored for every reader, so its captions must not take the owner's language.
-type publicationRunKey struct{}
-
-func isPublicationRun(ctx context.Context) bool {
-	marked, _ := ctx.Value(publicationRunKey{}).(bool)
-	return marked
-}
-
 func reportingRequested(scope crmcontracts.ReportingScope) RequestedScope {
 	// My teams is a live, deduplicated default, never a caller-selected union.
 	if scope.Kind == ScopeKindManagedTeams {
@@ -163,7 +154,7 @@ func (a reportingAuthority) PublicationHuman(ctx context.Context, tx pgx.Tx, use
 		return nil, err
 	}
 	human := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: seat, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions})
-	return principal.WithCorrelationID(context.WithValue(human, publicationRunKey{}, true), ids.NewV7()), nil
+	return principal.WithCorrelationID(human, ids.NewV7()), nil
 }
 
 func (a reportingAuthority) MembersFor(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) ([]ids.UUID, error) {

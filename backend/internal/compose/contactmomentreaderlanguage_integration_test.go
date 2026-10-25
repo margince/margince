@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The headline is the reader's language, not the installation's, and the
@@ -35,14 +36,13 @@ func TestAContactMomentIsWrittenInTheReadersLanguage(t *testing.T) {
 	if err != nil || english.Moment == nil {
 		t.Fatalf("assembling the contact in the base language: %v, moment %v", err, english.Moment)
 	}
-	if _, err := e.Pool.Exec(e.Admin(), `UPDATE app_user SET locale = 'vi' WHERE id = $1`, e.AdminUser); err != nil {
-		t.Fatal(err)
-	}
-	vietnamese, err := svc.Assemble(e.Admin(), contactID)
+	admin, _ := principal.Actor(e.Admin())
+	admin.Locale = "vi"
+	vietnamese, err := svc.Assemble(principal.WithActor(e.Admin(), admin), contactID)
 	if err != nil || vietnamese.Moment == nil {
 		t.Fatalf("assembling the contact for a Vietnamese reader: %v", err)
 	}
-	if want := "Việc đã hứa với họ: Send the signed contract"; vietnamese.Moment.Headline != want {
+	if want := "Bạn cần thực hiện cho họ: Send the signed contract"; vietnamese.Moment.Headline != want {
 		t.Errorf("headline = %q, want %q", vietnamese.Moment.Headline, want)
 	}
 	if english.Moment.EvidenceFingerprint != vietnamese.Moment.EvidenceFingerprint {

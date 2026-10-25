@@ -29,14 +29,21 @@ func TestReaderLanguageIsTheCallersChoiceElseTheInstallationsBase(t *testing.T) 
 	if got := read(ctx); got != "en" {
 		t.Fatalf("a member who never chose reads the base language en, got %q", got)
 	}
-	if _, err := svc.SaveMyLocale(ctx, "vi"); err != nil {
-		t.Fatal(err)
-	}
-	if got := read(ctx); got != "vi" {
+	chosen, _ := principal.Actor(ctx)
+	chosen.Locale = "vi"
+	if got := read(principal.WithActor(ctx, chosen)); got != "vi" {
 		t.Fatalf("a member who chose vi reads vi, got %q", got)
 	}
 	system := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 	if got := read(system); got != "en" {
 		t.Fatalf("a system caller has no display language and reads the base language, got %q", got)
+	}
+}
+
+func TestASignedInMembersChosenLanguageRidesTheirPrincipal(t *testing.T) {
+	ctx := withHumanPrincipal(context.Background(), Identity{Locale: "vi"})
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Locale != "vi" {
+		t.Fatalf("the principal carries locale %q, want vi", actor.Locale)
 	}
 }
