@@ -209,8 +209,8 @@ func TestAReadableCopiedContactDoesNotSetTheReplyLanguageWhenTheSenderIsPrivate(
 	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
 	drafter.envelope = draftfloor.NewResolver().WithUserLanguage(func(context.Context) string { return "en" })
 	recipient, err := e.Activities.ReplyRecipientFor(ctx, ids.From[ids.ActivityKind](ids.UUID(anchor.Id)))
-	if err != nil || recipient.FullName != "Anne Copied" || recipient.ContactID != "" {
-		t.Fatalf("precondition: recipient = %+v, err %v; want the copied contact named with no addressee id", recipient, err)
+	if err != nil || recipient.FullName != "Anne Copied" {
+		t.Fatalf("precondition: recipient = %+v, err %v; want the copied contact named", recipient, err)
 	}
 	if _, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), draftfloor.Steering{}); err != nil {
 		t.Fatal(err)

@@ -61,8 +61,23 @@ func (e *NoReplyAddressError) FieldFault() (field, code, message string) {
 	return "to", "no_reply_address", e.Error()
 }
 
-// ReplyAddressFor answers the single address a reply to this activity is sent
-// to, refusing when the thread carries none.
+// ReplyAddressFor is the address ReplyAddresseeFor answers.
+func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleague func(address string) bool) (string, error) {
+	to, err := s.ReplyAddresseeFor(ctx, id, colleague)
+	return to.Address, err
+}
+
+// ReplyAddressee is who a reply is delivered to. ContactID is empty unless this
+// caller may read the contact and it is the top-ranked counterparty. So a
+// readable CC never stands in for an unreadable sender.
+type ReplyAddressee struct {
+	Address   string
+	ContactID string
+}
+
+// ReplyAddresseeFor answers the single address a reply to this activity is
+// sent to, refusing when the thread carries none. It names the delivered-to
+// contact beside it, and the reply's language is read from that contact's mail.
 //
 // WHOSE address, precisely. The counterparty's — never one of our own. That
 // distinction is why this cannot simply reuse ReplyRecipientFor's ranking: on an
@@ -86,15 +101,15 @@ func (e *NoReplyAddressError) FieldFault() (field, code, message string) {
 // colleague AND a guest is answered to the guest whatever the header order.
 // A nil predicate treats nobody as a colleague. When every candidate is one,
 // the refusal says so.
-func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleague func(address string) bool) (string, error) {
+func (s *Store) ReplyAddresseeFor(ctx context.Context, id ids.ActivityID, colleague func(address string) bool) (ReplyAddressee, error) {
 	// Reaching a contact's address is a contact read, exactly as reaching their
 	// name is: a caller who may read activities but not contacts must not be told
 	// through this door what the contacts surface withholds.
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return "", err
+		return ReplyAddressee{}, err
 	}
 
-	var address string
+	var to ReplyAddressee
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The link-walk scope decides whether this caller may see the anchor at
 		// all. Reading a counterparty off an activity they cannot reach would
@@ -110,6 +125,10 @@ func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleagu
 		})
 		if err != nil {
 			return err
+		}
+		readable := scope
+		if readable == "" {
+			readable = "true"
 		}
 
 		// Two sources, ranked together rather than tried in sequence. The
@@ -134,18 +153,23 @@ func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleagu
 			WITH counterparty AS (
 			     SELECT contact_id, address,
 			            CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
+			            row_number() OVER (ORDER BY CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END,
+			                                        created_at, id) AS ordinal,
 			            created_at, id
 			       FROM activity_participant
 			      WHERE activity_id = $1
 			        AND user_id IS NULL
 			)
-			SELECT addr FROM (
-			     SELECT c.address AS addr, c.rank, 1 AS source,
+			SELECT addr, addressee FROM (
+			     SELECT c.address AS addr, CASE WHEN c.ordinal = 1 AND EXISTS (
+			                SELECT 1 FROM contact p
+			                 WHERE p.id = c.contact_id AND p.archived_at IS NULL AND (` + readable + `))
+			            THEN c.contact_id END AS addressee, c.rank, 1 AS source,
 			            true AS primary_first, 0 AS position, c.created_at, c.id
 			       FROM counterparty c
 			      WHERE c.address IS NOT NULL AND c.address <> ''
 			     UNION ALL
-			     SELECT e.email AS addr, c.rank, 2 AS source,
+			     SELECT e.email AS addr, CASE WHEN c.ordinal = 1 THEN c.contact_id END, c.rank, 2 AS source,
 			            e.is_primary AS primary_first, e.position, c.created_at, c.id
 			       FROM counterparty c
 			       JOIN contact p ON p.id = c.contact_id
@@ -164,24 +188,25 @@ func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleagu
 			return fmt.Errorf("resolve the address a reply answers: %w", err)
 		}
 		defer rows.Close()
-		address, err = firstOutside(rows, colleague)
+		to, err = firstOutside(rows, colleague)
 		return err
 	})
 	if err != nil {
-		return "", err
+		return ReplyAddressee{}, err
 	}
-	return address, nil
+	return to, nil
 }
 
 // firstOutside walks the ranked candidates and answers the first that is not
 // a colleague. No candidate at all is the plain refusal; candidates that are
 // all colleagues is the refusal that names why.
-func firstOutside(rows pgx.Rows, colleague func(address string) bool) (string, error) {
+func firstOutside(rows pgx.Rows, colleague func(address string) bool) (ReplyAddressee, error) {
 	sawColleague := false
 	for rows.Next() {
 		var address string
-		if err := rows.Scan(&address); err != nil {
-			return "", fmt.Errorf("resolve the address a reply answers: %w", err)
+		var contact *ids.UUID
+		if err := rows.Scan(&address, &contact); err != nil {
+			return ReplyAddressee{}, fmt.Errorf("resolve the address a reply answers: %w", err)
 		}
 		// A row that satisfies the predicate with whitespace is no addressee:
 		// it would reach the send as "no recipients" rather than as the honest
@@ -193,10 +218,14 @@ func firstOutside(rows pgx.Rows, colleague func(address string) bool) (string, e
 			sawColleague = true
 			continue
 		}
-		return address, nil
+		to := ReplyAddressee{Address: address}
+		if contact != nil {
+			to.ContactID = contact.String()
+		}
+		return to, nil
 	}
 	if err := rows.Err(); err != nil {
-		return "", fmt.Errorf("resolve the address a reply answers: %w", err)
+		return ReplyAddressee{}, fmt.Errorf("resolve the address a reply answers: %w", err)
 	}
-	return "", &NoReplyAddressError{Colleague: sawColleague}
+	return ReplyAddressee{}, &NoReplyAddressError{Colleague: sawColleague}
 }

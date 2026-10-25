@@ -59,8 +59,12 @@ func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts
 // longer, the addressee's newest mail follows the page. So their own words
 // still decide the language of a long thread.
 func (d replyDrafter) threadRows(ctx context.Context, threadKey, addressee string) ([]crmcontracts.Activity, error) {
-	limit, kind := replyEvidenceRows, string(crmcontracts.ActivityKindEmail)
-	in := activities.ListActivitiesInput{ThreadKey: &threadKey, Kind: &kind, Limit: &limit, WrittenByHuman: true}
+	limit, kind, now := replyEvidenceRows, string(crmcontracts.ActivityKindEmail), d.envelope.Now()
+	// ConversationAsOf keeps a row dated after the drafting instant out of the
+	// prompt and out of the language evidence.
+	in := activities.ListActivitiesInput{
+		ThreadKey: &threadKey, Kind: &kind, Limit: &limit, WrittenByHuman: true, ConversationAsOf: &now,
+	}
 	rows, page, err := d.store.ListActivities(ctx, in)
 	if err != nil {
 		return nil, err

@@ -738,6 +738,7 @@ func TestSenderContactsNamesTheFromParticipantNotTheCopiedOne(t *testing.T) {
 	copied := e.linkContact(t, anchor, "Anne Wiegert")
 	e.participate(t, anchor, copied, "cc", nil)
 	sender := e.linkContact(t, anchor, "Dietmar Rietsch")
+	e.seedContactEmail(t, sender, "dietmar@buyer.test")
 	e.participate(t, anchor, sender, "from", nil)
 	bare := e.seedAnchor(t, "", "")
 
@@ -752,12 +753,12 @@ func TestSenderContactsNamesTheFromParticipantNotTheCopiedOne(t *testing.T) {
 	if _, ok := got[bare.UUID]; ok {
 		t.Errorf("a message with no from participant has a sender entry: %v", got[bare.UUID])
 	}
-	recipient, err := e.store(nil).ReplyRecipientFor(ctx, anchor)
+	to, err := e.store(nil).ReplyAddresseeFor(ctx, anchor, nil)
 	if err != nil {
-		t.Fatalf("ReplyRecipientFor: %v", err)
+		t.Fatalf("ReplyAddresseeFor: %v", err)
 	}
-	if recipient.ContactID != sender.String() {
-		t.Errorf("recipient contact = %q, want %v", recipient.ContactID, sender)
+	if to.ContactID != sender.String() {
+		t.Errorf("delivered-to contact = %q, want %v", to.ContactID, sender)
 	}
 }
 
@@ -784,6 +785,7 @@ func TestAReadableCopiedContactIsNotTheAddresseeWhenTheSenderIsPrivate(t *testin
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	readable := e.linkContact(t, anchor, "Anne Wiegert")
+	e.seedContactEmail(t, readable, "anne@buyer.test")
 	e.participate(t, anchor, readable, "cc", nil)
 	private := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
@@ -794,11 +796,11 @@ func TestAReadableCopiedContactIsNotTheAddresseeWhenTheSenderIsPrivate(t *testin
 	}
 	e.participate(t, anchor, private, "from", nil)
 
-	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
+	got, err := e.store(nil).ReplyAddresseeFor(e.as(principal.RowScopeAll), anchor, nil)
 	if err != nil {
-		t.Fatalf("ReplyRecipientFor: %v", err)
+		t.Fatalf("ReplyAddresseeFor: %v", err)
 	}
-	if got.FullName != "Anne Wiegert" || got.ContactID != "" {
-		t.Errorf("recipient = %q with contact id %q, want the readable name and no addressee id", got.FullName, got.ContactID)
+	if got.Address != "anne@buyer.test" || got.ContactID != "" {
+		t.Errorf("delivered to %q with contact id %q, want the readable address and no addressee id", got.Address, got.ContactID)
 	}
 }

@@ -56,11 +56,13 @@ func LanguageEvidence(turns []Turn, addressee string) []string {
 
 // AddresseeEvidence is the text of the addressee's own inbound mail, newest
 // first and bounded like LanguageEvidence. It carries no subject: a reply often
-// keeps the subject line our side wrote, in our language.
+// keeps the subject line our side wrote, in our language. A logged call or
+// meeting is a rep's words, so only mail and messages count.
 func AddresseeEvidence(turns []Turn, addressee string) []string {
 	var own []Turn
 	for _, turn := range turns {
-		if addressee != "" && evidenceRank(turn, addressee) == 0 && strings.TrimSpace(turn.Text) != "" {
+		written := turn.Kind == crmcontracts.ActivityKindEmail || turn.Kind == crmcontracts.ActivityKindMessage
+		if written && addressee != "" && evidenceRank(turn, addressee) == 0 && strings.TrimSpace(turn.Text) != "" {
 			own = append(own, turn)
 		}
 	}
