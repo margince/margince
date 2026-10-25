@@ -3,7 +3,11 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import {
   cleanup,
   render,
@@ -256,19 +260,26 @@ describe("inviting from the setup list", () => {
     created_at: AT,
     updated_at: AT,
   };
+  const issuedTitle = translate("en", "access.issued.title", {
+    name: "Dana Buyer",
+  });
 
-  // The invite is the last step, so the list goes away once the seats are read
-  // again. The one-time link must outlive it.
-  it("keeps the issued link when the invite finishes the list", async () => {
+  afterEach(() => focusManager.setFocused(undefined));
+
+  // A room whose only open step is the invite. Once the invite is sent, the
+  // seats read again with the new buyer in them.
+  function stubLastStepRoom(roomReads: { failing: boolean }) {
     let invited = false;
     stubWithSession(
       {
         ...roomRoutes(),
         "GET /deal-rooms": () =>
-          jsonResponse({
-            data: [room({ welcome_message: "Hello" })],
-            page: { next_cursor: null },
-          }),
+          roomReads.failing
+            ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
+            : jsonResponse({
+                data: [room({ welcome_message: "Hello" })],
+                page: { next_cursor: null },
+              }),
         "GET /deal-rooms/room-1/participants": () =>
           jsonResponse({ data: invited ? [seat] : [], page: {} }),
         "GET /deal-rooms/room-1/documents": () =>
@@ -319,9 +330,9 @@ describe("inviting from the setup list", () => {
       },
       { deal_room: ["read", "update"] },
     );
-    const user = userEvent.setup();
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+  }
 
+  async function sendTheInviteStep(user: ReturnType<typeof userEvent.setup>) {
     const step = (
       await screen.findByText(translate("en", "roomtab.setup.invite"))
     ).closest("li");
@@ -351,17 +362,42 @@ describe("inviting from the setup list", () => {
         name: translate("en", "access.inviteConfirm"),
       }),
     );
+    expect(await screen.findByText(issuedTitle)).toBeInTheDocument();
+  }
+
+  // The invite is the last step, so the list goes away once the seats are read
+  // again. The one-time link must outlive it.
+  it("keeps the issued link when the invite finishes the list", async () => {
+    stubLastStepRoom({ failing: false });
+    const user = userEvent.setup();
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+
+    await sendTheInviteStep(user);
 
     await waitFor(() =>
       expect(
         screen.queryByText(translate("en", "roomtab.setup.title")),
       ).not.toBeInTheDocument(),
     );
+    expect(screen.getByText(issuedTitle)).toBeInTheDocument();
+  });
+
+  // The rep leaves to paste the link, and coming back reads the room again.
+  it("keeps the issued link when the room fails to read again", async () => {
+    const roomReads = { failing: false };
+    stubLastStepRoom(roomReads);
+    const user = userEvent.setup();
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+
+    await sendTheInviteStep(user);
+    roomReads.failing = true;
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+
     expect(
-      screen.getByText(
-        translate("en", "access.issued.title", { name: "Dana Buyer" }),
-      ),
+      await screen.findByText(translate("en", "common.error")),
     ).toBeInTheDocument();
+    expect(screen.getByText(issuedTitle)).toBeInTheDocument();
   });
 });
 

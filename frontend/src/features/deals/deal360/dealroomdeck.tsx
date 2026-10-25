@@ -22,7 +22,6 @@ import { formatDateAbbrev, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { useRecordZone } from "../../../lib/recordzone";
 import { useParticipants, useRoomAttendance } from "../dealroomaccess";
-import { InviteDialog } from "../dealroomaccess.dialogs";
 import { useRoomThreads } from "../dealroomconversation";
 import { useRoomDocuments } from "../dealroomdocuments";
 import { useSaveRoom } from "./dealroommanage";
@@ -152,29 +151,6 @@ export function StateBanner({
 // What still stands between a live room and one worth opening, read from the
 // room's own records. It goes away once all four are done.
 export function RoomSetup({
-  room,
-  onEditText,
-}: Readonly<{ room: DealRoom; onEditText: () => void }>) {
-  const [inviting, setInviting] = useState(false);
-  // The invite dialog keeps one place in the tree whatever the list draws.
-  // Inviting can finish the list, and the dialog still shows the link then.
-  return (
-    <>
-      <SetupChecklist
-        room={room}
-        onEditText={onEditText}
-        onInvite={() => setInviting(true)}
-      />
-      <InviteDialog
-        room={room}
-        open={inviting}
-        onClose={() => setInviting(false)}
-      />
-    </>
-  );
-}
-
-function SetupChecklist({
   room,
   onEditText,
   onInvite,

@@ -34,6 +34,7 @@ import { useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
 import { buyerLink, DealRoomAccess } from "../dealroomaccess";
+import { InviteDialog } from "../dealroomaccess.dialogs";
 import { DealRoomConversation } from "../dealroomconversation";
 import { RoomBrief } from "./dealroombrief";
 import { RoomBand, RoomSetup, StateAction, StateBanner } from "./dealroomdeck";
@@ -55,25 +56,42 @@ export function DealRoomTab({
   const roomQuery = useDealRoom(dealId);
   const room = roomQuery.data?.data?.[0];
   const mayWrite = useCanWrite("deal_room", "update");
+  const [inviting, setInviting] = useState(false);
+  // The invite dialog sits outside the reading, so neither the setup list
+  // going away nor a failed reload of the room takes the issued link with it.
   return (
-    <QueryStates
-      query={roomQuery}
-      pendingLines={6}
-      pendingLabel={t("room.card.title")}
-    >
-      {room ? (
-        <RoomReading room={room} mayWrite={mayWrite} />
-      ) : roomQuery.isSuccess ? (
-        <OpenRoomCard dealId={dealId} dealName={dealName} />
+    <>
+      <QueryStates
+        query={roomQuery}
+        pendingLines={6}
+        pendingLabel={t("room.card.title")}
+      >
+        {room ? (
+          <RoomReading
+            room={room}
+            mayWrite={mayWrite}
+            onInvite={() => setInviting(true)}
+          />
+        ) : roomQuery.isSuccess ? (
+          <OpenRoomCard dealId={dealId} dealName={dealName} />
+        ) : null}
+      </QueryStates>
+      {room && mayWrite ? (
+        <InviteDialog
+          room={room}
+          open={inviting}
+          onClose={() => setInviting(false)}
+        />
       ) : null}
-    </QueryStates>
+    </>
   );
 }
 
 function RoomReading({
   room,
   mayWrite,
-}: Readonly<{ room: DealRoom; mayWrite: boolean }>) {
+  onInvite,
+}: Readonly<{ room: DealRoom; mayWrite: boolean; onInvite: () => void }>) {
   const t = useT();
   const finished = FINISHED_STATES.has(room.state);
   const refusal = refusalFor(finished, mayWrite, t);
@@ -107,7 +125,7 @@ function RoomReading({
         }
       />
       {mayWrite && !finished ? (
-        <RoomSetup room={room} onEditText={manage} />
+        <RoomSetup room={room} onEditText={manage} onInvite={onInvite} />
       ) : null}
       <RoomBrief roomId={room.id} />
       <DealRoomConversation room={room} refusal={refusal} layout="deck" />
