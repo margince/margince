@@ -11569,7 +11569,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.status.invited": "Đã mời",
   "users.status.deactivated": "Đã vô hiệu hóa",
   "users.status.suspended": "Đã tạm khóa",
-  "users.status.inviteEmailFailed": "Chưa gửi được email mời",
   "users.handover.action": "Bàn giao công việc",
   "users.handover.title": "Bàn giao công việc của {name}",
   "users.handover.body":

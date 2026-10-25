@@ -71,7 +71,6 @@ export const ROSTER: {
       email: "ivy@acme.test",
       display_name: "Ivy Invited",
       status: "invited",
-      invite_email_failed: true,
       is_agent: false,
       roles: ["rep"],
       assignable: false,

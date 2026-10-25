@@ -240,12 +240,6 @@ function MemberIdentity({ member }: Readonly<{ member: User }>) {
               from passing for a colleague. */}
           {member.is_agent && <Badge tone="ai">{t("users.agentSeat")}</Badge>}
           <MemberStatus status={member.status} />
-          {member.invite_email_failed && (
-            <StatusBadge
-              kind="attention"
-              label={t("users.status.inviteEmailFailed")}
-            />
-          )}
         </span>
         <span className="t-caption">{member.email}</span>
       </CellStack>

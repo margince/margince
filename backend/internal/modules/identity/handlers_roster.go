@@ -137,7 +137,6 @@ func wireUserWithRoles(u userRow) crmcontracts.User {
 		wire.TeamIds = &teams
 	}
 	wire.LastActiveAt = u.LastActiveAt
-	wire.InviteEmailFailed = u.InviteEmailFailed
 	return wire
 }
 

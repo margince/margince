@@ -107,7 +107,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, teamMembershipRefusal(unknownRoleRefusal(companyNotDescribedRefusal(err))))
 		return
 	}
-	h.sendInvite(r, userID, email.String(), rawToken, actor)
+	h.sendInvite(r, email.String(), rawToken, actor)
 	h.writeUserByID(w, r, actor, userID, http.StatusCreated)
 }
 
@@ -375,8 +375,8 @@ func (h Handlers) writeUserByID(w http.ResponseWriter, r *http.Request, actor Id
 //
 // A goroutine and not a queued job because the link holds the raw token.
 // A job table stores its arguments verbatim, so the token must not enter it.
-// A refusal is recorded on the seat, which the roster shows, and logged.
-func (h Handlers) sendInvite(r *http.Request, userID ids.UserID, email, rawToken string, inviter Identity) {
+// A refusal is logged.
+func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Identity) {
 	if !h.canSendPasswordLink() || rawToken == "" {
 		return
 	}
@@ -397,9 +397,6 @@ func (h Handlers) sendInvite(r *http.Request, userID ids.UserID, email, rawToken
 			return
 		}
 		slog.Error("invite email failed", "err", sendErr)
-		if err := h.svc.RecordInviteEmailFailure(workCtx, inviter, userID); err != nil {
-			slog.Error("recording invite email failure failed", "err", err)
-		}
 	}()
 }
 

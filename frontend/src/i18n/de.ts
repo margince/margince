@@ -11903,7 +11903,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.status.invited": "Eingeladen",
   "users.status.deactivated": "Deaktiviert",
   "users.status.suspended": "Gesperrt",
-  "users.status.inviteEmailFailed": "Einladungs-E-Mail nicht gesendet",
   "users.handover.action": "Arbeit übergeben",
   "users.handover.title": "Arbeit von {name} übergeben",
   "users.handover.body":
