@@ -30,6 +30,7 @@ const REMINDER: Activity = {
   created_at: "2026-10-01T09:00:00Z",
   updated_at: "2026-10-01T09:00:00Z",
   version: 1,
+  offers_email: false,
 };
 
 class FakeNotification {
