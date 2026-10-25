@@ -230,8 +230,8 @@ func TestADayMeetingMovesTheClockOnceItsDateEnds(t *testing.T) {
 	f.assertClocks(t, met, "once its date is over the meeting has taken place")
 }
 
-// East of UTC+12 a day meeting's date ends before its stored noon, so the
-// refold after the date ends moves the clock before the walk reaches the noon.
+// East of UTC+12 a day meeting's date ends before its stored noon. The refold
+// after the date ends moves the clock, before the walk reaches the noon.
 func TestADayMeetingEastOfUTCPlus12MovesTheClockBeforeItsStoredNoon(t *testing.T) {
 	f := newAccountFixture(t)
 	f.e.WsExec(t, `UPDATE setting SET value = '"Pacific/Kiritimati"'::jsonb WHERE key = 'installation.timezone'`)
@@ -255,8 +255,8 @@ func TestADayMeetingEastOfUTCPlus12MovesTheClockBeforeItsStoredNoon(t *testing.T
 	f.assertClocks(t, met, "once its date is over the meeting has taken place, before its stored noon")
 }
 
-// The day entries come a batch at a time, each batch after the last one's key,
-// so a date holding more entries than a batch is read whole.
+// The day entries come a batch at a time, each after the last one's key. A date
+// holding more entries than a batch is read whole.
 func TestDayEntriesAreReadABatchAtATime(t *testing.T) {
 	f := newAccountFixture(t)
 	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")

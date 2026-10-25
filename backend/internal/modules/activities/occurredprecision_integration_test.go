@@ -393,7 +393,7 @@ func TestHappenedSQLAnswersTheSharedCases(t *testing.T) {
 		if happened != c.Happened {
 			t.Errorf("%s: SQL says happened = %v, want %v", c.Name, happened, c.Happened)
 		}
-		// A meeting is ahead exactly until it takes place.
+		// A meeting is ahead until it takes place, and not after.
 		if c.Kind == "meeting" && ahead == c.Happened {
 			t.Errorf("%s: AheadSQL = %v beside a meeting that took place = %v", c.Name, ahead, c.Happened)
 		}

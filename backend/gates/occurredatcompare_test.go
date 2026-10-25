@@ -11,8 +11,8 @@ package gates
 // calls a day entry dated today ahead until that noon. It calls a day meeting
 // held once the noon passes. occurredday.BegunSQL, MeetingTookPlaceSQL, HappenedSQL
 // and AheadSQL read the date in the installation zone. So an activity row's
-// occurred_at ordered against anything else is a finding: a bind, the clock,
-// a function of them, another column, or a bound Go joins on.
+// occurred_at ordered against anything else is a finding. That is a bind, the
+// clock, a function of them, another column, or a bound Go joins on.
 //
 // `occurred_at >= x` is a window's lower edge unless x is the clock. A bare
 // `occurred_at < x` is "before x", and passes only beside a `>= y` on the same
@@ -224,7 +224,7 @@ func asksWhetherHappened(found ordering, statements []string) bool {
 		return found.againstClock
 	}
 	for _, statement := range statements {
-		for _, line := range strings.Split(statement, "\n") {
+		for line := range strings.SplitSeq(statement, "\n") {
 			for _, other := range orderingsIn(line) {
 				if other.alias == found.alias && other.op == ">=" {
 					return false
@@ -373,10 +373,8 @@ func definitionBody(rest, kind string) string {
 		}
 		return ""
 	}
-	if end := strings.Index(rest, ";"); end >= 0 {
-		return rest[:end]
-	}
-	return rest
+	query, _, _ := strings.Cut(rest, ";")
+	return query
 }
 
 // bodyCompares judges a body once the owner's SQL rendered in it is taken out.

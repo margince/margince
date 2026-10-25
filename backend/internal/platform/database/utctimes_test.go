@@ -31,7 +31,7 @@ func TestATimestamptzScansInUTCWhateverTheProcessZone(t *testing.T) {
 		t.Fatal("the default codec already scans in UTC, so this test proves nothing")
 	}
 	utc := pgtype.NewMap()
-	registerUTCTimes(utc)
+	scanTimesInUTC(utc)
 	for _, format := range []int16{pgtype.BinaryFormatCode, pgtype.TextFormatCode} {
 		if got := scan(utc, format); got.Location() != time.UTC || !got.Equal(at) {
 			t.Errorf("format %d scans %v in %v, want %v in UTC", format, got, got.Location(), at)

@@ -101,7 +101,7 @@ func PassedActivitiesTx(ctx context.Context, tx pgx.Tx, after ClockRefoldMark, a
 }
 
 // DayActivitiesComeTx reads the next batch of day entries the (occurred_at, id)
-// walk cannot time, after the given key: a day's moment is its date in zone,
+// walk cannot time, after the given key. A day's moment is its date in zone,
 // not its stored noon. Another kind has begun from its date's start, which in
 // every zone east of UTC-12 is before the noon the walk waits for. So the run its
 // date begins reads it. A meeting takes place when its date ends, before its

@@ -510,8 +510,8 @@ func TestAMeetingsNextStepMustBeRaisedInsideTheWeek(t *testing.T) {
 	}
 }
 
-// A day meeting began with its date, so a task raised from it that morning is
-// its next step, though the meeting is stored at that date's noon.
+// A day meeting began with its date, though it is stored at that date's noon.
+// So a task raised from it that morning is its next step.
 func TestADayMeetingsNextStepMayBeRaisedTheMorningOfItsDate(t *testing.T) {
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
