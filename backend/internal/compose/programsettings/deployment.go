@@ -76,7 +76,7 @@ func distinctCurrencies(codes []string) error {
 	seen := make(map[string]bool, len(codes))
 	for _, c := range codes {
 		code := strings.ToUpper(strings.TrimSpace(c))
-		if !values.ValidCurrency(code) {
+		if !values.AssignableCurrency(code) {
 			return fmt.Errorf("%q is not a 3-letter ISO 4217 code", c)
 		}
 		if seen[code] {

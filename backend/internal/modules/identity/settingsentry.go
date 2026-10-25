@@ -129,7 +129,7 @@ var BaseCurrency = settings.Define[string](
 	"update",
 	"EUR",
 	func(v string) error {
-		if !values.ValidCurrency(v) {
+		if !values.AssignableCurrency(v) {
 			return errors.New("a base currency is three uppercase ISO-4217 letters, like EUR")
 		}
 		return nil

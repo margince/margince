@@ -376,10 +376,9 @@ func setAcceptedDealField(patch *deals.UpdateDealInput, position int, field acce
 		}
 		patch.AmountMinor = &amount
 	case acceptFieldCurrency:
-		// values.NewMoney is the ONE spelling of a valid ISO-4217 code (the
-		// amount is irrelevant to that check); its ParseError already
+		// values.RequireAssignableCurrency is the one spelling of a settable ISO-4217 code; its ParseError already
 		// carries the field and machine code the wire mapping expects.
-		if _, err := values.NewMoney(0, field.Value); err != nil {
+		if err := values.RequireAssignableCurrency(field.Value); err != nil {
 			return err
 		}
 		currency := field.Value

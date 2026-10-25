@@ -131,8 +131,8 @@ func TestUndoingAProjectFilingWithdrawsTheClassAndRecordsTheDecision(t *testing.
 	}
 }
 
-// A project the activity was moved away from is no longer a filing.
-// The state and the undo name only the project that holds the link.
+// A project the activity was moved away from is no longer listed as a filing.
+// Its evidence still holds the class, so the undo is refused.
 func TestAFilingListsOnlyTheProjectThatStillHoldsTheLink(t *testing.T) {
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
@@ -155,12 +155,44 @@ func TestAFilingListsOnlyTheProjectThatStillHoldsTheLink(t *testing.T) {
 		t.Fatalf("after the move the filing reads %+v, want only Datacentre migration", state.Projects)
 	}
 
-	after, err := e.Activities.UndoProjectFiling(e.Admin(), id, undoReason)
-	if err != nil {
-		t.Fatalf("undoing the filing: %v", err)
+	// The first project's evidence still holds the class, so the undo is refused
+	// and removes nothing, rather than deleting a row it never listed.
+	_, err = e.Activities.UndoProjectFiling(e.Admin(), id, undoReason)
+	if got := refusalCode(t, err); got != "other_basis_remains" {
+		t.Errorf("undo refused with %q, want other_basis_remains", got)
 	}
-	if len(after.Undone) != 1 || len(after.Undone[0].Projects) != 1 || after.Undone[0].Projects[0] != "Datacentre migration" {
-		t.Errorf("the decision on record is %+v, want only the project that held the link", after.Undone)
+	if left := e.WsCount(t, `SELECT count(*) FROM activity_retention_evidence
+		WHERE activity_id = $1 AND basis = 'project_linked'`, f.email); left != 2 {
+		t.Errorf("project evidence rows after the refused undo = %d, want 2", left)
+	}
+	if state.Undoable {
+		t.Error("the filing reads as undoable while the first project's evidence still holds the class")
+	}
+}
+
+// Evidence of a project that was deleted after the activity moved on is not a
+// current filing either.
+func TestADeletedProjectIsNotListedAsAFiling(t *testing.T) {
+	e := Setup(t)
+	f := filedUnderAProject(t, e)
+	id := ids.ActivityID{UUID: f.email}
+	other := ids.NewV7()
+	e.WsExec(t, `INSERT INTO project (id, name, company_id, phase, source, captured_by)
+		SELECT $1, 'Datacentre migration', company_id, 'delivering', 'manual', 'human:x'
+		  FROM project WHERE id = $2`, other, f.project)
+	if _, err := e.Activities.RelinkActivity(e.Admin(), id, activities.RelinkActivityInput{
+		EntityType: "project", EntityID: other, ReplaceExistingOfType: true,
+	}); err != nil {
+		t.Fatalf("moving the email to the second project: %v", err)
+	}
+	e.WsExec(t, `DELETE FROM project WHERE id = $1`, f.project)
+
+	state, err := e.Activities.GetProjectFiling(e.Admin(), id)
+	if err != nil {
+		t.Fatalf("reading the filing: %v", err)
+	}
+	if len(state.Projects) != 1 || state.Projects[0].Name != "Datacentre migration" {
+		t.Fatalf("after the first project was deleted the filing reads %+v, want only Datacentre migration", state.Projects)
 	}
 }
 

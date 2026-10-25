@@ -12,10 +12,11 @@ const CurrencyPattern = `^[A-Z]{3}$`
 
 var iso4217 = regexp.MustCompile(CurrencyPattern)
 
-// ValidCurrency answers whether s is an assigned ISO-4217 code, so a typo such
-// as EUT is refused where every writer takes it. The database CHECK stays the
-// shape alone, because a migration cannot follow amendments to the standard.
-func ValidCurrency(s string) bool { return iso4217.MatchString(s) && IsAssignedCurrency(s) }
+// ValidCurrency answers whether s has the shape of an ISO-4217 code. It is the
+// check for a value that may already be stored, since the schema's CHECK has
+// only ever admitted the shape. A currency being set or changed also passes
+// AssignableCurrency.
+func ValidCurrency(s string) bool { return iso4217.MatchString(s) }
 
 // Money binds an amount in minor units to its ISO-4217 currency. The
 // fields are unexported so a half-money — the amount-without-currency
@@ -31,7 +32,7 @@ type Money struct {
 func NewMoney(amountMinor int64, currency string) (Money, error) {
 	if !ValidCurrency(currency) {
 		return Money{}, &ParseError{Field: "currency", Code: "currency_malformed",
-			Message: "currency is an assigned three-letter ISO-4217 code, uppercase"}
+			Message: "currency is the three-letter ISO-4217 code, uppercase"}
 	}
 	return Money{amountMinor: amountMinor, currency: currency}, nil
 }

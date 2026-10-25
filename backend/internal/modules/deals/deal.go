@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ensureOpenBirthStage guards create: deals are born open — AdvanceDeal
@@ -317,6 +318,11 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	}
 	if err := moneyPairError(resultingAmount, resultingArr, resultingCurrency); err != nil {
 		return err
+	}
+	if _, currencySet := after[currencyField]; currencySet && resultingCurrency != nil {
+		if err := values.RequireAssignableCurrency(*resultingCurrency); err != nil {
+			return err
+		}
 	}
 	if _, amountSet := after[amountField]; amountSet {
 		if err := amountSetError(resultingAmount); err != nil {

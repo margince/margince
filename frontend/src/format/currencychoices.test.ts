@@ -44,8 +44,22 @@ describe("currencyCodes", () => {
     expect(codes).toContain("VND");
   });
 
-  it("keeps the code a record already carries, even one the platform does not list", () => {
+  it("keeps the code a record already carries, even one the server would not assign", () => {
     expect(currencyCodes(["NOK", "SEK"], "ZZZ")[2]).toBe("ZZZ");
+  });
+
+  it("never offers a code the server refuses, also not as a leading code", () => {
+    const codes = currencyCodes(["ZZZ", "NOK"]);
+    expect(codes[0]).toBe("NOK");
+    expect(codes.filter((code) => code === "ZZZ")).toEqual([]);
+  });
+
+  it("offers only assigned codes from the platform list", () => {
+    vi.stubGlobal("Intl", {
+      ...Intl,
+      supportedValuesOf: () => ["EUR", "QQQ", "JPY"],
+    });
+    expect(currencyCodes(["NOK"])).toEqual(["NOK", "EUR", "JPY"]);
   });
 });
 

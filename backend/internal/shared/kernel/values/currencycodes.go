@@ -3,6 +3,11 @@
 
 package values
 
+import (
+	"maps"
+	"slices"
+)
+
 // assignedCurrencies are the ISO-4217 alphabetic codes a record may be priced in.
 // BGN, HRK, CUC, SLL and ZWL are withdrawn, but stored records carry them.
 // The browser picker offers them too, and it may only offer codes the server accepts.
@@ -33,9 +38,26 @@ var assignedCurrencies = func() map[string]struct{} {
 	return codes
 }()
 
-// IsAssignedCurrency answers whether ISO-4217 assigns the code. It is the
-// membership half of ValidCurrency; the shape half is CurrencyPattern.
-func IsAssignedCurrency(code string) bool {
-	_, ok := assignedCurrencies[code]
-	return ok
+// AssignableCurrency answers whether s may be newly set or changed to: the
+// shape and ISO assigns the code. A stored value outside the list stays valid
+// for reads and for edits that leave the currency alone.
+func AssignableCurrency(s string) bool {
+	_, listed := assignedCurrencies[s]
+	return listed && ValidCurrency(s)
+}
+
+// RequireAssignableCurrency is AssignableCurrency as the ParseError a writer
+// returns for a currency it is setting.
+func RequireAssignableCurrency(s string) error {
+	if AssignableCurrency(s) {
+		return nil
+	}
+	return &ParseError{Field: "currency", Code: "currency_unassigned",
+		Message: "currency must be an assigned ISO-4217 code, such as EUR"}
+}
+
+// AssignedCurrencies lists the assignable codes in order, for the gate that
+// holds the browser's mirror of them.
+func AssignedCurrencies() []string {
+	return slices.Sorted(maps.Keys(assignedCurrencies))
 }

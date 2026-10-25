@@ -8,30 +8,37 @@ import (
 	"testing"
 )
 
-func TestOnlyAnAssignedCodeIsACurrency(t *testing.T) {
+func TestAnUnassignedCodeIsValidInShapeButNotAssignable(t *testing.T) {
 	for _, code := range []string{"EUR", "USD", "JPY", "KWD", "VND", "XAU"} {
-		if !ValidCurrency(code) {
-			t.Errorf("ValidCurrency(%q) = false, want true", code)
+		if !ValidCurrency(code) || !AssignableCurrency(code) {
+			t.Errorf("%q should be valid and assignable", code)
 		}
 	}
-	for _, code := range []string{"ZZZ", "QQQ", "AAA", "EUT", "eur", "EU", "EURO", ""} {
-		if ValidCurrency(code) {
-			t.Errorf("ValidCurrency(%q) = true, want false", code)
+	for _, code := range []string{"ZZZ", "QQQ", "AAA", "EUT"} {
+		if !ValidCurrency(code) || AssignableCurrency(code) {
+			t.Errorf("%q should have a valid shape and not be assignable", code)
+		}
+	}
+	for _, code := range []string{"eur", "EU", "EURO", ""} {
+		if ValidCurrency(code) || AssignableCurrency(code) {
+			t.Errorf("%q should fail both checks", code)
 		}
 	}
 }
 
-func TestNewMoneyRefusesAnUnassignedCode(t *testing.T) {
-	_, err := NewMoney(100, "ZZZ")
+func TestRequireAssignableCurrencyNamesTheField(t *testing.T) {
 	var parse *ParseError
-	if !errors.As(err, &parse) || parse.Field != "currency" {
-		t.Fatalf("NewMoney(100, ZZZ) = %v, want a currency ParseError", err)
+	if err := RequireAssignableCurrency("EUR"); err != nil {
+		t.Fatalf("EUR refused: %v", err)
+	}
+	if err := RequireAssignableCurrency("ZZZ"); !errors.As(err, &parse) || parse.Field != "currency" {
+		t.Fatalf("ZZZ gave %v, want a currency ParseError", err)
 	}
 }
 
 func TestEveryCurrencyWithAMinorUnitRuleIsAssigned(t *testing.T) {
 	for code := range MinorUnitExceptions() {
-		if !IsAssignedCurrency(code) {
+		if !AssignableCurrency(code) {
 			t.Errorf("%s has a minor-unit rule but is not in the assigned list", code)
 		}
 	}
