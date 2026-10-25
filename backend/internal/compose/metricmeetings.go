@@ -23,8 +23,8 @@ func readReportingMeetings(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	legacy := "(held.id IS NULL OR held.customer_eligible_at_change IS NULL OR held.partial_pre_history)"
 	owner := "CASE WHEN " + legacy + " THEN a.host_user_id ELSE held.host_id_at_change END"
 	eligible := "CASE WHEN " + legacy + " THEN " + activities.CustomerMeetingSQL("a") + " ELSE held.customer_eligible_at_change END"
-	// The scheduled start is stored as occurred_at is, so the meeting's own
-	// precision reads it: a day meeting falls in the period its date begins in.
+	// The scheduled start is stored as occurred_at is, read by the meeting's
+	// precision. A day meeting falls in the period its date begins in.
 	start := "COALESCE(held.scheduled_start,a.occurred_at)"
 	placed := occurredday.StartAtSQL(start, "a.occurred_precision")
 	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), owner, b.arg, unownedIsExcluded)

@@ -8,13 +8,13 @@ package gates
 // Every activity time on the wire says how precisely it is known.
 //
 // A day entry is stored at noon UTC of its date. A projection that hands out
-// that instant with no precision beside it reads as "12:00" to every client,
-// and the frontend's precision gate cannot see a field the contract never
-// declared. So each schema in the contracts with an `occurred_at`, or a `<x>_at`
-// its description calls an activity's time, also declares `occurred_precision`
-// or `<x>_precision`. A time that is not an activity's says why below.
+// that instant with no precision beside it reads as "12:00" to every client.
+// The frontend's precision gate cannot see a field the contract never declared.
+// So a schema's `occurred_at`, or a `<x>_at` its description calls an
+// activity's time, has `occurred_precision` or `<x>_precision` beside it.
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,7 +32,7 @@ var precisionContracts = []string{"api/crm.yaml", "api/public-events.yaml"}
 
 // activityTimeDescribed is a description that calls a `<x>_at` an activity's
 // time, or names the `occurred_at` it is taken from.
-var activityTimeDescribed = regexp.MustCompile("(?i)\\bactivit(?:y|ies)'?s? time\\b|`occurred_at`")
+var activityTimeDescribed = regexp.MustCompile("(?i)\\b(?:activity|activities)'?s? time\\b|`occurred_at`")
 
 // minActivityTimes is the floor: fewer activity times than this means the walk
 // reads less of the contract than it should.
@@ -123,13 +123,15 @@ func activityTimesIn(t *testing.T, spec string, raw []byte) []activityTime {
 		t.Fatalf("%s declares no schemas, so this gate would read nothing", spec)
 	}
 	var out []activityTime
-	for _, name := range slices.Sorted(mapsKeys(doc.Components.Schemas)) {
+	for _, name := range slices.Sorted(maps.Keys(doc.Components.Schemas)) {
 		out = append(out, schemaActivityTimes(spec+" "+name, doc.Components.Schemas[name])...)
 	}
 	return out
 }
 
 // schemaActivityTimes walks one schema and the objects nested in it.
+//
+//craft:ignore naked-any a YAML schema decodes to nested maps whose values are of any shape
 func schemaActivityTimes(path string, node any) []activityTime {
 	object, isObject := node.(map[string]any)
 	if !isObject {
@@ -137,7 +139,7 @@ func schemaActivityTimes(path string, node any) []activityTime {
 	}
 	var out []activityTime
 	if properties, ok := object["properties"].(map[string]any); ok {
-		for _, name := range slices.Sorted(mapsKeys(properties)) {
+		for _, name := range slices.Sorted(maps.Keys(properties)) {
 			if precision, isTime := precisionOf(name, properties[name]); isTime {
 				_, precise := properties[precision]
 				out = append(out, activityTime{where: path + "." + name, precise: precise})
@@ -160,6 +162,8 @@ func schemaActivityTimes(path string, node any) []activityTime {
 
 // precisionOf names the precision property an activity time needs beside it,
 // and says whether name is one.
+//
+//craft:ignore naked-any the same decoded schema schemaActivityTimes walks, for the same reason
 func precisionOf(name string, property any) (string, bool) {
 	if name == "occurred_at" {
 		return "occurred_precision", true
@@ -171,16 +175,6 @@ func precisionOf(name string, property any) (string, bool) {
 	described, _ := property.(map[string]any)
 	description, _ := described["description"].(string)
 	return stem + "_precision", activityTimeDescribed.MatchString(description)
-}
-
-func mapsKeys(m map[string]any) func(func(string) bool) {
-	return func(yield func(string) bool) {
-		for key := range m {
-			if !yield(key) {
-				return
-			}
-		}
-	}
 }
 
 // The census finds an activity time anywhere a schema nests it, and reads its

@@ -10,9 +10,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
-// A source known only by its date is read by that date in Auckland, where its
-// stored noon is the next local morning: a day note dated today has been said,
-// and a day meeting dated today is still pending until its date ends.
+// In Auckland a day source's stored noon is the next local morning. A day note
+// dated today has been said. A day meeting dated today is pending until its date ends.
 func TestADaySourceIsAdmittedByItsDate(t *testing.T) {
 	t.Parallel()
 	auckland, err := time.LoadLocation("Pacific/Auckland")

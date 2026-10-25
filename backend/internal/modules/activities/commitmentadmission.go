@@ -96,10 +96,8 @@ func AdmitAutomaticCommitment(evidence CommitmentAdmissionEvidence, asOf time.Ti
 		return CommitmentSourceUnknown
 	}
 	cutoff := asOf.AddDate(0, 0, -provenance.CommitmentHorizonDays)
-	if arrival := evidence.ProviderReceivedAt; arrival != nil {
-		if evidence.OccurredAt.After(arrival.Add(24*time.Hour)) || (evidence.OccurredAt.Before(cutoff) && !arrival.Before(cutoff)) {
-			return CommitmentTimeContradicted
-		}
+	if evidence.timeContradicted(cutoff) {
+		return CommitmentTimeContradicted
 	}
 	if evidence.UnreadLater {
 		if !evidence.ContextAssessed || evidence.LaterUnassessed {
@@ -111,6 +109,14 @@ func AdmitAutomaticCommitment(evidence CommitmentAdmissionEvidence, asOf time.Ti
 		return CommitmentHistorical
 	}
 	return CommitmentCurrent
+}
+
+// timeContradicted says the provider received the source well before its stated
+// time, or inside the horizon when its stated time is outside it.
+func (e CommitmentAdmissionEvidence) timeContradicted(cutoff time.Time) bool {
+	arrival := e.ProviderReceivedAt
+	return arrival != nil && (e.OccurredAt.After(arrival.Add(24*time.Hour)) ||
+		(e.OccurredAt.Before(cutoff) && !arrival.Before(cutoff)))
 }
 
 // happened is occurredday.Happened for the source at asOf.

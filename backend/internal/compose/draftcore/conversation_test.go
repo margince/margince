@@ -90,8 +90,8 @@ func TestConversationBoundsEveryTurnAndTheirNumber(t *testing.T) {
 	}
 }
 
-// A day note dated today has happened in Auckland though its stored noon is
-// ahead; a day meeting dated today has not until its date ends.
+// In Auckland a day note dated today has happened, though its stored noon is
+// ahead. A day meeting dated today has not until its date ends.
 func TestADayTouchDatedTodayIsReadByItsDate(t *testing.T) {
 	t.Parallel()
 	auckland, err := time.LoadLocation("Pacific/Auckland")

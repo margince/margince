@@ -11853,7 +11853,7 @@ components:
         interactions_90d: {type: integer}
         inbound_90d: {type: integer}
         outbound_90d: {type: integer}
-        last_at: {type: [string, 'null'], format: date-time}
+        last_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` among the activities the edge counts. A client orders edges by it.'}
         receipts:
           type: array
           maxItems: 3

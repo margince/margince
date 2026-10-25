@@ -437,8 +437,8 @@ func TestWithinSQLAnswersTheSharedCases(t *testing.T) {
 	}
 }
 
-// employment.InPlaceForSQL reads a day entry by its date: in place from the
-// edge's start date, or once its date begins after capture first saw the edge.
+// employment.InPlaceForSQL reads a day entry by its date. It is in place from
+// the edge's start date, or once its date begins after capture saw the edge.
 // In Auckland a day entry's stored noon falls on the next local date.
 func TestAnEmploymentIsInPlaceForADayEntryByItsDate(t *testing.T) {
 	e := setupSend(t)

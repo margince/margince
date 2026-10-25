@@ -30155,7 +30155,10 @@ export interface components {
             interactions_90d: number;
             inbound_90d?: number;
             outbound_90d?: number;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description The newest `occurred_at` among the activities the edge counts. A client orders edges by it.
+             */
             last_at?: string | null;
             /** @description The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows. */
             receipts?: components["schemas"]["ContactGraphReceipt"][];

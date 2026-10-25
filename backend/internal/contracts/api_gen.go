@@ -35117,11 +35117,13 @@ type ContactGraphGroupsOmitted string
 // ContactGraphEdge One corresponding pair, with the evidence the graph is allowed to disclose.
 type ContactGraphEdge struct {
 	// From A node id.
-	From            string     `json:"from"`
-	Inbound90d      *int       `json:"inbound_90d,omitempty"`
-	Interactions90d int        `json:"interactions_90d"`
-	LastAt          *time.Time `json:"last_at,omitempty"`
-	Outbound90d     *int       `json:"outbound_90d,omitempty"`
+	From            string `json:"from"`
+	Inbound90d      *int   `json:"inbound_90d,omitempty"`
+	Interactions90d int    `json:"interactions_90d"`
+
+	// LastAt The newest `occurred_at` among the activities the edge counts. A client orders edges by it.
+	LastAt      *time.Time `json:"last_at,omitempty"`
+	Outbound90d *int       `json:"outbound_90d,omitempty"`
 
 	// Receipts The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows.
 	Receipts       *[]ContactGraphReceipt         `json:"receipts,omitempty"`

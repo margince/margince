@@ -53,9 +53,9 @@ type SLABreach struct {
 // Each breach lands one audit row and lead.sla_breached; the escalation
 // task hangs off that event.
 //
-// With the target switched off the scan marks no breach: no deadline exists to
-// breach, and a breach row the installation never asked for would page an
-// owner about a rule they did not set. It still stamps day answers.
+// With the target switched off the scan marks no breach. No deadline exists to
+// breach, and a breach row nobody asked for would page an owner. It still stamps
+// day answers.
 func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, error) {
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return nil, err

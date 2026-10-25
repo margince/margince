@@ -264,8 +264,8 @@ func namesOccurredAt(file *ast.File) bool {
 }
 
 // rawOccurredAtCompares finds each raw as-of comparison of an activity row's
-// occurred_at in file's string literals, and each time the column is handed to
-// a helper outside occurredday. source is file's text, for the waivers' lines.
+// occurred_at in file's string literals. It also finds the column handed to a
+// helper outside occurredday. source is file's text, for the waivers' lines.
 func rawOccurredAtCompares(path string, file *ast.File, source []byte) []rawCompare {
 	var out []rawCompare
 	whole := tablesIn(gatekit.SQLStatementsOf(file)...)
@@ -599,8 +599,8 @@ func TestTheOccurredAtCensusSeesEachRawComparison(t *testing.T) {
 	}
 }
 
-// A column handed to a helper as text is a finding wherever it sits among the
-// arguments, unless occurredday takes it or a Go comment beside it waives it.
+// A column handed to a helper as text is a finding at any argument position.
+// It passes when occurredday takes it, or a Go comment beside it waives it.
 func TestTheCensusSeesAColumnHandedToAHelper(t *testing.T) {
 	t.Parallel()
 	handed := map[string]struct {

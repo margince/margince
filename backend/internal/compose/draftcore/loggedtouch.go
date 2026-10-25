@@ -45,10 +45,10 @@ func IsLoggedKind(kind crmcontracts.ActivityKind) bool {
 	return kind == crmcontracts.ActivityKindNote || kind == crmcontracts.ActivityKindMeeting
 }
 
-// IsLoggedTouch reports a note or meeting that records contact which really
-// happened by now (occurredday.Happened, today's date read in zone), and not a
-// meeting that was canceled or that the other side missed. A past meeting still
-// marked booked counts: it most often took place, and reps rarely come back to mark it held.
+// IsLoggedTouch reports a note or meeting that has happened by now in zone
+// (occurredday.Happened). A canceled or missed meeting records no contact. A
+// past meeting still marked booked counts: it most often took place, and reps
+// rarely come back to mark it held.
 func IsLoggedTouch(activity crmcontracts.Activity, now time.Time, zone *time.Location) bool {
 	if !IsLoggedKind(activity.Kind) || !occurredday.Happened(string(activity.Kind), activitywhen.MomentOf(activity), now, zone) {
 		return false

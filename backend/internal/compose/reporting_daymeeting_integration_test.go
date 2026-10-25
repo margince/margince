@@ -46,8 +46,10 @@ func TestADayMeetingCountsInTheWeekOfItsDate(t *testing.T) {
 	}
 
 	service := newReportingService(e.Pool, clock)
-	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open",
-		Metrics: []crmcontracts.ReportingMetricID{"meetings_held"}, Blocks: []crmcontracts.ReportingBlockKind{"sdr_outcomes"}}
+	selection := crmcontracts.ReportingSelection{
+		Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open",
+		Metrics: []crmcontracts.ReportingMetricID{"meetings_held"}, Blocks: []crmcontracts.ReportingBlockKind{"sdr_outcomes"},
+	}
 	result, err := service.Evaluate(human, selection)
 	if err != nil {
 		t.Fatal(err)
