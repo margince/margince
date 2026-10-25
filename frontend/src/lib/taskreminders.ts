@@ -27,11 +27,19 @@ type Activity = components["schemas"]["Activity"];
 export const TASK_PARAM = "task";
 
 const POLL_MS = 60_000;
-const PAGE = 50;
+const PAGE = 200;
 const LOCK = "margince-task-reminders";
+const KEY_PREFIX = "task-reminder:";
+// A shown key is kept a day past the server's 30-day window. So a reminder that
+// leaves the list and comes back (reassigned back, reopened) is not shown twice.
+const KEEP_MS = 31 * 24 * 60 * 60 * 1000;
 
 export function reminderKey(task: Pick<Activity, "id" | "remind_at">): string {
-  return `task-reminder:${task.id}:${task.remind_at ?? ""}`;
+  return `${KEY_PREFIX}${task.id}:${task.remind_at ?? ""}`;
+}
+
+function remindedAtOf(key: string): number {
+  return Date.parse(key.slice(key.indexOf(":", KEY_PREFIX.length) + 1));
 }
 
 function readShown(): Set<string> | null {
@@ -52,14 +60,15 @@ let storageRefused = false;
  * that has never recorded any records the current ones and shows none. So
  * allowing notifications does not bring up a month of old reminders.
  */
-export function takeUnshown(due: readonly Activity[]): Activity[] {
+export function takeUnshown(due: readonly Activity[], now: number): Activity[] {
   const shown = readShown() ?? (storageRefused ? shownInTab : null);
   const unshown =
     shown === null ? [] : due.filter((task) => !shown.has(reminderKey(task)));
-  // Only keys still due are kept, so the set stays one page long.
-  const keep = due.map(reminderKey);
+  const keep = [...(shown ?? []), ...due.map(reminderKey)].filter(
+    (key) => now - remindedAtOf(key) <= KEEP_MS,
+  );
   shownInTab = new Set(keep);
-  writeStored(STORAGE_KEYS.taskRemindersShown, JSON.stringify(keep));
+  writeStored(STORAGE_KEYS.taskRemindersShown, JSON.stringify([...shownInTab]));
   storageRefused = readShown() === null;
   return unshown;
 }
@@ -103,18 +112,31 @@ export function useTaskReminderNotifications(signedIn: boolean): void {
     refetchInterval: POLL_MS,
     // A notification is most often for a background tab.
     refetchIntervalInBackground: true,
-    queryFn: async () =>
-      unwrap(
-        await api.GET("/activities", {
-          params: { query: { reminder_due: true, kind: "task", limit: PAGE } },
-        }),
-        t,
-      ).data,
+    // Every page, so no due reminder sits past one the poll did not read.
+    queryFn: async () => {
+      const due: Activity[] = [];
+      let cursor: string | undefined;
+      do {
+        const page = unwrap(
+          await api.GET("/activities", {
+            params: {
+              query: { reminder_due: true, kind: "task", limit: PAGE, cursor },
+            },
+          }),
+          t,
+        );
+        due.push(...page.data);
+        cursor = page.page.has_more
+          ? (page.page.next_cursor ?? undefined)
+          : undefined;
+      } while (cursor);
+      return due;
+    },
   });
   useEffect(() => {
     if (!granted || !due.data) return;
     const page = due.data;
-    void underTabLock(() => takeUnshown(page)).then((unshown) => {
+    void underTabLock(() => takeUnshown(page, Date.now())).then((unshown) => {
       for (const task of unshown) show(task, t);
       if (unshown.length > 0)
         void client.invalidateQueries({ queryKey: worklistKey });

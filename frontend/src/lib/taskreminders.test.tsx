@@ -9,7 +9,11 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { requestNotificationPermission } from "./notificationpermission";
 import { removeStored, STORAGE_KEYS, writeStored } from "./storage";
-import { reminderKey, useTaskReminderNotifications } from "./taskreminders";
+import {
+  reminderKey,
+  takeUnshown,
+  useTaskReminderNotifications,
+} from "./taskreminders";
 
 const REMINDER = {
   id: "task-1",
@@ -34,9 +38,13 @@ class FakeNotification {
   close() {}
 }
 
+// The read instant of every case: five days after REMINDER came due.
+const NOW = Date.parse("2026-10-25T09:00:00Z");
+
 let reads: URL[] = [];
 
-function serve(rows: unknown[]) {
+// serve answers the reminder list in pages of pageSize, by the cursor asked.
+function serve(rows: unknown[], pageSize = rows.length || 1) {
   reads = [];
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
     const url = new URL(
@@ -44,9 +52,18 @@ function serve(rows: unknown[]) {
       "https://app.local",
     );
     if (url.pathname.endsWith("/activities")) reads.push(url);
-    return new Response(JSON.stringify({ data: rows, page: {} }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    const from = Number(url.searchParams.get("cursor") ?? "0");
+    const more = from + pageSize < rows.length;
+    return new Response(
+      JSON.stringify({
+        data: rows.slice(from, from + pageSize),
+        page: {
+          has_more: more,
+          next_cursor: more ? String(from + pageSize) : null,
+        },
+      }),
+      { headers: { "Content-Type": "application/json" } },
+    );
   }) as typeof fetch;
 }
 
@@ -64,6 +81,8 @@ function mount() {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
   FakeNotification.permission = "granted";
   FakeNotification.shown = [];
   vi.stubGlobal("Notification", FakeNotification);
@@ -71,6 +90,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   removeStored(STORAGE_KEYS.taskRemindersShown);
 });
@@ -152,4 +172,43 @@ test("clicking the notification opens the task on Home", async () => {
   FakeNotification.shown[0]?.onclick?.();
 
   expect(globalThis.location.hash).toBe("#/home?task=task-1");
+});
+
+test("every due reminder past the first page is shown once", async () => {
+  const due = Array.from({ length: 51 }, (_, i) => ({
+    ...REMINDER,
+    id: `task-${i}`,
+  }));
+  serve(due, 50);
+  mount();
+
+  await waitFor(() => expect(FakeNotification.shown).toHaveLength(51));
+  expect(new Set(FakeNotification.shown.map((n) => n.options?.tag)).size).toBe(
+    51,
+  );
+  expect(reads).toHaveLength(2);
+});
+
+test("a reminder that leaves the list and comes back is not shown again", () => {
+  expect(takeUnshown([REMINDER], NOW)).toEqual([REMINDER]);
+  // Reassigned away, or completed: the next read no longer lists it.
+  expect(takeUnshown([], NOW)).toEqual([]);
+  // Reassigned back, or reopened.
+  expect(takeUnshown([REMINDER], NOW)).toEqual([]);
+});
+
+test("a reminder moved later that comes due again is shown again", () => {
+  expect(takeUnshown([REMINDER], NOW)).toEqual([REMINDER]);
+  const moved = { ...REMINDER, remind_at: "2026-10-24T09:00:00Z" };
+  expect(takeUnshown([moved], NOW)).toEqual([moved]);
+});
+
+test("a shown reminder is forgotten only past the server's window", () => {
+  expect(takeUnshown([REMINDER], NOW)).toEqual([REMINDER]);
+  const day = 24 * 60 * 60 * 1000;
+  const remindedAt = Date.parse(REMINDER.remind_at);
+  takeUnshown([], remindedAt + 31 * day);
+  expect(takeUnshown([REMINDER], remindedAt + 31 * day)).toEqual([]);
+  takeUnshown([], remindedAt + 32 * day);
+  expect(takeUnshown([REMINDER], remindedAt + 32 * day)).toEqual([REMINDER]);
 });

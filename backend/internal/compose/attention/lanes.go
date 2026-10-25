@@ -162,10 +162,10 @@ type Tasks interface {
 	// single upcoming row was reached, and the reader who most needs next
 	// week's deadline is exactly the one who would never see it.
 	UpcomingForViewer(ctx context.Context, asOf, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
-	// RemindersForViewer answers the reader's own tasks whose reminder is due,
-	// latest reminder first. Its own bound, because a reminder on a task due
-	// next week would sort past the day's cap on the due date.
-	RemindersForViewer(ctx context.Context, asOf time.Time, limit int) ([]Task, error)
+	// RemindersForViewer answers every one of the reader's tasks whose reminder
+	// is due, latest reminder first. Not under the day's cap, which orders by
+	// due date, and not under any cap, because the lane's count counts them all.
+	RemindersForViewer(ctx context.Context, asOf time.Time) ([]Task, error)
 }
 
 // Task is one piece of agreed work.

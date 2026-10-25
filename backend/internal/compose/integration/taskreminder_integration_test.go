@@ -55,6 +55,27 @@ func TestTheReminderFilterAnswersAlikeThroughBothDoors(t *testing.T) {
 	if listed := dueReminderIDs(t, d); len(listed) != 0 {
 		t.Errorf("after the move the filter lists %v, want none", listed)
 	}
+
+	var undated struct {
+		ID string `json:"id"`
+	}
+	if status := d.e.Call(t, http.MethodPost, "/v1/activities", AnyMap{
+		"kind": "task", "subject": "Ring back some day",
+		"due_at":    now.AddDate(0, 0, 7).Format(time.RFC3339),
+		"remind_at": now.Add(-time.Minute).Format(time.RFC3339),
+	}, nil, &undated); status != http.StatusCreated {
+		t.Fatalf("writing the second task → %d", status)
+	}
+	var cleared struct {
+		RemindAt *string `json:"remind_at"`
+	}
+	if status := d.e.Call(t, http.MethodPatch, "/v1/activities/"+undated.ID,
+		AnyMap{"due_at": nil}, nil, &cleared); status != http.StatusOK {
+		t.Fatalf("clearing the due date → %d", status)
+	}
+	if cleared.RemindAt != nil {
+		t.Errorf("clearing the due date left the passed reminder at %s", *cleared.RemindAt)
+	}
 }
 
 func dueReminderIDs(t *testing.T, d *twoDoors) []string {

@@ -44,7 +44,7 @@ func (s *Service) planned(
 	// and a manager looking at a colleague's work is not its assignee.
 	var reminders []Task
 	if scope == TasksMine {
-		if reminders, err = s.tasks.RemindersForViewer(ctx, asOf, plannedCap); err != nil {
+		if reminders, err = s.tasks.RemindersForViewer(ctx, asOf); err != nil {
 			return nil, 0, err
 		}
 	}

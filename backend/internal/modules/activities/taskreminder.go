@@ -16,10 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// reminderFloorDays bounds how old a passed reminder may be and still be due.
-// It is the Worklist's own age-out, so a reminder lasts as long as the task
-// would stay on the page.
-const reminderFloorDays = worklistAgeOutDays
+// reminderWindow bounds how old a passed reminder may be and still be due:
+// the Worklist's age-out in days, as a fixed span. A calendar step would move
+// the bound by an hour across a daylight-saving change in the reader's zone.
+const reminderWindow = worklistAgeOutDays * 24 * time.Hour
 
 // dueReminderClause and ReminderDueFor are two writers of one rule. The SQL
 // bounds a page on it, and the Go judges a row already read.
@@ -31,7 +31,7 @@ func dueReminderClause(alias, reader string, asOf time.Time, arg func(any) int) 
 	return sprintf(`(%[1]s.kind = 'task' AND %[1]s.remind_at IS NOT NULL AND %[1]s.is_done = false
 		AND %[1]s.archived_at IS NULL AND %[1]s.remind_at <= $%[2]d AND %[1]s.remind_at >= $%[3]d
 		AND %[1]s.assignee_id = %[4]s)`,
-		alias, arg(asOf), arg(asOf.AddDate(0, 0, -reminderFloorDays)), reader)
+		alias, arg(asOf), arg(asOf.Add(-reminderWindow)), reader)
 }
 
 // ReminderDueFor reports whether row is a reminder due for reader at asOf.
@@ -46,7 +46,7 @@ func ReminderDueFor(row crmcontracts.Activity, reader ids.UUID, asOf time.Time) 
 		return false
 	}
 	at := *row.RemindAt
-	return !at.After(asOf) && !at.Before(asOf.AddDate(0, 0, -reminderFloorDays))
+	return !at.After(asOf) && !at.Before(asOf.Add(-reminderWindow))
 }
 
 // ReminderReader is the user a read's reminders are for: the caller's own
@@ -89,18 +89,28 @@ func reminderClockOf(in ListActivitiesInput) time.Time {
 }
 
 // endPassedReminder clears a reminder that has already passed when the patch
-// moves the task's due date. Moving the date is the reader dealing with the
-// reminder, so it stops leading their Worklist. A patch that names remind_at
-// itself, or a reminder still to come, is left alone.
+// moves or clears the task's due date. Changing the date is the reader dealing
+// with the reminder, so it stops leading their Worklist. A patch that names
+// remind_at itself, or a reminder still to come, is left alone.
 func endPassedReminder(current crmcontracts.Activity, in *UpdateActivityInput) {
-	if in.recordedAt == nil || in.DueAt == nil || in.RemindAt != nil || in.clears("remind_at") {
+	if in.recordedAt == nil || in.RemindAt != nil || in.clears("remind_at") {
 		return
 	}
 	if current.Kind != crmcontracts.ActivityKindTask || current.RemindAt == nil || current.RemindAt.After(*in.recordedAt) {
 		return
 	}
-	if current.DueAt != nil && current.DueAt.Equal(*in.DueAt) {
-		return
+	if movesDueDate(current.DueAt, in) {
+		in.Clear = append(in.Clear, "remind_at")
 	}
-	in.Clear = append(in.Clear, "remind_at")
+}
+
+// movesDueDate compares the due date the patch leaves with the one it found.
+func movesDueDate(current *time.Time, in *UpdateActivityInput) bool {
+	switch {
+	case in.clears("due_at"):
+		return current != nil
+	case in.DueAt == nil:
+		return false
+	}
+	return current == nil || !current.Equal(*in.DueAt)
 }

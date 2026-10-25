@@ -190,12 +190,61 @@ func TestTheTaskCountCountsEachDueReminderOnce(t *testing.T) {
 	if total != 3 {
 		t.Errorf("the lane counts %d tasks, want 3", total)
 	}
-	reminders, err := tasks.RemindersForViewer(r.rep1, r.now, 12)
+	reminders, err := tasks.RemindersForViewer(r.rep1, r.now)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(reminders) != 2 {
 		t.Errorf("the reminder read lists %d tasks, want 2", len(reminders))
+	}
+}
+
+// More reminders than the day's cap all reach the Worklist, and the lane says
+// it holds them all.
+func TestEveryDueReminderReachesTheWorklist(t *testing.T) {
+	r := setupReminders(t)
+	want := map[string]bool{}
+	for range 13 {
+		want[r.task(t, "Reminded", r.now.AddDate(0, 0, 7), new(r.now.Add(-time.Minute)), &r.e.Rep1).String()] = true
+	}
+
+	mine := r.worklist(r.rep1, t, "mine", ids.Nil)
+	listed := 0
+	for i := range mine.Queue {
+		if want[mine.Queue[i].Id] && saysReminderDue(&mine.Queue[i]) {
+			listed++
+		}
+	}
+	if listed != len(want) {
+		t.Errorf("the Worklist lists %d of the %d due reminders", listed, len(want))
+	}
+	for _, reach := range mine.Reach {
+		if reach.Source == crmcontracts.WorklistReachSourceTask && reach.MoreAvailable {
+			t.Error("the task lane says more are available when it lists every reminder")
+		}
+	}
+	total, err := attentionTasks{store: r.e.Activities}.CountOpenForViewer(r.rep1, r.now, r.now.Add(time.Hour), attention.TasksMine, ids.Nil)
+	if err != nil || total != len(want) {
+		t.Errorf("the lane counts %d (err %v), want the %d it lists", total, err, len(want))
+	}
+}
+
+// The reminder read follows the store's cursor past its largest page.
+func TestTheReminderReadFollowsItsCursor(t *testing.T) {
+	r := setupReminders(t)
+	for range reminderPage + 1 {
+		r.task(t, "Reminded", r.now.AddDate(0, 0, 7), new(r.now.Add(-time.Minute)), &r.e.Rep1)
+	}
+	due, err := attentionTasks{store: r.e.Activities}.RemindersForViewer(r.rep1, r.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[ids.UUID]bool{}
+	for _, task := range due {
+		seen[task.ID] = true
+	}
+	if len(seen) != reminderPage+1 {
+		t.Errorf("the reminder read reached %d distinct tasks, want %d", len(seen), reminderPage+1)
 	}
 }
 

@@ -20,7 +20,7 @@ import (
 // writeReminderCase writes one case's task through the store's own writers.
 func writeReminderCase(ctx context.Context, t *testing.T, store *Store, e *sendEnv, c reminderCase) ids.ActivityID {
 	t.Helper()
-	asOf := reminderInstant(t)
+	asOf := c.readInstant(t)
 	row := c.row(e.rep, e.other, asOf)
 	holder := &ids.UserID{}
 	switch c.holder {
@@ -77,9 +77,9 @@ func TestTheReminderClauseAnswersTheCaseTable(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := pinStore(e)
-	asOf := reminderInstant(t)
 	for _, c := range reminderCases {
 		t.Run(c.name, func(t *testing.T) {
+			asOf := c.readInstant(t)
 			id := writeReminderCase(ctx, t, store, e, c)
 			var matched bool
 			if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
@@ -108,6 +108,9 @@ func TestTheReminderFilterListsTheReadersOwnDueReminders(t *testing.T) {
 	store := pinStore(e).WithClock(func() time.Time { return asOf })
 	want := map[ids.UUID]bool{}
 	for _, c := range reminderCases {
+		if c.readAt != nil {
+			continue
+		}
 		id := writeReminderCase(ctx, t, store, e, c)
 		if c.want {
 			want[id.UUID] = true

@@ -130,25 +130,35 @@ func (t attentionTasks) UpcomingForViewer(
 	return t.markReadOnly(ctx, upcoming)
 }
 
-// RemindersForViewer reads the reader's due reminders through the store's
-// reminder_due filter, the same read GET /v1/activities?reminder_due=true makes.
-func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time, limit int) ([]attention.Task, error) {
+// RemindersForViewer reads every due reminder of the reader's through the
+// store's reminder_due filter, the same read GET /v1/activities?reminder_due=true
+// makes, following its cursor. All of them, because the badge counts all.
+func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) ([]attention.Task, error) {
 	reader := activities.ReminderReader(ctx)
 	if reader.IsZero() {
 		return nil, nil
 	}
-	rows, _, err := t.store.ListActivities(ctx, activities.ListActivitiesInput{
-		RemindersDue: true, TaskAsOf: &asOf, Limit: &limit,
-	})
-	if err != nil {
-		return nil, err
+	var due []attention.Task
+	page := reminderPage
+	in := activities.ListActivitiesInput{RemindersDue: true, TaskAsOf: &asOf, Limit: &page}
+	for {
+		rows, next, err := t.store.ListActivities(ctx, in)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range rows {
+			due = append(due, taskFromActivity(row, reader, asOf))
+		}
+		if !next.HasMore {
+			return t.markReadOnly(ctx, due)
+		}
+		in.Cursor = &next.NextCursor
 	}
-	due := make([]attention.Task, 0, len(rows))
-	for _, row := range rows {
-		due = append(due, taskFromActivity(row, reader, asOf))
-	}
-	return t.markReadOnly(ctx, due)
 }
+
+// reminderPage is the store's largest page, so a reader's reminders are
+// usually one read.
+const reminderPage = 200
 
 // reminderReaderFor is whose reminders a scope's rows may carry: the reader's
 // on their own queue, and nobody's on any other.

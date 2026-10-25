@@ -106,9 +106,6 @@ func TestThePlannedLaneListsAReminderFirstAndOnce(t *testing.T) {
 	if first := out.Planned[0]; first.Id != remindedID.String() || first.ReminderDue == nil || !*first.ReminderDue {
 		t.Errorf("the planned lane leads with %s, want the reminded task marked as due", first.Id)
 	}
-	if tasks.remindersLimit != plannedCap {
-		t.Errorf("the reminder read is bounded at %d, want %d", tasks.remindersLimit, plannedCap)
-	}
 }
 
 // Only the reader's own queue is reminded. The lane feed reads every visible
