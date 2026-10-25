@@ -80,11 +80,13 @@ export function ComposeFrame({
   onClose,
   closeDisabled,
   bodyId,
+  openedFrom,
   children,
 }: Readonly<{
   title: string;
   onClose: () => void;
   closeDisabled: boolean;
+  openedFrom?: HTMLElement;
   /** The words' field, where focus lands as the window opens. */
   bodyId: string;
   children: ReactNode;
@@ -98,6 +100,7 @@ export function ComposeFrame({
       onClose={onClose}
       closeDisabled={closeDisabled}
       initialFocusTo={() => document.getElementById(bodyId)}
+      openedFrom={openedFrom}
     >
       {children}
     </DockedWindow>

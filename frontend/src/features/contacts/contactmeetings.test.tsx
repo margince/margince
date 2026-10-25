@@ -290,6 +290,7 @@ function meeting(
 ) {
   return {
     occurred_precision: "instant",
+    offers_email: false,
     kind: "meeting",
     subject: "Weekly call",
     duration_seconds: 1800,

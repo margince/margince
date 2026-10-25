@@ -11,7 +11,6 @@ package activities
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -40,20 +39,35 @@ type emailParties struct {
 // readEmailParties reads the message's normalised recipients. They are stored
 // as activity_participant rows with a role, which is why the viewer never has
 // to parse a provider payload to learn who was on a message.
+func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailParties, error) {
+	byMessage, err := readEmailPartiesOf(ctx, tx, []ids.UUID{id.UUID})
+	if err != nil {
+		return emailParties{}, err
+	}
+	return byMessage[id.UUID], nil
+}
+
+// readEmailPartiesOf is readEmailParties for a page of messages in one read.
+// Every message asked about has an entry, empty when nobody is on it.
 //
 // A contact's name is resolved only through the caller's own row scope: an
 // address the caller may not see a contact for stays an address, which is the
 // truth rather than a blank.
-func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailParties, error) {
-	args := []any{id}
+func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (map[ids.UUID]emailParties, error) {
+	args := []any{messages}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
-	if err != nil {
-		return emailParties{}, err
-	}
-	contactJoin := `LEFT JOIN contact p ON p.id = ap.contact_id AND p.archived_at IS NULL`
-	if scope != "" {
-		contactJoin += ` AND (` + scope + `)`
+	// Row scope assumes the object grant. A reader without contact read keeps
+	// the header's own address and name, and learns no contact behind them.
+	contactJoin := `LEFT JOIN contact p ON false`
+	if auth.ReadGranted(ctx, "contact") {
+		scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
+		if err != nil {
+			return nil, err
+		}
+		contactJoin = `LEFT JOIN contact p ON p.id = ap.contact_id AND p.archived_at IS NULL`
+		if scope != "" {
+			contactJoin += ` AND (` + scope + `)`
+		}
 	}
 	// Three sources for one name, in the order of how much this installation
 	// knows the contact. The contact record first — it is ours and it is
@@ -88,7 +102,7 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 	// wrote from a secondary address. It rides the SCOPED contact join, so an
 	// address surfaces only where the contact itself may be named.
 	rows, err := tx.Query(ctx, `
-		SELECT ap.role, coalesce(ap.address, ''), p.id,
+		SELECT ap.activity_id, ap.role, coalesce(ap.address, ''), p.id,
 		       coalesce(p.full_name, u.display_name, ap.display_name), ap.user_id,
 		       coalesce(u.email, ''), coalesce(stated_pe.email, own_pe.email, '')
 		  FROM activity_participant ap
@@ -106,55 +120,72 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 		       SELECT e.email FROM contact_email e
 		        WHERE e.contact_id = p.id AND e.archived_at IS NULL`+
 		contactaddress.ReachableOrder+` LIMIT 1) own_pe ON p.id IS NOT NULL
-		 WHERE ap.activity_id = $1
+		 WHERE ap.activity_id = ANY($1)
 		   AND ap.role IN ('from', 'to', 'cc', 'bcc', 'organizer', 'attendee')
 		   AND NOT `+unstatedContactSQL("ap")+`
 		 ORDER BY CASE ap.role
 		            WHEN 'from' THEN 1 WHEN 'to' THEN 2 WHEN 'cc' THEN 3 ELSE 4
 		          END, ap.created_at, ap.id`, args...)
 	if err != nil {
-		return emailParties{}, err
+		return nil, err
 	}
-	out, err := collectEmailParties(rows)
+	out, err := collectEmailParties(rows, messages)
 	if err != nil {
-		return emailParties{}, err
+		return nil, err
 	}
-	// The logged path keeps the stated header addresses as rows of their own
-	// beside the contacts and seats they resolved to, so without the fold the
-	// sender reads as "Their Name, their@address" — two parties where the
-	// message had one.
-	out.from = foldStatedDuplicates(out.from)
-	out.to = foldStatedDuplicates(out.to)
-	out.cc = foldStatedDuplicates(out.cc)
-	out.bcc = foldStatedDuplicates(out.bcc)
-	if len(out.from) == 0 {
-		sender, err := receivedFromTx(ctx, tx, id)
-		if err != nil {
-			return emailParties{}, err
+	var unsent []ids.UUID
+	for id, parties := range out {
+		// The logged path keeps a stated header address beside the contact or
+		// seat it resolved to. Unfolded, one sender reads as two parties.
+		parties.from = foldStatedDuplicates(parties.from)
+		parties.to = foldStatedDuplicates(parties.to)
+		parties.cc = foldStatedDuplicates(parties.cc)
+		parties.bcc = foldStatedDuplicates(parties.bcc)
+		out[id] = parties
+		if len(parties.from) == 0 {
+			unsent = append(unsent, id)
 		}
-		if sender != "" {
-			out.from = append(out.from, crmcontracts.EmailParty{Address: sender})
-		}
+	}
+	senders, err := receivedFromTx(ctx, tx, unsent)
+	if err != nil {
+		return nil, err
+	}
+	for id, sender := range senders {
+		parties := out[id]
+		parties.from = append(parties.from, crmcontracts.EmailParty{Address: sender})
+		out[id] = parties
 	}
 	return out, nil
 }
 
-// receivedFromTx is the sender of a received message whose capture recorded
-// no sender participant: older captures dropped an address the seat held,
-// which left the drawer with no From line at all. On a received message the
-// counterparty IS the sender, so it answers rather than a gap.
-func receivedFromTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (string, error) {
-	var sender string
-	err := tx.QueryRow(ctx, `
-		SELECT coalesce(counterparty_email, '') FROM activity
-		 WHERE id = $1 AND archived_at IS NULL AND direction = 'inbound'`, id).Scan(&sender)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
+// receivedFromTx is the sender of each received message whose capture
+// recorded no sender participant, as older captures did. On a received
+// message the counterparty is the sender.
+func receivedFromTx(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (map[ids.UUID]string, error) {
+	out := make(map[ids.UUID]string, len(messages))
+	if len(messages) == 0 {
+		return out, nil
 	}
+	rows, err := tx.Query(ctx, `
+		SELECT id, counterparty_email FROM activity
+		 WHERE id = ANY($1) AND archived_at IS NULL AND direction = 'inbound'
+		   AND coalesce(counterparty_email, '') <> ''`, messages)
 	if err != nil {
-		return "", fmt.Errorf("activities: reading who sent %s: %w", id, err)
+		return nil, fmt.Errorf("activities: reading who sent a message: %w", err)
 	}
-	return sender, nil
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		var sender string
+		if err := rows.Scan(&id, &sender); err != nil {
+			return nil, fmt.Errorf("activities: reading who sent a message: %w", err)
+		}
+		out[id] = sender
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("activities: reading who sent a message: %w", err)
+	}
+	return out, nil
 }
 
 // counterpartyOf names the other side for a row: the first party the caller
@@ -219,26 +250,27 @@ func foldStatedDuplicates(parties []crmcontracts.EmailParty) []crmcontracts.Emai
 	return kept
 }
 
-// collectEmailParties reads the participant rows into the four header lists.
-func collectEmailParties(rows pgx.Rows) (emailParties, error) {
+// collectEmailParties reads the participant rows into the four header lists
+// of each message.
+func collectEmailParties(rows pgx.Rows, messages []ids.UUID) (map[ids.UUID]emailParties, error) {
 	defer rows.Close()
 	// Empty, not nil. Every one of these four is `required` in the contract, and
 	// a nil slice marshals to `null` rather than `[]` — so a message with
 	// nobody in copy served a null the viewer is entitled to treat as a list.
 	// It read `.length` off it and the drawer died where the message should be.
-	out := emailParties{
-		from: emptyParties(),
-		to:   emptyParties(),
-		cc:   emptyParties(),
-		bcc:  emptyParties(),
+	byMessage := make(map[ids.UUID]emailParties, len(messages))
+	for _, id := range messages {
+		byMessage[id] = emailParties{from: emptyParties(), to: emptyParties(), cc: emptyParties(), bcc: emptyParties()}
 	}
 	for rows.Next() {
+		var message ids.UUID
 		var role, address, seatEmail, contactEmail string
 		var contactID, userID *ids.UUID
 		var fullName *string
-		if err := rows.Scan(&role, &address, &contactID, &fullName, &userID, &seatEmail, &contactEmail); err != nil {
-			return emailParties{}, err
+		if err := rows.Scan(&message, &role, &address, &contactID, &fullName, &userID, &seatEmail, &contactEmail); err != nil {
+			return nil, err
 		}
+		out := byMessage[message]
 		// The seat's own address, when the participant row carries none. Capture
 		// writes an address for a party it read off a header and only a user_id
 		// for one it resolved to a seat, so this is the difference between a
@@ -273,9 +305,10 @@ func collectEmailParties(rows pgx.Rows) (emailParties, error) {
 		case "attendee":
 			out.attendees = append(out.attendees, party)
 		}
+		byMessage[message] = out
 	}
 	if err := rows.Err(); err != nil {
-		return emailParties{}, err
+		return nil, err
 	}
-	return out, nil
+	return byMessage, nil
 }

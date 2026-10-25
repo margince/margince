@@ -36,7 +36,13 @@ function activity(
   row: Pick<SectionActivity, "id" | "kind" | "occurred_at"> &
     Partial<SectionActivity>,
 ): SectionActivity {
-  return { occurred_precision: "instant", is_done: false, ...CAPTURED, ...row };
+  return {
+    occurred_precision: "instant",
+    offers_email: false,
+    is_done: false,
+    ...CAPTURED,
+    ...row,
+  };
 }
 
 // The tab reads the page's own activities section rather than fetching, so the

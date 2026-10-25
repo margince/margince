@@ -19,6 +19,22 @@ func (s *Service) WithBaseLanguage(resolve func(context.Context, pgx.Tx) textlan
 	return &configured
 }
 
+// WithReaderLanguage names the language of text only the caller reads and
+// nothing stores. Stored run statuses keep the base language.
+func (s *Service) WithReaderLanguage(resolve func(context.Context, pgx.Tx) textlang.Lang) *Service {
+	configured := *s
+	configured.reader = resolve
+	return &configured
+}
+
+// readerCopy is the caller's language for a live read, else the status language.
+func (s *Service) readerCopy(ctx context.Context, tx pgx.Tx) langcopy.Spoken {
+	if s.reader == nil {
+		return s.statusCopy(ctx, tx)
+	}
+	return langcopy.For(string(s.reader(ctx, tx)))
+}
+
 func (s *Service) statusCopy(ctx context.Context, tx pgx.Tx) langcopy.Spoken {
 	language := textlang.English
 	if s.language != nil {

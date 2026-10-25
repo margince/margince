@@ -16,6 +16,7 @@ import { openTaskDetails } from "./ai-task-details-testing";
 
 type Feature = components["schemas"]["AiFeatureRoute"];
 type Providers = components["schemas"]["AiProviderHealth"];
+type LaneKeyGap = components["schemas"]["AiLaneNeedingAKey"];
 
 afterEach(cleanup);
 
@@ -120,12 +121,52 @@ describe("taskDot", () => {
 });
 
 describe("a task's details", () => {
-  const show = (row: Feature, providers?: Providers) =>
+  const show = (row: Feature, providers?: Providers, lanes?: LaneKeyGap[]) =>
     render(
       <LocaleProvider initial="en">
-        <AiFeatureTable rows={[row]} providers={providers} onEdit={() => {}} />
+        <AiFeatureTable
+          rows={[row]}
+          providers={providers}
+          lanesNeedingAKey={lanes}
+          onEdit={() => {}}
+        />
       </LocaleProvider>,
     );
+
+  // The reported bug: the save is accepted, the router keeps the old model,
+  // and the screen showed only what was saved.
+  it("says a lane holds no key, and names the variable to set", async () => {
+    const user = userEvent.setup({ delay: null });
+    show(feature, undefined, [
+      {
+        lane: feature.leading_tier,
+        provider: "anthropic",
+        model: "claude-x",
+        key_env: "ANTHROPIC_API_KEY",
+      },
+    ]);
+
+    const details = await openTaskDetails(user, feature.display_name);
+
+    expect(details).toHaveTextContent("not running");
+    expect(details).toHaveTextContent("ANTHROPIC_API_KEY");
+  });
+
+  it("says nothing about keys for a lane whose binding can run", async () => {
+    const user = userEvent.setup({ delay: null });
+    show(feature, undefined, [
+      {
+        lane: "a-lane-this-task-does-not-start-on",
+        provider: "anthropic",
+        model: "claude-x",
+        key_env: "ANTHROPIC_API_KEY",
+      },
+    ]);
+
+    const details = await openTaskDetails(user, feature.display_name);
+
+    expect(details).not.toHaveTextContent("ANTHROPIC_API_KEY");
+  });
 
   it("says a background task waits while every model it can use is blocked", async () => {
     const user = userEvent.setup({ delay: null });

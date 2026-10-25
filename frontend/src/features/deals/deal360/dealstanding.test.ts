@@ -28,6 +28,7 @@ const AS_OF = "2026-08-13T12:00:00Z";
 function activity(over: Partial<Activity>): Activity {
   return {
     occurred_precision: "instant",
+    offers_email: false,
     id: "a",
     kind: "email",
     occurred_at: "2026-08-01T09:00:00Z",

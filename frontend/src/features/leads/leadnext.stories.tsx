@@ -40,6 +40,7 @@ function task(id: string, subject: string, dueAt: string): Activity {
     due_at: dueAt,
     occurred_at: "2026-06-18T08:00:00Z",
     occurred_precision: "instant",
+    offers_email: false,
     source: "manual",
     captured_by: "human:u-1",
     is_done: false,

@@ -5888,6 +5888,7 @@ export const en = {
   "files.empty":
     "No files on this deal yet. Upload a file, or link an email with an attachment.",
   "files.originUnknown": "an unknown sender",
+  "files.origin.mail": "From {who} · {subject}",
   "files.hiddenBadge": "Hidden",
   "files.hide": "Hide from this deal",
   "files.unhide": "Show on this deal again",
@@ -6059,6 +6060,8 @@ export const en = {
   "compose.newEmail": "New email",
   "compose.replyingTo": "Replying to “{subject}” · {when}",
   "compose.followingUp": "Following up on your email “{subject}” · {when}",
+  "compose.aboutRow": "About: {subject}",
+  "compose.aboutWhen": "· {when}",
   "compose.draftContextHint":
     "Describe the purpose. Margince uses the record context.",
   "compose.draftEmail": "Draft email",
@@ -6101,6 +6104,7 @@ export const en = {
   "compose.to": "To",
   "compose.cc": "Cc",
   "compose.subject": "Subject",
+  "compose.projectKeyInSubject": "Add project key to subject (helps filing)",
   "compose.noGroundableRecipient":
     "No contacts at this company yet. Write the message manually, or add a contact first.",
   "compose.draftTo": "Draft to",
@@ -6132,12 +6136,15 @@ export const en = {
   "compose.threadGone":
     "That thread can no longer be answered, so a new email was opened instead. Check the recipient before sending.",
   "compose.colleagueMailbox_one":
-    "This message was delivered to the mailbox of {names}. Your reply is sent from your own mailbox, under your name.",
+    "This email came in to {names}’s mailbox. Your reply goes to the recipients below, from your own mailbox and under your name.",
   "compose.colleagueMailbox_other":
-    "This message was delivered to the mailboxes of {names}. Your reply is sent from your own mailbox, under your name.",
+    "This email came in to the mailboxes of {names}. Your reply goes to the recipients below, from your own mailbox and under your name.",
+  "compose.notOnThreadTitle": "You are not on this thread",
+  "compose.notOnThread": "You are not on this thread.",
+  "compose.dealOwner": "{owner} owns this deal.",
   "compose.colleagueUnnamed": "a colleague",
   "compose.threadGoneTitle": "Thread cannot be answered",
-  "compose.colleagueMailboxTitle": "Delivered to a colleague",
+  "compose.colleagueMailboxTitle": "This email is in a colleague’s mailbox",
   "compose.deadRecipientsTitle": "Mail to these addresses bounces",
   "compose.attach": "Attach",
   "compose.filesOnRecord": "Attach from this record",
@@ -6238,8 +6245,23 @@ export const en = {
     "Several records share this address, so the recipient cannot be identified. Merge the records to resolve this.",
   "sendPermission.reason.unconfirmed":
     "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
-  "sendPermission.reason.other":
-    "This message cannot be sent, and no seat here can override that.",
+  "sendPermission.reason.noMarketingConsent":
+    "Marketing needs the recipient’s consent, and none is on record. If this message is not marketing, pick the contact reason that fits.",
+  "sendPermission.reason.noMarketingConsentFact":
+    "Marketing needs the recipient’s consent, and none is on record.",
+  "sendPermission.reason.legacyPurpose":
+    "This message uses an old purpose that nothing on record supports. Pick a contact reason so Margince can check it.",
+  "sendPermission.reason.legacyPurposeFact":
+    "This message uses an old purpose that nothing on record supports.",
+  "sendPermission.reason.unknownPurpose":
+    "This message names a purpose Margince does not know. Pick a contact reason from the list.",
+  "sendPermission.reason.unknownPurposeFact":
+    "This message names a purpose Margince does not know.",
+  "sendPermission.reason.claimContradicts":
+    "The contact reason you picked does not match this thread. Pick another reason, or leave it empty so Margince reads it from the thread.",
+  "sendPermission.reason.claimContradictsFact":
+    "The contact reason given does not match this thread.",
+  "sendPermission.reason.other": "This message cannot be sent as it stands.",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send email",
   "compose.threadLeave": "New email",
@@ -9165,6 +9187,8 @@ export const en = {
   "aiHealth.noCalls": "No model calls in the last {hours}h.",
   "aiHealth.answering": "Responding",
   "aiHealth.notAnswering": "Not responding",
+  "aiHealth.laneNeedsKey":
+    "{provider} holds no key, so the saved binding is not running and the previous model keeps answering. Set {env}.",
   "aiHealth.callCounts_one": "{count} call, {failures} failed",
   "aiHealth.callCounts_other": "{count} calls, {failures} failed",
   "heldThreads.title": "Held threads",

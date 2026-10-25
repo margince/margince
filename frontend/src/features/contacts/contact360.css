@@ -596,3 +596,12 @@
   font: inherit;
   text-align: start;
 }
+
+/* A file's name with the mail it came with beneath it. */
+.contact-file {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+}

@@ -733,7 +733,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `bytes_withheld` | `boolean`, default `false` | yes | True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. |
 | `category` | `text`, default `'other'::text` | yes | What kind of document this is. |
 | `checksum` | `text` |  | sha256 of the bytes, for integrity/dedupe. |
-| `company_id` | `uuid` |  | The account this file rolls up to, kept as a read path rather than a second parent. |
+| `company_id` | `uuid` |  | The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. |
 | `content_type` | `text` |  |  |
 | `contract_id` | `uuid` |  | The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. |
 | `deal_id` | `uuid` |  |  |

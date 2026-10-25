@@ -120,6 +120,7 @@ const standing: components["schemas"]["Company360"] = {
     data: [
       {
         occurred_precision: "instant",
+        offers_email: false,
         id: "a-kickoff",
         kind: "meeting",
         subject: "Kickoff call",
@@ -129,6 +130,7 @@ const standing: components["schemas"]["Company360"] = {
       },
       {
         occurred_precision: "instant",
+        offers_email: false,
         id: "a-visit",
         kind: "note",
         subject: "Site visit",
@@ -138,6 +140,7 @@ const standing: components["schemas"]["Company360"] = {
       },
       {
         occurred_precision: "instant",
+        offers_email: false,
         id: "a-wrote",
         kind: "email",
         direction: "inbound",

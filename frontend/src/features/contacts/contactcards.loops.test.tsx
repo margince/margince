@@ -186,6 +186,7 @@ describe("the Commitments card's rows", () => {
       data: [
         {
           occurred_precision: "instant",
+          offers_email: false,
           id: "t-1",
           kind: "task",
           subject: "Send the pilot quote",

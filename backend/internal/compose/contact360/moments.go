@@ -103,7 +103,7 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err != nil {
 		return err
 	}
-	said := momentCopyFor(string(identity.BaseLanguageForRecord(ctx, tx)))
+	said := momentCopyFor(string(identity.ReaderLanguageForRecord(ctx, tx)))
 	said.zone = zone
 	// A reader who may not read activity sees no mail to cite, so their
 	// promise cards stay as they are.

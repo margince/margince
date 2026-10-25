@@ -45,6 +45,7 @@ function view(claims: ConversationClaim[], tasks: string[] = []): Contact360 {
     claims,
     next_steps: {
       data: tasks.map((id) => ({
+        offers_email: false,
         id,
         kind: "task",
         subject: "Send the signed contract",

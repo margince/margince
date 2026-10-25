@@ -246,7 +246,10 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	if err := WithEmailRowFacts(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if err := attachLinks(ctx, tx, one); err != nil {
+	if err := AttachLinks(ctx, tx, one); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := WithOffersEmail(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := attachColleagues(ctx, tx, &one[0]); err != nil {
@@ -258,7 +261,7 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	return one[0], nil
 }
 
-// attachLinks fills the contract's links[] on a page of activities in ONE
+// AttachLinks fills the contract's links[] on a page of activities in one
 // query — the column the timeline's "via" chips and the per-contact filter
 // read. Batched rather than per-row because the timeline reads a page at a
 // time.
@@ -270,7 +273,7 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 // deal on the same thread — to a caller who cannot read them. A link whose
 // target is out of scope is dropped, so links[] answers "what this is about,
 // as far as you can see".
-func attachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activity) error {
+func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activity) error {
 	if len(activities) == 0 {
 		return nil
 	}

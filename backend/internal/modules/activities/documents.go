@@ -75,38 +75,11 @@ func (s *Store) ListCompanyDocuments(
 		if err := auth.EnsureVisibleExisting(ctx, tx, "company", companyID); err != nil {
 			return err
 		}
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		where := []string{
-			documentMembership(holderCompany, arg(companyID)),
-		}
-		// Keyset, not offset: the library is ordered pinned-then-newest and a
-		// page boundary has to survive a pin being added between two reads.
-		if in.Cursor != nil && *in.Cursor != "" {
-			sort, err := documentSort(ctx)
-			if err != nil {
-				return err
-			}
-			clause, err := sort.KeysetClause(*in.Cursor, arg)
-			if err != nil {
-				return err
-			}
-			// KeysetClause names the columns bare; this SELECT aliases the table.
-			where = append(where, strings.ReplaceAll(clause, `"pinned"`, "at.pinned"))
-		}
-		where = append(where, filterClauses(in, arg)...)
-		visible, err := visibleParentClause(ctx, arg)
+		statement, args, err := companyDocumentsQuery(ctx, companyID, in, lim)
 		if err != nil {
 			return err
 		}
-		where = append(where, visible)
-
-		rows, err := tx.Query(ctx, fmt.Sprintf(`
-			SELECT %s FROM attachment at
-			 WHERE %s
-			 ORDER BY at.pinned DESC, at.created_at DESC, at.id DESC
-			 LIMIT %d`,
-			attachmentColumns, strings.Join(where, " AND "), lim+1), args...)
+		rows, err := tx.Query(ctx, statement, args...)
 		if err != nil {
 			return fmt.Errorf("activities: listing the account's documents: %w", err)
 		}
@@ -129,7 +102,7 @@ func (s *Store) ListCompanyDocuments(
 			}
 			page = p
 		}
-		return nil
+		return withMailOrigins(ctx, tx, out)
 	})
 	if out == nil {
 		out = []crmcontracts.Attachment{}
@@ -137,14 +110,40 @@ func (s *Store) ListCompanyDocuments(
 	return out, page, err
 }
 
-// documentSort is the library's FIXED ordering — pinned first, then newest —
-// expressed through the house sort machinery rather than hand-rolled, because
-// the hand-rolled version got the cursor wrong: it ordered on three columns and
-// continued the page on two, so a page boundary landing inside the pinned group
-// excluded every newer unpinned document from every later page, permanently.
-//
-// It is not a client choice. The reader never picks this order, so the spec is
-// fixed here and ParseListSort is only the constructor.
+// companyDocumentsQuery is the account library's statement for this caller.
+// It holds the membership, the page, the filters and each row's parent gate.
+func companyDocumentsQuery(ctx context.Context, companyID ids.UUID, in DocumentFilters, lim int) (string, []any, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	where := []string{documentMembership(holderCompany, arg(companyID))}
+	// Keyset, not offset: the library is ordered pinned-then-newest and a
+	// page boundary has to survive a pin being added between two reads.
+	if in.Cursor != nil && *in.Cursor != "" {
+		sort, err := documentSort(ctx)
+		if err != nil {
+			return "", nil, err
+		}
+		clause, err := sort.KeysetClause(*in.Cursor, arg)
+		if err != nil {
+			return "", nil, err
+		}
+		// KeysetClause names the columns bare; this SELECT aliases the table.
+		where = append(where, strings.ReplaceAll(clause, `"pinned"`, "at.pinned"))
+	}
+	where = append(where, filterClauses(in, arg)...)
+	visible, err := visibleParentClause(ctx, arg)
+	if err != nil {
+		return "", nil, err
+	}
+	where = append(where, visible)
+	return fmt.Sprintf(`
+		SELECT %s FROM attachment at
+		 WHERE %s
+		 ORDER BY at.pinned DESC, at.created_at DESC, at.id DESC
+		 LIMIT %d`,
+		attachmentColumns, strings.Join(where, " AND "), lim+1), args, nil
+}
+
 // documentSort is the library's FIXED ordering — pinned first, then newest —
 // expressed through the house sort machinery rather than hand-rolled, because
 // the hand-rolled version got the cursor wrong: it ordered on three columns and

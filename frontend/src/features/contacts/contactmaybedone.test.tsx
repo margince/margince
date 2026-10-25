@@ -33,6 +33,7 @@ const CAPTURED = {
 } as const;
 
 const TASK = {
+  offers_email: false,
   id: "a-9",
   kind: "task",
   subject: "Send demo email",

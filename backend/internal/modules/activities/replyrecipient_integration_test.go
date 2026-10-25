@@ -698,3 +698,36 @@ func TestANoteFiledOnASharedMailboxOffersNoAddress(t *testing.T) {
 		t.Errorf("address = %q, want empty — a shared mailbox is nobody a rep replies to by default", got.Address)
 	}
 }
+
+func TestATaskFiledOnlyOnAContactTheCallerCannotReadOffersNoAddress(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	private := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
+		 VALUES ($1, 'Dietmar Rietsch', $2, 'owner', 'manual', 'human:x')`, private, e.other); err != nil {
+		t.Fatalf("seeding the owner-private contact: %v", err)
+	}
+	e.seedContactEmail(t, private, "dietmar@buyer.test")
+	// Filed on a company too, so the task stays in reach while its contact is not.
+	company := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Buyer GmbH', 'manual', 'human:x')`, company); err != nil {
+		t.Fatalf("seeding the company: %v", err)
+	}
+	task := ids.New[ids.ActivityKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'task', 'Send the revised quote', now(), 'manual', 'human:x')`, task); err != nil {
+		t.Fatalf("seeding the task: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity_link (activity_id, entity_type, contact_id, company_id)
+		VALUES ($1, 'contact', $2, NULL), ($1, 'company', NULL, $3)`, task, private, company); err != nil {
+		t.Fatalf("filing the task: %v", err)
+	}
+
+	if got := recipientOf(ctx, t, e.handlers(ourDomain{suffix: "@demo.test"}), task); got.Address != "" {
+		t.Errorf("address = %q, want empty — the only linked contact is private to somebody else", got.Address)
+	}
+}

@@ -130,6 +130,7 @@ export const populated: View = {
     data: [
       {
         occurred_precision: "instant",
+        offers_email: false,
         id: "a-1",
         kind: "email",
         direction: "inbound",
@@ -280,6 +281,7 @@ export const chatConversation: View = {
     data: [
       {
         occurred_precision: "instant",
+        offers_email: false,
         id: "a-9",
         kind: "message",
         channel_provider: "zalo_oa",

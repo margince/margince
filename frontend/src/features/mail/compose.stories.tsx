@@ -226,6 +226,27 @@ export const Drafted: Story = {
   },
 };
 
+// A logged call is context for a new email, never a message to answer.
+export const AboutACall: Story = {
+  render: composeStory({
+    "GET /activities/act-1": () =>
+      jsonResponse({
+        id: "act-1",
+        kind: "call",
+        subject: "Voicemail",
+        occurred_at: "2026-09-01T09:00:00Z",
+      }),
+  }),
+  play: async () => {
+    await composerOnScreen();
+    await screen.findByText(/^About: Voicemail/);
+    await expect(
+      screen.getByRole("button", { name: "Draft email" }),
+    ).toBeVisible();
+    await expect(screen.queryByText(/Replying to/)).toBeNull();
+  },
+};
+
 // The thread arrived in a COLLEAGUE's mailbox. The reply still goes out from
 // the reader's own, under their own name, so the composer says whose
 // conversation this is before they commit to answering it.

@@ -84,7 +84,12 @@ function upload(): DealDocument {
   } as DealDocument;
 }
 
-function captured(hidden = false): DealDocument {
+// A received mail's file by default. `sender` names who the mail is from; on
+// a sent mail that is the rep, while the counterparty is still the buyer.
+function captured(
+  hidden = false,
+  sender = "laura@buyer.example",
+): DealDocument {
   return {
     hidden,
     attachment: {
@@ -96,6 +101,13 @@ function captured(hidden = false): DealDocument {
       source: "gmail",
       captured_by: "human:u1",
       created_at: "2026-08-21T09:00:00Z",
+      origin: {
+        activity_id: "act-1",
+        kind: "email",
+        subject: "Re: MSA",
+        occurred_at: "2026-08-21T08:55:00Z",
+        sender: { address: sender },
+      },
     },
     origin: {
       activity_id: "act-1",
@@ -185,8 +197,23 @@ it("tells a captured file from an upload and says where it came from", async () 
   render(<DealFiles deal={dealOf()} />);
 
   expect(await screen.findByText("MSA-redline.docx")).toBeInTheDocument();
-  expect(screen.getByText("From laura@buyer.example")).toBeInTheDocument();
+  expect(
+    screen.getByText("From laura@buyer.example · Re: MSA"),
+  ).toBeInTheDocument();
   expect(screen.getByText("Uploaded here")).toBeInTheDocument();
+});
+
+it("names the rep, not the buyer, as the sender of a sent mail's file", async () => {
+  stubApi([captured(false, "rep@seller.example")]);
+  const onOpenEmail = vi.fn();
+  render(<DealFiles deal={dealOf()} onOpenEmail={onOpenEmail} />);
+
+  const origin = await screen.findByRole("button", {
+    name: "From rep@seller.example · Re: MSA",
+  });
+  expect(screen.queryByText(/laura@buyer\.example/)).toBeNull();
+  await userEvent.setup().click(origin);
+  expect(onOpenEmail).toHaveBeenCalledWith("act-1");
 });
 
 it("hides a captured file at once through the deal's own hide route, never the file", async () => {

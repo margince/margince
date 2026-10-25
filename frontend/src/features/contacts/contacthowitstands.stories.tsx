@@ -43,6 +43,7 @@ const visitedToday: Contact360 = {
         subject: "Site visit",
         occurred_at: "2026-08-13T12:00:00Z",
         occurred_precision: "day",
+        offers_email: false,
         source: "manual",
         captured_by: "human:u1",
         created_at: "2026-08-13T15:00:00Z",

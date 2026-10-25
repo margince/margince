@@ -111,6 +111,63 @@ describe("DealHistoryTab", () => {
     expect(screen.queryByLabelText("Activity kind")).toBeNull();
   });
 
+  // Mail is answered. Any other row is written about where the server can fill
+  // To, and a task the product filed offers no email at all.
+  it("offers Reply on mail and Write email only where the server can address the row", async () => {
+    const rows = [
+      { ...CALL_ACTIVITY, offers_email: true },
+      {
+        ...CALL_ACTIVITY,
+        id: "a-2",
+        kind: "meeting",
+        subject: "Site visit",
+        offers_email: false,
+      },
+      {
+        ...CALL_ACTIVITY,
+        id: "a-3",
+        kind: "task",
+        subject: "1 forecast input needs attention",
+        is_done: false,
+        captured_by: "system",
+        automatic_kind: "product",
+        offers_email: false,
+      },
+      {
+        ...CALL_ACTIVITY,
+        id: "a-4",
+        kind: "task",
+        subject: "Send the revised quote",
+        is_done: false,
+        offers_email: true,
+      },
+      {
+        ...CALL_ACTIVITY,
+        id: "a-5",
+        kind: "email",
+        subject: "Revised quote",
+        direction: "inbound",
+      },
+    ];
+    stubWithSession(
+      {
+        "GET /activities": () =>
+          jsonResponse({ data: rows, page: { has_more: false } }),
+      },
+      {},
+    );
+    withProviders(<DealHistoryTab deal={DEAL} onOpenEmail={() => {}} />);
+
+    await screen.findByText("Send the revised quote");
+    expect(screen.getAllByRole("button", { name: "Write email" })).toHaveLength(
+      2,
+    );
+    expect(screen.getAllByRole("button", { name: "Reply" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Open task" })).toHaveLength(
+      2,
+    );
+  });
+
   it("says there is nothing yet rather than drawing an empty list silently", async () => {
     stubWithSession({}, {});
     withProviders(<DealHistoryTab deal={DEAL} onOpenEmail={() => {}} />);

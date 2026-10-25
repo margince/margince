@@ -30,6 +30,7 @@ const BASE: Company360 = {
 function activity(over: Partial<Activity> & Pick<Activity, "id">): Activity {
   return {
     occurred_precision: "instant",
+    offers_email: false,
     kind: "meeting",
     occurred_at: "2026-06-03T10:00:00Z",
     subject: "Kickoff call",

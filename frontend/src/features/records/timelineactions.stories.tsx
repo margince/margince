@@ -25,6 +25,7 @@ type Activity = components["schemas"]["Activity"];
 
 const BASE: Activity = {
   occurred_precision: "instant",
+  offers_email: false,
   id: "11111111-1111-4111-8111-111111111111",
   kind: "email",
   occurred_at: "2026-09-01T09:12:00Z",

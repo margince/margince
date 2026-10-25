@@ -170,6 +170,7 @@ export const OpenTask: Story = {
         data: [
           {
             occurred_precision: "instant",
+            offers_email: false,
             id: "a-1",
             kind: "task",
             subject: "Send the pricing sheet Giacomo requested",

@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -164,6 +165,16 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 // connector-captured on the same medium and provider. A thread key alone is
 // shared across media, and a hand-typed activity says whatever its author typed.
 //
+// Participation is proved by the captured address alone. A relink repoints
+// p.contact_id to another contact while the address stays, so the mutable
+// contact link would carry the standing to another contact.
+//
+// The thread key is the sender's References root, so it proves nothing alone.
+// The copying mail must come from a sender the receiving server authenticated.
+// One of our seats must also have written to that same sender on the thread
+// (correspondence.ConversationSQL). A stranger who forges the key of
+// a thread we wrote on to somebody else shares no correspondent with it.
+//
 // Named by anchor when there is one and by thread key otherwise, the same
 // choice repliedIntoThisConversation makes, so staging and transmit agree.
 func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (bool, error) {
@@ -183,12 +194,11 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 			SELECT 1
 			  FROM activity a
 			  JOIN activity_participant p ON p.activity_id = a.id
-			 WHERE a.thread_key = $6
-			   AND a.direction = 'inbound'
+			 WHERE a.thread_key = $2
 			   AND a.archived_at IS NULL
-			   AND a.captured_by LIKE 'connector:%'
+			   AND `+correspondence.AuthenticatedInboundSQL("a")+`
 			   AND p.role IN ('to', 'cc')
-			   AND `+participantIsTheSubject+`
+			   AND $1 <> '' AND lower(p.address) = lower($1)
 			   AND EXISTS (
 			       SELECT 1 FROM activity_participant author
 			        WHERE author.activity_id = a.id
@@ -198,15 +208,12 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 			       SELECT 1
 			         FROM activity ours
 			         JOIN activity_participant op ON op.activity_id = ours.id
-			        WHERE ours.thread_key = a.thread_key
-			          AND ours.kind = a.kind
-			          AND ours.channel_provider IS NOT DISTINCT FROM a.channel_provider
-			          AND ours.archived_at IS NULL
-			          AND ours.direction = 'outbound'
+			        WHERE `+correspondence.ConversationSQL("ours", "a")+`
+			          AND `+correspondence.OurOutboundSQL("ours")+`
 			          AND ours.captured_by LIKE 'connector:%'
 			          AND op.role = 'from'
 			          AND op.user_id IS NOT NULL)
-		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, threadKey).Scan(&found)
+		)`, subject.Address, threadKey).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read whether the recipient was copied on this thread: %w", err)
 	}
@@ -273,9 +280,8 @@ const authorIsTheSubject = `(p.role = 'from' AND ` + participantIsTheSubject + `
 
 // participantIsTheSubject is the identity half of authorIsTheSubject, without
 // the role. The participant row p names this recipient by record, by bare
-// address or by channel account. copiedOnThisMatter reads it with the
-// recipient roles. So both roles read "this row is the recipient" from one
-// text. Same placeholders as authorIsTheSubject.
+// address or by channel account. copiedOnThisMatter does not read it, because
+// a relink can repoint the record. Same placeholders as authorIsTheSubject.
 const participantIsTheSubject = `(
 			            ($1 = 'contact' AND p.contact_id = $2::uuid)
 			         OR ($3 <> '' AND p.contact_id IS NULL AND lower(p.address) = lower($3))

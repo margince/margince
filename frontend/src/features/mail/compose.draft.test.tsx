@@ -554,6 +554,24 @@ describe("ComposeModal draft binding", () => {
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": () =>
         jsonResponse(voiceDraft("vd-a", "Re: Q3", "Draft A body.")),
+      // Closing keeps the words as a saved draft, and the window shuts once
+      // the server has kept them.
+      "PUT /mail-drafts": () =>
+        jsonResponse({
+          id: "md-1",
+          anchor_type: "activity",
+          anchor_id: "act-1",
+          to: [],
+          cc: [],
+          bcc: [],
+          subject: "Re: Q3",
+          body: "Draft A body.",
+          html_body: null,
+          version: 1,
+          agent_drafted: true,
+          created_at: "2026-08-01T00:00:00Z",
+          updated_at: "2026-08-01T00:00:00Z",
+        }),
     });
     const onClose = renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });

@@ -10,15 +10,15 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 129186,
+    "tool_catalog_bytes": 129497,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 33193,
+    "approx_wire_tokens_total": 33271,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 33327,
       "input_schema_bytes": 61689,
-      "output_schema_bytes": 25242,
+      "output_schema_bytes": 25553,
       "description_plus_input_schema_bytes": 95016
     }
   },
@@ -3267,6 +3267,36 @@
                       },
                       "filename": {
                         "type": "string"
+                      },
+                      "origin": {
+                        "properties": {
+                          "activity_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "occurred_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "sender_address": {
+                            "type": "string"
+                          },
+                          "sender_name": {
+                            "type": "string"
+                          },
+                          "subject": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "activity_id",
+                          "kind",
+                          "occurred_at"
+                        ],
+                        "type": "object"
                       },
                       "url": {
                         "type": "string"

@@ -49,6 +49,7 @@ function activity(
 ): Activity {
   return {
     occurred_precision: "instant",
+    offers_email: false,
     kind: "email",
     is_done: false,
     ...CAPTURED,

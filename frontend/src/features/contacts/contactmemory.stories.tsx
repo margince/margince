@@ -66,6 +66,7 @@ const requestSummary: NonNullable<Activity["email_summary"]> = {
 
 const email: Activity = {
   occurred_precision: "instant",
+  offers_email: false,
   id: "01a05500-0000-7000-8000-00000000ee01",
   kind: "email",
   subject: "Re: the renewal quote",
@@ -83,6 +84,7 @@ const email: Activity = {
 
 const meeting: Activity = {
   occurred_precision: "instant",
+  offers_email: false,
   id: "01a05500-0000-7000-8000-00000000ee02",
   kind: "meeting",
   subject: "Depot walkthrough",
@@ -96,6 +98,7 @@ const meeting: Activity = {
 
 const note: Activity = {
   occurred_precision: "instant",
+  offers_email: false,
   id: "01a05500-0000-7000-8000-00000000ee03",
   kind: "note",
   subject: "Call prep",
@@ -139,6 +142,7 @@ const reachable: components["schemas"]["Contact"] = {
 // Call: the widest the right slot gets.
 const call: Activity = {
   occurred_precision: "instant",
+  offers_email: false,
   id: "01a05500-0000-7000-8000-00000000ee04",
   kind: "call",
   subject: "Asked whether the retrofit slot can move to October",

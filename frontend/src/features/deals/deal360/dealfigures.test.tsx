@@ -130,6 +130,7 @@ describe("what the axis marks", () => {
   };
   const row = (over: Partial<Activity>): Activity => ({
     occurred_precision: "instant",
+    offers_email: false,
     id: "row",
     kind: "meeting",
     occurred_at: AS_OF,

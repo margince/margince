@@ -65,6 +65,7 @@ function emailSummary(over: Partial<EmailSummary> = {}): EmailSummary {
 function emailRow(over: Partial<Activity> = {}): Activity {
   return {
     occurred_precision: "instant",
+    offers_email: false,
     id: EMAIL_ID,
     kind: "email",
     occurred_at: "2026-08-29T09:15:00Z",
@@ -85,6 +86,7 @@ function emailRow(over: Partial<Activity> = {}): Activity {
 
 const noteRow: Activity = {
   occurred_precision: "instant",
+  offers_email: false,
   id: NOTE_ID,
   kind: "note",
   occurred_at: "2026-08-28T11:00:00Z",

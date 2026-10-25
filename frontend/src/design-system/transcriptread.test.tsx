@@ -379,6 +379,7 @@ describe("which activity carries a transcript", () => {
     expect(
       isTranscriptActivity({
         occurred_precision: "instant",
+        offers_email: false,
         ...base,
         kind: "call",
         source_system: "transcript",
@@ -387,6 +388,7 @@ describe("which activity carries a transcript", () => {
     expect(
       isTranscriptActivity({
         occurred_precision: "instant",
+        offers_email: false,
         ...base,
         kind: "meeting",
         source_system: "transcript",
@@ -398,6 +400,7 @@ describe("which activity carries a transcript", () => {
     expect(
       isTranscriptActivity({
         occurred_precision: "instant",
+        offers_email: false,
         ...base,
         kind: "meeting",
       }),
@@ -405,6 +408,7 @@ describe("which activity carries a transcript", () => {
     expect(
       isTranscriptActivity({
         occurred_precision: "instant",
+        offers_email: false,
         ...base,
         kind: "email",
         source_system: "transcript",
@@ -416,11 +420,18 @@ describe("which activity carries a transcript", () => {
     const [transcript, note] = activityTimeline([
       {
         occurred_precision: "instant",
+        offers_email: false,
         ...base,
         kind: "call",
         source_system: "transcript",
       },
-      { occurred_precision: "instant", ...base, id: "a-2", kind: "note" },
+      {
+        occurred_precision: "instant",
+        offers_email: false,
+        ...base,
+        id: "a-2",
+        kind: "note",
+      },
     ]);
     expect(transcript.detail).toBeTruthy();
     expect(note.detail).toBeUndefined();

@@ -32,6 +32,7 @@ function email(
 ): Activity {
   return {
     occurred_precision: "instant",
+    offers_email: false,
     id,
     kind: "email",
     subject,

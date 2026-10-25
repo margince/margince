@@ -169,6 +169,7 @@ it("offers each thread and the way back as design-system buttons", async () => {
 it("puts a reply to a thread outside the offer at the top, marked", () => {
   const cards = threadCards([pricing], "old-1", {
     occurred_precision: "instant",
+    offers_email: false,
     id: "old-1",
     kind: "email",
     subject: "An older thread",

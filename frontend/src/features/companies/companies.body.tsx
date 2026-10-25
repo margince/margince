@@ -278,6 +278,7 @@ export function CompanyRecordBody({
           <CompanyDocumentsCard
             companyId={company.id}
             refusedReasonId={refusedReasonId}
+            onOpenEmail={receipt.openEmail}
           />
         </div>
       )}

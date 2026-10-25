@@ -24,6 +24,7 @@ const held: Activity = {
   subject: "Depot walkthrough",
   occurred_at: "2026-09-24T08:00:00Z",
   occurred_precision: "instant",
+  offers_email: false,
   duration_seconds: 1800,
   meeting_status: "held",
   is_done: false,

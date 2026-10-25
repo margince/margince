@@ -5916,7 +5916,8 @@ export interface paths {
          *     `mailbox_user_ids` answers a different question from the three name fields:
          *     not who the reply goes TO, but whose mailbox the message being answered
          *     arrived in. A composer shows it so a reply into a colleague's conversation
-         *     says so before it is sent.
+         *     says so before it is sent. `viewer_on_conversation` and `deal_owner_user_id`
+         *     say whether the caller is part of that conversation, and who owns its deal.
          */
         get: operations["getReplyRecipient"];
         put?: never;
@@ -13284,7 +13285,8 @@ export interface paths {
         /**
          * Read AI administration status (ai_diagnostics and ai_budget read).
          * @description Requires both diagnostics and allowance read permissions. Without ai_routing
-         *     read, features and unused_tiers are empty and routing_version is an empty
+         *     read, features, unused_tiers and lanes_needing_a_key are empty and
+         *     routing_version is an empty
          *     string; routing settings are not read. Deferred-work counts cover the company.
          */
         get: operations["getAiStatus"];
@@ -25477,6 +25479,15 @@ export interface components {
              */
             waiting_on_provider?: number;
         };
+        /** @description One saved binding whose vendor needs a key that is not held. */
+        AiLaneNeedingAKey: {
+            /** @description The lane the binding sits on, named as the router names it: a tier name, `embed` or `decide`. */
+            lane: string;
+            provider: string;
+            model?: string;
+            /** @description The environment variable that would supply the key, named so an operator can act without looking it up. */
+            key_env: string;
+        };
         AiStatus: {
             /** Format: date-time */
             observed_at: string;
@@ -25487,6 +25498,8 @@ export interface components {
             deferred_work: components["schemas"]["AiDeferredWork"][];
             deferred_work_coverage: string;
             unused_tiers?: string[];
+            /** @description The saved bindings that cannot run, because the vendor they name holds no key. The router keeps serving whatever it served before such a save, so without this the screen names a model that is not answering. */
+            lanes_needing_a_key?: components["schemas"]["AiLaneNeedingAKey"][];
         };
         AiBudgetPreview: {
             current: components["schemas"]["AiBudgetSnapshot"];
@@ -34533,8 +34546,10 @@ export interface components {
              * @description The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
              */
             readonly source_activity_id?: string | null;
-            /** @description One activity may link to >1 entity (contact + deal). */
+            /** @description Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360. */
             links?: components["schemas"]["ActivityLink"][];
+            /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient. */
+            offers_email: boolean;
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
@@ -35028,7 +35043,7 @@ export interface components {
             supersedes_id?: string | null;
             /**
              * Format: uuid
-             * @description The account this file rolls up to, kept as a read path rather than a second parent. Visibility stays the primary parent's, and this is maintained on relink and merge so a file follows the record it belongs to.
+             * @description The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
              */
             readonly company_id?: string | null;
             /**
@@ -35040,11 +35055,30 @@ export interface components {
             readonly bytes_withheld?: boolean;
             /** @description The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download. */
             readonly url?: string | null;
+            origin?: components["schemas"]["AttachmentOrigin"];
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
             /** Format: date-time */
             created_at: string;
+        };
+        /** @description The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail. */
+        AttachmentOrigin: {
+            /**
+             * Format: uuid
+             * @description The mail to open.
+             */
+            activity_id: string;
+            /** @description The activity kind the file arrived with: email, message. */
+            kind: string;
+            subject?: string | null;
+            /**
+             * Format: date-time
+             * @description When the mail was sent or received.
+             */
+            occurred_at: string;
+            /** @description Who the mail is from, named as the caller may see them: a contact's name only when the caller may see that contact. Absent when capture recorded no sender. */
+            sender?: components["schemas"]["EmailParty"];
         };
         AttachmentListResponse: {
             data: components["schemas"]["Attachment"][];
@@ -35058,6 +35092,7 @@ export interface components {
         DealDocument: {
             attachment: components["schemas"]["Attachment"];
             hidden: boolean;
+            /** @description Deprecated: read attachment.origin, which names the mail's sender rather than its counterparty and is gated like every Documents list. Kept for older clients. */
             origin?: components["schemas"]["DealDocumentOrigin"];
         };
         /** @description Where a captured file came from. Present for a file that arrived with a message linked to the deal; absent for a file uploaded on the deal. */
@@ -35214,10 +35249,31 @@ export interface components {
          * @description Who a reply to a message is addressed to: one contact, resolved from the
          *     message's participants by role.
          *
+         *     A call, meeting, note or task is written about a contact, not replied to. Its
+         *     `address` comes from its links alone, never its participants: the reachable
+         *     address of its one live linked contact the caller may read. Links to companies,
+         *     deals and other records do not count. Two or more such contacts, none, a contact
+         *     without an address, a shared mailbox, a seat's login or a colleague's address
+         *     answer empty, and so does a task the product filed itself. None of these kinds has
+         *     a conversation to join: each answers `viewer_on_conversation` true, `mailbox_user_ids`
+         *     empty and `deal_owner_user_id` null. `POST /activities/{id}/draft-email` fills its
+         *     `to` by the same rule.
+         *
          *     One contact rather than a list. A reply is written to somebody, and a group
          *     thread degrades to the most likely counterparty rather than to nobody.
          */
         ReplyRecipient: {
+            /**
+             * @description Whether the caller already belongs to this conversation, so a composer can say when a reply comes from somebody the contact has not been writing with. A label, never a grant: it never refuses a send.
+             *     True when either holds. The caller is on the thread: one of their own addresses, or their seat, is the From, To or Cc of the message or of another message in its thread that they may read. Their addresses are their login, the addresses they declared and their connected mailboxes; an address another seat holds on equal or stronger evidence is not theirs. Or the caller is on the team of a deal the message is filed under: its owner, assigned to it, or a member of a team assigned to it. A deal counts only when the caller may read it, so the answer never shows that a hidden deal exists.
+             */
+            viewer_on_conversation: boolean;
+            /**
+             * Format: uuid
+             * @description The owner of the deal this message is filed under, for the client to name through its roster. Null when the message is filed under no deal the caller may read, or that deal has no owner. A deal the caller cannot read answers null, the same as no deal.
+             *     With several readable deals, an open deal comes before a won or lost one, and then the deal the message was filed under most recently. That is the deal the conversation is about now.
+             */
+            deal_owner_user_id: string | null;
             /**
              * @description Every member of this company whose OWN mailbox this message was delivered to, in the order the imports were recorded. It says whose conversation a reply would be joining: a thread that reached only a colleague's mailbox is theirs, and a reply still goes out from the caller's own mailbox under the caller's own name.
              *     A label of where the message arrived, never a grant. It is answered only to a caller who may already read the message's content, and a seat named here is named because their credential delivered the row.
@@ -35228,7 +35284,7 @@ export interface components {
             full_name: string;
             /** @description What a greeting uses. Split server-side rather than in a prompt: a model asked to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call. */
             first_name: string;
-            /** @description Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves. */
+            /** @description Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. A written-about row follows its own rule, above. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves. */
             address: string;
         };
         /**
@@ -35831,6 +35887,8 @@ export interface components {
              *     opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
              *     offered an override on those would render a button that cannot achieve what it
              *     promises, and the rep would type a justification the staging gate then ignores.
+             *     A recorded reason lifts one category, so a refusal that resolved to no single
+             *     category, such as `unknown_purpose`, answers false.
              */
             can_be_overruled?: boolean;
             /**

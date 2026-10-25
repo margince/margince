@@ -93,6 +93,7 @@ function meeting(
 ): Activity {
   return {
     occurred_precision: "instant",
+    offers_email: false,
     id,
     kind: "meeting",
     subject,

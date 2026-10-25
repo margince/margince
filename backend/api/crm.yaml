@@ -8600,7 +8600,8 @@ paths:
         `mailbox_user_ids` answers a different question from the three name fields:
         not who the reply goes TO, but whose mailbox the message being answered
         arrived in. A composer shows it so a reply into a colleague's conversation
-        says so before it is sent.
+        says so before it is sent. `viewer_on_conversation` and `deal_owner_user_id`
+        say whether the caller is part of that conversation, and who owns its deal.
       responses:
         '200':
           description: The recipient a reply would go to, with empty fields where unknown.
@@ -19531,7 +19532,8 @@ paths:
       summary: Read AI administration status (ai_diagnostics and ai_budget read).
       description: |
         Requires both diagnostics and allowance read permissions. Without ai_routing
-        read, features and unused_tiers are empty and routing_version is an empty
+        read, features, unused_tiers and lanes_needing_a_key are empty and
+        routing_version is an empty
         string; routing settings are not read. Deferred-work counts cover the company.
       responses:
         '200':
@@ -36360,6 +36362,19 @@ components:
             Work waiting for the AI provider to answer, not for the budget. It resumes by
             itself at the provider's next probe, and a budget raise does not change it;
             `count` holds only what a raise would resume.
+    AiLaneNeedingAKey:
+      type: object
+      required: [lane, provider, key_env]
+      description: 'One saved binding whose vendor needs a key that is not held.'
+      properties:
+        lane:
+          type: string
+          description: 'The lane the binding sits on, named as the router names it: a tier name, `embed` or `decide`.'
+        provider: { type: string }
+        model: { type: string }
+        key_env:
+          type: string
+          description: 'The environment variable that would supply the key, named so an operator can act without looking it up.'
     AiStatus:
       type: object
       required: [observed_at, budget, routing_version, task_contract_hash, features, deferred_work, deferred_work_coverage]
@@ -36372,6 +36387,10 @@ components:
         deferred_work: { type: array, items: { $ref: '#/components/schemas/AiDeferredWork' } }
         deferred_work_coverage: { type: string }
         unused_tiers: { type: array, items: { type: string } }
+        lanes_needing_a_key:
+          type: array
+          items: { $ref: '#/components/schemas/AiLaneNeedingAKey' }
+          description: 'The saved bindings that cannot run, because the vendor they name holds no key. The router keeps serving whatever it served before such a save, so without this the screen names a model that is not answering.'
     AiBudgetPreview:
       type: object
       required: [current, proposed, features, deferred_work]
@@ -47232,7 +47251,7 @@ components:
         **Custom fields**: the values of the workspace's activity custom fields arrive as extra
         top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
         `withheld`.
-      required: [id, kind, occurred_at, occurred_precision, source, captured_by, created_at, updated_at]
+      required: [id, kind, occurred_at, occurred_precision, source, captured_by, created_at, updated_at, offers_email]
       properties:
         commitment_admissions:
           type: array
@@ -47401,8 +47420,22 @@ components:
             A task cannot grant access to its source or disclose content from a withheld source.
         links:
           type: array
-          description: One activity may link to >1 entity (contact + deal).
+          description: >-
+            Every record this activity is filed under that the caller may read; a link to a
+            record they cannot read is left out. One activity may link to several, a contact
+            and a deal say. Every read that returns an activity answers the same links: the
+            list, one activity, and a contact's 360.
           items: { $ref: '#/components/schemas/ActivityLink' }
+        offers_email:
+          type: boolean
+          description: >-
+            Whether Write email on this row opens with a recipient filled in: true exactly when
+            `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call,
+            meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`.
+            Always false for an email or a message, which are answered with Reply instead, for
+            an archived row, for a task the product filed itself (`automatic_kind` product),
+            and for a row whose content is withheld from the caller. A client offers Write email
+            only when this is true, and reads the address from reply-recipient.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         imported_from:
@@ -48065,9 +48098,10 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The account this file rolls up to, kept as a read path rather than a second parent. Visibility
-            stays the primary parent's, and this is maintained on relink and merge so a file
-            follows the record it belongs to.
+            The account an upload is filed under: the company it was uploaded on, or the account of the
+            deal it was uploaded on at that time. A file that came with a captured mail carries none; the
+            account's Documents list reaches it through the mail's links as they are now. A read path
+            rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
         contract_id:
           type: [string, 'null']
           format: uuid
@@ -48090,9 +48124,31 @@ components:
             The address of a `link` row, and null for every other category. It is an http or https
             address on a known document host. The reader renders it as an outbound link to open in
             a new tab, never as a download.
+        origin:
+          $ref: '#/components/schemas/AttachmentOrigin'
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         created_at: { type: string, format: date-time }
+
+    AttachmentOrigin:
+      type: object
+      readOnly: true
+      x-email-presentation: exempt
+      x-email-presentation-reason: The line naming the mail a file came with, gated with that mail's content; opening it goes to the canonical email drawer.
+      description: >-
+        The mail a file came with. Present on a Documents list row whose file hangs off a mail the
+        caller may read; absent on an upload, and absent when the caller may not read the mail.
+      required: [activity_id, kind, occurred_at]
+      properties:
+        activity_id: { type: string, format: uuid, description: The mail to open. }
+        kind: { type: string, description: 'The activity kind the file arrived with: email, message.' }
+        subject: { type: [string, 'null'] }
+        occurred_at: { type: string, format: date-time, description: When the mail was sent or received. }
+        sender:
+          $ref: '#/components/schemas/EmailParty'
+          description: >-
+            Who the mail is from, named as the caller may see them: a contact's name only when the
+            caller may see that contact. Absent when capture recorded no sender.
 
     AttachmentListResponse:
       type: object
@@ -48113,6 +48169,9 @@ components:
         hidden: { type: boolean }
         origin:
           $ref: '#/components/schemas/DealDocumentOrigin'
+          description: >-
+            Deprecated: read attachment.origin, which names the mail's sender rather than its
+            counterparty and is gated like every Documents list. Kept for older clients.
 
     DealDocumentOrigin:
       type: object
@@ -48300,10 +48359,47 @@ components:
         Who a reply to a message is addressed to: one contact, resolved from the
         message's participants by role.
 
+        A call, meeting, note or task is written about a contact, not replied to. Its
+        `address` comes from its links alone, never its participants: the reachable
+        address of its one live linked contact the caller may read. Links to companies,
+        deals and other records do not count. Two or more such contacts, none, a contact
+        without an address, a shared mailbox, a seat's login or a colleague's address
+        answer empty, and so does a task the product filed itself. None of these kinds has
+        a conversation to join: each answers `viewer_on_conversation` true, `mailbox_user_ids`
+        empty and `deal_owner_user_id` null. `POST /activities/{id}/draft-email` fills its
+        `to` by the same rule.
+
         One contact rather than a list. A reply is written to somebody, and a group
         thread degrades to the most likely counterparty rather than to nobody.
-      required: [full_name, first_name, address, mailbox_user_ids]
+      required: [full_name, first_name, address, mailbox_user_ids, viewer_on_conversation, deal_owner_user_id]
       properties:
+        viewer_on_conversation:
+          type: boolean
+          description: >-
+            Whether the caller already belongs to this conversation, so a composer can say
+            when a reply comes from somebody the contact has not been writing with. A label,
+            never a grant: it never refuses a send.
+
+            True when either holds. The caller is on the thread: one of their own addresses,
+            or their seat, is the From, To or Cc of the message or of another message in its
+            thread that they may read. Their addresses are their login, the addresses they
+            declared and their connected mailboxes; an address another seat holds on equal
+            or stronger evidence is not theirs. Or the caller is on the team of a deal the message is filed under:
+            its owner, assigned to it, or a member of a team assigned to it. A deal counts
+            only when the caller may read it, so the answer never shows that a hidden deal
+            exists.
+        deal_owner_user_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The owner of the deal this message is filed under, for the client to name
+            through its roster. Null when the message is filed under no deal the caller may
+            read, or that deal has no owner. A deal the caller cannot read answers null, the
+            same as no deal.
+
+            With several readable deals, an open deal comes before a won or lost one, and
+            then the deal the message was filed under most recently. That is the deal the
+            conversation is about now.
         mailbox_user_ids:
           type: array
           uniqueItems: true
@@ -48335,7 +48431,8 @@ components:
           type: string
           description: >-
             Where the reply is sent: the counterparty's own corresponding address where
-            the thread carries one, else their primary live address. Never one of this
+            the thread carries one, else their primary live address. A written-about row
+            follows its own rule, above. Never one of this
             installation's own contacts. Empty when the thread offers none — including a
             thread whose every participant is a colleague — which the reader fills in
             themselves.
@@ -49030,6 +49127,8 @@ components:
             opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
             offered an override on those would render a button that cannot achieve what it
             promises, and the rep would type a justification the staging gate then ignores.
+            A recorded reason lifts one category, so a refusal that resolved to no single
+            category, such as `unknown_purpose`, answers false.
         decided_by:
           type: string
           enum: [machine, user, admin, subject]

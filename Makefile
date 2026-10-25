@@ -1049,6 +1049,14 @@ test-sbom-sign:
 test-sbom-census:
 	@./scripts/test-sbom-census.sh
 
+## test-sbom-license-parity — prove the licence comparison inside
+## `sbom-parity` fails on each way the three signed documents can disagree,
+## and passes on the ways they differ harmlessly. Planted documents, and the
+## real script: a comparison nothing tests is one that can quietly compare
+## the intersection and report a pass.
+test-sbom-license-parity:
+	@./scripts/test-sbom-license-parity.sh
+
 ## test-api-entrypoint — prove the container entrypoint writes the bootstrap
 ## credential ONLY onto an unprovisioned installation, retires a spent one, and
 ## refuses to start when it cannot tell which it is. Every failure on that path
@@ -1705,8 +1713,10 @@ sbom:
 sbom-supplement:
 	@test -f $(SBOM_DIR)/margince.cdx.json || { echo "FAIL: no SBOM found — run 'make sbom' first"; exit 1; }
 	@set -e; cdx=$(SBOM_DIR)/margince.cdx.json; s22=$(SBOM_DIR)/margince.spdx221.json; \
+	  s30=$(SBOM_DIR)/margince.spdx300.json; \
 	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .components |= map(((.purl // "") | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then .licenses = [{"license": {"id": $$map[$$k]}}] else . end)' "$$cdx" > "$$cdx.tmp" && mv "$$cdx.tmp" "$$cdx"; \
-	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .packages |= map((([.externalRefs[]? | select(.referenceType == "purl") | .referenceLocator] | (.[0] // "")) | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then (.licenseConcluded = $$map[$$k] | .licenseDeclared = $$map[$$k]) else . end)' "$$s22" > "$$s22.tmp" && mv "$$s22.tmp" "$$s22"
+	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .packages |= map((([.externalRefs[]? | select(.referenceType == "purl") | .referenceLocator] | (.[0] // "")) | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then (.licenseConcluded = $$map[$$k] | .licenseDeclared = $$map[$$k]) else . end)' "$$s22" > "$$s22.tmp" && mv "$$s22.tmp" "$$s22" ; \
+	  jq --slurpfile m sbom-schemas/license-supplement.json -f sbom-schemas/spdx30-licenses.jq "$$s30" > "$$s30.tmp" && mv "$$s30.tmp" "$$s30"
 
 ## sbom-normalize — reconcile syft's three writers so all three SBOMs describe one
 ## tree, the invariant the constellation dist gate enforces. syft scans the export
@@ -1746,6 +1756,10 @@ sbom-parity:
 	  else \
 	    echo "FAIL: SBOM file sets differ — see the diff above"; exit 1; \
 	  fi
+	@# The packages and their licenses, which the file sets above say nothing
+	@# about: a supplement that reached two of the three documents drifted
+	@# under this target for as long as it compared files alone.
+	@bash scripts/sbom-license-parity.sh $(SBOM_DIR)
 
 ## sbom-census — the license gate's coverage check: every package a committed
 ## pnpm-lock.yaml resolves must be an npm component of the CycloneDX SBOM,

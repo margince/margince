@@ -87,6 +87,7 @@ const reachableOnZalo = [
 // The timeline's own type then refuses it.
 const chatMessage: components["schemas"]["Activity"] = {
   occurred_precision: "instant",
+  offers_email: false,
   id: "a-chat",
   kind: "message",
   channel_provider: "zalo_oa",
@@ -412,6 +413,7 @@ describe("the header's writing verb", () => {
 // drawer's old bug. So this asserts the URL that actually goes out.
 describe("which meeting the brief drawer asks about", () => {
   const heldMeeting = {
+    offers_email: false,
     id: "a-held",
     kind: "meeting" as const,
     subject: "Depot walkthrough",

@@ -40,6 +40,7 @@ function jsonResponse(body: unknown, status = 200) {
 
 const inbound: Activity = {
   occurred_precision: "instant",
+  offers_email: false,
   id: "act-1",
   kind: "email",
   direction: "inbound",

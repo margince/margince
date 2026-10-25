@@ -342,8 +342,8 @@ describe("the composer's conversation pane", () => {
   });
 
   it("draws no thread for a reply to a note", async () => {
-    // A timeline row offers Reply on a note as readily as on a mail. A note
-    // offered as a thread would claim to be an exchange.
+    // A timeline row offers Write email on a note as readily as Reply on a
+    // mail. A note offered as a thread would claim to be an exchange.
     const note: Activity = { ...threaded, kind: "note" };
     const sent = stubRoutes({
       "GET /activities/act-1": () => jsonResponse(note),
@@ -365,7 +365,7 @@ describe("the composer's conversation pane", () => {
         sent.filter((call) => call.key === "GET /activities/act-1"),
       ).not.toHaveLength(0),
     );
-    await screen.findByText(/Replying to/);
+    await screen.findByText(/^About: /);
     await userEvent.click(screen.getByRole("button", { name: /Change$/ }));
     expect(threadMenu().querySelectorAll(".compose-threadrow")).toHaveLength(0);
   });

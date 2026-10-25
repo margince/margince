@@ -41,6 +41,7 @@ function meeting(over: Partial<Activity>): Activity {
     meeting_status: "booked",
     occurred_at: "2026-06-24T09:00:00Z",
     occurred_precision: "instant",
+    offers_email: false,
     source: "manual",
     captured_by: "human:u-1",
     is_done: false,

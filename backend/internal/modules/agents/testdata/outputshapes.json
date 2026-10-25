@@ -826,6 +826,36 @@
           "filename": {
             "type": "string"
           },
+          "origin": {
+            "type": "object",
+            "properties": {
+              "activity_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "occurred_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "sender_address": {
+                "type": "string"
+              },
+              "sender_name": {
+                "type": "string"
+              },
+              "subject": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "activity_id",
+              "kind",
+              "occurred_at"
+            ]
+          },
           "url": {
             "type": "string"
           }
@@ -5915,6 +5945,36 @@
                 },
                 "filename": {
                   "type": "string"
+                },
+                "origin": {
+                  "type": "object",
+                  "properties": {
+                    "activity_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "occurred_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "sender_address": {
+                      "type": "string"
+                    },
+                    "sender_name": {
+                      "type": "string"
+                    },
+                    "subject": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "activity_id",
+                    "kind",
+                    "occurred_at"
+                  ]
                 },
                 "url": {
                   "type": "string"

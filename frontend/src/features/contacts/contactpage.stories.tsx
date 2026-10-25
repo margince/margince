@@ -569,6 +569,7 @@ const promised: View = {
     data: [
       {
         occurred_precision: "instant",
+        offers_email: false,
         id: "a-9",
         kind: "task",
         subject: "Send the retrofit quote",
@@ -582,6 +583,7 @@ const promised: View = {
       },
       {
         occurred_precision: "instant",
+        offers_email: false,
         id: "a-8",
         kind: "task",
         subject: "Book the depot walkthrough",
@@ -627,6 +629,7 @@ const calledBack: View = {
     data: [
       {
         occurred_precision: "instant",
+        offers_email: false,
         id: "a-7",
         kind: "task",
         subject: "Call Dana back about the depot retrofit",

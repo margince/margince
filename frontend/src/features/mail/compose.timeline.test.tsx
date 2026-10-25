@@ -194,6 +194,8 @@ describe("TimelineActions", () => {
     ...activity202,
     id: "a2",
     kind: "note",
+    links: [{ entity_type: "contact", entity_id: "c1" }],
+    offers_email: true,
   };
 
   it("offers Reply on an email row and Relink alongside it", () => {
@@ -205,24 +207,61 @@ describe("TimelineActions", () => {
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 
-  it("offers Reply on a non-email row too, as the send path allows", () => {
+  it("offers Write email on a non-email row too, as the send path allows", async () => {
     // A send anchored to a note carries no RFC822 identity and starts a
     // conversation, which the backend handles. Gating this on kind === "email"
     // is what made "log a note → compose → send" unreachable in a workspace
     // whose timeline holds nothing captured from mail.
     stubRoutes();
     render(<TimelineActions activity={note} entityType="deal" entityId="d1" />);
-    expect(screen.getByRole("button", { name: "Reply" })).toBeTruthy();
-    // Relink is always available. The row is already linked to this timeline's
-    // entity, and the Activity list payload carries no `links` to gate on.
+    expect(
+      await screen.findByRole("button", { name: "Write email" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Reply" })).toBeNull();
+    // Relink is always available: the row is already linked to this timeline's entity.
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 
   it("opens the composer anchored to a note row", async () => {
     stubRoutes();
     render(<TimelineActions activity={note} entityType="deal" entityId="d1" />);
-    await userEvent.click(screen.getByRole("button", { name: "Reply" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Write email" }),
+    );
     expect(await screen.findByRole("dialog")).toBeTruthy();
+  });
+
+  it("offers Write email beside Open task on a task with one contact", async () => {
+    stubRoutes();
+    const task: Activity = { ...note, id: "t1", kind: "task" };
+    render(<TimelineActions activity={task} entityType="deal" entityId="d1" />);
+    expect(
+      await screen.findByRole("button", { name: "Write email" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open task" })).toBeTruthy();
+  });
+
+  it("offers Open task and no email on a task the product filed", async () => {
+    stubRoutes();
+    const task: Activity = {
+      ...note,
+      id: "t2",
+      kind: "task",
+      automatic_kind: "product",
+      offers_email: false,
+    };
+    render(
+      <>
+        <TimelineActions activity={note} entityType="deal" entityId="d1" />
+        <TimelineActions activity={task} entityType="deal" entityId="d1" />
+      </>,
+    );
+    // The note row is the positive control in the same render.
+    await screen.findByRole("button", { name: "Write email" });
+    expect(screen.getAllByRole("button", { name: "Write email" })).toHaveLength(
+      1,
+    );
+    expect(screen.getByRole("button", { name: "Open task" })).toBeTruthy();
   });
 
   it("opens the composer when Reply is clicked", async () => {

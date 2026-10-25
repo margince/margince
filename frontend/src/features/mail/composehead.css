@@ -39,3 +39,34 @@
   background: transparent;
   box-shadow: none;
 }
+
+/* The subject and the project whose tag it carries, on one ruled line. The
+   subject is a bare line of text, named by its placeholder. */
+.compose-subject {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.compose-subject > :first-child {
+  flex: 1;
+  min-inline-size: 0;
+}
+.compose-subject > .compose-subject-field + :not(.compose-subject-under) {
+  flex: none;
+  inline-size: 11.875rem;
+}
+/* What the subject carries, on its own line so a long label never squeezes the
+   subject; it starts where the subject's text does. */
+.compose-subject-under {
+  flex-basis: 100%;
+  padding-inline-start: var(--inputPaddingX);
+}
+.compose-subject-field .input {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  font-weight: var(--fontWeightMedium);
+}

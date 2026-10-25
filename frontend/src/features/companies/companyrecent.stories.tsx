@@ -18,6 +18,7 @@ type Company360 = components["schemas"]["Company360"];
 
 const email: Activity = {
   occurred_precision: "instant",
+  offers_email: false,
   id: "a-1",
   kind: "email",
   subject: "Re: retrofit timeline",

@@ -173,7 +173,7 @@ async function writeDraft(ask: SaveAsk): Promise<MailDraft> {
       html_body: ask.fields.html.trim() === "" ? null : ask.fields.html,
     },
   });
-  if (!response.ok || !data) {
+  if (!response.ok || !isMailDraft(data)) {
     throwProblem(error || {});
   }
   return data;

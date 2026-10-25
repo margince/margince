@@ -39,6 +39,7 @@ const wrote: Activity = {
   subject: "Re: retrofit timeline",
   occurred_at: "2026-08-01T08:00:00Z",
   occurred_precision: "instant",
+  offers_email: false,
 };
 
 function view(activities: Activity[]): Company360 {
@@ -103,6 +104,7 @@ export const DayOnlyVisit: Story = {
         subject: "Site visit",
         occurred_at: "2026-08-13T12:00:00Z",
         occurred_precision: "day",
+        offers_email: false,
       },
     ]),
   ),

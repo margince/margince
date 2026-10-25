@@ -57,6 +57,7 @@ var leadGate = objectGate{
 // than in the gated set: removing the lead condition could only WIDEN the
 // result the caller already sees.
 var predicateLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/leadorigin.go:DeleteLeadOrigin":             "`SELECT EXISTS (SELECT 1 FROM lead WHERE origin = $1)`: whether a lead still uses the origin being deleted, after the lead-vocabulary delete grant. One boolean that only refuses the delete as a conflict; nothing of a lead leaves",
 	"internal/modules/contacts/leadnoticehold.go:websiteLeadNoticePending": "the notice hold asks, inside EXISTS, whether a lead the caller is about to promote, claim, assign, route or merge is a website lead whose notice is not yet known to be delivered. One boolean leaves it and only ever refuses; every caller has already taken its own lead gate",
 	"internal/modules/consent/confirmresolve.go:ResolveConfirmToken":       "the public link resolver asks only whether the lead a website lead's privacy-notice link names is still live, in an EXISTS beside the contact arm. No lead column is selected; the token is the authority, as it is for a contact's link, and a dead lead reads as an unknown link",
 	"internal/modules/activities/awaitingreply.go":                         "the follow-up reminder's customer test: an EXISTS asking whether a message the reader sent went to a working lead. No lead column is selected; what reaches the caller is their own sent message under their activity content gate. Removing the arm hides a reminder, never discloses a lead",
@@ -201,21 +202,15 @@ func readsLeadTable(filePath string, file *ast.File) bool {
 func TestEveryReaderOfTheLeadTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 	t.Parallel()
 	files := leadReaderScope.Files(t)
-	gated := leadGate.gatedFunctionsByPackage(t, files)
+	walk := leadGate.walkPackages(t, files)
 	consts := constantTable{}
 
 	var satisfied int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
 		for _, site := range leadGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := parsed.Path
-			if site.function != "" {
-				subject += ":" + site.function
-			}
-			carriesGate := site.holdsGate || callsAGatedHelper(site.calls, gated[pkg])
-			if site.function == "" {
-				carriesGate = site.holdsGate || leadGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
-			}
+			subject := site.subject(parsed.Path)
+			carriesGate := walk.carries(t, leadGate, parsed, site, consts.of(t, pkg))
 			verdict := verdictIn(t, subject, leadVerdicts)
 
 			switch {

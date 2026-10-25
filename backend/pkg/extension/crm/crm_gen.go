@@ -566,7 +566,7 @@ type Activity struct {
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
 
-	// Links One activity may link to >1 entity (contact + deal).
+	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
@@ -574,8 +574,11 @@ type Activity struct {
 	OccurredAt    time.Time              `json:"occurred_at"`
 
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
-	OccurredPrecision OccurredPrecision       `json:"occurred_precision"`
-	Raw               *map[string]interface{} `json:"raw,omitempty"`
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
+	// OffersEmail Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
+	OffersEmail bool                    `json:"offers_email"`
+	Raw         *map[string]interface{} `json:"raw,omitempty"`
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
@@ -1264,6 +1267,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_precision")
 	}
 
+	if raw, found := object["offers_email"]; found {
+		err = json.Unmarshal(raw, &a.OffersEmail)
+		if err != nil {
+			return fmt.Errorf("error reading 'offers_email': %w", err)
+		}
+		delete(object, "offers_email")
+	}
+
 	if raw, found := object["raw"]; found {
 		err = json.Unmarshal(raw, &a.Raw)
 		if err != nil {
@@ -1573,6 +1584,11 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 	object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
+	}
+
+	object["offers_email"], err = json.Marshal(a.OffersEmail)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'offers_email': %w", err)
 	}
 
 	if a.Raw != nil {

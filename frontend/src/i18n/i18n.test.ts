@@ -26,6 +26,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "webhooks.headers.namePlaceholder",
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
+  "compose.aboutWhen",
   "deal.committee.seatSub",
   "lead.card.askedQuote",
   "signatureTemplate.placeholder",

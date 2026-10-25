@@ -50,6 +50,7 @@ function emailSummary(over: Partial<EmailSummary> = {}): EmailSummary {
 function emailRow(over: Partial<Activity> = {}): Activity {
   return {
     occurred_precision: "instant",
+    offers_email: false,
     id: EMAIL_ID,
     kind: "email",
     occurred_at: "2026-08-29T09:15:00Z",
@@ -72,6 +73,7 @@ function emailRow(over: Partial<Activity> = {}): Activity {
 // control for "only the email branch moved".
 const callRow: Activity = {
   occurred_precision: "instant",
+  offers_email: false,
   id: CALL_ID,
   kind: "call",
   occurred_at: "2026-08-28T14:00:00Z",
