@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,6 +47,14 @@ func captureVoiceFixture(t *testing.T) voiceFixture {
 		time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC),
 		commitmentMailRecipient{contact: f.to, role: "to"},
 		commitmentMailRecipient{contact: f.q, role: "cc"})
+	// The owed-verdict pass reads the mail as a request, so it has a move to owe.
+	judge := principal.WithActor(e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:owed_verdict",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	if applied, err := e.Activities.SetOwedVerdict(judge, f.mail, activities.OwedVerdictAsksUs, "voice-test", clocktest.Now(t)); err != nil || !applied {
+		t.Fatalf("judging the mail a request: applied=%v err=%v", applied, err)
+	}
 	return f
 }
 
@@ -90,6 +99,9 @@ func TestACopiedContactsPageNamesTheTrueAuthor(t *testing.T) {
 	}
 	if got := voiceRole(row); got != crmcontracts.ActivityVoiceContactRoleCc {
 		t.Errorf("contact_role = %q, want cc", got)
+	}
+	if listed := listedRow(t, f, f.readerSeat); listed.EmailSummary == nil || listed.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
+		t.Fatalf("the fixture mail's own move is %+v, want needs_reply so the copied page has one to drop", listed.EmailSummary)
 	}
 	if row.EmailSummary == nil || row.EmailSummary.Move != crmcontracts.EmailSummaryMoveNone {
 		t.Errorf("move = %+v, want none: a copied contact is owed no reply", row.EmailSummary)
