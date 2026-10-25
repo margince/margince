@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 328 |
-| Columns | 3850 |
-| Foreign keys | 533 |
+| Tables | 329 |
+| Columns | 3866 |
+| Foreign keys | 534 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -102,7 +102,7 @@ erDiagram
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 43 |
-| [consent](consent.md) | 19 |
+| [consent](consent.md) | 20 |
 | [contacts](contacts.md) | 48 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
@@ -261,7 +261,7 @@ erDiagram
 | [`conversation_claim`](contacts.md#conversation_claim) | contacts | 21 | 0 |
 | [`currency_minor_digits`](platform.md#currency_minor_digits) | platform | 2 | 0 |
 | [`custom_field`](customfields.md#custom_field) | customfields | 16 | 0 |
-| [`data_subject_request`](consent.md#data_subject_request) | consent | 16 | 0 |
+| [`data_subject_request`](consent.md#data_subject_request) | consent | 17 | 1 |
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
 | [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
@@ -359,6 +359,7 @@ erDiagram
 | [`pipeline`](deals.md#pipeline) | deals | 8 | 7 |
 | [`preference_token`](consent.md#preference_token) | consent | 8 | 0 |
 | [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 18 | 0 |
+| [`privacy_request_proof`](consent.md#privacy_request_proof) | consent | 15 | 0 |
 | [`product`](deals.md#product) | deals | 18 | 1 |
 | [`project`](projects.md#project) | projects | 23 | 10 |
 | [`project_health_assessment`](projects.md#project_health_assessment) | projects | 10 | 1 |
