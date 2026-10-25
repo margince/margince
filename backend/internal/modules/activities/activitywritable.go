@@ -5,13 +5,11 @@ package activities
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -19,19 +17,15 @@ import (
 // StampActivitiesWritable sets Writable on a page of activities from the
 // question the update path asks. That is the object grant, then the row
 // authority auth.ActivityWritableSubset answers for the whole page at once.
-// Every read that returns activities calls it, so the list, the single read
-// and the contact timeline cannot disagree about one row.
+// The list, the single read and the contact timeline each call it.
 func StampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
 	may := make(map[ids.UUID]bool)
-	err := auth.Require(ctx, "activity", principal.ActionUpdate)
-	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
-		return err
-	}
-	if err == nil && len(page) > 0 {
+	if auth.Allows(ctx, "activity", principal.ActionUpdate) && len(page) > 0 {
 		named := make([]ids.UUID, len(page))
 		for i := range page {
 			named[i] = ids.UUID(page[i].Id)
 		}
+		var err error
 		if may, err = auth.ActivityWritableSubset(ctx, tx, named); err != nil {
 			return err
 		}
