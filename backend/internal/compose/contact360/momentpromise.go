@@ -79,10 +79,11 @@ func (said momentCopy) openPromiseFrom(ctx context.Context, now time.Time, task 
 	// the reason's to state.
 	observed := task.OccurredAt
 	evidence := []crmcontracts.ContactMomentEvidence{{
-		Type:       crmcontracts.ContactMomentEvidenceTypeTask,
-		Id:         new(task.Id),
-		Label:      subject,
-		ObservedAt: &observed,
+		Type:              crmcontracts.ContactMomentEvidenceTypeTask,
+		Id:                new(task.Id),
+		Label:             subject,
+		ObservedAt:        &observed,
+		ObservedPrecision: new(task.OccurredPrecision),
 	}}
 	// The fingerprint carries WHOSE promise this is, not only which task it
 	// is. A dismissal is keyed on the fingerprint so that the moment comes
@@ -340,6 +341,9 @@ func (said momentCopy) openClaimCard(now time.Time, claim crmcontracts.Conversat
 		Snippet:    &claim.SourceQuote,
 		ObservedAt: claim.OccurredAt,
 	}}
+	if claim.OccurredAt != nil {
+		evidence[0].ObservedPrecision = new(claim.OccurredPrecision)
+	}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            claimMomentKey(openClaimRung, claim),
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,

@@ -35307,7 +35307,7 @@ type ContactMoment struct {
 	// EvidenceFingerprint A digest of the evidence this moment fired on. The dismissal is held against it, so a dismissed moment RE-ARMS when its evidence moves — the reader dismissed "she went quiet", a reply arrives, and the page must not stay silent about the thing that just changed. Keying a dismissal on the path alone is what gets that wrong.
 	EvidenceFingerprint string `json:"evidence_fingerprint"`
 
-	// FreshnessAt When the fact behind this moment happened, so a reader can judge its age themselves.
+	// FreshnessAt When the fact behind this moment happened, so a reader can judge its age themselves. It reads as an instant; for a day entry it is that date's noon UTC, and the evidence it is taken from says so in `observed_precision`.
 	FreshnessAt *time.Time `json:"freshness_at,omitempty"`
 
 	// Headline The reason in one line, written from the evidence — never a model's paraphrase of it.
@@ -35401,6 +35401,9 @@ type ContactMomentEvidence struct {
 	Label      string              `json:"label"`
 	ObservedAt *time.Time          `json:"observed_at,omitempty"`
 
+	// ObservedPrecision How to read `observed_at` when it is an activity's time, from the row it names. `day` means only its UTC date is known, so a reader takes no time from it. Absent with `observed_at`, and beside a promise's due date.
+	ObservedPrecision *OccurredPrecision `json:"observed_precision,omitempty"`
+
 	// Snippet A verbatim excerpt of the evidence, never a summary of it.
 	Snippet *string                   `json:"snippet,omitempty"`
 	Type    ContactMomentEvidenceType `json:"type"`
@@ -35422,7 +35425,9 @@ type ContactMomentMayBeDone struct {
 
 	// PromiseType `task` — an open task. `claim` — a `commitment_ours` claim with no task.
 	PromiseType ContactMomentMayBeDonePromiseType `json:"promise_type"`
-	WroteAt     time.Time                         `json:"wrote_at"`
+
+	// WroteAt When that email was sent, read as an instant. The same email in the moment's evidence carries `observed_precision`.
+	WroteAt time.Time `json:"wrote_at"`
 }
 
 // ContactMomentMayBeDonePromiseType `task` — an open task. `claim` — a `commitment_ours` claim with no task.

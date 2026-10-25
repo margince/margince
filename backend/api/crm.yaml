@@ -42817,7 +42817,7 @@ components:
         freshness_at:
           type: string
           format: date-time
-          description: When the fact behind this moment happened, so a reader can judge its age themselves.
+          description: When the fact behind this moment happened, so a reader can judge its age themselves. It reads as an instant; for a day entry it is that date's noon UTC, and the evidence it is taken from says so in `observed_precision`.
         evidence:
           type: array
           description: What the moment is derived from. Never empty — a reason with no evidence is an opinion.
@@ -42851,7 +42851,10 @@ components:
           type: string
           format: uuid
           description: The newest attested outbound email to the contact sent after the promise was made.
-        wrote_at: { type: string, format: date-time }
+        wrote_at:
+          type: string
+          format: date-time
+          description: When that email was sent, read as an instant. The same email in the moment's evidence carries `observed_precision`.
 
     ContactMomentRule:
       type: string
@@ -42884,6 +42887,9 @@ components:
           type: string
           description: A verbatim excerpt of the evidence, never a summary of it.
         observed_at: { type: string, format: date-time }
+        observed_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `observed_at` when it is an activity's time, from the row it names. `day` means only its UTC date is known, so a reader takes no time from it. Absent with `observed_at`, and beside a promise's due date.
 
     ContactMomentAction:
       type: object

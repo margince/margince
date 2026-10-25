@@ -128,8 +128,17 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 		"capture dates only an all-day calendar event, which has no direction",
 	"api/crm.yaml DomainQuestion.evidence_at": "a stored clock from the captured mail that raised the question; " +
 		"capture dates only an all-day calendar event, which is not mail",
-	"api/crm.yaml ContactMoment.freshness_at":                 "the age key a moment is ordered by; no client draws it",
-	"api/crm.yaml ContactMomentMayBeDone.wrote_at":            "the mail a promise may be kept by, as an ordering key; no client draws it",
+	"api/crm.yaml ContactMoment.freshness_at": "the age key a moment is ordered by, which an agent reads as an instant; " +
+		"the evidence it is taken from carries observed_precision",
+	"api/crm.yaml ContactMomentMayBeDone.wrote_at": "the mail a promise may be kept by, which an agent reads as an instant; " +
+		"the same mail in the moment's evidence carries observed_precision",
+	"api/crm.yaml ContactProfileField.observed_at": "when the source stated the value: a captured mail's sent instant, a card's REV " +
+		"or the write; capture dates only an all-day calendar event, which is not mail",
+	"api/crm.yaml ContactProfileField.superseded_observed_at": "the replaced value's observed_at, read the same way",
+	"api/crm.yaml Lead.first_response_at": "when a lead was first answered: a touch's instant, or the end of a day touch's date, " +
+		"the first moment it is proven; never a day entry's noon",
+	"api/crm.yaml IntroRequest.introduced_at": "an intro_request column, not an activity: the server's instant on a reply, " +
+		"or a date a rep states, at its UTC midnight",
 	"api/crm.yaml SearchResult.works_at":                      "not a time: the company a contact works at",
 	"api/crm.yaml UpdateRelationshipRequest.clear_ended_at":   "not a time: a flag that removes an end date",
 	"api/crm.yaml UpdateRelationshipRequest.clear_started_at": "not a time: a flag that removes a start date",
@@ -159,7 +168,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"annotated_at": runStamp, "finished_at": runStamp, "completed_at": runStamp, "failed_at": runStamp,
 	"first_failed_at": runStamp, "dead_lettered_at": runStamp, "effect_failed_at": runStamp, "ran_at": runStamp,
 	"detected_at": runStamp, "first_seen_at": runStamp, "observed_at": runStamp, "refresh_at": runStamp,
-	"verified_at": runStamp, "connected_at": runStamp, "month_start_at": runStamp, "superseded_observed_at": runStamp,
+	"verified_at": runStamp, "connected_at": runStamp, "month_start_at": runStamp,
 
 	"expires_at": aheadStamp, "credential_expires_at": aheadStamp, "watch_expires_at": aheadStamp, "deletes_at": aheadStamp,
 	"next_attempt_at": aheadStamp, "next_retry_at": aheadStamp, "next_pass_at": aheadStamp, "next_capture_at": aheadStamp,
@@ -173,8 +182,8 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"delivered_at": actStamp, "read_at": actStamp, "assigned_at": actStamp, "routed_at": actStamp,
 	"promoted_at": actStamp, "qualified_at": actStamp, "taken_at": actStamp, "issued_at": actStamp,
 	"paid_at": actStamp, "disposed_at": actStamp, "signed_in_at": actStamp, "visited_at": actStamp,
-	"previous_visit_at": actStamp, "baseline_at": actStamp, "asked_at": actStamp, "introduced_at": actStamp,
-	"name_dropped_at": actStamp, "first_response_at": actStamp, "responded_at": actStamp, "renewed_at": actStamp,
+	"previous_visit_at": actStamp, "baseline_at": actStamp, "asked_at": actStamp,
+	"name_dropped_at": actStamp, "responded_at": actStamp, "renewed_at": actStamp,
 	"link_requested_at": actStamp, "double_opt_in_confirmed_at": actStamp, "state_at": actStamp,
 	"refuted_at": actStamp, "left_at": actStamp, "received_at": actStamp, "acquired_at": actStamp, "done_at": actStamp,
 

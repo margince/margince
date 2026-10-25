@@ -261,10 +261,11 @@ func (said momentCopy) meetingPrepMoment(_ context.Context, now time.Time, page 
 	}
 	id := meeting.ActivityId
 	evidence := []crmcontracts.ContactMomentEvidence{{
-		Type:       crmcontracts.ContactMomentEvidenceTypeActivity,
-		Id:         &id,
-		Label:      label,
-		ObservedAt: &meeting.StartsAt,
+		Type:              crmcontracts.ContactMomentEvidenceTypeActivity,
+		Id:                &id,
+		Label:             label,
+		ObservedAt:        &meeting.StartsAt,
+		ObservedPrecision: &meeting.OccurredPrecision,
 	}}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:meeting_prep",
@@ -325,7 +326,7 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 	if sinceWeWrote < reEngagedQuietDays {
 		return crmcontracts.ContactMoment{}, false
 	}
-	evidence := []crmcontracts.ContactMomentEvidence{said.inboundEvidence(page, inbound)}
+	evidence := []crmcontracts.ContactMomentEvidence{said.inboundEvidence(page, inbound, page.LastLiveInboundPrecision)}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:re_engaged",
 		Rule:                crmcontracts.ContactMomentRuleReEngaged,
@@ -381,7 +382,7 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 	if page.LastInboundAt != nil {
 		quietFor = occurredday.DaysSince(occurredday.Moment{At: *page.LastInboundAt, DateOnly: occurredday.IsStatedDay(page.LastInboundPrecision)}, now, said.zone)
 	}
-	evidence := said.outboundEvidence(page, outbound)
+	evidence := said.outboundEvidence(page, outbound, page.LastOutboundPrecision)
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:gone_quiet",
 		Rule:                crmcontracts.ContactMomentRuleGoneQuiet,

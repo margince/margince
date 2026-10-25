@@ -188,22 +188,23 @@ func (said momentCopy) bookMeeting() crmcontracts.ContactMomentAction {
 // The fallback is honest rather than silent: the claim is true either way, and
 // pretending there is a row to open when the reader would land on nothing is
 // worse than saying the message is older than this page shows.
-func (said momentCopy) inboundEvidence(page *crmcontracts.Contact360, inbound time.Time) crmcontracts.ContactMomentEvidence {
-	return directionEvidence(page, inbound, said.Say(momentWords.TheirMessage))
+func (said momentCopy) inboundEvidence(page *crmcontracts.Contact360, inbound time.Time, precision *crmcontracts.OccurredPrecision) crmcontracts.ContactMomentEvidence {
+	return directionEvidence(page, inbound, precision, said.Say(momentWords.TheirMessage))
 }
 
 // outboundEvidence is the same lookup for the message WE sent.
-func (said momentCopy) outboundEvidence(page *crmcontracts.Contact360, outbound time.Time) []crmcontracts.ContactMomentEvidence {
+func (said momentCopy) outboundEvidence(page *crmcontracts.Contact360, outbound time.Time, precision *crmcontracts.OccurredPrecision) []crmcontracts.ContactMomentEvidence {
 	return []crmcontracts.ContactMomentEvidence{
-		directionEvidence(page, outbound, said.Say(momentWords.LastSentMessage)),
+		directionEvidence(page, outbound, precision, said.Say(momentWords.LastSentMessage)),
 	}
 }
 
-func directionEvidence(page *crmcontracts.Contact360, at time.Time, fallback string) crmcontracts.ContactMomentEvidence {
+func directionEvidence(page *crmcontracts.Contact360, at time.Time, precision *crmcontracts.OccurredPrecision, fallback string) crmcontracts.ContactMomentEvidence {
 	evidence := crmcontracts.ContactMomentEvidence{
-		Type:       crmcontracts.ContactMomentEvidenceTypeActivity,
-		Label:      fallback,
-		ObservedAt: &at,
+		Type:              crmcontracts.ContactMomentEvidenceTypeActivity,
+		Label:             fallback,
+		ObservedAt:        &at,
+		ObservedPrecision: precision,
 	}
 	if activity, ok := findActivityAt(page, at); ok {
 		id := activity.Id

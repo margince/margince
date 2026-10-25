@@ -26,9 +26,10 @@ type PromiseBasis struct {
 
 // PromiseFollowUp is our later message that may have kept a promise.
 type PromiseFollowUp struct {
-	EmailID ids.UUID
-	At      time.Time
-	Subject string
+	EmailID   ids.UUID
+	At        time.Time
+	Precision string
+	Subject   string
 }
 
 // PromiseFollowUpsTx finds, per promise, our newest mail on the promise's own
@@ -66,11 +67,11 @@ func PromiseFollowUpsTx(ctx context.Context, tx pgx.Tx, promises []PromiseBasis,
 	if readable == "" {
 		readable = scopeUnbounded
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT basis.promise_id, later.id, later.occurred_at, later.subject
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT basis.promise_id, later.id, later.occurred_at, later.occurred_precision, later.subject
   FROM %[1]s
   JOIN activity src ON src.id = basis.source_id AND src.thread_key IS NOT NULL
   CROSS JOIN LATERAL (
-    SELECT a.id, a.occurred_at, coalesce(a.subject, '') AS subject FROM activity a
+    SELECT a.id, a.occurred_at, a.occurred_precision, coalesce(a.subject, '') AS subject FROM activity a
      WHERE a.thread_key = src.thread_key
        AND a.kind = src.kind AND a.kind = 'email'
        AND a.channel_provider IS NOT DISTINCT FROM src.channel_provider
@@ -87,7 +88,7 @@ func PromiseFollowUpsTx(ctx context.Context, tx pgx.Tx, promises []PromiseBasis,
 	}
 	var promise ids.UUID
 	var sent PromiseFollowUp
-	if _, err := pgx.ForEachRow(rows, []any{&promise, &sent.EmailID, &sent.At, &sent.Subject}, func() error {
+	if _, err := pgx.ForEachRow(rows, []any{&promise, &sent.EmailID, &sent.At, &sent.Precision, &sent.Subject}, func() error {
 		found[promise] = sent
 		return nil
 	}); err != nil {

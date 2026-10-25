@@ -30482,7 +30482,7 @@ export interface components {
             confidence: "observed_fact" | "high" | "medium";
             /**
              * Format: date-time
-             * @description When the fact behind this moment happened, so a reader can judge its age themselves.
+             * @description When the fact behind this moment happened, so a reader can judge its age themselves. It reads as an instant; for a day entry it is that date's noon UTC, and the evidence it is taken from says so in `observed_precision`.
              */
             freshness_at?: string;
             /** @description What the moment is derived from. Never empty — a reason with no evidence is an opinion. */
@@ -30512,7 +30512,10 @@ export interface components {
              * @description The newest attested outbound email to the contact sent after the promise was made.
              */
             email_activity_id: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When that email was sent, read as an instant. The same email in the moment's evidence carries `observed_precision`.
+             */
             wrote_at: string;
         };
         /**
@@ -30542,6 +30545,8 @@ export interface components {
             snippet?: string;
             /** Format: date-time */
             observed_at?: string;
+            /** @description How to read `observed_at` when it is an activity's time, from the row it names. `day` means only its UTC date is known, so a reader takes no time from it. Absent with `observed_at`, and beside a promise's due date. */
+            observed_precision?: components["schemas"]["OccurredPrecision"];
         };
         /**
          * @description What to do about it: a TYPED descriptor, not a label the client has to interpret.

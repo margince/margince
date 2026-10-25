@@ -171,10 +171,10 @@ func TestContactEvidenceFallbackCaptionsFollowLanguage(t *testing.T) {
 		{"vi", "Tin nhắn gần nhất của họ", "Tin nhắn gần nhất gửi cho họ", "Cuộc họp"},
 	} {
 		said := momentCopyFor(tc.lang)
-		if got := said.inboundEvidence(&contracts.Contact360{}, now).Label; got != tc.inbound {
+		if got := said.inboundEvidence(&contracts.Contact360{}, now, nil).Label; got != tc.inbound {
 			t.Errorf("inbound %s: %s", tc.lang, got)
 		}
-		if got := said.outboundEvidence(&contracts.Contact360{}, now)[0].Label; got != tc.outbound {
+		if got := said.outboundEvidence(&contracts.Contact360{}, now, nil)[0].Label; got != tc.outbound {
 			t.Errorf("outbound %s: %s", tc.lang, got)
 		}
 		meeting, ok := said.meetingPrepMoment(readerCtx(), now, &contracts.Contact360{NextMeeting: &contracts.Contact360NextMeeting{StartsAt: ahead(24)}})
