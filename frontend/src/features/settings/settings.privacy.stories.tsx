@@ -77,6 +77,7 @@ const ROUTES: RouteMap = {
         assignee_id: "u-1",
         due_at: "2026-08-01T00:00:00Z",
         due_overridden: false,
+        dispute_open: false,
         created_at: "2026-07-01T00:00:00Z",
       },
       {
@@ -87,6 +88,7 @@ const ROUTES: RouteMap = {
         status: "open",
         due_at: "2099-10-01T00:00:00Z",
         due_overridden: false,
+        dispute_open: false,
         created_at: "2026-08-01T00:00:00Z",
       },
     ]),
@@ -120,6 +122,7 @@ const ROUTES: RouteMap = {
         rule: "art14",
         due_at: "2026-02-03T00:00:00Z",
         due_overridden: false,
+        dispute_open: false,
         state: "open",
         attempts: 0,
         created_at: "2026-01-04T09:00:00Z",

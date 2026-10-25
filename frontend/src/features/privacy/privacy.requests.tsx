@@ -12,7 +12,7 @@ import {
   useRosterPartial,
   useRosterPartialHint,
 } from "../../components/entityref";
-import { Button, Field, Textarea } from "../../design-system/atoms";
+import { Button, Field, Textarea, TextInput } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
@@ -29,10 +29,15 @@ import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
 import {
+  closingBody,
+  closingReady,
   DSR_KIND_LABEL,
   DSR_STATUS_KIND,
   DSR_STATUS_LABEL,
+  type DsrClosing,
   type DsrStatus,
+  IDENTITY_CHECK_LABEL,
+  IDENTITY_CHECKS,
   isIllegalTransition,
   isOverdue,
   isTerminal,
@@ -40,6 +45,7 @@ import {
 } from "../../lib/privacy.logic";
 import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import "./privacy.css";
+import { isOption } from "../../lib/options";
 import { isUuid } from "../../lib/uuid";
 
 export type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
@@ -214,12 +220,16 @@ export function DsrDetail({
   titleId: string;
   nowMs: number;
   onClose: () => void;
-  onFulfilErasure: (dsr: DataSubjectRequest, resolution: string) => void;
+  onFulfilErasure: (dsr: DataSubjectRequest, closing: DsrClosing) => void;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const canWork = useCanWrite("privacy_request", "update");
-  const [resolution, setResolution] = useState(dsr.resolution ?? "");
+  const [closing, setClosing] = useState<DsrClosing>({
+    resolution: dsr.resolution ?? "",
+    identityCheck: "",
+    requesterEmail: "",
+  });
 
   const patch = useMutation({
     mutationFn: async (vars: {
@@ -243,16 +253,16 @@ export function DsrDetail({
   });
 
   function transition(next: DsrStatus) {
-    const answer = resolution.trim();
     if (dsr.kind === "erasure" && next === "fulfilled") {
-      onFulfilErasure(dsr, answer);
+      onFulfilErasure(dsr, closing);
       return;
     }
-    // Omitted when blank: an empty string is a value the server would write.
-    patch.mutate({
-      id: dsr.id,
-      body: answer ? { status: next, resolution: answer } : { status: next },
-    });
+    patch.mutate({ id: dsr.id, body: closingBody(next, closing) });
+  }
+
+  function draft(change: Partial<DsrClosing>) {
+    setClosing((current) => ({ ...current, ...change }));
+    if (patch.isError) patch.reset();
   }
 
   const problem =
@@ -294,6 +304,18 @@ export function DsrDetail({
             </ErrorLine>
           )}
           {isTerminal(dsr.status) && <p>{t("privacy.closed")}</p>}
+          {isTerminal(dsr.status) && dsr.dispute_open && (
+            <p>{t("privacy.disputeOpen")}</p>
+          )}
+          {canWork && isTerminal(dsr.status) && (
+            <DsrDispute
+              open={dsr.dispute_open}
+              pending={patch.isPending}
+              onChange={(next) =>
+                patch.mutate({ id: dsr.id, body: { dispute_open: next } })
+              }
+            />
+          )}
           {open && (
             <Field
               label={t("privacy.resolution")}
@@ -302,19 +324,19 @@ export function DsrDetail({
               {(control) => (
                 <Textarea
                   {...control}
-                  value={resolution}
-                  onChange={(event) => {
-                    setResolution(event.target.value);
-                    if (patch.isError) patch.reset();
-                  }}
+                  value={closing.resolution}
+                  onChange={(event) =>
+                    draft({ resolution: event.target.value })
+                  }
                 />
               )}
             </Field>
           )}
+          {open && <DsrProofFields closing={closing} onDraft={draft} />}
           {open && (
             <DsrTransitions
               status={dsr.status}
-              answered={Boolean(resolution.trim() || dsr.resolution)}
+              ready={closingReady(closing, dsr.resolution)}
               pending={patch.isPending}
               onTransition={transition}
             />
@@ -391,6 +413,7 @@ function DsrFacts({
       value: dsr.resolution,
     });
   }
+
   return <FactList facts={facts} />;
 }
 
@@ -428,15 +451,92 @@ function DsrAssignee({
   );
 }
 
-// A close needs its answer: the draft in the field or the one already stored.
+// What the proof of a closed request records beside the answer.
+function DsrProofFields({
+  closing,
+  onDraft,
+}: Readonly<{
+  closing: DsrClosing;
+  onDraft: (change: Partial<DsrClosing>) => void;
+}>) {
+  const t = useT();
+  const options: SelectOption[] = [
+    { value: "", label: t("privacy.identityCheckPick"), disabled: true },
+    ...IDENTITY_CHECKS.map((check) => ({
+      value: check,
+      label: t(IDENTITY_CHECK_LABEL[check]),
+    })),
+  ];
+  return (
+    <>
+      <Field
+        label={t("privacy.identityCheck")}
+        hint={t("privacy.identityCheckHint")}
+      >
+        {(control) => (
+          <Select
+            {...control}
+            options={options}
+            value={closing.identityCheck}
+            onChange={(next) => {
+              if (isOption(next, IDENTITY_CHECKS)) {
+                onDraft({ identityCheck: next });
+              }
+            }}
+          />
+        )}
+      </Field>
+      <Field
+        label={t("privacy.requesterEmail")}
+        hint={t("privacy.requesterEmailHint")}
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            type="email"
+            value={closing.requesterEmail}
+            onChange={(event) =>
+              onDraft({ requesterEmail: event.target.value })
+            }
+          />
+        )}
+      </Field>
+    </>
+  );
+}
+
+// A complaint holds the closed request's proof past its retention date.
+function DsrDispute({
+  open,
+  pending,
+  onChange,
+}: Readonly<{
+  open: boolean;
+  pending: boolean;
+  onChange: (next: boolean) => void;
+}>) {
+  const t = useT();
+  return (
+    <div className="form-stack">
+      <p className="t-caption">{t("privacy.disputeHint")}</p>
+      <div className="dsr-actions">
+        <Button disabled={pending} onClick={() => onChange(!open)}>
+          {open ? t("privacy.closeDispute") : t("privacy.openDispute")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// A close needs its answer and its identity check (closingReady).
 function DsrTransitions({
   status,
-  answered,
+  ready,
   pending,
   onTransition,
 }: Readonly<{
   status: DsrStatus;
-  answered: boolean;
+  ready: boolean;
   pending: boolean;
   onTransition: (next: DsrStatus) => void;
 }>) {
@@ -446,10 +546,7 @@ function DsrTransitions({
       {nextStatuses(status).map((next) => (
         <Button
           key={next}
-          disabled={
-            pending ||
-            ((next === "fulfilled" || next === "rejected") && !answered)
-          }
+          disabled={pending || (isTerminal(next) && !ready)}
           onClick={() => onTransition(next)}
         >
           {t(transitionLabelKey(next))}

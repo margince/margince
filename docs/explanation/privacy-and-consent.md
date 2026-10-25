@@ -252,6 +252,20 @@ since rotated.
 - **A public fix or erasure opens a case.** A subject who types into a confirm link opens a
   `data_subject_request` in the same transaction. The case gets a reference number and the last day to answer it.
   No row is left behind for nobody to work.
+- **A closed case keeps a proof.** The transaction that closes a case writes one
+  `privacy_request_proof` row (`backend/internal/modules/consent/requestproof.go`). It records the
+  number, the address the request came from, the arrival date and the kind. It also records the
+  identity check, the result, the closer and the answer date. An erasure's counts per category
+  come from the map `Eraser.EraseContactCounted` returns, which holds the counts its tombstone
+  certifies. The proof holds no other contact data, so an erasure leaves it standing.
+- **A proof lasts three years past its year.** `ProofKeepUntil` dates it to the
+  first day of the year after that. The `privacy_request_proof_expiry` job deletes it in the first
+  month of that year, unless the case has `dispute_open` set. A data task writes proofs for cases
+  closed before proofs existed, and marks what no record shows as `unknown`.
+- **Expiry takes the requester off the case.** The pass that deletes the proof replaces
+  the case's `subject_ref` with a tombstone and writes an `anonymize` audit row on the case. Every
+  audit reader hides the images older than such a row. So the reference copied into the audit row
+  that opened the case is no longer shown.
 
 ## What the engine reports about itself
 

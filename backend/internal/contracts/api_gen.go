@@ -18982,6 +18982,33 @@ func (e UpdateContractRequestValueBasis) Valid() bool {
 	}
 }
 
+// Defines values for UpdateDataSubjectRequestIdentityCheck.
+const (
+	UpdateDataSubjectRequestIdentityCheckAddressOnFile UpdateDataSubjectRequestIdentityCheck = "address_on_file"
+	UpdateDataSubjectRequestIdentityCheckConfirmLink   UpdateDataSubjectRequestIdentityCheck = "confirm_link"
+	UpdateDataSubjectRequestIdentityCheckIdDocument    UpdateDataSubjectRequestIdentityCheck = "id_document"
+	UpdateDataSubjectRequestIdentityCheckInPerson      UpdateDataSubjectRequestIdentityCheck = "in_person"
+	UpdateDataSubjectRequestIdentityCheckNotVerified   UpdateDataSubjectRequestIdentityCheck = "not_verified"
+)
+
+// Valid indicates whether the value is a known member of the UpdateDataSubjectRequestIdentityCheck enum.
+func (e UpdateDataSubjectRequestIdentityCheck) Valid() bool {
+	switch e {
+	case UpdateDataSubjectRequestIdentityCheckAddressOnFile:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckConfirmLink:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckIdDocument:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckInPerson:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckNotVerified:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateDataSubjectRequestStatus.
 const (
 	UpdateDataSubjectRequestStatusFulfilled  UpdateDataSubjectRequestStatus = "fulfilled"
@@ -37064,6 +37091,10 @@ type DataSubjectRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	CreatedAt  time.Time           `json:"created_at"`
 
+	// DisputeOpen True while a complaint or dispute about this request is open. The proof of the
+	// answer is kept past its retention date until this is false again.
+	DisputeOpen bool `json:"dispute_open"`
+
 	// DueAt Statutory deadline (e.g. 30 days).
 	DueAt time.Time `json:"due_at"`
 
@@ -52200,10 +52231,36 @@ type UpdateDataSubjectRequest struct {
 	// AssigneeId null hands the request back to the unassigned pool.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
+	// DisputeOpen Opens (true) or closes (false) a complaint or dispute about the request. Any status takes it.
+	DisputeOpen *bool `json:"dispute_open,omitempty"`
+
+	// IdentityCheck How the requester's identity was checked, recorded in the proof the request keeps once
+	// it closes. Required on the patch that closes a request, except one that arrived through
+	// the subject's own confirm link, where the link is the check. `confirm_link`: the
+	// subject used a link mailed to their address. `address_on_file`: the request came from,
+	// or was confirmed at, an address the record already held. `id_document`: an identity
+	// document was seen. `in_person`: the requester was known in person. `not_verified`: the
+	// identity could not be checked, which is a reason to reject. Ignored on any other patch.
+	IdentityCheck *UpdateDataSubjectRequestIdentityCheck `json:"identity_check,omitempty"`
+
+	// RequesterEmail The address the request came from, recorded in the proof. Optional: when absent, the
+	// proof takes the address the confirm link was mailed to, or the subject reference when it
+	// is an address. Ignored on a patch that does not close the request.
+	RequesterEmail *openapi_types.Email `json:"requester_email,omitempty"`
+
 	// Resolution A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.
 	Resolution *string                         `json:"resolution,omitempty"`
 	Status     *UpdateDataSubjectRequestStatus `json:"status,omitempty"`
 }
+
+// UpdateDataSubjectRequestIdentityCheck How the requester's identity was checked, recorded in the proof the request keeps once
+// it closes. Required on the patch that closes a request, except one that arrived through
+// the subject's own confirm link, where the link is the check. `confirm_link`: the
+// subject used a link mailed to their address. `address_on_file`: the request came from,
+// or was confirmed at, an address the record already held. `id_document`: an identity
+// document was seen. `in_person`: the requester was known in person. `not_verified`: the
+// identity could not be checked, which is a reason to reject. Ignored on any other patch.
+type UpdateDataSubjectRequestIdentityCheck string
 
 // UpdateDataSubjectRequestStatus defines model for UpdateDataSubjectRequest.Status.
 type UpdateDataSubjectRequestStatus string

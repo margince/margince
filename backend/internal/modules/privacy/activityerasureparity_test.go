@@ -78,7 +78,7 @@ import (
 // through retireActivityIdentities, which both arms call, and the integration
 // test named on it reads the rows back rather than trusting this sentence.
 var finishedAnotherWay = gatekit.Waive(map[string]string{
-	"method EraseContact": "the Art. 17 cascade, whose purges are scoped to the SUBJECT rather than to one activity: raw_capture by every address and channel identity of theirs (purgeDerivedTraces, purgeChannelRawCapture) — which reaches originals an activity's own natural-key join cannot — plus redactApprovalsCitingActivities under ErasedSourceWithdrawal, purgeTranscriptReadings, retireActivityIdentities over the emptied ids, the attachments and the embeddings. Per-activity purging here would be N statements for one subject and would still miss the channel lane",
+	"method EraseContactCounted": "the Art. 17 cascade, whose purges are scoped to the SUBJECT rather than to one activity: raw_capture by every address and channel identity of theirs (purgeDerivedTraces, purgeChannelRawCapture) — which reaches originals an activity's own natural-key join cannot — plus redactApprovalsCitingActivities under ErasedSourceWithdrawal, purgeTranscriptReadings, retireActivityIdentities over the emptied ids, the attachments and the embeddings. Per-activity purging here would be N statements for one subject and would still miss the channel lane",
 })
 
 // contentPurger is the one function that finishes an activity-content erasure.

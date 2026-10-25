@@ -74,14 +74,22 @@ const (
 // (compose injects it into the DSR handler) and the retention engine's
 // polymorphic due-list — both hand over a bare UUID. The subject is
 // widened to a typed contact id once here and threaded typed from then on.
+func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason string) error {
+	_, err := e.EraseContactCounted(ctx, contactID, reason)
+	return err
+}
+
+// EraseContactCounted is EraseContact answering the tombstone's counts by
+// category, for the proof a closed privacy request keeps.
 //
 //nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
-func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason string) error {
+func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (map[string]int64, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
-		return err
+		return nil, err
 	}
 	subject := ids.From[ids.ContactKind](contactID)
-	return e.db.Tx(ctx, func(tx pgx.Tx) error {
+	var erased map[string]int64
+	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 		floor, err := e.erasableUnderFloor(ctx, tx, subject)
 		if err != nil {
 			return err
@@ -186,17 +194,14 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err != nil {
 			return err
 		}
-		channelsSuppressed, err := eraseChannelIdentities(ctx, tx, identities)
-		if err != nil {
-			return err
-		}
-
-		return tombstoneContactErasure(ctx, tx, subject, reason, contactErasureCounts{
+		erased, err = certifyErasure(ctx, tx, subject, reason, identities, contactErasureCounts{
 			emailsSuppressed: len(emails), rawRowsPurged: rawPurged, aiPayloadsPurged: aiPayloadsPurged,
 			activitiesRedacted: len(activitiesRedacted), activitiesRestricted: len(activitiesHeld),
-			channelIdentitiesSuppressed: channelsSuppressed,
+			leadsAnonymized: len(leadsWiped),
 		})
+		return err
 	})
+	return erased, err
 }
 
 // refuseContactUnderLegalHold refuses an erasure the workspace is obliged to

@@ -59085,7 +59085,7 @@ components:
     DataSubjectRequest:
       type: object
       description: A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5).
-      required: [id, kind, subject_ref, status, due_at, due_overridden, created_at]
+      required: [id, kind, subject_ref, status, due_at, due_overridden, dispute_open, created_at]
       properties:
         id: { type: string, format: uuid }
         kind: { type: string, enum: [access, rectify, erasure] }
@@ -59115,6 +59115,11 @@ components:
           description: 'True when the officer chose an earlier deadline than `due_rule` gives.'
         assignee_id: { type: [string, 'null'], format: uuid }
         resolution: { type: [string, 'null'] }
+        dispute_open:
+          type: boolean
+          description: |
+            True while a complaint or dispute about this request is open. The proof of the
+            answer is kept past its retention date until this is false again.
         created_at: { type: string, format: date-time }
         # no `version`/If-Match: data_subject_request has no version column (data-model §12.5) and is a
         # single-assignee human-only workflow record (x-agent-access: human-only) — not optimistically concurrent.
@@ -59445,6 +59450,28 @@ components:
         resolution:
           type: [string, 'null']
           description: 'A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.'
+        identity_check:
+          type: string
+          enum: [confirm_link, address_on_file, id_document, in_person, not_verified]
+          description: |
+            How the requester's identity was checked, recorded in the proof the request keeps once
+            it closes. Required on the patch that closes a request, except one that arrived through
+            the subject's own confirm link, where the link is the check. `confirm_link`: the
+            subject used a link mailed to their address. `address_on_file`: the request came from,
+            or was confirmed at, an address the record already held. `id_document`: an identity
+            document was seen. `in_person`: the requester was known in person. `not_verified`: the
+            identity could not be checked, which is a reason to reject. Ignored on any other patch.
+        requester_email:
+          type: string
+          format: email
+          maxLength: 320
+          description: |
+            The address the request came from, recorded in the proof. Optional: when absent, the
+            proof takes the address the confirm link was mailed to, or the subject reference when it
+            is an address. Ignored on a patch that does not close the request.
+        dispute_open:
+          type: boolean
+          description: 'Opens (true) or closes (false) a complaint or dispute about the request. Any status takes it.'
 
     CaptureConsent:
       type: object

@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -41,6 +42,7 @@ const (
 	fieldDueAt      = "due_at"
 	fieldReceivedAt = "received_at"
 	fieldAssigneeID = "assignee_id"
+	fieldDispute    = "dispute_open"
 
 	// The request kinds the handlers branch on. Constants for the same reason
 	// as the field names above, and dsrKindErasure carries the higher stake:
@@ -48,6 +50,8 @@ const (
 	// erasure silently and reports the request fulfilled.
 	dsrKindAccess  = "access"
 	dsrKindErasure = "erasure"
+
+	dsrStatusFulfilled = "fulfilled"
 )
 
 // illegalTransition is raised from both guards — the pre-erase check and the
@@ -60,7 +64,7 @@ func illegalTransition(from, to string) *ValidationError {
 	}
 }
 
-const dsrColumns = `id, kind, status, subject_ref, assignee_id, due_at, resolution, created_at, contact_id, due_rule, due_overridden`
+const dsrColumns = `id, kind, status, subject_ref, assignee_id, due_at, resolution, created_at, contact_id, due_rule, due_overridden, dispute_open`
 
 // dsrSelectByID is the single-row fetch GetDSR and lockDSR share, so their
 // projected columns cannot drift.
@@ -96,12 +100,14 @@ type dsrRow struct {
 	DueRule *string
 	// DueOverridden marks a deadline the officer set earlier than the rule's.
 	DueOverridden bool
+	// DisputeOpen holds the request's proof past its retention date.
+	DisputeOpen bool
 }
 
 func scanDSR(r pgx.Row) (dsrRow, error) {
 	var d dsrRow
 	err := r.Scan(&d.ID, &d.Kind, &d.Status, &d.SubjectRef, &d.AssigneeID, &d.DueAt, &d.Resolution,
-		&d.CreatedAt, &d.ContactID, &d.DueRule, &d.DueOverridden)
+		&d.CreatedAt, &d.ContactID, &d.DueRule, &d.DueOverridden, &d.DisputeOpen)
 	return d, err
 }
 
@@ -300,6 +306,10 @@ type UpdateDSRInput struct {
 	// pointer cannot tell apart from a field the caller left out.
 	ClearAssignee   bool
 	ClearResolution bool
+	// DisputeOpen opens or closes a complaint about the request.
+	DisputeOpen *bool
+	// Proof is what the closing patch states for the request's proof.
+	Proof ProofStatement
 }
 
 // hasResolution reports whether an update carries (or the row already
@@ -365,16 +375,16 @@ func sameAnswer(stored, sent *string) bool {
 	return stored != nil && sent != nil && *stored == *sent
 }
 
-// closedDSRStatus reports the two statuses a request ends in.
-func closedDSRStatus(status string) bool {
-	return status == "fulfilled" || status == "rejected"
-}
+// closedDSRStatuses are the two statuses a request ends in.
+func closedDSRStatuses() []string { return []string{dsrStatusFulfilled, "rejected"} }
 
-// dsrAssigneeSet is the assignee assignment both update writers share: an
-// explicit clear empties it, an absent value keeps what is stored.
-func dsrAssigneeSet(in UpdateDSRInput, arg func(any) int) string {
-	return storekit.SQLf("assignee_id = CASE WHEN $%d THEN NULL ELSE coalesce($%d, assignee_id) END",
-		arg(in.ClearAssignee), arg(in.AssigneeID))
+func closedDSRStatus(status string) bool { return slices.Contains(closedDSRStatuses(), status) }
+
+// dsrHeldSets are the assignments both update writers share, beside the
+// status. An explicit clear empties the assignee; an absent value keeps it.
+func dsrHeldSets(in UpdateDSRInput, arg func(any) int) string {
+	return storekit.SQLf("assignee_id = CASE WHEN $%d THEN NULL ELSE coalesce($%d, assignee_id) END, dispute_open = coalesce($%d, dispute_open)",
+		arg(in.ClearAssignee), arg(in.AssigneeID), arg(in.DisputeOpen))
 }
 
 func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (dsrRow, error) {
@@ -390,24 +400,34 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 		if verr := validateDSRUpdate(current, in); verr != nil {
 			return verr
 		}
+		if current.Kind == dsrKindErasure && closesAs(current, in, dsrStatusFulfilled) {
+			return &ValidationError{Field: fieldStatus, Reason: "an erasure request is fulfilled by carrying out the erasure"}
+		}
 		if dsrUpdateChangesNothing(current, in) {
 			out = current
 			return nil
 		}
+		source, err := readProofSource(ctx, tx, current, in)
+		if err != nil {
+			return err
+		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		assignee := dsrAssigneeSet(in, arg)
+		held := dsrHeldSets(in, arg)
 		sql := storekit.SQLf(`
 			UPDATE data_subject_request SET
 			  status = coalesce($%d, status),
 			  %s,
 			  resolution = CASE WHEN $%d THEN NULL ELSE coalesce($%d, resolution) END
 			WHERE id = $%d
-			RETURNING `+dsrColumns, arg(in.Status), assignee, arg(in.ClearResolution), arg(in.Resolution), arg(id))
+			RETURNING `+dsrColumns, arg(in.Status), held, arg(in.ClearResolution), arg(in.Resolution), arg(id))
 		if out, err = scanDSR(tx.QueryRow(ctx, sql, args...)); err != nil {
 			return err
 		}
-		return auditDSRUpdate(ctx, tx, current, out)
+		if err := auditDSRUpdate(ctx, tx, current, out); err != nil {
+			return err
+		}
+		return writeRequestProof(ctx, tx, source, out, nil)
 	})
 	return out, err
 }
@@ -416,9 +436,10 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 // assignee, so a hand-back says who let the request go.
 func auditDSRUpdate(ctx context.Context, tx pgx.Tx, current, out dsrRow) error {
 	_, err := storekit.Audit(ctx, tx, "update", "data_subject_request", out.ID, map[string]any{
-		fieldStatus: current.Status, fieldAssigneeID: current.AssigneeID,
+		fieldStatus: current.Status, fieldAssigneeID: current.AssigneeID, fieldDispute: current.DisputeOpen,
 	}, map[string]any{
 		fieldStatus: out.Status, fieldAssigneeID: out.AssigneeID, fieldResolution: resolutionChanged(current.Resolution, out.Resolution),
+		fieldDispute: out.DisputeOpen,
 	})
 	return err
 }
@@ -436,6 +457,7 @@ func wireDSR(d dsrRow, subjects map[ids.UUID]dsrSubject) crmcontracts.DataSubjec
 		// screen reads as "set by hand, rule unknown".
 		DueRule:       d.DueRule,
 		DueOverridden: d.DueOverridden,
+		DisputeOpen:   d.DisputeOpen,
 	}
 	if d.AssigneeID != nil {
 		assignee := openapi_types.UUID(d.AssigneeID.UUID)

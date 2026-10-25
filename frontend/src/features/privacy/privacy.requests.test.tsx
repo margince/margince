@@ -31,6 +31,7 @@ const NAMED: DataSubjectRequest = {
   status: "in_progress",
   due_at: "2026-08-01T00:00:00Z",
   due_overridden: false,
+  dispute_open: false,
   created_at: "2026-07-01T00:00:00Z",
 };
 
