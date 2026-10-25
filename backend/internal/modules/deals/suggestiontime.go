@@ -15,35 +15,39 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
-func suggestionSourceTimes(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (bool, error) {
+// suggestionSourceTimes says whether every item still cites its source as
+// stored: a zone change moves no stamp, so it never reads as changed evidence.
+// It answers where each item is placed (occurredday.StartSQL), in order.
+func suggestionSourceTimes(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) ([]time.Time, bool, error) {
+	placed := make([]time.Time, 0, len(evidence))
 	for _, item := range evidence {
-		var sourceTime *time.Time
-		args := []any{item.ref()}
 		var query string
 		switch item.Kind {
 		case EvidenceSignal:
-			query = fmt.Sprintf(`SELECT `+storekit.CitedActivityTime("s.evidence")+`
-		 FROM signal s WHERE s.id = $%d AND s.archived_at IS NULL`, len(args))
+			query = `SELECT ` + storekit.CitedActivityStamp("s.evidence") + `, ` + storekit.CitedActivityTime("s.evidence") + `
+		 FROM signal s WHERE s.id = $1 AND s.archived_at IS NULL`
 		case EvidenceMeeting:
-			query = fmt.Sprintf(`SELECT occurred_at FROM activity WHERE id=$%d AND archived_at IS NULL`, len(args))
+			query = `SELECT a.occurred_at, ` + occurredday.StartSQL("a") + ` FROM activity a WHERE a.id = $1 AND a.archived_at IS NULL`
 		case EvidenceAttachment:
-			query = fmt.Sprintf(`SELECT a.occurred_at FROM attachment at JOIN activity a ON a.id=at.activity_id
- WHERE at.id=$%d AND at.archived_at IS NULL AND a.archived_at IS NULL`, len(args))
+			query = `SELECT a.occurred_at, ` + occurredday.StartSQL("a") + ` FROM attachment at JOIN activity a ON a.id = at.activity_id
+ WHERE at.id = $1 AND at.archived_at IS NULL AND a.archived_at IS NULL`
 		default:
-			return false, nil
+			return nil, false, nil
 		}
-		err := tx.QueryRow(ctx, query, args...).Scan(&sourceTime)
+		var stamp, at *time.Time
+		err := tx.QueryRow(ctx, query, item.ref()).Scan(&stamp, &at)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return false, nil
+			return nil, false, nil
 		}
 		if err != nil {
-			return false, fmt.Errorf("deals: reading suggestion source time: %w", err)
+			return nil, false, fmt.Errorf("deals: reading suggestion source time: %w", err)
 		}
-		if sourceTime == nil || !sourceTime.Equal(item.OccurredAt) {
-			return false, nil
+		if stamp == nil || at == nil || !stamp.Equal(item.OccurredAt) {
+			return nil, false, nil
 		}
+		placed = append(placed, *at)
 	}
-	return true, nil
+	return placed, true, nil
 }
 
 func supersedeIfEvidenceChanged(ctx context.Context, tx pgx.Tx, current Suggestion) (bool, error) {
@@ -59,7 +63,8 @@ func suggestionEvidenceCurrentTx(ctx context.Context, tx pgx.Tx, current Suggest
 	for _, item := range current.Evidence {
 		evidence = append(evidence, item.SuggestionEvidence)
 	}
-	return suggestionSourceTimes(ctx, tx, evidence)
+	_, stands, err := suggestionSourceTimes(ctx, tx, evidence)
+	return stands, err
 }
 
 func (s *Store) supersedeIfBuyerChanged(ctx context.Context, tx pgx.Tx, current Suggestion) (bool, error) {
@@ -70,23 +75,11 @@ func (s *Store) supersedeIfBuyerChanged(ctx context.Context, tx pgx.Tx, current 
 	return true, supersedeTx(ctx, tx, current.ID, nil)
 }
 
-// placed is when the item counts as having happened against the floor: a day
-// entry when its date begins in zone, as occurredday.StartSQL places it.
-func (e SuggestionEvidence) placed(zone *time.Location) time.Time {
-	if e.DateOnly {
-		return occurredday.Begins(e.OccurredAt, zone)
-	}
-	return e.OccurredAt
-}
-
 // evidenceStandsTx says whether the draft's evidence still stands: each item
-// is at its source's time and past the company's floor. It answers the newest
-// item's time with it.
-func evidenceStandsTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft, zone *time.Location) (time.Time, bool, error) {
-	if zone == nil {
-		return time.Time{}, false, errors.New("deals: recording a suggestion needs the installation zone")
-	}
-	current, err := suggestionSourceTimes(ctx, tx, d.Evidence)
+// is at its source's time and placed past the company's floor. It answers the
+// newest item's time with it.
+func evidenceStandsTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (time.Time, bool, error) {
+	placed, current, err := suggestionSourceTimes(ctx, tx, d.Evidence)
 	if err != nil || !current {
 		return time.Time{}, false, err
 	}
@@ -94,16 +87,16 @@ func evidenceStandsTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft, zone *t
 	if err != nil {
 		return time.Time{}, false, err
 	}
-	through, past := evidenceThrough(d.Evidence, floor, zone)
+	through, past := evidenceThrough(d.Evidence, placed, floor)
 	return through, past, nil
 }
 
-// evidenceThrough is the newest item's time, and whether every item falls
-// after floor where zone places it. A nil floor admits every item.
-func evidenceThrough(evidence []SuggestionEvidence, floor *time.Time, zone *time.Location) (time.Time, bool) {
+// evidenceThrough is the newest item's time, and whether every item is placed
+// after floor. A nil floor admits every item.
+func evidenceThrough(evidence []SuggestionEvidence, placed []time.Time, floor *time.Time) (time.Time, bool) {
 	through := evidence[0].OccurredAt
-	for _, e := range evidence {
-		if floor != nil && !e.placed(zone).After(*floor) {
+	for i, e := range evidence {
+		if floor != nil && !placed[i].After(*floor) {
 			return time.Time{}, false
 		}
 		if e.OccurredAt.After(through) {

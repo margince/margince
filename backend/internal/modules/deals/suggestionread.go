@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -136,7 +135,8 @@ type Suggestion struct {
 type SuggestionEvidenceItem struct {
 	SuggestionEvidence
 	Title string
-	// Precision is the meeting's or the document's message's; nil for a signal.
+	// Precision is how to read OccurredAt, from the activity behind it; nil when
+	// a signal's citations no longer resolve.
 	Precision *string
 	// carrier is the message a document came on; nil for the other kinds.
 	carrier *ids.UUID
@@ -339,7 +339,7 @@ func attachEvidence(ctx context.Context, tx pgx.Tx, list []Suggestion) error {
 	rows, err := tx.Query(ctx, `
 		SELECT e.suggestion_id, e.kind, e.activity_id, e.signal_id, e.attachment_id, e.occurred_at,
 		       coalesce(a.subject, sg.summary, at.filename, ''), at.activity_id,
-		       coalesce(a.occurred_precision, carried.occurred_precision)
+		       coalesce(a.occurred_precision, carried.occurred_precision, `+storekit.CitedActivityPrecision("sg.evidence")+`)
 		  FROM deal_suggestion_evidence e
 		  JOIN deal_suggestion s ON s.id = e.suggestion_id
 		  LEFT JOIN activity a ON a.id = e.activity_id
@@ -359,7 +359,6 @@ func attachEvidence(ctx context.Context, tx pgx.Tx, list []Suggestion) error {
 			&item.OccurredAt, &item.Title, &item.carrier, &item.Precision); err != nil {
 			return fmt.Errorf("deals: scanning suggestion evidence: %w", err)
 		}
-		item.DateOnly = occurredday.IsStatedDay(item.Precision)
 		list[index[owner]].Evidence = append(list[index[owner]].Evidence, item)
 	}
 	return rows.Err()

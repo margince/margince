@@ -51,9 +51,9 @@ type SuggestionEvidence struct {
 	ActivityID   *ids.UUID
 	SignalID     *ids.UUID
 	AttachmentID *ids.UUID
-	OccurredAt   time.Time
-	// DateOnly says OccurredAt is a day entry's anchor: only its date is known.
-	DateOnly bool
+	// OccurredAt is the stored time the item cites, which no zone moves: a
+	// signal's newest cited occurred_at (storekit.CitedActivityStamp).
+	OccurredAt time.Time
 }
 
 // ref is the item's own id, whichever column carries it.
@@ -178,15 +178,14 @@ func suggestionFloorTx(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (*tim
 // or an open suggestion, when this exact evidence already raised one, when an
 // open, dismissed or accepted suggestion on a company in DuplicateOf already
 // cites any of it, or when any item is not newer than the company's floor.
-// zone is the installation's, where a day entry's date begins.
-func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft, zone *time.Location) (bool, error) {
+func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
 	}
 	if err := validDraft(d); err != nil {
 		return false, err
 	}
-	through, stands, err := evidenceStandsTx(ctx, tx, d, zone)
+	through, stands, err := evidenceStandsTx(ctx, tx, d)
 	if err != nil || !stands {
 		return false, err
 	}

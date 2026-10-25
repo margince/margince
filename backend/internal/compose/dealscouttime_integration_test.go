@@ -71,7 +71,7 @@ func (e *scoutEnv) dayMeeting(t *testing.T, contact ids.UUID, date time.Time) de
 		t.Fatalf("logging the day meeting: %v", err)
 	}
 	id := ids.UUID(logged.Id)
-	return deals.SuggestionEvidence{Kind: deals.EvidenceMeeting, ActivityID: &id, OccurredAt: anchor, DateOnly: true}
+	return deals.SuggestionEvidence{Kind: deals.EvidenceMeeting, ActivityID: &id, OccurredAt: anchor}
 }
 
 // A day meeting falls past a dismissal by its date, as the scout's SQL places
@@ -103,5 +103,32 @@ func TestTheWriterPlacesADayMeetingByItsDateAgainstTheFloor(t *testing.T) {
 	}
 	if raised, err := e.record(e.system(), t, draft(e.dayMeeting(t, dana, date.AddDate(0, 0, 1)))); err != nil || !raised {
 		t.Fatalf("a day meeting dated the day after = %v, %v; want it raised", raised, err)
+	}
+}
+
+// A signal citing a day entry keeps its evidence when the installation zone
+// changes. Its recorded stamp does not move, so accepting opens a deal.
+func TestAZoneChangeLeavesASignalCitingADayStanding(t *testing.T) {
+	e := setupScout(t)
+	e.now = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
+	company := e.SeedCompany(t, "Maple Studio", nil)
+	source, buyer := e.buyingEmail(t, company, e.daysAgo(2))
+	e.WsExec(t, `UPDATE activity SET occurred_precision = 'day', occurred_at = $2 WHERE id = $1`,
+		source, occurredday.Anchor(e.daysAgo(2)))
+	e.signal(t, "new_opportunity", company, source, e.now, ids.Nil, buyer)
+	e.signal(t, "commitment_made", company, source, e.now, ids.Nil)
+	if pass := e.pass(t); pass.Raised != 1 {
+		t.Fatalf("raised %d suggestions, want 1", pass.Raised)
+	}
+	e.WsExec(t, `UPDATE setting SET value = '"Pacific/Kiritimati"'::jsonb WHERE key = 'installation.timezone'`)
+
+	suggestion := e.onlySuggestion(e.signalReader(), t, company)
+	for _, item := range suggestion.Evidence {
+		if item.Precision == nil || *item.Precision != "day" || !item.OccurredAt.Equal(occurredday.Anchor(e.daysAgo(2))) {
+			t.Errorf("%s evidence reads %v at %v, want the cited day's anchor as a day", item.Kind, item.Precision, item.OccurredAt)
+		}
+	}
+	if _, err := e.decider().AcceptSuggestion(e.signalReader(), suggestion.ID, deals.AcceptSuggestionInput{}); err != nil {
+		t.Fatalf("accepting after the zone moved = %v, want the deal opened", err)
 	}
 }

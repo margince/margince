@@ -38265,7 +38265,7 @@ type DealSuggestionEvidence struct {
 	Kind         DealSuggestionEvidenceKind `json:"kind"`
 	OccurredAt   time.Time                  `json:"occurred_at"`
 
-	// OccurredPrecision How to read `occurred_at` for a meeting or a document. `day` means only its date is known, its UTC date, so a client draws no time. Absent for a signal, whose time is when the newest of the activities it cites begins, a day entry with its date in the installation zone.
+	// OccurredPrecision How to read `occurred_at`, from the meeting, the document's message or, for a signal, the newest activity it cites. `day` means only its date is known, its UTC date, so a client draws no time. Absent when a signal's citations no longer resolve.
 	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
 	SignalId          *openapi_types.UUID `json:"signal_id,omitempty"`
 

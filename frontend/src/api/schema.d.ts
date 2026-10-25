@@ -25096,7 +25096,7 @@ export interface components {
             attachment_id?: string | null;
             /** Format: date-time */
             occurred_at: string;
-            /** @description How to read `occurred_at` for a meeting or a document. `day` means only its date is known, its UTC date, so a client draws no time. Absent for a signal, whose time is when the newest of the activities it cites begins, a day entry with its date in the installation zone. */
+            /** @description How to read `occurred_at`, from the meeting, the document's message or, for a signal, the newest activity it cites. `day` means only its date is known, its UTC date, so a client draws no time. Absent when a signal's citations no longer resolve. */
             occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The meeting's subject, the signal's summary or the document's file name. */
             title: string;

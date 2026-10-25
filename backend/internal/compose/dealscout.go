@@ -26,7 +26,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -85,17 +84,13 @@ func scoutPass(ctx context.Context, tx pgx.Tx, now time.Time, companyCap int) (D
 	if err != nil {
 		return pass, err
 	}
-	zone, err := identity.ZoneAppliedTx(ctx, tx)
-	if err != nil {
-		return pass, err
-	}
 	for _, company := range byCompany(items) {
 		pass.Considered++
 		draft := draftSuggestion(company)
 		if draft.DuplicateOf, err = contacts.OpenDuplicateCompaniesTx(ctx, tx, draft.CompanyID); err != nil {
 			return pass, err
 		}
-		raised, err := deals.RecordSuggestionTx(ctx, tx, draft, zone)
+		raised, err := deals.RecordSuggestionTx(ctx, tx, draft)
 		if err != nil {
 			return pass, err
 		}
@@ -128,7 +123,7 @@ func scanScoutItem(row pgx.CollectableRow) (scoutItem, error) {
 	var it scoutItem
 	var ref ids.UUID
 	var amount, currency *string
-	if err := row.Scan(&it.company, &it.evidence.Kind, &ref, &it.evidence.OccurredAt, &it.evidence.DateOnly, &amount, &currency); err != nil {
+	if err := row.Scan(&it.company, &it.evidence.Kind, &ref, &it.evidence.OccurredAt, &amount, &currency); err != nil {
 		return scoutItem{}, err
 	}
 	switch it.evidence.Kind {
