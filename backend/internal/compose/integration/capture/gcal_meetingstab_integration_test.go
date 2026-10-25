@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -137,7 +138,7 @@ func guestMeetings(t *testing.T, owner, colleague, guest string) []map[string]an
 
 func TestAColleaguesMeetingWithAContactIsOnTheirMeetingsTab(t *testing.T) {
 	e := integration.SetupSearch(t)
-	buyer, err := contacts.NewStore(e.DB()).EnsureContactByEmail(contactCreator(e), "Anna Buyer", "anna@acme.com", "manual")
+	buyer, err := contacts.NewStore(e.DB()).EnsureContactByEmail(contactCreator(e), "Anna Buyer", "anna@acme.com", "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("seeding the guest: %v", err)
 	}
@@ -154,7 +155,7 @@ func TestAMeetingSyncedBeforeItsGuestBecameAContactReachesTheirMeetingsTab(t *te
 	e := integration.SetupSearch(t)
 	syncGcalEvents(t, e, "rep@ws.example", guestMeetings(t, "rep@ws.example", "lead@ws.example", "anna@acme.com"))
 	store := contacts.NewStore(e.DB())
-	buyer, err := store.EnsureContactByEmail(contactCreator(e), "Anna Buyer", "anna@acme.com", "manual")
+	buyer, err := store.EnsureContactByEmail(contactCreator(e), "Anna Buyer", "anna@acme.com", "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("seeding the guest: %v", err)
 	}

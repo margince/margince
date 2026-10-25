@@ -56,7 +56,7 @@ type CalendarMethodCandidate struct {
 // calendarMethodDirections are walked in this order, each to the end before
 // the next. A copy we sent of our own invitation is as much a calendar copy as
 // the one we received.
-var calendarMethodDirections = []string{"inbound", "outbound"}
+var calendarMethodDirections = []string{directionInbound, directionOutbound}
 
 // CalendarMethodCandidatesTx offers the next limit unchecked mails in capture
 // order, inbound first. Each direction resumes after its own newest checked

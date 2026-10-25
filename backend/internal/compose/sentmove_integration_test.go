@@ -27,7 +27,7 @@ import (
 )
 
 // moveFor is the server's whose-move answer for one message, read as reader.
-func (o *owedEnv) moveFor(t *testing.T, reader context.Context, message ids.UUID) crmcontracts.EmailSummaryMove {
+func (o *owedEnv) moveFor(reader context.Context, t *testing.T, message ids.UUID) crmcontracts.EmailSummaryMove {
 	t.Helper()
 	summaries, err := activities.NewStore(o.e.DB()).EmailSummariesByID(reader, []ids.UUID{message})
 	if err != nil {
@@ -77,7 +77,7 @@ func TestOnlyTheSeatThatSentAMailSeesItWaiting(t *testing.T) {
 		"the mailbox owner reads a colleague's mail":          {o.reader(), theirs, crmcontracts.EmailSummaryMoveNone},
 		"the colleague reads their own mail":                  {colleague, theirs, crmcontracts.EmailSummaryMoveWaitingForThem},
 	} {
-		if got := o.moveFor(t, c.reader, c.message); got != c.want {
+		if got := o.moveFor(c.reader, t, c.message); got != c.want {
 			t.Errorf("%s: move %q, want %q", name, got, c.want)
 		}
 	}

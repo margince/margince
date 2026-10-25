@@ -98,17 +98,27 @@ func TestACapturedInvitationWaitsOnNobodyEitherWay(t *testing.T) {
 		method  string
 		want    crmcontracts.EmailSummaryMove
 	}{
-		"an inbound invitation": {o.captureAs(t, invitationMail("pat@customer.example", o.seat, "REQUEST", at), false),
-			"REQUEST", crmcontracts.EmailSummaryMoveNone},
-		"an inbound cancellation": {o.captureAs(t, invitationMail("pat@customer.example", o.seat, "CANCEL", at), false),
-			"CANCEL", crmcontracts.EmailSummaryMoveNone},
-		"our sent invitation": {o.captureAs(t, invitationMail(o.seat, "pat@customer.example", "REQUEST", at), true),
-			"REQUEST", crmcontracts.EmailSummaryMoveNone},
-		"our sent update": {o.captureAs(t, invitationMail(o.seat, "pat@customer.example", "PUBLISH", at), true),
-			"PUBLISH", crmcontracts.EmailSummaryMoveNone},
+		"an inbound invitation": {
+			o.captureAs(t, invitationMail("pat@customer.example", o.seat, "REQUEST", at), false),
+			"REQUEST", crmcontracts.EmailSummaryMoveNone,
+		},
+		"an inbound cancellation": {
+			o.captureAs(t, invitationMail("pat@customer.example", o.seat, "CANCEL", at), false),
+			"CANCEL", crmcontracts.EmailSummaryMoveNone,
+		},
+		"our sent invitation": {
+			o.captureAs(t, invitationMail(o.seat, "pat@customer.example", "REQUEST", at), true),
+			"REQUEST", crmcontracts.EmailSummaryMoveNone,
+		},
+		"our sent update": {
+			o.captureAs(t, invitationMail(o.seat, "pat@customer.example", "PUBLISH", at), true),
+			"PUBLISH", crmcontracts.EmailSummaryMoveNone,
+		},
 		"a plain request from the contact": {asked, "", crmcontracts.EmailSummaryMoveNeedsReply},
-		"our plain mail to the contact": {o.weWrite(t, owedMail{to: "pat@customer.example", subject: "The quote", at: at}),
-			"", crmcontracts.EmailSummaryMoveWaitingForThem},
+		"our plain mail to the contact": {
+			o.weWrite(t, owedMail{to: "pat@customer.example", subject: "The quote", at: at}),
+			"", crmcontracts.EmailSummaryMoveWaitingForThem,
+		},
 	}
 	for name, c := range cases {
 		if got := o.calendarMethod(t, c.message); got != c.method {
