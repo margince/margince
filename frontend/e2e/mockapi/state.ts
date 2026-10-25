@@ -62,6 +62,7 @@ export type LoggedActivity = {
   links: { entity_type: string; entity_id: string }[];
   source: string;
   captured_by: string;
+  writable: boolean;
   version: number;
   created_at: string;
   updated_at: string;
