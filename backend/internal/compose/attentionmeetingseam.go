@@ -10,7 +10,6 @@ package compose
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -32,12 +31,12 @@ type attentionMeetings struct{ store *activities.Store }
 var soonestFirst = "occurred_at"
 
 func (m attentionMeetings) Today(
-	ctx context.Context, from, until time.Time, limit int,
+	ctx context.Context, window attention.MeetingWindow, limit int,
 	scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.Meeting, error) {
 	kind := string(crmcontracts.ActivityKindMeeting)
 	in := activities.ListActivitiesInput{
-		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until, Limit: &limit,
+		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window), Limit: &limit,
 		AwaitingOutcome: true, Sort: &soonestFirst, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
@@ -66,6 +65,11 @@ func (m attentionMeetings) Today(
 		ahead[i].ContactID = with[ahead[i].ID]
 	}
 	return ahead, nil
+}
+
+// dayDatesOf is the store's day range for a lane window.
+func dayDatesOf(window attention.MeetingWindow) *activities.DayDates {
+	return &activities.DayDates{From: window.DaysFrom, Before: window.DaysUntil}
 }
 
 // meetingReadable re-checks a row the store was asked to return readable only.
@@ -196,12 +200,12 @@ func meetingIDs[M any](meetings []M, id func(M) ids.UUID) []ids.UUID {
 type attentionMeetingsAwaitingOutcome struct{ store *activities.Store }
 
 func (m attentionMeetingsAwaitingOutcome) Since(
-	ctx context.Context, from, until time.Time, limit int,
+	ctx context.Context, window attention.MeetingWindow, limit int,
 	scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.MeetingAwaitingOutcome, error) {
 	kind := string(crmcontracts.ActivityKindMeeting)
 	in := activities.ListActivitiesInput{
-		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until,
+		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window),
 		AwaitingOutcome: true, CustomerMeetingsOnly: true, Limit: &limit, Sort: &soonestFirst, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {

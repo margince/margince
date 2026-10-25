@@ -51,10 +51,7 @@ func (s *Service) nameTheCompanies(ctx context.Context, rows []crmcontracts.Work
 		if !known {
 			continue
 		}
-		company.Touch = &crmcontracts.WorklistContactTouch{
-			LastInboundAt:  touch.LastInbound,
-			LastOutboundAt: touch.LastOutbound,
-		}
+		company.Touch = touch.wire()
 	}
 	return nil
 }

@@ -23987,7 +23987,7 @@ export interface components {
             preview?: string | null;
             /** Format: date-time */
             occurred_at: string;
-            /** @description How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time. */
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
             occurred_precision: components["schemas"]["OccurredPrecision"];
             /** @enum {string|null} */
             direction?: null | "inbound" | "outbound";
@@ -24201,7 +24201,7 @@ export interface components {
             lifecycle: "delivered";
             /** Format: date-time */
             occurred_at: string;
-            /** @description How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time. */
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
             occurred_precision: components["schemas"]["OccurredPrecision"];
             summary: components["schemas"]["EmailSummary"];
             /**
@@ -26813,7 +26813,7 @@ export interface components {
             subject?: string | null;
             /** Format: date-time */
             occurred_at: string;
-            /** @description How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time. */
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
             occurred_precision: components["schemas"]["OccurredPrecision"];
             /**
              * @description Whether this reader may read what the activity says. The same vocabulary `ActivityAccess.content_state` uses, because it is the same question about the same row.
@@ -29076,6 +29076,10 @@ export interface components {
              * @description When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
              */
             last_outbound_at?: string | null;
+            /** @description How to read `last_inbound_at`, from the row it names. Absent when that is null or absent. */
+            last_inbound_precision?: components["schemas"]["OccurredPrecision"];
+            /** @description How to read `last_outbound_at`, from the row it names. Absent when that is null or absent. */
+            last_outbound_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws. */
             last_contact?: components["schemas"]["Company360LastContact"];
             state_strip?: components["schemas"]["Company360StateStrip"];
@@ -29380,6 +29384,8 @@ export interface components {
         Company360LastContact: {
             /** Format: date-time */
             at: string;
+            /** @description How to read `at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /** @enum {string} */
             kind: "email" | "call" | "meeting" | "message";
             /** Format: uuid */
@@ -29420,6 +29426,12 @@ export interface components {
              * @description The newest exchange in either direction, a meeting included: the moment "quiet for N days" counts from. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
              */
             last_contact_at?: string | null;
+            /** @description How to read `last_inbound_at`, from the row it names. Absent when that is null or absent. */
+            last_inbound_precision?: components["schemas"]["OccurredPrecision"];
+            /** @description How to read `last_outbound_at`, from the row it names. Absent when that is null or absent. */
+            last_outbound_precision?: components["schemas"]["OccurredPrecision"];
+            /** @description How to read `last_contact_at`, from the row it names. Absent when that is null or absent. */
+            last_contact_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
             sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile" | "dead_addresses" | "billing_roles")[];
             strength?: components["schemas"]["RelationshipStrength"];
@@ -30882,7 +30894,7 @@ export interface components {
             evidence: components["schemas"]["AgentExcerpt"][];
             occurred_at?: string;
             /**
-             * @description Present when only the date of occurred_at is known.
+             * @description Present when only the date of occurred_at is known: name its UTC date, unconverted, and no time.
              * @enum {string}
              */
             occurred_precision?: "day";
@@ -32202,7 +32214,7 @@ export interface components {
         DealLastEmail: {
             /** Format: date-time */
             occurred_at: string;
-            /** @description How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time. */
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
             occurred_precision: components["schemas"]["OccurredPrecision"];
             /**
              * @description Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
@@ -34707,7 +34719,7 @@ export interface components {
             body?: string | null;
             /** Format: date-time */
             occurred_at?: string;
-            /** @description `day` when only the date is known: the date `occurred_at` names in its own offset is stored at that date's noon in the installation's zone. Omitted means `instant`. `day` without `occurred_at` is refused with 422. */
+            /** @description `day` when only the date is known: the date `occurred_at` names in its own offset is stored at noon UTC of that date, and its date is the UTC date. Omitted means `instant`. `day` without `occurred_at` is refused with 422. */
             occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date-time */
             due_at?: string | null;
@@ -34774,7 +34786,7 @@ export interface components {
          */
         ActivityAudience: "workspace" | "participants" | "selected";
         /**
-         * @description How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is that date's noon in the installation's zone, so read its date in that zone. A meeting of this precision never holds its host's calendar slot.
+         * @description How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
          * @enum {string}
          */
         OccurredPrecision: "instant" | "day";
@@ -34880,7 +34892,7 @@ export interface components {
             body?: string | null;
             /** Format: date-time */
             occurred_at?: string;
-            /** @description How to read `occurred_at` from now on. A patch that sends `occurred_at` without this field sets `instant`, because a new time is a known time. `day` stores the date at its noon in the installation's zone: the date `occurred_at` names in its own offset, or, sent alone, the date the stored time falls on in that zone. */
+            /** @description How to read `occurred_at` from now on. A patch that sends `occurred_at` without this field sets `instant`, because a new time is a known time. `day` stores the date at noon UTC: the date `occurred_at` names in its own offset, or, sent alone, the date the stored instant falls on in the installation's zone. `instant` on a `day` activity needs `occurred_at` too, or the stored noon would read as a real 12:00, and is refused with 422. */
             occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date-time */
             due_at?: string | null;
@@ -41021,7 +41033,7 @@ export interface components {
              * @description When an event item happened, null when the item is not an event. A reader states a date from THIS rather than from one written inside a summary's prose — a note recalling "October" for a September email is the reading that otherwise reaches the customer. It is an instant in UTC; render it in the reader's zone before naming a calendar day.
              */
             occurred_at?: string | null;
-            /** @description `day` when only the date of `occurred_at` is known: name the day and never its time. Absent on an instant. */
+            /** @description `day` when only the date of `occurred_at` is known. It is stored at noon UTC of that date, so name its UTC date without converting it to a zone, and never its time. Absent on an instant. */
             occurred_precision?: components["schemas"]["OccurredPrecision"];
             evidence?: components["schemas"]["ContextEvidence"][];
         };
@@ -49417,6 +49429,10 @@ export interface components {
              * @description When we last wrote to them. Null means we never have.
              */
             last_outbound_at: string | null;
+            /** @description How to read `last_inbound_at`, from the row it names. Absent when that is null. */
+            last_inbound_precision?: components["schemas"]["OccurredPrecision"];
+            /** @description How to read `last_outbound_at`, from the row it names. Absent when that is null. */
+            last_outbound_precision?: components["schemas"]["OccurredPrecision"];
         };
         /** @description The lead's contact context, without inventing an inbound request or response deadline. */
         WorklistLeadFacts: {

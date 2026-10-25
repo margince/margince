@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -39,10 +40,12 @@ const scopeNone = "FALSE"
 
 // meeting is the room, as the brief reads it.
 type meeting struct {
-	ID        ids.UUID
-	Subject   string
-	StartsAt  time.Time
-	DateOnly  bool
+	ID       ids.UUID
+	Subject  string
+	StartsAt time.Time
+	DateOnly bool
+	// Opens is when the room opens (opensAt), the ceiling on what came before.
+	Opens     time.Time
 	Deal      *dealRow
 	Project   *projectRow
 	Attendees []attendeeRow
@@ -419,4 +422,13 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// opensAt is when a meeting opens: its start. A day meeting opens when its date
+// begins in the installation zone, since its stored noon is no hour.
+func opensAt(room meeting, zone *time.Location) time.Time {
+	if !room.DateOnly {
+		return room.StartsAt
+	}
+	return occurredday.Begins(room.StartsAt, zone)
 }

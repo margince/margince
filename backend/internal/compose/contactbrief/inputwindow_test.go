@@ -64,7 +64,7 @@ func timelineOf(n int) crmcontracts.Contact360 {
 // the ones the model is now shown.
 func TestTheWindowReachesPastTheNewestExchange(t *testing.T) {
 	t.Parallel()
-	in := FromView(timelineOf(20), time.UTC)
+	in := FromView(timelineOf(20))
 
 	if len(in.Recent) != BriefInputActivities {
 		t.Fatalf("the fold carried %d rows, want %d", len(in.Recent), BriefInputActivities)
@@ -86,7 +86,7 @@ func TestTheWindowReachesPastTheNewestExchange(t *testing.T) {
 // would rewrite every cached brief on every captured mail.
 func TestTheWindowStopsAtItsBound(t *testing.T) {
 	t.Parallel()
-	in := FromView(timelineOf(BriefInputActivities+5), time.UTC)
+	in := FromView(timelineOf(BriefInputActivities + 5))
 
 	if len(in.Recent) != BriefInputActivities {
 		t.Fatalf("the fold carried %d rows, want the bound of %d", len(in.Recent), BriefInputActivities)
@@ -102,7 +102,7 @@ func TestTheWindowStopsAtItsBound(t *testing.T) {
 // the fold reaching for rows that are not there.
 func TestAShortTimelineCarriesEveryRowItHas(t *testing.T) {
 	t.Parallel()
-	in := FromView(timelineOf(3), time.UTC)
+	in := FromView(timelineOf(3))
 
 	if len(in.Recent) != 3 {
 		t.Fatalf("the fold carried %d rows for a three-message contact, want 3", len(in.Recent))

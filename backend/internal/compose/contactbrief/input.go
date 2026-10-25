@@ -259,7 +259,7 @@ type ActIn struct {
 // FromView folds the assembled 360 into the brief's input. Nothing re-queries:
 // the reader's scope is already spent, and asking again would be a second set
 // of gates that could disagree with the first.
-func FromView(view crmcontracts.Contact360, zone *time.Location) Input {
+func FromView(view crmcontracts.Contact360) Input {
 	in := Input{
 		ID:              view.Contact.Id.String(),
 		Name:            view.Contact.FullName,
@@ -271,14 +271,14 @@ func FromView(view crmcontracts.Contact360, zone *time.Location) Input {
 	if view.Strength != nil {
 		in.Strength = view.Strength.Score
 	}
-	in.LastInbound = stamp(view.LastInboundAt)
-	in.LastOutbound = stamp(view.LastOutboundAt)
+	in.LastInbound = contactcontext.StampOf(view.LastInboundAt, view.LastInboundPrecision)
+	in.LastOutbound = contactcontext.StampOf(view.LastOutboundAt, view.LastOutboundPrecision)
 	in.Employer = currentEmployer(view)
 	foldCommercial(&in, view)
 	foldMoment(&in, view)
 	foldChanges(&in, view)
 	foldClaims(&in, view)
-	foldRecent(&in, view, zone)
+	foldRecent(&in, view)
 	if view.Contact.RelationshipMark != nil {
 		in.Relationship = string(*view.Contact.RelationshipMark)
 		withholdWhatTheySeekFrom(&in)
@@ -361,7 +361,7 @@ func foldMoment(in *Input, view crmcontracts.Contact360) {
 	in.Moment = &folded
 }
 
-func foldRecent(in *Input, view crmcontracts.Contact360, zone *time.Location) {
+func foldRecent(in *Input, view crmcontracts.Contact360) {
 	if view.Activities == nil {
 		return
 	}
@@ -372,7 +372,7 @@ func foldRecent(in *Input, view crmcontracts.Contact360, zone *time.Location) {
 		folded := ActIn{
 			ID:       activity.Id.String(),
 			Kind:     string(activity.Kind),
-			At:       activitywhen.Text(activity, zone),
+			At:       activitywhen.Text(activity),
 			Withheld: withheldContent(activity),
 		}
 		if activity.Subject != nil {
@@ -441,12 +441,8 @@ func withheldContent(activity crmcontracts.Activity) bool {
 		*activity.ContentState == crmcontracts.ActivityContentStateWithheld
 }
 
-// stamp renders an optional instant in one fixed format, so two timestamps
-// compare as strings the way the instants they name compare — and so the
-// fingerprint does not churn on a formatting difference.
-func stamp(at *time.Time) string { return contactcontext.Stamp(at) }
-
-// stampAt is stamp for an instant that is always present.
+// stampAt renders an instant in one fixed format. Two stamps then compare as
+// strings as their instants do, and the fingerprint does not churn on format.
 func stampAt(at time.Time) string { return at.UTC().Format(time.RFC3339) }
 
 // Fingerprint keys the cache on everything that could change the text: the

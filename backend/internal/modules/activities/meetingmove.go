@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -51,19 +52,19 @@ const (
 // (SeatStanding) is what does, decided under the row's own lock.
 //
 // An unchanged start and length write nothing, so a resynced calendar costs no
-// audit row and no event. A whole-day move lands on the date's anchor in zone.
-func MoveCapturedMeetingFor(holds SeatStanding, zone RecordZone) func(
+// audit row and no event. A whole-day move lands on its date's anchor.
+func MoveCapturedMeetingFor(holds SeatStanding) func(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, slot connector.MeetingSlot,
 ) (bool, error) {
 	return func(
 		ctx context.Context, tx pgx.Tx, id ids.ActivityID, slot connector.MeetingSlot,
 	) (bool, error) {
-		return moveCapturedMeetingTx(ctx, tx, id, slot, holds, zone)
+		return moveCapturedMeetingTx(ctx, tx, id, slot, holds)
 	}
 }
 
 func moveCapturedMeetingTx(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, slot connector.MeetingSlot, holds SeatStanding, zone RecordZone,
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, slot connector.MeetingSlot, holds SeatStanding,
 ) (bool, error) {
 	if slot.Start.IsZero() || !datasource.InstantInRange(slot.Start) {
 		return false, nil
@@ -91,10 +92,7 @@ func moveCapturedMeetingTx(
 	}
 	moved := meetingPlace{start: slot.Start.UTC(), duration: slot.Duration, precision: PrecisionInstant}
 	if slot.AllDay {
-		if moved.start, err = anchorDay(ctx, tx, zone, moved.start); err != nil {
-			return false, err
-		}
-		moved.precision = PrecisionDay
+		moved.start, moved.precision = occurredday.Anchor(slot.Start), PrecisionDay
 	}
 	if stored.start.Equal(moved.start) && sameDuration(stored.duration, moved.duration) && stored.precision == moved.precision {
 		return false, nil

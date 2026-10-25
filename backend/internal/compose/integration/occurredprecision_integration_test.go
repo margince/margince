@@ -31,8 +31,8 @@ func readDay(t *testing.T, raw json.RawMessage) dayRead {
 	return read
 }
 
-// setRecordZone moves the installation's zone, the one day entries are dated in.
-func setRecordZone(t *testing.T, e *apptest.AppEnv, zone string) *time.Location {
+// setInstallationZone moves the zone that says which date is today.
+func setInstallationZone(t *testing.T, e *apptest.AppEnv, zone string) *time.Location {
 	t.Helper()
 	if _, err := e.Owner.Exec(context.Background(),
 		`UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, zone); err != nil {
@@ -45,10 +45,10 @@ func setRecordZone(t *testing.T, e *apptest.AppEnv, zone string) *time.Location 
 	return loc
 }
 
-// isDayOn says a read is a day entry stored at noon of date in loc.
-func isDayOn(read dayRead, date string, loc *time.Location) bool {
-	local := read.OccurredAt.In(loc)
-	return read.OccurredPrecision == "day" && local.Format(time.DateOnly) == date && local.Hour() == 12
+// isDayOn says a read is a day entry stored at noon UTC of date.
+func isDayOn(read dayRead, date string) bool {
+	at := read.OccurredAt.UTC()
+	return read.OccurredPrecision == "day" && at.Format(time.DateOnly) == date && at.Hour() == 12 && at.Minute() == 0
 }
 
 // A date-only entry is a day on the web form's door and on the agent's. A later
@@ -69,27 +69,27 @@ func TestADayEntryIsADayOverBothDoors(t *testing.T) {
 				made = d.tool(t, "log_activity", fields)
 			}
 			read := readDay(t, d.restStatus(t, "GET", "/v1/activities/"+anIDIn(t, made), nil, http.StatusOK))
-			if !isDayOn(read, "2026-03-09", time.UTC) {
-				t.Fatalf("read back %v as %q, want 9 March at the record zone's noon as a day", read.OccurredAt, read.OccurredPrecision)
+			if !isDayOn(read, "2026-03-09") {
+				t.Fatalf("read back %v as %q, want 9 March at noon UTC as a day", read.OccurredAt, read.OccurredPrecision)
 			}
 		})
 	}
 }
 
-// The web client sends a picked date at noon UTC. The server reads the date in
-// that offset and stores it at noon in the record zone, east and west of UTC.
-func TestAWebDayIsStoredOnItsDateInTheRecordZone(t *testing.T) {
+// The web client sends a picked date at noon UTC. The server stores that date
+// at noon UTC whatever the installation zone, east and west of UTC.
+func TestAWebDayIsStoredAtNoonUTCInAnyZone(t *testing.T) {
 	d := newTwoDoors(t, "day-entry-zones", "read", "write")
 	for _, zone := range []string{"Pacific/Auckland", "Pacific/Pago_Pago"} {
 		t.Run(zone, func(t *testing.T) {
-			loc := setRecordZone(t, d.e, zone)
+			setInstallationZone(t, d.e, zone)
 			made := d.restStatus(t, "POST", "/v1/activities", map[string]any{
 				"kind": "note", "subject": "Met at the fair", "source": "manual",
 				"occurred_at": "2025-03-09T12:00:00Z", "occurred_precision": "day",
 			}, http.StatusCreated)
 			read := readDay(t, d.restStatus(t, "GET", "/v1/activities/"+anIDIn(t, made), nil, http.StatusOK))
-			if !isDayOn(read, "2025-03-09", loc) {
-				t.Fatalf("read back %v as %q, want 2025-03-09 at noon in %s as a day", read.OccurredAt, read.OccurredPrecision, zone)
+			if !isDayOn(read, "2025-03-09") {
+				t.Fatalf("read back %v as %q in %s, want 2025-03-09 at noon UTC as a day", read.OccurredAt, read.OccurredPrecision, zone)
 			}
 		})
 	}
@@ -116,7 +116,7 @@ func TestADayWithoutADateIsRefusedOnTheWire(t *testing.T) {
 // A day cell is a day's activity, and a cell with a time keeps its time.
 func TestAnImportedDayCellIsADay(t *testing.T) {
 	e := setupImportApp(t)
-	loc := setRecordZone(t, e, "America/New_York")
+	setInstallationZone(t, e, "America/New_York")
 	_, report := importActivities(t, e, map[string]string{
 		"contacts.csv": "ref,email,name\nP-1,jo@day-cell.example,Jo Tran\n",
 		"activities.csv": activityHeader + "\n" +
@@ -126,8 +126,8 @@ func TestAnImportedDayCellIsADay(t *testing.T) {
 	if report.Disposition.Created != 3 {
 		t.Fatalf("disposition = %+v, issues %+v, want the contact and two activities", report.Disposition, report.Issues)
 	}
-	if read := storedDay(t, e, "Day-only visit"); !isDayOn(read, "2025-03-09", loc) {
-		t.Errorf("the day cell landed at %v as %q, want 9 March at New York's noon as a day", read.OccurredAt, read.OccurredPrecision)
+	if read := storedDay(t, e, "Day-only visit"); !isDayOn(read, "2025-03-09") {
+		t.Errorf("the day cell landed at %v as %q, want 9 March at noon UTC as a day", read.OccurredAt, read.OccurredPrecision)
 	}
 	if read := storedDay(t, e, "Timed call"); read.OccurredPrecision != "instant" {
 		t.Errorf("the timed cell landed as %q, want instant", read.OccurredPrecision)
@@ -151,7 +151,7 @@ func storedDay(t *testing.T, e *apptest.AppEnv, subject string) dayRead {
 // again leaves a day the web made alone.
 func TestAReImportedDayCellComparesByDate(t *testing.T) {
 	e := setupImportApp(t)
-	loc := setRecordZone(t, e, "America/New_York")
+	setInstallationZone(t, e, "America/New_York")
 	parts := contactAndActivityParts()
 	file := func(occurredAt string) map[string]string {
 		return map[string]string{
@@ -166,7 +166,7 @@ func TestAReImportedDayCellComparesByDate(t *testing.T) {
 	if _, moved := importActivities(t, e, file("2025-03-07"), parts); moved.Disposition.Updated != 1 {
 		t.Fatalf("a new date = %+v, want the meeting rewritten", moved.Disposition)
 	}
-	if read := storedDay(t, e, "Fair visit"); !isDayOn(read, "2025-03-07", loc) {
+	if read := storedDay(t, e, "Fair visit"); !isDayOn(read, "2025-03-07") {
 		t.Errorf("the rewritten row reads %v as %q, want 7 March as a day", read.OccurredAt, read.OccurredPrecision)
 	}
 	importActivities(t, e, file("2025-03-07T09:30:00-05:00"), parts)
@@ -182,7 +182,32 @@ func TestAReImportedDayCellComparesByDate(t *testing.T) {
 	if _, again := importActivities(t, e, file("2025-03-07"), parts); again.Disposition.Updated != 0 {
 		t.Fatalf("the web's day re-imported on its own date = %+v, want it untouched", again.Disposition)
 	}
-	if read := storedDay(t, e, "Fair visit"); !isDayOn(read, "2025-03-07", loc) {
+	if read := storedDay(t, e, "Fair visit"); !isDayOn(read, "2025-03-07") {
 		t.Errorf("the web's day reads %v as %q, want 7 March as a day", read.OccurredAt, read.OccurredPrecision)
+	}
+}
+
+// A day becomes an instant only with the time it happened. A PATCH naming the
+// precision alone is refused, naming occurred_at, and the day stays as it was.
+func TestADayMadeAnInstantWithoutATimeIsRefusedOnTheWire(t *testing.T) {
+	d := newTwoDoors(t, "day-entry-instant", "read", "write")
+	made := d.restStatus(t, "POST", "/v1/activities", map[string]any{
+		"kind": "note", "subject": "Met at the fair", "source": "manual",
+		"occurred_at": "2026-03-09T12:00:00Z", "occurred_precision": "day",
+	}, http.StatusCreated)
+	id := anIDIn(t, made)
+	body := d.restStatus(t, "PATCH", "/v1/activities/"+id, map[string]any{"occurred_precision": "instant"}, http.StatusUnprocessableEntity)
+	var refusal struct {
+		Details struct {
+			Errors []struct {
+				Field string `json:"field"`
+			} `json:"errors"`
+		} `json:"details"`
+	}
+	if err := json.Unmarshal(body, &refusal); err != nil || len(refusal.Details.Errors) == 0 || refusal.Details.Errors[0].Field != "occurred_at" {
+		t.Fatalf("the refusal = %s, want it to name occurred_at", body)
+	}
+	if read := readDay(t, d.restStatus(t, "GET", "/v1/activities/"+id, nil, http.StatusOK)); !isDayOn(read, "2026-03-09") {
+		t.Errorf("after the refusal the note reads %v as %q, want the day untouched", read.OccurredAt, read.OccurredPrecision)
 	}
 }

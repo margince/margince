@@ -123,9 +123,9 @@ func TestADirectionIsInboundOrOutbound(t *testing.T) {
 	}
 }
 
-// A day cell is held against today's date in the record zone. Today passes all
-// day, and tomorrow is refused even once UTC has reached it.
-func TestADayCellIsHeldAgainstTodayInTheRecordZone(t *testing.T) {
+// A day cell is held against today's date in the installation zone. Today
+// passes all day, and tomorrow is refused even once UTC has reached it.
+func TestADayCellIsHeldAgainstTodayInTheInstallationZone(t *testing.T) {
 	york, err := time.LoadLocation("America/New_York")
 	if err != nil {
 		t.Fatal(err)

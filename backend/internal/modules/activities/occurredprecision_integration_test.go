@@ -10,6 +10,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -34,7 +35,7 @@ func zoneNamed(t *testing.T, name string) *time.Location {
 	return loc
 }
 
-// zonedStore is the store with its record zone fixed, as compose binds it.
+// zonedStore is the store with the installation zone fixed, as compose binds it.
 func (e *sendEnv) zonedStore(zone *time.Location) *Store {
 	return e.store(nil).WithRecordZone(func(context.Context, pgx.Tx) (*time.Location, error) { return zone, nil })
 }
@@ -84,53 +85,50 @@ func lastUpdatedPrecision(t *testing.T, e *sendEnv, id crmcontracts.Activity) st
 	return *precision
 }
 
-// A day entry is stored at its date's noon in the record zone, whatever zone
-// that is, and reads back as that date there.
-func TestADayEntryIsStoredAtItsDatesNoonInTheRecordZone(t *testing.T) {
+// A day entry is stored at noon UTC of its date, whatever the installation
+// zone, and reads back as that date.
+func TestADayEntryIsStoredAtNoonUTCOfItsDate(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
-	date := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
+	want := time.Date(2026, 3, 9, 12, 0, 0, 0, time.UTC)
 	for _, name := range []string{"Pacific/Auckland", "America/New_York", "Pacific/Pago_Pago"} {
-		zone := zoneNamed(t, name)
-		store := e.zonedStore(zone)
-		meeting := logDayMeeting(ctx, t, store, pastDay)
-		if want := occurredday.Anchor(date, zone); !meeting.OccurredAt.Equal(want) {
-			t.Errorf("%s: stored at %v, want the date's noon %v", name, meeting.OccurredAt, want)
+		store := e.zonedStore(zoneNamed(t, name))
+		meeting := logDayMeeting(ctx, t, store, time.Date(2026, 3, 9, 8, 0, 0, 0, time.UTC))
+		if !meeting.OccurredAt.Equal(want) {
+			t.Errorf("%s: stored at %v, want %v", name, meeting.OccurredAt, want)
 		}
 		read, err := store.GetActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), storekit.LiveOnly)
 		if err != nil {
 			t.Fatalf("GetActivity: %v", err)
 		}
 		if read.OccurredPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionDay ||
-			!occurredday.Date(read.OccurredAt, zone).Equal(date) {
+			occurredday.Date(read.OccurredAt).Format(time.DateOnly) != "2026-03-09" {
 			t.Errorf("%s: reads back %v as %q, want 2026-03-09 as a day", name, read.OccurredAt, read.OccurredPrecision)
 		}
 	}
 }
 
 // The writer's own offset names the date: late on 9 March in Honolulu is 10
-// March in Berlin, and the entry still files under the 9th.
+// March in UTC, and the entry still files under the 9th.
 func TestTheWritersOffsetNamesTheDate(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	lateEvening := time.Date(2026, 3, 9, 23, 0, 0, 0, time.FixedZone("HST", -10*3600))
-	meeting := logDayMeeting(ctx, t, e.zonedStore(zoneNamed(t, "Europe/Berlin")), lateEvening)
-	if want := time.Date(2026, 3, 9, 11, 0, 0, 0, time.UTC); !meeting.OccurredAt.Equal(want) {
-		t.Errorf("stored at %v, want Berlin's noon of 9 March %v", meeting.OccurredAt, want)
+	meeting := logDayMeeting(ctx, t, e.store(nil), lateEvening)
+	if want := time.Date(2026, 3, 9, 12, 0, 0, 0, time.UTC); !meeting.OccurredAt.Equal(want) {
+		t.Errorf("stored at %v, want noon UTC of 9 March %v", meeting.OccurredAt, want)
 	}
 }
 
-// A store built without the record zone refuses a day rather than guessing.
-func TestADayFromAStoreWithoutARecordZoneIsRefused(t *testing.T) {
+// An instant made a day takes the day it falls on in the installation zone, so
+// a store without that zone refuses rather than guessing.
+func TestAnInstantMadeADayOnAStoreWithoutTheZoneIsRefused(t *testing.T) {
 	e := setupSend(t)
-	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "note", Subject: new("Met at the fair"), OccurredAt: &pastDay,
-		OccurredPrecision: new(crmcontracts.OccurredPrecisionOccurredPrecisionDay), Source: "manual",
-	})
-	if err != nil {
-		t.Fatalf("LogActivityInputFrom: %v", err)
-	}
-	if _, _, err := e.store(nil).LogActivity(e.as(principal.RowScopeAll), in); !errors.Is(err, errNoRecordZone) {
+	ctx := e.as(principal.RowScopeAll)
+	note := loggedNote(ctx, t, e)
+	day := PrecisionDay
+	_, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(note.Id)), UpdateActivityInput{OccurredPrecision: &day})
+	if !errors.Is(err, errNoRecordZone) {
 		t.Fatalf("err = %v, want errNoRecordZone", err)
 	}
 }
@@ -183,8 +181,8 @@ func TestAPatchedTimeAloneIsAnInstant(t *testing.T) {
 	}
 }
 
-// A day sent alone keeps the date the stored time falls on in the record zone,
-// and moves the time to that date's anchor.
+// A day sent alone keeps the date the stored instant falls on in the
+// installation zone, and moves the time to that date's anchor.
 func TestAPatchedPrecisionAloneAnchorsTheStoredDate(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
@@ -195,7 +193,7 @@ func TestAPatchedPrecisionAloneAnchorsTheStoredDate(t *testing.T) {
 
 	out := patchActivity(ctx, t, store, note, UpdateActivityInput{OccurredPrecision: &day})
 
-	want := occurredday.Anchor(occurredday.Date(note.OccurredAt, zone), zone)
+	want := occurredday.AnchorIn(note.OccurredAt, zone)
 	if out.OccurredPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionDay || !out.OccurredAt.Equal(want) {
 		t.Errorf("got %v as %q, want the stored date's anchor %v as a day", out.OccurredAt, out.OccurredPrecision, want)
 	}
@@ -209,21 +207,22 @@ func TestAPatchedPrecisionAloneAnchorsTheStoredDate(t *testing.T) {
 	}
 }
 
+// An instant given a new date as a day lands on that date's anchor, and the
+// event names the precision that changed.
 func TestAPatchedTimeAndDayMoveTogether(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
-	zone := zoneNamed(t, "America/New_York")
-	store := e.zonedStore(zone)
-	meeting := logDayMeeting(ctx, t, store, pastDay)
+	store := e.zonedStore(zoneNamed(t, "America/New_York"))
+	note := loggedNote(ctx, t, e)
 	moved, day := pastDay.Add(48*time.Hour), PrecisionDay
 
-	out := patchActivity(ctx, t, store, meeting, UpdateActivityInput{OccurredAt: &moved, OccurredPrecision: &day})
+	out := patchActivity(ctx, t, store, note, UpdateActivityInput{OccurredAt: &moved, OccurredPrecision: &day})
 
-	want := occurredday.Anchor(moved, zone)
+	want := occurredday.Anchor(moved)
 	if out.OccurredPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionDay || !out.OccurredAt.Equal(want) {
 		t.Errorf("got %v at %q, want %v at day", out.OccurredAt, out.OccurredPrecision, want)
 	}
-	if got := lastUpdatedPrecision(t, e, meeting); got != PrecisionDay {
+	if got := lastUpdatedPrecision(t, e, note); got != PrecisionDay {
 		t.Errorf("activity.updated carries occurred_precision %q, want day", got)
 	}
 }
@@ -292,5 +291,68 @@ func TestAnInvitedMeetingCannotBeADay(t *testing.T) {
 	_, err = store.UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), UpdateActivityInput{OccurredPrecision: &precision})
 	if _, ok := errors.AsType[*DayHeldSlotError](err); !ok {
 		t.Fatalf("err = %v, want DayHeldSlotError", err)
+	}
+}
+
+// A day becomes an instant only with the time it happened. Its stored noon
+// would otherwise read as a real 12:00.
+func TestADayMadeAnInstantWithoutATimeIsRefused(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	store := e.zonedStore(time.UTC)
+	meeting := logDayMeeting(ctx, t, store, pastDay)
+	instant := PrecisionInstant
+	_, err := store.UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), UpdateActivityInput{OccurredPrecision: &instant})
+	if _, ok := errors.AsType[*DayToInstantNeedsTimeError](err); !ok {
+		t.Fatalf("err = %v, want DayToInstantNeedsTimeError", err)
+	}
+}
+
+// A day moved to another date audits the precision beside the time. Its event
+// moves the time and names no precision, since that did not change.
+func TestADayMovedToAnotherDateKeepsItsPrecisionInTheTrail(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	store := e.zonedStore(time.UTC)
+	meeting := logDayMeeting(ctx, t, store, pastDay)
+	moved, day := pastDay.AddDate(0, 0, 3), PrecisionDay
+
+	out := patchActivity(ctx, t, store, meeting, UpdateActivityInput{OccurredAt: &moved, OccurredPrecision: &day})
+
+	if !out.OccurredAt.Equal(occurredday.Anchor(moved)) {
+		t.Fatalf("moved to %v, want %v", out.OccurredAt, occurredday.Anchor(moved))
+	}
+	before, after := auditImagesFor(t, e, ids.UUID(meeting.Id))
+	if before[fieldOccurredPrecision] != PrecisionDay || after[fieldOccurredPrecision] != PrecisionDay {
+		t.Errorf("the audit says %v -> %v, want day on both sides", before[fieldOccurredPrecision], after[fieldOccurredPrecision])
+	}
+	if got := lastUpdatedPrecision(t, e, meeting); got != "" {
+		t.Errorf("activity.updated names occurred_precision %q for an unchanged day", got)
+	}
+}
+
+// occurredday.EndSQL and occurredday.Ended agree: a day entry ends when its
+// date ends in the installation zone, east and west of UTC.
+func TestADayEntryEndsWithItsDateInSQLAsInGo(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	meeting := logDayMeeting(ctx, t, e.store(nil), pastDay)
+	for _, name := range []string{"Pacific/Auckland", "America/Los_Angeles", "UTC"} {
+		if _, err := e.owner.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ('installation.timezone', to_jsonb($1::text))
+			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, name); err != nil {
+			t.Fatal(err)
+		}
+		zone := zoneNamed(t, name)
+		midnight := time.Date(2026, 3, 10, 0, 0, 0, 0, zone)
+		for _, asOf := range []time.Time{midnight.Add(-time.Minute), midnight} {
+			var ended bool
+			if err := e.owner.QueryRow(context.Background(), fmt.Sprintf(
+				`SELECT %s <= $1 FROM activity a WHERE a.id = $2`, occurredday.EndSQL("a")), asOf, ids.UUID(meeting.Id)).Scan(&ended); err != nil {
+				t.Fatalf("%s: %v", name, err)
+			}
+			if want := occurredday.Ended(meeting.OccurredAt, asOf, zone); ended != want {
+				t.Errorf("%s at %v: SQL says ended = %v, Go says %v", name, asOf, ended, want)
+			}
+		}
 	}
 }

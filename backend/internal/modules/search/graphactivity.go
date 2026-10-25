@@ -35,7 +35,7 @@ import (
 
 // assembleActivityWithin builds the context for an activity anchor.
 func (s *Store) assembleActivityWithin(ctx context.Context, tx pgx.Tx, activityID ids.UUID, maxItems int, within projectScope) ([]graphSection, error) {
-	profile, err := s.activityProfile(ctx, tx, activityID, within)
+	profile, err := activityProfile(ctx, tx, activityID, within)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (s *Store) assembleActivityWithin(ctx context.Context, tx pgx.Tx, activityI
 // is read. Filtering the walk around it while still naming the room and who
 // was in it would hand over the other engagement under a scope that claims
 // to have excluded it.
-func (s *Store) activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within projectScope) (graphItem, error) {
+func activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within projectScope) (graphItem, error) {
 	// Object RBAC before row scope: a caller with no read grant on activity at
 	// all is denied the type (403), not handed the subset of events their row
 	// scope would have admitted.
@@ -135,13 +135,7 @@ func (s *Store) activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.U
 	// When it happens is half of what a prep is for, and the title alone does
 	// not carry it — a subject line reads the same the day before and the week
 	// after.
-	zone := time.UTC
-	if dateOnly {
-		if zone, err = s.dayZone(ctx, tx); err != nil {
-			return graphItem{}, err
-		}
-	}
-	when := occurredday.When(occurredAt, dateOnly, zone)
+	when := occurredday.When(occurredAt, dateOnly)
 	return graphItem{
 		entityType: string(datasource.EntityActivity), id: activityID, dateOnly: dateOnly,
 		summary: fmt.Sprintf("%s — %s on %s", title, kind, when),

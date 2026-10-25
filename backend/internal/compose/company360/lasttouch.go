@@ -28,6 +28,9 @@ import (
 type LastTouch struct {
 	InboundAt  *time.Time
 	OutboundAt *time.Time
+	// The precisions of the rows behind InboundAt and OutboundAt: "day" when
+	// that row names only a date, empty when there is no row.
+	InboundPrecision, OutboundPrecision string
 	// Contact is the newest exchange of any direction that counts as contact
 	// (relstrength.InteractionCountsSQL): a note is not contact, and neither is
 	// a meeting called off. Nil when there was none.
@@ -40,6 +43,8 @@ type LastContact struct {
 	At         time.Time
 	Kind       string
 	ActivityID ids.ActivityID
+	// Precision is "day" when At is only a date's anchor.
+	Precision string
 }
 
 // lastTouchCompanyAlias is the company alias LastTouchFor's statement and its
@@ -101,20 +106,26 @@ func LastTouchFor(
 	// human's message last went each way, so any directed kind counts.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH touched AS (
-		  SELECT reach.company_id, a.id, a.occurred_at, a.kind, a.direction,
+		  SELECT reach.company_id, a.id, a.occurred_at, a.occurred_precision, a.kind, a.direction,
 		         %[5]s AS held, %[6]s AS is_interaction
 		  %[2]s
 		), clocks AS (
 		  SELECT company_id,
 		         max(occurred_at) FILTER (WHERE direction = 'inbound' AND held) AS inbound_at,
-		         max(occurred_at) FILTER (WHERE direction = 'outbound' AND held) AS outbound_at
+		         max(occurred_at) FILTER (WHERE direction = 'outbound' AND held) AS outbound_at,
+		         (array_agg(occurred_precision ORDER BY occurred_at DESC, id DESC)
+		            FILTER (WHERE direction = 'inbound' AND held))[1] AS inbound_precision,
+		         (array_agg(occurred_precision ORDER BY occurred_at DESC, id DESC)
+		            FILTER (WHERE direction = 'outbound' AND held))[1] AS outbound_precision
 		  FROM touched GROUP BY company_id
 		), last_contact AS (
-		  SELECT DISTINCT ON (company_id) company_id, id, occurred_at, kind
+		  SELECT DISTINCT ON (company_id) company_id, id, occurred_at, occurred_precision, kind
 		  FROM touched WHERE is_interaction
 		  ORDER BY company_id, occurred_at DESC, id DESC
 		)
-		SELECT %[1]s.id, clocks.inbound_at, clocks.outbound_at, lc.id, lc.occurred_at, lc.kind
+		SELECT %[1]s.id, clocks.inbound_at, clocks.outbound_at,
+		       coalesce(clocks.inbound_precision, ''), coalesce(clocks.outbound_precision, ''),
+		       lc.id, lc.occurred_at, lc.kind, coalesce(lc.occurred_precision, '')
 		FROM company %[1]s
 		LEFT JOIN clocks ON clocks.company_id = %[1]s.id
 		LEFT JOIN last_contact lc ON lc.company_id = %[1]s.id
@@ -124,6 +135,11 @@ func LastTouchFor(
 	if err != nil {
 		return nil, err
 	}
+	return scanLastTouches(rows, out)
+}
+
+// scanLastTouches reads LastTouchFor's rows into out, one company each.
+func scanLastTouches(rows pgx.Rows, out map[ids.CompanyID]LastTouch) (map[ids.CompanyID]LastTouch, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var companyID ids.CompanyID
@@ -131,12 +147,14 @@ func LastTouchFor(
 		var contactID *ids.ActivityID
 		var contactAt *time.Time
 		var contactKind *string
+		var contactPrecision string
 		if err := rows.Scan(&companyID, &touch.InboundAt, &touch.OutboundAt,
-			&contactID, &contactAt, &contactKind); err != nil {
+			&touch.InboundPrecision, &touch.OutboundPrecision,
+			&contactID, &contactAt, &contactKind, &contactPrecision); err != nil {
 			return nil, err
 		}
 		if contactID != nil && contactAt != nil && contactKind != nil {
-			touch.Contact = &LastContact{At: *contactAt, Kind: *contactKind, ActivityID: *contactID}
+			touch.Contact = &LastContact{At: *contactAt, Kind: *contactKind, ActivityID: *contactID, Precision: contactPrecision}
 		}
 		out[companyID] = touch
 	}

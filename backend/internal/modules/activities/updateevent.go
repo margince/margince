@@ -10,8 +10,9 @@ import (
 )
 
 // Events describe requested fields; audit images describe the persisted row.
-// Body content stays out of events because it can be large and private.
-func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEventActivityChangedFields {
+// Body content stays out of events because it can be large and private. The
+// precision is named only when it changed, since a new time alone implies one.
+func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.Activity) crmcontracts.PublicEventActivityChangedFields {
 	var fields crmcontracts.PublicEventActivityChangedFields
 	if in.Subject != nil {
 		fields.Subject = in.Subject
@@ -23,7 +24,7 @@ func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEve
 	if in.OccurredAt != nil {
 		fields.OccurredAt = in.OccurredAt
 	}
-	if in.OccurredPrecision != nil {
+	if in.OccurredPrecision != nil && *in.OccurredPrecision != string(current.OccurredPrecision) {
 		precision := crmcontracts.PublicEventActivityChangedFieldsOccurredPrecision(*in.OccurredPrecision)
 		fields.OccurredPrecision = &precision
 	}
@@ -45,4 +46,14 @@ func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEve
 		fields.MeetingStatus = &status
 	}
 	return fields
+}
+
+// precisionBesideTime puts the precision in both audit images whenever the time
+// is there. A moved day entry then still says its time is only a date.
+func precisionBesideTime(before, after map[string]any, current, out crmcontracts.Activity) {
+	if _, moved := after[auditFieldOccurredAt]; !moved {
+		return
+	}
+	before[fieldOccurredPrecision] = string(current.OccurredPrecision)
+	after[fieldOccurredPrecision] = string(out.OccurredPrecision)
 }

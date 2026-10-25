@@ -69,7 +69,7 @@ func TestTheDealAmountReachesTheModelAsAMajorUnitFigure(t *testing.T) {
 // you about X" — which is the generic prose the model lane exists to replace.
 func TestTheFoldCarriesWhatEachMessageActuallySaid(t *testing.T) {
 	t.Parallel()
-	in := FromView(viewFixture(t), time.UTC)
+	in := FromView(viewFixture(t))
 	if len(in.Recent) == 0 {
 		t.Fatal("the fold carried no timeline at all")
 	}
@@ -93,13 +93,13 @@ func TestTheFoldCarriesWhatEachMessageActuallySaid(t *testing.T) {
 func TestTheFoldNamesWhoWroteEachMessage(t *testing.T) {
 	t.Parallel()
 	view := viewFixture(t)
-	if got := FromView(view, time.UTC).Recent[0].Speaker; got != "them" {
+	if got := FromView(view).Recent[0].Speaker; got != "them" {
 		t.Errorf("an inbound message folded to speaker %q, want %q — the contact wrote it", got, "them")
 	}
 
 	outbound := crmcontracts.ActivityDirectionOutbound
 	view.Activities.Data[0].Direction = &outbound
-	if got := FromView(view, time.UTC).Recent[0].Speaker; got != "you" {
+	if got := FromView(view).Recent[0].Speaker; got != "you" {
 		t.Errorf("an outbound message folded to speaker %q, want %q.\n"+
 			"\tThese are the READER's own words, and a brief that reports them as the "+
 			"contact's puts words in somebody's mouth.", got, "you")
@@ -114,7 +114,7 @@ func TestAMessageWithNoDirectionNamesNoSpeaker(t *testing.T) {
 	t.Parallel()
 	view := viewFixture(t)
 	view.Activities.Data[0].Direction = nil
-	if got := FromView(view, time.UTC).Recent[0].Speaker; got != "" {
+	if got := FromView(view).Recent[0].Speaker; got != "" {
 		t.Errorf("a directionless message folded to speaker %q, want no speaker at all", got)
 	}
 }
@@ -129,7 +129,7 @@ func TestAHeldMessageReachesTheModelAsADateAndNothingElse(t *testing.T) {
 	row.EmailSummary = nil
 	view.Activities.Data[0] = row
 
-	in := FromView(view, time.UTC)
+	in := FromView(view)
 	if !in.Recent[0].Withheld {
 		t.Error("the fold did not mark the held row, so the model cannot tell an empty message from a private one")
 	}
@@ -150,7 +150,7 @@ func TestADismissedClaimNeverReachesTheModel(t *testing.T) {
 	claims[0].Status = crmcontracts.ConversationClaimStatusDismissed
 	view.Claims = &claims
 
-	if in := FromView(view, time.UTC); len(in.Claims) != 0 {
+	if in := FromView(view); len(in.Claims) != 0 {
 		t.Errorf("the fold carried %+v, want a dismissed claim left out", in.Claims)
 	}
 }
@@ -169,7 +169,7 @@ func TestAPromisesStoredDateReachesTheModelWithTheRuleToStateIt(t *testing.T) {
 	claims[0].DueAt = &due
 	view.Claims = &claims
 
-	request := BriefRequest(FromView(view, time.UTC), "en")
+	request := BriefRequest(FromView(view), "en")
 	if !strings.Contains(request.System, `state that date, never the relative words its quote used ("this week", "shortly")`) {
 		t.Errorf("the system prompt does not tell the brief to state a claim's date:\n%s", request.System)
 	}
@@ -193,7 +193,7 @@ func TestOnlyAMomentsRowBackedEvidenceBecomesACitation(t *testing.T) {
 			{Type: crmcontracts.ContactMomentEvidenceTypeActivity},
 		},
 	}
-	in := FromView(view, time.UTC)
+	in := FromView(view)
 	if in.Moment == nil {
 		t.Fatal("the fold dropped the moment")
 	}
@@ -243,14 +243,14 @@ func viewFixture(t *testing.T) crmcontracts.Contact360 {
 func TestAMarkedContactsOwnAskIsNotHandedToTheBriefAsANextStep(t *testing.T) {
 	t.Parallel()
 	view := viewFixture(t)
-	ordinary := FromView(view, time.UTC)
+	ordinary := FromView(view)
 	if len(ordinary.Claims) == 0 || ordinary.Recent[0].Move == "" {
 		t.Fatal("the fixture must give an ordinary contact a claim and a message waiting for a reply")
 	}
 
 	mark := crmcontracts.ContactRelationshipMarkVendorMarketing
 	view.Contact.RelationshipMark = &mark
-	marked := FromView(view, time.UTC)
+	marked := FromView(view)
 	if marked.Relationship != "vendor_marketing" {
 		t.Errorf("relationship = %q, want vendor_marketing", marked.Relationship)
 	}

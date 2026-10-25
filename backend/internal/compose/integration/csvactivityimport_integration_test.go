@@ -105,7 +105,7 @@ func TestAnActivitiesFileLandsAtItsPastDatesUnderItsLinks(t *testing.T) {
 	meeting := activityNamed(t, e, "Site visit")
 	if meeting.Kind != "meeting" || meeting.MeetingStatus == nil || *meeting.MeetingStatus != "held" ||
 		!meeting.OccurredAt.Equal(time.Date(2025, 3, 9, 12, 0, 0, 0, time.UTC)) {
-		t.Fatalf("meeting = %+v, want a held meeting at its day's noon in the record zone", meeting)
+		t.Fatalf("meeting = %+v, want a held meeting at noon UTC of its day", meeting)
 	}
 }
 

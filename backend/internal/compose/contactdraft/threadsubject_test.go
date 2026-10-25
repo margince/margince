@@ -113,7 +113,7 @@ func TestAMeetingFollowUpContinuesNoEmailThread(t *testing.T) {
 	in := Input{
 		Recent: FoldRecent([]crmcontracts.Activity{
 			mail(crmcontracts.ActivityDirectionInbound, draftedAt.Add(-time.Hour), "Unrelated invoice"),
-		}, draftedAt, time.UTC),
+		}, draftedAt),
 		About: &ActIn{Kind: string(crmcontracts.ActivityKindMeeting), Subject: "Kickoff"},
 	}
 	if subject, ok := in.ThreadSubject(); ok || in.ContinuesThread() {

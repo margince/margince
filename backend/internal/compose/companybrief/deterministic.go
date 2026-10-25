@@ -245,7 +245,10 @@ func shortDate(at string, say spoken) string {
 	}
 	parsed, err := time.Parse(time.RFC3339, at)
 	if err != nil {
-		return ""
+		// A day entry is told as its date alone (activitywhen.Text).
+		if parsed, err = time.Parse(time.DateOnly, at); err != nil {
+			return ""
+		}
 	}
 	return parsed.UTC().Format(say.Say(floor.DateLayout))
 }

@@ -219,7 +219,7 @@ func FromView(
 		CompanyID:  view.Company.Id.String(),
 		Company:    view.Company.DisplayName,
 		Recipient:  recipientOf(contact),
-		Recent:     foldRecent(view, req.Envelope.Zone()),
+		Recent:     foldRecent(view),
 		Commitment: foldCommitment(view),
 	}
 	if view.Company.Industry != nil {
@@ -359,7 +359,7 @@ func languageEvidence(view crmcontracts.Company360, now time.Time) []string {
 	return draftcore.LanguageEvidenceOf(view.Activities.Data, now)
 }
 
-func foldRecent(view crmcontracts.Company360, zone *time.Location) []ActIn {
+func foldRecent(view crmcontracts.Company360) []ActIn {
 	if view.Activities == nil {
 		return nil
 	}
@@ -371,7 +371,7 @@ func foldRecent(view crmcontracts.Company360, zone *time.Location) []ActIn {
 		item := ActIn{
 			ID:      act.Id.String(),
 			Kind:    string(act.Kind),
-			At:      activitywhen.Text(act, zone),
+			At:      activitywhen.Text(act),
 			Inbound: act.Direction != nil && *act.Direction == crmcontracts.ActivityDirectionInbound,
 		}
 		if act.Subject != nil {

@@ -46,8 +46,6 @@ func activityCapturedPayload(ctx context.Context, kind, channelProvider string) 
 type LogActivityInput struct {
 	FollowUpTask *LogActivityInput
 	recordedAt   *time.Time
-	// recordZone anchors a day entry; the store sets it from WithRecordZone.
-	recordZone RecordZone
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
 	// invitedAssignee admits an invited colleague as the task's assignee. The
@@ -242,7 +240,7 @@ func (s *Store) logActivityAndReadTranscript(
 		return s.takeEmailRequest(ctx, tx, in)
 	}
 	at := s.now()
-	in.recordedAt, in.recordZone = &at, s.recordZone
+	in.recordedAt = &at
 	out, created, err := logActivityInTx(ctx, tx, in)
 	if err != nil {
 		return out, created, err

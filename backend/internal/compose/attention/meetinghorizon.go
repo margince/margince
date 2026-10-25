@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // nextMeetingHorizon is how far past today the next customer meeting is looked for.
@@ -34,9 +35,9 @@ const (
 type MeetingHorizon interface {
 	// Calendar is whether the reader's own calendar connections feed the lane.
 	Calendar(ctx context.Context) (crmcontracts.WorklistCalendar, error)
-	// NextCustomerMeeting is the reader's soonest booked customer meeting starting
-	// in [after, before); found is false when none is.
-	NextCustomerMeeting(ctx context.Context, after, before time.Time) (meeting crmcontracts.Contact360NextMeeting, found bool, err error)
+	// NextCustomerMeeting is the reader's soonest booked customer meeting in
+	// window; found is false when none is.
+	NextCustomerMeeting(ctx context.Context, window MeetingWindow) (meeting crmcontracts.Contact360NextMeeting, found bool, err error)
 }
 
 // WithMeetingHorizon binds the horizon. Unbound, the page carries neither field,
@@ -75,7 +76,11 @@ func (s *Service) meetingHorizon(ctx context.Context, day crmcontracts.Attention
 		return out
 	}
 	if failed := s.horizonSide(ctx, sourceNextMeeting, func(ctx context.Context) error {
-		next, found, err := s.horizon.NextCustomerMeeting(ctx, until, until.Add(nextMeetingHorizon))
+		window, err := s.pastToday(ctx, until)
+		if err != nil {
+			return err
+		}
+		next, found, err := s.horizon.NextCustomerMeeting(ctx, window)
 		if found && err == nil {
 			out.next = &next
 		}
@@ -102,4 +107,18 @@ func (s *Service) horizonSide(
 		Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		ContributesRows: &rowless,
 	}
+}
+
+// pastToday is the horizon after today's end: timed meetings from until, and
+// day meetings from tomorrow's date, which the installation zone names.
+func (s *Service) pastToday(ctx context.Context, until time.Time) (MeetingWindow, error) {
+	loc, err := s.location(ctx)
+	if err != nil {
+		return MeetingWindow{}, err
+	}
+	before := until.Add(nextMeetingHorizon)
+	return MeetingWindow{
+		From: until, Until: before,
+		DaysFrom: occurredday.AnchorIn(until, loc), DaysUntil: occurredday.AnchorIn(before, loc),
+	}, nil
 }

@@ -15,7 +15,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -27,7 +26,7 @@ func TestAClaimCarriesThePrecisionOfItsSource(t *testing.T) {
 	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Precision contact", &e.AdminUser))
 	quote := "I will send the rollout plan."
 	day := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
-	writer := activities.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS))).WithRecordZone(identity.ZoneAppliedTx)
+	writer := activities.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)))
 	source, _, err := writer.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Body: &quote, OccurredAt: &day,
 		OccurredPrecision: activities.PrecisionDay, Source: "manual",

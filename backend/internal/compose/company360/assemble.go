@@ -412,11 +412,7 @@ func (a *assembly) readNextMeeting() error {
 	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
 		return err
 	}
-	zone, err := a.zone()
-	if err != nil {
-		return err
-	}
-	meeting, err := nextMeetingSection(a.ctx, a.tx, a.companyID, a.now, zone, a.opts)
+	meeting, err := nextMeetingSection(a.ctx, a.tx, a.companyID, a.now, a.opts)
 	if err != nil {
 		return err
 	}

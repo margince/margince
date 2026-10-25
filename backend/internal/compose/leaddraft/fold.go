@@ -39,7 +39,7 @@ func FromLead(
 		RewriteOf: strings.TrimSpace(req.RewriteOf),
 		Envelope:  envelope,
 		Recipient: recipientOf(lead, activities),
-		Recent:    contactdraft.FoldRecent(activities, envelope.At(), envelope.Zone()),
+		Recent:    contactdraft.FoldRecent(activities, envelope.At()),
 	}
 }
 

@@ -44,9 +44,24 @@ func TestTheReplyAndContactDraftersReadTheSameTurns(t *testing.T) {
 	}
 	rows := []crmcontracts.Activity{mail(1), mail(2)}
 	reply := replyConversationText(draftcore.Conversation(rows, nil, conversationNow, replyContextTurns))
-	for i, recent := range contactdraft.FoldRecent(rows, conversationNow, time.UTC) {
+	for i, recent := range contactdraft.FoldRecent(rows, conversationNow) {
 		if recent.Said == "" || !strings.Contains(reply, recent.Said) {
 			t.Errorf("turn %d: the contact drafter reads %q, which the reply drafter does not", i, recent.Said)
 		}
+	}
+}
+
+// A logged call with only a date reaches the reply prompt as that date, never
+// as the noon it is stored at.
+func TestTheReplyConversationStatesADayEntryAsItsDate(t *testing.T) {
+	note := "Called about the renewal"
+	call := crmcontracts.Activity{
+		Id: crmcontracts.Id(ids.NewV7()), Kind: crmcontracts.ActivityKindCall, Body: &note,
+		OccurredAt:        time.Date(2026, 8, 30, 12, 0, 0, 0, time.UTC),
+		OccurredPrecision: crmcontracts.OccurredPrecisionOccurredPrecisionDay,
+	}
+	got := replyConversationText(draftcore.Conversation([]crmcontracts.Activity{call}, nil, conversationNow, replyContextTurns))
+	if !strings.Contains(got, "| 2026-08-30 |") || strings.Contains(got, "12:00") {
+		t.Errorf("the day entry reads %q, want its date and no time", got)
 	}
 }

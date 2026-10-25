@@ -279,6 +279,6 @@ func providerWithTranscripts(db *database.DB, onLanding activities.TranscriptRea
 }
 
 func registryRetrievers(pool *pgxpool.Pool, embedder search.Embedder) (*search.Retriever, riskAwareRetriever) {
-	retriever := search.NewRetriever(search.NewStore(InstallationDB(pool)).WithRecordZone(installationZoneTx), embedder)
+	retriever := search.NewRetriever(search.NewStore(InstallationDB(pool)), embedder)
 	return retriever, riskAwareRetriever{pool: pool, inner: retriever}
 }

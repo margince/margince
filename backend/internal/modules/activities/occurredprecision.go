@@ -4,7 +4,7 @@
 package activities
 
 // How much of an activity's time is known. A date-only entry is stored at noon
-// of its date in the record zone. Only the precision says that noon is no fact.
+// UTC of its date. Only the precision says that noon is no fact.
 
 import (
 	"context"
@@ -44,7 +44,7 @@ func precisionInsertFragment(precision string, base []any) (col, holder string, 
 
 // admitLoggedPrecision refuses a day with no date to anchor it, and a day on a
 // meeting that holds an hour. A day is stored at its date's anchor.
-func admitLoggedPrecision(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
+func admitLoggedPrecision(in *LogActivityInput) error {
 	if in.OccurredPrecision == "" || in.OccurredPrecision == PrecisionInstant {
 		return nil
 	}
@@ -57,19 +57,22 @@ func admitLoggedPrecision(ctx context.Context, tx pgx.Tx, in *LogActivityInput) 
 	if err := refuseDayHeldSlot(in.OccurredPrecision, in.ClaimsHostSlot); err != nil {
 		return err
 	}
-	anchor, err := anchorDay(ctx, tx, in.recordZone, *in.OccurredAt)
-	in.OccurredAt = &anchor
-	return err
+	in.OccurredAt = new(occurredday.Anchor(*in.OccurredAt))
+	return nil
 }
 
 // admitPatchPrecision settles the precision a patch writes. A new time with
-// none named is an instant. A day may not land on a meeting holding a slot,
-// and lands on its date's anchor: the sent time's date, else the stored one's.
+// none named is an instant, and a day leaves only with a new time. A day lands
+// on its date's anchor: the sent time's date, else the stored instant's day.
 func admitPatchPrecision(ctx context.Context, tx pgx.Tx, current crmcontracts.Activity, in *UpdateActivityInput) error {
 	if in.OccurredPrecision == nil && in.OccurredAt != nil {
 		in.OccurredPrecision = new(PrecisionInstant)
 	}
+	storedDay := current.OccurredPrecision == crmcontracts.OccurredPrecisionOccurredPrecisionDay
 	if in.OccurredPrecision == nil || *in.OccurredPrecision == PrecisionInstant {
+		if in.OccurredPrecision != nil && in.OccurredAt == nil && storedDay {
+			return &DayToInstantNeedsTimeError{}
+		}
 		return nil
 	}
 	if *in.OccurredPrecision != PrecisionDay {
@@ -82,21 +85,22 @@ func admitPatchPrecision(ctx context.Context, tx pgx.Tx, current crmcontracts.Ac
 	if err := refuseDayHeldSlot(*in.OccurredPrecision, holdsSlot); err != nil {
 		return err
 	}
-	zone, err := resolveRecordZone(ctx, tx, in.recordZone)
-	if err != nil {
-		return err
+	switch {
+	case in.OccurredAt != nil:
+		in.OccurredAt = new(occurredday.Anchor(*in.OccurredAt))
+	case !storedDay:
+		zone, err := resolveRecordZone(ctx, tx, in.recordZone)
+		if err != nil {
+			return err
+		}
+		in.OccurredAt = new(occurredday.AnchorIn(current.OccurredAt, zone))
 	}
-	named := occurredday.Date(current.OccurredAt, zone)
-	if in.OccurredAt != nil {
-		named = *in.OccurredAt
-	}
-	in.OccurredAt = new(occurredday.Anchor(named, zone))
 	return nil
 }
 
-// errNoRecordZone refuses a day entry from a store built without a record zone.
-// A guessed zone would file it under another date.
-var errNoRecordZone = errors.New("activities: a date-only entry needs the record zone, and this writer has none (WithRecordZone)")
+// errNoRecordZone refuses to turn an instant into a day on a store built
+// without the installation zone: the instant's day depends on it.
+var errNoRecordZone = errors.New("activities: an instant becomes a day in the installation zone, and this writer has none (WithRecordZone)")
 
 func resolveRecordZone(ctx context.Context, tx pgx.Tx, zone RecordZone) (*time.Location, error) {
 	if zone == nil {
@@ -109,14 +113,17 @@ func resolveRecordZone(ctx context.Context, tx pgx.Tx, zone RecordZone) (*time.L
 	return loc, err
 }
 
-// anchorDay is where the date named's own year, month and day name is stored:
-// the writer's offset decides the date, the record zone its anchor.
-func anchorDay(ctx context.Context, tx pgx.Tx, zone RecordZone, named time.Time) (time.Time, error) {
-	loc, err := resolveRecordZone(ctx, tx, zone)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return occurredday.Anchor(named, loc), nil
+// DayToInstantNeedsTimeError refuses a patch that makes a day an instant with
+// no time: the stored noon would then read as a real 12:00.
+type DayToInstantNeedsTimeError struct{}
+
+func (e *DayToInstantNeedsTimeError) Error() string {
+	return "a date-only activity becomes an instant only with the time it happened, so send occurred_at"
+}
+
+// FieldFault names occurred_at, which is what the caller must add.
+func (e *DayToInstantNeedsTimeError) FieldFault() (field, code, message string) {
+	return auditFieldOccurredAt, codeRequired, e.Error()
 }
 
 // InvalidPrecisionError refuses a precision outside the contract's list.

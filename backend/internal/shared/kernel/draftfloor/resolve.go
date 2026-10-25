@@ -53,18 +53,8 @@ type Resolver struct {
 	sender Sender
 	base   BaseLanguage
 	user   UserLanguage
-	zone   RecordZone
 	now    Clock
 	logger *slog.Logger
-}
-
-// RecordZone answers the installation's zone, which a day entry is dated in.
-type RecordZone func(ctx context.Context) (*time.Location, error)
-
-// WithRecordZone binds the zone a draft dates a day entry in.
-func (r *Resolver) WithRecordZone(zone RecordZone) *Resolver {
-	r.zone = zone
-	return r
 }
 
 // NewResolver builds a resolver on the real clock, with no sender bound.
@@ -170,24 +160,8 @@ func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate
 	// envelope carries a register only for a German draft, so a language
 	// corrected after construction would leave a German register on an English
 	// envelope, or drop one the other way.
-	envelope := NewEnvelopeWithRegister(r.language(ctx, written),
+	return NewEnvelopeWithRegister(r.language(ctx, written),
 		register(written), state, now, name, email)
-	envelope.zone = r.recordZone(ctx)
-	return envelope
-}
-
-// recordZone is the bound zone, or nil (read as UTC) when it cannot be read.
-// A day entry dated off by one beats a draft that fails.
-func (r *Resolver) recordZone(ctx context.Context) *time.Location {
-	if r == nil || r.zone == nil {
-		return nil
-	}
-	zone, err := r.zone(ctx)
-	if err != nil {
-		r.log().WarnContext(ctx, "the record zone could not be read; day entries are dated in UTC", "err", err)
-		return nil
-	}
-	return zone
 }
 
 // evidence is the text a draft's language and register are read from, in the

@@ -121,6 +121,9 @@ type ListActivitiesInput struct {
 	// [day 00:00, next day 00:00) with no double-counting at midnight.
 	OccurredAfter  *time.Time
 	OccurredBefore *time.Time
+	// DayDates holds a day entry to a range of dates instead, as anchors: a day
+	// has no hour to fall inside the range above. Nil leaves days to that range.
+	DayDates *DayDates
 	// AwaitingOutcome narrows to meetings whose status is still open: booked,
 	// or NULL because capture writes calendar events with no status. Both
 	// meeting lanes set it so the status filter runs before the limit. A page
@@ -197,4 +200,10 @@ type ListActivitiesInput struct {
 	// the page is filled from. The store sets them; a composite page reads them
 	// with ActiveActivityColumns before its transaction opens. Zero fills nothing.
 	Columns CustomColumns
+}
+
+// DayDates is a range of dates as day-entry anchors, From inclusive and Before
+// exclusive (occurredday.AnchorIn).
+type DayDates struct {
+	From, Before time.Time
 }

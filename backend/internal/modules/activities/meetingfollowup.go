@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -128,7 +129,7 @@ func addressableContactClause(ctx context.Context, arg func(any) int) (string, e
 }
 
 // meetingEndSQL is when the meeting under alias a ended.
-const meetingEndSQL = `(a.occurred_at + make_interval(secs => coalesce(a.duration_seconds, 0)))`
+var meetingEndSQL = occurredday.EndSQL("a")
 
 // meetingFollowUpsSQL: every rule sits before the cap.
 //

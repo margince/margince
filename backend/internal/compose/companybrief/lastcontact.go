@@ -4,9 +4,9 @@
 package companybrief
 
 import (
-	"time"
-
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // foldLastContact keeps the activity the tile names, with its subject when
@@ -19,7 +19,7 @@ func foldLastContact(view crmcontracts.Company360, in *Input) {
 	act := ActIn{
 		ID:   last.ActivityId.String(),
 		Kind: string(last.Kind),
-		At:   last.At.UTC().Format(time.RFC3339),
+		At:   occurredday.When(last.At, activitywhen.IsDay(last.OccurredPrecision)),
 	}
 	if view.Activities != nil {
 		for _, activity := range view.Activities.Data {

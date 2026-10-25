@@ -1,6 +1,5 @@
 -- Whether an activity's time is a real moment or only a date. A date-only
--- entry is stored at its date's noon in the installation's zone, and only this
--- column says so.
+-- entry is stored at noon UTC of its date, and only this column says so.
 --
 -- NOT VALID, validated by the next migration in its own transaction, so the
 -- scan holds SHARE UPDATE EXCLUSIVE rather than this ALTER's lock.

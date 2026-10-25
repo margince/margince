@@ -26,7 +26,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -34,21 +33,16 @@ import (
 //
 // ONE query, not two. Participants come back as JSON from a lateral sub-select
 // carrying its own row-scope predicate. A section that read the row and then
-// its children would cost per record. A day
-// meeting has no start hour. It is next for its whole date in the record zone.
+// its children would cost per record. A day meeting is next for its whole date
+// (activities.MeetingAheadSQL).
 func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, opts AssembleOptions, out *crmcontracts.Contact360) error {
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	zone, err := recordZone(ctx, tx)
-	if err != nil {
-		return err
-	}
 	linkPos := arg(contactID)
 	nowPos := arg(now)
-	todayPos := arg(storekit.StartOfDay(now, zone))
 	scope, err := activityScope(ctx, arg)
 	if err != nil {
 		return err
@@ -70,11 +64,11 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID i
 		FROM activity a
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
-		  AND (a.occurred_at > $%d OR (a.occurred_precision = 'day' AND a.occurred_at >= $%d))
+		  AND %s
 		  AND `+fmt.Sprintf(contactReachesActivity, bind(linkPos))+`
 		  AND (%s)%s
 		ORDER BY a.occurred_at, a.id
-		LIMIT 1`, room, nowPos, todayPos, scope, projectScope(opts, arg)), args...).
+		LIMIT 1`, room, activities.MeetingAheadSQL("a", bind(nowPos)), scope, projectScope(opts, arg)), args...).
 		Scan(&activityID, &meeting.StartsAt, &meeting.OccurredPrecision, &subject, &dealID, &participants)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing booked. That IS the answer, and the strip renders "None".

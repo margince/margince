@@ -74,37 +74,66 @@ func TestADayMeetingIsNeverAboutToStartOrLate(t *testing.T) {
 	}
 }
 
-// windowedMeetings answers each Today window with the meetings anchored in it.
-type windowedMeetings struct{ all []Meeting }
-
-func (w *windowedMeetings) Today(_ context.Context, from, until time.Time, _ int, _ TaskScope, _ ids.UUID) ([]Meeting, error) {
-	var out []Meeting
-	for _, meeting := range w.all {
-		if !meeting.StartsAt.Before(from) && meeting.StartsAt.Before(until) {
-			out = append(out, meeting)
-		}
-	}
-	return out, nil
+// laneWindows answers each meeting lane with rows and keeps the window it was asked.
+type laneWindows struct {
+	rows        []Meeting
+	today, over *MeetingWindow
 }
 
-// Today's day meeting stays on the meetings lane after its stored noon, while a
-// timed meeting that started at noon has left it.
-func TestTodaysDayMeetingStaysAheadAllDay(t *testing.T) {
-	t.Parallel()
-	york, err := time.LoadLocation("America/New_York")
+func (w *laneWindows) Today(_ context.Context, window MeetingWindow, _ int, _ TaskScope, _ ids.UUID) ([]Meeting, error) {
+	w.today = &window
+	return w.rows, nil
+}
+
+func (w *laneWindows) Since(_ context.Context, window MeetingWindow, _ int, _ TaskScope, _ ids.UUID) ([]MeetingAwaitingOutcome, error) {
+	w.over = &window
+	return nil, nil
+}
+
+func zoneOf(t *testing.T, name string) *time.Location {
+	t.Helper()
+	loc, err := time.LoadLocation(name)
 	if err != nil {
 		t.Fatal(err)
 	}
-	noon := time.Date(2026, 3, 10, 12, 0, 0, 0, york)
-	day := crmcontracts.OccurredPrecisionOccurredPrecisionDay
-	meetings := &windowedMeetings{all: []Meeting{
-		{ID: ids.NewV7(), Subject: "Trade fair", StartsAt: noon.UTC(), Precision: day},
-		{ID: ids.NewV7(), Subject: "Lunch call", StartsAt: noon.UTC()},
-		{ID: ids.NewV7(), Subject: "Review", StartsAt: noon.Add(5 * time.Hour).UTC()},
+	return loc
+}
+
+// The meetings lane asks for today's day meetings by their date, which the
+// installation zone names. A day meeting stays on it for its whole date, east
+// and west of UTC. Timed meetings keep the window from now.
+func TestTheMeetingsLaneAsksForTodaysDayMeetingsByDate(t *testing.T) {
+	t.Parallel()
+	tenth := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
+	for _, c := range []struct {
+		zone string
+		hour int
+	}{{"Pacific/Auckland", 23}, {"America/Los_Angeles", 8}, {"Asia/Tokyo", 23}, {"UTC", 0}} {
+		loc := zoneOf(t, c.zone)
+		lanes := &laneWindows{}
+		svc := &Service{meetings: lanes, zone: func(context.Context) (*time.Location, error) { return loc, nil }}
+		asOf := time.Date(2026, 3, 10, c.hour, 30, 0, 0, loc)
+		if _, err := svc.meetingsAhead(context.Background(), asOf, asOf.Add(time.Hour)); err != nil {
+			t.Fatal(err)
+		}
+		got := *lanes.today
+		if !got.DaysFrom.Equal(tenth) || !got.DaysUntil.Equal(tenth.AddDate(0, 0, 1)) || !got.From.Equal(asOf) {
+			t.Errorf("%s at %v asks %+v, want 10 March's anchor and timed meetings from now", c.zone, asOf, got)
+		}
+	}
+}
+
+// A day meeting is drawn above the timed ones, as a calendar's all-day row.
+func TestTheMeetingsLanePutsDayMeetingsFirst(t *testing.T) {
+	t.Parallel()
+	asOf := time.Date(2026, 3, 10, 9, 0, 0, 0, time.UTC)
+	lanes := &laneWindows{rows: []Meeting{
+		{ID: ids.NewV7(), Subject: "Review", StartsAt: asOf.Add(time.Hour)},
+		{ID: ids.NewV7(), Subject: "Trade fair", StartsAt: asOf.Add(3 * time.Hour), Precision: crmcontracts.OccurredPrecisionOccurredPrecisionDay},
+		{ID: ids.NewV7(), Subject: "Lunch call", StartsAt: asOf.Add(4 * time.Hour)},
 	}}
-	svc := &Service{meetings: meetings, zone: func(context.Context) (*time.Location, error) { return york, nil }}
-	asOf := noon.Add(3 * time.Hour)
-	ahead, err := svc.meetingsAhead(context.Background(), asOf, time.Date(2026, 3, 11, 0, 0, 0, 0, york))
+	svc := &Service{meetings: lanes}
+	ahead, err := svc.meetingsAhead(context.Background(), asOf, asOf.Add(12*time.Hour))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,29 +141,33 @@ func TestTodaysDayMeetingStaysAheadAllDay(t *testing.T) {
 	for _, meeting := range ahead {
 		got = append(got, meeting.Subject)
 	}
-	if len(got) != 2 || got[0] != "Trade fair" || got[1] != "Review" {
-		t.Errorf("the lane at 15:00 holds %v, want [Trade fair Review]", got)
+	if len(got) != 3 || got[0] != "Trade fair" || got[1] != "Review" || got[2] != "Lunch call" {
+		t.Errorf("the lane holds %v, want [Trade fair Review Lunch call]", got)
 	}
 }
 
-// A day meeting asks what happened only once its date is over in the record zone.
+// A day meeting asks what happened only once its date is over in the
+// installation zone: the outcome lane's day range ends at today's date.
 func TestADayMeetingOwesAnOutcomeOnlyAfterItsDate(t *testing.T) {
 	t.Parallel()
-	auckland, err := time.LoadLocation("Pacific/Auckland")
-	if err != nil {
-		t.Fatal(err)
-	}
-	noon := time.Date(2026, 3, 10, 12, 0, 0, 0, auckland).UTC()
-	over := []MeetingAwaitingOutcome{
-		{ID: ids.NewV7(), Subject: "Trade fair", StartedAt: noon, Precision: crmcontracts.OccurredPrecisionOccurredPrecisionDay},
-		{ID: ids.NewV7(), Subject: "Lunch call", StartedAt: noon},
-	}
-	evening := time.Date(2026, 3, 10, 23, 0, 0, 0, auckland)
-	if kept := stillOwingAnOutcome(over, evening, auckland); len(kept) != 1 || kept[0].Subject != "Lunch call" {
-		t.Errorf("on its own date the outcome lane keeps %v, want only the timed call", kept)
-	}
-	nextMorning := time.Date(2026, 3, 11, 0, 30, 0, 0, auckland)
-	if kept := stillOwingAnOutcome(over, nextMorning, auckland); len(kept) != 2 {
-		t.Errorf("after its date the outcome lane keeps %d rows, want both", len(kept))
+	auckland := zoneOf(t, "Pacific/Auckland")
+	tenth := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
+	for _, c := range []struct {
+		asOf  time.Time
+		owing bool
+	}{
+		{time.Date(2026, 3, 10, 23, 0, 0, 0, auckland), false},
+		{time.Date(2026, 3, 11, 0, 30, 0, 0, auckland), true},
+	} {
+		lanes := &laneWindows{}
+		svc := &Service{meetingsAwaitingOutcome: lanes, zone: func(context.Context) (*time.Location, error) { return auckland, nil }}
+		if _, err := svc.meetingsOwingAnOutcome(context.Background(), c.asOf); err != nil {
+			t.Fatal(err)
+		}
+		got := *lanes.over
+		owing := !tenth.Before(got.DaysFrom) && tenth.Before(got.DaysUntil)
+		if owing != c.owing || !got.Until.Equal(c.asOf) {
+			t.Errorf("at %v the lane asks %+v: 10 March owing = %v, want %v", c.asOf, got, owing, c.owing)
+		}
 	}
 }

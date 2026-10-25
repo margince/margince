@@ -359,7 +359,7 @@ func derefInt(v *int64) int64 {
 }
 
 // MarshalJSON is the input as the model reads it. A day meeting's start and a
-// day entry's time are their dates in the record zone, never the stored noon.
+// day entry's time are their dates, never the stored noon.
 func (in Input) MarshalJSON() ([]byte, error) {
 	type plain Input
 	type promptAct struct {
@@ -368,7 +368,7 @@ func (in Input) MarshalJSON() ([]byte, error) {
 	}
 	recent := make([]promptAct, 0, len(in.Recent))
 	for _, act := range in.Recent {
-		recent = append(recent, promptAct{ActIn: act, At: occurredday.When(act.At, act.DateOnly, in.zone())})
+		recent = append(recent, promptAct{ActIn: act, At: occurredday.When(act.At, act.DateOnly)})
 	}
 	return json.Marshal(struct {
 		plain
@@ -379,13 +379,5 @@ func (in Input) MarshalJSON() ([]byte, error) {
 
 // startsText is the meeting's start as a prompt states it.
 func (in Input) startsText() string {
-	return occurredday.When(in.StartsAt, in.StartsDateOnly, in.zone())
-}
-
-// zone is the record zone, UTC for an input built without one.
-func (in Input) zone() *time.Location {
-	if in.Zone == nil {
-		return time.UTC
-	}
-	return in.Zone
+	return occurredday.When(in.StartsAt, in.StartsDateOnly)
 }

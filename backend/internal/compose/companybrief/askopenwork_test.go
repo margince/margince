@@ -180,7 +180,7 @@ func TestACommitmentOfOursHasNoHolder(t *testing.T) {
 		Kind: crmcontracts.Company360CommitmentKindTheirs, Body: "Pay the invoice", ContactName: "Dana Buyer",
 		ClaimId: openapi_types.UUID{3}, ActivityId: openapi_types.UUID{4},
 	}}}
-	folded := FromView(view, time.UTC).OpenCommitments
+	folded := FromView(view).OpenCommitments
 	if len(folded) != 2 || folded[0].Holder != "" || folded[1].Holder != "Dana Buyer" {
 		t.Errorf("holders = %+v, want none for ours and the contact for theirs", folded)
 	}
@@ -265,14 +265,14 @@ func TestAViewWithItsOpenWorkCutFoldsTheGapIntoTheInput(t *testing.T) {
 		Data []crmcontracts.Company360NextStep `json:"data"`
 		Page crmcontracts.PageInfo             `json:"page"`
 	}{Page: crmcontracts.PageInfo{HasMore: true}}
-	in := FromView(view, time.UTC)
+	in := FromView(view)
 	if !in.OpenWorkWithheld || !in.OpenWorkCapped {
 		t.Errorf("gaps = capped %v withheld %v, want both", in.OpenWorkCapped, in.OpenWorkWithheld)
 	}
 	due := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
 	name := "Mira Vogt"
 	view.NextSteps.Data = []crmcontracts.Company360NextStep{{Subject: "Send", DueAt: &due, AssigneeName: &name}}
-	if got := FromView(view, time.UTC).OpenTasks[0].Holder; got != name {
+	if got := FromView(view).OpenTasks[0].Holder; got != name {
 		t.Errorf("task holder = %q, want %q", got, name)
 	}
 }

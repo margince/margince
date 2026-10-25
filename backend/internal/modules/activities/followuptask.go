@@ -114,7 +114,7 @@ func prepareFollowUpSource(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 // row of its kind stores, its follow-up source and its duration.
 func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
 	maskTextOfKind(crmcontracts.ActivityKind(in.Kind), &in.Subject, &in.Body)
-	if err := admitLoggedPrecision(ctx, tx, in); err != nil {
+	if err := admitLoggedPrecision(in); err != nil {
 		return err
 	}
 	if err := prepareFollowUpSource(ctx, tx, in); err != nil {

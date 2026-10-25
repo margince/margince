@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
@@ -416,32 +417,28 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 			  AND back.channel_provider IS NOT DISTINCT FROM a.channel_provider
 			  AND back.occurred_at > mine.set_at
 			  AND back.occurred_at <= %[1]s)
-		-- The same rule the brief's queue applies, and for the same reasons:
-		-- over means ENDED (start plus duration, not start), a meeting that
-		-- will never happen counts as over, and kind = 'meeting' is what makes
-		-- reopen_ref mean a meeting rather than any activity id.
+		-- The rule the brief's queue applies (storekit.MeetingIsOverSQL), and
+		-- kind = 'meeting' is what makes reopen_ref mean a meeting rather than
+		-- any activity id.
 		WHEN 'meeting' THEN EXISTS (
 			SELECT 1 FROM activity m
 			WHERE m.id = mine.reopen_ref AND m.kind = '%[2]s'
-			  AND (m.archived_at IS NOT NULL
-			       OR m.meeting_status IN ('canceled', 'no_show')
-			       OR m.occurred_at
-			          + make_interval(secs => coalesce(m.duration_seconds, 0)) <= %[1]s))
+			  AND %[4]s)
 		ELSE false
-	END)`, asOf, KindMeeting, backContent)
+	END)`, asOf, KindMeeting, backContent, storekit.MeetingIsOverSQL("m", asOf))
 }
 
 // bookedMeetingSQL is when the soonest booked meeting with this message's
 // sender starts, or NULL — the fact that turns a waiting card into "meeting
 // booked" instead of a count of waiting days.
 //
-// Booked means: a meeting the sender's contact is on (linked or attending,
-// the walks the answer arms use), not over — by the rule the snooze
-// disposition already applies: canceled and no-show count as over, and over
-// means ENDED, start plus duration — and booked or moved since the message
-// arrived. That last fact is read from the write shape: a meeting created
-// after the ask, or an audited change to its start after it, which is what
-// both move writers leave behind. A meeting that merely predates the ask
+// Booked means three things. The sender's contact is on the meeting, linked or
+// attending (the walks the answer arms use). It is not over, by the rule the
+// snooze disposition applies: canceled and no-show count as over, and over
+// means ENDED (occurredday.EndSQL). And it was booked or moved since the
+// message arrived. That last fact is read from the write shape. A meeting
+// created after the ask counts, and so does an audited change to its start
+// after it, which both move writers leave behind. A meeting that merely predates the ask
 // untouched does not answer it.
 //
 // Workspace-audience and unrestricted, as every off-thread answer arm is —
@@ -471,8 +468,7 @@ func bookedMeetingSQL(asOf, discover string) string {
 	           AND booked.restricted_at IS NULL` + auth.AudienceWorkspaceOnly("booked") + `
 	           AND (` + discover + `)
 	           AND coalesce(booked.meeting_status, '') NOT IN ('canceled', 'no_show')
-	           AND booked.occurred_at
-	               + make_interval(secs => coalesce(booked.duration_seconds, 0)) > ` + asOf + `
+	           AND ` + occurredday.EndSQL("booked") + ` > ` + asOf + `
 	           AND (booked.created_at > a.occurred_at
 	             OR EXISTS (SELECT 1 FROM audit_log booked_move
 	                 WHERE booked_move.entity_type = 'activity'

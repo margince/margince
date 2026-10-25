@@ -107,7 +107,8 @@ type csvWriters struct {
 	// now is the clock an activity's timestamp is held against; nil is the
 	// system clock.
 	now func() time.Time
-	// zone is the record zone a day cell's date is read in, read once per run.
+	// zone is the installation zone, read once per run: it says which date is
+	// today and which date a stored instant falls on.
 	zone *time.Location
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
 	// no "updated" member — the frozen-source model it was built for had no
@@ -133,7 +134,7 @@ func newCSVWriters(
 			WithShareRequests(contactShareRequests(db.Pool())).
 			WithInstallationRenamer(installationRenamer(db.Pool())),
 		deals:            dealsStoreOver(db),
-		activities:       activities.NewStore(db).WithRecordZone(installationZoneTx),
+		activities:       activities.NewStore(db),
 		tags:             collections.NewStore(db),
 		identities:       migration.NewRunStore(db),
 		runID:            runID,

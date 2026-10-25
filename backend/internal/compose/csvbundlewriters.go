@@ -91,7 +91,7 @@ func newBundleWriters(
 	if err != nil {
 		return nil, err
 	}
-	zone, err := runRecordZone(ctx, db)
+	zone, err := runInstallationZone(ctx, db)
 	if err != nil {
 		return nil, err
 	}
@@ -110,8 +110,8 @@ func newBundleWriters(
 	return b, nil
 }
 
-// runRecordZone reads the zone a run's day cells are dated in.
-func runRecordZone(ctx context.Context, db *database.DB) (*time.Location, error) {
+// runInstallationZone reads the zone that says which date is today for a run.
+func runInstallationZone(ctx context.Context, db *database.DB) (*time.Location, error) {
 	var zone *time.Location
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error

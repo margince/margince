@@ -167,9 +167,9 @@ type followUpCandidate struct {
 // have been about. The rep was then told a meeting "left no next step planned"
 // days before it happened.
 //
-// A meeting is evidence only once it is over — the same reading the waiting
-// queue uses, so a meeting running right now is not yet a touch to reconcile —
-// and only when it took place: MeetingIsOverSQL calls a canceled one over too.
+// A meeting is evidence only once it is over, the waiting queue's reading: a
+// meeting running right now is not yet a touch to reconcile. It must also have
+// taken place, since storekit.MeetingIsOverSQL calls a canceled one over too.
 //
 // Extracted from reconcileWorkspace so the statement, its two bounds and the
 // reason for them sit together rather than being read past on the way to the
@@ -209,7 +209,7 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 		  AND NOT %[2]s
 		ORDER BY d.id
 		LIMIT $2`,
-		MeetingIsOverSQL("a", "$3"),
+		storekit.MeetingIsOverSQL("a", "$3"),
 		OpenNextStepSQL("d.id", "$3", current),
 		relstrength.MeetingCountsSQL("a")), args, nil
 }

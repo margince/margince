@@ -16,6 +16,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
@@ -36,11 +37,14 @@ func (a *assembly) readLastTouch() error {
 	touch := touched[a.companyID]
 	a.out.LastInboundAt = touch.InboundAt
 	a.out.LastOutboundAt = touch.OutboundAt
+	a.out.LastInboundPrecision = activitywhen.Stated(touch.InboundPrecision)
+	a.out.LastOutboundPrecision = activitywhen.Stated(touch.OutboundPrecision)
 	if c := touch.Contact; c != nil {
 		a.out.LastContact = &crmcontracts.Company360LastContact{
-			ActivityId: openapi_types.UUID(c.ActivityID.UUID),
-			At:         c.At,
-			Kind:       crmcontracts.Company360LastContactKind(c.Kind),
+			ActivityId:        openapi_types.UUID(c.ActivityID.UUID),
+			At:                c.At,
+			OccurredPrecision: crmcontracts.OccurredPrecision(c.Precision),
+			Kind:              crmcontracts.Company360LastContactKind(c.Kind),
 		}
 	}
 	return nil

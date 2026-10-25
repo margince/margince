@@ -31,6 +31,29 @@ func TestABookedMeetingIsProjectedAsScheduledNotPast(t *testing.T) {
 	}
 }
 
+// A day meeting is scheduled for its whole date in the installation zone. It is
+// dated by its own date, though its stored noon is the next morning there.
+func TestADayMeetingIsScheduledUntilItsDateEnds(t *testing.T) {
+	auckland, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fair := act(crmcontracts.ActivityKindMeeting, time.Date(2026, 8, 23, 12, 0, 0, 0, time.UTC))
+	fair.OccurredPrecision = crmcontracts.OccurredPrecisionOccurredPrecisionDay
+	for _, c := range []struct {
+		now  time.Time
+		when string
+	}{
+		{time.Date(2026, 8, 23, 23, 0, 0, 0, auckland), "scheduled"},
+		{time.Date(2026, 8, 24, 0, 30, 0, 0, auckland), "past"},
+	} {
+		got := actIn(fair, c.now, auckland)
+		if got.When != c.when || got.At != "2026-08-23" {
+			t.Errorf("at %v the day meeting reads %s on %s, want %s on 2026-08-23", c.now, got.When, got.At, c.when)
+		}
+	}
+}
+
 func TestAWithheldRowContributesItsDateButNotItsWords(t *testing.T) {
 	// The reader may know contact happened without reading what was said, so
 	// the model may not read it either.

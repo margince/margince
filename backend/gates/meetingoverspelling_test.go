@@ -1,123 +1,78 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind claim H2
+//gate:kind census H2
 
 package gates
 
-// "This meeting is over" is spelled twice, and the two must say the same thing.
+// When a meeting ENDS is spelled once, in occurredday.EndSQL.
 //
-// Over means ENDED — start plus duration, not start — and a meeting that will
-// never happen (archived, cancelled, a no-show) counts as over. Three readers
-// depend on that reading: the waiting queue's snooze-lift, the brief's, and the
-// deal sweeps that decide whether a meeting is evidence of a touch yet.
-//
-// Why a second spelling is allowed here at all, when the tree's usual answer is
-// one helper: `activities` owns the rule, and a module never imports a sibling.
-// `deals` cannot reach it. So the copy is deliberate and this gate is the price
-// of it — the thing that makes "the two agree" a fact rather than a hope.
-//
-// It fails in BOTH directions: reword either side and the comparison fails, so
-// neither can drift silently. The needles are DERIVED from each owner rather
-// than written here, so a rewritten clause cannot leave this gate hunting for a
-// string that no longer exists and reporting a pass having compared nothing —
-// under-recognition is the one way a gate must not break.
+// Over means ENDED: start plus duration for an hour, the end of its date in the
+// installation zone for a day. A copy of the end once called a day meeting over
+// at its stored noon. So a literal outside the owner that adds a duration to a
+// start is a finding.
 
 import (
+	"go/ast"
+	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var (
-	// meetingOverActivitiesOwner holds the rule as the waiting queue asks it.
-	meetingOverActivitiesOwner = filepath.Join(
-		repoRoot, "backend", "internal", "modules", "activities", "waitingsql.go")
-	// meetingOverDealsOwner holds the copy the deal sweeps ask it with.
+	// meetingEndOwner is the one file allowed to add a meeting's duration to its start.
+	meetingEndOwner = filepath.Join("internal", "shared", "kernel", "occurredday", "occurredday.go")
+	// meetingOverDealsOwner holds the next-step rule, whose standing test the
+	// second check below reads.
 	meetingOverDealsOwner = filepath.Join(
 		repoRoot, "backend", "internal", "modules", "deals", "nextstep.go")
+	// meetingEndSpelling is start plus duration, in any alias's spelling.
+	meetingEndSpelling = regexp.MustCompile(`make_interval\(\s*secs\s*=>\s*coalesce\([^)]*duration_seconds`)
 )
 
-// meetingOverShape reduces one spelling to the facts it asserts, so the
-// comparison survives the differences that are NOT drift: the alias each side
-// binds (`m.` here, `%[1]s.` there), its clock placeholder, and its whitespace.
-// What survives is the sequence of predicates, which is the rule itself.
-func meetingOverShape(clause string) string {
-	// The alias is whatever precedes the columns; normalize every form of it.
-	clause = regexp.MustCompile(`%\[\d\]s\.|\bm\.`).ReplaceAllString(clause, "X.")
-	// The clock is a placeholder on one side and a format verb on the other.
-	clause = regexp.MustCompile(`%\[\d\]s|\$\d+`).ReplaceAllString(clause, "CLOCK")
-	return strings.Join(strings.Fields(clause), " ")
-}
-
-// meetingOverClause reads the distinctive run of predicates out of an owner,
-// starting at the archived-or-cancelled test and ending at the clause's closing
-// parenthesis.
-//
-// The end is found by BALANCING parentheses from the opening one, not by
-// stopping at a marker inside the text. An earlier version cut the needle at
-// the duration add, which left the comparison OPERATOR outside what was
-// compared: flipping the deals copy's `<=` to `>` — inverting the rule — kept
-// the gate green. A census that can fail short has already failed, and this one
-// did.
-func meetingOverClause(t *testing.T, name, body string) string {
-	t.Helper()
-	const opens = "archived_at IS NOT NULL"
-	before, _, ok := strings.Cut(body, opens)
-	if !ok {
-		t.Fatalf("%s no longer contains %q, so this gate would compare nothing and "+
-			"report a pass. Re-derive the marker from the clause's current text.",
-			name, opens)
-	}
-	// Walk back to the parenthesis this predicate opens under, then forward to
-	// its match: everything between is the clause, operators included.
-	start := strings.LastIndex(before, "(")
-	if start < 0 {
-		t.Fatalf("%s opens the meeting-over clause with no enclosing parenthesis", name)
-	}
-	depth := 0
-	for i := start; i < len(body); i++ {
-		switch body[i] {
-		case '(':
-			depth++
-		case ')':
-			depth--
-			if depth == 0 {
-				return body[start : i+1]
-			}
+// meetingEndLiterals counts the string literals in file that spell a meeting's end.
+func meetingEndLiterals(file *ast.File) int {
+	found := 0
+	ast.Inspect(file, func(n ast.Node) bool {
+		lit, ok := n.(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
+			return true
 		}
-	}
-	t.Fatalf("%s opens the meeting-over clause and never closes it", name)
-	return ""
+		text, err := strconv.Unquote(lit.Value)
+		if err == nil && meetingEndSpelling.MatchString(text) {
+			found++
+		}
+		return true
+	})
+	return found
 }
 
-func TestTheMeetingIsOverRuleIsSpelledTheSameOnBothSides(t *testing.T) {
+func TestAMeetingsEndIsSpelledOnce(t *testing.T) {
 	t.Parallel()
-
-	activities, err := os.ReadFile(meetingOverActivitiesOwner)
-	if err != nil {
-		t.Fatalf("reading the activities spelling: %v", err)
+	scope := gatekit.Scope{
+		Roots:   []string{"internal"},
+		Subject: func(_ string, file *ast.File) bool { return meetingEndLiterals(file) > 0 },
+		Exempt:  gatekit.Waive(map[string]string{}),
 	}
-	dealsBody, err := os.ReadFile(meetingOverDealsOwner)
-	if err != nil {
-		t.Fatalf("reading the deals spelling: %v", err)
+	owned := false
+	for _, src := range scope.Files(t) {
+		if filepath.Clean(src.Path) == meetingEndOwner {
+			owned = true
+			continue
+		}
+		t.Errorf("%s spells a meeting's end itself. Ask occurredday.EndSQL, or "+
+			"storekit.MeetingIsOverSQL for \"is it over\": a copy misses the day "+
+			"meeting that ends with its date, not at its stored noon", src.Path)
 	}
-
-	theirs := meetingOverShape(meetingOverClause(
-		t, filepath.Base(meetingOverActivitiesOwner), string(activities)))
-	ours := meetingOverShape(meetingOverClause(
-		t, filepath.Base(meetingOverDealsOwner), string(dealsBody)))
-
-	if theirs != ours {
-		t.Errorf("the two spellings of \"this meeting is over\" have drifted.\n"+
-			"  %s: %s\n  %s: %s\n"+
-			"They are a deliberate copy — deals may not import activities — so they "+
-			"only stay one rule while they stay identical. Reconcile them; do not "+
-			"relax this gate.",
-			filepath.Base(meetingOverActivitiesOwner), theirs,
-			filepath.Base(meetingOverDealsOwner), ours)
+	if !owned {
+		t.Errorf("%s no longer spells a meeting's end where this census looks, so it "+
+			"would report a pass having seen nothing. Re-derive the pattern from the owner", meetingEndOwner)
 	}
 }
 

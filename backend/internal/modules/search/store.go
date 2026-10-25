@@ -47,8 +47,6 @@ type Store struct {
 	// companyLogos reads a company hit's logo URL (CompanyLogoReader). Nil
 	// leaves every company hit without one, which the client draws as initials.
 	companyLogos CompanyLogoReader
-	// recordZone dates a day entry (WithRecordZone). Nil refuses to date one.
-	recordZone RecordZone
 }
 
 // NewStore opens this module's store on a handle already bound to the

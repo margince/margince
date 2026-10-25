@@ -44,7 +44,7 @@ var zonelessLayouts = []string{"2006-01-02 15:04", "2006-01-02 15:04:05", "2006-
 var zonedLayouts = []string{time.RFC3339, "2006-01-02 15:04:05Z07:00", "2006-01-02 15:04Z07:00"}
 
 // cellClock is what a timestamp cell is held against: the writer's moment, and
-// the record zone whose date a day cell may not pass.
+// the installation zone, whose date today a day cell may not pass.
 type cellClock struct {
 	now  time.Time
 	zone *time.Location
@@ -106,7 +106,7 @@ func checkOccurredAt(fields map[string]string, typed map[string]any, clock cellC
 		return problemOf(activityTargetOccurredAt, raw, *problem)
 	}
 	// A day is held against today's date, so today is never refused before noon.
-	if (dateOnly && at.After(occurredday.Date(clock.now, clock.zone))) || (!dateOnly && at.After(clock.now)) {
+	if (dateOnly && occurredday.Anchor(at).After(occurredday.AnchorIn(clock.now, clock.zone))) || (!dateOnly && at.After(clock.now)) {
 		return problemOf(activityTargetOccurredAt, raw, migration.Why(migration.ReasonOccurredAtFuture, "value", text))
 	}
 	typed[activityTargetOccurredAt] = at

@@ -732,7 +732,7 @@ type CreateActivityRequest struct {
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
-	// OccurredPrecision `day` when only the date is known: the date `occurred_at` names in its own offset is stored at that date's noon in the installation's zone. Omitted means `instant`. `day` without `occurred_at` is refused with 422.
+	// OccurredPrecision `day` when only the date is known: the date `occurred_at` names in its own offset is stored at noon UTC of that date, and its date is the UTC date. Omitted means `instant`. `day` without `occurred_at` is refused with 422.
 	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. An inbound message whose `from` is the mail system itself (postmaster, mailer-daemon, a bounce address) is a delivery report and returns `422` on `participants.from`.
@@ -909,7 +909,7 @@ type EmailSummary struct {
 	Move       EmailSummaryMove `json:"move"`
 	OccurredAt time.Time        `json:"occurred_at"`
 
-	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time.
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Preview One line of the sender's own text, signature and quoted history already removed.
@@ -934,7 +934,7 @@ type EmailSummaryDirection string
 // the question cannot be answered honestly — an unanswerable move is not a claim.
 type EmailSummaryMove string
 
-// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is that date's noon in the installation's zone, so read its date in that zone. A meeting of this precision never holds its host's calendar slot.
+// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
 type OccurredPrecision string
 
 // ProviderRef A reference to a messaging transport registered in THIS installation

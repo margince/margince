@@ -315,7 +315,7 @@ type ContextItem struct {
 	// before saying "on the 13th".
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 	// OccurredPrecision is "day" when only OccurredAt's date is known; absent
-	// on an instant.
+	// on an instant. A day's date is its UTC date, so it is named unconverted.
 	OccurredPrecision string            `json:"occurred_precision,omitempty"`
 	Evidence          []ContextEvidence `json:"evidence"`
 }

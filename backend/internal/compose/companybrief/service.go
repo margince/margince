@@ -26,7 +26,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/company360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -75,14 +74,6 @@ type Service struct {
 	// so it is attached to the wire value on the way out and never to the row
 	// that gets saved.
 	emailRows briefevidence.Reader
-	// zone dates a day entry for the model (WithRecordZone).
-	zone activitywhen.Zone
-}
-
-// WithRecordZone binds the record zone a day entry is dated in.
-func (s *Service) WithRecordZone(zone activitywhen.Zone) *Service {
-	s.zone = zone
-	return s
 }
 
 // WithEmailSummaries binds the reader that opens a cited message.
@@ -139,11 +130,7 @@ func (s *Service) assemble(
 	if err != nil {
 		return Input{}, nil, err
 	}
-	zone, err := activitywhen.Of(ctx, s.zone)
-	if err != nil {
-		return Input{}, nil, err
-	}
-	in := FromView(view, zone)
+	in := FromView(view)
 	if withProfile && s.profile != nil {
 		fields, profileErr := s.profile.ListCompanyProfileFields(ctx, companyID)
 		if profileErr != nil {

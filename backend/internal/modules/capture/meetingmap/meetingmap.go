@@ -294,8 +294,8 @@ func buildBody(ev Event, attendeeEmails []string) (body string, masked bool) {
 	return textcut.BytesMarked(maskedBody, MaxBodyLen, "…"), maskedBody != body
 }
 
-// AllDayStart anchors an all-day date (YYYY-MM-DD) at noon UTC. The sink stores
-// that date at noon in the record zone; this instant carries the date there.
+// AllDayStart anchors an all-day date (YYYY-MM-DD) at noon UTC, where every
+// door stores a day entry (occurredday.Anchor).
 //
 // An all-day date is calendar-local with no timezone; reading it as midnight
 // UTC lands it on the PREVIOUS day for any zone west of UTC. Noon keeps the

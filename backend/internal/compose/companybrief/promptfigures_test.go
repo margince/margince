@@ -156,7 +156,7 @@ func TestATaskOnTheTimelineCarriesWhetherItIsDone(t *testing.T) {
 		}},
 	}
 
-	encoded, err := json.Marshal(FromView(view, time.UTC))
+	encoded, err := json.Marshal(FromView(view))
 	if err != nil {
 		t.Fatalf("encoding the assembled input: %v", err)
 	}
@@ -192,7 +192,7 @@ func TestAWithheldDealsSectionSendsNoLostCount(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			in := FromView(crmcontracts.Company360{
 				Company: crmcontracts.Company{DisplayName: "Nordwind AG"}, Deals: tc.deals,
-			}, time.UTC)
+			})
 			if (in.LostCount != nil) != tc.wantSent {
 				t.Fatalf("lost count set = %v, want %v", in.LostCount != nil, tc.wantSent)
 			}
@@ -220,7 +220,7 @@ func TestATimelineMessageCarriesWhoSentIt(t *testing.T) {
 			{Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindNote, OccurredAt: occurredAt},
 		}},
 	}
-	recent := FromView(view, time.UTC).Recent
+	recent := FromView(view).Recent
 	if len(recent) != 3 {
 		t.Fatalf("the assembled input carries %d recent rows, want 3", len(recent))
 	}

@@ -10,7 +10,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -48,13 +47,14 @@ func (h attentionMeetingHorizon) Calendar(ctx context.Context) (crmcontracts.Wor
 // record they may see, and booked. AwaitingOutcome means no result recorded yet,
 // which for a meeting still ahead is booked or unset. Soonest first, one row.
 func (h attentionMeetingHorizon) NextCustomerMeeting(
-	ctx context.Context, after, before time.Time,
+	ctx context.Context, window attention.MeetingWindow,
 ) (crmcontracts.Contact360NextMeeting, bool, error) {
 	kind := string(crmcontracts.ActivityKindMeeting)
 	soonestFirst := "occurred_at"
 	one := 1
 	in := activities.ListActivitiesInput{
-		Kind: &kind, OccurredAfter: &after, OccurredBefore: &before, Sort: &soonestFirst, Limit: &one,
+		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window),
+		Sort: &soonestFirst, Limit: &one,
 		AwaitingOutcome: true, CustomerMeetingsOnly: true, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, attention.TasksMine, ids.UUID{}) {

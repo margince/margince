@@ -269,8 +269,8 @@ type stubMeetingsAwaitingOutcome struct {
 	from *time.Time
 }
 
-func (s *stubMeetingsAwaitingOutcome) Since(_ context.Context, from, _ time.Time, _ int, _ TaskScope, _ ids.UUID) ([]MeetingAwaitingOutcome, error) {
-	s.from = &from
+func (s *stubMeetingsAwaitingOutcome) Since(_ context.Context, window MeetingWindow, _ int, _ TaskScope, _ ids.UUID) ([]MeetingAwaitingOutcome, error) {
+	s.from = &window.From
 	return s.rows, s.err
 }
 
@@ -283,8 +283,8 @@ type stubMeetings struct {
 	from *time.Time
 }
 
-func (s *stubMeetings) Today(_ context.Context, from, _ time.Time, _ int, _ TaskScope, _ ids.UUID) ([]Meeting, error) {
-	s.from = &from
+func (s *stubMeetings) Today(_ context.Context, window MeetingWindow, _ int, _ TaskScope, _ ids.UUID) ([]Meeting, error) {
+	s.from = &window.From
 	s.calls++
 	return s.rows, s.err
 }

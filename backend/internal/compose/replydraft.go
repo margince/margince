@@ -187,7 +187,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		RecipientLastName: textcut.Runes(surname, recipientMaxRunes),
 		Subject:           textcut.Runes(topic, replyActivityMaxRunes),
 		Body:              textcut.Runes(body, replyActivityMaxRunes),
-		OccurredAt:        activitywhen.Text(activity, envelope.Zone()),
+		OccurredAt:        activitywhen.Text(activity),
 		Intent:            textcut.Runes(steering.Intent, replyActivityMaxRunes),
 		RewriteOf:         textcut.Runes(steering.RewriteOf, replyActivityMaxRunes),
 		Conversation:      replyConversationText(turns),

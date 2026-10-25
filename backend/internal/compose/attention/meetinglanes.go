@@ -23,7 +23,15 @@ import (
 // calendar, or naming them as a participant. Answering it unscoped puts one
 // seat's appointments in every colleague's brief.
 type Meetings interface {
-	Today(ctx context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Meeting, error)
+	Today(ctx context.Context, window MeetingWindow, limit int, scope TaskScope, owner ids.UUID) ([]Meeting, error)
+}
+
+// MeetingWindow is the stretch a meetings read covers: a timed meeting starting
+// in [From, Until), and a day meeting whose anchor is in [DaysFrom, DaysUntil).
+// A day has no hour to fall inside the first range.
+type MeetingWindow struct {
+	From, Until         time.Time
+	DaysFrom, DaysUntil time.Time
 }
 
 // MeetingsAwaitingOutcome is today's meetings that have started and whose result
@@ -31,7 +39,7 @@ type Meetings interface {
 // because every stub would otherwise have to answer both. Scoped exactly as
 // Meetings is, or whichever half was left open leaks.
 type MeetingsAwaitingOutcome interface {
-	Since(ctx context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]MeetingAwaitingOutcome, error)
+	Since(ctx context.Context, window MeetingWindow, limit int, scope TaskScope, owner ids.UUID) ([]MeetingAwaitingOutcome, error)
 }
 
 // MeetingAwaitingOutcome is one appointment that happened and owes an answer. It

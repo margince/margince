@@ -34840,7 +34840,7 @@ components:
         occurred_at: { type: string, format: date-time }
         occurred_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
-          description: How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time.
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
         counterparty:
           type: [string, 'null']
@@ -35097,7 +35097,7 @@ components:
         occurred_at: { type: string, format: date-time }
         occurred_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
-          description: How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time.
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         summary:
           $ref: '#/components/schemas/EmailSummary'
         body:
@@ -37792,7 +37792,7 @@ components:
         occurred_at: { type: string, format: date-time }
         occurred_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
-          description: How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time.
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         content_state:
           type: string
           enum: [available, withheld]
@@ -40796,6 +40796,12 @@ components:
             When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded
             into one "last touch": which direction went last is the whole question — an account we
             mailed a fortnight ago with no reply is not the same as one that just wrote to us.
+        last_inbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_inbound_at`, from the row it names. Absent when that is null or absent.
+        last_outbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
         last_contact:
           description: >-
             The newest exchange with the account in either direction, over the same walk: an
@@ -41136,9 +41142,12 @@ components:
 
     Company360LastContact:
       type: object
-      required: [at, kind, activity_id]
+      required: [at, kind, activity_id, occurred_precision]
       properties:
         at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `at`. `day` means only its date is known, its UTC date, so a client draws no time.
         kind:
           type: string
           enum: [email, call, meeting, message]
@@ -41196,6 +41205,15 @@ components:
             The newest exchange in either direction, a meeting included: the moment "quiet for N
             days" counts from. Absent when the caller has no activity grant, named in
             `sections_omitted` as `last_touch`.
+        last_inbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_inbound_at`, from the row it names. Absent when that is null or absent.
+        last_outbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
+        last_contact_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_contact_at`, from the row it names. Absent when that is null or absent.
         sections_omitted:
           type: array
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
@@ -43272,7 +43290,7 @@ components:
       properties:
         evidence: { type: array, items: { $ref: '#/components/schemas/AgentExcerpt' } }
         occurred_at: { type: string }
-        occurred_precision: { type: string, enum: [day], description: 'Present when only the date of occurred_at is known.' }
+        occurred_precision: { type: string, enum: [day], description: 'Present when only the date of occurred_at is known: name its UTC date, unconverted, and no time.' }
         record_id: { type: string, format: uuid }
         record_type: { type: string }
         summary: { type: string }
@@ -44811,7 +44829,7 @@ components:
         occurred_at: { type: string, format: date-time }
         occurred_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
-          description: How to read `occurred_at`. `day` means only its date is known, in the installation's zone, so a client draws no time.
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         direction:
           type: [string, 'null']
           enum: [inbound, outbound, null]
@@ -47599,8 +47617,8 @@ components:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
           description: >-
             `day` when only the date is known: the date `occurred_at` names in its own offset is
-            stored at that date's noon in the installation's zone. Omitted means `instant`. `day`
-            without `occurred_at` is refused with 422.
+            stored at noon UTC of that date, and its date is the UTC date. Omitted means `instant`.
+            `day` without `occurred_at` is refused with 422.
         due_at: { type: [string, 'null'], format: date-time }
         remind_at: { type: [string, 'null'], format: date-time, description: Task only. }
         assignee_id: { type: [string, 'null'], format: uuid }
@@ -47716,9 +47734,9 @@ components:
       x-enum-varnames: [OccurredPrecisionInstant, OccurredPrecisionDay]
       description: >-
         How much of an activity's time is known. `instant` is a real moment. `day` is a date
-        with no time of day: the stored instant is that date's noon in the installation's zone,
-        so read its date in that zone. A meeting of this precision never holds its host's
-        calendar slot.
+        with no time of day: the stored instant is noon UTC of that date, so its date is the
+        UTC date, whatever the installation's zone. A meeting of this precision never holds its
+        host's calendar slot.
     WorklistPinRequest:
       type: object
       additionalProperties: false
@@ -47869,9 +47887,10 @@ components:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
           description: >-
             How to read `occurred_at` from now on. A patch that sends `occurred_at` without this
-            field sets `instant`, because a new time is a known time. `day` stores the date at its
-            noon in the installation's zone: the date `occurred_at` names in its own offset, or,
-            sent alone, the date the stored time falls on in that zone.
+            field sets `instant`, because a new time is a known time. `day` stores the date at noon
+            UTC: the date `occurred_at` names in its own offset, or, sent alone, the date the stored
+            instant falls on in the installation's zone. `instant` on a `day` activity needs
+            `occurred_at` too, or the stored noon would read as a real 12:00, and is refused with 422.
         due_at: { type: [string, 'null'], format: date-time }
         assignee_id: { type: [string, 'null'], format: uuid }
         remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.' }
@@ -56175,7 +56194,8 @@ components:
         occurred_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
           description: >-
-            `day` when only the date of `occurred_at` is known: name the day and never its time.
+            `day` when only the date of `occurred_at` is known. It is stored at noon UTC of that
+            date, so name its UTC date without converting it to a zone, and never its time.
             Absent on an instant.
         evidence: { type: array, items: { $ref: '#/components/schemas/ContextEvidence' } }
     ContextSection:
@@ -65638,6 +65658,12 @@ components:
       properties:
         last_inbound_at: { type: [string, 'null'], format: date-time, description: 'When they last wrote to us. Null means nothing inbound was ever captured.' }
         last_outbound_at: { type: [string, 'null'], format: date-time, description: 'When we last wrote to them. Null means we never have.' }
+        last_inbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_inbound_at`, from the row it names. Absent when that is null.
+        last_outbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_outbound_at`, from the row it names. Absent when that is null.
 
     WorklistLeadFacts:
       type: object

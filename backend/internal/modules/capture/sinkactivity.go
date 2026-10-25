@@ -44,7 +44,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if err != nil || found {
 		return invited, false, counterpartyDecision{}, err
 	}
-	if fields, err = s.settledFields(ctx, tx, rec, fields); err != nil {
+	if fields, err = settledFields(ctx, tx, rec, fields); err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
 	// Whose credential carried this record, asked ONCE and carried to both the
@@ -444,14 +444,14 @@ func (f ActivityFields) occurredPrecision() string {
 
 // settledFields fills in what the capture does not take as sent. That is the
 // time and its day anchor, the storable length, and the envelope's judgement.
-func (s *Sink) settledFields(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields) (ActivityFields, error) {
+func settledFields(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields) (ActivityFields, error) {
 	var err error
-	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
 	if fields.DateOnly {
-		if fields.OccurredAt, err = s.dayAnchor(ctx, tx, fields.OccurredAt); err != nil {
+		if fields.OccurredAt, err = dayAnchor(fields.OccurredAt); err != nil {
 			return fields, err
 		}
 	}
+	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
 	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
 	fields.judged, err = judgeEnvelopeTx(ctx, tx, rec, fields)
 	return fields, err

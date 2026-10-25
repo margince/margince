@@ -8,6 +8,7 @@ package attention
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -18,70 +19,45 @@ func isDayPrecision(p crmcontracts.OccurredPrecision) bool {
 	return p == crmcontracts.OccurredPrecisionOccurredPrecisionDay
 }
 
-// meetingsAhead is the meetings lane: what starts between asOf and the day's end.
-// A day meeting dated today stays on it after its stored noon. That noon is one
-// instant, so the second read asks for that instant alone.
+// meetingsAhead is the meetings lane: what starts between asOf and the day's
+// end, and the day meetings dated today, which the zone says.
 func (s *Service) meetingsAhead(ctx context.Context, asOf, until time.Time) ([]Meeting, error) {
-	timed, err := s.meetings.Today(ctx, asOf, until, plannedCap, s.taskScope, s.taskOwner)
-	if err != nil {
-		return nil, err
-	}
 	loc, err := s.location(ctx)
 	if err != nil {
 		return nil, err
 	}
-	anchor := occurredday.Anchor(occurredday.Date(asOf, loc), loc)
-	if !anchor.Before(asOf) {
-		return timed, nil
-	}
-	onAnchor, err := s.meetings.Today(ctx, anchor, anchor.Add(time.Second), plannedCap, s.taskScope, s.taskOwner)
-	if err != nil {
-		return nil, err
-	}
-	return withTodaysDayMeetings(timed, onAnchor), nil
+	today := occurredday.AnchorIn(asOf, loc)
+	window := MeetingWindow{From: asOf, Until: until, DaysFrom: today, DaysUntil: today.AddDate(0, 0, 1)}
+	ahead, err := s.meetings.Today(ctx, window, plannedCap, s.taskScope, s.taskOwner)
+	return dayMeetingsFirst(ahead), err
 }
 
-// withTodaysDayMeetings puts today's day meetings ahead of the timed ones, as a
-// calendar draws its all-day row, within the lane's cap. An hour that merely
-// starts at the anchor has passed, so only a day is kept from that read.
-func withTodaysDayMeetings(timed, onAnchor []Meeting) []Meeting {
-	out := make([]Meeting, 0, len(timed)+len(onAnchor))
-	for _, meeting := range onAnchor {
-		if isDayPrecision(meeting.Precision) {
-			out = append(out, meeting)
+// dayMeetingsFirst puts the day meetings ahead of the timed ones, as a
+// calendar draws its all-day row. The read already holds the lane's cap.
+func dayMeetingsFirst(ahead []Meeting) []Meeting {
+	slices.SortStableFunc(ahead, func(a, b Meeting) int {
+		switch day := isDayPrecision(a.Precision); {
+		case day == isDayPrecision(b.Precision):
+			return 0
+		case day:
+			return -1
 		}
-	}
-	out = append(out, timed...)
-	if len(out) > plannedCap {
-		out = out[:plannedCap]
-	}
-	return out
+		return 1
+	})
+	return ahead
 }
 
 // meetingsOwingAnOutcome is the outcome lane: meetings since unansweredSince
-// that started before asOf, less a day meeting whose date runs on.
+// that started before asOf, and the day meetings whose date is over.
 func (s *Service) meetingsOwingAnOutcome(ctx context.Context, asOf time.Time) ([]MeetingAwaitingOutcome, error) {
 	began, err := s.unansweredSince(ctx, asOf)
 	if err != nil {
 		return nil, err
 	}
-	over, err := s.meetingsAwaitingOutcome.Since(ctx, began, asOf, plannedCap, s.taskScope, s.taskOwner)
+	loc, err := s.location(ctx)
 	if err != nil {
 		return nil, err
 	}
-	loc, err := s.location(ctx)
-	return stillOwingAnOutcome(over, asOf, loc), err
-}
-
-// stillOwingAnOutcome drops a day meeting whose date has not ended. The rows
-// come oldest first, so the ones dropped are the newest and hide no older row.
-func stillOwingAnOutcome(over []MeetingAwaitingOutcome, asOf time.Time, loc *time.Location) []MeetingAwaitingOutcome {
-	out := make([]MeetingAwaitingOutcome, 0, len(over))
-	for _, meeting := range over {
-		if isDayPrecision(meeting.Precision) && !occurredday.Ended(meeting.StartedAt, asOf, loc) {
-			continue
-		}
-		out = append(out, meeting)
-	}
-	return out
+	window := MeetingWindow{From: began, Until: asOf, DaysFrom: occurredday.AnchorIn(began, loc), DaysUntil: occurredday.AnchorIn(asOf, loc)}
+	return s.meetingsAwaitingOutcome.Since(ctx, window, plannedCap, s.taskScope, s.taskOwner)
 }

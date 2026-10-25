@@ -124,15 +124,16 @@ func (w *csvWriters) predictActivityUpdate(
 }
 
 // sameOccurrence says the timestamp cell names what the activity already holds.
-// A day cell is a date, so it matches any stored time on that date in the
-// record zone. A timed cell matches only the same instant, never a day.
+// A day cell is a date, so it matches a day entry of that date and an instant
+// on that date in the installation zone. A timed cell matches only the same
+// instant, never a day.
 func sameOccurrence(stored storedActivity, typed map[string]any, zone *time.Location) bool {
 	at, ok := typed[activityTargetOccurredAt].(time.Time)
 	if !ok {
 		return true
 	}
 	if precision, _ := typed[activityTypedPrecision].(string); precision == activities.PrecisionDay {
-		return occurredday.Date(stored.OccurredAt, zone).Equal(at)
+		return occurredday.DateIn(stored.OccurredAt, stored.OccurredPrecision == activities.PrecisionDay, zone).Equal(at)
 	}
 	return stored.OccurredPrecision != activities.PrecisionDay && stored.OccurredAt.Equal(at)
 }

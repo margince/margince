@@ -134,8 +134,8 @@ func (s *Service) readHistory(
 	// three weeks early must not fold in conversations that happen between the
 	// read and the room.
 	ceiling := now
-	if room.StartsAt.Before(ceiling) {
-		ceiling = room.StartsAt
+	if room.Opens.Before(ceiling) {
+		ceiling = room.Opens
 	}
 	ceilingPos := arg(ceiling)
 	floorPos := arg(ceiling.AddDate(0, -historyMonths, 0))

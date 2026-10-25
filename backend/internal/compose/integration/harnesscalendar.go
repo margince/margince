@@ -15,7 +15,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -31,7 +30,7 @@ const CalendarSystem = "gcal"
 func (e *Env) CalendarSink() *capture.Sink {
 	return capture.NewSink(e.DB()).WithMeetingCloser(
 		activities.CancelCapturedMeetingFor(capture.SeatHoldsActivityTx),
-		activities.CancelMeetingByIDTx).WithRecordZone(identity.ZoneAppliedTx)
+		activities.CancelMeetingByIDTx)
 }
 
 // ConnectorOwnerCtx binds the connector principal a sync runs under, the way

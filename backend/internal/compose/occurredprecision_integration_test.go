@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -44,8 +46,11 @@ func TestAnAllDayCalendarEventIsADayMeeting(t *testing.T) {
 	})
 
 	lane := attentionMeetings{store: activities.NewStore(InstallationDB(e.Pool))}
-	rows, err := lane.Today(e.As(e.Rep1, nil, integration.AdminPerms), laneDay,
-		laneDay.Truncate(24*time.Hour).Add(24*time.Hour), 12, attention.TasksMine, ids.UUID{})
+	window := attention.MeetingWindow{
+		From: laneDay, Until: laneDay.Truncate(24 * time.Hour).Add(24 * time.Hour),
+		DaysFrom: occurredday.Anchor(laneDay), DaysUntil: occurredday.Anchor(laneDay).AddDate(0, 0, 1),
+	}
+	rows, err := lane.Today(e.As(e.Rep1, nil, integration.AdminPerms), window, 12, attention.TasksMine, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading the meeting lane: %v", err)
 	}
@@ -127,6 +132,16 @@ func TestAMeetingFollowsItsEventBetweenAnHourAndAWholeDay(t *testing.T) {
 		}
 	}
 
+	// A whole day with no date is refused rather than filed under now.
+	if _, err := sink.Upsert(ctx, connector.NormalizedRecord{
+		EntityType: "activity", NaturalKey: connector.NaturalKey{SourceSystem: calendarSystem, SourceID: "evt-no-date"},
+		Fields: capture.ActivityFields{Kind: "meeting", Subject: "Undated", DateOnly: true},
+		Source: calendarSystem + ":evt-no-date", CapturedBy: "connector:" + calendarSystem,
+		Raw: []byte(`{"id":"evt-no-date"}`),
+	}); !errors.Is(err, capture.ErrDayWithoutDate) {
+		t.Errorf("an undated whole day = %v, want ErrDayWithoutDate", err)
+	}
+
 	// An hour at the date's anchor moved to the whole day changes only the
 	// precision, and the event names the precision alone.
 	replay(day, false)
@@ -157,15 +172,11 @@ func lastUpdate(t *testing.T, e *integration.Env, id ids.UUID) map[string]any {
 	return changed
 }
 
-// An all-day event is stored at its date's noon in the record zone. Noon UTC is
-// the previous date in Auckland, so a capture that kept it would misfile it.
-func TestAnAllDayEventIsAnchoredInTheRecordZone(t *testing.T) {
+// An all-day event is stored at noon UTC of its date, whatever the installation
+// zone. In Auckland that noon is the next morning, and the date still holds.
+func TestAnAllDayEventIsStoredAtNoonUTCOfItsDate(t *testing.T) {
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Pacific/Auckland"'::jsonb WHERE key = 'installation.timezone'`)
-	auckland, err := time.LoadLocation("Pacific/Auckland")
-	if err != nil {
-		t.Fatal(err)
-	}
 	allDay, _ := meetingmap.AllDayStart("2026-03-09")
 	captureCalendarEvent(t, e, e.Rep1, meetingmap.Event{
 		ID: "evt-nz-fair", Subject: "Auckland fair", StartsAt: allDay, EndsAt: allDay.Add(24 * time.Hour), AllDay: true,
@@ -179,7 +190,7 @@ func TestAnAllDayEventIsAnchoredInTheRecordZone(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("reading the captured meeting: %v", err)
 	}
-	if local := start.In(auckland); precision != "day" || local.Format(time.DateOnly) != "2026-03-09" || local.Hour() != 12 {
-		t.Errorf("captured at %v as %q, want 9 March at Auckland's noon as a day", local, precision)
+	if want := time.Date(2026, 3, 9, 12, 0, 0, 0, time.UTC); precision != "day" || !start.Equal(want) {
+		t.Errorf("captured at %v as %q, want %v as a day", start.UTC(), precision, want)
 	}
 }

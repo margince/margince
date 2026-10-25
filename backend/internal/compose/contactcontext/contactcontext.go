@@ -22,7 +22,9 @@ package contactcontext
 import (
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // CurrentEmployer names where this contact works now, or nothing.
@@ -60,14 +62,15 @@ func OmittedNames(omitted []crmcontracts.Contact360SectionsOmitted) []string {
 	return out
 }
 
-// Stamp renders an optional time as RFC3339 UTC, or empty.
+// StampOf renders a moment read off an activity as RFC3339 UTC, or empty. A day
+// entry is its date alone, so a prompt never states its stored noon.
 //
 // Empty means the thing never happened, which is a fact the prose surfaces
 // state honestly — "we have never written to them" rather than a zero date that
 // reads as 1 January year one.
-func Stamp(at *time.Time) string {
+func StampOf(at *time.Time, precision *crmcontracts.OccurredPrecision) string {
 	if at == nil {
 		return ""
 	}
-	return at.UTC().Format(time.RFC3339)
+	return occurredday.When(*at, precision != nil && activitywhen.IsDay(*precision))
 }

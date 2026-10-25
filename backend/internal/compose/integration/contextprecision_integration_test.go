@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -34,8 +33,8 @@ func itemFor(t *testing.T, assembled retrieval.Context, section string, id ids.U
 	return retrieval.Item{}
 }
 
-// A day entry reaches an agent's context as a day, dated in the record zone.
-// Auckland's noon is the previous date in UTC, so a UTC reader names it wrong.
+// A day entry reaches an agent's context as a day, named by its own date. In
+// Auckland its stored noon is the next morning, and the date still holds.
 func TestAnAssembledDayEntryIsADay(t *testing.T) {
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
@@ -44,7 +43,7 @@ func TestAnAssembledDayEntryIsADay(t *testing.T) {
 		t.Fatal(err)
 	}
 	subject, date := "Trade fair", time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
-	writer := activities.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS))).WithRecordZone(identity.ZoneAppliedTx)
+	writer := activities.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)))
 	logged, _, err := writer.LogActivity(e.AsFullUser(), activities.LogActivityInput{
 		Kind: activities.KindMeeting, Subject: &subject, OccurredAt: &date, OccurredPrecision: activities.PrecisionDay,
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: f.organizer}}, Source: "manual",

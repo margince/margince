@@ -17,24 +17,23 @@ func zone(t *testing.T, name string) *time.Location {
 	return loc
 }
 
-// The stored anchor reads back as its own date in every zone. That includes the
-// zones a noon-UTC anchor puts on the wrong date.
-func TestADateSurvivesItsAnchorInEveryZone(t *testing.T) {
+// A day entry is stored at noon UTC of its date and reads back as that date.
+func TestADayIsStoredAtNoonUTCAndReadsBackAsItsDate(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"Pacific/Auckland", "Pacific/Tongatapu", "Pacific/Kiritimati", "America/New_York", "Pacific/Pago_Pago", "UTC"} {
-		loc := zone(t, name)
-		for _, date := range []time.Time{
-			time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC),   // a DST change in New York
-			time.Date(2025, 4, 6, 0, 0, 0, 0, time.UTC),   // a DST change in Auckland
-			time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC), // a year end
-		} {
-			at := Anchor(date, loc)
-			if got := Date(at, loc); !got.Equal(date) {
-				t.Errorf("%s: %s anchored at %v reads back as %s", name, date.Format(time.DateOnly), at, got.Format(time.DateOnly))
-			}
-			if local := at.In(loc); local.Hour() != 12 {
-				t.Errorf("%s: the anchor of %s is %v, want noon", name, date.Format(time.DateOnly), local)
-			}
+	for _, date := range []time.Time{
+		time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC),
+		time.Date(2025, 4, 6, 0, 0, 0, 0, time.UTC),
+		time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC),
+	} {
+		at := Anchor(date)
+		if want := date.Add(12 * time.Hour); !at.Equal(want) || at.Location() != time.UTC {
+			t.Errorf("%s is anchored at %v, want %v", date.Format(time.DateOnly), at, want)
+		}
+		if got := Date(at); !got.Equal(date) {
+			t.Errorf("%s reads back as %s", date.Format(time.DateOnly), got.Format(time.DateOnly))
+		}
+		if got := When(at, true); got != date.Format(time.DateOnly) {
+			t.Errorf("%s is told as %q", date.Format(time.DateOnly), got)
 		}
 	}
 }
@@ -45,40 +44,72 @@ func TestTheAnchorTakesTheDateInTheWritersOwnOffset(t *testing.T) {
 	t.Parallel()
 	honolulu := time.FixedZone("HST", -10*3600)
 	lateEvening := time.Date(2025, 3, 9, 23, 0, 0, 0, honolulu)
-	berlin := zone(t, "Europe/Berlin")
-	want := time.Date(2025, 3, 9, 11, 0, 0, 0, time.UTC)
-	if got := Anchor(lateEvening, berlin); !got.Equal(want) {
-		t.Errorf("a Honolulu 9 March read for Berlin is anchored at %v, want %v", got, want)
+	if got, want := Anchor(lateEvening), time.Date(2025, 3, 9, 12, 0, 0, 0, time.UTC); !got.Equal(want) {
+		t.Errorf("a Honolulu 9 March is anchored at %v, want %v", got, want)
+	}
+}
+
+// AnchorIn takes the date an instant falls on in a zone: the real local day.
+func TestAnInstantIsDatedOnTheDayItFallsOnInTheZone(t *testing.T) {
+	t.Parallel()
+	instant := time.Date(2025, 3, 8, 23, 0, 0, 0, time.UTC)
+	for name, want := range map[string]string{
+		"Pacific/Auckland":    "2025-03-09",
+		"UTC":                 "2025-03-08",
+		"America/Los_Angeles": "2025-03-08",
+	} {
+		got := AnchorIn(instant, zone(t, name))
+		if got.Format(time.DateOnly) != want || got.Hour() != 12 {
+			t.Errorf("%s: %v is anchored at %v, want noon UTC of %s", name, instant, got, want)
+		}
+		if got := DateIn(instant, false, zone(t, name)).Format(time.DateOnly); got != want {
+			t.Errorf("%s: an instant names %s, want %s", name, got, want)
+		}
 	}
 }
 
 func TestWhenSaysADateOrAnInstant(t *testing.T) {
 	t.Parallel()
-	auckland := zone(t, "Pacific/Auckland")
-	anchor := Anchor(time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC), auckland)
-	if got := When(anchor, true, auckland); got != "2025-03-09" {
+	anchor := Anchor(time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC))
+	if got := When(anchor, true); got != "2025-03-09" {
 		t.Errorf("a day entry reads %q, want 2025-03-09", got)
 	}
-	if got := When(anchor, false, auckland); got != "2025-03-08T23:00:00Z" {
+	if got := When(anchor, false); got != "2025-03-09T12:00:00Z" {
 		t.Errorf("an instant reads %q, want its RFC 3339 form", got)
 	}
 }
 
-// A day entry is not over until its date is.
-func TestADayEntryEndsWithItsDate(t *testing.T) {
+// A day entry is not over until its date is over in the zone that says which
+// date is today. That holds east and west of UTC alike.
+func TestADayEntryEndsWithItsDateInTheZone(t *testing.T) {
 	t.Parallel()
-	york := zone(t, "America/New_York")
-	anchor := Anchor(time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC), york)
-	for _, c := range []struct {
-		asOf time.Time
-		want bool
-	}{
-		{time.Date(2025, 3, 9, 8, 0, 0, 0, york), false},
-		{time.Date(2025, 3, 9, 23, 59, 0, 0, york), false},
-		{time.Date(2025, 3, 10, 0, 0, 0, 0, york), true},
-	} {
-		if got := Ended(anchor, c.asOf, york); got != c.want {
-			t.Errorf("at %v, ended = %v, want %v", c.asOf, got, c.want)
+	anchor := Anchor(time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC))
+	for _, name := range []string{"America/New_York", "Pacific/Auckland", "Asia/Tokyo", "America/Los_Angeles", "Pacific/Kiritimati"} {
+		loc := zone(t, name)
+		for _, c := range []struct {
+			asOf time.Time
+			want bool
+		}{
+			{time.Date(2025, 3, 9, 0, 0, 0, 0, loc), false},
+			{time.Date(2025, 3, 9, 23, 59, 0, 0, loc), false},
+			{time.Date(2025, 3, 10, 0, 0, 0, 0, loc), true},
+		} {
+			if got := Ended(anchor, c.asOf, loc); got != c.want {
+				t.Errorf("%s at %v: ended = %v, want %v", name, c.asOf, got, c.want)
+			}
+		}
+	}
+}
+
+// A day entry's date begins at that date's midnight in the zone asked, even
+// where its stored noon is already the next morning.
+func TestADayBeginsAtItsOwnDatesMidnight(t *testing.T) {
+	t.Parallel()
+	anchor := Anchor(time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
+	for _, name := range []string{"Pacific/Auckland", "America/Los_Angeles"} {
+		loc := zone(t, name)
+		if got, want := Begins(anchor, loc), time.Date(2026, 3, 10, 0, 0, 0, 0, loc); !got.Equal(want) {
+			t.Errorf("%s: begins %v, want %v", name, got, want)
 		}
 	}
 }

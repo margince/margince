@@ -46,8 +46,8 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 	// Before the meeting AND before now: a brief read for a meeting already
 	// held must not take a later conversation as "before we spoke".
 	ceiling := now
-	if room.StartsAt.Before(ceiling) {
-		ceiling = room.StartsAt
+	if room.Opens.Before(ceiling) {
+		ceiling = room.Opens
 	}
 	ceilingPos := arg(ceiling)
 	contactsPos := arg(room.Room)

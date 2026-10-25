@@ -29,7 +29,7 @@ import (
 type UpdateActivityInput struct {
 	recordedAt         *time.Time
 	calendarSettlement bool
-	// recordZone anchors a day; the store sets it from WithRecordZone.
+	// recordZone dates a stored instant made a day; the store sets it (WithRecordZone).
 	recordZone RecordZone
 	// Trail names what the audit trail calls this write; zero is an update.
 	Trail      storekit.AuditTrail
@@ -177,11 +177,12 @@ func updateActivityInTx(
 	}
 	before, after := storekit.ChangedColumns(customFieldImage(activityColumnImage(current), current, in.customColumns),
 		customFieldImage(activityColumnImage(out), out, in.customColumns))
+	precisionBesideTime(before, after, current, out)
 	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "activity", id.UUID, before, after)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	updated := crmcontracts.PublicEventActivityUpdated{ChangedFields: activityUpdatedChangedFields(in)}
+	updated := crmcontracts.PublicEventActivityUpdated{ChangedFields: activityUpdatedChangedFields(in, current)}
 	updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, updated); err != nil {
 		return crmcontracts.Activity{}, err

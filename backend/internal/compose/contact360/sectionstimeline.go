@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/network"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -325,6 +326,9 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids
 	out.LastOutboundAt = touch.OutboundAt
 	out.LastLiveInboundAt = touch.LiveInboundAt
 	out.LastContactAt = touch.ContactAt
+	out.LastInboundPrecision = activitywhen.Stated(touch.InboundPrecision)
+	out.LastOutboundPrecision = activitywhen.Stated(touch.OutboundPrecision)
+	out.LastContactPrecision = activitywhen.Stated(touch.ContactPrecision)
 	return nil
 }
 

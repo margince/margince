@@ -76,7 +76,7 @@ func TestANotesTextReachesTheBuiltRequest(t *testing.T) {
 func TestALoggedMeetingsTextIsFolded(t *testing.T) {
 	recent := FoldRecent([]crmcontracts.Activity{
 		logged(crmcontracts.ActivityKindMeeting, draftedAt.Add(-time.Hour), "Agreed to send the pilot scope by Friday."),
-	}, draftedAt, time.UTC)
+	}, draftedAt)
 	if len(recent) != 1 || recent[0].Record != "Agreed to send the pilot scope by Friday." {
 		t.Errorf("the meeting's record = %+v", recent)
 	}
@@ -86,7 +86,7 @@ func TestALoggedMeetingsTextIsFolded(t *testing.T) {
 func TestANotesTextIsBounded(t *testing.T) {
 	recent := FoldRecent([]crmcontracts.Activity{
 		logged(crmcontracts.ActivityKindNote, draftedAt, strings.Repeat("slot ", draftcore.TurnTextRunes)),
-	}, draftedAt, time.UTC)
+	}, draftedAt)
 	if got := len([]rune(recent[0].Record)); got > draftcore.TurnTextRunes {
 		t.Errorf("the note's record is %d runes, bounded at %d", got, draftcore.TurnTextRunes)
 	}
@@ -139,7 +139,7 @@ func TestOnlyAPastNoteOrMeetingThatHappenedCountsAsContact(t *testing.T) {
 // None of them reaches the model as a record, and the meetings take no slot
 // in the window a real exchange could fill.
 func TestOnlyAPastNoteOrMeetingThatHappenedIsSentAsARecord(t *testing.T) {
-	for _, act := range FoldRecent(notContact(), draftedAt, time.UTC) {
+	for _, act := range FoldRecent(notContact(), draftedAt) {
 		if act.Kind == string(crmcontracts.ActivityKindMeeting) || act.Record != "" {
 			t.Errorf("a %s that records no contact reached the window: %+v", act.Kind, act)
 		}

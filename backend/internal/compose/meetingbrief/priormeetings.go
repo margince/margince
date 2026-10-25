@@ -73,7 +73,7 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 	// Earlier than this meeting AND already past. Constraining on the current
 	// meeting alone would let a brief for a meeting three weeks out say "you
 	// met" about one happening next Tuesday — a room that has not met yet.
-	startsPos := arg(room.StartsAt)
+	startsPos := arg(room.Opens)
 	nowPos := arg(now)
 	attendeePos := arg(attendees)
 	// CONTENT, not discover. This section prints an earlier meeting's SUBJECT,

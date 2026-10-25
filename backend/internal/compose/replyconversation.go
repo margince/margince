@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -47,7 +48,7 @@ func replyConversationText(turns []draftcore.Turn) string {
 			relation = "later than the selected message"
 		}
 		rendered = append(rendered, fmt.Sprintf("%s | %s | %s | %s\n%s", relation,
-			turn.At.Format("2006-01-02T15:04:05Z07:00"), direction, textcut.Runes(turn.Subject, 200), turn.Text))
+			occurredday.When(turn.At, turn.DateOnly), direction, textcut.Runes(turn.Subject, 200), turn.Text))
 	}
 	return textcut.Runes(strings.Join(rendered, "\n\n"), replyActivityMaxRunes)
 }

@@ -40,6 +40,9 @@ type LastTouch struct {
 	// PrecedingContactAt is the newest exchange strictly before InboundAt,
 	// the far side of the silence a reply broke.
 	PrecedingContactAt *time.Time
+	// The precisions of the rows behind InboundAt, OutboundAt and ContactAt:
+	// "day" when that row names only a date, empty when there is no row.
+	InboundPrecision, OutboundPrecision, ContactPrecision string
 }
 
 // Touches is what the relationship-change derivation needs from this answer.
@@ -120,10 +123,13 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		       (SELECT max(a.occurred_at) %[1]s AND %[2]s AND NOT %[6]s),
 		       (SELECT max(a.occurred_at) %[1]s AND %[7]s),
 		       (SELECT max(a.occurred_at) %[1]s AND %[7]s
-		           AND a.occurred_at < (SELECT max(a.occurred_at) %[1]s AND %[2]s))
+		           AND a.occurred_at < (SELECT max(a.occurred_at) %[1]s AND %[2]s)),
+		       coalesce((SELECT a.occurred_precision %[1]s AND %[2]s %[8]s), ''),
+		       coalesce((SELECT a.occurred_precision %[1]s AND a.direction = 'outbound' AND %[5]s %[8]s), ''),
+		       coalesce((SELECT a.occurred_precision %[1]s AND %[7]s %[8]s), '')
 		FROM contact c
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
-		reached, inbound, wantedPos, visible, humanClock, activities.ImportedHistorySQL, exchange), args...)
+		reached, inbound, wantedPos, visible, humanClock, activities.ImportedHistorySQL, exchange, newestRow), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +138,8 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		var contactID ids.ContactID
 		var touch LastTouch
 		if err := rows.Scan(&contactID, &touch.InboundAt, &touch.OutboundAt, &touch.LiveInboundAt,
-			&touch.ContactAt, &touch.PrecedingContactAt); err != nil {
+			&touch.ContactAt, &touch.PrecedingContactAt,
+			&touch.InboundPrecision, &touch.OutboundPrecision, &touch.ContactPrecision); err != nil {
 			return nil, err
 		}
 		out[contactID] = touch
@@ -142,3 +149,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	}
 	return out, nil
 }
+
+// newestRow picks the row a max(a.occurred_at) beside it names, so its
+// precision is read off the same row as the date.
+const newestRow = "ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1"

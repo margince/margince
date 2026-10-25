@@ -26,7 +26,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/contact360"
@@ -71,14 +70,6 @@ type Service struct {
 	// to keep, and the message behind it is another reader's to receive, so it
 	// is attached on the way out and never to the row that gets saved.
 	emailRows briefevidence.Reader
-	// zone dates a day entry for the model (WithRecordZone).
-	zone activitywhen.Zone
-}
-
-// WithRecordZone binds the record zone a day entry is dated in.
-func (s *Service) WithRecordZone(zone activitywhen.Zone) *Service {
-	s.zone = zone
-	return s
 }
 
 // WithEmailSummaries binds the reader that opens a cited message.
@@ -139,11 +130,7 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 	if err != nil {
 		return crmcontracts.ContactBrief{}, err
 	}
-	zone, err := activitywhen.Of(ctx, s.zone)
-	if err != nil {
-		return crmcontracts.ContactBrief{}, err
-	}
-	in := FromView(view, zone)
+	in := FromView(view)
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
 	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
 	if err != nil {

@@ -310,6 +310,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		if zone, err = identity.ZoneAppliedTx(ctx, tx); err != nil {
 			return err
 		}
+		loaded.Opens = opensAt(loaded, zone)
 		room = loaded
 		chosen, err := resolveScope(loaded, requested)
 		if err != nil {

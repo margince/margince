@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/nextstep"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -86,7 +87,7 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 			subject = said.Say(statusWords.Meeting)
 		}
 		return move(ActionOpenMeetingBrief,
-			fmt.Sprintf(said.Say(statusWords.Prepare), said.until(f.now, meeting.StartsAt, f.loc)),
+			fmt.Sprintf(said.Say(statusWords.Prepare), said.until(f.now, meetingDay(meeting, f.loc), f.loc)),
 			map[string]any{argActivityID: activityID},
 			crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: fmt.Sprintf(said.Say(statusWords.Booked), subject)})
 	}
@@ -150,7 +151,7 @@ func farMeetingMove(f facts) crmcontracts.DealStatusCardMove {
 	}
 	activityID := openapi_types.UUID(meeting.ID)
 	return move(ActionOpenMeetingBrief,
-		fmt.Sprintf(said.Say(statusWords.FarMeeting), said.until(f.now, meeting.StartsAt, f.loc)),
+		fmt.Sprintf(said.Say(statusWords.FarMeeting), said.until(f.now, meetingDay(meeting, f.loc), f.loc)),
 		map[string]any{argActivityID: activityID},
 		crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: fmt.Sprintf(said.Say(statusWords.Booked), subject)})
 }
@@ -449,6 +450,15 @@ func (said statusCopy) subjectOf(a crmcontracts.Activity) string {
 
 func (said statusCopy) since(now, then time.Time, loc *time.Location) string {
 	return said.spell(elapsed.Days(then, now, loc))
+}
+
+// meetingDay is when the booked meeting falls for a day count. A day meeting
+// counts by its own date, not by where its stored noon falls in loc.
+func meetingDay(meeting activities.BookedMeeting, loc *time.Location) time.Time {
+	if meeting.Precision != activities.PrecisionDay {
+		return meeting.StartsAt
+	}
+	return occurredday.Begins(meeting.StartsAt, loc)
 }
 
 func (said statusCopy) until(now, then time.Time, loc *time.Location) string {

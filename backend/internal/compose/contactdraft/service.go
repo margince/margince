@@ -146,7 +146,7 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	if req.AboutActivityID != nil {
-		if in.About, err = s.aboutActivity(ctx, *req.AboutActivityID, req.Envelope.At(), req.Envelope.Zone()); err != nil {
+		if in.About, err = s.aboutActivity(ctx, *req.AboutActivityID, req.Envelope.At()); err != nil {
 			return crmcontracts.CompanyEmailDraft{}, nil, err
 		}
 		in.Recent = withoutActivity(in.Recent, in.About.ID)

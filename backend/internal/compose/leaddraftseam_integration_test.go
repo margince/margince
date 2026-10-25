@@ -56,7 +56,7 @@ func TestTheLeadDraftQuotesTheLeadNotTheNoticesAfterIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	recent := contactdraft.FoldRecent(rows, now, time.UTC)
+	recent := contactdraft.FoldRecent(rows, now)
 	quoted := false
 	for _, row := range recent {
 		if notices[row.ID] {
