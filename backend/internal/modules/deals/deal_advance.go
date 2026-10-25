@@ -157,6 +157,13 @@ func (s *Store) advanceOnTx(
 	// `return err`, and unwrapping them into `return crmcontracts.Deal{}, err`
 	// would be fourteen chances to return a half-built deal beside an error.
 	err = func() error {
+		// Locked before the authorization and before the decision inputs are
+		// read, and before the target stage is locked: a reassignment or a
+		// competing move committing in between must not be judged against a
+		// stale row. Deal first, then stage, is the order every writer takes.
+		if _, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly); err != nil {
+			return err
+		}
 		if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
 			return err
 		}

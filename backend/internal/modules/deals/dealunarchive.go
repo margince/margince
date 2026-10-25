@@ -42,6 +42,11 @@ func (s *Store) RestoreDealTx(
 	if err := auth.Require(ctx, "deal", principal.ActionDelete); err != nil {
 		return storekit.RestoreReport{}, err
 	}
+	// Locked before the write check, which judges the row as it stands under
+	// the lock. The archived row is reached on purpose, so no live filter.
+	if _, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.IncludeArchived); err != nil {
+		return storekit.RestoreReport{}, err
+	}
 	// Not the live twin: the row is archived by definition, and bringing it
 	// back is the write that reaches it on purpose.
 	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {

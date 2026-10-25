@@ -84,6 +84,11 @@ func (s *Store) ArchiveDealTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifV
 // archiveDealInTx is the archive itself, behind the object gate its callers
 // ask: the row's write check, the guarded patch and the cascade.
 func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64, o archiveOptions) error {
+	// Locked first so the write check judges the row as the archive will find
+	// it, not as it stood before a concurrent reassignment committed.
+	if _, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly); err != nil {
+		return err
+	}
 	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
 		return err
 	}
