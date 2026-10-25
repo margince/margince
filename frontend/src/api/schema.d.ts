@@ -742,7 +742,8 @@ export interface paths {
         };
         /**
          * List contacts (live by default; cursor-paginated).
-         * @description Default view excludes archived rows (`archived_at IS NULL`). Leads never appear here.
+         * @description Default view excludes archived rows (`archived_at IS NULL`) and contacts carrying a
+         *     `relationship_mark`. A text search (`q`) still finds a marked contact. Leads never appear here.
          */
         get: operations["listContacts"];
         put?: never;
@@ -27109,6 +27110,11 @@ export interface components {
         };
         /** @description A contact. Mirrors the `contact` table. */
         Contact: {
+            /**
+             * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+             * @enum {string|null}
+             */
+            relationship_mark?: "vendor_marketing" | null;
             /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
             readonly legal_hold?: boolean;
             tags?: components["schemas"]["RowTag"][];
@@ -27352,6 +27358,11 @@ export interface components {
         };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdateContactRequest: {
+            /**
+             * @description Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
+             * @enum {string|null}
+             */
+            relationship_mark?: "vendor_marketing" | null;
             full_name?: string;
             first_name?: string | null;
             last_name?: string | null;
@@ -51019,6 +51030,11 @@ export interface operations {
                  *     itself), and not otherwise.
                  */
                 ai_written?: components["parameters"]["AiWritten"];
+                /**
+                 * @description Without it the list leaves out marked contacts, unless `q` is given. `vendor_marketing`
+                 *     returns only contacts carrying that mark; `any` returns marked and unmarked alike.
+                 */
+                relationship_mark?: "vendor_marketing" | "any";
                 /** @description Filter to a single owner. */
                 owner_id?: string;
                 /**

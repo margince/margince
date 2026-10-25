@@ -2050,6 +2050,7 @@ export const en = {
   "history.field.vat_status": "VAT status",
   "history.field.visibility": "Visibility",
   "history.field.parent_company_id": "Parent company",
+  "history.field.relationship_mark": "Relationship mark",
   "history.field.partner_attribution": "Partner attribution",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",

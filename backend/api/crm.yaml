@@ -1283,7 +1283,9 @@ paths:
       tags: [Contacts]
       operationId: listContacts
       summary: List contacts (live by default; cursor-paginated).
-      description: Default view excludes archived rows (`archived_at IS NULL`). Leads never appear here.
+      description: |
+        Default view excludes archived rows (`archived_at IS NULL`) and contacts carrying a
+        `relationship_mark`. A text search (`q`) still finds a marked contact. Leads never appear here.
       x-mcp-tool:
         verb: list_records
         record_type: contact
@@ -1297,6 +1299,12 @@ paths:
         - $ref: '#/components/parameters/IncludeArchived'
         - $ref: '#/components/parameters/CapturedByKind'
         - $ref: '#/components/parameters/AiWritten'
+        - name: relationship_mark
+          in: query
+          schema: { type: string, enum: [vendor_marketing, any] }
+          description: |
+            Without it the list leaves out marked contacts, unless `q` is given. `vendor_marketing`
+            returns only contacts carrying that mark; `any` returns marked and unmarked alike.
         - name: owner_id
           in: query
           schema: { type: string, format: uuid }
@@ -38216,6 +38224,15 @@ components:
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        relationship_mark:
+          type: [string, 'null']
+          enum: [vendor_marketing, null]
+          description: >-
+            Set when the workspace's relationship to this contact is not an ordinary one.
+            `vendor_marketing` is a named sender who only pitches something to this business and
+            whom nobody here has answered. The default contact lists leave a marked contact out;
+            a text search and a read by id still find it. Null is not marked. Written through
+            `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
         legal_hold:
           type: boolean
           readOnly: true
@@ -38560,6 +38577,13 @@ components:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
+        relationship_mark:
+          type: [string, 'null']
+          enum: [vendor_marketing, null]
+          description: >-
+            Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records
+            who set it, so a mark set by hand is never lifted by the automatic check that
+            lifts the mark the sender check set.
         full_name: { type: string }
         first_name: { type: [string, 'null'] }
         last_name: { type: [string, 'null'] }

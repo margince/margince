@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 325 |
-| Columns | 3836 |
+| Columns | 3838 |
 | Foreign keys | 531 |
 | Owning areas | 36 |
 
@@ -40,7 +40,7 @@ Ranked by how many foreign keys point at them.
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 30 | 141 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 34 | 45 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 43 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 65 | 38 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 25 |
@@ -242,7 +242,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 10 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 32 | 45 |
+| [`contact`](contacts.md#contact) | contacts | 34 | 45 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 10 | 1 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |

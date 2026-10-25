@@ -2055,6 +2055,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.vat_status": "Trạng thái VAT",
   "history.field.visibility": "Phạm vi hiển thị",
   "history.field.parent_company_id": "Công ty mẹ",
+  "history.field.relationship_mark": "Nhãn quan hệ",
   "history.field.partner_attribution": "Ghi công đối tác",
   "history.field.partner_company_id": "Đối tác",
   "history.field.project_id": "Dự án",

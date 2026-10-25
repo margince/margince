@@ -1845,7 +1845,7 @@ public.capture_pending_counterparty.backfill_id uuid gen=- def=-
 public.capture_pending_counterparty.capture_pending_counterparty_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.capture_pending_counterparty.capture_pending_counterparty_backfill_id_fkey FOREIGN KEY (backfill_id) REFERENCES capture_backfill(id) ON DELETE SET NULL
 public.capture_pending_counterparty.capture_pending_counterparty_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
-public.capture_pending_counterparty.capture_pending_counterparty_kind_check CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact'::text, 'role_mailbox'::text, 'company_sender'::text, 'newsletter'::text, 'transactional'::text, 'spam'::text, 'personal'::text, 'advisor'::text]))))
+public.capture_pending_counterparty.capture_pending_counterparty_kind_check CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact'::text, 'role_mailbox'::text, 'company_sender'::text, 'newsletter'::text, 'transactional'::text, 'spam'::text, 'personal'::text, 'advisor'::text, 'vendor_pitch'::text]))))
 public.capture_pending_counterparty.capture_pending_counterparty_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_pending_counterparty.capture_pending_counterparty_pkey PRIMARY KEY (id)
 public.capture_pending_counterparty.capture_pending_counterparty_proposal_id_fkey FOREIGN KEY (proposal_id) REFERENCES approval(id) ON DELETE SET NULL
@@ -3050,6 +3050,8 @@ public.contact.contact_narrowing_reason_only_when_owner CHECK (((narrowing_reaso
 public.contact.contact_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.contact.contact_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
 public.contact.contact_pkey PRIMARY KEY (id)
+public.contact.contact_relationship_mark_check CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'::text])))
+public.contact.contact_relationship_mark_set_by_pairs CHECK (((relationship_mark IS NULL) = (relationship_mark_set_by IS NULL)))
 public.contact.contact_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.contact.contact_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
 public.contact.contact_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -3069,6 +3071,8 @@ public.contact.owner_id uuid gen=- def=-
 public.contact.photo_object_key text gen=- def=-
 public.contact.photo_origin text gen=- def=-
 public.contact.quarantined_at timestamp with time zone gen=- def=-
+public.contact.relationship_mark text gen=- def=-
+public.contact.relationship_mark_set_by text gen=- def=-
 public.contact.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(full_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(full_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(title, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(title, ''::text))), 'B'::"char"))
 public.contact.source text NOT NULL gen=- def=-
 public.contact.source_author_id uuid gen=- def=-

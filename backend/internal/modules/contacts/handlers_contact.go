@@ -69,6 +69,10 @@ func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request, params cr
 		CustomFilters:   httperr.CustomFieldFilters(r),
 		TagIDs:          uuidArgs(params.TagId),
 	}
+	if params.RelationshipMark != nil {
+		mark := string(*params.RelationshipMark)
+		in.RelationshipMark = &mark
+	}
 	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
 	if err != nil {
 		httperr.Write(w, r, httperr.Validation("tag_mode", "invalid", err.Error()))

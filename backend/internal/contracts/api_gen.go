@@ -6709,6 +6709,21 @@ func (e ConsumerMailDomainKind) Valid() bool {
 	}
 }
 
+// Defines values for ContactRelationshipMark.
+const (
+	ContactRelationshipMarkVendorMarketing ContactRelationshipMark = "vendor_marketing"
+)
+
+// Valid indicates whether the value is a known member of the ContactRelationshipMark enum.
+func (e ContactRelationshipMark) Valid() bool {
+	switch e {
+	case ContactRelationshipMarkVendorMarketing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactVisibility.
 const (
 	ContactVisibilityOwner     ContactVisibility = "owner"
@@ -18847,6 +18862,21 @@ func (e UpdateCompanyRequestVisibility) Valid() bool {
 	}
 }
 
+// Defines values for UpdateContactRequestRelationshipMark.
+const (
+	UpdateContactRequestRelationshipMarkVendorMarketing UpdateContactRequestRelationshipMark = "vendor_marketing"
+)
+
+// Valid indicates whether the value is a known member of the UpdateContactRequestRelationshipMark enum.
+func (e UpdateContactRequestRelationshipMark) Valid() bool {
+	switch e {
+	case UpdateContactRequestRelationshipMarkVendorMarketing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateContactRequestVisibility.
 const (
 	UpdateContactRequestVisibilityOwner     UpdateContactRequestVisibility = "owner"
@@ -22903,6 +22933,24 @@ func (e ListContactsParamsCapturedByKind) Valid() bool {
 	case ListContactsParamsCapturedByKindHuman:
 		return true
 	case ListContactsParamsCapturedByKindSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListContactsParamsRelationshipMark.
+const (
+	ListContactsParamsRelationshipMarkAny             ListContactsParamsRelationshipMark = "any"
+	ListContactsParamsRelationshipMarkVendorMarketing ListContactsParamsRelationshipMark = "vendor_marketing"
+)
+
+// Valid indicates whether the value is a known member of the ListContactsParamsRelationshipMark enum.
+func (e ListContactsParamsRelationshipMark) Valid() bool {
+	switch e {
+	case ListContactsParamsRelationshipMarkAny:
+		return true
+	case ListContactsParamsRelationshipMarkVendorMarketing:
 		return true
 	default:
 		return false
@@ -34355,6 +34403,9 @@ type Contact struct {
 	// showing that a conversation exists even when a reply cannot currently be delivered.
 	Reachability *[]ContactReachability `json:"reachability,omitempty"`
 
+	// RelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
+
 	// Social { linkedin, twitter, github, ... }
 	Social *map[string]interface{} `json:"social,omitempty"`
 	Source string                  `json:"source"`
@@ -34380,6 +34431,9 @@ type Contact struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ContactRelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+type ContactRelationshipMark string
 
 // ContactVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
 type ContactVisibility string
@@ -51923,9 +51977,12 @@ type UpdateContactRequest struct {
 	// `Contact360.dead_addresses` already names which address bounced; until now the
 	// contract's own remedy for that was to visit the contact page, because the write
 	// existed on create and nowhere else.
-	Phones *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social *map[string]interface{} `json:"social,omitempty"`
-	Title  *string                 `json:"title,omitempty"`
+	Phones *[]ContactPhoneInput `json:"phones,omitempty"`
+
+	// RelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
+	RelationshipMark *UpdateContactRequestRelationshipMark `json:"relationship_mark,omitempty"`
+	Social           *map[string]interface{}               `json:"social,omitempty"`
+	Title            *string                               `json:"title,omitempty"`
 
 	// Visibility Who may see this contact: `workspace` for everyone in the company,
 	// `owner` for the contact named by `owner_id` alone.
@@ -51951,6 +52008,9 @@ type UpdateContactRequest struct {
 	Visibility           *UpdateContactRequestVisibility `json:"visibility,omitempty"`
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
+
+// UpdateContactRequestRelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
+type UpdateContactRequestRelationshipMark string
 
 // UpdateContactRequestVisibility Who may see this contact: `workspace` for everyone in the company,
 // `owner` for the contact named by `owner_id` alone.
@@ -58084,6 +58144,10 @@ type ListContactsParams struct {
 	// itself), and not otherwise.
 	AiWritten *AiWritten `form:"ai_written,omitempty" json:"ai_written,omitempty"`
 
+	// RelationshipMark Without it the list leaves out marked contacts, unless `q` is given. `vendor_marketing`
+	// returns only contacts carrying that mark; `any` returns marked and unmarked alike.
+	RelationshipMark *ListContactsParamsRelationshipMark `form:"relationship_mark,omitempty" json:"relationship_mark,omitempty"`
+
 	// OwnerId Filter to a single owner.
 	OwnerId *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
 
@@ -58123,6 +58187,9 @@ type ListContactsParams struct {
 
 // ListContactsParamsCapturedByKind defines parameters for ListContacts.
 type ListContactsParamsCapturedByKind string
+
+// ListContactsParamsRelationshipMark defines parameters for ListContacts.
+type ListContactsParamsRelationshipMark string
 
 // ListContactsParamsTagMode defines parameters for ListContacts.
 type ListContactsParamsTagMode string
@@ -65526,6 +65593,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "reachability")
 	}
 
+	if raw, found := object["relationship_mark"]; found {
+		err = json.Unmarshal(raw, &a.RelationshipMark)
+		if err != nil {
+			return fmt.Errorf("error reading 'relationship_mark': %w", err)
+		}
+		delete(object, "relationship_mark")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -65767,6 +65842,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["reachability"], err = json.Marshal(a.Reachability)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'reachability': %w", err)
+		}
+	}
+
+	if a.RelationshipMark != nil {
+		object["relationship_mark"], err = json.Marshal(a.RelationshipMark)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'relationship_mark': %w", err)
 		}
 	}
 
@@ -72765,6 +72847,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "phones")
 	}
 
+	if raw, found := object["relationship_mark"]; found {
+		err = json.Unmarshal(raw, &a.RelationshipMark)
+		if err != nil {
+			return fmt.Errorf("error reading 'relationship_mark': %w", err)
+		}
+		delete(object, "relationship_mark")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -72854,6 +72944,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["phones"], err = json.Marshal(a.Phones)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phones': %w", err)
+		}
+	}
+
+	if a.RelationshipMark != nil {
+		object["relationship_mark"], err = json.Marshal(a.RelationshipMark)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'relationship_mark': %w", err)
 		}
 	}
 
@@ -96210,6 +96307,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "ai_written"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "ai_written", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "relationship_mark" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "relationship_mark", r.URL.Query(), &params.RelationshipMark, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "relationship_mark"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "relationship_mark", Err: err})
 		}
 		return
 	}

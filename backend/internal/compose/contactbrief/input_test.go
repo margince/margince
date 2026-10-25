@@ -19,6 +19,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -234,4 +235,44 @@ func viewFixture(t *testing.T) crmcontracts.Contact360 {
 		},
 	}}}
 	return view
+}
+
+// A vendor's own ask (an open claim, a message waiting for a reply) must not
+// reach the brief as something the reader owes. A rep once read "book their
+// demo" in a summary of a sender who only pitches.
+func TestAMarkedContactsOwnAskIsNotHandedToTheBriefAsANextStep(t *testing.T) {
+	t.Parallel()
+	view := viewFixture(t)
+	ordinary := FromView(view)
+	if len(ordinary.Claims) == 0 || ordinary.Recent[0].Move == "" {
+		t.Fatal("the fixture must give an ordinary contact a claim and a message waiting for a reply")
+	}
+
+	mark := crmcontracts.ContactRelationshipMarkVendorMarketing
+	view.Contact.RelationshipMark = &mark
+	marked := FromView(view)
+	if marked.Relationship != "vendor_marketing" {
+		t.Errorf("relationship = %q, want vendor_marketing", marked.Relationship)
+	}
+	if len(marked.Claims) != 0 || marked.Moment != nil || len(marked.Changes) != 0 {
+		t.Errorf("a marked contact's claims, moment and changes reached the brief: %+v", marked)
+	}
+	if marked.Recent[0].Move != "" {
+		t.Errorf("move = %q, want empty so no message reads as waiting on the reader", marked.Recent[0].Move)
+	}
+
+	before, err := Fingerprint(ordinary, "route-1", "en")
+	if err != nil {
+		t.Fatalf("fingerprint: %v", err)
+	}
+	after, err := Fingerprint(marked, "route-1", "en")
+	if err != nil {
+		t.Fatalf("fingerprint: %v", err)
+	}
+	if before == after {
+		t.Error("marking the contact left the fingerprint alone, so a cached brief written before the mark would keep telling the rep to answer the vendor")
+	}
+	if prose := claims.Prose(Deterministic(briefContactID, marked, "en")); strings.Contains(prose, "unanswered") || strings.Contains(prose, "owes") {
+		t.Errorf("the floor wrote %q for a marked contact, which frames the vendor's mail as owed", prose)
+	}
 }

@@ -23,7 +23,7 @@ var createRecordShapes = map[string]string{
 }
 
 var updateRecordShapes = map[string]string{
-	"contact":        "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name?: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], social?: object, title?: string, visibility?: \"workspace\"|\"owner\"}",
+	"contact":        "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name?: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], relationship_mark?: \"vendor_marketing\", social?: object, title?: string, visibility?: \"workspace\"|\"owner\"}",
 	"company":        "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, assess_against_entity_id?: uuid, description?: string, display_name?: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, lifecycle?: \"unknown\"|\"target\"|\"prospect\"|\"opportunity\"|\"customer\"|\"former_customer\"|\"disqualified\", linkedin_url?: string, owner_id?: uuid, parent_company_id?: uuid, relationship_types?: [\"customer\"|\"partner\"|\"supplier\"|\"investor\"|\"portfolio_company\"|\"competitor\"|\"other\"], size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\", visibility?: \"workspace\"|\"owner\"}",
 	"deal":           "{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \"new_business\"|\"renewal\"|\"upsell\"|\"cross_sell\"|\"expansion\"|\"existing_business\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, forecast_category?: \"commit\"|\"best_case\"|\"pipeline\"|\"omitted\", fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, priority?: \"low\"|\"medium\"|\"high\", project_id?: uuid, status?: \"open\"|\"won\"|\"lost\", wait_until?: YYYY-MM-DD}",
 	"lead":           "{candidate_company_key?: string, company_name?: string, email?: email, full_name?: string, origin?: string, origin_detail?: string, owner_id?: uuid, phone?: string, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \"new\"|\"contacted\"|\"engaged\", title?: string}",
@@ -67,6 +67,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "list_id", Type: "string"},
 		{Name: "owner_id", Type: "string"},
 		{Name: "owner_team_id", Type: "string"},
+		{Name: "relationship_mark", Type: "string", Enum: []string{"vendor_marketing", "any"}},
 		{Name: "sort", Type: "string"},
 		{Name: "tag_id", Type: "array"},
 		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},

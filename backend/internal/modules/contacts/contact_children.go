@@ -266,7 +266,7 @@ var contactColumns = `id, full_name, first_name, last_name, title, owner_id, vis
 	merged_into_id, converted_from_lead_id, source, captured_by,
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("contact") + `,
-	version, created_at, updated_at, archived_at, last_activity_at, legal_hold`
+	version, created_at, updated_at, archived_at, last_activity_at, legal_hold, relationship_mark`
 
 // readContact resolves one contact row; active names the custom-field
 // columns to carry alongside the core ones — nil for internal decision
@@ -307,6 +307,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var visibility string
 	var sourceSystem, authorName, authorSeatName *string
 	var authorID *ids.UUID
+	var mark *string
 
 	dests := []any{
 		&id, &p.FullName, &p.FirstName, &p.LastName, &p.Title, &ownerID, &visibility,
@@ -314,6 +315,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt, &p.LegalHold,
+		&mark,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -334,6 +336,10 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		p.Address = a
 	}
 	p.Version = &version
+	if mark != nil {
+		m := crmcontracts.ContactRelationshipMark(*mark)
+		p.RelationshipMark = &m
+	}
 	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	p.ImportedFrom = provenance.ImportedFrom(sourceSystem)
 	return p, nil

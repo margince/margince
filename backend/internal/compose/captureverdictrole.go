@@ -204,5 +204,5 @@ func verdictFloorFor(kind string) float64 {
 //
 // Held by: TestEveryCreatingKindNeedsTheHigherFloor (backend/internal/compose/captureverdictkinds_test.go)
 func createsARecord(kind string) bool {
-	return kind == capture.KindContact || kind == capture.KindAdvisor
+	return kind == capture.KindContact || kind == capture.KindAdvisor || kind == capture.KindVendorPitch
 }
