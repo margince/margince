@@ -194,3 +194,45 @@ func TestAnInteractionDatedAfterNowIsNotTheLatestTouch(t *testing.T) {
 		t.Errorf("as-of recency came from %v, want the past email at %v", asOf.lastInteraction, pastEmail)
 	}
 }
+
+// The single-contact fold and the change fold bound at the same clock as the
+// batch fold. An interaction dated at now has happened and counts.
+func TestSingleContactAndChangeFoldsBoundAtNow(t *testing.T) {
+	e := setupDedupe(t)
+	now := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)
+	contact := e.seedVisibleContact(t, "Single Fold Contact")
+	pastEmail := now.AddDate(0, 0, -20)
+	e.seedInteraction(t, contact, pastEmail, "inbound")
+	e.seedInteraction(t, contact, now, "outbound")
+	e.seedInteractionOfKind(t, contact, "meeting", now.Add(time.Hour), "outbound")
+
+	ctx := e.as()
+	single, err := e.store.ContactStrength(ctx, contact, now)
+	if err != nil {
+		t.Fatalf("reading one contact's strength: %v", err)
+	}
+	if single.InteractionCount90d != 2 {
+		t.Errorf("the single-contact fold counted %d, want 2: the email and the interaction dated exactly now", single.InteractionCount90d)
+	}
+	if single.LastInteraction == nil || !single.LastInteraction.Equal(now) {
+		t.Errorf("single-contact recency came from %v, want %v", single.LastInteraction, now)
+	}
+	if len(single.ContributingIDs) != 2 {
+		t.Errorf("the single-contact fold cites %d interactions, want 2", len(single.ContributingIDs))
+	}
+
+	var in relstrength.ChangeInputs
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		in, err = changeInputs(ctx, tx, contact, now, nil)
+		return err
+	}); err != nil {
+		t.Fatalf("reading the change inputs: %v", err)
+	}
+	if in.Current.Count90d != 2 {
+		t.Errorf("the change fold counted %d, want 2", in.Current.Count90d)
+	}
+	if in.Current.LastInteraction == nil || !in.Current.LastInteraction.Equal(now) {
+		t.Errorf("change-fold recency came from %v, want %v", in.Current.LastInteraction, now)
+	}
+}
