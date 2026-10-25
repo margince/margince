@@ -10,6 +10,7 @@ package compose
 // settling a confirmed request are checked separately.
 
 import (
+	"cmp"
 	"context"
 	"strings"
 	"testing"
@@ -45,6 +46,8 @@ type owedMail struct {
 	// deliveredTo is the receiving server's Delivered-To, which proves a Bcc
 	// copy reached the seat.
 	deliveredTo string
+	// charset is the plain body's declared charset, utf-8 when empty.
+	charset string
 }
 
 func (m owedMail) raw() []byte {
@@ -76,7 +79,8 @@ func (m owedMail) raw() []byte {
 	if body == "" {
 		body = "Text."
 	}
-	lines = append(lines, "Content-Type: text/plain; charset=utf-8")
+	charset := cmp.Or(m.charset, "utf-8")
+	lines = append(lines, "Content-Type: text/plain; charset="+charset)
 	if m.encoding != "" {
 		lines = append(lines, "Content-Transfer-Encoding: "+m.encoding)
 	}

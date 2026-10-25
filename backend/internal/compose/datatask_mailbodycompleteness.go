@@ -17,14 +17,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// mailBodyCompletenessDataTask first restores mail bodies an older parser or
-// the older cap left short, from their stored originals. It then assesses the
-// rest of the mail stored before completeness was recorded. Both go through
-// the parser capture uses today. Mail without its stored original is never
-// guessed at: it stays unassessed, and automatic work does not read it.
+// mailBodyCompletenessDataTask restores mail bodies an older parser or cap left
+// short, from their stored originals, then assesses the rest of the stored mail.
+// Two later steps drop labels read from a short body and decode legacy charsets.
+// All use the parser capture uses today. Mail without its stored original is
+// never guessed at: it stays unassessed, and automatic work does not read it.
 func mailBodyCompletenessDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1792776165_mail_body_completeness", Version: 1,
+		ID: "core/1792776165_mail_body_completeness", Version: 2,
 		Title: "Restore and assess the text of stored mail", Requires: []string{"core/1792776166"},
 		Steps: []datatask.Step{{
 			Name: "restore_stored_mail_bodies", Limit: 50, MinLimit: 1,
@@ -34,6 +34,14 @@ func mailBodyCompletenessDataTask() datatask.Task {
 			Name: "assess_stored_mail_bodies", Limit: 50, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{Reason: "capture stamps the same parsed completeness on the row it inserts, without a separate audit"},
 			Estimate: estimateUnassessedMailBodies, Batch: assessMailBodiesBatch,
+		}, {
+			Name: "reset_labels_read_from_short_bodies", Limit: 100, MinLimit: 1,
+			Audit:    datatask.AuditPolicy{Reason: "activities.SetCaptureLabel writes and the classify pass rewrites the label without an audit"},
+			Estimate: estimateStaleMailLabels, Batch: resetRestoredMailLabelsBatch,
+		}, {
+			Name: "repair_mail_charsets", Limit: 50, MinLimit: 1,
+			Audit:    datatask.AuditPolicy{PerRecord: true},
+			Estimate: estimateCharsetDamagedMail, Batch: repairMailCharsetsBatch,
 		}},
 	}
 }

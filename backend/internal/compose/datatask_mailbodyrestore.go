@@ -77,10 +77,16 @@ func restoreMailBody(ctx context.Context, tx pgx.Tx, candidate recoverableMailBo
 	if !ok {
 		return false, nil
 	}
-	restored, threadKey, err := activities.RestoreMailBodyTx(ctx, tx, activities.MailBodyRestoration{
+	return writeMailRestoration(ctx, tx, activities.MailBodyRestoration{
 		Activity: candidate.ID, Version: candidate.Version, StoredBody: candidate.Body,
 		Body: body, Completeness: string(completeness),
 	})
+}
+
+// writeMailRestoration is the one write every mail restoration takes, so a
+// conversation read from replaced text is made due again by each of them.
+func writeMailRestoration(ctx context.Context, tx pgx.Tx, restoration activities.MailBodyRestoration) (bool, error) {
+	restored, threadKey, err := activities.RestoreMailBodyTx(ctx, tx, restoration)
 	if err != nil || !restored || threadKey == nil {
 		return restored, err
 	}
