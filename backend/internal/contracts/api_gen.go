@@ -53141,6 +53141,9 @@ type User struct {
 	GreetingName *string            `json:"greeting_name,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
 
+	// InviteEmailFailed True when the mail relay refused the invitation email of a member still `invited`, so the member has no link yet. `issue_password_link` hands them one. Present only on the management view, on the same terms as `roles`, and false once the member is entered. The invite's own answer reads false: the mail leaves after that answer, so the roster is where a refusal shows.
+	InviteEmailFailed *bool `json:"invite_email_failed,omitempty"`
+
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
 

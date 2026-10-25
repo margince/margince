@@ -78,6 +78,8 @@ type userRow struct {
 	// or the member never signed in.
 	LastActiveAt *time.Time
 	CreatedAt    time.Time
+	// InviteEmailFailed is nil when the read did not ask for the management view.
+	InviteEmailFailed *bool
 	// Assignable is whether the caller may make this member a record's owner;
 	// nil when the read did not ask.
 	Assignable *bool
@@ -115,7 +117,7 @@ const lastActive = `CASE WHEN $1::boolean THEN
 	  ELSE NULL::timestamptz END`
 
 const userColumns = `id, email, display_name, status, is_agent, seat_type, ` +
-	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at`
+	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, ` + inviteEmailFailed + `, created_at`
 
 // $1 is the "read role keys?" flag on every user query below, so the aggregate
 // stays inside ONE fixed query string instead of two the caller picks between.
@@ -181,7 +183,7 @@ const listUsersAllFilteredQuery = `
 func scanUser(r pgx.Row) (userRow, error) {
 	var u userRow
 	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.SeatType,
-		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt)
+		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.InviteEmailFailed, &u.CreatedAt)
 	return u, err
 }
 

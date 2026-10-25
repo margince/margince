@@ -11932,6 +11932,7 @@ export const en = {
   "users.status.invited": "Invited",
   "users.status.deactivated": "Deactivated",
   "users.status.suspended": "Suspended",
+  "users.status.inviteEmailFailed": "Invite email not sent",
   "users.handover.action": "Hand over work",
   "users.handover.title": "Hand over the work of {name}",
   "users.handover.body":

@@ -38619,6 +38619,8 @@ export interface components {
              *     Present only to a caller who administers members and could list this member's sessions (`listUserSessions`): the `user_admin` grant, and the ceiling over the target (a non-admin never sees an admin's). Carried by `listUsers`'s management view for a human caller and by the member-administration writes; absent everywhere else, including `MeResponse.user`. Absent or null also when the member never signed in, so a client renders the column only on the management view.
              */
             last_active_at?: string | null;
+            /** @description True when the mail relay refused the invitation email of a member still `invited`, so the member has no link yet. `issue_password_link` hands them one. Present only on the management view, on the same terms as `roles`, and false once the member is entered. The invite's own answer reads false: the mail leaves after that answer, so the roster is where a refusal shows. */
+            invite_email_failed?: boolean;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */

@@ -61,6 +61,12 @@ describe("the members table", () => {
     expect(within(rowFor("Ada Active")).queryByText("Active")).toBeNull();
     expect(within(rowFor("Otto Off")).getByText("Deactivated")).toBeTruthy();
     expect(within(rowFor("Ivy Invited")).getByText("Invited")).toBeTruthy();
+    expect(
+      within(rowFor("Ivy Invited")).getByText("Invite email not sent"),
+    ).toBeTruthy();
+    expect(
+      within(rowFor("Ada Active")).queryByText("Invite email not sent"),
+    ).toBeNull();
   });
 
   it("draws the administration columns only for a reader the roster serves them to", async () => {

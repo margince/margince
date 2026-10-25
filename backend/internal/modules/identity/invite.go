@@ -11,6 +11,7 @@ package identity
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
@@ -155,4 +156,35 @@ func emitInvited(
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, newUserID.UUID,
 		crmcontracts.PublicEventUserGreetingNameChanged{GreetingName: in.GreetingName})
+}
+
+// inviteEmailFailed is gated by the same $1 as roleKeys, since whether an
+// invitation mail went out is the administrator's question. It reads false once
+// the seat is entered.
+const inviteEmailFailed = `CASE WHEN $1::boolean THEN
+	  (status = 'invited' AND invite_email_failed_at IS NOT NULL)
+	  ELSE NULL::boolean END`
+
+// RecordInviteEmailFailure marks an invited seat whose invitation mail the relay
+// refused, so the roster can show the administrator that no link reached them.
+//
+// Not audited or evented, like the deal room's delivery outcome. No record of
+// the member changed; this is the relay's answer written down.
+// The status guard leaves a seat that was entered meanwhile untouched.
+func (s *Service) RecordInviteEmailFailure(ctx context.Context, actor Identity, userID ids.UserID) error {
+	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionCreate)
+	if err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Zero rows means the seat was entered or removed while the mail was in
+		// flight. No invitation is left to flag.
+		tag, err := tx.Exec(ctx,
+			`UPDATE app_user SET invite_email_failed_at = now()
+			  WHERE id = $1 AND status = 'invited' AND `+ActivatableMemberSQL(""), userID)
+		if err == nil && tag.RowsAffected() == 0 {
+			slog.InfoContext(ctx, "invite email failure not recorded: seat no longer invited", "user_id", userID)
+		}
+		return err
+	})
 }
