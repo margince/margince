@@ -133,17 +133,16 @@ func TestTheNextMeetingFollowsTheDatesInTheZone(t *testing.T) {
 	}
 }
 
-// A follow-up sent on the morning of a day meeting's date answers it. The
-// date ends at midnight, so measuring from the end missed that morning.
-func TestAFollowUpOnADayMeetingsDateAnswersIt(t *testing.T) {
-	e := integration.Setup(t)
-	auckland := setInstallationZone(t, e, "Pacific/Auckland")
+// dayMeetingOwingAFollowUp is a held day meeting four dates back in zone that
+// owes a follow-up, its date, its attendee and whether it still owes one.
+func dayMeetingOwingAFollowUp(t *testing.T, e *integration.Env, zone *time.Location) (time.Time, ids.UUID, func() bool) {
+	t.Helper()
 	sent, met := seedFollowUps(t, e)
 	if _, err := e.Activities.ArchiveActivity(e.Admin(), ids.From[ids.ActivityKind](sent), nil); err != nil {
 		t.Fatalf("archiving the sent mail: %v", err)
 	}
 	now := databaseNow(t, e)
-	dated, dayPrecision := occurredday.AnchorIn(now.AddDate(0, 0, -4), auckland), activities.PrecisionDay
+	dated, dayPrecision := occurredday.AnchorIn(now.AddDate(0, 0, -4), zone), activities.PrecisionDay
 	if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](met), activities.UpdateActivityInput{
 		OccurredAt: &dated, OccurredPrecision: &dayPrecision,
 	}); err != nil {
@@ -161,16 +160,54 @@ func TestAFollowUpOnADayMeetingsDateAnswersIt(t *testing.T) {
 	if !owed() {
 		t.Fatal("the day meeting owes no follow-up before anything was sent, so this test proves nothing")
 	}
-
-	year, month, day := dated.Date()
-	morning := time.Date(year, month, day, 8, 0, 0, 0, auckland)
 	var attendee ids.UUID
 	if err := e.Pool.QueryRow(context.Background(), `SELECT contact_id FROM activity_link WHERE activity_id = $1`, met).Scan(&attendee); err != nil {
 		t.Fatalf("reading the meeting's contact: %v", err)
 	}
+	return dated, attendee, owed
+}
+
+// A follow-up sent on the morning of a day meeting's date answers it. The
+// date ends at midnight, so measuring from the end missed that morning.
+func TestAFollowUpOnADayMeetingsDateAnswersIt(t *testing.T) {
+	e := integration.Setup(t)
+	auckland := setInstallationZone(t, e, "Pacific/Auckland")
+	dated, attendee, owed := dayMeetingOwingAFollowUp(t, e, auckland)
+
+	year, month, day := dated.Date()
+	morning := time.Date(year, month, day, 8, 0, 0, 0, auckland)
 	logMail(t, e, attendee, "outbound", morning)
 	if owed() {
 		t.Errorf("a follow-up at %v on the meeting's date did not answer it", morning)
+	}
+}
+
+// A day call is placed by its own date. Dated the day before a day meeting, it
+// is not a follow-up, though in Auckland its stored noon falls after the
+// meeting's date begins. Dated the meeting's own date, it is one.
+func TestADayCallDatedBeforeADayMeetingIsNotItsFollowUp(t *testing.T) {
+	e := integration.Setup(t)
+	auckland := setInstallationZone(t, e, "Pacific/Auckland")
+	dated, attendee, owed := dayMeetingOwingAFollowUp(t, e, auckland)
+	call := func(date time.Time) {
+		t.Helper()
+		subject, outbound := "Rang them", "outbound"
+		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "call", Subject: &subject, Direction: &outbound, OccurredAt: &date, Source: "manual",
+			OccurredPrecision: activities.PrecisionDay,
+			Links:             []activities.ActivityLinkInput{{EntityType: "contact", EntityID: attendee}},
+		}); err != nil {
+			t.Fatalf("logging the day call: %v", err)
+		}
+	}
+
+	call(dated.AddDate(0, 0, -1))
+	if !owed() {
+		t.Error("a day call dated the day before the meeting answered it")
+	}
+	call(dated)
+	if owed() {
+		t.Error("a day call dated the meeting's own date did not answer it")
 	}
 }
 

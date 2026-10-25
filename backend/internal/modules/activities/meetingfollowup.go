@@ -94,7 +94,7 @@ func (s *Store) queryMeetingFollowUps(
 		instant, g.content, g.links, arg(windowDays), AwaitingReplyLookbackDays,
 		g.later, relstrength.InteractionCountsSQL("later"), arg(readerOrNobody(ctx)),
 		messageSnoozeLiftedSQL(at, g.back), g.customer, AwaitingReplyScanCap,
-		meetingHeldSQL("a", at), addressable, maxActivityLinks, narrowed, followUpFromSQL,
+		meetingHeldSQL("a", at), addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading meetings the reader owes a follow-up: %w", err)
@@ -131,8 +131,9 @@ func addressableContactClause(ctx context.Context, arg func(any) int) (string, e
 // meetingEndSQL is when the meeting under alias a ended.
 var meetingEndSQL = occurredday.EndSQL("a")
 
-// followUpFromSQL is where a follow-up to the meeting under alias a may start.
-// That is its end for an hour, and the start of its date for a day.
+// followUpFromSQL is where a follow-up to the meeting under alias a may start:
+// its end for an hour, its date's start for a day. A later touch is placed by
+// its own date too (occurredday.FromSQL).
 var followUpFromSQL = `(CASE WHEN a.occurred_precision = 'day' THEN ` + occurredday.StartSQL("a") +
 	` ELSE ` + meetingEndSQL + ` END)`
 
@@ -143,7 +144,8 @@ var followUpFromSQL = `(CASE WHEN a.occurred_precision = 'day' THEN ` + occurred
 //  7. what counts as contact for later, 8. the reader, 9. a snooze lifted,
 //  10. the customer arms the reader may read, 11. the cap, 12. the meeting
 //     took place, 13. the contacts the reader may write to, 14. the recipient
-//     cap, 15. which meetings the caller narrowed the read to.
+//     cap, 15. which meetings the caller narrowed the read to, 16. later comes
+//     after the meeting.
 //
 // The attendees are read once, in the LATERAL, and both the recipient list and
 // the "nothing sent since" test use that one set.
@@ -205,7 +207,7 @@ var meetingFollowUpsSQL = `
 	                      AND later.direction IS DISTINCT FROM 'inbound'
 	                      AND %[6]s
 	                      AND %[7]s
-	                      AND later.occurred_at >= %[16]s -- occurred_at raw: a touch after the meeting, an ordering of rows
+	                      AND %[16]s
 	                      AND ` + occurredday.BegunSQL("later", "$%[1]d::timestamptz") + `)
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[10]s)
 	   AND NOT ` + readerSetAsideSQL("$%[8]d", "%[9]s") + `
