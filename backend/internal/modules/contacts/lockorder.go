@@ -44,6 +44,23 @@ func lockContactLanes(ctx context.Context, tx pgx.Tx, emails []string, name stri
 	return lockNameLane(ctx, tx, name)
 }
 
+// lockLanesForContacts takes the lanes of several contacts at once, each lane
+// kind sorted across all of them, so the order matches the one-contact case.
+func lockLanesForContacts(ctx context.Context, tx pgx.Tx, subjects []contactSubject) error {
+	var emails, names []string
+	for _, subject := range subjects {
+		emails = append(emails, subject.emails...)
+		names = append(names, subject.name)
+	}
+	if err := storekit.LockSubjectKeys(ctx, tx, nil, emails); err != nil {
+		return err
+	}
+	if err := lockAddressBaseLane(ctx, tx, emails); err != nil {
+		return err
+	}
+	return lockNameLanes(ctx, tx, names...)
+}
+
 // lockLanesAndReview takes the candidate's lane locks and reads the review lanes
 // under them, so a create that committed while this writer waited is seen.
 func lockLanesAndReview(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactResolution, error) {

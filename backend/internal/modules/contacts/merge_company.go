@@ -90,7 +90,7 @@ func (s *Store) mergeCompanyTx(
 	if err := companyMergeAllowed(ctx, tx, sourceID, targetID); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	employees, err := liveEmployeesOf(ctx, tx, sourceID)
+	employersBefore, err := primaryEmployersOf(ctx, tx, sourceID)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -116,7 +116,7 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	if err := fileMergedEmployerTwins(ctx, tx, employees, by); err != nil {
+	if err := fileMergedEmployerTwins(ctx, tx, employersBefore, by); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	// A survivor that just inherited the retired record's legal name can now
