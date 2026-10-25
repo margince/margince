@@ -90,6 +90,17 @@ export const DraftedBesideThread: StoryObj = {
   render: () => {
     installFetchStub({
       ...selectedReplyRoutes(),
+      // The composer keeps the draft as the reader writes; the server answers
+      // with the draft it stored, so the composer reads its own words back.
+      "PUT /mail-drafts": (body) =>
+        jsonResponse({
+          ...(typeof body === "object" && body !== null ? body : {}),
+          id: "md-1",
+          version: 1,
+          agent_drafted: true,
+          created_at: "2026-09-01T10:00:00Z",
+          updated_at: "2026-09-01T10:00:00Z",
+        }),
       "POST /activities/message-0/draft-email": () =>
         jsonResponse({
           subject: "Re: Delivery window",
@@ -129,7 +140,9 @@ export const DraftedBesideThread: StoryObj = {
       .getByRole("button", { name: "Bold" })
       .getBoundingClientRect();
     await expect(body.bottom).toBeLessThanOrEqual(toolbar.top);
-    await expect(toolbar.bottom).toBeLessThanOrEqual(send.top);
+    // The formatting bar sits in the foot, on the row Send is on.
+    await expect(toolbar.top).toBeGreaterThanOrEqual(send.top);
+    await expect(toolbar.bottom).toBeLessThanOrEqual(send.bottom);
     await expect(send.bottom).toBeLessThanOrEqual(window.innerHeight);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       window.innerWidth,
