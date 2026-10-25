@@ -62,13 +62,12 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 	// a mail natural key is a message-id, whereas a channel record's embeds the
 	// account id itself, so the channel refusal names no identifier at all.
 	if fields.Email != "" {
-		suppressed, err := storekit.EmailSuppressed(ctx, tx, fields.Email)
-		if err != nil {
+		if err := storekit.RefuseErasedEmail(ctx, tx, "email", fields.Email); err != nil {
+			if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+				return datasource.EntityRef{}, nil, nil, fmt.Errorf("capture: %s/%s matches the erasure suppression list: %w",
+					rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, connector.ErrSkip)
+			}
 			return datasource.EntityRef{}, nil, nil, err
-		}
-		if suppressed {
-			return datasource.EntityRef{}, nil, nil, fmt.Errorf("capture: %s/%s matches the erasure suppression list: %w",
-				rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, connector.ErrSkip)
 		}
 		existing, captured, err := s.findLeadCollision(ctx, tx, rec, fields)
 		if err != nil {

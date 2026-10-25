@@ -205,15 +205,19 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 
 //nolint:unparam // the same shape as its siblings; see replaceContactSocial.
 func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput) error {
+	// Every address a contact gains is written here, so every create and
+	// update door meets the erasure list without asking for it.
+	addresses := make([]string, 0, len(emails))
+	for _, e := range emails {
+		addresses = append(addresses, e.Email)
+	}
+	if err := storekit.RefuseErasedEmails(ctx, tx, "emails", addresses); err != nil {
+		return err
+	}
 	for _, e := range emails {
 		// Capture, channel, promotion and booking reach this writer without
 		// parseContactContacts, so the refusal is asked here too.
 		if err := refuseMachineAddress(e.Email); err != nil {
-			return err
-		}
-		// Every address a contact gains is written here, so every create and
-		// update door meets the erasure list without asking for it.
-		if err := storekit.RefuseErasedEmail(ctx, tx, "emails", e.Email); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,

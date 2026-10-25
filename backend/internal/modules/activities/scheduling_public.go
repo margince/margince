@@ -379,9 +379,11 @@ func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, req crmco
 		return ids.Nil, false
 	}
 	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
-		// This door is anonymous, so its answer must not tell a stranger that
-		// the address belongs to someone who asked to be erased.
-		httperr.Write(w, r, httperr.Validation("booker.email", "invalid", "This address cannot be used to book. Use a different address."))
+		// This door is anonymous. An answer only an erased address gets would
+		// tell a stranger who asked to be erased, so it answers as a taken slot.
+		// A faked success cannot hide it: that answer carries a meeting id and
+		// reserves the slot.
+		writeStoreErr(w, r, &SlotTakenError{Start: req.Start})
 		return ids.Nil, false
 	}
 	if err != nil {

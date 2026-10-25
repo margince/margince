@@ -7,8 +7,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -23,18 +23,29 @@ func (erasedBookerContacts) EnsureContactByEmail(context.Context, string, string
 	return ids.Nil, &storekit.ErasedIdentifierError{Field: "emails"}
 }
 
-func TestThePublicBookingDoorRefusesAnErasedAddressWithoutSayingSo(t *testing.T) {
-	h := Handlers{}.WithPublicBooking(erasedBookerContacts{}, nil)
+func TestThePublicBookingDoorAnswersAnErasedAddressAsATakenSlot(t *testing.T) {
+	start := time.Date(2026, 3, 2, 10, 0, 0, 0, time.UTC)
 	var req crmcontracts.BookPublicMeetingJSONRequestBody
 	req.Booker.Name = "Wieder Da"
 	req.Booker.Email = "geloescht@betroffene.example"
-	rec := httptest.NewRecorder()
-	_, ok := h.ensureBooker(rec, httptest.NewRequest(http.MethodPost, "/public/booking/x", nil), req)
-	body := rec.Body.String()
-	if ok || rec.Code != http.StatusUnprocessableEntity || !strings.Contains(body, "booker.email") {
-		t.Fatalf("the door answered %d %s, want 422 naming booker.email", rec.Code, body)
+	req.Start, req.End = start, start.Add(30*time.Minute)
+	httpReq := httptest.NewRequest(http.MethodPost, "/public/booking/x", nil)
+
+	erased := httptest.NewRecorder()
+	h := Handlers{}.WithPublicBooking(erasedBookerContacts{}, nil)
+	if _, ok := h.ensureBooker(erased, httpReq, req); ok {
+		t.Fatal("the door admitted an erased booker")
 	}
-	if strings.Contains(body, "erase") || strings.Contains(body, storekit.ErasedIdentifierCode) {
-		t.Errorf("an anonymous caller learns the address was erased: %s", body)
+	taken := httptest.NewRecorder()
+	writeStoreErr(taken, httpReq, &SlotTakenError{Start: start})
+
+	if erased.Code != taken.Code || erased.Body.String() != taken.Body.String() {
+		t.Fatalf("the erased answer %d %s differs from a taken slot's %d %s",
+			erased.Code, erased.Body.String(), taken.Code, taken.Body.String())
+	}
+	for _, header := range []string{"Content-Type", "Content-Length", "Cache-Control"} {
+		if erased.Header().Get(header) != taken.Header().Get(header) {
+			t.Errorf("header %s: erased %q, taken slot %q", header, erased.Header().Get(header), taken.Header().Get(header))
+		}
 	}
 }

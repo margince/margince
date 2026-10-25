@@ -310,12 +310,11 @@ func upsertGhost(ctx context.Context, tx pgx.Tx, owner ids.UUID, row linkedInRow
 	// is imported, which is the same limit every address-keyed suppression in
 	// this codebase has.
 	if row.email != "" {
-		suppressed, err := storekit.EmailSuppressed(ctx, tx, row.email)
-		if err != nil {
+		if err := storekit.RefuseErasedEmail(ctx, tx, "email", row.email); err != nil {
+			if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+				return false, nil
+			}
 			return false, fmt.Errorf("contacts: checking the erasure suppression list: %w", err)
-		}
-		if suppressed {
-			return false, nil
 		}
 	}
 	_, err := tx.Exec(ctx, `

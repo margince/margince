@@ -86,15 +86,33 @@ func (e *ErasedIdentifierError) FieldFault() (field, code, message string) {
 		"The person with this address asked to be erased and not to be stored again. Leave the address out."
 }
 
-// RefuseErasedEmail is EmailSuppressed for a writer that stores the address:
-// a hit is an *ErasedIdentifierError naming field.
+// RefuseErasedEmail is RefuseErasedEmails for one address.
 func RefuseErasedEmail(ctx context.Context, tx pgx.Tx, field, email string) error {
-	suppressed, err := EmailSuppressed(ctx, tx, email)
-	if err != nil {
-		return fmt.Errorf("storekit: checking an address against the erasure list: %w", err)
+	return RefuseErasedEmails(ctx, tx, field, []string{email})
+}
+
+// RefuseErasedEmails is the check every writer of an address runs: a hit on
+// any address is an *ErasedIdentifierError naming field.
+//
+// It takes the eraser's subject lock over all the addresses at once, in
+// LockSubjectKeys' one order, before it reads the list. Without the lock an
+// erasure can commit between this read and the caller's insert, and the
+// erased address lands anyway. The lock is held to commit.
+func RefuseErasedEmails(ctx context.Context, tx pgx.Tx, field string, emails []string) error {
+	if len(emails) == 0 {
+		return nil
 	}
-	if suppressed {
-		return &ErasedIdentifierError{Field: field}
+	if err := LockSubjectKeys(ctx, tx, nil, emails); err != nil {
+		return err
+	}
+	for _, email := range emails {
+		suppressed, err := EmailSuppressed(ctx, tx, email)
+		if err != nil {
+			return fmt.Errorf("storekit: checking an address against the erasure list: %w", err)
+		}
+		if suppressed {
+			return &ErasedIdentifierError{Field: field}
+		}
 	}
 	return nil
 }
@@ -129,8 +147,12 @@ func ChannelIdentitySuppressed(ctx context.Context, tx pgx.Tx, provider, channel
 	return suppressed, err
 }
 
-// RefuseErasedChannelIdentity is RefuseErasedEmail for a channel account.
+// RefuseErasedChannelIdentity is RefuseErasedEmail for a channel account,
+// under the same lock.
 func RefuseErasedChannelIdentity(ctx context.Context, tx pgx.Tx, field, provider, channelUserID string) error {
+	if err := LockChannelIdentities(ctx, tx, []ChannelIdentityKey{{Provider: provider, ChannelUserID: channelUserID}}); err != nil {
+		return err
+	}
 	suppressed, err := ChannelIdentitySuppressed(ctx, tx, provider, channelUserID)
 	if err != nil {
 		return fmt.Errorf("storekit: checking a channel account against the erasure list: %w", err)

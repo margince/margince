@@ -164,3 +164,41 @@ func TestAVCardImportSkipsAnErasedAddressAndLandsTheRest(t *testing.T) {
 		t.Errorf("the skip reason %q does not say why", results[0].Reason)
 	}
 }
+
+func TestAContactUpdateCannotAddAnErasedAddress(t *testing.T) {
+	e := erasedSubject(t)
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "Wieder Da",
+		Emails:   []contacts.ContactEmailInput{{Email: cleanAddress, EmailType: "work", IsPrimary: true}},
+		Source:   "manual",
+	})
+	if err != nil {
+		t.Fatalf("creating the contact: %v", err)
+	}
+	_, err = e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](ids.UUID(contact.Id)), contacts.UpdateContactInput{
+		Emails: []contacts.ContactEmailInput{
+			{Email: cleanAddress, EmailType: "work", IsPrimary: true},
+			{Email: erasedAddress, EmailType: "home", Position: 1},
+		},
+	})
+	if _, refused := errors.AsType[*storekit.ErasedIdentifierError](err); !refused {
+		t.Fatalf("adding the erased address answered %v, want the erasure refusal", err)
+	}
+}
+
+// The erased address second in the list: a check that reads only the first
+// address would let it through.
+func TestACreateRefusesAnErasedAddressThatIsNotTheFirst(t *testing.T) {
+	e := erasedSubject(t)
+	_, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "Wieder Da",
+		Emails: []contacts.ContactEmailInput{
+			{Email: cleanAddress, EmailType: "work", IsPrimary: true},
+			{Email: erasedAddress, EmailType: "home", Position: 1},
+		},
+		Source: "manual",
+	})
+	if _, refused := errors.AsType[*storekit.ErasedIdentifierError](err); !refused {
+		t.Fatalf("a create carrying the erased address second answered %v, want the erasure refusal", err)
+	}
+}

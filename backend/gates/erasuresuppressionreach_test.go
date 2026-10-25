@@ -27,11 +27,11 @@ import (
 // other child tables out.
 var storesIdentifier = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(contact_email|lead|contact_channel_identity)[\s(]`)
 
-// suppressionProbes are storekit's questions to the erasure list.
+// suppressionProbes are the storekit checks a writer must call. A bare
+// EmailSuppressed read does not count: it skips the eraser's lock.
 var suppressionProbes = map[string]bool{
-	"EmailSuppressed":             true,
-	"ChannelIdentitySuppressed":   true,
 	"RefuseErasedEmail":           true,
+	"RefuseErasedEmails":          true,
 	"RefuseErasedChannelIdentity": true,
 }
 
@@ -89,8 +89,8 @@ func TestEveryIdentifierWriterReachesTheSuppressionProbe(t *testing.T) {
 	for _, w := range writers {
 		reach := probeReach{funcs: packages[filepath.Dir(w.file)], visiting: map[*ast.FuncDecl]bool{}}
 		if !reach.guarded(w.fn) {
-			t.Errorf("%s: %s inserts into %s and no path to it asks the erasure list.\n"+
-				"Call storekit.RefuseErasedEmail or storekit.RefuseErasedChannelIdentity in the "+
+			t.Errorf("%s: %s inserts into %s and no path to it asks the erasure list under its lock.\n"+
+				"Call storekit.RefuseErasedEmail(s) or storekit.RefuseErasedChannelIdentity in the "+
 				"same transaction before the insert, or route the write through a writer that does "+
 				"(contacts.insertContactEmails, contacts.insertLeadRow, "+
 				"contacts.ResolveOrCreateChannelIdentity).", w.file, w.fn.Name.Name, w.table)
