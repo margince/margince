@@ -189,8 +189,9 @@ func ProvenSQL(alias string) string {
 }
 
 // LatestPrecisionSQL is the precision of the newest activity under alias that
-// filter admits, the row behind max(occurred_at), the later id on a tie. It is an
-// aggregate. An empty alias reads bare columns, and an empty filter admits every row.
+// filter admits, instant when an instant ties a day entry's noon. It is an
+// aggregate of two maxima, so no group is sorted, and null when filter admits no row.
+// An empty alias reads bare columns, and an empty filter admits every row.
 func LatestPrecisionSQL(alias, filter string) string {
 	column := func(name string) string {
 		if alias == "" {
@@ -198,12 +199,14 @@ func LatestPrecisionSQL(alias, filter string) string {
 		}
 		return alias + "." + name
 	}
-	newest := fmt.Sprintf(`array_agg(%s ORDER BY %s DESC, %s DESC)`,
-		column("occurred_precision"), column("occurred_at"), column("id"))
+	at, instant := column("occurred_at"), column("occurred_precision")+" = 'instant'"
+	admitted, newestInstant := "", " FILTER (WHERE "+instant+")"
 	if filter != "" {
-		newest += " FILTER (WHERE " + filter + ")"
+		admitted = " FILTER (WHERE " + filter + ")"
+		newestInstant = " FILTER (WHERE " + instant + " AND (" + filter + "))"
 	}
-	return "(" + newest + ")[1]"
+	return fmt.Sprintf(`(CASE WHEN max(%[1]s)%[2]s = max(%[1]s)%[3]s THEN 'instant'
+		WHEN max(%[1]s)%[3]s IS NOT NULL THEN 'day' END)`, at, newestInstant, admitted)
 }
 
 // dateEndSQL is when the date the day entry under alias names ends in the
