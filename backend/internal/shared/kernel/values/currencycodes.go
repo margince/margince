@@ -52,8 +52,11 @@ func RequireAssignableCurrency(s string) error {
 	if AssignableCurrency(s) {
 		return nil
 	}
-	return &ParseError{Field: currencyField, Code: "currency_unassigned",
-		Message: "currency must be an assigned ISO-4217 code, such as EUR"}
+	return &ParseError{
+		Field:   currencyField,
+		Code:    "currency_unassigned",
+		Message: "currency must be an assigned ISO-4217 code, such as EUR",
+	}
 }
 
 // AssignedCurrencies lists the assignable codes in order, for the gate that

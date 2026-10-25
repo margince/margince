@@ -34,8 +34,11 @@ type Money struct {
 
 func NewMoney(amountMinor int64, currency string) (Money, error) {
 	if !ValidCurrency(currency) {
-		return Money{}, &ParseError{Field: currencyField, Code: "currency_malformed",
-			Message: "currency is the three-letter ISO-4217 code, uppercase"}
+		return Money{}, &ParseError{
+			Field:   currencyField,
+			Code:    "currency_malformed",
+			Message: "currency is the three-letter ISO-4217 code, uppercase",
+		}
 	}
 	return Money{amountMinor: amountMinor, currency: currency}, nil
 }
@@ -48,8 +51,11 @@ func (m Money) IsZero() bool       { return m == Money{} }
 // a number (P11); the caller converts explicitly or errors out.
 func (m Money) Add(o Money) (Money, error) {
 	if m.currency != o.currency {
-		return Money{}, &ParseError{Field: currencyField, Code: "currency_mismatch",
-			Message: "cannot add " + o.currency + " to " + m.currency + " without an explicit conversion"}
+		return Money{}, &ParseError{
+			Field:   currencyField,
+			Code:    "currency_mismatch",
+			Message: "cannot add " + o.currency + " to " + m.currency + " without an explicit conversion",
+		}
 	}
 	return Money{amountMinor: m.amountMinor + o.amountMinor, currency: m.currency}, nil
 }
