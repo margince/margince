@@ -223,10 +223,12 @@ func scopeToWire(s ResolvedScope) crmcontracts.AnalyticsScope {
 }
 
 // markAssertable says whether a forecast call or a share may name this scope.
-// It asks what the write routes ask: the forecast read and create grants, then
-// the lens rule ResolveAssertionScope applies. No write accepts managed_teams.
+// It asks what the write routes ask: a seat that may write, the forecast read and
+// create grants, then the lens rule ResolveAssertionScope applies. No write
+// accepts managed_teams.
 func markAssertable(ctx context.Context, p principal.Principal, scope *crmcontracts.AnalyticsScope) {
-	assertable := auth.Allows(ctx, objectForecast, principal.ActionRead) &&
+	assertable := p.SeatType.CanMutate() &&
+		auth.Allows(ctx, objectForecast, principal.ActionRead) &&
 		auth.Allows(ctx, objectForecast, principal.ActionCreate) &&
 		scope.Kind != crmcontracts.AnalyticsScopeKindManagedTeams
 	if assertable {

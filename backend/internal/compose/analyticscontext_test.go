@@ -19,16 +19,19 @@ func forecastGrant(grant principal.ObjectGrant) map[string]principal.ObjectGrant
 func TestMarkAssertableNeedsTheForecastGrants(t *testing.T) {
 	cases := []struct {
 		name  string
+		seat  principal.SeatType
 		grant map[string]principal.ObjectGrant
 		want  bool
 	}{
-		{"read and create", forecastGrant(principal.ObjectGrant{Read: true, Create: true}), true},
-		{"no forecast read", forecastGrant(principal.ObjectGrant{Create: true}), false},
-		{"no forecast create", forecastGrant(principal.ObjectGrant{Read: true}), false},
+		{"read and create", principal.SeatFull, forecastGrant(principal.ObjectGrant{Read: true, Create: true}), true},
+		{"no forecast read", principal.SeatFull, forecastGrant(principal.ObjectGrant{Create: true}), false},
+		{"no forecast create", principal.SeatFull, forecastGrant(principal.ObjectGrant{Read: true}), false},
+		{"read seat with both grants", principal.SeatRead, forecastGrant(principal.ObjectGrant{Read: true, Create: true}), false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			actor := actorWithScope(principal.RowScopeOwn)
+			actor.SeatType = tc.seat
 			actor.Permissions.Objects = tc.grant
 			ctx := principal.WithActor(context.Background(), actor)
 			scope := crmcontracts.AnalyticsScope{
@@ -68,6 +71,7 @@ func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			tc.actor.SeatType = principal.SeatFull
 			tc.actor.Permissions.Objects = forecastGrant(principal.ObjectGrant{Read: true, Create: true})
 			ctx := principal.WithActor(context.Background(), tc.actor)
 			markAssertable(ctx, tc.actor, &tc.scope)
