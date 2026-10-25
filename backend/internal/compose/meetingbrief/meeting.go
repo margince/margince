@@ -213,7 +213,7 @@ const meetingQuery = `
 	                    FROM activity pa
 	                    JOIN activity_participant pp ON pp.activity_id = pa.id
 	                    WHERE pp.contact_id = p.id AND pa.archived_at IS NULL
-	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at
+	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at -- occurred_at raw: a touch before this meeting, an ordering of rows
 	                      AND pa.audience = 'workspace'
 	                      AND %[4]s
 	                      -- Workspace-visible messages only. A brief is read by

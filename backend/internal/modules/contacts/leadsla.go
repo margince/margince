@@ -265,7 +265,8 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 		       EXISTS (SELECT 1 FROM activity_link li JOIN activity ai ON ai.id = li.activity_id
 		               WHERE li.lead_id = $1 AND ai.direction = 'inbound'
 		                 AND ai.archived_at IS NULL AND `+auth.ActivityAvailableClause("ai")+`
-		                 AND ai.occurred_at < a.occurred_at),
+		                 AND ai.occurred_at < a.occurred_at -- occurred_at raw: an inbound before the touch, an ordering of rows
+		               ),
 		       a.kind, coalesce(a.meeting_status, ''), a.source
 		FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		WHERE l.lead_id = $1 AND a.archived_at IS NULL

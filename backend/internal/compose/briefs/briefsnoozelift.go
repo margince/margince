@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // briefSnoozeLiftedSQL renders the predicate as a boolean expression over five
@@ -57,8 +58,8 @@ func briefSnoozeLiftedSQL(deal, condition, ref, setDown, asOf string) string {
 			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = %s
 			WHERE a.archived_at IS NULL
 			  AND a.direction = 'inbound'
-			  AND a.occurred_at > %s
-			  AND a.occurred_at <= %s)
+			  AND a.occurred_at > %s -- occurred_at raw: since the item was set down, a window's lower edge
+			  AND %s)
 		-- The meeting is over once it has ENDED (storekit.MeetingIsOverSQL).
 		-- Lifting at occurred_at would put the work back while the rep is
 		-- still in the room, the one moment they cannot act on it.
@@ -75,5 +76,5 @@ func briefSnoozeLiftedSQL(deal, condition, ref, setDown, asOf string) string {
 			WHERE m.id = %s AND m.kind = '%s'
 			  AND %s)
 		ELSE false
-	END)`, condition, deal, setDown, asOf, ref, activities.KindMeeting, storekit.MeetingIsOverSQL("m", asOf))
+	END)`, condition, deal, setDown, occurredday.HappenedSQL("a", asOf), ref, activities.KindMeeting, storekit.MeetingIsOverSQL("m", asOf))
 }

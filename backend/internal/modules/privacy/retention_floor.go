@@ -95,7 +95,7 @@ func handelsbriefShielded(currentArg, carriedArg int) string {
 // With no carried floor the second arm is NULL, which GREATEST ignores.
 func floorWindowEnd(currentArg, carriedArg int) string {
 	return fmt.Sprintf(`GREATEST(%s,
-		           CASE WHEN a.occurred_at < ($%[2]d::jsonb->>'before')::timestamptz
+		           CASE WHEN a.occurred_at < ($%[2]d::jsonb->>'before')::timestamptz -- occurred_at raw: before the floor changed, a retention age
 		                  OR a.created_at < ($%[2]d::jsonb->>'before')::timestamptz THEN %[3]s END)`,
 		windowEndUnder(currentArg), carriedArg, windowEndUnder(carriedArg))
 }

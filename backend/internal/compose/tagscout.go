@@ -138,8 +138,9 @@ func tagScoutRankedSQL() string {
 	candidate := func(entityType string) string {
 		return `(ev.entity_type = '` + entityType + `' AND ` +
 			collections.SuggestableTagClause(entityType, "ev.tag_id", "ev.record") +
-			` AND ev.occurred_at > coalesce(` + collections.TagSuggestionFloorExpr(entityType, "ev.tag_id", "ev.record") +
-			`, '-infinity'::timestamptz))`
+			` AND coalesce(` + collections.TagSuggestionFloorExpr(entityType, "ev.tag_id", "ev.record") +
+			`, '-infinity'::timestamptz) < ev.occurred_at -- occurred_at raw: past the suggestion floor, a window's lower edge
+			)`
 	}
 	return `ranked AS (
 	  SELECT ev.*, row_number() OVER (PARTITION BY ev.tag_id, ev.entity_type, ev.record

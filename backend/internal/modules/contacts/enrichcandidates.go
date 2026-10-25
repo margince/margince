@@ -44,7 +44,7 @@ var signatureCandidateSQL = `
 			-- asking. The watermark keeps that affordable: NEW mail, not a
 			-- missing answer, makes somebody a candidate.
 			WHERE p.archived_at IS NULL AND p.merged_into_id IS NULL
-			  AND (st.last_activity_at IS NULL OR a.occurred_at > st.last_activity_at)
+			  AND (st.last_activity_at IS NULL OR a.occurred_at > st.last_activity_at) -- occurred_at raw: new mail past the watermark
 			-- Freshest mail first. The pass is capped and runs within minutes of
 			-- a message arriving, so the contact who just wrote is the one a rep
 			-- is about to look at.

@@ -148,7 +148,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 			      ELSE NOT EXISTS (
 				SELECT 1 FROM activity a
 				JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
-				WHERE a.archived_at IS NULL AND a.occurred_at > bi.state_at
+				WHERE a.archived_at IS NULL AND a.occurred_at > bi.state_at -- occurred_at raw: since the dismissal, a window's lower edge
 				  -- Not after this instant. A future-dated activity has not
 				  -- happened, so treating it as "the deal moved" brings a
 				  -- dismissed deal back for something still to come — and the

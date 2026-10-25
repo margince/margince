@@ -106,7 +106,8 @@ func MeetingAheadSQL(alias string) string {
 		WHERE ahead_link.deal_id = ` + deal + `.id AND ahead.archived_at IS NULL
 		  AND ahead.kind = 'meeting' AND ` + relstrength.NotCalledOffSQL("ahead") +
 		auth.OriginIsEngagement("ahead") + ` AND ahead.audience = 'workspace'
-		  AND ahead.occurred_at > coalesce(` + deal + `.last_activity_at, '-infinity'))`
+		  AND coalesce(` + deal + `.last_activity_at, '-infinity') < ahead.occurred_at -- occurred_at raw: the stored clock holds an occurred_at
+		)`
 }
 
 // LastActivityDaySQL says the activity the deal's stored clock names is a day

@@ -139,7 +139,8 @@ const priorMeetingsQuery = `
 	FROM activity m
 	JOIN activity_participant mp ON mp.activity_id = m.id
 	WHERE m.kind = 'meeting' AND m.archived_at IS NULL
-	  AND m.id <> $%[3]d AND m.occurred_at < $%[4]d AND %[5]s
+	  AND m.id <> $%[3]d AND %[5]s
+	  AND m.occurred_at < $%[4]d -- occurred_at raw: the room's start, the window's edge
 	  AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
 	  AND mp.contact_id = ANY($%[6]d)
 	  AND %[1]s

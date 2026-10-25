@@ -415,7 +415,7 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 			  AND back.thread_key = a.thread_key
 			  AND back.kind = a.kind
 			  AND back.channel_provider IS NOT DISTINCT FROM a.channel_provider
-			  AND back.occurred_at > mine.set_at
+			  AND back.occurred_at > mine.set_at -- occurred_at raw: since the item was set down, a window's lower edge
 			  AND %[5]s)
 		-- The rule the brief's queue applies (storekit.MeetingIsOverSQL), and
 		-- kind = 'meeting' is what makes reopen_ref mean a meeting rather than
@@ -469,7 +469,7 @@ func bookedMeetingSQL(asOf, discover string) string {
 	           AND (` + discover + `)
 	           AND coalesce(booked.meeting_status, '') NOT IN ('canceled', 'no_show')
 	           AND ` + occurredday.EndSQL("booked") + ` > ` + asOf + `
-	           AND (booked.created_at > a.occurred_at
+	           AND (booked.created_at > a.occurred_at -- occurred_at raw: booked after the ask, an ordering of rows
 	             OR EXISTS (SELECT 1 FROM audit_log booked_move
 	                 WHERE booked_move.entity_type = 'activity'
 	                   AND booked_move.entity_id = booked.id
@@ -479,7 +479,7 @@ func bookedMeetingSQL(asOf, discover string) string {
 	                   -- length-only edit included.
 	                   AND (booked_move.before ->> 'occurred_at')
 	                       IS DISTINCT FROM (booked_move.after ->> 'occurred_at')
-	                   AND booked_move.occurred_at > a.occurred_at
+	                   AND booked_move.occurred_at > a.occurred_at -- occurred_at raw: moved after the ask, an ordering of rows
 	                   AND booked_move.occurred_at <= ` + asOf + `))
 	        OFFSET 0) booked
 	  WHERE booked_asker.activity_id = a.id AND booked_asker.role = 'from'

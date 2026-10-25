@@ -25,6 +25,7 @@ package compose
 // numerator can exceed its denominator is not a rate.
 
 import (
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -55,47 +56,47 @@ const (
 	// them here would answer a question about calendars rather than about work.
 	whereHeldMeeting = "t.kind = 'meeting' AND t.meeting_status = 'held' AND t.archived_at IS NULL"
 
-	// joinAcceptedHandoff is the anchor.
-	//
-	// LATERAL with LIMIT 1 rather than a plain join, because the join CAN
-	// multiply: one prospect may be handed on more than once — recycled and
-	// resubmitted is an ordinary path — and a meeting counted once per handoff
-	// would inflate the numerator above the denominator. The lateral takes the
-	// EARLIEST acceptance, so a prospect accepted, lost, and handed on again a
-	// year later credits the meeting that preceded the first acceptance rather
-	// than whichever one happens to sort last.
-	//
-	// LEFT, because a meeting that converted into nothing is the other half of
-	// the rate. An inner join would silently answer "what share of converted
-	// meetings converted", which is 100% and tells nobody anything.
-	//
-	// The join reaches the prospect through activity_link, which carries both a
-	// lead_id and a contact_id — the same two subjects a handoff names, so the
-	// two shapes meet without a translation step in between.
-	// The select list carries h.id ALONE. The acceptance's deal_id is the
-	// tempting thing to add — it names what the meeting became — but this
-	// report never reads it, and a deal reference handed back from a join is a
-	// row-scoped record served without its scope: the meeting is discoverable
-	// to its host, the deal need not be, and
-	// TestEveryComposeReadOfARecordReferenceAppliesItsRowScope refuses the pair.
-	// A report that wants the deal has to walk the deal's own scope to get it.
-	joinAcceptedHandoff = `LEFT JOIN LATERAL (
-		SELECT h.id, h.decided_at
-		  FROM sdr_handoff h
-		  JOIN activity_link al ON al.activity_id = t.id
-		 WHERE h.status = 'accepted'
-		   AND (h.lead_id = al.lead_id OR h.contact_id = al.contact_id)
-		   AND h.decided_at >= t.occurred_at
-		 ORDER BY h.decided_at
-		 LIMIT 1
-	) hoff ON true`
-
 	// The acceptance must come AFTER the meeting, which the join's own predicate
 	// says. A prospect accepted in March and met in June was not converted by
 	// that June meeting, and without the ordering the report would credit a
 	// meeting for an opportunity that already existed when it happened.
 	colBecameOpportunity = "(hoff.id IS NOT NULL)"
 )
+
+// joinAcceptedHandoff is the anchor.
+//
+// LATERAL with LIMIT 1 rather than a plain join, because the join CAN
+// multiply: one prospect may be handed on more than once — recycled and
+// resubmitted is an ordinary path — and a meeting counted once per handoff
+// would inflate the numerator above the denominator. The lateral takes the
+// EARLIEST acceptance, so a prospect accepted, lost, and handed on again a
+// year later credits the meeting that preceded the first acceptance rather
+// than whichever one happens to sort last.
+//
+// LEFT, because a meeting that converted into nothing is the other half of
+// the rate. An inner join would silently answer "what share of converted
+// meetings converted", which is 100% and tells nobody anything.
+//
+// The join reaches the prospect through activity_link, which carries both a
+// lead_id and a contact_id — the same two subjects a handoff names, so the
+// two shapes meet without a translation step in between.
+// The select list carries h.id ALONE. The acceptance's deal_id is the
+// tempting thing to add — it names what the meeting became — but this
+// report never reads it, and a deal reference handed back from a join is a
+// row-scoped record served without its scope: the meeting is discoverable
+// to its host, the deal need not be, and
+// TestEveryComposeReadOfARecordReferenceAppliesItsRowScope refuses the pair.
+// A report that wants the deal has to walk the deal's own scope to get it.
+var joinAcceptedHandoff = `LEFT JOIN LATERAL (
+	SELECT h.id, h.decided_at
+	  FROM sdr_handoff h
+	  JOIN activity_link al ON al.activity_id = t.id
+	 WHERE h.status = 'accepted'
+	   AND (h.lead_id = al.lead_id OR h.contact_id = al.contact_id)
+	   AND h.decided_at >= ` + occurredday.StartSQL("t") + `
+	 ORDER BY h.decided_at
+	 LIMIT 1
+) hoff ON true`
 
 // meetingConversionSpec is the held-meeting-to-accepted-opportunity key.
 //

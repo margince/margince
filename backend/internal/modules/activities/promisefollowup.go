@@ -76,7 +76,8 @@ func PromiseFollowUpsTx(ctx context.Context, tx pgx.Tx, promises []PromiseBasis,
        AND a.channel_provider IS NOT DISTINCT FROM src.channel_provider
        AND a.direction = 'outbound' AND a.counterparty_outbound_attested AND NOT a.bulk_mail_attested
        AND a.archived_at IS NULL
-       AND a.occurred_at > src.occurred_at AND %[2]s
+       AND a.occurred_at > src.occurred_at -- occurred_at raw: a later mail in the thread, both instants
+       AND %[2]s
        AND %[3]s
        AND %[4]s
      ORDER BY a.occurred_at DESC, a.id DESC

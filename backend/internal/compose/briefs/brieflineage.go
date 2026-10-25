@@ -116,7 +116,7 @@ func briefLineage(
 		  JOIN activity a ON a.id = l.activity_id
 		 WHERE m.state = 'dismissed'
 		   AND a.archived_at IS NULL
-		   AND a.occurred_at > m.state_at
+		   AND a.occurred_at > m.state_at -- occurred_at raw: since the dismissal, a window's lower edge
 		   -- Not after the run's own instant. A future-dated activity has not
 		   -- happened yet, and the candidate query bounds itself the same way,
 		   -- so the two agree about which deals are returning — disagreement

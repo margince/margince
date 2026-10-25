@@ -280,7 +280,7 @@ var awaitingRepliesSQL = `
 	                      AND later.archived_at IS NULL
 	                      AND %[7]s
 	                      AND %[8]s
-	                      AND later.occurred_at > a.occurred_at
+	                      AND later.occurred_at > a.occurred_at -- occurred_at raw: heard after the mail, an ordering of rows
 	                      AND ` + occurredday.BegunSQL("later", "$%[1]d") + `)
 	   -- A customer: a lead, someone at a prospect or customer company, or a
 	   -- record with an open deal or a lead being worked.

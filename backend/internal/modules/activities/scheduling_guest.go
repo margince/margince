@@ -33,7 +33,8 @@ func (s *Store) ResolveMeetingToken(ctx context.Context, token string) (ids.UUID
 		args := schedulingArgs{}
 		query := `SELECT i.activity_id,i.host_user_id FROM meeting_invitation i JOIN activity a ON a.id=i.activity_id
    WHERE i.management_hash=` + args.add(hex.EncodeToString(sum[:])) + ` AND a.archived_at IS NULL
-   AND a.occurred_at>` + args.add(s.now().Add(-30*24*time.Hour))
+   AND ` + args.add(s.now().Add(-30*24*time.Hour)) + `<a.occurred_at -- occurred_at raw: the thirty days a guest may manage it
+`
 		return tx.QueryRow(ctx, query, args...).Scan(&id, &host)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {

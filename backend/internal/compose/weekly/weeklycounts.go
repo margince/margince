@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -250,9 +251,9 @@ func countWeekMeetings(
 		        SELECT 1 FROM activity task
 		         WHERE task.source_activity_id = m.id AND task.kind = 'task'
 		           AND task.archived_at IS NULL
-		           AND task.created_at >= m.occurred_at
+		           AND task.created_at >= %[6]s
 		           AND task.created_at < $%[2]d AND (%[5]s)))`,
-		startPos, endPos, hostPos, scope, taskScope), args...).
+		startPos, endPos, hostPos, scope, taskScope, occurredday.StartSQL("m")), args...).
 		Scan(&held, &withNextStep)
 	if err != nil {
 		return 0, 0, fmt.Errorf("weekly: counting the week's meetings: %w", err)

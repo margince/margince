@@ -76,7 +76,7 @@ func correspondedBeforeTx(ctx context.Context, tx pgx.Tx, addresses []string, be
 	// The LIMIT 2 is why this is safe on a high-volume address: one outbound
 	// versus more than one is the only distinction writesTo draws.
 	sent, err := outboundToTx(ctx, tx, `
-		  AND ($2::timestamptz IS NULL OR occurred_at < $2)
+		  AND ($2::timestamptz IS NULL OR occurred_at < $2) -- occurred_at raw: mail sent before the bound, an instant
 		 LIMIT 2`, addresses, bound)
 	if err != nil {
 		return false, err
@@ -406,7 +406,7 @@ func metInPersonTx(
 		          -- are the new holder's, meetings before it are not anybody's
 		          -- to inherit. An address that never changed hands has no such
 		          -- row and is unaffected.
-		          (lower(p.address) = $1 AND a.occurred_at > COALESCE(
+		          (lower(p.address) = $1 AND a.occurred_at > COALESCE( -- occurred_at raw: after the address changed hands
 		             (SELECT max(pe.archived_at) FROM contact_email pe
 		               WHERE lower(pe.email) = $1 AND pe.archived_at IS NOT NULL),
 		             '-infinity'::timestamptz))
