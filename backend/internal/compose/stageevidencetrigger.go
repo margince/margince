@@ -358,7 +358,7 @@ func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids
 	}
 	// A meeting in the future has not been held. The capture path records
 	// scheduled meetings too, and one settles event_held only once it happened.
-	zone, err := installationZone(ctx, t.pool)
+	zone, err := t.installationZone(ctx)
 	if err != nil {
 		return err
 	}
@@ -415,6 +415,17 @@ func (t *StageEvidenceTrigger) activityFacts(
 		return err
 	})
 	return out, err
+}
+
+// installationZone is the zone that says which date is today.
+func (t *StageEvidenceTrigger) installationZone(ctx context.Context) (*time.Location, error) {
+	var zone *time.Location
+	err := pgx.BeginFunc(ctx, t.pool, func(tx pgx.Tx) error {
+		var err error
+		zone, err = identity.ZoneAppliedTx(ctx, tx)
+		return err
+	})
+	return zone, err
 }
 
 // dealOfContract answers the deal a contract is bound to.
