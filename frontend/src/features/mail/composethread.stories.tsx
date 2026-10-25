@@ -109,7 +109,8 @@ export const DraftedBesideThread: StoryObj = {
     return <SelectedReplyComposer />;
   },
   play: async () => {
-    const dialog = within(await screen.findByRole("dialog"));
+    const frame = await screen.findByRole("dialog");
+    const dialog = within(frame);
     await userEvent.click(
       await dialog.findByRole("button", { name: "Draft reply" }),
     );
@@ -125,18 +126,36 @@ export const DraftedBesideThread: StoryObj = {
     );
     await expect(body.top).toBeGreaterThanOrEqual(0);
     const toolbar = dialog
-      .getByRole("button", { name: "Bold" })
+      .getByRole("toolbar", { name: "Body" })
       .getBoundingClientRect();
     await expect(body.bottom).toBeLessThanOrEqual(toolbar.top);
-    // The marks share the foot with Send, beside it or wrapped under it.
-    const apart =
-      toolbar.right <= send.left ||
-      send.right <= toolbar.left ||
-      toolbar.bottom <= send.top ||
-      send.bottom <= toolbar.top;
-    await expect(apart).toBe(true);
-    await expect(toolbar.bottom).toBeLessThanOrEqual(window.innerHeight);
-    await expect(send.bottom).toBeLessThanOrEqual(window.innerHeight);
+    // The window clips what passes its edge, so a page scroll check cannot see
+    // a foot control pushed out of it.
+    const edge = frame.getBoundingClientRect();
+    const marks = [
+      toolbar,
+      dialog.getByRole("button", { name: "Attach" }).getBoundingClientRect(),
+    ];
+    const sending = [
+      send,
+      dialog
+        .getByRole("button", { name: "Other ways to send" })
+        .getBoundingClientRect(),
+    ];
+    for (const control of [...marks, ...sending]) {
+      await expect(control.right).toBeLessThanOrEqual(edge.right);
+      await expect(control.bottom).toBeLessThanOrEqual(window.innerHeight);
+    }
+    for (const mark of marks) {
+      for (const sendControl of sending) {
+        const apart =
+          mark.right <= sendControl.left ||
+          sendControl.right <= mark.left ||
+          mark.bottom <= sendControl.top ||
+          sendControl.bottom <= mark.top;
+        await expect(apart).toBe(true);
+      }
+    }
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       window.innerWidth,
     );

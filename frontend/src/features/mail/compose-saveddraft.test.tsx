@@ -201,6 +201,7 @@ describe("a saved draft", () => {
 
     expect(await screen.findByText(/The draft was not saved/)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
+    expect(messageText("Body")).toBe("Finished after lunch");
   });
 
   it("saves over the version it restored and closes", async () => {
