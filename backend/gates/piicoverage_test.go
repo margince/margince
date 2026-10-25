@@ -527,6 +527,7 @@ var sarAssemblyFiles = []string{
 // erasure's writes as disclosures, which is the confusion the list was made to
 // avoid in the first place.
 var sarReachedButNotAssembly = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/erasuretally.go":      "reached because the walk follows any call named Query or QueryRow to the methods tallyTx declares. The SAR never runs on a tallyTx; the file passes an erasure arm's statements through and counts them",
 	"internal/modules/privacy/scheduledsends.go":    "reached because sarmessages.go calls loweredAddresses, a string helper living here. Its own SQL is the queued-send scrub's, on the erasure path",
 	"internal/modules/privacy/erasure_approvals.go": "reached because sarmessages.go calls addressPatterns, likewise. Its SQL erases staged proposals and discloses nothing",
 	"internal/modules/privacy/erasure_channels.go":  "reached because sarjudgements.go calls channelIdentityPairs, a pairing helper living here. Its SQL reads and erases the subject's channel identities on the erasure path",

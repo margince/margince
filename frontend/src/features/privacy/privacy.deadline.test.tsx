@@ -70,6 +70,7 @@ function stub(): Sent[] {
               due_at: COMPUTED.due_at,
               due_rule: "gdpr",
               due_overridden: false,
+              dispute_open: false,
               created_at: "2026-07-15T00:00:00Z",
             },
             201,

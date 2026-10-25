@@ -74,7 +74,7 @@ func TestFulfillingAnErasureDSRExecutesTheErasure(t *testing.T) {
 		t.Fatalf("create DSR → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased per Art. 17",
+		"status": "fulfilled", "resolution": "erased per Art. 17", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfill DSR → %d", status)
 	}

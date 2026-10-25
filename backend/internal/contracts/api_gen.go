@@ -18982,6 +18982,33 @@ func (e UpdateContractRequestValueBasis) Valid() bool {
 	}
 }
 
+// Defines values for UpdateDataSubjectRequestIdentityCheck.
+const (
+	UpdateDataSubjectRequestIdentityCheckAddressOnFile UpdateDataSubjectRequestIdentityCheck = "address_on_file"
+	UpdateDataSubjectRequestIdentityCheckConfirmLink   UpdateDataSubjectRequestIdentityCheck = "confirm_link"
+	UpdateDataSubjectRequestIdentityCheckIdDocument    UpdateDataSubjectRequestIdentityCheck = "id_document"
+	UpdateDataSubjectRequestIdentityCheckInPerson      UpdateDataSubjectRequestIdentityCheck = "in_person"
+	UpdateDataSubjectRequestIdentityCheckNotVerified   UpdateDataSubjectRequestIdentityCheck = "not_verified"
+)
+
+// Valid indicates whether the value is a known member of the UpdateDataSubjectRequestIdentityCheck enum.
+func (e UpdateDataSubjectRequestIdentityCheck) Valid() bool {
+	switch e {
+	case UpdateDataSubjectRequestIdentityCheckAddressOnFile:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckConfirmLink:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckIdDocument:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckInPerson:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckNotVerified:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateDataSubjectRequestStatus.
 const (
 	UpdateDataSubjectRequestStatusFulfilled  UpdateDataSubjectRequestStatus = "fulfilled"
@@ -20771,6 +20798,7 @@ const (
 	WorklistComparisonComparatorOrder           WorklistComparisonComparator = "order"
 	WorklistComparisonComparatorPin             WorklistComparisonComparator = "pin"
 	WorklistComparisonComparatorRelationship    WorklistComparisonComparator = "relationship"
+	WorklistComparisonComparatorReminder        WorklistComparisonComparator = "reminder"
 	WorklistComparisonComparatorWaitingDays     WorklistComparisonComparator = "waiting_days"
 )
 
@@ -20792,6 +20820,8 @@ func (e WorklistComparisonComparator) Valid() bool {
 	case WorklistComparisonComparatorPin:
 		return true
 	case WorklistComparisonComparatorRelationship:
+		return true
+	case WorklistComparisonComparatorReminder:
 		return true
 	case WorklistComparisonComparatorWaitingDays:
 		return true
@@ -21512,6 +21542,7 @@ const (
 	WorklistReasonKindPromised           WorklistReasonKind = "promised"
 	WorklistReasonKindQuietDays          WorklistReasonKind = "quiet_days"
 	WorklistReasonKindReadOnly           WorklistReasonKind = "read_only"
+	WorklistReasonKindReminderDue        WorklistReasonKind = "reminder_due"
 	WorklistReasonKindRepeatedFailure    WorklistReasonKind = "repeated_failure"
 	WorklistReasonKindResponseDueSoon    WorklistReasonKind = "response_due_soon"
 	WorklistReasonKindResponseOverdue    WorklistReasonKind = "response_overdue"
@@ -21594,6 +21625,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindQuietDays:
 		return true
 	case WorklistReasonKindReadOnly:
+		return true
+	case WorklistReasonKindReminderDue:
 		return true
 	case WorklistReasonKindRepeatedFailure:
 		return true
@@ -24941,7 +24974,7 @@ type Activity struct {
 	OffersEmail bool                    `json:"offers_email"`
 	Raw         *map[string]interface{} `json:"raw,omitempty"`
 
-	// RemindAt Task only. Reminder-fire time; the B-E16.6 scan reads tasks whose reminder is due, not-done, and un-archived.
+	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Source   string     `json:"source"`
 
@@ -28550,6 +28583,9 @@ type AttentionItem struct {
 	// The band travels rather than the raw score, because a number between 0 and 100
 	// invites a client to draw a precision the §4 arithmetic does not claim.
 	Relationship *AttentionRelationshipFacts `json:"relationship,omitempty"`
+
+	// ReminderDue Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise.
+	ReminderDue *bool `json:"reminder_due,omitempty"`
 
 	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve.
 	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
@@ -35949,7 +35985,7 @@ type CreateActivityRequest struct {
 	// Raw Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text.
 	Raw *map[string]interface{} `json:"raw,omitempty"`
 
-	// RemindAt Task only.
+	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
@@ -37057,6 +37093,12 @@ type DataCoverage struct {
 type DataSubjectRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	CreatedAt  time.Time           `json:"created_at"`
+
+	// DisputeOpen True while a complaint or dispute about this request is open. The proof of the
+	// answer is kept until 1 January of the fourth year after the year it was answered in,
+	// with both the year and that date read in the installation's time zone
+	// (`installation.timezone`), and past that date until this is false again.
+	DisputeOpen bool `json:"dispute_open"`
 
 	// DueAt Statutory deadline (e.g. 30 days).
 	DueAt time.Time `json:"due_at"`
@@ -38681,7 +38723,10 @@ type EmailSummary struct {
 	// would branch on and never reach.
 	DisplayStatus EmailAccessStatus `json:"display_status"`
 
-	// Move Whose move it is, derived from what this reader can see of the thread. `none` when
+	// Move Whose move it is, derived from what this reader can see of the thread.
+	// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+	// that is still the last word with them. A calendar invitation, update, cancellation
+	// or answer is `none` unless someone confirmed it asks us something. `none` also when
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
 	Move       EmailSummaryMove `json:"move"`
 	OccurredAt time.Time        `json:"occurred_at"`
@@ -38704,7 +38749,10 @@ type EmailSummary struct {
 // EmailSummaryDirection defines model for EmailSummary.Direction.
 type EmailSummaryDirection string
 
-// EmailSummaryMove Whose move it is, derived from what this reader can see of the thread. `none` when
+// EmailSummaryMove Whose move it is, derived from what this reader can see of the thread.
+// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+// that is still the last word with them. A calendar invitation, update, cancellation
+// or answer is `none` unless someone confirmed it asks us something. `none` also when
 // the question cannot be answered honestly — an unanswerable move is not a claim.
 type EmailSummaryMove string
 
@@ -51882,7 +51930,7 @@ type UpdateActivityRequest struct {
 	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
-	// RemindAt Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.
+	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt             *time.Time             `json:"remind_at,omitempty"`
 	Subject              *string                `json:"subject,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -52208,10 +52256,40 @@ type UpdateDataSubjectRequest struct {
 	// AssigneeId null hands the request back to the unassigned pool.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
+	// DisputeOpen Opens (true) or closes (false) a complaint or dispute about the request. Any status takes it.
+	DisputeOpen *bool `json:"dispute_open,omitempty"`
+
+	// IdentityCheck How the requester's identity was checked, recorded in the proof the request keeps once
+	// it closes. Required on the patch that closes a request, except one that arrived through
+	// the subject's own confirm link, where the link is the check. `confirm_link`: the
+	// subject used a link mailed to their address. `address_on_file`: the request came from,
+	// or was confirmed at, an address the record already held. `id_document`: an identity
+	// document was seen. `in_person`: the requester was known in person. `not_verified`: the
+	// identity could not be checked. A request closes with `not_verified` only as `rejected`;
+	// a patch that fulfils with it is refused with 422 before anything is erased. Ignored on
+	// any other patch.
+	IdentityCheck *UpdateDataSubjectRequestIdentityCheck `json:"identity_check,omitempty"`
+
+	// RequesterEmail The address the request came from, recorded in the proof. Optional: when absent, the
+	// proof takes the address the confirm link was mailed to, or the subject reference when it
+	// is an address. Ignored on a patch that does not close the request.
+	RequesterEmail *openapi_types.Email `json:"requester_email,omitempty"`
+
 	// Resolution A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.
 	Resolution *string                         `json:"resolution,omitempty"`
 	Status     *UpdateDataSubjectRequestStatus `json:"status,omitempty"`
 }
+
+// UpdateDataSubjectRequestIdentityCheck How the requester's identity was checked, recorded in the proof the request keeps once
+// it closes. Required on the patch that closes a request, except one that arrived through
+// the subject's own confirm link, where the link is the check. `confirm_link`: the
+// subject used a link mailed to their address. `address_on_file`: the request came from,
+// or was confirmed at, an address the record already held. `id_document`: an identity
+// document was seen. `in_person`: the requester was known in person. `not_verified`: the
+// identity could not be checked. A request closes with `not_verified` only as `rejected`;
+// a patch that fulfils with it is refused with 422 before anything is erased. Ignored on
+// any other patch.
+type UpdateDataSubjectRequestIdentityCheck string
 
 // UpdateDataSubjectRequestStatus defines model for UpdateDataSubjectRequest.Status.
 type UpdateDataSubjectRequestStatus string
@@ -54630,7 +54708,8 @@ type WorklistCompanyFacts struct {
 // Absent on the last row of the page, which has nothing below it to beat.
 type WorklistComparison struct {
 	// Comparator What decided it. `order` means every comparator tied and the ids broke it, which the
-	// client renders as no reason at all.
+	// client renders as no reason at all. `reminder` means this row is a due reminder and
+	// the one below is not.
 	//
 	// `crowded` means the row below is one of many of its kind: past a lead group, further
 	// rows of the same source sort under the other kinds of work so one noisy lane cannot own
@@ -54651,7 +54730,8 @@ type WorklistComparison struct {
 }
 
 // WorklistComparisonComparator What decided it. `order` means every comparator tied and the ids broke it, which the
-// client renders as no reason at all.
+// client renders as no reason at all. `reminder` means this row is a due reminder and
+// the one below is not.
 //
 // `crowded` means the row below is one of many of its kind: past a lead group, further
 // rows of the same source sort under the other kinds of work so one noisy lane cannot own
@@ -55136,7 +55216,7 @@ type WorklistItem struct {
 	Lead *WorklistLeadFacts `json:"lead,omitempty"`
 
 	// Level The hard priority band, and the whole of the product rule: 0 pinned by the
-	// reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
+	// reader, or a task assigned to the reader whose reminder came due, 1 a customer waiting or a deadline arriving, 2 a promise due or an
 	// approved action that failed, 3 material revenue at risk, 4 an assigned task
 	// or a smaller deal drifting, 5 a decision blocking customer work, 6 data
 	// hygiene. Levels are never mixed by a score.
@@ -55710,7 +55790,7 @@ type WorklistReadings struct {
 // product ships three languages and a sentence composed here would reach a German
 // reader in English.
 type WorklistReason struct {
-	// Kind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
+	// Kind Which fact this is. The client writes the phrase. `reminder_due` says the reader is the task's assignee and its reminder came due. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
 	Kind WorklistReasonKind `json:"kind"`
 
 	// Value A typed comparator value — a date, an amount, a count of days, or nothing. Typed
@@ -55719,7 +55799,7 @@ type WorklistReason struct {
 	Value *WorklistValue `json:"value,omitempty"`
 }
 
-// WorklistReasonKind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
+// WorklistReasonKind Which fact this is. The client writes the phrase. `reminder_due` says the reader is the task's assignee and its reminder came due. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
 type WorklistReasonKind string
 
 // WorklistSourceUnavailable A source that did not contribute, and why. `withheld` means the caller may not
@@ -56190,6 +56270,9 @@ type ListActivitiesParams struct {
 
 	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
 	WaitingReply *bool `form:"waiting_reply,omitempty" json:"waiting_reply,omitempty"`
+
+	// ReminderDue Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out.
+	ReminderDue *bool `form:"reminder_due,omitempty" json:"reminder_due,omitempty"`
 }
 
 // ListActivitiesParamsKind defines parameters for ListActivities.
@@ -83392,6 +83475,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "waiting_reply"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "waiting_reply", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "reminder_due" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "reminder_due", r.URL.Query(), &params.ReminderDue, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "reminder_due"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reminder_due", Err: err})
 		}
 		return
 	}

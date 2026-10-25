@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { renderWithQueryClient as render } from "../../testing/queryrender";
 import { jsonResponse } from "../../testing/story-utils";
@@ -105,6 +106,15 @@ export function choose(control: HTMLElement, optionLabel: string) {
   return pickOption(userEvent.setup(), control, optionLabel);
 }
 
+// Writes what a close needs: the answer, and how the identity was checked.
+export async function draftClose(answer: string) {
+  await userEvent.type(screen.getByLabelText(/resolution/i), answer);
+  await choose(
+    screen.getByLabelText(en["privacy.identityCheck"]),
+    en["privacy.identityCheck.id_document"],
+  );
+}
+
 export const DSRS = {
   data: [
     {
@@ -114,6 +124,7 @@ export const DSRS = {
       status: "open",
       due_at: "2026-08-01T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-07-01T00:00:00Z",
     },
     {
@@ -124,6 +135,7 @@ export const DSRS = {
       resolution: "sent by post",
       due_at: "2026-07-12T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-06-01T00:00:00Z",
     },
   ],

@@ -55,6 +55,9 @@ func focusEligible(row ranked, asOf time.Time) bool {
 	case "notice":
 		return urgentWork(row)
 	case "task":
+		if row.reminded {
+			return true
+		}
 		if !row.deadlineAt.IsZero() && row.deadlineAt.After(asOf) {
 			return row.item.DueGroup != nil && *row.item.DueGroup == "today"
 		}

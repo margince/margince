@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -83,7 +84,9 @@ func SetupSearch(t *testing.T) *SearchEnv {
 	// so a suite without them is refused before any rule under test is reached.
 	seedInstallationIdentity(ctx, t, owner)
 	for i, u := range []ids.UUID{e.Rep1, e.Rep3} {
-		if _, err := owner.Exec(ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, u, fmt.Sprintf("rep%d@search.test", i)); err != nil {
+		address := fmt.Sprintf("rep%d@search.test", i)
+		if _, err := owner.Exec(ctx, `INSERT INTO app_user (id, email, display_name, email_domain_folded) VALUES ($1, $2, 'Rep', $3)`,
+			u, address, owndomain.StoredOfAddress(address)); err != nil {
 			t.Fatal(err)
 		}
 	}

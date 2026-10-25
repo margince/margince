@@ -15,7 +15,8 @@ import { useT } from "../../i18n";
 import { isReviewableReceipt } from "../../lib/receiptreview";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { useUrlParams } from "../../lib/urlstate";
+import { TASK_PARAM } from "../../lib/taskreminders";
+import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { pillCount } from "../../lib/worklistcounts";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
@@ -178,12 +179,21 @@ function PersonalMorning({
   const brief = useMorningBrief();
   const handled = useHandledForYou();
   const [selected, setSelected] = useState("");
+  const [params] = useUrlParams();
   const titleId = useId();
   const update = useTaskUpdate([worklistKey]);
   const day = briefDay(query.data?.pages);
   const context = day?.focus?.items.find(
     (item) => `${item.source}-${item.id}` === selected,
   );
+  // A task named by the address, as a reminder notification opens it. It
+  // opens whether or not the day lists it, and writes only where a row the
+  // reader holds offers `complete`.
+  const linkedTask = context ? undefined : params.get(TASK_PARAM);
+  const linkedRow = [
+    ...(day?.focus?.items ?? []),
+    ...(query.data?.pages.flatMap((page) => page.queue) ?? []),
+  ].find((item) => item.source === "task" && item.id === linkedTask);
   const state = query.isPending
     ? "loading"
     : query.isError && !day
@@ -254,6 +264,14 @@ function PersonalMorning({
           </>
         }
       />
+      {linkedTask && (
+        <TaskDetailModal
+          activityId={linkedTask}
+          readOnly={!linkedRow?.actions.includes("complete")}
+          update={update}
+          onClose={() => replaceDial(TASK_PARAM, undefined)}
+        />
+      )}
       {context && opensActivity ? (
         <TaskDetailModal
           activityId={context.id}

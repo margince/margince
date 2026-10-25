@@ -5,6 +5,7 @@ package capture
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/owndomain"
@@ -85,5 +86,19 @@ func TestAnAccountLabelYieldsItsDomainInEitherShape(t *testing.T) {
 	// An unparseable label is judged as an address, which is what it was before.
 	if got := owndomain.OfAddress(bareAddress("not an address")); got != "" {
 		t.Errorf("unparseable label gave domain %q, want none", got)
+	}
+}
+
+// The administrator's own domain is stored in the form owndomain.Fold gives,
+// so the SQL own-domain checks can compare it without folding.
+func TestAnOwnDomainIsStoredFolded(t *testing.T) {
+	for _, typed := range []string{"Bücher.Example", "@bücher.example.", "XN--BCHER-KVA.EXAMPLE", "ｂücher.example"} {
+		stored, err := ValidOwnDomain(typed)
+		if err != nil {
+			t.Fatalf("ValidOwnDomain(%q): %v", typed, err)
+		}
+		if want := owndomain.Fold(strings.TrimPrefix(typed, "@")); stored != want {
+			t.Errorf("ValidOwnDomain(%q) stores %q, owndomain.Fold gives %q", typed, stored, want)
+		}
 	}
 }

@@ -142,13 +142,14 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company_domain
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `company_id` | `uuid` | yes | Points at `company.id`. |
 | `domain` | `text` | yes | Lowercased, no scheme, no www. |
+| `domain_folded` | `text` |  |  |
 | `is_primary` | `boolean`, default `false` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
@@ -780,6 +781,7 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `contact_phone_pkey`: `unique, btree (id)`
+- `contact_phone_superseded_phone_ix`: `btree (superseded_phone_id) WHERE (superseded_phone_id IS NOT NULL)`
 - `idx_contact_phone_contact`: `btree (contact_id)`
 - `idx_contact_phone_dedupe_scan`: `btree (updated_at, id)`
 - `uq_contact_phone_primary`: `unique, btree (contact_id, phone_type) WHERE (is_primary AND (archived_at IS NULL))`

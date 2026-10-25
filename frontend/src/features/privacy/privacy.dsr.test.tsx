@@ -8,6 +8,7 @@ import { RequestsPanel } from "../settings/settings.privacy";
 import {
   choose,
   DSRS,
+  draftClose,
   findDsrRow,
   jsonResponse,
   render,
@@ -90,6 +91,7 @@ describe("opening a DSR (G-2)", () => {
             status: "open",
             due_at: "2026-08-02T03:59:59.999Z",
             due_overridden: false,
+            dispute_open: false,
             created_at: "2026-07-15T00:00:00Z",
           },
           201,
@@ -137,6 +139,7 @@ describe("opening a DSR (G-2)", () => {
             status: "open",
             due_at: "2026-08-02T03:59:59.999Z",
             due_overridden: false,
+            dispute_open: false,
             created_at: "2026-07-15T00:00:00Z",
           },
           201,
@@ -182,6 +185,7 @@ describe("opening a DSR (G-2)", () => {
       status: "open",
       due_at: "2026-07-16T03:59:59.999Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-07-15T00:00:00Z",
     };
     const sent = stubRoutes({
@@ -237,7 +241,7 @@ describe("fulfilling an erasure", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
-    await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
+    await draftClose("verified");
     // "Fulfil" also matches the facet bar's "Fulfilled" filter button. So
     // the query is scoped to the row under test, as findDsrRow's other
     // callers do.
@@ -287,7 +291,7 @@ describe("fulfilling an erasure", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
-    await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
+    await draftClose("verified");
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     await userEvent.type(erasePhraseInput(), "ERASE");
@@ -330,7 +334,7 @@ describe("fulfilling an erasure", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
-    await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
+    await draftClose("verified");
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     await userEvent.type(erasePhraseInput(), "ERASE");
@@ -357,7 +361,7 @@ describe("fulfilling an erasure", () => {
   // The stub echoes what the server would store. An open fixture with no
   // resolution cannot get a 200 for a fulfil that sent none. So the response
   // includes the resolution just sent.
-  it("sends {status: fulfilled, resolution} on the erasure fulfil PATCH", async () => {
+  it("sends {status: fulfilled, resolution, identity_check} on the erasure fulfil PATCH", async () => {
     const sent = stubRoutes({
       "PATCH /data-subject-requests/d1": () =>
         jsonResponse({
@@ -370,7 +374,7 @@ describe("fulfilling an erasure", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
-    await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
+    await draftClose("verified");
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     await userEvent.type(erasePhraseInput(), "ERASE");
@@ -388,6 +392,7 @@ describe("fulfilling an erasure", () => {
     expect(patches[0]?.body).toEqual({
       status: "fulfilled",
       resolution: "verified",
+      identity_check: "id_document",
     });
   });
 
@@ -417,7 +422,7 @@ describe("fulfilling an erasure", () => {
       name: /8f3a-contact-uuid/i,
     });
     await userEvent.click(summary);
-    await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
+    await draftClose("verified");
     const row = await findDsrRow("8f3a-contact-uuid");
     const opener = within(row).getByRole("button", { name: /fulfil/i });
     await userEvent.click(opener);
@@ -434,5 +439,67 @@ describe("fulfilling an erasure", () => {
       ),
     );
     expect(within(drawer).getByText("Fulfilled")).toBeInTheDocument();
+  });
+});
+
+describe("the proof a closed request keeps", () => {
+  it("sends the requester's address with the close", async () => {
+    const sent = stubRoutes();
+    render(<RequestsPanel />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
+    );
+    await draftClose("not a data subject");
+    await userEvent.type(
+      screen.getByLabelText(en["privacy.requesterEmail"]),
+      "asker@acme.test",
+    );
+    const row = await findDsrRow("8f3a-contact-uuid");
+    await userEvent.click(within(row).getByRole("button", { name: /reject/i }));
+    await waitFor(() =>
+      expect(
+        sent.find((s) => s.key === "PATCH /data-subject-requests/d1")?.body,
+      ).toEqual({
+        status: "rejected",
+        resolution: "not a data subject",
+        identity_check: "id_document",
+        requester_email: "asker@acme.test",
+      }),
+    );
+  });
+
+  it("offers only Reject for a request whose identity could not be checked", async () => {
+    stubRoutes();
+    render(<RequestsPanel />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
+    );
+    await userEvent.type(
+      screen.getByLabelText(/resolution/i),
+      "unknown sender",
+    );
+    await choose(
+      screen.getByLabelText(en["privacy.identityCheck"]),
+      en["privacy.identityCheck.not_verified"],
+    );
+    const row = await findDsrRow("8f3a-contact-uuid");
+    expect(within(row).getByRole("button", { name: /fulfil/i })).toBeDisabled();
+    expect(within(row).getByRole("button", { name: /reject/i })).toBeEnabled();
+  });
+
+  it("records a complaint on a closed request, which holds its proof", async () => {
+    const sent = stubRoutes();
+    render(<RequestsPanel />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /anna@acme\.test/i }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: en["privacy.openDispute"] }),
+    );
+    await waitFor(() =>
+      expect(
+        sent.find((s) => s.key === "PATCH /data-subject-requests/d2")?.body,
+      ).toEqual({ dispute_open: true }),
+    );
   });
 });

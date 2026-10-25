@@ -7824,6 +7824,13 @@ paths:
             Restrict the list to an inbound message still awaiting an answer: the newest message
             of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it
             answers what on this record is waiting for a reply.
+        - name: reminder_due
+          in: query
+          schema: { type: boolean }
+          description: >-
+            Restrict the list to the caller's own due reminders: open, live tasks assigned to the
+            caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes
+            first. It reads content, so a task whose content the caller may not read is left out.
       responses:
         '200':
           description: A page of activities (newest first by default).
@@ -17576,7 +17583,7 @@ paths:
         product rule, not a score: a customer waiting outranks a promise, a promise
         outranks material revenue at risk, and routine data hygiene never outranks any of
         them however large its pile. Level 0 is the reader's own pin, which is the one
-        override a contact has over the ordering.
+        override a contact has over the ordering, and a task of theirs whose reminder came due.
 
         Inside a level the tie-breaks run deadline → expected revenue → waiting days →
         relationship importance → occurrence. Deadline leads because a date somebody
@@ -34864,7 +34871,10 @@ components:
           type: string
           enum: [needs_reply, waiting_for_them, none]
           description: |
-            Whose move it is, derived from what this reader can see of the thread. `none` when
+            Whose move it is, derived from what this reader can see of the thread.
+            `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+            that is still the last word with them. A calendar invitation, update, cancellation
+            or answer is `none` unless someone confirmed it asks us something. `none` also when
             the question cannot be answered honestly — an unanswerable move is not a claim.
         display_status:
           $ref: '#/components/schemas/EmailAccessStatus'
@@ -47194,7 +47204,7 @@ components:
             caller who may discover the row without reading it is not told this either.
         occurred_at: { type: string, format: date-time }
         due_at: { type: [string, 'null'], format: date-time, description: Task only. }
-        remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. Reminder-fire time; the B-E16.6 scan reads tasks whose reminder is due, not-done, and un-archived.' }
+        remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.' }
         assignee_id: { type: [string, 'null'], format: uuid, description: Task only. }
         is_done: { type: boolean, default: false, description: Task only. }
         done_at: { type: [string, 'null'], format: date-time }
@@ -47613,7 +47623,7 @@ components:
         body: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
         due_at: { type: [string, 'null'], format: date-time }
-        remind_at: { type: [string, 'null'], format: date-time, description: Task only. }
+        remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.' }
         assignee_id: { type: [string, 'null'], format: uuid }
         host_user_id:
           type: string
@@ -47867,7 +47877,7 @@ components:
         occurred_at: { type: string, format: date-time }
         due_at: { type: [string, 'null'], format: date-time }
         assignee_id: { type: [string, 'null'], format: uuid }
-        remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.' }
+        remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.' }
         is_done: { type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).' }
         meeting_status:
           type: [string, 'null']
@@ -59130,7 +59140,7 @@ components:
     DataSubjectRequest:
       type: object
       description: A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5).
-      required: [id, kind, subject_ref, status, due_at, due_overridden, created_at]
+      required: [id, kind, subject_ref, status, due_at, due_overridden, dispute_open, created_at]
       properties:
         id: { type: string, format: uuid }
         kind: { type: string, enum: [access, rectify, erasure] }
@@ -59160,6 +59170,13 @@ components:
           description: 'True when the officer chose an earlier deadline than `due_rule` gives.'
         assignee_id: { type: [string, 'null'], format: uuid }
         resolution: { type: [string, 'null'] }
+        dispute_open:
+          type: boolean
+          description: |
+            True while a complaint or dispute about this request is open. The proof of the
+            answer is kept until 1 January of the fourth year after the year it was answered in,
+            with both the year and that date read in the installation's time zone
+            (`installation.timezone`), and past that date until this is false again.
         created_at: { type: string, format: date-time }
         # no `version`/If-Match: data_subject_request has no version column (data-model §12.5) and is a
         # single-assignee human-only workflow record (x-agent-access: human-only) — not optimistically concurrent.
@@ -59490,6 +59507,30 @@ components:
         resolution:
           type: [string, 'null']
           description: 'A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.'
+        identity_check:
+          type: string
+          enum: [confirm_link, address_on_file, id_document, in_person, not_verified]
+          description: |
+            How the requester's identity was checked, recorded in the proof the request keeps once
+            it closes. Required on the patch that closes a request, except one that arrived through
+            the subject's own confirm link, where the link is the check. `confirm_link`: the
+            subject used a link mailed to their address. `address_on_file`: the request came from,
+            or was confirmed at, an address the record already held. `id_document`: an identity
+            document was seen. `in_person`: the requester was known in person. `not_verified`: the
+            identity could not be checked. A request closes with `not_verified` only as `rejected`;
+            a patch that fulfils with it is refused with 422 before anything is erased. Ignored on
+            any other patch.
+        requester_email:
+          type: string
+          format: email
+          maxLength: 320
+          description: |
+            The address the request came from, recorded in the proof. Optional: when absent, the
+            proof takes the address the confirm link was mailed to, or the subject reference when it
+            is an address. Ignored on a patch that does not close the request.
+        dispute_open:
+          type: boolean
+          description: 'Opens (true) or closes (false) a complaint or dispute about the request. Any status takes it.'
 
     CaptureConsent:
       type: object
@@ -63045,6 +63086,11 @@ components:
         adds none.
       required: [id, source, actions]
       properties:
+        reminder_due:
+          type: boolean
+          description: >-
+            Sent as true on a task whose reminder is due for the reader, who is its assignee and
+            reads their own work. Absent otherwise.
         promise_recipients:
           type: array
           description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
@@ -64703,7 +64749,7 @@ components:
           maximum: 6
           description: |
             The hard priority band, and the whole of the product rule: 0 pinned by the
-            reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
+            reader, or a task assigned to the reader whose reminder came due, 1 a customer waiting or a deadline arriving, 2 a promise due or an
             approved action that failed, 3 material revenue at risk, 4 an assigned task
             or a smaller deal drifting, 5 a decision blocking customer work, 6 data
             hygiene. Levels are never mixed by a score.
@@ -65412,8 +65458,8 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, non_buyer_request, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, account_termination, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, bcc_from_stranger, link_off_sender, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
-          description: 'Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender''s request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.'
+          enum: [pinned, reminder_due, buyer_wrote_last, non_buyer_request, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, account_termination, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, bcc_from_stranger, link_off_sender, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
+          description: 'Which fact this is. The client writes the phrase. `reminder_due` says the reader is the task''s assignee and its reminder came due. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender''s request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 
     WorklistComparison:
@@ -65428,10 +65474,11 @@ components:
       properties:
         comparator:
           type: string
-          enum: [pin, crowded, level, deadline, expected_revenue, opportunity, waiting_days, relationship, order]
+          enum: [pin, reminder, crowded, level, deadline, expected_revenue, opportunity, waiting_days, relationship, order]
           description: |
             What decided it. `order` means every comparator tied and the ids broke it, which the
-            client renders as no reason at all.
+            client renders as no reason at all. `reminder` means this row is a due reminder and
+            the one below is not.
 
             `crowded` means the row below is one of many of its kind: past a lead group, further
             rows of the same source sort under the other kinds of work so one noisy lane cannot own

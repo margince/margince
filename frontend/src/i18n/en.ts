@@ -1746,6 +1746,7 @@ export const en = {
   "systemJob.linkedin_rematch": "LinkedIn import matching",
   "systemJob.list_checker": "Live list check",
   "systemJob.mail_draft_retention": "Mail draft cleanup",
+  "systemJob.privacy_request_proof_expiry": "Privacy request proof cleanup",
   "systemJob.waiting_horizon_refresh": "Reply time measurement",
   "systemJob.meeting_delivery": "Calendar delivery",
   "systemJob.merge": "Record merge",
@@ -8467,6 +8468,18 @@ export const en = {
   "notifications.empty":
     "Nothing has come in yet. What the product tells you about arrives here.",
   "notifications.title": "Delivery by kind",
+  "notifications.browser.label": "Browser notifications",
+  "notifications.browser.default":
+    "When a reminder on one of your tasks comes due, the browser can show it while Margince is open in a tab.",
+  "notifications.browser.granted":
+    "On. A due reminder on one of your tasks shows as a browser notification while Margince is open in a tab. To turn it off, block notifications for this site in your browser settings.",
+  "notifications.browser.denied":
+    "Blocked in this browser. To allow them, change the notification setting for this site in your browser settings.",
+  "notifications.browser.unsupported":
+    "This browser cannot show notifications. A due reminder still leads your Home and your Worklist.",
+  "notifications.browser.allow": "Allow",
+  "reminder.notification.body": "Your reminder is due. Click to open the task.",
+  "reminder.notification.untitled": "Task reminder",
   "notifications.sub":
     "Every notice also stays in your notification center, whatever you choose here.",
   "notifications.saveFailedFor": "“{setting}” was not saved",
@@ -8546,6 +8559,25 @@ export const en = {
   "privacy.assignee": "Assignee",
   "privacy.resolution": "Resolution",
   "privacy.resolutionRequired": "Closing a request needs its answer.",
+  "privacy.identityCheck": "How the identity was checked",
+  "privacy.identityCheckHint":
+    "Kept in the proof of this request until three years after the end of the year it closes.",
+  "privacy.identityCheckPick": "Choose how",
+  "privacy.identityCheck.confirm_link":
+    "The subject used the link mailed to them",
+  "privacy.identityCheck.address_on_file":
+    "It came from an address the record holds",
+  "privacy.identityCheck.id_document": "An identity document was seen",
+  "privacy.identityCheck.in_person": "The requester was met face to face",
+  "privacy.identityCheck.not_verified": "It could not be checked",
+  "privacy.requesterEmail": "Requester’s email address",
+  "privacy.requesterEmailHint":
+    "Optional. Leave it empty when the request came through the subject’s own link or names the address.",
+  "privacy.disputeOpen": "A complaint about this request is open",
+  "privacy.disputeHint":
+    "While a complaint is open, the proof of this request is kept past its retention date.",
+  "privacy.openDispute": "Record a complaint",
+  "privacy.closeDispute": "Close the complaint",
   "privacy.movedOn":
     "Someone else decided this request first. Review its current state.",
   "privacy.inProgress": "In progress",
@@ -15966,6 +15998,7 @@ export const en = {
   "worklist.category.relationships": "Quiet relationship",
   "worklist.category.system": "System",
   "worklist.because.pinned": "pinned by you",
+  "worklist.because.reminder_due": "your reminder is due",
   "worklist.because.non_buyer_request": "not established as customer work",
   "worklist.because.buyer_wrote_last": "buyer wrote last",
   "worklist.because.waiting_days": "waiting",
