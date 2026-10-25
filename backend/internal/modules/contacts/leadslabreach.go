@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -52,9 +53,9 @@ type SLABreach struct {
 // Each breach lands one audit row and lead.sla_breached; the escalation
 // task hangs off that event.
 //
-// With the target switched off the scan is a no-op: no deadline exists to
+// With the target switched off the scan marks no breach: no deadline exists to
 // breach, and a breach row the installation never asked for would page an
-// owner about a rule they did not set.
+// owner about a rule they did not set. It still stamps day answers.
 func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, error) {
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return nil, err
@@ -65,59 +66,93 @@ func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, er
 		if err != nil {
 			return err
 		}
-		if !policy.enabled {
-			return nil
+		if policy.enabled {
+			if breaches, err = markBreaches(ctx, tx, policy, now); err != nil {
+				return err
+			}
 		}
-		rows, err := tx.Query(ctx, `
-			SELECT id, owner_id, COALESCE(routed_at, created_at) + $1 * interval '1 minute',
-			       COALESCE(NULLIF(btrim(full_name), ''), email::text, '')
-			FROM lead
-			WHERE `+leadOwesAReplySQL+` AND sla_breached_at IS NULL
-			  AND (source_system IS NULL OR source_system <> ALL($3))
-			  AND COALESCE(routed_at, created_at) + $1 * interval '1 minute' < $2
-			ORDER BY created_at
-			FOR UPDATE SKIP LOCKED`,
-			policy.targetMinutes(), now, leadsource.PassiveDiscoverySources())
+		// After the breaches: a date that ended past the deadline answered late,
+		// and stamped first the lead would no longer owe the reply it missed.
+		return stampDayAnswers(ctx, tx, now)
+	})
+	return breaches, err
+}
+
+// markBreaches marks each lead whose deadline under policy passed unanswered.
+func markBreaches(ctx context.Context, tx pgx.Tx, policy leadSLAPolicy, now time.Time) ([]SLABreach, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT id, owner_id, COALESCE(routed_at, created_at) + $1 * interval '1 minute',
+		       COALESCE(NULLIF(btrim(full_name), ''), email::text, '')
+		FROM lead
+		WHERE `+leadOwesAReplySQL+` AND sla_breached_at IS NULL
+		  AND (source_system IS NULL OR source_system <> ALL($3))
+		  AND COALESCE(routed_at, created_at) + $1 * interval '1 minute' < $2
+		ORDER BY created_at
+		FOR UPDATE SKIP LOCKED`,
+		policy.targetMinutes(), now, leadsource.PassiveDiscoverySources())
+	if err != nil {
+		return nil, fmt.Errorf("select breached leads: %w", err)
+	}
+	candidates, err := collectBreaches(rows)
+	if err != nil {
+		return nil, err
+	}
+	// first_response_at is a projection the bus writes late, and a breach pages
+	// someone. So each candidate is judged on its activities, and an answer found
+	// there is stamped here; the subscriber's later write is then a replay.
+	var breaches []SLABreach
+	for _, b := range candidates {
+		answered, err := answeredBy(ctx, tx, b.LeadID, b.Deadline)
 		if err != nil {
-			return fmt.Errorf("select breached leads: %w", err)
+			return nil, err
 		}
-		candidates, err := collectBreaches(rows)
+		if answered != nil {
+			if _, err := recordFirstResponseTx(ctx, tx, b.LeadID, *answered); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		if err := markBreach(ctx, tx, b, now); err != nil {
+			return nil, err
+		}
+		breaches = append(breaches, b)
+	}
+	return breaches, nil
+}
+
+// stampDayAnswers stamps the first response of each unanswered lead a day
+// touch has answered by now. The subscriber skips a day touch while its date
+// runs, and this scan runs on the clock whether or not a target is set.
+func stampDayAnswers(ctx context.Context, tx pgx.Tx, now time.Time) error {
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT l.lead_id
+		  FROM activity_link l
+		  JOIN lead ld ON ld.id = l.lead_id
+		  JOIN activity a ON a.id = l.activity_id
+		 WHERE ld.archived_at IS NULL AND ld.first_response_at IS NULL
+		   AND a.archived_at IS NULL AND a.occurred_precision = 'day'
+		   AND `+occurredday.ProvenSQL("a")+` <= $1
+		   AND `+auth.ActivityAvailableClause("a"), now)
+	if err != nil {
+		return fmt.Errorf("select leads a day touch may have answered: %w", err)
+	}
+	leads, err := pgx.CollectRows(rows, pgx.RowTo[ids.LeadID])
+	if err != nil {
+		return err
+	}
+	for _, lead := range leads {
+		answered, err := answeredBy(ctx, tx, lead, now)
 		if err != nil {
 			return err
 		}
-		// Each candidate is re-checked against the ACTIVITIES before it is
-		// marked. first_response_at is projected by an event subscriber
-		// reacting to activity.captured, so it lags the activity's own commit
-		// by the bus's latency: a reply committed at 11:59 against a 12:00
-		// deadline can still be unprojected when a 12:01 scan runs, and the
-		// lead reads as unanswered because the projection has not caught up
-		// rather than because nobody answered.
-		//
-		// The scan owns the consequence — a breach event, an escalation task,
-		// and a number on somebody's review — so it reads the ground truth
-		// rather than the projection. Where it finds one, it stamps the column
-		// itself: the subscriber's later write is then the replay
-		// recordFirstResponseTx already answers as a no-op.
-		breaches = breaches[:0]
-		for _, b := range candidates {
-			answered, err := answeredBy(ctx, tx, b.LeadID, b.Deadline)
-			if err != nil {
-				return err
-			}
-			if answered != nil {
-				if _, err := recordFirstResponseTx(ctx, tx, b.LeadID, *answered); err != nil {
-					return err
-				}
-				continue
-			}
-			if err := markBreach(ctx, tx, b, now); err != nil {
-				return err
-			}
-			breaches = append(breaches, b)
+		if answered == nil {
+			continue
 		}
-		return nil
-	})
-	return breaches, err
+		if _, err := recordFirstResponseTx(ctx, tx, lead, *answered); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func collectBreaches(rows pgx.Rows) ([]SLABreach, error) {

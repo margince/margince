@@ -64,8 +64,8 @@ func (w leadFirstResponse) Apply(ctx context.Context, ev workflow.Event, eff wor
 	}
 	applied := false
 	for _, t := range touches {
-		// A day touch dated today is not yet an answer; the breach scan judges it
-		// against the deadline once that passes.
+		// A day touch dated today is not yet an answer. The SLA scan stamps it
+		// once its date ends (stampDayAnswers).
 		if !isFirstResponseActivity(t) || t.respondedAt.After(leadSLAClock()) {
 			continue
 		}
