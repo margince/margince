@@ -57,8 +57,8 @@ export function DealRoomTab({
   const room = roomQuery.data?.data?.[0];
   const mayWrite = useCanWrite("deal_room", "update");
   const [inviting, setInviting] = useState(false);
-  // The invite dialog sits outside the reading, so neither the setup list
-  // going away nor a failed reload of the room takes the issued link with it.
+  // The invite dialog sits outside the reading. The setup list can go away and
+  // a reload of the room can fail, and the issued link stays either way.
   return (
     <>
       <QueryStates
