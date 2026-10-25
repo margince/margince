@@ -1286,6 +1286,23 @@ kinds:
       answers not found, so nobody can find it to discard it — and a draft
       holds a subject's address and the words written to them.
 
+  privacy_request_proof_expiry:
+    role: worker
+    go_type: RequestProofExpiryArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 24h
+    reason: >-
+      Daily, and the pass deletes only in January: a proof is kept until the
+      start of the fourth year after the year its request was answered in, so
+      every proof of one year falls due on the same 1 January and the first
+      January pass deletes them. The later January passes find only proofs
+      whose dispute closed since. Outside January the pass returns without
+      reading anything. Each pass loops over capped batches until no due proof
+      is left.
+
   waiting_horizon_refresh:
     role: worker
     go_type: WaitingHorizonRefreshArgs
@@ -1787,6 +1804,28 @@ kinds:
       outbound call of its own — the lookups happen in the per-company jobs it
       queues, each paced by the installation-wide requester. Two minutes is
       generous for that and bounded by the batch.
+
+  # The address-country check: which country a record's postal code and city
+  # lie in, so the read can flag a stored country that does not fit. It asks
+  # through the same client and on the same queue as geocode_company, so the
+  # one pacer and the one worker hold it to the provider's rate. No workspace
+  # arg, for geocode_backfill's reason.
+  address_country_check:
+    role: worker
+    go_type: AddressCountryCheckArgs
+    queue: geocode
+    timeout: 4m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 10m
+    registration: {when: [Geocoder], absent: registers_nothing}
+    reason: >-
+      At most addressCountryLookupsPerRun (4) provider lookups a pass. The pacer
+      may hold each for its 15s interval and the HTTP client allows 20s, so a
+      pass spends at most 140s waiting on the provider, plus indexed reads and
+      one guarded write per record. Four minutes is that with room. Every ten
+      minutes keeps the pass to 24 lookups an hour, a quarter of what the
+      provider's terms allow, so address writes keep most of the rate.
 
   technical_enrich_company:
     role: worker

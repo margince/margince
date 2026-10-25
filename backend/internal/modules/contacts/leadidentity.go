@@ -16,9 +16,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -186,4 +188,16 @@ func reopenedLeadContactFree(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) 
 		return err
 	}
 	return ensureContactNotWorked(ctx, tx, contact, &leadID)
+}
+
+// refuseErasedLeadEmail asks the erasure list about an address the update
+// gives the lead. The address it already holds is not asked about again.
+func refuseErasedLeadEmail(ctx context.Context, tx pgx.Tx, current crmcontracts.Lead, in UpdateLeadInput) error {
+	if in.Email == nil {
+		return nil
+	}
+	if current.Email != nil && strings.EqualFold(string(*current.Email), strings.TrimSpace(*in.Email)) {
+		return nil
+	}
+	return storekit.RefuseErasedEmail(ctx, tx, leadEmailColumn, *in.Email)
 }

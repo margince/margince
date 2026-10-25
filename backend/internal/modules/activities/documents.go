@@ -425,14 +425,23 @@ var provenanceCategories = map[string]struct{}{
 // caller asserting arrival on a file that never arrived: `source` is the writer
 // that made the row, and `upload` is the one that means a human handed it over.
 func refuseAssertedProvenance(before crmcontracts.Attachment, in DocumentMetadata) error {
-	if in.Category == nil || before.Source != attachmentSource {
+	if in.Category == nil {
+		return nil
+	}
+	if before.Category != nil && *before.Category == categoryLink {
+		return &values.ParseError{
+			Field: fieldCategory, Code: "category_not_assertable",
+			Message: "a document link stays a link; archive it if it should not be listed",
+		}
+	}
+	if before.Source != attachmentSource {
 		return nil
 	}
 	if _, provenance := provenanceCategories[*in.Category]; !provenance {
 		return nil
 	}
 	return &values.ParseError{
-		Field: "category", Code: "category_not_assertable",
+		Field: fieldCategory, Code: "category_not_assertable",
 		Message: "that category records how a file arrived and is derived from the message " +
 			"that carried it; an uploaded file has no arrival to claim — file it by what it is",
 	}
@@ -445,7 +454,7 @@ func refuseAssertedProvenance(before crmcontracts.Attachment, in DocumentMetadat
 func documentMetadataPatch(before crmcontracts.Attachment, in DocumentMetadata) *storekit.Patch {
 	p := storekit.NewPatch()
 	if in.Category != nil {
-		p.Set("category", before.Category, *in.Category)
+		p.Set(fieldCategory, before.Category, *in.Category)
 	}
 	if in.Title != nil || in.ClearTitle {
 		p.Set("title", before.Title, in.Title)

@@ -319,6 +319,10 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 	// lockContactForAttach gives the single-contact writers — an archive in
 	// flight either commits first and drops the row out of this read, or waits
 	// and sweeps the edge this plants.
+	seats, err := storekit.WorkspaceSeatAddresses(ctx, tx)
+	if err != nil {
+		return 0, err
+	}
 	candidates, err := domainEmploymentCandidates(ctx, tx, domain)
 	if err != nil {
 		return 0, err
@@ -342,12 +346,13 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 		SELECT 'employment', p.id, $1, true, $2, $3, `+employmentFirstObservedSQL("p.id", "$5", "NULL::uuid", "$6")+`
 		FROM contact p
 		WHERE p.id = ANY($4)
+		  AND NOT EXISTS (SELECT 1 FROM contact_email se WHERE se.contact_id = p.id AND se.archived_at IS NULL AND lower(se.email) = ANY($7))
 		  AND NOT EXISTS (
 			SELECT 1 FROM relationship r
 			WHERE r.contact_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id, contact_id`,
-		companyID, domainTriageSource(domain), by, candidates, domain, mailClockSkewAllowance)
+		companyID, domainTriageSource(domain), by, candidates, domain, mailClockSkewAllowance, seats.For(ids.Nil))
 	if err != nil {
 		return 0, fmt.Errorf("contacts: planting the employment edges for %s: %w", domain, err)
 	}

@@ -104,6 +104,9 @@ var tableOwners = map[string]string{
 	"company_fact_revision":          "internal/modules/contacts",
 	"company_geocode_state":          "internal/modules/contacts",
 	"geocode_cache":                  "internal/modules/contacts",
+	"geocode_country_cache":          "internal/modules/contacts",
+	"company_address_country":        "internal/modules/contacts",
+	"contact_address_country":        "internal/modules/contacts",
 	// What a technical lookup last read for one company, per public source,
 	// and what those sources answered. The cache is installation-global for
 	// the same reason geocode_cache is — a domain's DNS records are the same
@@ -285,6 +288,7 @@ var tableOwners = map[string]string{
 	"communication_suppression":    "internal/modules/consent",
 	"consent_qualifying_event":     "internal/modules/consent",
 	"data_subject_request":         "internal/modules/consent",
+	"privacy_request_proof":        "internal/modules/consent",
 	"preference_token":             "internal/modules/consent",
 	// The emailed link that shows a contact their own record and carries their
 	// marketing answer back, and what comes back through it. Consent's, because

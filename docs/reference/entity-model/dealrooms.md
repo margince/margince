@@ -121,6 +121,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `deal_room_document_attachment_ix`: `btree (attachment_id)`
 - `deal_room_document_pkey`: `unique, btree (id)`
 - `idx_deal_room_document_room`: `btree (room_id, group_key, "position") WHERE (archived_at IS NULL)`
 - `idx_deal_room_document_room_cascade`: `btree (room_id)`
@@ -330,6 +331,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `deal_room_thread_attachment_ix`: `btree (attachment_id) WHERE (attachment_id IS NOT NULL)`
 - `deal_room_thread_pkey`: `unique, btree (id)`
 - `idx_deal_room_thread_document`: `btree (document_id)`
 - `idx_deal_room_thread_document_open`: `btree (document_id) WHERE ((state = 'open') AND required_change)`

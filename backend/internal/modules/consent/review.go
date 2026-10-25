@@ -283,21 +283,16 @@ func stateFor(refusals []RefusedRecipient) string {
 // offers no argument — the safe direction, because the alternative is a form
 // inviting a rep to argue with a withdrawal.
 //
-// The two here are the refusals about what the INSTALLATION knows: no evidence
-// that this message has a ground to stand on, and a purpose key nothing
-// defines. Somebody who was on the call can answer both.
+// It reads the remedy table (commsauthz.RemediesFor) for what an answer
+// can resolve. Today that is no evidence, a purpose key nothing defines, and a
+// claim the record contradicts. Somebody who was on the call can answer these.
 //
 // Everything else is about the SUBJECT or the ADDRESS and no context repairs
 // it. An objection, a restriction, a withdrawal and a subject request are the
 // subject's own instruction; a hard bounce is a dead mailbox; a frequency cap
 // is a fact about volume that time answers rather than evidence.
 func answerableByContext(reasonCode string) bool {
-	switch reasonCode {
-	case commsauthz.ReasonNoEvidence, commsauthz.ReasonUnknownPurpose,
-		commsauthz.ReasonLegacyTransactionalUnevidenced:
-		return true
-	}
-	return false
+	return commsauthz.HasRemedy(reasonCode, commsauthz.RemedyAnswer)
 }
 
 // initiatingSeat reads the human this send belongs to, or the zero id for a

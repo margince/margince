@@ -11,13 +11,13 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import type { components } from "../../api/schema";
-import { SEARCH_HIT_KIND_KEY } from "../../app/searchkinds";
 import { Badge } from "../../design-system/atoms";
 import { formatDateTime } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { type ActorFields, actorAttribution } from "../../lib/auditactor";
 import { useRecordZone } from "../../lib/recordzone";
+import { SEARCH_HIT_KIND_KEY } from "../../lib/searchkinds";
 import "./audit.css";
 
 // Reusable audit attribution — turns a raw AuditLogEntry into a line a contact

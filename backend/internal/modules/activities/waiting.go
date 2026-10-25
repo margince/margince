@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -415,47 +416,23 @@ func (s *Store) ownDomainList(ctx context.Context, tx pgx.Tx) ([]string, error) 
 	return domains, nil
 }
 
-// ownDomainSenderSQL is the ONE spelling of "this message came from one of our
-// own domains", rendered under a caller's activity alias with the placeholder
-// holding the domain list.
+// ownDomainSenderSQL is "this message came from one of our own domains" under
+// a caller's activity alias, with the placeholder holding Set's folded domains.
+// The waiting queue and the response reading share it so they agree on who is
+// waiting. It compares the sender's folded domain, never the address, so it
+// agrees with the reply path's owndomain.Set.Covers. An unfolded row stays in
+// the queue as an outside sender.
 //
-// Held by: TestTheOwnDomainSenderPredicateHasOneSpelling
+// Held by: TestEveryOwnDomainComparisonInSQLReadsFoldedDomains
 // (backend/gates/owndomainpredicate_test.go)
-//
-// A shared fragment rather than the same predicate typed twice, because the
-// waiting queue and the response reading judge the same messages: a rule that
-// drifted between them would make /worklist/response disagree with the queue
-// about who is waiting, and nothing would fail.
-//
-// Two things it does NOT do, each learned from a way it can suppress a real
-// customer silently:
-//
-//   - It reads the domain after the LAST at-sign, not the first. A quoted local
-//     part may legally contain one, so a sender can put one of our domains
-//     inside their own local part; splitting at the first would read that as
-//     the domain and hide their message.
-//   - It compares a suffix with right(), never LIKE. A domain is text an
-//     operator typed, and underscore is a LIKE wildcard, so an entry such as
-//     "our_.test" would match "ourx.test" and hide that customer's mail.
-//
-// A blank entry matches nothing on its own: equality fails against any real
-// domain, and the suffix comparison then asks whether a domain ends in a bare
-// dot, which none does. Stated here rather than guarded, because a guard no
-// test can fail is a claim nobody is holding.
 func ownDomainSenderSQL(alias string, domainArg int) string {
 	return fmt.Sprintf(`EXISTS (
 	         SELECT 1 FROM activity_participant ours
-	          CROSS JOIN LATERAL (SELECT lower(split_part(ours.address, '@',
-	                  length(ours.address) - length(replace(ours.address, '@', '')) + 1))
-	              ) AS sender(domain)
 	          WHERE ours.activity_id = %[1]s.id
 	            AND ours.role = 'from'
-	            AND sender.domain <> ''
 	            AND EXISTS (
 	                  SELECT 1 FROM unnest($%[2]d::text[]) AS own(domain)
-	                   WHERE (sender.domain = own.domain
-	                       OR right(sender.domain, length(own.domain) + 1)
-	                          = '.' || own.domain)))`, alias, domainArg)
+	                   WHERE %[3]s))`, alias, domainArg, owndomain.CoversSQL("ours.address_domain_folded", "own.domain"))
 }
 
 func scanWaitingReply(record pgx.Row) (WaitingReply, error) {

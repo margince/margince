@@ -189,6 +189,31 @@ rules. This decides who may act against the answer those rules gave about one co
 installation that handed over the first has not handed over the second with it. The check is
 `auth.RequireHuman` plus the grant, so a passport that holds an admin's grants cannot make one.
 
+Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. The grant
+alone does not say which refusals a seat may send past. Each refusal reason declares what can
+resolve it in `commsauthz.RemediesFor`.
+
+- A reason that lists the plain exception can be sent past by any holder of the grant. Examples are
+  no evidence and no marketing consent.
+- A reason that lists only the admin exception can be sent past only by an admin. Examples are a
+  contact's own objection, withdrawal or stop request. A hard bounce and a frequency cap are two
+  more.
+
+`Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
+
+A contact can be written to about a thread when three things hold:
+
+- They were To or Cc on an inbound mail a connector captured on that thread.
+- Someone who is not one of our seats wrote that mail.
+- One of our seats sent a captured mail on the same thread, of the same kind and provider.
+
+Mail our own side sends never counts. Capture files a colleague's mail as outbound, so it never
+counts either. So a seat cannot make this ground by copying the contact.
+
+The rule reads the thread key and records its basis against that thread. So it never becomes
+standing permission for the contact. It never supports a message the sender calls marketing.
+`copiedOnThisMatter` holds the whole rule.
+
 ## Reaching the subject without the message that carried the link
 
 Three records exist so a subject's own acts do not rest on a mailbox, a session or a token that has
@@ -227,6 +252,32 @@ since rotated.
 - **A public fix or erasure opens a case.** A subject who types into a confirm link opens a
   `data_subject_request` in the same transaction. The case gets a reference number and the last day to answer it.
   No row is left behind for nobody to work.
+- **A closed case keeps a proof.** The transaction that closes a case writes one
+  `privacy_request_proof` row (`backend/internal/modules/consent/requestproof.go`). It records the
+  number, the address the request came from, the arrival date and the kind. It also records the
+  identity check, the result, the closer and the answer date. The proof holds no other contact
+  data, so an erasure leaves it standing. A `not_verified` check closes a case only as rejected.
+- **The erasure counts its own work.** `Eraser.EraseContactCounted` runs every step of the erasure on a
+  `tallyTx` (`backend/internal/modules/privacy/erasuretally.go`). It counts the rows each writing
+  statement touched, by table and verb, so a new arm is counted without a change here. A row two
+  statements touch counts twice. Objects outside the database, such as attachment files, are
+  named as not counted. The tombstone carries this account, and so does the proof.
+- **A request certifies its erasure once.** A replay of reason `dsr:<request-id>` runs the whole
+  erasure again, so text written about the subject since the first run goes too. It writes no
+  second tombstone or event, and answers the account the first tombstone carries. So a close that
+  failed after its erasure committed stores the first account when it is retried.
+- **A proof lasts three years past its year.** `ProofKeepUntil` dates it to the first day of the
+  year after that, with the year and that day both read in `installation.timezone`. The
+  `privacy_request_proof_expiry` job deletes it in the first month of that year, unless the case
+  has `dispute_open` set.
+- **Expiry takes the requester off the case.** The pass ends the case with the tombstone the
+  erasure writes on a subject's other cases (`RetireExpiredRightsCaseTx`), injected by compose. It
+  writes an `anonymize` audit row on the case. Every audit reader hides the images older than such
+  a row. So the reference copied into the audit row that opened the case is no longer shown.
+- **Old cases get a proof too.** A data task writes proofs for cases closed before proofs
+  existed. It takes the closer from the latest audit row that moved the case into its status. It
+  finds the erasure by its reason, since the case's own reference may be a tombstone. What no
+  record shows is marked `unknown`.
 
 ## What the engine reports about itself
 
@@ -251,10 +302,12 @@ category refusing mail the old gate would have allowed.
 into consent's handlers.
 
 - **Article 17 erasure** (`Eraser.EraseContact`) removes the personal values from the normal rows in
-  place. It deletes raw capture, embeddings and attachment bytes. It hashes each address and handle into a
-  **suppression list**, so a later capture cannot add the subject again. It proves the work with a
-  **audit tombstone with no PII**, all in **one transaction per record**. That all-or-nothing
-  transaction *is* the promise. It refuses a subject under `legal_hold`.
+  place, and deletes raw capture, embeddings and attachment bytes. It proves the work with an **audit
+  tombstone with no PII**, all in **one transaction per record**, and that transaction *is* the
+  promise. It refuses a subject under `legal_hold`.
+- **The suppression list** holds a hash of each erased address and handle. No later capture, import
+  or typed create can store one again. A booking on the public booking page still can, because a
+  refusal there would show which addresses were erased.
 - **Article 15 subject access** (`AssembleSAR`) is one read that needs more rights. It needs the
   `contact.delete` grant **and** a row scope with no limit. It puts everything held about a contact
   into one export package: channels, deals, leads, activities, attachments, consent and its proof log,

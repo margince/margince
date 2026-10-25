@@ -49,8 +49,11 @@ const vcardCreateKind = "vcard_create"
 // staged identity, and the approvals engine verifies an identity against
 // the payload that carries it.
 type vcardCreateProposal struct {
-	Entry    contacts.VCardEntry `json:"entry"`
-	FullName string              `json:"full_name"`
+	Entry contacts.VCardEntry `json:"entry"`
+	// Name is the name the accepted create writes, and the one the decider is
+	// shown. FullName below is the folded identity and is never displayed.
+	Name     string `json:"name"`
+	FullName string `json:"full_name"`
 	// Emails is the card's addresses lowered, sorted and joined — ONE string,
 	// because an identity field is a string by the engine's contract.
 	Emails string `json:"emails"`
@@ -111,6 +114,7 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry conta
 		}
 		proposal := vcardCreateProposal{
 			Entry: entry,
+			Name:  contacts.VCardContactName(entry),
 			// The dedupe lane's own folding, not a plain lowercase: a name it
 			// treats as the same contact must hit the same decline memory, or
 			// a re-spelt card walks past a refusal.
@@ -161,7 +165,7 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry conta
 			ProposedChange: body,
 			DiffHash:       hex.EncodeToString(digest[:]),
 			Identity:       identity,
-			Summary:        vcardCreateSummary(approvalSummaryCopyOver(ctx, pool), entry.FullName),
+			Summary:        vcardCreateSummary(approvalSummaryCopyOver(ctx, pool), entry, candidate != nil),
 			JoinPending:    true,
 		})
 		return err
@@ -173,9 +177,11 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry conta
 // is the uploader's text, and a long one placed first would push "resembles
 // an existing contact" past the summary's truncation. Every language's
 // sentence keeps that order.
-func vcardCreateSummary(said approvalSummaryCopy, fullName string) string {
-	name := strings.TrimSpace(fullName)
-	name = textcut.RunesMarked(name, 80, "…")
+func vcardCreateSummary(said approvalSummaryCopy, entry contacts.VCardEntry, resemblesContact bool) string {
+	name := textcut.RunesMarked(strings.TrimSpace(entry.FullName), 80, "…")
+	if entry.ModelRead && !resemblesContact {
+		return fmt.Sprintf(said.vcardReadFromPhoto, name)
+	}
 	return fmt.Sprintf(said.vcardResemblesContact, name)
 }
 

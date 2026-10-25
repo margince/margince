@@ -189,6 +189,10 @@ func (censusGeocoder) Resolve(context.Context, string) (geocode.Point, bool, err
 	return geocode.Point{}, false, errCensusSeam
 }
 
+func (censusGeocoder) Countries(context.Context, string) ([]string, error) {
+	return nil, errCensusSeam
+}
+
 // censusVatChecker stands in for the VAT register on the same terms: wired for
 // the count, refusing every consultation, so no test passes on an answer the
 // register never gave.

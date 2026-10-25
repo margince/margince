@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -91,7 +92,7 @@ func (s *Sink) standInSubject(
 		// position, not a name, and inventing one from the local part would put
 		// a guess where provenance belongs. Enrichment names them properly.
 		DisplayName: "",
-		Domain:      domainOfAddress(stand),
+		Domain:      owndomain.OfAddress(stand),
 		Direction:   direction,
 		// The owner attestation and the unsubscribe header belong to the
 		// message's real counterparty, not to a party standing in for them:

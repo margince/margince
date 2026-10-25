@@ -1283,7 +1283,9 @@ paths:
       tags: [Contacts]
       operationId: listContacts
       summary: List contacts (live by default; cursor-paginated).
-      description: Default view excludes archived rows (`archived_at IS NULL`). Leads never appear here.
+      description: |
+        Default view excludes archived rows (`archived_at IS NULL`) and contacts carrying a
+        `relationship_mark`. A text search (`q`) still finds a marked contact. Leads never appear here.
       x-mcp-tool:
         verb: list_records
         record_type: contact
@@ -1297,6 +1299,12 @@ paths:
         - $ref: '#/components/parameters/IncludeArchived'
         - $ref: '#/components/parameters/CapturedByKind'
         - $ref: '#/components/parameters/AiWritten'
+        - name: relationship_mark
+          in: query
+          schema: { type: string, enum: [vendor_marketing, any] }
+          description: |
+            Without it the list leaves out marked contacts, unless `q` is given. `vendor_marketing`
+            returns only contacts carrying that mark; `any` returns marked and unmarked alike.
         - name: owner_id
           in: query
           schema: { type: string, format: uuid }
@@ -1403,7 +1411,8 @@ paths:
       description: |
         With name + email returns 201 and a stable `id` (UUID) that round-trips on GET
         (features/01 §1.1 AC). If the email already exists on a live contact, returns 409
-        with the existing contact id (features/01 §1.3). Writes one audit row + one
+        with the existing contact id. An email on the erasure list
+        answers 422 naming `emails` with code `address_erased`. Writes one audit row + one
         `contact.created` event.
       x-mcp-tool:
         verb: create_record
@@ -1579,6 +1588,55 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /contacts/card-photos:
+    post:
+      tags: [Contacts]
+      operationId: importCardPhoto
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      summary: Read a photo of business cards and propose the contacts it shows.
+      description: |
+        A model reads the photo and returns one card per business card it can see. Nothing is
+        written to a contact: every card that is not an exact match goes to the approval queue
+        as a `vcard_create` approval that only the importing member can see and decide.
+
+        Per card, in reading order: `proposed` — nobody matched, waiting on an approval.
+        `needs_review` — the card resembles a contact, waiting on an approval that names the
+        candidate. `skipped` — the card states no name, carries a sending system's address, or
+        its email already belongs to a contact; a card read from a photo never changes an
+        existing contact. A photo that shows more than 20 cards is refused whole.
+
+        JPEG, PNG, GIF and WebP are accepted. HEIC and HEIF are refused with `422` and code
+        `unsupported_type`; the photo must be saved as JPEG or PNG first. A photo larger than
+        8,388,608 bytes is refused with `413` before it is read. The reading runs inside
+        the request. `422` with code `no_cards` means the photo shows no business card, and `422`
+        with `not_readable` means the configured model cannot read photos or the reply could not
+        be used. `501` means the installation has no model configured.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: "The photo. Its bytes must be the image type it claims to be." }
+      responses:
+        '200':
+          description: What became of each card in the photo.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VCardImportReport' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501':
+          description: The installation has no model configured to read photos.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /contacts/{id}:
     parameters:
@@ -4500,6 +4558,53 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Partner' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /companies/{id}/partner/setup:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Companies, Partners]
+      operationId: setUpPartner
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Set up a partner program on a company that has none, with no margin tier.
+      description: |
+        The answer the `set_up_partner` agent tool gives, run by the same tool on both doors. It
+        creates the company's partner program with a role, a relationship stage and a next step,
+        and adds `partner` to its `relationship_types`. The certification status starts at
+        `applied`. The margin tier stays unset: it is the rate the commission ledger multiplies a
+        won deal by, so a human sets it on the company's Partner tab through `PUT /companies/{id}/partner`.
+        A body naming `margin_tier` is refused.
+
+        Confirm-first for an agent: the call stages one approval and answers 403 `approval_required`
+        naming it. A human who may update both partners and companies approves it. Repeat the same
+        call with that id as `approval_id`, or as the `X-Approval-Token` header. A human's own call
+        is its approval.
+
+        A company that already has a live partner program answers 409 `partner_row_exists`.
+        A program ends only when the company is archived.
+
+        A retry with the same `idempotency_key` answers the first call's result. An
+        `Idempotency-Key` header is taken as that key.
+      x-mcp-tool: { verb: set_up_partner, record_type: company, tier: confirmation_required, scope: write, served_by: registry }
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetUpPartnerRequest' }
+      responses:
+        '200':
+          description: The partner program as set up, with no margin tier.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Partner' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/enrich:
     parameters:
@@ -7767,6 +7872,13 @@ paths:
             Restrict the list to an inbound message still awaiting an answer: the newest message
             of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it
             answers what on this record is waiting for a reply.
+        - name: reminder_due
+          in: query
+          schema: { type: boolean }
+          description: >-
+            Restrict the list to the caller's own due reminders: open, live tasks assigned to the
+            caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes
+            first. It reads content, so a task whose content the caller may not read is left out.
       responses:
         '200':
           description: A page of activities (newest first by default).
@@ -10589,6 +10701,7 @@ paths:
         dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
         for idempotent re-import. A `project_id` that names no project the caller can read
         answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
+        An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
       x-mcp-tool: { verb: create_record, record_type: lead, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -17517,7 +17630,7 @@ paths:
         product rule, not a score: a customer waiting outranks a promise, a promise
         outranks material revenue at risk, and routine data hygiene never outranks any of
         them however large its pile. Level 0 is the reader's own pin, which is the one
-        override a contact has over the ordering.
+        override a contact has over the ordering, and a task of theirs whose reminder came due.
 
         Inside a level the tie-breaks run deadline → expected revenue → waiting days →
         relationship importance → occurrence. Deadline leads because a date somebody
@@ -28612,7 +28725,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - name: category
           in: query
-          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other] }
+          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other, link] }
         - name: include_hidden
           in: query
           schema: { type: boolean, default: false }
@@ -29899,7 +30012,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - name: category
           in: query
-          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other] }
+          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other, link] }
         - name: doc_state
           in: query
           schema: { type: string, enum: [draft, current, final, superseded] }
@@ -34936,7 +35049,10 @@ components:
           type: string
           enum: [needs_reply, waiting_for_them, none]
           description: |
-            Whose move it is, derived from what this reader can see of the thread. `none` when
+            Whose move it is, derived from what this reader can see of the thread.
+            `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+            that is still the last word with them. A calendar invitation, update, cancellation
+            or answer is `none` unless someone confirmed it asks us something. `none` also when
             the question cannot be answered honestly — an unanswerable move is not a claim.
         display_status:
           $ref: '#/components/schemas/EmailAccessStatus'
@@ -36916,7 +37032,7 @@ components:
 
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
 
     CreateImportRunRequest:
@@ -37726,6 +37842,21 @@ components:
         country: { type: [string, 'null'], description: 'ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.' }
       additionalProperties: true
 
+    AddressCountryMismatch:
+      type: object
+      description: >-
+        The stored address country does not fit the postal code and city. A background check
+        asks the geocoder for the postal code and city alone, reads the countries of up to five
+        places they name, and flags the stored country only when it is none of them. The stored
+        country is never changed. Editing the postal code, city or country clears the result
+        until the next check, and a result older than 180 days is checked again.
+      required: [resolved_country]
+      properties:
+        resolved_country:
+          type: string
+          pattern: '^[A-Z]{2}$'
+          description: ISO-3166 alpha-2 code of the best-ranked country the postal code and city resolve to.
+
     Money:
       type: object
       description: Money as integer minor-units + ISO-4217 currency. Never a float.
@@ -38395,6 +38526,15 @@ components:
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        relationship_mark:
+          type: [string, 'null']
+          enum: [vendor_marketing, null]
+          description: >-
+            Set when the workspace's relationship to this contact is not an ordinary one.
+            `vendor_marketing` is a named sender who only pitches something to this business and
+            whom nobody here has answered. The default contact lists leave a marked contact out;
+            a text search and a read by id still find it. Null is not marked. Written through
+            `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
         legal_hold:
           type: boolean
           readOnly: true
@@ -38457,6 +38597,13 @@ components:
           additionalProperties: true
           description: '{ linkedin, twitter, github, ... }'
         address: { $ref: '#/components/schemas/Address' }
+        address_country_mismatch:
+          readOnly: true
+          description: >-
+            Present only when the stored address country is none of the countries the postal
+            code and city resolve to. Absent when one of them matches, when the address has not
+            been checked yet, or when it carries no postal code, city or assigned country code.
+          allOf: [{ $ref: '#/components/schemas/AddressCountryMismatch' }]
         emails:
           type: array
           items: { $ref: '#/components/schemas/ContactEmail' }
@@ -38682,7 +38829,7 @@ components:
         full_name: { type: string, description: "The name the card stated, so a reader can find the row it came from." }
         outcome:
           type: string
-          enum: [created, updated, needs_review, skipped]
+          enum: [created, updated, needs_review, proposed, skipped]
           # Pins the generated Go constant names. Unpinned, the generator names
           # these bare whenever nothing else in api_gen.go happens to claim the
           # word — and `Created` is already declared by publicevents_gen.go in
@@ -38693,12 +38840,14 @@ components:
               VCardImportResultOutcomeCreated,
               VCardImportResultOutcomeUpdated,
               VCardImportResultOutcomeNeedsReview,
+              VCardImportResultOutcomeProposed,
               VCardImportResultOutcomeSkipped,
             ]
           description: |
             `created` — nobody matched, so the card became a contact, their company and the edge
             between them. `updated` — an exact match, filled only where the record was empty.
             `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+            `proposed` — a card read from a photo that nobody matched, waiting on an approval.
             `skipped` — the card states no name, carries a sending system's address, or matches a
             contact the caller may not write; `reason` says which.
         contact_id:
@@ -38740,6 +38889,13 @@ components:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
+        relationship_mark:
+          type: [string, 'null']
+          enum: [vendor_marketing, null]
+          description: >-
+            Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records
+            who set it, so a mark set by hand is never lifted by the automatic check that
+            lifts the mark the sender check set.
         full_name: { type: string }
         first_name: { type: [string, 'null'] }
         last_name: { type: [string, 'null'] }
@@ -38914,6 +39070,13 @@ components:
           type: [string, 'null']
           enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']
         address: { $ref: '#/components/schemas/Address' }
+        address_country_mismatch:
+          readOnly: true
+          description: >-
+            Present only when the stored address country is none of the countries the postal
+            code and city resolve to. Absent when one of them matches, when the address has not
+            been checked yet, or when it carries no postal code, city or assigned country code.
+          allOf: [{ $ref: '#/components/schemas/AddressCountryMismatch' }]
         owner_id: { type: [string, 'null'], format: uuid }
         visibility:
           type: string
@@ -46944,10 +47107,10 @@ components:
     AssignLeadOutcomeKind:
       type: string
       description: |
-        `assigned` moved the lead — including one already owned by the destination, which still
-        takes a version and an audit row rather than being quietly skipped: the writer records
-        the assignment as an act, so a re-run says what it did rather than claiming it did
-        nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+        `assigned` means the lead now belongs to the destination. A lead already owned by the
+        destination is not written: it keeps its version and gains no audit row, exactly as a
+        single update that changes nothing, and the result carries the version it already had.
+        `forbidden` is a lead the caller may not hand on. `conflict` is a version that
         no longer holds.
 
         `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
@@ -47233,7 +47396,7 @@ components:
             caller who may discover the row without reading it is not told this either.
         occurred_at: { type: string, format: date-time }
         due_at: { type: [string, 'null'], format: date-time, description: Task only. }
-        remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. Reminder-fire time; the B-E16.6 scan reads tasks whose reminder is due, not-done, and un-archived.' }
+        remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.' }
         assignee_id: { type: [string, 'null'], format: uuid, description: Task only. }
         is_done: { type: boolean, default: false, description: Task only. }
         done_at: { type: [string, 'null'], format: date-time }
@@ -47638,7 +47801,7 @@ components:
         body: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
         due_at: { type: [string, 'null'], format: date-time }
-        remind_at: { type: [string, 'null'], format: date-time, description: Task only. }
+        remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.' }
         assignee_id: { type: [string, 'null'], format: uuid }
         host_user_id:
           type: string
@@ -47892,7 +48055,7 @@ components:
         occurred_at: { type: string, format: date-time }
         due_at: { type: [string, 'null'], format: date-time }
         assignee_id: { type: [string, 'null'], format: uuid }
-        remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.' }
+        remind_at: { type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.' }
         is_done: { type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).' }
         meeting_status:
           type: [string, 'null']
@@ -47960,10 +48123,14 @@ components:
         checksum: { type: [string, 'null'], description: 'sha256 of the bytes, for integrity/dedupe.' }
         category:
           type: string
-          enum: [contract, offer, legal, email_attachment, message_attachment, other]
+          enum: [contract, offer, legal, email_attachment, message_attachment, other, link]
           description: |
             What kind of document this is. Closed vocabulary; `other` is the
             honest default, not a fallback for an unknown value.
+
+            `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+            Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+            and the category cannot be set or changed through a metadata patch.
 
             `email_attachment` and `message_attachment` record PROVENANCE rather than
             content: capture derives them from the transport the file arrived on, so a
@@ -48013,6 +48180,14 @@ components:
           description: >-
             True for a file a private message carried that was recorded by name, size and
             type only: no bytes were kept, so there is nothing to download (404) or read.
+            Also true for a `link` row, which is a pointer and has no bytes.
+        url:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            The address of a `link` row, and null for every other category. It is an http or https
+            address on a known document host. The reader renders it as an outbound link to open in
+            a new tab, never as a download.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         created_at: { type: string, format: date-time }
@@ -50983,10 +51158,14 @@ components:
             since the catalog owns labels and this vocabulary does not.
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean, id, domain]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, id, domain, distance]
           description: |
-            The six custom-field types, plus `id` for a reference to another record and
-            `domain` for a host column. The type decides the operators, which is why it is here.
+            The six custom-field types, plus `id` for a reference to another record,
+            `domain` for a host column and `distance` for a place on the earth. A `distance`
+            field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
+            `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
+            name the builder showed for the center. Only companies that have a located address
+            can match. The type decides the operators, which is why it is here.
 
             `domain` also decides what happens to the VALUE, and it is the only type that does:
             the operand is folded to the host the column stores, so
@@ -51003,7 +51182,7 @@ components:
             this field, so a builder can disable it rather than discover it.
           items:
             type: string
-            enum: [eq, neq, gt, lt, gte, lte, in, contains, exists]
+            enum: [eq, neq, gt, lt, gte, lte, in, contains, exists, within_radius]
         custom:
           type: boolean
           description: |
@@ -56183,6 +56362,24 @@ components:
             On a `per_type` answer only: the types that matched more hits than the page carries
             for them. Absent on a ranked answer, whose `page.has_more` says the same thing for
             the list as a whole.
+        near_matches:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/SearchNearMatch' }
+          description: >
+            Present only when `data` is empty on a first page of a plain search (no cursor, no
+            record bound, no operator syntax): up to five records whose names are spelt close to
+            the query, closest first. They are suggestions, not matches, and only records the
+            caller may open appear. Absent otherwise, and never on a page with a cursor.
+
+    SearchNearMatch:
+      type: object
+      required: [type, id, title]
+      properties:
+        type: { type: string, enum: [contact, company, deal, lead] }
+        id: { type: string, format: uuid }
+        title: { type: string }
+        snippet: { type: string, description: 'The company beside a lead''s name, as a lead hit carries it.' }
 
     ContextEntityRef:
       type: object
@@ -58366,6 +58563,19 @@ components:
         next_step_due_at: { type: [string, 'null'], format: date }
         served_segments: { type: [array, 'null'], items: { type: string } }
 
+    SetUpPartnerRequest:
+      type: object
+      description: |
+        What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
+        or `served_segments`: the tier is a human's choice, and the others are set after set-up.
+      required: [partner_role]
+      additionalProperties: false
+      properties:
+        partner_role: { type: string, enum: [hosting, consulting, strategic] }
+        relationship_stage: { type: string, enum: [research, identified, contacted, in_conversation, fit_confirmed, agreement_pending, active, active_referring, dormant, no_fit] }
+        next_step: { type: string }
+        next_step_due_at: { type: string, format: date }
+
     # ---- Per-purpose consent (ADR-0011) ----
     ConsentPurpose:
       type: object
@@ -59120,7 +59330,7 @@ components:
     DataSubjectRequest:
       type: object
       description: A GDPR data-subject request (Art. 15/16/17) tracked to completion (B-E11.30; data-model §12.5).
-      required: [id, kind, subject_ref, status, due_at, due_overridden, created_at]
+      required: [id, kind, subject_ref, status, due_at, due_overridden, dispute_open, created_at]
       properties:
         id: { type: string, format: uuid }
         kind: { type: string, enum: [access, rectify, erasure] }
@@ -59150,6 +59360,13 @@ components:
           description: 'True when the officer chose an earlier deadline than `due_rule` gives.'
         assignee_id: { type: [string, 'null'], format: uuid }
         resolution: { type: [string, 'null'] }
+        dispute_open:
+          type: boolean
+          description: |
+            True while a complaint or dispute about this request is open. The proof of the
+            answer is kept until 1 January of the fourth year after the year it was answered in,
+            with both the year and that date read in the installation's time zone
+            (`installation.timezone`), and past that date until this is false again.
         created_at: { type: string, format: date-time }
         # no `version`/If-Match: data_subject_request has no version column (data-model §12.5) and is a
         # single-assignee human-only workflow record (x-agent-access: human-only) — not optimistically concurrent.
@@ -59480,6 +59697,30 @@ components:
         resolution:
           type: [string, 'null']
           description: 'A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.'
+        identity_check:
+          type: string
+          enum: [confirm_link, address_on_file, id_document, in_person, not_verified]
+          description: |
+            How the requester's identity was checked, recorded in the proof the request keeps once
+            it closes. Required on the patch that closes a request, except one that arrived through
+            the subject's own confirm link, where the link is the check. `confirm_link`: the
+            subject used a link mailed to their address. `address_on_file`: the request came from,
+            or was confirmed at, an address the record already held. `id_document`: an identity
+            document was seen. `in_person`: the requester was known in person. `not_verified`: the
+            identity could not be checked. A request closes with `not_verified` only as `rejected`;
+            a patch that fulfils with it is refused with 422 before anything is erased. Ignored on
+            any other patch.
+        requester_email:
+          type: string
+          format: email
+          maxLength: 320
+          description: |
+            The address the request came from, recorded in the proof. Optional: when absent, the
+            proof takes the address the confirm link was mailed to, or the subject reference when it
+            is an address. Ignored on a patch that does not close the request.
+        dispute_open:
+          type: boolean
+          description: 'Opens (true) or closes (false) a complaint or dispute about the request. Any status takes it.'
 
     CaptureConsent:
       type: object
@@ -63035,6 +63276,11 @@ components:
         adds none.
       required: [id, source, actions]
       properties:
+        reminder_due:
+          type: boolean
+          description: >-
+            Sent as true on a task whose reminder is due for the reader, who is its assignee and
+            reads their own work. Absent otherwise.
         promise_recipients:
           type: array
           description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
@@ -64693,7 +64939,7 @@ components:
           maximum: 6
           description: |
             The hard priority band, and the whole of the product rule: 0 pinned by the
-            reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
+            reader, or a task assigned to the reader whose reminder came due, 1 a customer waiting or a deadline arriving, 2 a promise due or an
             approved action that failed, 3 material revenue at risk, 4 an assigned task
             or a smaller deal drifting, 5 a decision blocking customer work, 6 data
             hygiene. Levels are never mixed by a score.
@@ -65402,8 +65648,8 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, non_buyer_request, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, account_termination, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, bcc_from_stranger, link_off_sender, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
-          description: 'Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender''s request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.'
+          enum: [pinned, reminder_due, buyer_wrote_last, non_buyer_request, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, account_termination, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, bcc_from_stranger, link_off_sender, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file, read_only]
+          description: 'Which fact this is. The client writes the phrase. `reminder_due` says the reader is the task''s assignee and its reminder came due. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender''s request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 
     WorklistComparison:
@@ -65418,10 +65664,11 @@ components:
       properties:
         comparator:
           type: string
-          enum: [pin, crowded, level, deadline, expected_revenue, opportunity, waiting_days, relationship, order]
+          enum: [pin, reminder, crowded, level, deadline, expected_revenue, opportunity, waiting_days, relationship, order]
           description: |
             What decided it. `order` means every comparator tied and the ids broke it, which the
-            client renders as no reason at all.
+            client renders as no reason at all. `reminder` means this row is a due reminder and
+            the one below is not.
 
             `crowded` means the row below is one of many of its kind: past a lead group, further
             rows of the same source sort under the other kinds of work so one noisy lane cannot own

@@ -493,7 +493,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `disposition_reason` | `text` |  |  |
 | `domain` | `text` |  |  |
 | `email` | `text` | yes |  |
-| `kind` | `text` |  | One of `contact`, `role_mailbox`, `company_sender`, `newsletter`, `transactional`, `spam` and 2 more. |
+| `kind` | `text` |  | One of `contact`, `role_mailbox`, `company_sender`, `newsletter`, `transactional`, `spam` and 3 more. |
 | `next_attempt_at` | `timestamp with time zone` |  |  |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
 | `proposal_id` | `uuid` |  | Points at `approval.id`. |
@@ -517,7 +517,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `capture_pending_counterparty_confidence_range`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))`
-- `capture_pending_counterparty_kind_check`: `CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact', 'role_mailbox', 'company_sender', 'newsletter', 'transactional', 'spam', 'personal', 'advisor']))))`
+- `capture_pending_counterparty_kind_check`: `CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact', 'role_mailbox', 'company_sender', 'newsletter', 'transactional', 'spam', 'personal', 'advisor', 'vendor_pitch']))))`
 - `capture_pending_counterparty_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'unsure', 'real', 'noise', 'suppressed', 'rejected'])))`
 
 **Indexes**

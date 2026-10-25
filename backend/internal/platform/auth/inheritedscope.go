@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -171,12 +172,13 @@ func activityAttendanceArm(p principal.Principal, alias string, arg func(any) in
 
 // senderAtOwnDomain re-asks at read time that the stamped seat's login address
 // is at a trusted own domain. A domain that stops being ours closes the arm at
-// once. A form the SQL folds differently from capture fails closed.
+// once. Both sides are folded by the writers, so the SQL compares capture's
+// answer; a row whose fold is not written yet fails closed.
 func senderAtOwnDomain(alias string) string {
 	return fmt.Sprintf(`EXISTS (SELECT 1 FROM app_user sender
-	   JOIN (%[2]s) own_domain(domain) ON substring(lower(sender.email) FROM '@([^@]+)$') = lower(own_domain.domain)
-	     OR right(substring(lower(sender.email) FROM '@([^@]+)$'), length(own_domain.domain) + 1) = '.' || lower(own_domain.domain)
-	  WHERE sender.id = %[1]s.sent_by_colleague)`, alias, TrustedOwnDomainsSQL)
+	   JOIN (%[2]s) own_domain(domain) ON %[3]s
+	  WHERE sender.id = %[1]s.sent_by_colleague)`,
+		alias, TrustedOwnDomainsFoldedSQL, owndomain.CoversSQL("sender.email_domain_folded", "own_domain.domain"))
 }
 
 // SenderStampsCheckedStep is the data task step that re-checks every sender

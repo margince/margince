@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -71,11 +72,11 @@ func (s *Service) DeclareServiceMember(ctx context.Context, actor Identity, in S
 			return err
 		}
 		member = ids.From[ids.UserKind](ids.NewV7())
+		address := fmt.Sprintf("service-%s@%s", member, serviceMemberEmailDomain)
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO app_user (id, email, display_name, is_agent, service_extension)
-			 VALUES ($1, $2, $3, true, $4)`,
-			member, fmt.Sprintf("service-%s@%s", member, serviceMemberEmailDomain),
-			in.DisplayName, in.Extension); err != nil {
+			`INSERT INTO app_user (id, email, display_name, is_agent, service_extension, email_domain_folded)
+			 VALUES ($1, $2, $3, true, $4, $5)`,
+			member, address, in.DisplayName, in.Extension, owndomain.StoredOfAddress(address)); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,

@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
 // The repeated storage vocabulary of this engine, named once.
@@ -109,6 +110,11 @@ type EnsureCounterpartyInput struct {
 	// accepting the record for this sender sets it when they may not promote
 	// a lead themselves.
 	SkipLeadPromotion bool
+
+	// RelationshipMark marks the contact this ensure CREATES, and is set by
+	// CapturedBy. A contact that already exists is never marked here: the
+	// decision that made it, or whoever edited it, stands.
+	RelationshipMark relationshipmark.Mark
 }
 
 // EnsureCounterpartyResult reports what the ensure did — every flag maps to
@@ -190,6 +196,13 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 	if suppressed {
 		return EnsureCounterpartyResult{}, ErrCounterpartySuppressed
 	}
+	seats, err := storekit.WorkspaceSeatAddresses(ctx, tx)
+	if err != nil {
+		return EnsureCounterpartyResult{}, err
+	}
+	if seats.Covers(in.Email, in.OwnerID) {
+		return EnsureCounterpartyResult{}, ErrCounterpartyIsSeat
+	}
 	if err := s.ensureContact(ctx, tx, in, &res); err != nil {
 		return EnsureCounterpartyResult{}, err
 	}
@@ -237,10 +250,7 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 	if err := auth.Require(ctx, entityContact, principal.ActionCreate); err != nil {
 		return err
 	}
-	parsed, err := s.nameCounterparty(ctx, tx, in)
-	if err != nil {
-		return err
-	}
+	parsed := ParseContactName(in.DisplayName, in.Email)
 	name := parsed.Full
 	// The workspace's own consumer-mail list travels with the candidate: the
 	// employer-agreement term must judge a shared domain the same way capture
@@ -318,6 +328,9 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		Emails:      []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:      in.Source,
 		CapturedBy:  in.CapturedBy,
+
+		RelationshipMark:      in.RelationshipMark,
+		RelationshipMarkSetBy: markSetBy(in.RelationshipMark, in.CapturedBy),
 		// Only a message FROM them is the contact initiating contact: a reply,
 		// or any captured mail they sent us (acquiredFromCaptureTx). Capture
 		// also mints a record for somebody we wrote to twice who never

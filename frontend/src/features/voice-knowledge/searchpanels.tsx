@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useState } from "react";
-import { SEARCH_ACTIVITY_SEGMENT } from "../../app/searchkinds";
 import { useOpenEmail } from "../../lib/openemail";
 import { useRecordZone } from "../../lib/recordzone";
+import { SEARCH_ACTIVITY_SEGMENT } from "../../lib/searchkinds";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { OpenActivityDrawer } from "./activitydrawer";
 

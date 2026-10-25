@@ -31,6 +31,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -39,7 +40,7 @@ import (
 const (
 	// GeocodeOK — the coordinates match the address in the row. The ONLY
 	// status a radius query reads.
-	GeocodeOK = "ok"
+	GeocodeOK = geocode.ResolvedStatus
 	// GeocodeFailed — the lookup did not complete. Retryable.
 	GeocodeFailed = "failed"
 	// GeocodeNoMatch — the geocoder resolved the address to nothing. A fact

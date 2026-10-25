@@ -117,6 +117,38 @@ func contradictsClaim(claimed, resolved commsauthz.Category) bool {
 	return claimed != "" && claimed != resolved
 }
 
+// claimYieldsToEvidence reports whether a claim the evidence contradicts gives
+// way to that evidence. Every claim does except marketing. A "requested
+// follow-up" written from the recipient's own open deal is sent as the deal
+// follow-up, and the claim stays in Requested. A marketing claim never yields:
+// an objection to marketing binds the category the sender named.
+func claimYieldsToEvidence(claimed commsauthz.Category) bool {
+	return claimed != commsauthz.CategoryMarketing
+}
+
+// putClaimToEvidence puts the caller's claim to the category the evidence
+// resolved. A contradicted claim is kept in Requested; denied is true when the
+// claim does not yield. The contact and the lead arm both call it, so a
+// marketing claim binds a lead as it binds a contact.
+func putClaimToEvidence(d commsauthz.Decision, claimed, resolved commsauthz.Category) (commsauthz.Decision, bool) {
+	if !contradictsClaim(claimed, resolved) {
+		return d, false
+	}
+	d.Requested = claimed
+	if claimYieldsToEvidence(claimed) {
+		return d, false
+	}
+	return denyContradiction(d, resolved), true
+}
+
+// unsupportedClaimAwaitsAnswer reports whether an unsupported claim is a
+// question for the sender rather than a purpose nothing defines. That holds when
+// the claim is in the vocabulary and the caller named no legacy purpose key.
+// Both subject arms ask it, so a lead and a contact get the same answer.
+func unsupportedClaimAwaitsAnswer(claimed commsauthz.Category, purposeKey string) bool {
+	return purposeKey == "" && claimed != "" && claimed.Valid()
+}
+
 // denyContradiction is the refusal both paths give, with Resolved carrying the
 // RECORD's reading rather than the claim. An unproven claim must never reach
 // that column: it selects the rollout mode and decides whether the advertising
@@ -173,11 +205,10 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 		// things at once, and the withdrawal read below would be asked about
 		// reply_to_inbound — so a live objection to direct marketing would
 		// never be put to a message its own sender called marketing.
-		if contradictsClaim(req.Context, res.Category) {
-			d.Requested = req.Context
-			// An evidence-borne category, not a purpose key: nothing here ever
-			// named one, so a narrow suppression cannot be about this send.
-			return denyContradiction(d, res.Category), nil, nil
+		var denied bool
+		d, denied = putClaimToEvidence(d, req.Context, res.Category)
+		if denied {
+			return d, nil, nil
 		}
 		// The record bears the category out — and the subject may still have
 		// said stop. The evidence arms never read contact_consent, so this is
@@ -234,6 +265,11 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // purpose from one that binds some OTHER marketing purpose, which
 // suppressionBinds cannot do from the category alone.
 func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
+	if unsupportedClaimAwaitsAnswer(claimed, purposeKey) {
+		d.Verdict = commsauthz.VerdictReview
+		d.ReasonCode = res.Reason
+		return d, nil, nil
+	}
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err

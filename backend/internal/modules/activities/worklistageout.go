@@ -22,6 +22,7 @@ const worklistAgeOutDays = 30
 // worklistAgeOutDays before asOf. A human reopening keeps the task current.
 // A row still pinned in effect by the user that
 // pinner names stays regardless, because a pin is someone keeping it on purpose.
+// So does a task whose reminder is due for that user: they asked to be reminded.
 //
 // pinner is a SQL expression, not a value: the reader's own placeholder for the
 // day's page, the assignee column for the team board that counts their day.
@@ -29,8 +30,10 @@ func worklistAgeOutClause(asOf time.Time, pinner, identities string, arg func(an
 	floor := arg(asOf.AddDate(0, 0, -worklistAgeOutDays))
 	return storekit.CurrentTaskClause("a", asOf, identities, arg) + " AND " + sprintf(`(a.kind <> 'task' OR a.due_at IS NULL OR a.due_at >= $%d
 		OR `+humanReopenedTaskSQL("a")+`
-		OR (%s, a.id::text) IN (SELECT reader_id, row_id FROM %s wp WHERE wp.source = $%d))`,
-		floor, pinner, auth.EffectiveWorklistPinsSQL(arg), arg(string(crmcontracts.WorklistItemSourceTask)))
+		OR (%s, a.id::text) IN (SELECT reader_id, row_id FROM %s wp WHERE wp.source = $%d)
+		OR %s)`,
+		floor, pinner, auth.EffectiveWorklistPinsSQL(arg), arg(string(crmcontracts.WorklistItemSourceTask)),
+		dueReminderClause("a", pinner, asOf, arg))
 }
 
 func humanReopenedTaskSQL(alias string) string {

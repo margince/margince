@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { ADDRESS_FIELDS, addressFrom } from "../../components/companyform";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
@@ -150,7 +151,22 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           </>,
           Boolean(contact.title),
         ),
-        field("address", t("co.address.summary"), address, address !== ""),
+        field(
+          "address",
+          t("co.address.summary"),
+          <>
+            {address}
+            {contact.address_country_mismatch && (
+              <>
+                {" "}
+                <AddressCountryMismatchBadge
+                  mismatch={contact.address_country_mismatch}
+                />
+              </>
+            )}
+          </>,
+          address !== "",
+        ),
       ],
     },
     {

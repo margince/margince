@@ -28,11 +28,14 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -79,6 +82,11 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		args := []any{key}
 		arg := func(v any) int { args = append(args, v); return len(args) }
+		columns, ok := geocode.ColumnsFor("company")
+		if !ok {
+			return errors.New("company has no geocode columns")
+		}
+		locatedTerms := geocode.LocatedSQL("company", columns, arg)
 		// ROW SCOPE, and it is load-bearing rather than ceremonial. This
 		// answers a point derived from companies, so without the predicate a
 		// caller who may see none of them still learns that SOMEBODY is located
@@ -89,17 +97,13 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 		if err != nil {
 			return err
 		}
-		// geocode_status = 'ok' is REQUIRED, and it is the same predicate the
-		// radius query itself applies (querygeo.go). A row keeps its old point
-		// when its address changes and is stamped `stale` — "not queryable,
-		// deliberately" in geocode.go's own words — so averaging one in would
-		// measure this city from where a company USED to be. Coordinates that
-		// are merely non-NULL are not coordinates that are true.
+		// The located terms are the predicate the radius query applies
+		// (geocode.LocatedSQL). An address change stamps the row `stale` and
+		// keeps its old point, so averaging it would use the previous address.
 		//
-		// The SPREAD comes back with the centre, from the same scan: asking a
-		// second time would read a different row set under a concurrent write,
-		// and the check is only meaningful against the rows that produced this
-		// average.
+		// The spread comes back with the centre from the same scan. A second
+		// query could read a different row set under a concurrent write, and
+		// the check only means something against the rows behind this average.
 		return tx.QueryRow(ctx, `
 			SELECT avg(geocode_lat), avg(geocode_lon),
 			       max(geocode_lat) - min(geocode_lat),
@@ -107,9 +111,7 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 			       count(*)
 			  FROM company
 			 WHERE archived_at IS NULL
-			   AND geocode_status = 'ok'
-			   AND geocode_lat IS NOT NULL
-			   AND geocode_lon IS NOT NULL
+			   AND `+strings.Join(locatedTerms, " AND ")+`
 			   AND lower(btrim(address_city)) = $1
 			   AND `+scope, args...).
 			Scan(&lat, &lon, &latSpread, &lonSpread, &located)

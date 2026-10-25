@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-31 columns · primary key `(id)` · referenced by 141 foreign keys
+32 columns · primary key `(id)` · referenced by 141 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -15,6 +15,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `delivery_hour_local` | `integer` |  |  |
 | `display_name` | `text` | yes |  |
 | `email` | `text` | yes |  |
+| `email_domain_folded` | `text` |  |  |
 | `failed_login_count` | `integer`, default `0` | yes |  |
 | `greeting_name` | `text` |  | At most 100 characters. |
 | `greeting_name_chosen_at` | `timestamp with time zone` |  |  |

@@ -8,7 +8,13 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { LocaleProvider } from "../../i18n";
-import { VCardImportAction, VCardImportPage } from "./vcard-import";
+import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
+import {
+  CARD_PHOTO_EXTENSIONS,
+  isCardPhoto,
+  VCardImportAction,
+  VCardImportPage,
+} from "./vcard-import";
 
 // The report is the point. An import that says "done" while three cards went
 // nowhere is worse than one that refuses, because nobody can tell WHO is
@@ -81,7 +87,7 @@ describe("VCardImport", () => {
   it("leads back to the contact list", () => {
     render(<VCardImportPage />);
     const title = screen.getByRole("heading", { level: 1 });
-    expect(title).toHaveTextContent("Import vCards");
+    expect(title).toHaveTextContent("Import business cards");
     // The link that opened the page is gone, so the title holds focus.
     expect(title).toHaveFocus();
     expect(
@@ -236,5 +242,73 @@ describe("VCardImport", () => {
 
     expect(await screen.findByText("quarantined")).toBeInTheDocument();
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+  });
+
+  it("sends a photo to the card photo endpoint and says it waits for approval", async () => {
+    const user = userEvent.setup();
+    const fetchSpy = vi.fn(
+      async (_url: string, _init: RequestInit): Promise<Response> =>
+        jsonResponse({
+          results: [
+            { index: 0, full_name: "Ada Lovelace", outcome: "proposed" },
+          ],
+        }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    render(<VCardImportPage />);
+    const input = screen
+      .getByTestId("vcard-import-file")
+      .querySelector("input[type=file]");
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error("the page rendered no file input");
+    }
+    await user.upload(
+      input,
+      new File(["jpeg"], "cards.jpg", { type: "image/jpeg" }),
+    );
+
+    expect(await screen.findByText("Waiting for approval")).toBeVisible();
+    expect(fetchSpy.mock.calls[0][0]).toBe("/v1/contacts/card-photos");
+  });
+
+  it("accepts vCards and photos in the picker", () => {
+    render(<VCardImportPage />);
+    const input = screen
+      .getByTestId("vcard-import-file")
+      .querySelector("input[type=file]");
+    expect(input).toHaveAttribute("accept", expect.stringContaining(".vcf"));
+    expect(input).toHaveAttribute(
+      "accept",
+      expect.stringContaining("image/jpeg"),
+    );
+    expect(input).toHaveAttribute(
+      "accept",
+      expect.stringContaining("image/png"),
+    );
+    expect(input).not.toHaveAttribute(
+      "accept",
+      expect.stringMatching(/heic|heif/i),
+    );
+  });
+});
+
+describe("isCardPhoto", () => {
+  it("tells a photo from a vCard by type or by extension", () => {
+    expect(isCardPhoto(new File([""], "a.vcf", { type: "text/vcard" }))).toBe(
+      false,
+    );
+    expect(isCardPhoto(new File([""], "a.jpg", { type: "image/jpeg" }))).toBe(
+      true,
+    );
+    // A HEIC dragged in still goes to the photo endpoint, which says to save it
+    // as JPEG or PNG. It often carries no content type at all.
+    expect(isCardPhoto(new File([""], "IMG_1.HEIC", { type: "" }))).toBe(true);
+  });
+
+  it("only offers photo types the attachment mirror accepts", () => {
+    for (const extension of CARD_PHOTO_EXTENSIONS) {
+      expect(ACCEPTED_ATTACHMENT_EXTENSIONS).toContain(extension);
+    }
   });
 });

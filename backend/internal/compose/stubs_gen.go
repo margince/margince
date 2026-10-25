@@ -1131,6 +1131,10 @@ func (stubs) UpsertPartner(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "UpsertPartner")
 }
 
+func (stubs) SetUpPartner(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SetUpPartnerParams) {
+	httperr.NotImplemented(w, r, "SetUpPartner")
+}
+
 func (stubs) ListCompanyProfileFields(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListCompanyProfileFields")
 }
@@ -1321,6 +1325,10 @@ func (stubs) ListContacts(w nethttp.ResponseWriter, r *nethttp.Request, params c
 
 func (stubs) CreateContact(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateContactParams) {
 	httperr.NotImplemented(w, r, "CreateContact")
+}
+
+func (stubs) ImportCardPhoto(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ImportCardPhoto")
 }
 
 func (stubs) DismissRelationshipNudges(w nethttp.ResponseWriter, r *nethttp.Request) {

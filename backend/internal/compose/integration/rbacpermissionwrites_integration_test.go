@@ -101,7 +101,10 @@ func rolePermissionMigrations(t *testing.T) []permissionWrite {
 			continue
 		}
 		name := migration.Version + "_" + migration.Name
-		statements := rolePermissionStatements(migration.UpSQL)
+		statements := withoutRolesTheBootstrapDoesNotSeed(rolePermissionStatements(migration.UpSQL))
+		if len(statements) == 0 && len(rolePermissionStatements(migration.UpSQL)) > 0 {
+			continue
+		}
 		if len(statements) == 0 {
 			// The baseline declares the table and seeds nothing into it, which is
 			// the one candidate that legitimately carries no write.
@@ -421,4 +424,23 @@ func dedupe(matches [][]string) []string {
 		}
 	}
 	return out
+}
+
+// bootstrapUnseededRole matches a statement aimed at the one system role the
+// bootstrap never seeds.
+var bootstrapUnseededRole = regexp.MustCompile(`(?i)\bkey\s*=\s*'service_ingest'`)
+
+// withoutRolesTheBootstrapDoesNotSeed drops the statements that write only the
+// service_ingest role. That role does not exist until a unit declares a service
+// member, so the seeded matrix has no entry for it and a rewind of the seeded
+// roles has nothing to converge back onto. Every other role's write is still
+// replayed.
+func withoutRolesTheBootstrapDoesNotSeed(statements []string) []string {
+	kept := make([]string, 0, len(statements))
+	for _, statement := range statements {
+		if !bootstrapUnseededRole.MatchString(statement) {
+			kept = append(kept, statement)
+		}
+	}
+	return kept
 }

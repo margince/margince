@@ -4,7 +4,6 @@
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part
 of Margince that connects to your mailbox, your calendar and your chat. It files
 what arrives against the right contacts, their companies and projects.
-
 Connecting a mailbox or calendar, and importing your older mail, is its own
 page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
 
@@ -114,6 +113,7 @@ An unknown sender goes into a queue, which Margince works through every 10 minut
 
 - **A contact**: create the contact, and check whether the domain should get a company.
 - **A role mailbox** or **a company sender**: keep the mail visible, create no contact.
+- **A vendor pitch**: a named sender selling you something you never asked for. The mail stays visible and the sender becomes a contact marked **Vendor / marketing**. Default contact lists leave it out, and its brief suggests no next step. A sender you have written to, or who answered your thread, is an ordinary contact.
 - **A newsletter**, **something transactional**, or **spam**: hide the mail and mark the domain as not a company.
 
 Calendar notifications and meeting notes from Google are never hidden this way.

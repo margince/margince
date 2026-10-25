@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -214,6 +215,10 @@ func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64)
 		Visibility:   contactVisibilityArg(req.Visibility),
 		IfVersion:    ifVersion,
 		CustomFields: req.AdditionalProperties,
+	}
+	if req.RelationshipMark != nil {
+		mark := relationshipmark.Mark(*req.RelationshipMark)
+		in.RelationshipMark = &mark
 	}
 	if req.Social != nil {
 		in.Social = *req.Social

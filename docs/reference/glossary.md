@@ -45,8 +45,10 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Gradion | The company that builds Margince and licenses it. |
 | HNSW | A vector index type, Hierarchical Navigable Small World, that Margince does not use. |
 | HTTPS | HTTP over an encrypted connection. |
+| identity | Who sent a privacy request; closing one records how that was checked. |
 | IMAP | The standard protocol for reading mail from a mail server. |
 | incoming | An incoming webhook: the address a chat tool gives for posting into a channel. |
+| JPEG | A common photo file format, saved as .jpg or .jpeg. |
 | Jurisdiction | The settings page where an admin chooses the law an installation follows. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
 | LICENSE | The file at the repository root that holds the license text. |
@@ -66,6 +68,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | origin | Where a lead came from, such as a referral or an event, chosen from a list in Settings. |
 | Origins | The list of places a lead can come from, kept in Settings. |
 | origins | The list of places a lead can come from, kept in Settings. |
+| PNG | A common image file format, saved as .png. |
 | PKCE | Proof Key for Code Exchange: a one-time secret that ties the end of a sign-in to its start. |
 | pnpm | The package manager for the web app. |
 | Postgres | PostgreSQL, the database Margince stores its data in. |

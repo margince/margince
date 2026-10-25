@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -372,20 +373,21 @@ func StampFurtherParticipants(
 	// carrying both would file under whoever holds the ADDRESS while the row
 	// kept somebody else's account — one row naming two contacts, and an erasure
 	// keyed on either of them reaching a record about the other.
-	return insertFurtherParticipants(ctx, tx, kind, partyListIsAttested, []any{activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider})
+	return insertFurtherParticipants(ctx, tx, kind, partyListIsAttested,
+		[]any{activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider, storedDomainsOf(addresses)})
 }
 
 // insertFurtherParticipants writes the parties StampFurtherParticipants
-// collected, with args holding the statement's first seven arguments.
+// collected, with args holding the statement's first eight arguments.
 func insertFurtherParticipants(ctx context.Context, tx pgx.Tx, kind string, partyListIsAttested bool, args []any) error {
 	seatMatch, err := calendarSeatMatch(ctx, tx, kind, partyListIsAttested, &args)
 	if err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name)
-		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name
-		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[]) AS inp(address, role, display_name, account)
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name, address_domain_folded)
+		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name, inp.domain_folded
+		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[], $8::text[]) AS inp(address, role, display_name, account, domain_folded)
 		  LEFT JOIN app_user u
 		         ON $4 AND inp.address <> '' AND `+seatMatch+`
 		  LEFT JOIN LATERAL (
@@ -429,12 +431,12 @@ func insertParticipant(
 	// read off the wire, over a participant row that is a nicety rather than
 	// the point of the write.
 	_, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role)
-		SELECT $1, $2, $3, NULLIF($4, ''), NULLIF($6, ''), $5
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, address_domain_folded)
+		SELECT $1, $2, $3, NULLIF($4, ''), NULLIF($6, ''), $5, $7
 		 WHERE $2::uuid IS NULL
 		    OR EXISTS (SELECT 1 FROM app_user u WHERE u.id = $2)
 		ON CONFLICT DO NOTHING`,
-		activityID, userID, contactID, address, role, channelUserID)
+		activityID, userID, contactID, address, role, channelUserID, owndomain.StoredOfAddress(address))
 	return err
 }
 

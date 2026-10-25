@@ -19,10 +19,11 @@ import (
 //nolint:goconst // the map keys are wire field names and the values are COLUMN names; each is its own vocabulary, and the constants goconst names are filter params and report fields that spell the same words by coincidence
 func clearableContactColumns(current crmcontracts.Contact) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"first_name": {Column: "first_name", Current: current.FirstName},
-		"last_name":  {Column: "last_name", Current: current.LastName},
-		"title":      {Column: "title", Current: current.Title},
-		"owner_id":   {Column: ownerIDColumn, Current: current.OwnerId},
+		"first_name":        {Column: "first_name", Current: current.FirstName},
+		"last_name":         {Column: "last_name", Current: current.LastName},
+		"title":             {Column: "title", Current: current.Title},
+		"owner_id":          {Column: ownerIDColumn, Current: current.OwnerId},
+		"relationship_mark": {Column: fieldRelationshipMark, Current: current.RelationshipMark},
 	}
 }
 

@@ -89,6 +89,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 - `comms_outbound_bounced_idx`: `btree (bounced_at DESC) WHERE (bounced_at IS NOT NULL)`
 - `comms_outbound_controller_payload`: `btree (payload_expires_at) WHERE (payload_ref IS NOT NULL)`
 - `comms_outbound_due`: `btree (delivery_due_at) WHERE ((delivery_due_at IS NOT NULL) AND (status <> 'sent'))`
+- `comms_outbound_link_ix`: `btree (link_id) WHERE (link_id IS NOT NULL)`
 - `comms_outbound_message_unique`: `unique, btree (message_id)`
 - `comms_outbound_one_delivery_per_instruction`: `unique, btree (instruction_id) WHERE (instruction_id IS NOT NULL)`
 - `comms_outbound_pkey`: `unique, btree (id)`

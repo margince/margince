@@ -742,7 +742,8 @@ export interface paths {
         };
         /**
          * List contacts (live by default; cursor-paginated).
-         * @description Default view excludes archived rows (`archived_at IS NULL`). Leads never appear here.
+         * @description Default view excludes archived rows (`archived_at IS NULL`) and contacts carrying a
+         *     `relationship_mark`. A text search (`q`) still finds a marked contact. Leads never appear here.
          */
         get: operations["listContacts"];
         put?: never;
@@ -750,7 +751,8 @@ export interface paths {
          * Create a contact.
          * @description With name + email returns 201 and a stable `id` (UUID) that round-trips on GET
          *     (features/01 §1.1 AC). If the email already exists on a live contact, returns 409
-         *     with the existing contact id (features/01 §1.3). Writes one audit row + one
+         *     with the existing contact id. An email on the erasure list
+         *     answers 422 naming `emails` with code `address_erased`. Writes one audit row + one
          *     `contact.created` event.
          */
         post: operations["createContact"];
@@ -829,6 +831,41 @@ export interface paths {
          *     is a separate, recorded act.
          */
         post: operations["importVCards"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/card-photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read a photo of business cards and propose the contacts it shows.
+         * @description A model reads the photo and returns one card per business card it can see. Nothing is
+         *     written to a contact: every card that is not an exact match goes to the approval queue
+         *     as a `vcard_create` approval that only the importing member can see and decide.
+         *
+         *     Per card, in reading order: `proposed` — nobody matched, waiting on an approval.
+         *     `needs_review` — the card resembles a contact, waiting on an approval that names the
+         *     candidate. `skipped` — the card states no name, carries a sending system's address, or
+         *     its email already belongs to a contact; a card read from a photo never changes an
+         *     existing contact. A photo that shows more than 20 cards is refused whole.
+         *
+         *     JPEG, PNG, GIF and WebP are accepted. HEIC and HEIF are refused with `422` and code
+         *     `unsupported_type`; the photo must be saved as JPEG or PNG first. A photo larger than
+         *     8,388,608 bytes is refused with `413` before it is read. The reading runs inside
+         *     the request. `422` with code `no_cards` means the photo shows no business card, and `422`
+         *     with `not_readable` means the configured model cannot read photos or the reply could not
+         *     be used. `501` means the installation has no model configured.
+         */
+        post: operations["importCardPhoto"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2965,6 +3002,45 @@ export interface paths {
          */
         put: operations["upsertPartner"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}/partner/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set up a partner program on a company that has none, with no margin tier.
+         * @description The answer the `set_up_partner` agent tool gives, run by the same tool on both doors. It
+         *     creates the company's partner program with a role, a relationship stage and a next step,
+         *     and adds `partner` to its `relationship_types`. The certification status starts at
+         *     `applied`. The margin tier stays unset: it is the rate the commission ledger multiplies a
+         *     won deal by, so a human sets it on the company's Partner tab through `PUT /companies/{id}/partner`.
+         *     A body naming `margin_tier` is refused.
+         *
+         *     Confirm-first for an agent: the call stages one approval and answers 403 `approval_required`
+         *     naming it. A human who may update both partners and companies approves it. Repeat the same
+         *     call with that id as `approval_id`, or as the `X-Approval-Token` header. A human's own call
+         *     is its approval.
+         *
+         *     A company that already has a live partner program answers 409 `partner_row_exists`.
+         *     A program ends only when the company is archived.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's result. An
+         *     `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["setUpPartner"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7105,6 +7181,7 @@ export interface paths {
          *     dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
          *     for idempotent re-import. A `project_id` that names no project the caller can read
          *     answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
+         *     An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
          */
         post: operations["createLead"];
         delete?: never;
@@ -11738,7 +11815,7 @@ export interface paths {
          *     product rule, not a score: a customer waiting outranks a promise, a promise
          *     outranks material revenue at risk, and routine data hygiene never outranks any of
          *     them however large its pile. Level 0 is the reader's own pin, which is the one
-         *     override a contact has over the ordering.
+         *     override a contact has over the ordering, and a task of theirs whose reminder came due.
          *
          *     Inside a level the tie-breaks run deadline → expected revenue → waiting days →
          *     relationship importance → occurrence. Deadline leads because a date somebody
@@ -24050,7 +24127,10 @@ export interface components {
             /** @description How many files came with it. Zero when withheld, like every other count. */
             attachment_count: number;
             /**
-             * @description Whose move it is, derived from what this reader can see of the thread. `none` when
+             * @description Whose move it is, derived from what this reader can see of the thread.
+             *     `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+             *     that is still the last word with them. A calendar invitation, update, cancellation
+             *     or answer is `none` unless someone confirmed it asks us something. `none` also when
              *     the question cannot be answered honestly — an unanswerable move is not a claim.
              * @enum {string}
              */
@@ -25956,7 +26036,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -26698,6 +26778,11 @@ export interface components {
         } & {
             [key: string]: unknown;
         }) | null;
+        /** @description The stored address country does not fit the postal code and city. A background check asks the geocoder for the postal code and city alone, reads the countries of up to five places they name, and flags the stored country only when it is none of them. The stored country is never changed. Editing the postal code, city or country clears the result until the next check, and a result older than 180 days is checked again. */
+        AddressCountryMismatch: {
+            /** @description ISO-3166 alpha-2 code of the best-ranked country the postal code and city resolve to. */
+            resolved_country: string;
+        };
         /** @description Money as integer minor-units + ISO-4217 currency. Never a float. */
         Money: {
             /**
@@ -27227,6 +27312,11 @@ export interface components {
         };
         /** @description A contact. Mirrors the `contact` table. */
         Contact: {
+            /**
+             * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+             * @enum {string|null}
+             */
+            relationship_mark?: "vendor_marketing" | null;
             /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
             readonly legal_hold?: boolean;
             tags?: components["schemas"]["RowTag"][];
@@ -27254,6 +27344,8 @@ export interface components {
                 [key: string]: unknown;
             };
             address?: components["schemas"]["Address"];
+            /** @description Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code. */
+            readonly address_country_mismatch?: components["schemas"]["AddressCountryMismatch"];
             emails?: components["schemas"]["ContactEmail"][];
             /**
              * Format: email
@@ -27421,11 +27513,12 @@ export interface components {
              * @description `created` — nobody matched, so the card became a contact, their company and the edge
              *     between them. `updated` — an exact match, filled only where the record was empty.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+             *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
              *     `skipped` — the card states no name, carries a sending system's address, or matches a
              *     contact the caller may not write; `reason` says which.
              * @enum {string}
              */
-            outcome: "created" | "updated" | "needs_review" | "skipped";
+            outcome: "created" | "updated" | "needs_review" | "proposed" | "skipped";
             /**
              * Format: uuid
              * @description The contact created or updated, or — for `needs_review` — the candidate the card resembles.
@@ -27472,6 +27565,11 @@ export interface components {
         };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdateContactRequest: {
+            /**
+             * @description Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
+             * @enum {string|null}
+             */
+            relationship_mark?: "vendor_marketing" | null;
             full_name?: string;
             first_name?: string | null;
             last_name?: string | null;
@@ -27612,6 +27710,8 @@ export interface components {
             /** @enum {string|null} */
             size_band?: null | "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1001-5000" | "5000+";
             address?: components["schemas"]["Address"];
+            /** @description Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code. */
+            readonly address_country_mismatch?: components["schemas"]["AddressCountryMismatch"];
             /** Format: uuid */
             owner_id?: string | null;
             /**
@@ -34153,10 +34253,10 @@ export interface components {
             version?: number;
         };
         /**
-         * @description `assigned` moved the lead — including one already owned by the destination, which still
-         *     takes a version and an audit row rather than being quietly skipped: the writer records
-         *     the assignment as an act, so a re-run says what it did rather than claiming it did
-         *     nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+         * @description `assigned` means the lead now belongs to the destination. A lead already owned by the
+         *     destination is not written: it keeps its version and gains no audit row, exactly as a
+         *     single update that changes nothing, and the result carries the version it already had.
+         *     `forbidden` is a lead the caller may not hand on. `conflict` is a version that
          *     no longer holds.
          *
          *     `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
@@ -34446,7 +34546,7 @@ export interface components {
             due_at?: string | null;
             /**
              * Format: date-time
-             * @description Task only. Reminder-fire time; the B-E16.6 scan reads tasks whose reminder is due, not-done, and un-archived.
+             * @description Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
              */
             remind_at?: string | null;
             /**
@@ -34738,7 +34838,7 @@ export interface components {
             due_at?: string | null;
             /**
              * Format: date-time
-             * @description Task only.
+             * @description Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
              */
             remind_at?: string | null;
             /** Format: uuid */
@@ -34906,7 +35006,7 @@ export interface components {
             assignee_id?: string | null;
             /**
              * Format: date-time
-             * @description Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.
+             * @description Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
              */
             remind_at?: string | null;
             /** @description Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family). */
@@ -34976,6 +35076,10 @@ export interface components {
              * @description What kind of document this is. Closed vocabulary; `other` is the
              *     honest default, not a fallback for an unknown value.
              *
+             *     `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+             *     Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+             *     and the category cannot be set or changed through a metadata patch.
+             *
              *     `email_attachment` and `message_attachment` record PROVENANCE rather than
              *     content: capture derives them from the transport the file arrived on, so a
              *     file that came with a Telegram message is not reported as an email one. The
@@ -34986,7 +35090,7 @@ export interface components {
              *     uploaded file, which has no arrival to claim (422 `category_not_assertable`).
              * @enum {string}
              */
-            category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other";
+            category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
             /** @description A display name distinct from the filename, showing what a reader looks for rather than what arrived. */
             title?: string | null;
             /**
@@ -35011,8 +35115,10 @@ export interface components {
              * @description The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
-            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. */
+            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes. */
             readonly bytes_withheld?: boolean;
+            /** @description The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download. */
+            readonly url?: string | null;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -37733,8 +37839,12 @@ export interface components {
              */
             name: string;
             /**
-             * @description The six custom-field types, plus `id` for a reference to another record and
-             *     `domain` for a host column. The type decides the operators, which is why it is here.
+             * @description The six custom-field types, plus `id` for a reference to another record,
+             *     `domain` for a host column and `distance` for a place on the earth. A `distance`
+             *     field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
+             *     `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
+             *     name the builder showed for the center. Only companies that have a located address
+             *     can match. The type decides the operators, which is why it is here.
              *
              *     `domain` also decides what happens to the VALUE, and it is the only type that does:
              *     the operand is folded to the host the column stores, so
@@ -37745,13 +37855,13 @@ export interface components {
              *     a folded value has no fragment to match against.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "id" | "domain";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "id" | "domain" | "distance";
             /**
              * @description The operator subset this field's type admits (LVS-PARAM-1), in one
              *     stable order. An operator absent here is one the engine refuses for
              *     this field, so a builder can disable it rather than discover it.
              */
-            operators: ("eq" | "neq" | "gt" | "lt" | "gte" | "lte" | "in" | "contains" | "exists")[];
+            operators: ("eq" | "neq" | "gt" | "lt" | "gte" | "lte" | "in" | "contains" | "exists" | "within_radius")[];
             /**
              * @description Whether this is a workspace-defined custom-field column. Where true,
              *     `name` is the catalog's `column_name` — join on it to show an admin's
@@ -41024,6 +41134,17 @@ export interface components {
             page: components["schemas"]["PageInfo"];
             /** @description On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole. */
             types_with_more?: ("contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
+            /** @description Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor. */
+            near_matches?: components["schemas"]["SearchNearMatch"][];
+        };
+        SearchNearMatch: {
+            /** @enum {string} */
+            type: "contact" | "company" | "deal" | "lead";
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** @description The company beside a lead's name, as a lead hit carries it. */
+            snippet?: string;
         };
         ContextEntityRef: {
             /**
@@ -42813,6 +42934,19 @@ export interface components {
             next_step_due_at?: string | null;
             served_segments?: string[] | null;
         };
+        /**
+         * @description What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
+         *     or `served_segments`: the tier is a human's choice, and the others are set after set-up.
+         */
+        SetUpPartnerRequest: {
+            /** @enum {string} */
+            partner_role: "hosting" | "consulting" | "strategic";
+            /** @enum {string} */
+            relationship_stage?: "research" | "identified" | "contacted" | "in_conversation" | "fit_confirmed" | "agreement_pending" | "active" | "active_referring" | "dormant" | "no_fit";
+            next_step?: string;
+            /** Format: date */
+            next_step_due_at?: string;
+        };
         ConsentPurpose: {
             /** Format: uuid */
             id: string;
@@ -43467,6 +43601,13 @@ export interface components {
             /** Format: uuid */
             assignee_id?: string | null;
             resolution?: string | null;
+            /**
+             * @description True while a complaint or dispute about this request is open. The proof of the
+             *     answer is kept until 1 January of the fourth year after the year it was answered in,
+             *     with both the year and that date read in the installation's time zone
+             *     (`installation.timezone`), and past that date until this is false again.
+             */
+            dispute_open: boolean;
             /** Format: date-time */
             created_at: string;
         };
@@ -43766,6 +43907,28 @@ export interface components {
             assignee_id?: string | null;
             /** @description A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft. */
             resolution?: string | null;
+            /**
+             * @description How the requester's identity was checked, recorded in the proof the request keeps once
+             *     it closes. Required on the patch that closes a request, except one that arrived through
+             *     the subject's own confirm link, where the link is the check. `confirm_link`: the
+             *     subject used a link mailed to their address. `address_on_file`: the request came from,
+             *     or was confirmed at, an address the record already held. `id_document`: an identity
+             *     document was seen. `in_person`: the requester was known in person. `not_verified`: the
+             *     identity could not be checked. A request closes with `not_verified` only as `rejected`;
+             *     a patch that fulfils with it is refused with 422 before anything is erased. Ignored on
+             *     any other patch.
+             * @enum {string}
+             */
+            identity_check?: "confirm_link" | "address_on_file" | "id_document" | "in_person" | "not_verified";
+            /**
+             * Format: email
+             * @description The address the request came from, recorded in the proof. Optional: when absent, the
+             *     proof takes the address the confirm link was mailed to, or the subject reference when it
+             *     is an address. Ignored on a patch that does not close the request.
+             */
+            requester_email?: string;
+            /** @description Opens (true) or closes (false) a complaint or dispute about the request. Any status takes it. */
+            dispute_open?: boolean;
         };
         /**
          * @description The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -47060,6 +47223,8 @@ export interface components {
          *     adds none.
          */
         AttentionItem: {
+            /** @description Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise. */
+            reminder_due?: boolean;
             /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */
             promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
@@ -48621,7 +48786,7 @@ export interface components {
             destination?: "today" | "review" | "system_health" | "receipt";
             /**
              * @description The hard priority band, and the whole of the product rule: 0 pinned by the
-             *     reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
+             *     reader, or a task assigned to the reader whose reminder came due, 1 a customer waiting or a deadline arriving, 2 a promise due or an
              *     approved action that failed, 3 material revenue at risk, 4 an assigned task
              *     or a smaller deal drifting, 5 a decision blocking customer work, 6 data
              *     hygiene. Levels are never mixed by a score.
@@ -49172,10 +49337,10 @@ export interface components {
          */
         WorklistReason: {
             /**
-             * @description Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
+             * @description Which fact this is. The client writes the phrase. `reminder_due` says the reader is the task's assignee and its reminder came due. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "non_buyer_request" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "account_termination" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "bcc_from_stranger" | "link_off_sender" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file" | "read_only";
+            kind: "pinned" | "reminder_due" | "buyer_wrote_last" | "non_buyer_request" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "account_termination" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "bcc_from_stranger" | "link_off_sender" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file" | "read_only";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -49188,7 +49353,8 @@ export interface components {
         WorklistComparison: {
             /**
              * @description What decided it. `order` means every comparator tied and the ids broke it, which the
-             *     client renders as no reason at all.
+             *     client renders as no reason at all. `reminder` means this row is a due reminder and
+             *     the one below is not.
              *
              *     `crowded` means the row below is one of many of its kind: past a lead group, further
              *     rows of the same source sort under the other kinds of work so one noisy lane cannot own
@@ -49197,7 +49363,7 @@ export interface components {
              *     when the two rows share a level.
              * @enum {string}
              */
-            comparator: "pin" | "crowded" | "level" | "deadline" | "expected_revenue" | "opportunity" | "waiting_days" | "relationship" | "order";
+            comparator: "pin" | "reminder" | "crowded" | "level" | "deadline" | "expected_revenue" | "opportunity" | "waiting_days" | "relationship" | "order";
             mine?: components["schemas"]["WorklistValue"];
             theirs?: components["schemas"]["WorklistValue"];
         };
@@ -51169,6 +51335,11 @@ export interface operations {
                  *     itself), and not otherwise.
                  */
                 ai_written?: components["parameters"]["AiWritten"];
+                /**
+                 * @description Without it the list leaves out marked contacts, unless `q` is given. `vendor_marketing`
+                 *     returns only contacts carrying that mark; `any` returns marked and unmarked alike.
+                 */
+                relationship_mark?: "vendor_marketing" | "any";
                 /** @description Filter to a single owner. */
                 owner_id?: string;
                 /**
@@ -51393,6 +51564,49 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    importCardPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The photo. Its bytes must be the image type it claims to be.
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description What became of each card in the photo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VCardImportReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["ValidationError"];
+            /** @description The installation has no model configured to read photos. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getContact: {
@@ -54195,6 +54409,54 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setUpPartner: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+                 *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+                 *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+                 */
+                "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
+                /**
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetUpPartnerRequest"];
+            };
+        };
+        responses: {
+            /** @description The partner program as set up, with no margin tier. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Partner"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -58199,6 +58461,8 @@ export interface operations {
                 occurred_before?: string;
                 /** @description Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply. */
                 waiting_reply?: boolean;
+                /** @description Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out. */
+                reminder_due?: boolean;
             };
             header?: never;
             path?: never;
@@ -79708,7 +79972,7 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
-                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other";
+                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
                 include_hidden?: boolean;
             };
             header?: never;
@@ -80893,7 +81157,7 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
-                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other";
+                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
                 doc_state?: "draft" | "current" | "final" | "superseded";
                 pinned_only?: boolean;
                 /** @description Only the paper filed against this agreement (CONTRACT-DDL-5). */

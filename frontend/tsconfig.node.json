@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "composite": true,
+    // Incremental, not composite, for the TS7056 reason in tsconfig.app.json.
+    "incremental": true,
     "tsBuildInfoFile": "node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "ES2022",
     "lib": ["ES2022", "ES2023.Intl", "DOM", "DOM.Iterable"],

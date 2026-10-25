@@ -26,5 +26,8 @@ func dsrUpdateChangesNothing(current dsrRow, in UpdateDSRInput) bool {
 	case in.Resolution != nil:
 		p.Set(fieldResolution, current.Resolution, *in.Resolution)
 	}
+	if in.DisputeOpen != nil {
+		p.Set(fieldDispute, current.DisputeOpen, *in.DisputeOpen)
+	}
 	return p.Empty()
 }

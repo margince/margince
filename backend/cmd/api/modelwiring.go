@@ -212,6 +212,9 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// differs — this one is read by a customer — but the task is drafting,
 		// which is what the lane is.
 		compose.WithIntroNoteDraft(modelPath.DraftReply),
+		// A photo of business cards rides the document task. It has the same
+		// ladder and the same carriage declaration as an attached document.
+		compose.WithCardPhotoReader(modelPath.DocumentExtract),
 	}
 }
 
@@ -269,8 +272,8 @@ func jobEnqueueOptions(
 	if !vatcheck.Configured(gates.vatCheck) {
 		logger.Warn("api: MARGINCE_VAT_CHECK_BASE_URL is unset — this role queues no VAT consultation, whatever the worker carries")
 	}
-	if !geocode.Configured(gates.geocode) {
-		logger.Warn("api: MARGINCE_GEOCODE_BASE_URL is unset — this role queues no coordinate lookup, whatever the worker carries")
+	if _, on := geocode.Resolve(gates.geocode); !on {
+		logger.Warn("api: MARGINCE_GEOCODE_BASE_URL=off — this role queues no coordinate lookup; the worker must carry the same value")
 	}
 	opts = append(opts, vatCheckEnqueueOptions(inserter, gates.vatCheck)...)
 	return append(opts, geocodeEnqueueOptions(inserter, gates.geocode)...), nil
@@ -290,21 +293,15 @@ type queueGates struct {
 }
 
 // geocodeEnqueueOptions wires the coordinate-lookup enqueue only when
-// geocode.Configured says this installation geocodes — the same predicate
-// cmd/worker's geocoderFor gates its own client on.
+// geocode.Resolve says this installation geocodes. cmd/worker's geocoderFor
+// gates its own client on the same predicate.
 //
-// The api role only ENQUEUES: the provider lives on the worker
-// (JobRunnerConfig.Geocoder), and that split is what keeps the
-// single-requester rule enforceable — several api replicas may queue, exactly
-// one worker asks. Which is also why an unset variable HERE has to stop the
-// queueing rather than being left to the worker: the worker's nil-provider
-// path does answer honestly, but what it writes is contacts.GeocodeFailed, and
-// an operator asking why geocoding does not work then reads a lookup failure
-// on every address when the truth is that no provider was ever configured for
-// the role that queued it. A wrong answer delivered confidently is worse for
-// diagnosis than an empty queue.
+// The api role only enqueues; the provider lives on the worker
+// (JobRunnerConfig.Geocoder). When geocoding is off, the api must not queue.
+// A worker without a provider would write contacts.GeocodeFailed for every
+// address, which reads as a lookup failure instead of "never configured".
 func geocodeEnqueueOptions(inserter *jobs.Runner, baseURL string) []compose.Option {
-	if !geocode.Configured(baseURL) {
+	if _, on := geocode.Resolve(baseURL); !on {
 		return nil
 	}
 	return []compose.Option{compose.WithGeocoding(inserter)}

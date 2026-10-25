@@ -100,7 +100,7 @@ type Message struct {
 	openRecipients   []string
 	directRecipients []string
 	recipientsUnread bool
-	linkHosts        []string
+	links            []capture.MailLink
 	linksCut         bool
 	listMail         bool
 }
@@ -226,7 +226,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		openRecipients:   allAddresses(toList, ccList),
 		directRecipients: allAddresses(toList),
 		recipientsUnread: toErr != nil || ccErr != nil,
-		linkHosts:        walked.links,
+		links:            walked.links,
 		linksCut:         walked.linksCut,
 		listMail:         viaGroup || header.Get("List-Id") != "" || header.Get("List-Unsubscribe") != "",
 		parts:            parts,
@@ -450,9 +450,10 @@ func (m Message) envelope() *capture.MailEnvelope {
 	if m.listMail {
 		return nil
 	}
+	hosts, hostsOver := hostsOf(m.links)
 	return &capture.MailEnvelope{
 		OpenRecipients: m.openRecipients, DirectRecipients: m.directRecipients, RecipientsUnreadable: m.recipientsUnread,
-		LinkHosts: m.linkHosts, LinksTruncated: m.linksCut,
+		LinkHosts: hosts, Links: m.links, LinksTruncated: m.linksCut || hostsOver,
 	}
 }
 

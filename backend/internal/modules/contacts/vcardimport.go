@@ -58,6 +58,9 @@ const (
 	// close enough to be sure. The card is not written; the candidate is
 	// named so a human can open it.
 	VCardNeedsReview VCardOutcome = "needs_review"
+	// VCardProposed means nobody matched a card a model read off a photo. It is
+	// not written either: it waits on an approval, with no candidate to open.
+	VCardProposed VCardOutcome = "proposed"
 	// VCardSkipped means the card could not be written: no name, a sending
 	// system's address, or a match this caller may not write.
 	VCardSkipped VCardOutcome = "skipped"
@@ -173,6 +176,8 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 			}
 		}
 		switch {
+		case entry.ModelRead && decision.Decision == DecisionExactCollision:
+			return skipModelReadMatch(ctx, tx, decision.ContactID, &result)
 		case decision.Decision == DecisionExactCollision:
 			// The card names somebody who exists, so the caller's authority
 			// over THAT ROW decides whether this card may touch it — the
@@ -210,6 +215,8 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 			result.Outcome = VCardNeedsReview
 			result.ContactID = &shown.ContactID
 			return nil
+		case entry.ModelRead:
+			return proposeModelReadCard(ctx, tx, source, &result)
 		default:
 			return s.createFromCard(ctx, tx, entry, source, &result)
 		}
@@ -257,6 +264,12 @@ func vcardCandidate(entry VCardEntry) ContactCandidate {
 	return candidate
 }
 
+// VCardContactName is the name a card's contact is created with. An approval
+// that shows a card shows this, so the decider sees the name that is written.
+func VCardContactName(entry VCardEntry) string {
+	return strings.TrimSpace(entry.FullName)
+}
+
 // ValidateVCardContacts answers whether a reviewed card's addresses and
 // numbers are ones the create will accept, without writing anything.
 //
@@ -275,7 +288,7 @@ func ValidateVCardContacts(entry VCardEntry) error {
 
 func contactFromVCard(entry VCardEntry) CreateContactInput {
 	contact := CreateContactInput{
-		FullName:      strings.TrimSpace(entry.FullName),
+		FullName:      VCardContactName(entry),
 		Source:        vcardSource,
 		auditEvidence: map[string]any{auditKeySource: vcardSource},
 	}
@@ -321,62 +334,6 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 		})
 	}
 	return contact
-}
-
-// attachVCardEmployer creates the company the card names and the employment
-// edge to it. A card with no COMPANY leaves the contact unemployed, which is a
-// contact.
-func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) error {
-	name := strings.TrimSpace(entry.Company)
-	if name == "" {
-		return nil
-	}
-	companyID, err := s.employerByName(ctx, tx, name)
-	if err != nil {
-		return err
-	}
-	role := strings.TrimSpace(entry.Title)
-	edge := CreateRelationshipInput{
-		Kind:      employmentKind,
-		ContactID: &contactID,
-		CompanyID: companyID,
-		Source:    vcardSource,
-	}
-	if role != "" {
-		edge.Role = &role
-	}
-	_, err = s.CreateRelationshipTx(ctx, tx, edge)
-	return err
-}
-
-// employerByName finds the company the card names, or creates it.
-//
-// Without the lookup, two cards from the same company create two companies:
-// every employee of Acme arrives with `ORG:Acme`, and a create-only path turns
-// a ten-card export into ten Acmes that a human then has to merge.
-func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*ids.CompanyID, error) {
-	var existing ids.CompanyID
-	err := tx.QueryRow(ctx, `
-		SELECT id FROM company
-		 WHERE lower(display_name) = lower($1) AND archived_at IS NULL AND merged_into_id IS NULL
-		 ORDER BY created_at
-		 LIMIT 1`, name).Scan(&existing)
-	switch {
-	case err == nil:
-		return &existing, nil
-	case errors.Is(err, pgx.ErrNoRows):
-		company, createErr := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
-			DisplayName: name,
-			Source:      vcardSource,
-		}, CustomColumns{})
-		if createErr != nil {
-			return nil, createErr
-		}
-		made := ids.From[ids.CompanyKind](ids.UUID(company.Id))
-		return &made, nil
-	default:
-		return nil, fmt.Errorf("looking for the card's employer: %w", err)
-	}
 }
 
 // fillFromVCard writes the card's stated fields onto a contact who already

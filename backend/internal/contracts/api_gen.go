@@ -2070,6 +2070,7 @@ const (
 	AttachmentCategoryContract          AttachmentCategory = "contract"
 	AttachmentCategoryEmailAttachment   AttachmentCategory = "email_attachment"
 	AttachmentCategoryLegal             AttachmentCategory = "legal"
+	AttachmentCategoryLink              AttachmentCategory = "link"
 	AttachmentCategoryMessageAttachment AttachmentCategory = "message_attachment"
 	AttachmentCategoryOffer             AttachmentCategory = "offer"
 	AttachmentCategoryOther             AttachmentCategory = "other"
@@ -2083,6 +2084,8 @@ func (e AttachmentCategory) Valid() bool {
 	case AttachmentCategoryEmailAttachment:
 		return true
 	case AttachmentCategoryLegal:
+		return true
+	case AttachmentCategoryLink:
 		return true
 	case AttachmentCategoryMessageAttachment:
 		return true
@@ -6730,6 +6733,21 @@ func (e ConsumerMailDomainKind) Valid() bool {
 	}
 }
 
+// Defines values for ContactRelationshipMark.
+const (
+	ContactRelationshipMarkVendorMarketing ContactRelationshipMark = "vendor_marketing"
+)
+
+// Valid indicates whether the value is a known member of the ContactRelationshipMark enum.
+func (e ContactRelationshipMark) Valid() bool {
+	switch e {
+	case ContactRelationshipMarkVendorMarketing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactVisibility.
 const (
 	ContactVisibilityOwner     ContactVisibility = "owner"
@@ -10401,15 +10419,16 @@ func (e FilterVocabularyResource) Valid() bool {
 
 // Defines values for FilterVocabularyFieldOperators.
 const (
-	FilterVocabularyFieldOperatorsContains FilterVocabularyFieldOperators = "contains"
-	FilterVocabularyFieldOperatorsEq       FilterVocabularyFieldOperators = "eq"
-	FilterVocabularyFieldOperatorsExists   FilterVocabularyFieldOperators = "exists"
-	FilterVocabularyFieldOperatorsGt       FilterVocabularyFieldOperators = "gt"
-	FilterVocabularyFieldOperatorsGte      FilterVocabularyFieldOperators = "gte"
-	FilterVocabularyFieldOperatorsIn       FilterVocabularyFieldOperators = "in"
-	FilterVocabularyFieldOperatorsLt       FilterVocabularyFieldOperators = "lt"
-	FilterVocabularyFieldOperatorsLte      FilterVocabularyFieldOperators = "lte"
-	FilterVocabularyFieldOperatorsNeq      FilterVocabularyFieldOperators = "neq"
+	FilterVocabularyFieldOperatorsContains     FilterVocabularyFieldOperators = "contains"
+	FilterVocabularyFieldOperatorsEq           FilterVocabularyFieldOperators = "eq"
+	FilterVocabularyFieldOperatorsExists       FilterVocabularyFieldOperators = "exists"
+	FilterVocabularyFieldOperatorsGt           FilterVocabularyFieldOperators = "gt"
+	FilterVocabularyFieldOperatorsGte          FilterVocabularyFieldOperators = "gte"
+	FilterVocabularyFieldOperatorsIn           FilterVocabularyFieldOperators = "in"
+	FilterVocabularyFieldOperatorsLt           FilterVocabularyFieldOperators = "lt"
+	FilterVocabularyFieldOperatorsLte          FilterVocabularyFieldOperators = "lte"
+	FilterVocabularyFieldOperatorsNeq          FilterVocabularyFieldOperators = "neq"
+	FilterVocabularyFieldOperatorsWithinRadius FilterVocabularyFieldOperators = "within_radius"
 )
 
 // Valid indicates whether the value is a known member of the FilterVocabularyFieldOperators enum.
@@ -10432,6 +10451,8 @@ func (e FilterVocabularyFieldOperators) Valid() bool {
 	case FilterVocabularyFieldOperatorsLte:
 		return true
 	case FilterVocabularyFieldOperatorsNeq:
+		return true
+	case FilterVocabularyFieldOperatorsWithinRadius:
 		return true
 	default:
 		return false
@@ -10476,6 +10497,7 @@ const (
 	FilterVocabularyFieldTypeBoolean     FilterVocabularyFieldType = "boolean"
 	FilterVocabularyFieldTypeCurrency    FilterVocabularyFieldType = "currency"
 	FilterVocabularyFieldTypeDate        FilterVocabularyFieldType = "date"
+	FilterVocabularyFieldTypeDistance    FilterVocabularyFieldType = "distance"
 	FilterVocabularyFieldTypeDomain      FilterVocabularyFieldType = "domain"
 	FilterVocabularyFieldTypeId          FilterVocabularyFieldType = "id"
 	FilterVocabularyFieldTypeMultiselect FilterVocabularyFieldType = "multiselect"
@@ -10492,6 +10514,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeCurrency:
 		return true
 	case FilterVocabularyFieldTypeDate:
+		return true
+	case FilterVocabularyFieldTypeDistance:
 		return true
 	case FilterVocabularyFieldTypeDomain:
 		return true
@@ -11536,6 +11560,7 @@ const (
 	ImportReasonCodeActivityTypeUnknown          ImportReasonCode = "activity_type_unknown"
 	ImportReasonCodeActivityTypeUnnamed          ImportReasonCode = "activity_type_unnamed"
 	ImportReasonCodeActivityUnlinked             ImportReasonCode = "activity_unlinked"
+	ImportReasonCodeAddressErased                ImportReasonCode = "address_erased"
 	ImportReasonCodeAddressNotSplit              ImportReasonCode = "address_not_split"
 	ImportReasonCodeAmountNegative               ImportReasonCode = "amount_negative"
 	ImportReasonCodeAuthorTooLong                ImportReasonCode = "author_too_long"
@@ -11662,6 +11687,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeActivityTypeUnnamed:
 		return true
 	case ImportReasonCodeActivityUnlinked:
+		return true
+	case ImportReasonCodeAddressErased:
 		return true
 	case ImportReasonCodeAddressNotSplit:
 		return true
@@ -16885,6 +16912,30 @@ func (e SchedulingProfileProvider) Valid() bool {
 	}
 }
 
+// Defines values for SearchNearMatchType.
+const (
+	SearchNearMatchTypeCompany SearchNearMatchType = "company"
+	SearchNearMatchTypeContact SearchNearMatchType = "contact"
+	SearchNearMatchTypeDeal    SearchNearMatchType = "deal"
+	SearchNearMatchTypeLead    SearchNearMatchType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the SearchNearMatchType enum.
+func (e SearchNearMatchType) Valid() bool {
+	switch e {
+	case SearchNearMatchTypeCompany:
+		return true
+	case SearchNearMatchTypeContact:
+		return true
+	case SearchNearMatchTypeDeal:
+		return true
+	case SearchNearMatchTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SearchResponseTypesWithMore.
 const (
 	SearchResponseTypesWithMoreActivity      SearchResponseTypesWithMore = "activity"
@@ -17317,6 +17368,69 @@ func (e SetTransitionPolicyRequestMode) Valid() bool {
 	case SetTransitionPolicyRequestModeSetTransitionModeAuto:
 		return true
 	case SetTransitionPolicyRequestModeSetTransitionModePropose:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetUpPartnerRequestPartnerRole.
+const (
+	SetUpPartnerRequestPartnerRoleConsulting SetUpPartnerRequestPartnerRole = "consulting"
+	SetUpPartnerRequestPartnerRoleHosting    SetUpPartnerRequestPartnerRole = "hosting"
+	SetUpPartnerRequestPartnerRoleStrategic  SetUpPartnerRequestPartnerRole = "strategic"
+)
+
+// Valid indicates whether the value is a known member of the SetUpPartnerRequestPartnerRole enum.
+func (e SetUpPartnerRequestPartnerRole) Valid() bool {
+	switch e {
+	case SetUpPartnerRequestPartnerRoleConsulting:
+		return true
+	case SetUpPartnerRequestPartnerRoleHosting:
+		return true
+	case SetUpPartnerRequestPartnerRoleStrategic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetUpPartnerRequestRelationshipStage.
+const (
+	SetUpPartnerRequestRelationshipStageActive           SetUpPartnerRequestRelationshipStage = "active"
+	SetUpPartnerRequestRelationshipStageActiveReferring  SetUpPartnerRequestRelationshipStage = "active_referring"
+	SetUpPartnerRequestRelationshipStageAgreementPending SetUpPartnerRequestRelationshipStage = "agreement_pending"
+	SetUpPartnerRequestRelationshipStageContacted        SetUpPartnerRequestRelationshipStage = "contacted"
+	SetUpPartnerRequestRelationshipStageDormant          SetUpPartnerRequestRelationshipStage = "dormant"
+	SetUpPartnerRequestRelationshipStageFitConfirmed     SetUpPartnerRequestRelationshipStage = "fit_confirmed"
+	SetUpPartnerRequestRelationshipStageIdentified       SetUpPartnerRequestRelationshipStage = "identified"
+	SetUpPartnerRequestRelationshipStageInConversation   SetUpPartnerRequestRelationshipStage = "in_conversation"
+	SetUpPartnerRequestRelationshipStageNoFit            SetUpPartnerRequestRelationshipStage = "no_fit"
+	SetUpPartnerRequestRelationshipStageResearch         SetUpPartnerRequestRelationshipStage = "research"
+)
+
+// Valid indicates whether the value is a known member of the SetUpPartnerRequestRelationshipStage enum.
+func (e SetUpPartnerRequestRelationshipStage) Valid() bool {
+	switch e {
+	case SetUpPartnerRequestRelationshipStageActive:
+		return true
+	case SetUpPartnerRequestRelationshipStageActiveReferring:
+		return true
+	case SetUpPartnerRequestRelationshipStageAgreementPending:
+		return true
+	case SetUpPartnerRequestRelationshipStageContacted:
+		return true
+	case SetUpPartnerRequestRelationshipStageDormant:
+		return true
+	case SetUpPartnerRequestRelationshipStageFitConfirmed:
+		return true
+	case SetUpPartnerRequestRelationshipStageIdentified:
+		return true
+	case SetUpPartnerRequestRelationshipStageInConversation:
+		return true
+	case SetUpPartnerRequestRelationshipStageNoFit:
+		return true
+	case SetUpPartnerRequestRelationshipStageResearch:
 		return true
 	default:
 		return false
@@ -18856,6 +18970,21 @@ func (e UpdateCompanyRequestVisibility) Valid() bool {
 	}
 }
 
+// Defines values for UpdateContactRequestRelationshipMark.
+const (
+	UpdateContactRequestRelationshipMarkVendorMarketing UpdateContactRequestRelationshipMark = "vendor_marketing"
+)
+
+// Valid indicates whether the value is a known member of the UpdateContactRequestRelationshipMark enum.
+func (e UpdateContactRequestRelationshipMark) Valid() bool {
+	switch e {
+	case UpdateContactRequestRelationshipMarkVendorMarketing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateContactRequestVisibility.
 const (
 	UpdateContactRequestVisibilityOwner     UpdateContactRequestVisibility = "owner"
@@ -18886,6 +19015,33 @@ func (e UpdateContractRequestValueBasis) Valid() bool {
 	case UpdateContractRequestValueBasisAnnualized12m:
 		return true
 	case UpdateContractRequestValueBasisTotal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateDataSubjectRequestIdentityCheck.
+const (
+	UpdateDataSubjectRequestIdentityCheckAddressOnFile UpdateDataSubjectRequestIdentityCheck = "address_on_file"
+	UpdateDataSubjectRequestIdentityCheckConfirmLink   UpdateDataSubjectRequestIdentityCheck = "confirm_link"
+	UpdateDataSubjectRequestIdentityCheckIdDocument    UpdateDataSubjectRequestIdentityCheck = "id_document"
+	UpdateDataSubjectRequestIdentityCheckInPerson      UpdateDataSubjectRequestIdentityCheck = "in_person"
+	UpdateDataSubjectRequestIdentityCheckNotVerified   UpdateDataSubjectRequestIdentityCheck = "not_verified"
+)
+
+// Valid indicates whether the value is a known member of the UpdateDataSubjectRequestIdentityCheck enum.
+func (e UpdateDataSubjectRequestIdentityCheck) Valid() bool {
+	switch e {
+	case UpdateDataSubjectRequestIdentityCheckAddressOnFile:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckConfirmLink:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckIdDocument:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckInPerson:
+		return true
+	case UpdateDataSubjectRequestIdentityCheckNotVerified:
 		return true
 	default:
 		return false
@@ -19631,6 +19787,7 @@ func (e UserStatus) Valid() bool {
 const (
 	VCardImportResultOutcomeVCardImportResultOutcomeCreated     VCardImportResultOutcome = "created"
 	VCardImportResultOutcomeVCardImportResultOutcomeNeedsReview VCardImportResultOutcome = "needs_review"
+	VCardImportResultOutcomeVCardImportResultOutcomeProposed    VCardImportResultOutcome = "proposed"
 	VCardImportResultOutcomeVCardImportResultOutcomeSkipped     VCardImportResultOutcome = "skipped"
 	VCardImportResultOutcomeVCardImportResultOutcomeUpdated     VCardImportResultOutcome = "updated"
 )
@@ -19641,6 +19798,8 @@ func (e VCardImportResultOutcome) Valid() bool {
 	case VCardImportResultOutcomeVCardImportResultOutcomeCreated:
 		return true
 	case VCardImportResultOutcomeVCardImportResultOutcomeNeedsReview:
+		return true
+	case VCardImportResultOutcomeVCardImportResultOutcomeProposed:
 		return true
 	case VCardImportResultOutcomeVCardImportResultOutcomeSkipped:
 		return true
@@ -20678,6 +20837,7 @@ const (
 	WorklistComparisonComparatorOrder           WorklistComparisonComparator = "order"
 	WorklistComparisonComparatorPin             WorklistComparisonComparator = "pin"
 	WorklistComparisonComparatorRelationship    WorklistComparisonComparator = "relationship"
+	WorklistComparisonComparatorReminder        WorklistComparisonComparator = "reminder"
 	WorklistComparisonComparatorWaitingDays     WorklistComparisonComparator = "waiting_days"
 )
 
@@ -20699,6 +20859,8 @@ func (e WorklistComparisonComparator) Valid() bool {
 	case WorklistComparisonComparatorPin:
 		return true
 	case WorklistComparisonComparatorRelationship:
+		return true
+	case WorklistComparisonComparatorReminder:
 		return true
 	case WorklistComparisonComparatorWaitingDays:
 		return true
@@ -21419,6 +21581,7 @@ const (
 	WorklistReasonKindPromised           WorklistReasonKind = "promised"
 	WorklistReasonKindQuietDays          WorklistReasonKind = "quiet_days"
 	WorklistReasonKindReadOnly           WorklistReasonKind = "read_only"
+	WorklistReasonKindReminderDue        WorklistReasonKind = "reminder_due"
 	WorklistReasonKindRepeatedFailure    WorklistReasonKind = "repeated_failure"
 	WorklistReasonKindResponseDueSoon    WorklistReasonKind = "response_due_soon"
 	WorklistReasonKindResponseOverdue    WorklistReasonKind = "response_overdue"
@@ -21501,6 +21664,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindQuietDays:
 		return true
 	case WorklistReasonKindReadOnly:
+		return true
+	case WorklistReasonKindReminderDue:
 		return true
 	case WorklistReasonKindRepeatedFailure:
 		return true
@@ -22809,6 +22974,7 @@ const (
 	ListCompanyDocumentsParamsCategoryContract          ListCompanyDocumentsParamsCategory = "contract"
 	ListCompanyDocumentsParamsCategoryEmailAttachment   ListCompanyDocumentsParamsCategory = "email_attachment"
 	ListCompanyDocumentsParamsCategoryLegal             ListCompanyDocumentsParamsCategory = "legal"
+	ListCompanyDocumentsParamsCategoryLink              ListCompanyDocumentsParamsCategory = "link"
 	ListCompanyDocumentsParamsCategoryMessageAttachment ListCompanyDocumentsParamsCategory = "message_attachment"
 	ListCompanyDocumentsParamsCategoryOffer             ListCompanyDocumentsParamsCategory = "offer"
 	ListCompanyDocumentsParamsCategoryOther             ListCompanyDocumentsParamsCategory = "other"
@@ -22822,6 +22988,8 @@ func (e ListCompanyDocumentsParamsCategory) Valid() bool {
 	case ListCompanyDocumentsParamsCategoryEmailAttachment:
 		return true
 	case ListCompanyDocumentsParamsCategoryLegal:
+		return true
+	case ListCompanyDocumentsParamsCategoryLink:
 		return true
 	case ListCompanyDocumentsParamsCategoryMessageAttachment:
 		return true
@@ -22912,6 +23080,24 @@ func (e ListContactsParamsCapturedByKind) Valid() bool {
 	case ListContactsParamsCapturedByKindHuman:
 		return true
 	case ListContactsParamsCapturedByKindSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListContactsParamsRelationshipMark.
+const (
+	ListContactsParamsRelationshipMarkAny             ListContactsParamsRelationshipMark = "any"
+	ListContactsParamsRelationshipMarkVendorMarketing ListContactsParamsRelationshipMark = "vendor_marketing"
+)
+
+// Valid indicates whether the value is a known member of the ListContactsParamsRelationshipMark enum.
+func (e ListContactsParamsRelationshipMark) Valid() bool {
+	switch e {
+	case ListContactsParamsRelationshipMarkAny:
+		return true
+	case ListContactsParamsRelationshipMarkVendorMarketing:
 		return true
 	default:
 		return false
@@ -23265,6 +23451,7 @@ const (
 	ListDealDocumentsParamsCategoryContract          ListDealDocumentsParamsCategory = "contract"
 	ListDealDocumentsParamsCategoryEmailAttachment   ListDealDocumentsParamsCategory = "email_attachment"
 	ListDealDocumentsParamsCategoryLegal             ListDealDocumentsParamsCategory = "legal"
+	ListDealDocumentsParamsCategoryLink              ListDealDocumentsParamsCategory = "link"
 	ListDealDocumentsParamsCategoryMessageAttachment ListDealDocumentsParamsCategory = "message_attachment"
 	ListDealDocumentsParamsCategoryOffer             ListDealDocumentsParamsCategory = "offer"
 	ListDealDocumentsParamsCategoryOther             ListDealDocumentsParamsCategory = "other"
@@ -23278,6 +23465,8 @@ func (e ListDealDocumentsParamsCategory) Valid() bool {
 	case ListDealDocumentsParamsCategoryEmailAttachment:
 		return true
 	case ListDealDocumentsParamsCategoryLegal:
+		return true
+	case ListDealDocumentsParamsCategoryLink:
 		return true
 	case ListDealDocumentsParamsCategoryMessageAttachment:
 		return true
@@ -24821,7 +25010,7 @@ type Activity struct {
 	OccurredAt    time.Time               `json:"occurred_at"`
 	Raw           *map[string]interface{} `json:"raw,omitempty"`
 
-	// RemindAt Task only. Reminder-fire time; the B-E16.6 scan reads tasks whose reminder is due, not-done, and un-archived.
+	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Source   string     `json:"source"`
 
@@ -25026,6 +25215,12 @@ type Address struct {
 	PostalCode           *string                `json:"postal_code,omitempty"`
 	Region               *string                `json:"region,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// AddressCountryMismatch The stored address country does not fit the postal code and city. A background check asks the geocoder for the postal code and city alone, reads the countries of up to five places they name, and flags the stored country only when it is none of them. The stored country is never changed. Editing the postal code, city or country clears the result until the next check, and a result older than 180 days is checked again.
+type AddressCountryMismatch struct {
+	// ResolvedCountry ISO-3166 alpha-2 code of the best-ranked country the postal code and city resolve to.
+	ResolvedCountry string `json:"resolved_country"`
 }
 
 // AdvanceDealRequest defines model for AdvanceDealRequest.
@@ -27448,10 +27643,10 @@ type ApproveRequest struct {
 type AssignLeadOutcome struct {
 	LeadId openapi_types.UUID `json:"lead_id"`
 
-	// Outcome `assigned` moved the lead — including one already owned by the destination, which still
-	// takes a version and an audit row rather than being quietly skipped: the writer records
-	// the assignment as an act, so a re-run says what it did rather than claiming it did
-	// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+	// Outcome `assigned` means the lead now belongs to the destination. A lead already owned by the
+	// destination is not written: it keeps its version and gains no audit row, exactly as a
+	// single update that changes nothing, and the result carries the version it already had.
+	// `forbidden` is a lead the caller may not hand on. `conflict` is a version that
 	// no longer holds.
 	//
 	// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
@@ -27464,10 +27659,10 @@ type AssignLeadOutcome struct {
 	Version *int64 `json:"version,omitempty"`
 }
 
-// AssignLeadOutcomeKind `assigned` moved the lead — including one already owned by the destination, which still
-// takes a version and an audit row rather than being quietly skipped: the writer records
-// the assignment as an act, so a re-run says what it did rather than claiming it did
-// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+// AssignLeadOutcomeKind `assigned` means the lead now belongs to the destination. A lead already owned by the
+// destination is not written: it keeps its version and gains no audit row, exactly as a
+// single update that changes nothing, and the result carries the version it already had.
+// `forbidden` is a lead the caller may not hand on. `conflict` is a version that
 // no longer holds.
 //
 // `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
@@ -27620,7 +27815,7 @@ type AtRiskRelationships struct {
 type Attachment struct {
 	ByteSize *int64 `json:"byte_size,omitempty"`
 
-	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read.
+	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes.
 	BytesWithheld *bool `json:"bytes_withheld,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
@@ -27628,6 +27823,10 @@ type Attachment struct {
 
 	// Category What kind of document this is. Closed vocabulary; `other` is the
 	// honest default, not a fallback for an unknown value.
+	//
+	// `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+	// Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+	// and the category cannot be set or changed through a metadata patch.
 	//
 	// `email_attachment` and `message_attachment` record PROVENANCE rather than
 	// content: capture derives them from the transport the file arrived on, so a
@@ -27666,10 +27865,17 @@ type Attachment struct {
 
 	// Title A display name distinct from the filename, showing what a reader looks for rather than what arrived.
 	Title *string `json:"title,omitempty"`
+
+	// Url The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download.
+	Url *string `json:"url,omitempty"`
 }
 
 // AttachmentCategory What kind of document this is. Closed vocabulary; `other` is the
 // honest default, not a fallback for an unknown value.
+//
+// `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+// Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+// and the category cannot be set or changed through a metadata patch.
 //
 // `email_attachment` and `message_attachment` record PROVENANCE rather than
 // content: capture derives them from the transport the file arrived on, so a
@@ -28413,6 +28619,9 @@ type AttentionItem struct {
 	// The band travels rather than the raw score, because a number between 0 and 100
 	// invites a client to draw a precision the §4 arithmetic does not claim.
 	Relationship *AttentionRelationshipFacts `json:"relationship,omitempty"`
+
+	// ReminderDue Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise.
+	ReminderDue *bool `json:"reminder_due,omitempty"`
 
 	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve.
 	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
@@ -31278,8 +31487,11 @@ type CommunicationReviewState string
 // Company A company. Mirrors the `company` table.
 type Company struct {
 	// Address Structured postal address.
-	Address    *Address   `json:"address,omitempty"`
-	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	Address *Address `json:"address,omitempty"`
+
+	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
+	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
+	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
 
 	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Null means the main offering.
 	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
@@ -34317,8 +34529,11 @@ type ConsumerMailDomainListResponse struct {
 // Contact A contact. Mirrors the `contact` table.
 type Contact struct {
 	// Address Structured postal address.
-	Address    *Address   `json:"address,omitempty"`
-	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	Address *Address `json:"address,omitempty"`
+
+	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
+	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
+	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
 
 	// Author Who created this contact in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
@@ -34377,6 +34592,9 @@ type Contact struct {
 	// showing that a conversation exists even when a reply cannot currently be delivered.
 	Reachability *[]ContactReachability `json:"reachability,omitempty"`
 
+	// RelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
+
 	// Social { linkedin, twitter, github, ... }
 	Social *map[string]interface{} `json:"social,omitempty"`
 	Source string                  `json:"source"`
@@ -34402,6 +34620,9 @@ type Contact struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ContactRelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+type ContactRelationshipMark string
 
 // ContactVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
 type ContactVisibility string
@@ -35813,7 +36034,7 @@ type CreateActivityRequest struct {
 	// Raw Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text.
 	Raw *map[string]interface{} `json:"raw,omitempty"`
 
-	// RemindAt Task only.
+	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
@@ -36933,6 +37154,12 @@ type DataCoverage struct {
 type DataSubjectRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	CreatedAt  time.Time           `json:"created_at"`
+
+	// DisputeOpen True while a complaint or dispute about this request is open. The proof of the
+	// answer is kept until 1 January of the fourth year after the year it was answered in,
+	// with both the year and that date read in the installation's time zone
+	// (`installation.timezone`), and past that date until this is false again.
+	DisputeOpen bool `json:"dispute_open"`
 
 	// DueAt Statutory deadline (e.g. 30 days).
 	DueAt time.Time `json:"due_at"`
@@ -38578,7 +38805,10 @@ type EmailSummary struct {
 	// would branch on and never reach.
 	DisplayStatus EmailAccessStatus `json:"display_status"`
 
-	// Move Whose move it is, derived from what this reader can see of the thread. `none` when
+	// Move Whose move it is, derived from what this reader can see of the thread.
+	// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+	// that is still the last word with them. A calendar invitation, update, cancellation
+	// or answer is `none` unless someone confirmed it asks us something. `none` also when
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
 	Move       EmailSummaryMove `json:"move"`
 	OccurredAt time.Time        `json:"occurred_at"`
@@ -38601,7 +38831,10 @@ type EmailSummary struct {
 // EmailSummaryDirection defines model for EmailSummary.Direction.
 type EmailSummaryDirection string
 
-// EmailSummaryMove Whose move it is, derived from what this reader can see of the thread. `none` when
+// EmailSummaryMove Whose move it is, derived from what this reader can see of the thread.
+// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+// that is still the last word with them. A calendar invitation, update, cancellation
+// or answer is `none` unless someone confirmed it asks us something. `none` also when
 // the question cannot be answered honestly — an unanswerable move is not a claim.
 type EmailSummaryMove string
 
@@ -39177,8 +39410,12 @@ type FilterVocabularyField struct {
 	// `id`, so only a core field can carry a reference.
 	References *FilterVocabularyFieldReferences `json:"references,omitempty"`
 
-	// Type The six custom-field types, plus `id` for a reference to another record and
-	// `domain` for a host column. The type decides the operators, which is why it is here.
+	// Type The six custom-field types, plus `id` for a reference to another record,
+	// `domain` for a host column and `distance` for a place on the earth. A `distance`
+	// field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
+	// `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
+	// name the builder showed for the center. Only companies that have a located address
+	// can match. The type decides the operators, which is why it is here.
 	//
 	// `domain` also decides what happens to the VALUE, and it is the only type that does:
 	// the operand is folded to the host the column stores, so
@@ -39204,8 +39441,12 @@ type FilterVocabularyFieldOperators string
 // `id`, so only a core field can carry a reference.
 type FilterVocabularyFieldReferences string
 
-// FilterVocabularyFieldType The six custom-field types, plus `id` for a reference to another record and
-// `domain` for a host column. The type decides the operators, which is why it is here.
+// FilterVocabularyFieldType The six custom-field types, plus `id` for a reference to another record,
+// `domain` for a host column and `distance` for a place on the earth. A `distance`
+// field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
+// `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
+// name the builder showed for the center. Only companies that have a located address
+// can match. The type decides the operators, which is why it is here.
 //
 // `domain` also decides what happens to the VALUE, and it is the only type that does:
 // the operand is folded to the host the column stores, so
@@ -49275,10 +49516,26 @@ type SearchHitEmployer struct {
 	CompanyName string             `json:"company_name"`
 }
 
+// SearchNearMatch defines model for SearchNearMatch.
+type SearchNearMatch struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Snippet The company beside a lead's name, as a lead hit carries it.
+	Snippet *string             `json:"snippet,omitempty"`
+	Title   string              `json:"title"`
+	Type    SearchNearMatchType `json:"type"`
+}
+
+// SearchNearMatchType defines model for SearchNearMatch.Type.
+type SearchNearMatchType string
+
 // SearchResponse defines model for SearchResponse.
 type SearchResponse struct {
 	Data []SearchResult `json:"data"`
-	Page PageInfo       `json:"page"`
+
+	// NearMatches Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor.
+	NearMatches *[]SearchNearMatch `json:"near_matches,omitempty"`
+	Page        PageInfo           `json:"page"`
 
 	// TypesWithMore On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
 	TypesWithMore *[]SearchResponseTypesWithMore `json:"types_with_more,omitempty"`
@@ -50118,6 +50375,21 @@ type SetTransitionPolicyRequest struct {
 
 // SetTransitionPolicyRequestMode defines model for SetTransitionPolicyRequest.Mode.
 type SetTransitionPolicyRequestMode string
+
+// SetUpPartnerRequest What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
+// or `served_segments`: the tier is a human's choice, and the others are set after set-up.
+type SetUpPartnerRequest struct {
+	NextStep          *string                               `json:"next_step,omitempty"`
+	NextStepDueAt     *openapi_types.Date                   `json:"next_step_due_at,omitempty"`
+	PartnerRole       SetUpPartnerRequestPartnerRole        `json:"partner_role"`
+	RelationshipStage *SetUpPartnerRequestRelationshipStage `json:"relationship_stage,omitempty"`
+}
+
+// SetUpPartnerRequestPartnerRole defines model for SetUpPartnerRequest.PartnerRole.
+type SetUpPartnerRequestPartnerRole string
+
+// SetUpPartnerRequestRelationshipStage defines model for SetUpPartnerRequest.RelationshipStage.
+type SetUpPartnerRequestRelationshipStage string
 
 // SettingLock A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`.
 type SettingLock struct {
@@ -51737,7 +52009,7 @@ type UpdateActivityRequest struct {
 	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
-	// RemindAt Task only. Set/clear the reminder; PATCH target for B-E16.2/.3. The reminder scan (B-E16.6) fires on this.
+	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt             *time.Time             `json:"remind_at,omitempty"`
 	Subject              *string                `json:"subject,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -51971,9 +52243,12 @@ type UpdateContactRequest struct {
 	// `Contact360.dead_addresses` already names which address bounced; until now the
 	// contract's own remedy for that was to visit the contact page, because the write
 	// existed on create and nowhere else.
-	Phones *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social *map[string]interface{} `json:"social,omitempty"`
-	Title  *string                 `json:"title,omitempty"`
+	Phones *[]ContactPhoneInput `json:"phones,omitempty"`
+
+	// RelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
+	RelationshipMark *UpdateContactRequestRelationshipMark `json:"relationship_mark,omitempty"`
+	Social           *map[string]interface{}               `json:"social,omitempty"`
+	Title            *string                               `json:"title,omitempty"`
 
 	// Visibility Who may see this contact: `workspace` for everyone in the company,
 	// `owner` for the contact named by `owner_id` alone.
@@ -51999,6 +52274,9 @@ type UpdateContactRequest struct {
 	Visibility           *UpdateContactRequestVisibility `json:"visibility,omitempty"`
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
+
+// UpdateContactRequestRelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
+type UpdateContactRequestRelationshipMark string
 
 // UpdateContactRequestVisibility Who may see this contact: `workspace` for everyone in the company,
 // `owner` for the contact named by `owner_id` alone.
@@ -52057,10 +52335,40 @@ type UpdateDataSubjectRequest struct {
 	// AssigneeId null hands the request back to the unassigned pool.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
+	// DisputeOpen Opens (true) or closes (false) a complaint or dispute about the request. Any status takes it.
+	DisputeOpen *bool `json:"dispute_open,omitempty"`
+
+	// IdentityCheck How the requester's identity was checked, recorded in the proof the request keeps once
+	// it closes. Required on the patch that closes a request, except one that arrived through
+	// the subject's own confirm link, where the link is the check. `confirm_link`: the
+	// subject used a link mailed to their address. `address_on_file`: the request came from,
+	// or was confirmed at, an address the record already held. `id_document`: an identity
+	// document was seen. `in_person`: the requester was known in person. `not_verified`: the
+	// identity could not be checked. A request closes with `not_verified` only as `rejected`;
+	// a patch that fulfils with it is refused with 422 before anything is erased. Ignored on
+	// any other patch.
+	IdentityCheck *UpdateDataSubjectRequestIdentityCheck `json:"identity_check,omitempty"`
+
+	// RequesterEmail The address the request came from, recorded in the proof. Optional: when absent, the
+	// proof takes the address the confirm link was mailed to, or the subject reference when it
+	// is an address. Ignored on a patch that does not close the request.
+	RequesterEmail *openapi_types.Email `json:"requester_email,omitempty"`
+
 	// Resolution A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.
 	Resolution *string                         `json:"resolution,omitempty"`
 	Status     *UpdateDataSubjectRequestStatus `json:"status,omitempty"`
 }
+
+// UpdateDataSubjectRequestIdentityCheck How the requester's identity was checked, recorded in the proof the request keeps once
+// it closes. Required on the patch that closes a request, except one that arrived through
+// the subject's own confirm link, where the link is the check. `confirm_link`: the
+// subject used a link mailed to their address. `address_on_file`: the request came from,
+// or was confirmed at, an address the record already held. `id_document`: an identity
+// document was seen. `in_person`: the requester was known in person. `not_verified`: the
+// identity could not be checked. A request closes with `not_verified` only as `rejected`;
+// a patch that fulfils with it is refused with 422 before anything is erased. Ignored on
+// any other patch.
+type UpdateDataSubjectRequestIdentityCheck string
 
 // UpdateDataSubjectRequestStatus defines model for UpdateDataSubjectRequest.Status.
 type UpdateDataSubjectRequestStatus string
@@ -53032,6 +53340,7 @@ type VCardImportResult struct {
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
 	// between them. `updated` — an exact match, filled only where the record was empty.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 	// `skipped` — the card states no name, carries a sending system's address, or matches a
 	// contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
@@ -53043,6 +53352,7 @@ type VCardImportResult struct {
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
 // between them. `updated` — an exact match, filled only where the record was empty.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 // `skipped` — the card states no name, carries a sending system's address, or matches a
 // contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
@@ -54477,7 +54787,8 @@ type WorklistCompanyFacts struct {
 // Absent on the last row of the page, which has nothing below it to beat.
 type WorklistComparison struct {
 	// Comparator What decided it. `order` means every comparator tied and the ids broke it, which the
-	// client renders as no reason at all.
+	// client renders as no reason at all. `reminder` means this row is a due reminder and
+	// the one below is not.
 	//
 	// `crowded` means the row below is one of many of its kind: past a lead group, further
 	// rows of the same source sort under the other kinds of work so one noisy lane cannot own
@@ -54498,7 +54809,8 @@ type WorklistComparison struct {
 }
 
 // WorklistComparisonComparator What decided it. `order` means every comparator tied and the ids broke it, which the
-// client renders as no reason at all.
+// client renders as no reason at all. `reminder` means this row is a due reminder and
+// the one below is not.
 //
 // `crowded` means the row below is one of many of its kind: past a lead group, further
 // rows of the same source sort under the other kinds of work so one noisy lane cannot own
@@ -54983,7 +55295,7 @@ type WorklistItem struct {
 	Lead *WorklistLeadFacts `json:"lead,omitempty"`
 
 	// Level The hard priority band, and the whole of the product rule: 0 pinned by the
-	// reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
+	// reader, or a task assigned to the reader whose reminder came due, 1 a customer waiting or a deadline arriving, 2 a promise due or an
 	// approved action that failed, 3 material revenue at risk, 4 an assigned task
 	// or a smaller deal drifting, 5 a decision blocking customer work, 6 data
 	// hygiene. Levels are never mixed by a score.
@@ -55557,7 +55869,7 @@ type WorklistReadings struct {
 // product ships three languages and a sentence composed here would reach a German
 // reader in English.
 type WorklistReason struct {
-	// Kind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
+	// Kind Which fact this is. The client writes the phrase. `reminder_due` says the reader is the task's assignee and its reminder came due. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
 	Kind WorklistReasonKind `json:"kind"`
 
 	// Value A typed comparator value — a date, an amount, a count of days, or nothing. Typed
@@ -55566,7 +55878,7 @@ type WorklistReason struct {
 	Value *WorklistValue `json:"value,omitempty"`
 }
 
-// WorklistReasonKind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
+// WorklistReasonKind Which fact this is. The client writes the phrase. `reminder_due` says the reader is the task's assignee and its reminder came due. `read_only` says why a row offers no way off the list: the reader may read its record and not change it. `bcc_from_stranger` and `link_off_sender` say why a first-time sender's request is routine: it reached the reader only by Bcc, or a link in it leads to a site unrelated to the sender.
 type WorklistReasonKind string
 
 // WorklistSourceUnavailable A source that did not contribute, and why. `withheld` means the caller may not
@@ -56037,6 +56349,9 @@ type ListActivitiesParams struct {
 
 	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
 	WaitingReply *bool `form:"waiting_reply,omitempty" json:"waiting_reply,omitempty"`
+
+	// ReminderDue Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out.
+	ReminderDue *bool `form:"reminder_due,omitempty" json:"reminder_due,omitempty"`
 }
 
 // ListActivitiesParamsKind defines parameters for ListActivities.
@@ -57802,6 +58117,22 @@ type UpsertPartnerParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// SetUpPartnerParams defines parameters for SetUpPartner.
+type SetUpPartnerParams struct {
+	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+	// It is held for 24h per caller and tool, not per path: the same key on two records of one
+	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
 // UpdateCompanyProfileFieldParams defines parameters for UpdateCompanyProfileField.
 type UpdateCompanyProfileFieldParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -58140,6 +58471,10 @@ type ListContactsParams struct {
 	// itself), and not otherwise.
 	AiWritten *AiWritten `form:"ai_written,omitempty" json:"ai_written,omitempty"`
 
+	// RelationshipMark Without it the list leaves out marked contacts, unless `q` is given. `vendor_marketing`
+	// returns only contacts carrying that mark; `any` returns marked and unmarked alike.
+	RelationshipMark *ListContactsParamsRelationshipMark `form:"relationship_mark,omitempty" json:"relationship_mark,omitempty"`
+
 	// OwnerId Filter to a single owner.
 	OwnerId *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
 
@@ -58180,6 +58515,9 @@ type ListContactsParams struct {
 // ListContactsParamsCapturedByKind defines parameters for ListContacts.
 type ListContactsParamsCapturedByKind string
 
+// ListContactsParamsRelationshipMark defines parameters for ListContacts.
+type ListContactsParamsRelationshipMark string
+
 // ListContactsParamsTagMode defines parameters for ListContacts.
 type ListContactsParamsTagMode string
 
@@ -58205,6 +58543,12 @@ type CreateContactParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ImportCardPhotoMultipartBody defines parameters for ImportCardPhoto.
+type ImportCardPhotoMultipartBody struct {
+	// File The photo. Its bytes must be the image type it claims to be.
+	File openapi_types.File `json:"file"`
 }
 
 // QuickCaptureContactParams defines parameters for QuickCaptureContact.
@@ -63223,6 +63567,9 @@ type MergeCompanyJSONRequestBody MergeCompanyJSONBody
 // UpsertPartnerJSONRequestBody defines body for UpsertPartner for application/json ContentType.
 type UpsertPartnerJSONRequestBody = UpsertPartnerRequest
 
+// SetUpPartnerJSONRequestBody defines body for SetUpPartner for application/json ContentType.
+type SetUpPartnerJSONRequestBody = SetUpPartnerRequest
+
 // UpdateCompanyProfileFieldJSONRequestBody defines body for UpdateCompanyProfileField for application/json ContentType.
 type UpdateCompanyProfileFieldJSONRequestBody = UpdateCompanyProfileFieldRequest
 
@@ -63282,6 +63629,9 @@ type CreateConsentPurposeJSONRequestBody = CreateConsentPurposeRequest
 
 // CreateContactJSONRequestBody defines body for CreateContact for application/json ContentType.
 type CreateContactJSONRequestBody = CreateContactRequest
+
+// ImportCardPhotoMultipartRequestBody defines body for ImportCardPhoto for multipart/form-data ContentType.
+type ImportCardPhotoMultipartRequestBody ImportCardPhotoMultipartBody
 
 // DismissRelationshipNudgesJSONRequestBody defines body for DismissRelationshipNudges for application/json ContentType.
 type DismissRelationshipNudgesJSONRequestBody = DismissRelationshipNudgesRequest
@@ -64824,6 +65174,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["address_country_mismatch"]; found {
+		err = json.Unmarshal(raw, &a.AddressCountryMismatch)
+		if err != nil {
+			return fmt.Errorf("error reading 'address_country_mismatch': %w", err)
+		}
+		delete(object, "address_country_mismatch")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -65138,6 +65496,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AddressCountryMismatch != nil {
+		object["address_country_mismatch"], err = json.Marshal(a.AddressCountryMismatch)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'address_country_mismatch': %w", err)
+		}
+	}
+
 	if a.ArchivedAt != nil {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
@@ -65420,6 +65785,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["address_country_mismatch"]; found {
+		err = json.Unmarshal(raw, &a.AddressCountryMismatch)
+		if err != nil {
+			return fmt.Errorf("error reading 'address_country_mismatch': %w", err)
+		}
+		delete(object, "address_country_mismatch")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -65596,6 +65969,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "reachability")
 	}
 
+	if raw, found := object["relationship_mark"]; found {
+		err = json.Unmarshal(raw, &a.RelationshipMark)
+		if err != nil {
+			return fmt.Errorf("error reading 'relationship_mark': %w", err)
+		}
+		delete(object, "relationship_mark")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -65691,6 +66072,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.AddressCountryMismatch != nil {
+		object["address_country_mismatch"], err = json.Marshal(a.AddressCountryMismatch)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'address_country_mismatch': %w", err)
 		}
 	}
 
@@ -65837,6 +66225,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["reachability"], err = json.Marshal(a.Reachability)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'reachability': %w", err)
+		}
+	}
+
+	if a.RelationshipMark != nil {
+		object["relationship_mark"], err = json.Marshal(a.RelationshipMark)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'relationship_mark': %w", err)
 		}
 	}
 
@@ -72895,6 +73290,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "phones")
 	}
 
+	if raw, found := object["relationship_mark"]; found {
+		err = json.Unmarshal(raw, &a.RelationshipMark)
+		if err != nil {
+			return fmt.Errorf("error reading 'relationship_mark': %w", err)
+		}
+		delete(object, "relationship_mark")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -72984,6 +73387,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["phones"], err = json.Marshal(a.Phones)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phones': %w", err)
+		}
+	}
+
+	if a.RelationshipMark != nil {
+		object["relationship_mark"], err = json.Marshal(a.RelationshipMark)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'relationship_mark': %w", err)
 		}
 	}
 
@@ -75520,6 +75930,9 @@ type ServerInterface interface {
 	// Create/update the partner extension on a company (adds `partner` to its relationship types).
 	// (PUT /companies/{id}/partner)
 	UpsertPartner(w http.ResponseWriter, r *http.Request, id Id, params UpsertPartnerParams)
+	// Set up a partner program on a company that has none, with no margin tier.
+	// (POST /companies/{id}/partner/setup)
+	SetUpPartner(w http.ResponseWriter, r *http.Request, id Id, params SetUpPartnerParams)
 	// The company's confirmed profile fields (company_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it.
 	// (GET /companies/{id}/profile-fields)
 	ListCompanyProfileFields(w http.ResponseWriter, r *http.Request, id Id)
@@ -75664,6 +76077,9 @@ type ServerInterface interface {
 	// Create a contact.
 	// (POST /contacts)
 	CreateContact(w http.ResponseWriter, r *http.Request, params CreateContactParams)
+	// Read a photo of business cards and propose the contacts it shows.
+	// (POST /contacts/card-photos)
+	ImportCardPhoto(w http.ResponseWriter, r *http.Request)
 	// Set several lapsed contacts aside at once — the Worklist's "Dismiss all".
 	// (PUT /contacts/nudge-dismissals)
 	DismissRelationshipNudges(w http.ResponseWriter, r *http.Request)
@@ -79087,6 +79503,12 @@ func (_ Unimplemented) UpsertPartner(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Set up a partner program on a company that has none, with no margin tier.
+// (POST /companies/{id}/partner/setup)
+func (_ Unimplemented) SetUpPartner(w http.ResponseWriter, r *http.Request, id Id, params SetUpPartnerParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The company's confirmed profile fields (company_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it.
 // (GET /companies/{id}/profile-fields)
 func (_ Unimplemented) ListCompanyProfileFields(w http.ResponseWriter, r *http.Request, id Id) {
@@ -79372,6 +79794,12 @@ func (_ Unimplemented) ListContacts(w http.ResponseWriter, r *http.Request, para
 // Create a contact.
 // (POST /contacts)
 func (_ Unimplemented) CreateContact(w http.ResponseWriter, r *http.Request, params CreateContactParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read a photo of business cards and propose the contacts it shows.
+// (POST /contacts/card-photos)
+func (_ Unimplemented) ImportCardPhoto(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -83240,6 +83668,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "waiting_reply"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "waiting_reply", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "reminder_due" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "reminder_due", r.URL.Query(), &params.ReminderDue, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "reminder_due"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reminder_due", Err: err})
 		}
 		return
 	}
@@ -94629,6 +95070,83 @@ func (siw *ServerInterfaceWrapper) UpsertPartner(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// SetUpPartner operation middleware
+func (siw *ServerInterfaceWrapper) SetUpPartner(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetUpPartnerParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey ToolIdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetUpPartner(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListCompanyProfileFields operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanyProfileFields(w http.ResponseWriter, r *http.Request) {
 
@@ -96447,6 +96965,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "relationship_mark" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "relationship_mark", r.URL.Query(), &params.RelationshipMark, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "relationship_mark"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "relationship_mark", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "owner_id" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_id", r.URL.Query(), &params.OwnerId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
@@ -96589,6 +97120,26 @@ func (siw *ServerInterfaceWrapper) CreateContact(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateContact(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ImportCardPhoto operation middleware
+func (siw *ServerInterfaceWrapper) ImportCardPhoto(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ImportCardPhoto(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -122155,6 +122706,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/companies/{id}/partner", wrapper.UpsertPartner)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/companies/{id}/partner/setup", wrapper.SetUpPartner)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/profile-fields", wrapper.ListCompanyProfileFields)
 	})
 	r.Group(func(r chi.Router) {
@@ -122297,6 +122851,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts", wrapper.CreateContact)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/card-photos", wrapper.ImportCardPhoto)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/contacts/nudge-dismissals", wrapper.DismissRelationshipNudges)

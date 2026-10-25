@@ -53,11 +53,17 @@ type fieldReading struct {
 	// field the text[] subquery.
 	expr   string
 	linked bool
+	// valueless marks a field with nothing to show: a distance field's Expr is
+	// the whole row alias, so projecting it would read every column.
+	valueless bool
 }
 
 // readField decides, for explanations and member values alike, whether a leaf's
 // field is hidden, a scalar value or a list of linked values.
 func (q Query) readField(ctx context.Context, name string, field Field, arg func(any) int) (fieldReading, error) {
+	if field.Type == FieldDistance {
+		return fieldReading{valueless: true}, nil
+	}
 	if field.Withheld || (field.Link != "" && !field.ReadsLink) {
 		return fieldReading{hidden: true}, nil
 	}

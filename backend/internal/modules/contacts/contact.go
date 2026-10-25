@@ -87,6 +87,8 @@ type CreateContactInput struct {
 	// auditEvidence rides on the create's audit row. Unexported, so no request
 	// can claim the evidence an import writes for itself.
 	auditEvidence map[string]any
+	// erasure is set only by EnsureContactByEmail, from its caller.
+	erasure storekit.ErasureAdmission
 }
 
 // CreateContact inserts the contact + child rows + audit + event atomically.
@@ -200,6 +202,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		CapturedBy:   by,
 		CustomFields: in.CustomFields,
 		Active:       active,
+		erasure:      in.erasure,
 	})
 	if err != nil {
 		return crmcontracts.Contact{}, err
@@ -270,7 +273,7 @@ func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID,
 
 // EnsureContactByEmail returns the contact holding this address, creating one
 // when none does — where an address seen on a message becomes a record.
-func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error) {
+func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
 		return ids.Nil, err
 	}
@@ -306,6 +309,7 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 		FullName: fullName,
 		Emails:   []ContactEmailInput{{Email: email, EmailType: emailTypeWork, IsPrimary: true}},
 		Source:   source,
+		erasure:  erasure,
 	})
 	if err == nil {
 		return ids.UUID(created.Id), nil

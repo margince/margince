@@ -75,6 +75,10 @@ type searchBranch struct {
 	// matched. Retrieval cites the title instead, because evidence must be text
 	// that could have ranked the hit.
 	snippetIsContext bool
+	// nearName is the indexed trigram expression over the branch's name, with a
+	// %s for the alias. It is copied from the index definition, so the
+	// near-match pass reads the index. Empty means no near matches.
+	nearName string
 }
 
 // snippetIsEvidence reports whether a hit's excerpt may be cited as the text
@@ -231,18 +235,23 @@ const noSnippet = "NULL"
 const columnName = "name"
 
 var searchBranches = []searchBranch{
-	{entity: "contact", table: entityContact, title: "full_name", snippet: noSnippet, identifier: storekit.ContactEmails},
+	{
+		entity: "contact", table: entityContact, title: "full_name", snippet: noSnippet,
+		identifier: storekit.ContactEmails, nearName: "f_fold_apostrophes(lower(%s.full_name))",
+	},
 	{
 		entity: "company", table: entityCompany, title: "display_name", snippet: noSnippet,
 		extraWhere: "NOT %s.is_anchor", identifier: storekit.CompanyDomains,
+		nearName: "f_fold_apostrophes(lower(%s.display_name))",
 	},
-	{entity: "deal", table: entityDeal, title: columnName, snippet: noSnippet},
+	{entity: "deal", table: entityDeal, title: columnName, snippet: noSnippet, nearName: "f_fold_apostrophes(lower(%s.name))"},
 	// A name alone does not say why searching an account found the lead.
 	// So a lead's excerpt is its company, as a contact hit carries its employer.
 	// A lead with no full name is already titled by that company.
 	{
 		entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)",
 		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END", snippetIsContext: true, identifier: storekit.LeadEmails,
+		nearName: "f_fold_apostrophes(lower(coalesce(%[1]s.full_name, '') || ' ' || coalesce(%[1]s.company_name, '')))",
 	},
 	// A project's name alone does not say which account's work it is, and two
 	// accounts can run a "Phase 2". The excerpt is the key and the company,

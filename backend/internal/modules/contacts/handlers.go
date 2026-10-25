@@ -37,6 +37,10 @@ type Handlers struct {
 	// create proposal. See WithVCardReviewStager for why it is injected.
 	stageVCardReview func(ctx context.Context, entry VCardEntry, candidate *ids.ContactID) error
 
+	// readCardPhoto reads a photo of business cards. Nil is an installation
+	// with no model, and the photo route then answers 501.
+	readCardPhoto CardPhotoReader
+
 	store *Store
 	// listMembers resolves a list read's list_id; nil while lists are off.
 	listMembers storekit.ListMemberFilterResolver

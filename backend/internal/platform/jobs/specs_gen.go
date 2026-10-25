@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "d1f10f53bffd0494a4723809e1de82b55154c183382d20a3a4c697c6bd917110"
+const JobContractHash = "ef4d84c19d6c415cd7405407815c7453baf8a32cba7173e5aa032904d878975b"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -27,6 +27,17 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"AccountScanBrain"}, AbsentRegistersAnyway: true},
 		Args:         []ArgField{{Name: "CompanyID"}, {Name: "ScanID"}, {Name: "ViewerID"}, {Name: "Workspace"}},
+	},
+	"address_country_check": {
+		Kind:         "address_country_check",
+		GoType:       "AddressCountryCheckArgs",
+		Role:         Worker,
+		Queue:        "geocode",
+		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
+		MaxAttempts:  3,
+		OptsOwner:    OptsArgs,
+		Cadence:      Cadence{Fixed: 10 * time.Minute},
+		Registration: Registration{When: []string{"Geocoder"}},
 	},
 	"agent_scheduler": {
 		Kind:         "agent_scheduler",
@@ -740,6 +751,16 @@ var specs = map[string]Spec{
 		MaxAttempts: 1,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Fixed: 10 * time.Minute},
+	},
+	"privacy_request_proof_expiry": {
+		Kind:        "privacy_request_proof_expiry",
+		GoType:      "RequestProofExpiryArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsArgs,
+		Cadence:     Cadence{Fixed: 24 * time.Hour},
 	},
 	"privacy_retention": {
 		Kind:        "privacy_retention",

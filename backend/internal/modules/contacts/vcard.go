@@ -54,6 +54,9 @@ type VCardEntry struct {
 	// changed. Nil where it states none, and the import then dates the card
 	// from its own clock.
 	Revised *time.Time
+	// ModelRead marks a card a model read off a photo. importOneVCard never
+	// writes such a card, on any arm: it is reported for approval or skipped.
+	ModelRead bool `json:"model_read,omitempty"`
 }
 
 // VCardChannel is one address or number with the kind the card gave it.

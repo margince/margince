@@ -8,7 +8,10 @@
 // Stdlib only, which the shared tier requires.
 package calendarmethod
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // known are the methods RFC 5546 defines; activity.calendar_method's CHECK
 // holds the same eight.
@@ -27,11 +30,28 @@ func Known(value string) string {
 	return method
 }
 
+// responses answer the organizer; invitations come from the organizer. Every
+// known method is in one of the two, and none is in both.
+var (
+	responses   = []string{"REPLY", "COUNTER", "DECLINECOUNTER"}
+	invitations = []string{"REQUEST", "ADD", "CANCEL", "PUBLISH", "REFRESH"}
+)
+
+// Responses lists the methods IsResponse admits, for a reader that spells them
+// in SQL.
+func Responses() []string { return slices.Clone(responses) }
+
+// Invitations lists the methods IsInvitation admits, for a reader that spells
+// them in SQL.
+func Invitations() []string { return slices.Clone(invitations) }
+
 // IsResponse reports an attendee answering the organizer rather than asking.
 func IsResponse(method string) bool {
-	switch method {
-	case "REPLY", "COUNTER", "DECLINECOUNTER":
-		return true
-	}
-	return false
+	return slices.Contains(responses, method)
+}
+
+// IsInvitation reports the organizer sending an invitation, an update or a
+// cancellation. Such a mail asks for an RSVP, never for a written reply.
+func IsInvitation(method string) bool {
+	return slices.Contains(invitations, method)
 }

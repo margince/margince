@@ -113,6 +113,17 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 			Supported: true,
 		}, nil
 	}
+	copied, err := copiedOnThisMatter(ctx, tx, req, subject)
+	if err != nil {
+		return resolution{}, err
+	}
+	if copied {
+		return resolution{
+			Category:  commsauthz.CategoryReplyToInbound,
+			Basis:     commsauthz.BasisLegitimateInterests,
+			Supported: true,
+		}, nil
+	}
 	live, err := liveDealInLinks(ctx, tx, req.Links, subject)
 	if err != nil {
 		return resolution{}, err

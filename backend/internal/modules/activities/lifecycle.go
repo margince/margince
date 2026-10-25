@@ -320,6 +320,9 @@ func admitActivityPatch(
 			return crmcontracts.Activity{}, held, err
 		}
 	}
+	if !held {
+		endPassedReminder(current, in)
+	}
 	return current, held, nil
 }
 

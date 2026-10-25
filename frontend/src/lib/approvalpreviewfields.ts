@@ -244,6 +244,14 @@ export function previewFieldLabel(field: string, t: Translator): string {
       return t("rel.counterparty");
     case "archive_primary_employer":
       return t("approval.preview.newPrimaryEmployer");
+    case "partner_role":
+      return t("partner.role");
+    case "partner_stage":
+      return t("partner.stage");
+    case "partner_next_step":
+      return t("partner.nextStep");
+    case "partner_next_step_due_at":
+      return t("partner.nextStepDue");
     case "merge_tag_source":
       return t("approval.preview.mergeTagSource");
     case "merge_tag_target":

@@ -85,6 +85,7 @@ Never invent a fact. If the summary does not say it, you may still ASSESS it —
 If the summary is thin, say what is MISSING and stop. Four honest sentences beat six padded ones, and a brief that pads is one a reader learns to skip.
 Cite the ids the summary gave you. A sentence about the contact themselves cites the contact; one drawn from a claim cites the claim's source_id as an activity.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
+If the summary says "relationship": "vendor_marketing", this contact is a vendor selling to the reader and nobody here has answered them. State that once, as a fact, and say what they offer. Give NO recommendation: nothing they ask for (a demo, a call, a reply) is a move the reader owes them.
 Write one claim per sentence, plainly, addressing the reader as "you" where natural. Name the contact once; after that they are "they".`
 
 // briefSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.

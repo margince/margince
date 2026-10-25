@@ -28,4 +28,7 @@
 //
 // It also owns lead_privacy_notice, the record of a website lead's notice.
 // That record names nobody.
+//
+// And it owns privacy_request_proof: what a closed request did, kept for three
+// years past the year it closed in.
 package consent
