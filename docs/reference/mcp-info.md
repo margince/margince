@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 9 |
 | Tool catalog | 126.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 33148 |
+| Approx. wire tokens | 33161 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,7 +32,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 24.6 KB | 19% | **No**: a result's shape, never listed to a model |
+| Output schemas | 24.7 KB | 19% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 32.4 KB | 25% | Yes, every step |
 | Input schemas | 60.2 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
@@ -3679,6 +3679,9 @@ document register, filtered by category, contract or state. Keep next_cursor to 
               "captured_by": {
                 "type": "string"
               },
+              "category": {
+                "type": "string"
+              },
               "checksum": {
                 "type": "string"
               },
@@ -3701,6 +3704,9 @@ document register, filtered by category, contract or state. Keep next_cursor to 
                 "type": "string"
               },
               "filename": {
+                "type": "string"
+              },
+              "url": {
                 "type": "string"
               }
             },
