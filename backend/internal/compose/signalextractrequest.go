@@ -122,7 +122,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			`attribution, same-name ambiguity, and non-commitment events. When two participants share a name, `+
 			`that name alone cannot select a reference: leave it empty even if one is a colleague and another is external. `+
 			`Only that participant's exact address in the quoted clause may resolve that tie. Never choose the first match. `+
-			`When the words name someone other than the writer as the one who will act and that person is not on the message, use "". Never put the writer in their place. `+
+			`When the words name a colleague other than the writer as the one who will act and that colleague is not on the message, use "". Never put the writer in their place. `+
 			`Never invent a reference. `+
 			`"quote" is the words of that message the event is stated in, copied exactly; `+
 			`for "commitment_made" it is the clause the promise is made in, one promise per event. `+
