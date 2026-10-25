@@ -26,7 +26,7 @@ const COUNTING_MEETING_STATUSES: ReadonlySet<string> = new Set([
 ]);
 
 // Whether a row moves last activity as of `asOf`, as LastActivityCountsSQL
-// decides on the server: it must have happened, a `day` entry by its date in
+// decides on the server. It must have happened, a `day` entry by its date in
 // the record zone. lastactivity.test.ts reads the server's shared cases.
 export function movesLastActivity(
   row: Activity,
