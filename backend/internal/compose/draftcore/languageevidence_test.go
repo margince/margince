@@ -6,6 +6,7 @@ package draftcore_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -66,5 +67,25 @@ func TestLanguageEvidenceKeepsAnOldInboundMessageBehindManyNewerOutboundOnes(t *
 	got := draftcore.LanguageEvidenceOf(rows, turnsNow)
 	if len(got) == 0 || !strings.HasSuffix(got[0], "their old reply") {
 		t.Errorf("first evidence = %q, want their old inbound reply ahead of newer outbound mail", got)
+	}
+}
+
+func TestLanguageEvidencePrefersTheAddresseesMailOverAnotherParticipants(t *testing.T) {
+	t.Parallel()
+	in := string(crmcontracts.ActivityDirectionInbound)
+	turns := []draftcore.Turn{
+		{Direction: in, SenderID: "cc-colleague", At: turnsNow, Text: "colleague newest"},
+		{Direction: in, SenderID: "addressee", At: turnsNow.Add(-48 * time.Hour), Text: "addressee older"},
+		{Direction: in, At: turnsNow.Add(-24 * time.Hour), Text: "unknown sender"},
+	}
+	got := draftcore.LanguageEvidence(turns, "addressee")
+	want := []string{"addressee older", "colleague newest", "unknown sender"}
+	for i, w := range want {
+		if got[i] != w {
+			t.Errorf("evidence[%d] = %q, want %q", i, got[i], w)
+		}
+	}
+	if first := draftcore.LanguageEvidence(turns, "")[0]; first != "colleague newest" {
+		t.Errorf("with no addressee the newest inbound leads, got %q", first)
 	}
 }

@@ -145,3 +145,30 @@ func TestReplyEndpointNormalizesTheSubjectForEveryDraftAdapter(t *testing.T) {
 		})
 	}
 }
+
+func TestAnOldInboundMessageStillDecidesTheReplyLanguageBehindManyNewerOutboundOnes(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	at := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
+	inbound, subject := "inbound", "Angebot"
+	german := "Vielen Dank für das Angebot, wir prüfen es mit unserem Team und melden uns nächste Woche bei Ihnen zurück."
+	if _, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Body: &german, ThreadKey: "angebot",
+		Direction: &inbound, OccurredAt: &at, Source: "manual",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var anchor crmcontracts.Activity
+	for i := range replyContextTurns + 4 {
+		anchor = logReplyMessage(ctx, t, e, "angebot", "Angebot", "ok", time.Duration(i+1)*time.Hour)
+	}
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
+	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
+	drafter.envelope = draftfloor.NewResolver().WithUserLanguage(func(context.Context) string { return "en" })
+	if _, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), draftfloor.Steering{}); err != nil {
+		t.Fatal(err)
+	}
+	if content := brain.request.Messages[0].Content; !strings.Contains(content, `"output_language":"de"`) {
+		t.Fatalf("the older German inbound message was cut before the language was decided: %s", content)
+	}
+}

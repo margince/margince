@@ -731,3 +731,32 @@ func TestATaskFiledOnlyOnAContactTheCallerCannotReadOffersNoAddress(t *testing.T
 		t.Errorf("address = %q, want empty — the only linked contact is private to somebody else", got.Address)
 	}
 }
+
+func TestSenderContactsNamesTheFromParticipantNotTheCopiedOne(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+	copied := e.linkContact(t, anchor, "Anne Wiegert")
+	e.participate(t, anchor, copied, "cc", nil)
+	sender := e.linkContact(t, anchor, "Dietmar Rietsch")
+	e.participate(t, anchor, sender, "from", nil)
+	bare := e.seedAnchor(t, "", "")
+
+	ctx := e.as(principal.RowScopeAll)
+	got, err := e.store(nil).SenderContacts(ctx, []ids.UUID{anchor.UUID, bare.UUID})
+	if err != nil {
+		t.Fatalf("SenderContacts: %v", err)
+	}
+	if got[anchor.UUID] != sender {
+		t.Errorf("sender = %v, want the from participant %v", got[anchor.UUID], sender)
+	}
+	if _, ok := got[bare.UUID]; ok {
+		t.Errorf("a message with no from participant has a sender entry: %v", got[bare.UUID])
+	}
+	recipient, err := e.store(nil).ReplyRecipientFor(ctx, anchor)
+	if err != nil {
+		t.Fatalf("ReplyRecipientFor: %v", err)
+	}
+	if recipient.ContactID != sender.String() {
+		t.Errorf("recipient contact = %q, want %v", recipient.ContactID, sender)
+	}
+}

@@ -36,6 +36,9 @@ import (
 // drafter with no name — and a draft that opens "Hallo," is correct there,
 // where one that guesses is not.
 type ReplyRecipient struct {
+	// ContactID is the contact the reply is addressed to, so the language of
+	// that contact's own mail can be told from other participants' mail.
+	ContactID string
 	// FullName as recorded, for the drafter to greet by.
 	FullName string
 	// FirstName is what a familiar greeting uses. Split here rather than in
@@ -57,6 +60,15 @@ type ReplyRecipient struct {
 	// FiledAddress is the reachable address of a written-about row's one readable linked
 	// contact, never a seat's or a shared mailbox's. Several linked contacts leave it empty.
 	FiledAddress string
+}
+
+// GreetingNames are the first name (or full name when there is none) and the
+// surname a greeting uses.
+func (r ReplyRecipient) GreetingNames() (greeting, surname string) {
+	if r.FirstName != "" {
+		return r.FirstName, r.LastName
+	}
+	return r.FullName, r.LastName
 }
 
 // ReplyRecipientFor names the contact a reply to this activity is written to.
@@ -126,7 +138,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// a "to" recipient (our own outbound, where the addressee is the
 		// counterparty), then anyone else on it, then the bare link.
 		q := `
-			SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
+			SELECT p.id, p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
 			       coalesce((SELECT pe.email
 			                   FROM contact_email pe
 			                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
@@ -150,8 +162,9 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		}
 		q += ` ORDER BY c.rank, c.created_at, c.id LIMIT 1`
 
+		var contactID ids.UUID
 		var address string
-		err = tx.QueryRow(ctx, q, args...).Scan(&out.FullName, &out.FirstName, &out.LastName, &address)
+		err = tx.QueryRow(ctx, q, args...).Scan(&contactID, &out.FullName, &out.FirstName, &out.LastName, &address)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Linked to nobody, or to a contact out of scope. Both mean no
 			// name, which the floor renders as an unnamed greeting rather
@@ -171,6 +184,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// recipient would greet "steireif Partnernet," which is worse than
 		// either. The empty recipient is already this type's documented answer
 		// for "no name", and the floor opens without one.
+		out.ContactID = contactID.String()
 		if mailrole.GreetsNobody(out.FullName, address) {
 			out = ReplyRecipient{}
 		}

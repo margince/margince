@@ -191,25 +191,44 @@ const minReplyWords = 12
 // leading whitespace is skipped: "  > quoted" is a quote however the client
 // indented it.
 func quoteStart(runes []rune) int {
-	return quoteBoundary(runes, false)
+	return quoteBoundary(runes, quoteReading{})
+}
+
+// provenQuoteStart is quoteStart before a second sender header counted as a
+// quote. CurrentMessage keeps it: stored quote proofs hash its output, so a
+// changed cut would stop verifying proofs stored for mails of that shape.
+func provenQuoteStart(runes []rune) int {
+	return quoteBoundary(runes, quoteReading{keepSecondSender: true})
 }
 
 // unmarkedQuoteStart is quoteStart that reads on past a quote marked line by
 // line. A bottom-posted reply puts the sender's words and signature under the
 // ">" lines it answers, so only an unmarked boundary ends the sender's text.
 func unmarkedQuoteStart(runes []rune) int {
-	return quoteBoundary(runes, true)
+	return quoteBoundary(runes, quoteReading{passMarked: true})
 }
 
-func quoteBoundary(runes []rune, passMarked bool) int {
-	ownHeaders := true
+// quoteReading selects how quoteBoundary reads the text.
+type quoteReading struct {
+	passMarked       bool
+	keepSecondSender bool
+}
+
+// quoteBoundary finds the first quote line. The stored envelope names its
+// sender once. A second sender header in that run is an Outlook quote block
+// that follows the envelope directly, unless keepSecondSender is set.
+func quoteBoundary(runes []rune, reading quoteReading) int {
+	passMarked, secondSenderQuotes := reading.passMarked, !reading.keepSecondSender
+	ownHeaders, senderSeen := true, false
 	for offset, atLineStart := 0, true; offset < len(runes); offset++ {
 		if atLineStart && !unicode.IsSpace(runes[offset]) {
 			line := lineAt(runes, offset)
-			if startsQuote(line) && (!ownHeaders || !isOwnHeader(line, offset)) &&
+			own := ownHeaders && isOwnHeader(line, offset) && !(secondSenderQuotes && senderSeen)
+			if startsQuote(line) && !own &&
 				(!passMarked || !opensMarkedQuote(runes, offset, line)) {
 				return offset
 			}
+			senderSeen = senderSeen || (own && startsQuote(line))
 			ownHeaders = ownHeaders && IsMailHeader(string(line))
 			atLineStart = false
 			continue
@@ -345,7 +364,7 @@ func NewTextOnly(text string) string {
 // here as the forwarding contact's own statement.
 func CurrentMessage(text string) string {
 	runes := []rune(text)
-	if offset := quoteStart(runes); offset >= 0 {
+	if offset := provenQuoteStart(runes); offset >= 0 {
 		runes = runes[:offset]
 	}
 	return strings.TrimSpace(string(runes))
