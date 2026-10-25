@@ -18,6 +18,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"strings"
 
@@ -26,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // quickCaptureSource is the provenance every row this path writes carries. It
@@ -105,7 +107,7 @@ func (s *Store) quickCaptureInTx(
 	var out QuickCaptureResult
 	contact, err := s.CreateContactTx(ctx, tx, contactFromQuickCapture(in), CustomColumns{})
 	if err != nil {
-		return out, err
+		return out, nameProfileURLField(err)
 	}
 	out.Contact = contact
 
@@ -160,6 +162,17 @@ func (s *Store) employerForQuickCapture(
 	}
 	made := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 	return &made, true, nil
+}
+
+// nameProfileURLField reports a refused LinkedIn value under the field this
+// request carries, so a client can bind the refusal to its profile_url input.
+func nameProfileURLField(err error) error {
+	if parseErr, ok := errors.AsType[*values.ParseError](err); ok && parseErr.Field == linkedinURLField {
+		renamed := *parseErr
+		renamed.Field = "profile_url"
+		return &renamed
+	}
+	return err
 }
 
 func contactFromQuickCapture(in QuickCaptureInput) CreateContactInput {

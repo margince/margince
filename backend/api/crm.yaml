@@ -38629,7 +38629,7 @@ components:
           description: What they do at that employer, when it differs from `title`.
         profile_url:
           type: [string, 'null']
-          description: The public profile this was read from. Stored, never fetched.
+          description: 'The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field.'
         email: { type: [string, 'null'], format: email, description: 'Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.' }
         phone: { type: [string, 'null'] }
       additionalProperties: false

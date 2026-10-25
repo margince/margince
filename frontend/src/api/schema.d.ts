@@ -27369,7 +27369,7 @@ export interface components {
             company_name?: string | null;
             /** @description What they do at that employer, when it differs from `title`. */
             role?: string | null;
-            /** @description The public profile this was read from. Stored, never fetched. */
+            /** @description The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field. */
             profile_url?: string | null;
             /**
              * Format: email

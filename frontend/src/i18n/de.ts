@@ -2139,7 +2139,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.resolved_category": "Nachrichtenkategorie",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Grund für die Score-Anpassung",
-  "history.field.size_band": "Größe",
+  "history.field.size_band": "Mitarbeitende",
   "history.field.social": "Social-Profile",
   "history.field.source": "Quelle",
   "history.field.origin": "Herkunft",
@@ -2757,7 +2757,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.viewProspects": "Interessenten",
   "company.filterLifecycleAll": "Jede Phase",
   "company.filterRelTypeAll": "Jeder Typ",
-  "company.filterSizeBandAll": "Jede Größe",
+  "company.filterSizeBandAll": "Jede Mitarbeiterzahl",
   "consent.confirmRecipient": "An {address} senden",
   "consent.guardFailed": "Die Kontakterlaubnis konnte nicht geladen werden.",
   "consent.permissionScope":
@@ -2828,7 +2828,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // die die abgelöste Einstufung mit einem Wert beantworten wollte.
   "company.lifecycle": "Lebenszyklus",
   "company.relationshipTypes": "Beziehungstyp",
-  "company.sizeBand": "Unternehmensgröße",
+  "company.sizeBand": "Mitarbeitende",
+  "company.sizeBandValue": "{band} Mitarbeitende",
   "company.lifecycle.unknown": "Unbekannt",
   "company.lifecycle.target": "Zielunternehmen",
   "company.lifecycle.prospect": "Interessent",
@@ -2906,7 +2907,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.kind.message": "Nachricht",
   "record.details.about": "Überblick",
   "record.details.ownership": "Zuständigkeit",
-  "co.aside.size": "Größe",
+  "co.aside.size": "Mitarbeitende",
   "co.aside.wayIn": "Zugang",
   "record.details.visibleTo": "Sichtbar für",
   "co.aside.visibleEveryone": "Alle",
@@ -5590,7 +5591,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.displayName": "Unternehmensname",
   "create.legalName": "Rechtlicher Name",
   "create.industry": "Branche",
-  "create.sizeBand": "Unternehmensgröße",
+  "create.sizeBand": "Mitarbeitende",
   "co.address.summary": "Adresse",
   "co.address.countryMismatch": "Postleitzahl und Ort liegen in {country}",
 
@@ -6402,7 +6403,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.project": "Projektkennung",
   "analytics.field.project_id": "Projekt",
   "analytics.field.quiet_since": "Ruhig seit",
-  "analytics.field.size_band": "Unternehmensgröße",
+  "analytics.field.size_band": "Mitarbeitende",
   "analytics.field.source": "Quelle",
   "analytics.field.origin": "Herkunft",
   "analytics.field.stage_id": "Phase",
@@ -7746,7 +7747,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.reason.row_key_repeated":
     "Der Wert „{value}“ der Spalte „{column}“ wird bereits in Zeile {line} verwendet. Jede Zeile braucht einen eigenen, weil ein erneuter Import und das Rückgängigmachen die Zeile daran erkennen.",
   "import.reason.size_band_invalid":
-    "Die Größenklasse „{value}“ gehört nicht zu: {allowed}.",
+    "Mitarbeitende „{value}“ gehört nicht zu: {allowed}.",
   "import.reason.tag_created":
     "Kein Tag hatte diesen Namen, daher hat der Import ihn angelegt.",
   "import.reason.tag_name_invalid":
@@ -15058,7 +15059,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.classification": "Klassifizierung",
   "filters.field.company_industry": "Branche des Unternehmens",
   "filters.field.company_lifecycle": "Lebenszyklus des Unternehmens",
-  "filters.field.company_size_band": "Größe des Unternehmens",
+  "filters.field.company_size_band": "Mitarbeitende",
   "filters.field.country": "Ländercode",
   "filters.field.created_at": "Erstellt",
   "filters.field.hosting_provider": "Hosting",

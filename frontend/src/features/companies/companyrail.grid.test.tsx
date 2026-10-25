@@ -23,7 +23,7 @@ describe("CompanyRail", () => {
     stub();
     renderRail();
     expect(screen.getByText("Automotive")).toBeInTheDocument();
-    expect(screen.getByText("51–200")).toBeInTheDocument();
+    expect(screen.getByText("51–200 employees")).toBeInTheDocument();
     expect(screen.getByText("Munich, DE")).toBeInTheDocument();
     expect(screen.getByText("brandt.example")).toBeInTheDocument();
     // The owner resolves through the roster read: not shown until it lands.
@@ -43,13 +43,13 @@ describe("CompanyRail", () => {
     };
     renderRail({ view: view({ company: bare }) });
     expect(screen.queryByText("Industry")).toBeNull();
-    expect(screen.queryByText("Size")).toBeNull();
+    expect(screen.queryByText("Employees")).toBeNull();
 
     await userEvent.click(
       screen.getByRole("button", { name: /^Show \d+ empty fields$/ }),
     );
     expect(screen.getByText("Industry")).toBeVisible();
-    expect(screen.getByText("Size")).toBeVisible();
+    expect(screen.getByText("Employees")).toBeVisible();
     expect(screen.getByText("Address")).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Hide empty fields" }),

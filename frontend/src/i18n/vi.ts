@@ -2070,7 +2070,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.resolved_category": "Loại tin nhắn",
   "history.field.score": "Điểm",
   "history.field.score_override_reason": "Lý do chỉnh điểm",
-  "history.field.size_band": "Quy mô",
+  "history.field.size_band": "Số nhân viên",
   "history.field.social": "Hồ sơ mạng xã hội",
   "history.field.source": "Nguồn",
   "history.field.origin": "Nguồn gốc",
@@ -2672,7 +2672,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "list.viewProspects": "Tiềm năng",
   "company.filterLifecycleAll": "Mọi giai đoạn",
   "company.filterRelTypeAll": "Mọi loại",
-  "company.filterSizeBandAll": "Mọi quy mô",
+  "company.filterSizeBandAll": "Mọi số nhân viên",
   "consent.confirmRecipient": "Gửi đến {address}",
   "consent.guardFailed": "Không thể tải quyền liên lạc.",
   "consent.permissionScope":
@@ -2740,7 +2740,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // questions the retired classification answered with one value.
   "company.lifecycle": "Vòng đời",
   "company.relationshipTypes": "Loại quan hệ",
-  "company.sizeBand": "Quy mô công ty",
+  "company.sizeBand": "Số nhân viên",
+  "company.sizeBandValue": "{band} nhân viên",
   "company.lifecycle.unknown": "Chưa rõ",
   "company.lifecycle.target": "Mục tiêu",
   "company.lifecycle.prospect": "Tiềm năng",
@@ -2818,7 +2819,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.overview.kind.message": "tin nhắn",
   "record.details.about": "Thông tin",
   "record.details.ownership": "Phụ trách",
-  "co.aside.size": "Quy mô",
+  "co.aside.size": "Số nhân viên",
   "co.aside.wayIn": "Đường vào",
   "record.details.visibleTo": "Ai xem được",
   "co.aside.visibleEveryone": "Mọi người",
@@ -5447,7 +5448,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.displayName": "Tên công ty",
   "create.legalName": "Tên pháp lý",
   "create.industry": "Ngành",
-  "create.sizeBand": "Quy mô công ty",
+  "create.sizeBand": "Số nhân viên",
   "co.address.summary": "Địa chỉ",
   "co.address.countryMismatch": "Mã bưu chính và thành phố thuộc {country}",
 
@@ -6226,7 +6227,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.project": "Nhãn dự án",
   "analytics.field.project_id": "Dự án",
   "analytics.field.quiet_since": "Im lặng từ",
-  "analytics.field.size_band": "Quy mô công ty",
+  "analytics.field.size_band": "Số nhân viên",
   "analytics.field.source": "Nguồn",
   "analytics.field.origin": "Nguồn gốc",
   "analytics.field.stage_id": "Giai đoạn",
@@ -7516,7 +7517,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.row_key_repeated":
     "Giá trị “{value}” của cột “{column}” đã được dùng ở dòng {line}. Mỗi hàng cần một giá trị riêng vì nhập lại và hoàn tác nhận ra hàng theo giá trị đó.",
   "import.reason.size_band_invalid":
-    "Nhóm quy mô “{value}” không thuộc: {allowed}.",
+    "Số nhân viên “{value}” không thuộc: {allowed}.",
   "import.reason.tag_created":
     "Không có thẻ nào mang tên này nên quá trình nhập đã tạo thẻ.",
   "import.reason.tag_name_invalid":
@@ -14645,7 +14646,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.field.classification": "Phân loại",
   "filters.field.company_industry": "Ngành của công ty",
   "filters.field.company_lifecycle": "Vòng đời của công ty",
-  "filters.field.company_size_band": "Quy mô công ty",
+  "filters.field.company_size_band": "Số nhân viên",
   "filters.field.country": "Mã quốc gia",
   "filters.field.created_at": "Ngày tạo",
   "filters.field.hosting_provider": "Nhà cung cấp máy chủ",
