@@ -30772,6 +30772,9 @@ type CaptureSenderDecision struct {
 	// LastSeenAt When the newest of those messages was sent or received. Absent when there are none.
 	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
 
+	// LastSeenPrecision How to read `last_seen_at`, from the message it names. Absent when that is absent.
+	LastSeenPrecision *OccurredPrecision `json:"last_seen_precision,omitempty"`
+
 	// MessageCount How many messages stored from your mailbox have this address as their counterparty, sent
 	// or received. Archived mail is not counted.
 	MessageCount int `json:"message_count"`
@@ -32190,8 +32193,14 @@ type Company360StateStrip struct {
 
 	// Engagement Null when the caller has no activity grant — not assessed, as distinct from never contacted.
 	Engagement *struct {
-		LastInboundAt  *time.Time `json:"last_inbound_at,omitempty"`
-		LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+		LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+		// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+		LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+		LastOutboundAt       *time.Time         `json:"last_outbound_at,omitempty"`
+
+		// LastOutboundPrecision How to read `last_outbound_at`, from the activity it names. Absent when that is null.
+		LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
 		// State PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
 		State Company360StateStripEngagementState `json:"state"`
@@ -32269,6 +32278,9 @@ type Company360Suggestion struct {
 	// date moves on its own, so a dismissal keyed on one would expire without anything
 	// about the account changing.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DuePrecision How to read `due_at` where it is an activity's time, from that activity. Absent when `due_at` is null, and when it is when a deal last moved, a stored clock with no precision.
+	DuePrecision *OccurredPrecision `json:"due_precision,omitempty"`
 
 	// Evidence The records the rule fired on — always ones this reader can open.
 	Evidence []CompanyBriefEvidence `json:"evidence"`
@@ -32596,8 +32608,14 @@ type CompanyContact struct {
 	// `engagement` is what says whether it counts as current.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
+	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
 	// LastOutboundAt When we last wrote to them, over all history. Read beside `last_inbound_at`, the pair says which way the conversation is owed.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`, from the activity it names. Absent when that is null.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
 	// Strength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
 	// interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
@@ -32739,7 +32757,10 @@ type CompanyCoverageRoute struct {
 	Engagement    ContactEngagement `json:"engagement"`
 	FullName      string            `json:"full_name"`
 	LastInboundAt *time.Time        `json:"last_inbound_at,omitempty"`
-	Title         *string           `json:"title,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+	Title                *string            `json:"title,omitempty"`
 }
 
 // CompanyCoverageSeat defines model for CompanyCoverageSeat.
@@ -34944,9 +34965,12 @@ type ContactCaptureGap struct {
 	DisplayName string `json:"display_name"`
 
 	// Invited True when the colleague has not signed in yet.
-	Invited        bool               `json:"invited"`
-	LastOnThreadAt time.Time          `json:"last_on_thread_at"`
-	UserId         openapi_types.UUID `json:"user_id"`
+	Invited        bool      `json:"invited"`
+	LastOnThreadAt time.Time `json:"last_on_thread_at"`
+
+	// LastOnThreadPrecision How to read `last_on_thread_at`, from the activity it names.
+	LastOnThreadPrecision *OccurredPrecision `json:"last_on_thread_precision,omitempty"`
+	UserId                openapi_types.UUID `json:"user_id"`
 }
 
 // ContactConsentGuard Whether an outbound message to this contact is allowed right now, per purpose and
@@ -38236,7 +38260,7 @@ type DealSuggestionEvidence struct {
 	Kind         DealSuggestionEvidenceKind `json:"kind"`
 	OccurredAt   time.Time                  `json:"occurred_at"`
 
-	// OccurredPrecision How to read `occurred_at` for a meeting or a document. `day` means only its date is known, its UTC date, so a client draws no time. Absent for a signal, whose time is the newest of the activities it cites.
+	// OccurredPrecision How to read `occurred_at` for a meeting or a document. `day` means only its date is known, its UTC date, so a client draws no time. Absent for a signal, whose time is when the newest of the activities it cites begins, a day entry with its date in the installation zone.
 	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
 	SignalId          *openapi_types.UUID `json:"signal_id,omitempty"`
 
@@ -42406,6 +42430,9 @@ type Lead struct {
 
 	// LastActivityAt Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). A task never counts, whoever filed it. Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
@@ -55641,9 +55668,12 @@ type WorklistItemSource string
 
 // WorklistLeadFacts The lead's contact context, without inventing an inbound request or response deadline.
 type WorklistLeadFacts struct {
-	CompanyName           *string    `json:"company_name,omitempty"`
-	LastActivityAt        *time.Time `json:"last_activity_at,omitempty"`
-	ResponseTargetTracked *bool      `json:"response_target_tracked,omitempty"`
+	CompanyName    *string    `json:"company_name,omitempty"`
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+	ResponseTargetTracked *bool              `json:"response_target_tracked,omitempty"`
 
 	// Source The administered source label, absent for an unlabelled import or connector key.
 	Source *string `json:"source,omitempty"`
@@ -70728,6 +70758,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["legal_hold"]; found {
 		err = json.Unmarshal(raw, &a.LegalHold)
 		if err != nil {
@@ -71130,6 +71168,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 

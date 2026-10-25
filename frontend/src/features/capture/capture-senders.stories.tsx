@@ -22,18 +22,20 @@ type AwaitingContact = components["schemas"]["CaptureAwaitingContact"];
 // One of each kind the classifier can answer with, so both halves of the
 // decision column are visible in one frame: the three admitted kinds carry the
 // tone, the rest read as the absence they are.
+const JANA: SenderDecision = {
+  address: "jana@commercetools.com",
+  kind: "contact",
+  status: "real",
+  overruled: false,
+  record_exists: true,
+  contact_id: "0190b7a2-0000-7000-8000-000000000011",
+  contact_name: "Jana Keller",
+  message_count: 248,
+  last_seen_at: "2026-10-09T16:20:00Z",
+};
+
 const EVERY_KIND: SenderDecision[] = [
-  {
-    address: "jana@commercetools.com",
-    kind: "contact",
-    status: "real",
-    overruled: false,
-    record_exists: true,
-    contact_id: "0190b7a2-0000-7000-8000-000000000011",
-    contact_name: "Jana Keller",
-    message_count: 248,
-    last_seen_at: "2026-10-09T16:20:00Z",
-  },
+  JANA,
   {
     address: "info@steireif.de",
     kind: "role_mailbox",
@@ -183,6 +185,29 @@ export const EveryKind: Story = {
 };
 
 export const Overruled: Story = { render: story(OVERRULED), play: openSenders };
+
+// The newest message was logged by its date alone. Last seen names that date
+// and no clock, so its stored noon never reads as the hour it arrived.
+export const LastSeenOnADay: Story = {
+  render: story([
+    {
+      ...JANA,
+      last_seen_at: "2026-10-09T12:00:00Z",
+      last_seen_precision: "day",
+    },
+  ]),
+  play: async ({ canvasElement }) => {
+    const list = await openList(canvasElement, "Senders");
+    await list.findByText("jana@commercetools.com");
+    const drawer = within(canvasElement.ownerDocument.body).getByRole(
+      "dialog",
+      {
+        name: "Senders",
+      },
+    );
+    await expect(drawer.textContent).not.toMatch(/\d:\d\d/);
+  },
+};
 
 // A mailbox that has brought in nothing: the row says so and offers no list.
 export const NothingDecided: Story = {

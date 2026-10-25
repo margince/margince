@@ -42,6 +42,25 @@ it("gives an SDR contact context without inventing a response deadline", () => {
   expect(leadFactsText(base, t, "en", "UTC")).toBeNull();
 });
 
+it("names a last touch known by its date alone on that date in any zone", () => {
+  const touched = (precision: "day" | "instant") =>
+    leadFactsText(
+      {
+        ...base,
+        lead: {
+          status: "contacted",
+          last_activity_at: "2026-09-01T12:00:00Z",
+          last_activity_precision: precision,
+        },
+      },
+      t,
+      "en",
+      "Pacific/Kiritimati",
+    );
+  expect(touched("day")).toContain("01/09/2026");
+  expect(touched("instant")).toContain("02/09/2026");
+});
+
 it("keeps a provisional close on its calendar date in both hemispheres", () => {
   const item: WorklistItem = {
     ...base,

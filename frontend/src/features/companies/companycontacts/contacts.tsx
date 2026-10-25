@@ -10,7 +10,7 @@ import {
   useListQuery,
 } from "../../../components/listquery";
 import { Badge } from "../../../design-system/atoms";
-import { formatDate } from "../../../format/format";
+import { type ActivityMoment, activityDay } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
 import { bucketLabel } from "../../../lib/bucketlabel";
 import { throwProblem } from "../../../lib/problem";
@@ -239,18 +239,29 @@ function LastTouch({ contact }: { readonly contact: CompanyContact }) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const inbound = contact.last_inbound_at;
-  const outbound = contact.last_outbound_at;
-  if (!inbound && !outbound) {
+  const last = lastWritten(contact);
+  if (!last) {
     return <span>{t("co.contacts.neverInTouch")}</span>;
   }
-  const theyWroteLast =
-    inbound && (!outbound || new Date(inbound) > new Date(outbound));
-  const at = theyWroteLast ? inbound : outbound;
   return (
     <span>
-      {theyWroteLast ? t("co.contacts.theyWrote") : t("co.contacts.weWrote")}
-      {at && ` · ${formatDate(at, locale, recordZone)}`}
+      {last.theyWrote ? t("co.contacts.theyWrote") : t("co.contacts.weWrote")}
+      {` · ${activityDay(last.at, last.precision, locale, recordZone)}`}
     </span>
   );
+}
+
+/** The newer of the two direction clocks, read by its own precision. */
+function lastWritten(
+  contact: CompanyContact,
+): (ActivityMoment & { theyWrote: boolean }) | undefined {
+  const inbound = contact.last_inbound_at;
+  const outbound = contact.last_outbound_at;
+  if (inbound && (!outbound || new Date(inbound) > new Date(outbound))) {
+    const precision = contact.last_inbound_precision ?? "instant";
+    return { theyWrote: true, at: inbound, precision };
+  }
+  if (!outbound) return undefined;
+  const precision = contact.last_outbound_precision ?? "instant";
+  return { theyWrote: false, at: outbound, precision };
 }

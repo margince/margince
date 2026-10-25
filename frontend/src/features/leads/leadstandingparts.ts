@@ -286,7 +286,7 @@ function lastTouchAt(
   }
   const stored = lead.last_activity_at;
   return !wholeHistory && stored && Date.parse(stored) <= now
-    ? { at: stored, precision: "instant" }
+    ? { at: stored, precision: lead.last_activity_precision ?? "instant" }
     : undefined;
 }
 

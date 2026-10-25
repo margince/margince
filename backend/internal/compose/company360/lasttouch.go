@@ -114,10 +114,8 @@ func LastTouchFor(
 		  SELECT company_id,
 		         max(occurred_at) FILTER (WHERE direction = 'inbound' AND held) AS inbound_at,
 		         max(occurred_at) FILTER (WHERE direction = 'outbound' AND held) AS outbound_at,
-		         (array_agg(occurred_precision ORDER BY occurred_at DESC, id DESC)
-		            FILTER (WHERE direction = 'inbound' AND held))[1] AS inbound_precision,
-		         (array_agg(occurred_precision ORDER BY occurred_at DESC, id DESC)
-		            FILTER (WHERE direction = 'outbound' AND held))[1] AS outbound_precision
+		         %[7]s AS inbound_precision,
+		         %[8]s AS outbound_precision
 		  FROM touched GROUP BY company_id
 		), last_contact AS (
 		  SELECT DISTINCT ON (company_id) company_id, id, occurred_at, occurred_precision, kind
@@ -132,7 +130,9 @@ func LastTouchFor(
 		LEFT JOIN last_contact lc ON lc.company_id = %[1]s.id
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
 		lastTouchCompanyAlias, touched, wantedPos, visible,
-		relstrength.DirectionClockSQL("a"), relstrength.InteractionCountsSQL("a")), args...)
+		relstrength.DirectionClockSQL("a"), relstrength.InteractionCountsSQL("a"),
+		occurredday.LatestPrecisionSQL("", "direction = 'inbound' AND held"),
+		occurredday.LatestPrecisionSQL("", "direction = 'outbound' AND held")), args...)
 	if err != nil {
 		return nil, err
 	}

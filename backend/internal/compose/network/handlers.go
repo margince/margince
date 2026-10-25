@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -118,6 +119,7 @@ func (h Reads) GetContactNetwork(w http.ResponseWriter, r *http.Request, id crmc
 			out.CaptureGaps = append(out.CaptureGaps, crmcontracts.ContactCaptureGap{
 				UserId: openapi_types.UUID(g.UserID), DisplayName: g.DisplayName,
 				Invited: g.Invited, LastOnThreadAt: g.LastOnThread,
+				LastOnThreadPrecision: activitywhen.Stated(g.LastOnThreadPrecision),
 			})
 		}
 		return nil

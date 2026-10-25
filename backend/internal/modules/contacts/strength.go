@@ -14,13 +14,10 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -66,6 +63,10 @@ type RelationshipStrength struct {
 	// waiting.
 	LastInbound  *time.Time
 	LastOutbound *time.Time
+	// LastInboundPrecision and LastOutboundPrecision say how to read the two
+	// dates, from the activity each names; empty when its date is nil.
+	LastInboundPrecision  string
+	LastOutboundPrecision string
 	// LastInboundActivity is the message a follow-up would answer — the anchor
 	// the composer needs to open a reply rather than a fresh thread.
 	//
@@ -91,6 +92,10 @@ var (
 	strengthCounts          = relstrength.InteractionCountsSQL("a")
 	strengthCitedCounts     = relstrength.InteractionCountsSQL("i")
 	strengthInteractionUnit = relstrength.InteractionUnitSQL("a")
+	// strengthDirectionPrecisions reads the precision behind each direction's
+	// last date, empty where that date is null.
+	strengthDirectionPrecisions = `coalesce(` + occurredday.LatestPrecisionSQL("a", "a.direction = 'inbound'") + `, ''),
+		coalesce(` + occurredday.LatestPrecisionSQL("a", "a.direction = 'outbound'") + `, '')`
 )
 
 // ContactStrength computes the §4 baseline for one contact. The contact
@@ -132,60 +137,6 @@ func (s *Store) ContactStrengthTx(
 	}
 	out.finish(now)
 	return out, nil
-}
-
-// StrengthToWire renders a §4 result onto the contract's shared
-// RelationshipStrength. It lives with the computation, not beside one of
-// its transports: the per-contact route, the per-company route and the
-// company view all answer this shape, and a bucket rename made in only one
-// of three places is the drift this prevents.
-//
-// factors.direction has no dedicated domain field — the §4 computation
-// derives it internally on the way to reciprocity — so it is recomputed
-// here from the same two counts rather than invented.
-func StrengthToWire(rs RelationshipStrength, now time.Time) crmcontracts.RelationshipStrength {
-	inbound, outbound := rs.Inbound90d, rs.Outbound90d
-	direction := 0.0
-	if directed := inbound + outbound; directed > 0 {
-		direction = 1 - math.Abs(float64(inbound-outbound))/float64(directed)
-	}
-	contributing := make([]openapi_types.UUID, len(rs.ContributingIDs))
-	for i, activityID := range rs.ContributingIDs {
-		contributing[i] = openapi_types.UUID(activityID.UUID)
-	}
-	computedAt := now
-	wire := crmcontracts.RelationshipStrength{
-		Score:                   rs.Strength,
-		Bucket:                  StrengthBucketToWire(rs.Bucket),
-		LastInteraction:         rs.LastInteraction,
-		ComputedAt:              &computedAt,
-		Inbound90d:              &inbound,
-		Outbound90d:             &outbound,
-		ContributingActivityIds: &contributing,
-	}
-	wire.Factors.Recency = float32(rs.Recency)
-	wire.Factors.Frequency = float32(rs.Frequency)
-	wire.Factors.Reciprocity = float32(rs.Reciprocity)
-	wire.Factors.Direction = float32(direction)
-	return wire
-}
-
-// StrengthBucketToWire types the domain's display bucket for the contract.
-// The two vocabularies are the same words on purpose — the wire enum was
-// aligned to the §4 kernel's — so this switch renames nothing. The input is
-// still a plain string, so a value the kernel never emits reads as none
-// rather than as a wire value the enum never declared.
-func StrengthBucketToWire(bucket string) crmcontracts.RelationshipStrengthBucket {
-	switch bucket {
-	case relstrength.BucketWeak:
-		return crmcontracts.RelationshipStrengthBucketWeak
-	case relstrength.BucketModerate:
-		return crmcontracts.RelationshipStrengthBucketModerate
-	case relstrength.BucketStrong:
-		return crmcontracts.RelationshipStrengthBucketStrong
-	default:
-		return crmcontracts.RelationshipStrengthBucketNone
-	}
 }
 
 // ContactStrength pairs one of a company's current contacts with
@@ -364,6 +315,7 @@ func contactStrengths(
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'outbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
+		       `+strengthDirectionPrecisions+`,
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = l.contact_id
 		         WHERE i.direction = 'inbound' AND `+strengthCitedCounts+`
@@ -388,7 +340,7 @@ func contactStrengths(
 		var rs RelationshipStrength
 		if err := rows.Scan(&contactID, &rs.LastInteraction, &rs.InteractionCount90d,
 			&rs.Inbound90d, &rs.Outbound90d, &rs.LastInbound, &rs.LastOutbound,
-			&rs.LastInboundActivity); err != nil {
+			&rs.LastInboundPrecision, &rs.LastOutboundPrecision, &rs.LastInboundActivity); err != nil {
 			return nil, err
 		}
 		byContact[contactID] = &rs
@@ -437,6 +389,7 @@ func strengthInputs(
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'outbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
+		       `+strengthDirectionPrecisions+`,
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = $1
 		         WHERE i.direction = 'inbound' AND `+strengthCitedCounts+`
@@ -448,7 +401,7 @@ func strengthInputs(
 		WHERE `+strengthCounts+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+scoreWithin,
 		foldArgs...).Scan(&out.LastInteraction, &out.InteractionCount90d,
 		&out.Inbound90d, &out.Outbound90d, &out.LastInbound, &out.LastOutbound,
-		&out.LastInboundActivity); err != nil {
+		&out.LastInboundPrecision, &out.LastOutboundPrecision, &out.LastInboundActivity); err != nil {
 		return err
 	}
 

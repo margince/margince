@@ -7,7 +7,8 @@ import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
-import { formatDate, formatNumber } from "../../format/format";
+import { activityDay } from "../../format/activitywhen";
+import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
@@ -296,7 +297,12 @@ export function useSuggestionsBody({
       // system chose.
       when={
         suggestion.due_at
-          ? formatDate(suggestion.due_at, locale, recordZone)
+          ? activityDay(
+              suggestion.due_at,
+              suggestion.due_precision ?? "instant",
+              locale,
+              recordZone,
+            )
           : undefined
       }
       // The ask: what the rule wants done. Falls back to the kind only when the

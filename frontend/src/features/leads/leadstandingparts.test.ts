@@ -257,6 +257,21 @@ describe("leadFigures", () => {
     expect(figures[1].value).toBe("standing.noneYet");
   });
 
+  // Noon UTC is the next morning in Kiritimati. A stored last touch known by
+  // its date alone still names that date; one known to the minute does not.
+  it("reads a stored last touch by the precision the lead carries", () => {
+    const east = { ...ctx, zone: "Pacific/Kiritimati" };
+    const stored = { last_activity_at: "2026-08-09T12:00:00Z" } as const;
+    const day = leadFigures(
+      lead({ ...stored, last_activity_precision: "day" }),
+      [],
+      east,
+    );
+    const instant = leadFigures(lead(stored), [], east);
+    expect(day[1].value).toBe("9 Aug");
+    expect(instant[1].value).toBe("10 Aug");
+  });
+
   it("ignores a stored last activity that lies ahead of the reading", () => {
     const figures = leadFigures(
       lead({ last_activity_at: "2026-08-15T09:00:00Z" }),

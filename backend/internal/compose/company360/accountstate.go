@@ -83,12 +83,16 @@ func (a *assembly) readStateStrip() error {
 
 	if in.timeline {
 		strip.Engagement = new(struct {
-			LastInboundAt  *time.Time                                       `json:"last_inbound_at,omitempty"`
-			LastOutboundAt *time.Time                                       `json:"last_outbound_at,omitempty"`
-			State          crmcontracts.Company360StateStripEngagementState `json:"state"`
+			LastInboundAt         *time.Time                                       `json:"last_inbound_at,omitempty"`
+			LastInboundPrecision  *crmcontracts.OccurredPrecision                  `json:"last_inbound_precision,omitempty"`
+			LastOutboundAt        *time.Time                                       `json:"last_outbound_at,omitempty"`
+			LastOutboundPrecision *crmcontracts.OccurredPrecision                  `json:"last_outbound_precision,omitempty"`
+			State                 crmcontracts.Company360StateStripEngagementState `json:"state"`
 		})
 		strip.Engagement.LastInboundAt = a.out.LastInboundAt
 		strip.Engagement.LastOutboundAt = a.out.LastOutboundAt
+		strip.Engagement.LastInboundPrecision = a.out.LastInboundPrecision
+		strip.Engagement.LastOutboundPrecision = a.out.LastOutboundPrecision
 		strip.Engagement.State = engagementState(in, a.now)
 	}
 	if in.pipeline {

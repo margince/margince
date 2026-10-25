@@ -23928,6 +23928,8 @@ export interface components {
              * @description When the newest of those messages was sent or received. Absent when there are none.
              */
             last_seen_at?: string;
+            /** @description How to read `last_seen_at`, from the message it names. Absent when that is absent. */
+            last_seen_precision?: components["schemas"]["OccurredPrecision"];
             /**
              * Format: date-time
              * @description When this sender's oldest message is destroyed. Present only for a `personal` verdict
@@ -25094,7 +25096,7 @@ export interface components {
             attachment_id?: string | null;
             /** Format: date-time */
             occurred_at: string;
-            /** @description How to read `occurred_at` for a meeting or a document. `day` means only its date is known, its UTC date, so a client draws no time. Absent for a signal, whose time is the newest of the activities it cites. */
+            /** @description How to read `occurred_at` for a meeting or a document. `day` means only its date is known, its UTC date, so a client draws no time. Absent for a signal, whose time is when the newest of the activities it cites begins, a day entry with its date in the installation zone. */
             occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The meeting's subject, the signal's summary or the document's file name. */
             title: string;
@@ -28576,6 +28578,10 @@ export interface components {
                 last_inbound_at?: string | null;
                 /** Format: date-time */
                 last_outbound_at?: string | null;
+                /** @description How to read `last_inbound_at`, from the activity it names. Absent when that is null. */
+                last_inbound_precision?: components["schemas"]["OccurredPrecision"];
+                /** @description How to read `last_outbound_at`, from the activity it names. Absent when that is null. */
+                last_outbound_precision?: components["schemas"]["OccurredPrecision"];
             } | null;
             /** @description Null when the caller has no deal grant. */
             commercial?: {
@@ -28950,6 +28956,8 @@ export interface components {
              *     about the account changing.
              */
             due_at?: string | null;
+            /** @description How to read `due_at` where it is an activity's time, from that activity. Absent when `due_at` is null, and when it is when a deal last moved, a stored clock with no precision. */
+            due_precision?: components["schemas"]["OccurredPrecision"];
             /**
              * @description Identifies this suggestion by its EVIDENCE, not by its kind: a hash over the
              *     kind, the subject and the records it fired on. Dismissing a suggestion stores
@@ -30695,6 +30703,8 @@ export interface components {
             invited: boolean;
             /** Format: date-time */
             last_on_thread_at: string;
+            /** @description How to read `last_on_thread_at`, from the activity it names. */
+            last_on_thread_precision?: components["schemas"]["OccurredPrecision"];
         };
         /** @description One stakeholder seat, and whether it is a relationship or just a name. */
         DealCoverageSeat: {
@@ -31917,6 +31927,8 @@ export interface components {
             engagement: components["schemas"]["ContactEngagement"];
             /** Format: date-time */
             last_inbound_at?: string | null;
+            /** @description How to read `last_inbound_at`, from the activity it names. Absent when that is null. */
+            last_inbound_precision?: components["schemas"]["OccurredPrecision"];
         };
         CompanyCoverageCommittee: {
             seats: components["schemas"]["CompanyCoverageSeat"][];
@@ -32080,6 +32092,10 @@ export interface components {
              * @description When we last wrote to them, over all history. Read beside `last_inbound_at`, the pair says which way the conversation is owed.
              */
             last_outbound_at?: string | null;
+            /** @description How to read `last_inbound_at`, from the activity it names. Absent when that is null. */
+            last_inbound_precision?: components["schemas"]["OccurredPrecision"];
+            /** @description How to read `last_outbound_at`, from the activity it names. Absent when that is null. */
+            last_outbound_precision?: components["schemas"]["OccurredPrecision"];
         };
         CompanyContactListResponse: {
             data: components["schemas"]["CompanyContact"][];
@@ -36254,6 +36270,8 @@ export interface components {
              * @description Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). A task never counts, whoever filed it. Derived from activity_link, not stored on the lead.
              */
             readonly last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118). */
             readonly open_task_count?: number | null;
             /** @description Subject of the earliest open task linked to this lead. */
@@ -49590,6 +49608,8 @@ export interface components {
             source?: string | null;
             /** Format: date-time */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. Absent when that is null. */
+            last_activity_precision?: components["schemas"]["OccurredPrecision"];
             response_target_tracked?: boolean;
         };
         /**

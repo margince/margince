@@ -5,7 +5,7 @@
 
 package contacts
 
-// The day-answer sweep reads only the leads a day touch can still answer, so a
+// The day-answer sweep reads only the leads a day touch can still answer. A
 // lead it can never stamp is not read again on every scan.
 
 import (
@@ -21,13 +21,14 @@ import (
 )
 
 // seedDayTouch links a day entry dated date to lead, as a capture commits it.
+// An empty direction is a note's, which has none.
 func (e *promoteConsentEnv) seedDayTouch(t *testing.T, lead ids.LeadID, kind, direction string, date time.Time) {
 	t.Helper()
 	id := ids.NewV7()
 	ctx := context.Background()
 	if _, err := e.owner.Exec(ctx,
 		`INSERT INTO activity (id, kind, subject, direction, occurred_at, occurred_precision, source, captured_by)
-		 VALUES ($1, $2, 'Touch', $3, $4, 'day', 'manual', $5)`,
+		 VALUES ($1, $2, 'Touch', NULLIF($3, ''), $4, 'day', 'manual', $5)`,
 		id, kind, direction, occurredday.Anchor(date), "human:"+e.user.String()); err != nil {
 		t.Fatalf("seeding the day %s: %v", kind, err)
 	}

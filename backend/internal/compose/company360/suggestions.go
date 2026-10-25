@@ -30,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
 	"github.com/margince/margince/backend/internal/compose/receiptcopy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -306,6 +307,7 @@ func (said suggestionCopy) staleThread(
 	// went quiet. Neither reaches the fingerprint above (PO-AC-N-14).
 	out.Title = new(fmt.Sprintf(said.Say(suggestionWords.NoReplyTitle), waitedDays))
 	out.DueAt = new(newest.At)
+	out.DuePrecision = activitywhen.PrecisionOf(occurredday.Moment{At: newest.At, DateOnly: newest.DateOnly})
 	setDraftReply(out, newest.ID)
 	return out
 }

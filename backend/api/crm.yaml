@@ -34778,6 +34778,9 @@ components:
           type: string
           format: date-time
           description: When the newest of those messages was sent or received. Absent when there are none.
+        last_seen_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_seen_at`, from the message it names. Absent when that is absent.
         deletes_at:
           type: string
           format: date-time
@@ -36036,7 +36039,7 @@ components:
         occurred_at: { type: string, format: date-time }
         occurred_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
-          description: How to read `occurred_at` for a meeting or a document. `day` means only its date is known, its UTC date, so a client draws no time. Absent for a signal, whose time is the newest of the activities it cites.
+          description: How to read `occurred_at` for a meeting or a document. `day` means only its date is known, its UTC date, so a client draws no time. Absent for a signal, whose time is when the newest of the activities it cites begins, a day entry with its date in the installation zone.
         title: { type: string, description: 'The meeting''s subject, the signal''s summary or the document''s file name.' }
     DealSuggestionListResponse:
       type: object
@@ -40196,6 +40199,12 @@ components:
                 disagree about whether an account is waiting.
             last_inbound_at: { type: [string, 'null'], format: date-time }
             last_outbound_at: { type: [string, 'null'], format: date-time }
+            last_inbound_precision:
+              allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+              description: How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+            last_outbound_precision:
+              allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+              description: How to read `last_outbound_at`, from the activity it names. Absent when that is null.
         commercial:
           type: [object, 'null']
           description: Null when the caller has no deal grant.
@@ -40685,6 +40694,11 @@ components:
             Excluded from the fingerprint for the same reason as the title, and more sharply: a
             date moves on its own, so a dismissal keyed on one would expire without anything
             about the account changing.
+        due_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: >-
+            How to read `due_at` where it is an activity's time, from that activity. Absent when
+            `due_at` is null, and when it is when a deal last moved, a stored clock with no precision.
         fingerprint:
           type: string
           description: |
@@ -43082,6 +43096,9 @@ components:
           type: boolean
           description: True when the colleague has not signed in yet.
         last_on_thread_at: { type: string, format: date-time }
+        last_on_thread_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_on_thread_at`, from the activity it names.
 
     DealCoverageSeat:
       type: object
@@ -44581,6 +44598,9 @@ components:
         title: { type: string, nullable: true }
         engagement: { $ref: '#/components/schemas/ContactEngagement' }
         last_inbound_at: { type: string, format: date-time, nullable: true }
+        last_inbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_inbound_at`, from the activity it names. Absent when that is null.
     CompanyCoverageCommittee:
       type: object
       required: [seats, gaps, unlisted_seats]
@@ -44761,6 +44781,12 @@ components:
           format: date-time
           nullable: true
           description: When we last wrote to them, over all history. Read beside `last_inbound_at`, the pair says which way the conversation is owed.
+        last_inbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+        last_outbound_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_outbound_at`, from the activity it names. Absent when that is null.
     CompanyContactListResponse:
       type: object
       required: [data, page]
@@ -49506,6 +49532,10 @@ components:
           readOnly: true
           description: 'Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119).'
         last_activity_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). A task never counts, whoever filed it. Derived from activity_link, not stored on the lead.' }
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
         open_task_count: { type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118).' }
         next_task_subject: { type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.' }
         next_task_due_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.' }
@@ -65922,6 +65952,9 @@ components:
         status: { type: string }
         source: { type: [string, 'null'], description: 'The administered source label, absent for an unlabelled import or connector key.' }
         last_activity_at: { type: [string, 'null'], format: date-time }
+        last_activity_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
         response_target_tracked: { type: boolean }
 
     WorklistDealFacts:

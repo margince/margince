@@ -10416,6 +10416,12 @@ components:
                 `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
             last_inbound_at: {type: [string, 'null'], format: date-time}
             last_outbound_at: {type: [string, 'null'], format: date-time}
+            last_inbound_precision:
+              allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+              description: How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+            last_outbound_precision:
+              allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+              description: How to read `last_outbound_at`, from the activity it names. Absent when that is null.
         commercial:
           type: [object, 'null']
           description: Null when the caller has no deal grant.
@@ -10754,6 +10760,10 @@ components:
           format: date-time
           description: |-
             The date the EVIDENCE carries — when the thread went quiet, when the deal last moved.
+        due_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: >-
+            How to read `due_at` where it is an activity's time, from that activity. Absent when `due_at` is null, and when it is when a deal last moved, a stored clock with no precision.
         fingerprint:
           type: string
           description: |-
@@ -12163,6 +12173,9 @@ components:
           type: boolean
           description: True when the colleague has not signed in yet.
         last_on_thread_at: {type: string, format: date-time}
+        last_on_thread_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_on_thread_at`, from the activity it names.
     DealCoverageSeat:
       type: object
       description: One stakeholder seat, and whether it is a relationship or just a name.
@@ -13204,6 +13217,9 @@ components:
         title: {type: string, nullable: true}
         engagement: {$ref: '#/components/schemas/ContactEngagement'}
         last_inbound_at: {type: string, format: date-time, nullable: true}
+        last_inbound_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_inbound_at`, from the activity it names. Absent when that is null.
     CompanyCoverageCommittee:
       type: object
       required: [seats, gaps, unlisted_seats]
@@ -13296,6 +13312,12 @@ components:
           format: date-time
           nullable: true
           description: When we last wrote to them, over all history. Read beside `last_inbound_at`, the pair says which way the conversation is owed.
+        last_inbound_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_inbound_at`, from the activity it names. Absent when that is null.
+        last_outbound_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_outbound_at`, from the activity it names. Absent when that is null.
     CompanyContactListResponse:
       type: object
       required: [data, page]
@@ -16014,6 +16036,10 @@ components:
           readOnly: true
           description: 'Derived from sla_deadline_at and first_response_at; null once responded or on a terminal lead. Orders the work queue above score.'
         last_activity_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows. A task never counts, whoever filed it.'}
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
         open_task_count: {type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them.'}
         next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.'}
         next_task_due_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.'}
