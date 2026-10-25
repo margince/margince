@@ -5,13 +5,14 @@ import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { formatDayMonth, formatMoneyCompact } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { type Locale, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import "./contact360.css";
 import { dealRoleLabel } from "../../lib/recordlabels";
+import { closeDayOf } from "../deals/closeday";
 import { AddRelationshipAction } from "../records/relationships";
 import { ContactDealRooms } from "./contactdealrooms";
 import "./contacttabs.css";
@@ -80,6 +81,25 @@ function useDealCompany(companyId: string | null | undefined) {
   });
 }
 
+// The close day the deal header states, worded for where the deal stands.
+// Uses the record's own zone. A forecast is a date-only value with no instant
+// to localize, and a reader west of UTC would otherwise quote the day before.
+function closeLine(
+  deal: Deal | null | undefined,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  zone: string,
+): string | null {
+  const day = deal ? closeDayOf(deal) : null;
+  if (!deal || !day) {
+    return null;
+  }
+  const closed = deal.status === "won" || deal.status === "lost";
+  return t(closed ? "contact.commercial.closed" : "contact.commercial.closes", {
+    date: formatDayMonth(day, locale, zone),
+  });
+}
+
 // One deal this contact sits on: the seat `deal_roles` carries, and the
 // money, the close date and the company `useDealSummary`/`useDealCompany`
 // fetch for it.
@@ -95,15 +115,7 @@ function DealRow({ role }: Readonly<{ role: DealRole }>) {
       ? formatMoneyCompact(deal.amount_minor, deal.currency, locale)
       : null,
     role.deal_stage ?? t("contact.deals.noStage"),
-    deal?.expected_close_date
-      ? t("contact.commercial.closes", {
-          // The record's own zone: a close date is a date-only wire value
-          // with no instant to localize, and a reader west of UTC rendering
-          // it in their own would quote the day before to a colleague
-          // quoting the right one.
-          date: formatDayMonth(deal.expected_close_date, locale, recordZone),
-        })
-      : null,
+    closeLine(deal, t, locale, recordZone),
     company?.display_name ?? null,
   ]
     .filter(Boolean)

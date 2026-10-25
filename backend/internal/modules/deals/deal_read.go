@@ -152,6 +152,7 @@ var dealListFields = map[string]storekit.SortField{
 	"last_activity_at":      storekit.Column(storekit.KindTimestamp),
 	"amount_minor":          storekit.Column(fieldcatalog.TypeCurrency),
 	closeDateField:          storekit.Column(fieldcatalog.TypeDate),
+	closeDayField:           {Kind: fieldcatalog.TypeDate, Expr: orderByCloseDay("UTC")},
 	dealNameColumn:          storekit.Column(fieldcatalog.TypeText),
 	"status":                storekit.Column(fieldcatalog.TypeText),
 	filterOwnerID:           storekit.OwnerNameSort(dealTable),
@@ -233,13 +234,13 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 
 // dealListQuery is the half of a deal list both entry points share: the sort
 // refusal, the shared prelude and the deal's own filters. The valuation is
-// read in the list's own transaction, and only when the request sorts by Value.
+// read in the list's own transaction, and only when the request sorts by Value or close day.
 func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput, active []fieldcatalog.Column) (*storekit.ListPrelude, []string, error) {
 	if err := refuseMaskedSort(ctx, in.Sort); err != nil {
 		return nil, nil, err
 	}
 	vocab := dealListFields
-	if sortsByValue(in.Sort) {
+	if sortsByValue(in.Sort) || sortsByCloseDay(in.Sort) {
 		valuation, err := s.valuationTx(ctx, tx)
 		if err != nil {
 			return nil, nil, err

@@ -14254,6 +14254,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.commercial.withheld": "Bạn không có quyền xem deal của liên hệ này.",
   "contact.commercial.noDeal": "Chưa có deal đang mở.",
   "contact.commercial.closes": "chốt {date}",
+  "contact.commercial.closed": "đã chốt {date}",
   "contact.commercial.committee": "Nhóm quyết định mua",
   "contact.commercial.openDeal": "Deal đang mở",
 

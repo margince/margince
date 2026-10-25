@@ -4,11 +4,11 @@ import { Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
 import type { BoardMoneyColumn } from "../../design-system/pipelineboard";
 import { FieldGuard } from "../../design-system/rbac";
-import { middayInstant } from "../../format/calendarday";
 import { formatDate, formatDuration, formatMoney } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import type { StageTotals } from "../../lib/deals.queries";
 import { toBoardDeal } from "./boarddeal";
+import { closeDayOf } from "./closeday";
 import type { CompanyNaming } from "./dealcompanymarks";
 import { lastMailColumn } from "./dealmailaside";
 import type { Deal, Stage } from "./deals";
@@ -166,15 +166,11 @@ export function dealColumns(
       key: "close",
       header: t("deals.close"),
       holds: "date",
-      sort: "expected_close_date",
-      cell: (deal) =>
-        deal.expected_close_date
-          ? formatDate(
-              middayInstant(deal.expected_close_date, recordZone),
-              locale,
-              recordZone,
-            )
-          : null,
+      sort: "close_day",
+      cell: (deal) => {
+        const day = closeDayOf(deal);
+        return day ? formatDate(day, locale, recordZone) : null;
+      },
     },
     ownerColumn<Deal>(t),
     {

@@ -14660,6 +14660,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du hast keinen Zugriff auf die Deals dieses Kontakts.",
   "contact.commercial.noDeal": "Kein offener Deal.",
   "contact.commercial.closes": "Abschluss {date}",
+  "contact.commercial.closed": "Abgeschlossen {date}",
   "contact.commercial.committee": "Buying Center",
   "contact.commercial.openDeal": "Offener Deal",
 

@@ -14607,6 +14607,7 @@ export const en = {
     "You do not have access to this contact’s deals.",
   "contact.commercial.noDeal": "No open deal.",
   "contact.commercial.closes": "closes {date}",
+  "contact.commercial.closed": "closed {date}",
   "contact.commercial.committee": "Buying committee",
   "contact.commercial.openDeal": "Open deal",
 
