@@ -27649,10 +27649,10 @@ type ApproveRequest struct {
 type AssignLeadOutcome struct {
 	LeadId openapi_types.UUID `json:"lead_id"`
 
-	// Outcome `assigned` moved the lead — including one already owned by the destination, which still
-	// takes a version and an audit row rather than being quietly skipped: the writer records
-	// the assignment as an act, so a re-run says what it did rather than claiming it did
-	// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+	// Outcome `assigned` means the lead now belongs to the destination. A lead already owned by the
+	// destination is not written: it keeps its version and gains no audit row, exactly as a
+	// single update that changes nothing, and the result carries the version it already had.
+	// `forbidden` is a lead the caller may not hand on. `conflict` is a version that
 	// no longer holds.
 	//
 	// `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
@@ -27665,10 +27665,10 @@ type AssignLeadOutcome struct {
 	Version *int64 `json:"version,omitempty"`
 }
 
-// AssignLeadOutcomeKind `assigned` moved the lead — including one already owned by the destination, which still
-// takes a version and an audit row rather than being quietly skipped: the writer records
-// the assignment as an act, so a re-run says what it did rather than claiming it did
-// nothing. `forbidden` is a lead the caller may not hand on. `conflict` is a version that
+// AssignLeadOutcomeKind `assigned` means the lead now belongs to the destination. A lead already owned by the
+// destination is not written: it keeps its version and gains no audit row, exactly as a
+// single update that changes nothing, and the result carries the version it already had.
+// `forbidden` is a lead the caller may not hand on. `conflict` is a version that
 // no longer holds.
 //
 // `not_found` is a lead the caller cannot see — and also an ARCHIVED one, because the
@@ -35378,10 +35378,14 @@ type ContactNetwork struct {
 	// later replies they alone receive may be missing here. Information only: a seat
 	// listed here is not a route in, owns no work and may not send. An invited seat
 	// appears here and never in `colleagues`. At most ten are returned, most recent
-	// first.
-	CaptureGaps []ContactCaptureGap       `json:"capture_gaps"`
-	Colleagues  []ContactNetworkColleague `json:"colleagues"`
-	ContactId   openapi_types.UUID        `json:"contact_id"`
+	// first; `capture_gaps_total` counts them all.
+	CaptureGaps []ContactCaptureGap `json:"capture_gaps"`
+
+	// CaptureGapsTotal How many colleagues meet the `capture_gaps` condition in all. When it is larger
+	// than the length of `capture_gaps`, the list names only the most recent of them.
+	CaptureGapsTotal int                       `json:"capture_gaps_total"`
+	Colleagues       []ContactNetworkColleague `json:"colleagues"`
+	ContactId        openapi_types.UUID        `json:"contact_id"`
 }
 
 // ContactNetworkColleague One colleague's own relationship with this contact.

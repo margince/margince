@@ -17,10 +17,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// writeReminderCase writes one case's task through the store's own writers.
-func writeReminderCase(ctx context.Context, t *testing.T, store *Store, e *sendEnv, c reminderCase) ids.ActivityID {
+// writeReminderCase writes one case's task through the store's own writers,
+// dated from base, the instant the test's reads are judged at.
+func writeReminderCase(ctx context.Context, t *testing.T, store *Store, e *sendEnv, c reminderCase, base time.Time) ids.ActivityID {
 	t.Helper()
-	asOf := c.readInstant(t)
+	asOf := c.readInstant(base)
 	row := c.row(e.rep, e.other, asOf)
 	holder := &ids.UserID{}
 	switch c.holder {
@@ -77,10 +78,11 @@ func TestTheReminderClauseAnswersTheCaseTable(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := pinStore(e)
+	base := reminderInstant(t)
 	for _, c := range reminderCases {
 		t.Run(c.name, func(t *testing.T) {
-			asOf := c.readInstant(t)
-			id := writeReminderCase(ctx, t, store, e, c)
+			asOf := c.readInstant(base)
+			id := writeReminderCase(ctx, t, store, e, c, base)
 			var matched bool
 			if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 				args := []any{}
@@ -111,7 +113,7 @@ func TestTheReminderFilterListsTheReadersOwnDueReminders(t *testing.T) {
 		if c.readAt != nil {
 			continue
 		}
-		id := writeReminderCase(ctx, t, store, e, c)
+		id := writeReminderCase(ctx, t, store, e, c, asOf)
 		if c.want {
 			want[id.UUID] = true
 		}

@@ -7,7 +7,11 @@ package identity
 // platform/keyvault keeps CleanupTimeout: beside the rule it answers rather
 // than among the token TTLs it would otherwise be mistaken for.
 
-import "time"
+import (
+	"log/slog"
+	"runtime/debug"
+	"time"
+)
 
 // resetSendTimeout bounds the detached send goroutine on this UNAUTHENTICATED
 // endpoint, where a stuck relay would otherwise pin a goroutine and a
@@ -19,3 +23,17 @@ import "time"
 // the handler returns the moment the goroutine does, so a deferred release up
 // there would cancel this budget before any of the work it bounds had run.
 const resetSendTimeout = 2 * time.Minute
+
+// inviteSendTimeout bounds one invitation mail's lookup and relay exchange, for
+// the same reason as resetSendTimeout: a stuck relay must not pin a goroutine.
+const inviteSendTimeout = 2 * time.Minute
+
+// recoverDetached stops a panic in a goroutine that outlives its request.
+// The chassis recovery middleware cannot see it there.
+// An unrecovered panic ends the process. It logs the stack, since no request log exists to find the site.
+// Call it deferred, directly.
+func recoverDetached(what string) {
+	if panicked := recover(); panicked != nil {
+		slog.Error(what+" panicked", "panic", panicked, "stack", string(debug.Stack()))
+	}
+}

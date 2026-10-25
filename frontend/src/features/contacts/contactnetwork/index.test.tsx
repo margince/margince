@@ -859,3 +859,29 @@ describe("using a route from the picture", () => {
     ).toBeNull();
   });
 });
+
+// The graph can answer before the ask list does. Until then nobody knows
+// whether an ask is open, so the handoff slot must not say none has started.
+describe("the handoff while the ask list is still being read", () => {
+  it("says it is loading, not that nothing has started", async () => {
+    renderTab(
+      {
+        contact_id: CONTACT,
+        nodes: [anchor],
+        edges: [],
+        routes: [],
+        groups_omitted: [],
+      },
+      "en",
+      {},
+      { asksPending: true },
+    );
+
+    const label = await screen.findByText(en["contact.intro.stripHandoff"]);
+    const card = label.closest(".stat-card");
+    expect(card?.textContent).toContain(en["common.loading"]);
+    expect(
+      screen.queryByText(en["contact.intro.handoffNotStarted"]),
+    ).toBeNull();
+  });
+});

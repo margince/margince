@@ -13905,6 +13905,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.network.captureGap_other":
     "{names} có trong các cuộc trao đổi với liên hệ này nhưng chưa kết nối hộp thư, nên thư về sau có thể bị thiếu.",
   "contact.network.captureGapInvited": "{name} (chưa đăng nhập)",
+  "contact.network.captureGapMore_one": "{names} và {count} đồng nghiệp khác",
+  "contact.network.captureGapMore_other": "{names} và {count} đồng nghiệp khác",
+  "contact.network.captureGapsFailed":
+    "Không đọc được những đồng nghiệp nào trong các cuộc trao đổi với liên hệ này chưa kết nối hộp thư.",
   "contact.graph.noDirect": "Chưa ai trong công ty trao đổi với liên hệ này.",
   "contact.graph.sideColumn": "Giới thiệu và thay đổi",
   "contact.graph.recordWorksWith": "Theo hồ sơ: làm việc cùng {name}",
@@ -13975,6 +13979,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.change.buckets": "{from} → {to}",
   "contact.intro.stripHandoff": "Yêu cầu giới thiệu",
   "contact.intro.handoffNotStarted": "Chưa bắt đầu",
+  "contact.intro.handoffUnread": "Không đọc được",
   "contact.intro.handoffOwner": "Tiếp theo: {name}",
   "contact.intro.ownerColleague": "một đồng nghiệp",
   "contact.intro.ownerNobody": "không ai",
@@ -14085,6 +14090,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.answerDecline": "Từ chối",
   "contact.intro.answerDeclineHelp": "Yêu cầu sẽ đóng lại. Thêm lý do nếu cần.",
   "contact.intro.asksTitle": "Giới thiệu",
+  "contact.intro.asksFailed": "Không đọc được các lời giới thiệu cho liên hệ này.",
   "contact.intro.answerAction": "Trả lời",
   "contact.intro.completeIntroducedAction": "Đánh dấu đã giới thiệu",
   "contact.intro.completeNameDroppedAction": "Đánh dấu đã nhắc tên",

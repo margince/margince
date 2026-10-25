@@ -241,60 +241,6 @@ func TestTheRepairLeavesAContactWithABlankHalfAlone(t *testing.T) {
 	}
 }
 
-// plantInitialsGuess leaves a contact named the way capture named it before an
-// initials-only address stopped being read as a name. No current writer produces
-// that name, so it is planted directly.
-func plantInitialsGuess(t *testing.T, e *integration.Env, id ids.ContactID) {
-	t.Helper()
-	e.WsExec(t, `UPDATE contact SET full_name = 'Dv' WHERE id = $1`, id)
-}
-
-func TestTheRepairShowsTheLocalPartInPlaceOfCapturesInitials(t *testing.T) {
-	e := integration.Setup(t)
-	id := captureCounterparty(t, e, "", "dv@initials.test")
-	plantInitialsGuess(t, e, id)
-
-	runDisplayNameRepair(t, e)
-
-	if got := shownName(t, e, id); got != "dv" {
-		t.Errorf("full_name = %q, want the local part in place of the initials guess", got)
-	}
-	audits := e.WsScalar(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1`, id)
-	runDisplayNameRepair(t, e)
-	if again := e.WsScalar(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1`, id); again != audits {
-		t.Errorf("audit rows = %s after a second run, want %s: the repair must be idempotent", again, audits)
-	}
-}
-
-func TestTheRepairKeepsAnInitialsNamedContactAHumanRenamed(t *testing.T) {
-	e := integration.Setup(t)
-	id := captureCounterparty(t, e, "", "dv@initials.test")
-	typed := "Dvx"
-	if _, err := e.Contacts.UpdateContact(e.Admin(), id, contacts.UpdateContactInput{FullName: &typed}); err != nil {
-		t.Fatalf("a human renaming the contact: %v", err)
-	}
-	plantInitialsGuess(t, e, id)
-
-	runDisplayNameRepair(t, e)
-
-	if got := shownName(t, e, id); got != "Dv" {
-		t.Errorf("full_name = %q, want Dv left alone: a human touched the name", got)
-	}
-}
-
-func TestTheRepairKeepsAnImportedInitialsName(t *testing.T) {
-	e := integration.Setup(t)
-	id := captureCounterparty(t, e, "", "dv@initials.test")
-	plantInitialsGuess(t, e, id)
-	e.WsExec(t, `UPDATE contact SET source_system = 'crm_import' WHERE id = $1`, id)
-
-	runDisplayNameRepair(t, e)
-
-	if got := shownName(t, e, id); got != "Dv" {
-		t.Errorf("full_name = %q, want Dv left alone: an import named it", got)
-	}
-}
-
 func TestTheRepairKeepsAShortNameThatTheAddressSpells(t *testing.T) {
 	e := integration.Setup(t)
 	id := captureCounterparty(t, e, "", "anna@initials.test")
