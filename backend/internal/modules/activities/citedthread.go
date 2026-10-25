@@ -40,16 +40,17 @@ func SettledCitations(ctx context.Context, tx pgx.Tx, cited []ids.UUID, asOf tim
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT a.id,
+	// An unjudged message has a NULL verdict, and unknown never settles.
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT a.id, coalesce(
   CASE WHEN a.direction = 'inbound' AND a.kind IN ('email', 'message')
-         THEN NOT (%[1]s AND ((%[2]s) OR NOT %[3]s))
+         THEN NOT (%[1]s AND (coalesce(%[2]s, false) OR NOT %[3]s))
        WHEN a.direction = 'outbound' AND a.kind = 'email'
          THEN EXISTS (SELECT 1 FROM activity kept
                 WHERE %[4]s AND (%[5]s)
                   AND EXISTS (SELECT 1 FROM activity_participant promised
                        WHERE promised.activity_id = a.id AND promised.role IN ('to', 'cc')
                          AND promised.contact_id IS NOT NULL AND %[6]s))
-       ELSE false END
+       ELSE false END, false)
   FROM activity a
  WHERE a.id = ANY($%[7]d) AND a.archived_at IS NULL AND (%[8]s)`,
 		requestOpenSQL, confirmedRequestSQL, answeredSQL("a", until),

@@ -69,12 +69,13 @@ func TestOneContactCompanyReadsItsContactsDirection(t *testing.T) {
 	}
 }
 
-// logOnCompanyOnly files an inbound call against the account and no contact.
+// logOnCompanyOnly files an inbound mail to an account alias against the
+// account and no contact.
 func (f *relationshipFixture) logOnCompanyOnly(t *testing.T, daysAgo int) {
 	t.Helper()
-	subject, inbound, at := "Switchboard call", "inbound", f.now.AddDate(0, 0, -daysAgo)
+	subject, inbound, at := "Mail to the account alias", "inbound", f.now.AddDate(0, 0, -daysAgo)
 	if _, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{
-		Kind: "call", Subject: &subject, Direction: &inbound, OccurredAt: &at, Source: "manual",
+		Kind: "email", Subject: &subject, Direction: &inbound, OccurredAt: &at, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "company", EntityID: f.company}},
 	}); err != nil {
 		t.Fatal(err)
