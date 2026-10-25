@@ -1411,9 +1411,8 @@ paths:
       description: |
         With name + email returns 201 and a stable `id` (UUID) that round-trips on GET
         (features/01 §1.1 AC). If the email already exists on a live contact, returns 409
-        with the existing contact id (features/01 §1.3). An email that belongs to a person
-        who asked to be erased answers 422 naming `emails` with code `address_erased`; only
-        that person can bring the address back. Writes one audit row + one
+        with the existing contact id. An email on the erasure list
+        answers 422 naming `emails` with code `address_erased`. Writes one audit row + one
         `contact.created` event.
       x-mcp-tool:
         verb: create_record
@@ -10598,8 +10597,7 @@ paths:
         dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
         for idempotent re-import. A `project_id` that names no project the caller can read
         answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
-        An `email` that belongs to a person who asked to be erased answers 422 naming `email` with
-        code `address_erased`.
+        An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
       x-mcp-tool: { verb: create_record, record_type: lead, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'

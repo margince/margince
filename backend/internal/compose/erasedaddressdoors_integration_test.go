@@ -5,7 +5,7 @@
 
 package compose
 
-// Every door a person types an address into refuses an erased subject's
+// Every door an address is typed into refuses an erased subject's
 // address and accepts a clean one. The subject is erased through the real
 // eraser, so the suppression list holds what production writes.
 

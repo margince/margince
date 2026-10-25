@@ -5,7 +5,7 @@
 
 package integration
 
-// An erased person can book again through the public page. A refusal there
+// An erased address can book again through the public page. A refusal there
 // would tell an anonymous caller who asked to be erased, so the erased address
 // gets the answer any other address gets. The erasure list keeps it.
 

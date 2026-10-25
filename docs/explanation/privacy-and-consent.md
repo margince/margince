@@ -276,11 +276,12 @@ category refusing mail the old gate would have allowed.
 into consent's handlers.
 
 - **Article 17 erasure** (`Eraser.EraseContact`) removes the personal values from the normal rows in
-  place. It deletes raw capture, embeddings and attachment bytes. It hashes each address and handle into a
-  **suppression list**, so no later capture, import or typed create can store them again. The one
-  exception is the person's own booking on the public booking page, because a refusal there would tell
-  an anonymous caller that the address was erased. It proves the work with a **audit tombstone with
-  no PII**, all in **one transaction per record**. That all-or-nothing transaction *is* the promise. It refuses a subject under `legal_hold`.
+  place, and deletes raw capture, embeddings and attachment bytes. It proves the work with an **audit
+  tombstone with no PII**, all in **one transaction per record**, and that transaction *is* the
+  promise. It refuses a subject under `legal_hold`.
+- **The suppression list** holds a hash of each erased address and handle. No later capture, import
+  or typed create can store one again. A booking on the public booking page still can, because a
+  refusal there would show which addresses were erased.
 - **Article 15 subject access** (`AssembleSAR`) is one read that needs more rights. It needs the
   `contact.delete` grant **and** a row scope with no limit. It puts everything held about a contact
   into one export package: channels, deals, leads, activities, attachments, consent and its proof log,

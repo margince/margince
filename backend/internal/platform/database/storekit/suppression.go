@@ -77,26 +77,25 @@ type ErasedIdentifierError struct {
 }
 
 func (e *ErasedIdentifierError) Error() string {
-	return "storekit: " + e.Field + " belongs to a person who asked to be erased and not stored again"
+	return "storekit: " + e.Field + " is on the erasure list and is not stored again"
 }
 
 // FieldFault answers 422 naming the field the caller must leave out.
 func (e *ErasedIdentifierError) FieldFault() (field, code, message string) {
 	return e.Field, ErasedIdentifierCode,
-		"The person with this address asked to be erased and not to be stored again. Leave the address out."
+		"This address is on the erasure list and is not stored again. Leave the address out."
 }
 
 // ErasureAdmission says whether a contact write may store an address the
-// erasure list names. Every write refuses one, except the person's own booking.
+// erasure list names. Every write refuses one, except a public booking.
 type ErasureAdmission int
 
 const (
-	// RefuseErased is every write but one.
+	// RefuseErased is the default for a contact write.
 	RefuseErased ErasureAdmission = iota
 	// AdmitSelfBooking is the public booking page alone. A refusal there would
-	// tell an anonymous caller that the address was erased. The person booking
-	// a meeting themselves, with consent, is the admission, and the host sees
-	// a real meeting. The erasure list keeps the address.
+	// tell an anonymous caller that the address was erased. Booking a meeting
+	// with consent is the admission, and the host sees a real meeting. The erasure list keeps the address.
 	AdmitSelfBooking
 )
 
