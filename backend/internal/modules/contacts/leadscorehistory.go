@@ -22,25 +22,28 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// ScoreCapturedLeadTx gives a lead that capture just inserted the score and
-// first history point a hand-created lead gets from CreateLead.
+// ScoreCapturedLead scores a lead that capture is about to insert, from the
+// title and origin it will store, with the scoring CreateLead uses.
 //
 // Capture owns the INSERT and cannot import this module, so compose hands it
-// this function. It scores the title and origin the row stored, the same
-// inputs the create path scores.
-func ScoreCapturedLeadTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) error {
-	var title, origin *string
-	if err := tx.QueryRow(ctx, `SELECT title, origin FROM lead WHERE id = $1`, leadID).Scan(&title, &origin); err != nil {
-		return fmt.Errorf("read captured lead for scoring: %w", err)
+// this function. It answers the opening score for the row and a function that
+// writes the first history point once the row exists. Nothing here reads or
+// updates the lead table.
+func ScoreCapturedLead(ctx context.Context, tx pgx.Tx, title, origin string) (int, func(context.Context, pgx.Tx, ids.LeadID) error, error) {
+	// The key capture will store: its INSERT keeps an active catalog key and
+	// nothing else, so an unknown or retired one scores as no origin.
+	var stored *string
+	err := tx.QueryRow(ctx, `SELECT key FROM lead_origin WHERE key = $1 AND active`, origin).Scan(&stored)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil, fmt.Errorf("resolve captured lead origin: %w", err)
 	}
-	fit, err := scoreNewLead(ctx, tx, deref(title), origin)
+	fit, err := scoreNewLead(ctx, tx, title, stored)
 	if err != nil {
-		return err
+		return 0, nil, err
 	}
-	if _, err := tx.Exec(ctx, `UPDATE lead SET score = $2 WHERE id = $1`, leadID, fit.Score); err != nil {
-		return fmt.Errorf("score captured lead: %w", err)
-	}
-	return appendLeadScoreHistory(ctx, tx, leadID, fit.Score, fit, nil)
+	return fit.Score, func(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) error {
+		return appendLeadScoreHistory(ctx, tx, leadID, fit.Score, fit, nil)
+	}, nil
 }
 
 // appendLeadScoreHistory records one point in the series.

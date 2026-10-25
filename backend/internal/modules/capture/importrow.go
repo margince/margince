@@ -123,10 +123,12 @@ func (s *Sink) WithParticipantNamer(name ParticipantNamer) *Sink {
 	return &c
 }
 
-// LeadScorer gives a lead the capture sink just inserted its opening score and
-// score-history point. The contacts module owns both writes, so compose
-// injects it. Nil leaves the database default, which is what fixtures get.
-type LeadScorer func(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) error
+// LeadScorer scores a lead the sink is about to insert. It answers the opening
+// score for the row and a function that writes the first score-history point
+// once the row exists. The contacts module owns the scoring and the history
+// table, so compose injects it. Nil leaves the database default, which is what
+// fixtures get.
+type LeadScorer func(ctx context.Context, tx pgx.Tx, title, origin string) (int, func(context.Context, pgx.Tx, ids.LeadID) error, error)
 
 // WithLeadScorer returns a copy that scores every lead it creates.
 func (s *Sink) WithLeadScorer(score LeadScorer) *Sink {
