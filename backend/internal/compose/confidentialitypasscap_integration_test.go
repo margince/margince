@@ -109,7 +109,8 @@ func TestThePassJudgesNoMoreThanTheSavedCapAndReadsItEveryRun(t *testing.T) {
 	assertPassCapRead(t, e, 3)
 	runPassOn(t, e, engine)
 	if got := brain.calls.Load(); got != 3 {
-		t.Fatalf("a pass under a cap of 3 judged %d threads, want 3", got)
+		t.Fatalf("a pass under a cap of 3 judged %d threads, want 3 (the cap now reads %d)",
+			got, passCapNow(t, e))
 	}
 
 	// The same engine, a larger cap saved between two passes.
@@ -117,7 +118,8 @@ func TestThePassJudgesNoMoreThanTheSavedCapAndReadsItEveryRun(t *testing.T) {
 	assertPassCapRead(t, e, 5)
 	runPassOn(t, e, engine)
 	if got := brain.calls.Load(); got != 8 {
-		t.Fatalf("after raising the cap to 5 the second pass brought the total to %d, want 8", got)
+		t.Fatalf("after raising the cap to 5 the second pass brought the total to %d, want 8 "+
+			"(the cap now reads %d)", got, passCapNow(t, e))
 	}
 }
 
@@ -276,6 +278,25 @@ func TestAnUnreachableDatabaseFailsThePassCapAndTheBacklogReads(t *testing.T) {
 // assertPassCapRead fails when the pass would read another cap than the one just
 // saved. A pass that read the wrong limit is then told apart from one that
 // judged too many threads under the right one.
+// passCapNow is the cap the pass would read if it started here.
+//
+// A failure counting more judgements than the cap allows has two causes, and
+// they want different fixes. Either the cap the engine read was not the one
+// saved, or the pass judged past the cap it read.
+//
+// Naming the value after the pass tells them apart, so the next failure in the
+// parallel lane arrives diagnosed.
+func passCapNow(t *testing.T, e *integration.Env) int {
+	t.Helper()
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS),
+		confidentialityActor)
+	got, err := capture.NewThreadVerdictStore(InstallationDB(e.Pool)).PassCap(ctx)
+	if err != nil {
+		t.Fatalf("re-reading the pass cap: %v", err)
+	}
+	return got
+}
+
 func assertPassCapRead(t *testing.T, e *integration.Env, want int) {
 	t.Helper()
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), confidentialityActor)
