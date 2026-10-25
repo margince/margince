@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { requestNotificationPermission } from "./notificationpermission";
 import { removeStored, STORAGE_KEYS, writeStored } from "./storage";
@@ -15,12 +16,19 @@ import {
   useTaskReminderNotifications,
 } from "./taskreminders";
 
-const REMINDER = {
+type Activity = components["schemas"]["Activity"];
+
+const REMINDER: Activity = {
   id: "task-1",
   kind: "task",
   subject: "Call back about the renewal",
   remind_at: "2026-10-20T09:00:00Z",
   occurred_at: "2026-10-01T09:00:00Z",
+  is_done: false,
+  source: "manual",
+  captured_by: "human:u1",
+  created_at: "2026-10-01T09:00:00Z",
+  updated_at: "2026-10-01T09:00:00Z",
   version: 1,
 };
 
@@ -206,7 +214,7 @@ test("a reminder moved later that comes due again is shown again", () => {
 test("a shown reminder is forgotten only past the server's window", () => {
   expect(takeUnshown([REMINDER], NOW)).toEqual([REMINDER]);
   const day = 24 * 60 * 60 * 1000;
-  const remindedAt = Date.parse(REMINDER.remind_at);
+  const remindedAt = Date.parse(REMINDER.remind_at ?? "");
   takeUnshown([], remindedAt + 31 * day);
   expect(takeUnshown([REMINDER], remindedAt + 31 * day)).toEqual([]);
   takeUnshown([], remindedAt + 32 * day);
