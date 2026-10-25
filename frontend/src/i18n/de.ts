@@ -5819,6 +5819,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "files.empty":
     "Noch keine Dateien an diesem Deal. Lade eine Datei hoch oder verknüpfe eine E-Mail mit Anhang.",
   "files.originUnknown": "unbekannter Absendeadresse",
+  "files.origin.mail": "Von {who} · {subject}",
   "files.hiddenBadge": "Ausgeblendet",
   "files.hide": "An diesem Deal ausblenden",
   "files.unhide": "Wieder an diesem Deal anzeigen",

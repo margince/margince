@@ -5881,6 +5881,7 @@ export const en = {
   "files.empty":
     "No files on this deal yet. Upload a file, or link an email with an attachment.",
   "files.originUnknown": "an unknown sender",
+  "files.origin.mail": "From {who} · {subject}",
   "files.hiddenBadge": "Hidden",
   "files.hide": "Hide from this deal",
   "files.unhide": "Show on this deal again",

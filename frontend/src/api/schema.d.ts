@@ -34988,7 +34988,7 @@ export interface components {
             supersedes_id?: string | null;
             /**
              * Format: uuid
-             * @description The account this file rolls up to, kept as a read path rather than a second parent. Visibility stays the primary parent's, and this is maintained on relink and merge so a file follows the record it belongs to.
+             * @description The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
              */
             readonly company_id?: string | null;
             /**
@@ -35000,11 +35000,30 @@ export interface components {
             readonly bytes_withheld?: boolean;
             /** @description The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download. */
             readonly url?: string | null;
+            origin?: components["schemas"]["AttachmentOrigin"];
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
             /** Format: date-time */
             created_at: string;
+        };
+        /** @description The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail. */
+        AttachmentOrigin: {
+            /**
+             * Format: uuid
+             * @description The mail to open.
+             */
+            activity_id: string;
+            /** @description The activity kind the file arrived with: email, message. */
+            kind: string;
+            subject?: string | null;
+            /**
+             * Format: date-time
+             * @description When the mail was sent or received.
+             */
+            occurred_at: string;
+            /** @description Who the mail is from, named as the caller may see them: a contact's name only when the caller may see that contact. Absent when capture recorded no sender. */
+            sender?: components["schemas"]["EmailParty"];
         };
         AttachmentListResponse: {
             data: components["schemas"]["Attachment"][];

@@ -47994,9 +47994,10 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The account this file rolls up to, kept as a read path rather than a second parent. Visibility
-            stays the primary parent's, and this is maintained on relink and merge so a file
-            follows the record it belongs to.
+            The account an upload is filed under: the company it was uploaded on, or the account of the
+            deal it was uploaded on at that time. A file that came with a captured mail carries none; the
+            account's Documents list reaches it through the mail's links as they are now. A read path
+            rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
         contract_id:
           type: [string, 'null']
           format: uuid
@@ -48019,9 +48020,31 @@ components:
             The address of a `link` row, and null for every other category. It is an http or https
             address on a known document host. The reader renders it as an outbound link to open in
             a new tab, never as a download.
+        origin:
+          $ref: '#/components/schemas/AttachmentOrigin'
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         created_at: { type: string, format: date-time }
+
+    AttachmentOrigin:
+      type: object
+      readOnly: true
+      x-email-presentation: exempt
+      x-email-presentation-reason: The line naming the mail a file came with, gated with that mail's content; opening it goes to the canonical email drawer.
+      description: >-
+        The mail a file came with. Present on a Documents list row whose file hangs off a mail the
+        caller may read; absent on an upload, and absent when the caller may not read the mail.
+      required: [activity_id, kind, occurred_at]
+      properties:
+        activity_id: { type: string, format: uuid, description: The mail to open. }
+        kind: { type: string, description: 'The activity kind the file arrived with: email, message.' }
+        subject: { type: [string, 'null'] }
+        occurred_at: { type: string, format: date-time, description: When the mail was sent or received. }
+        sender:
+          $ref: '#/components/schemas/EmailParty'
+          description: >-
+            Who the mail is from, named as the caller may see them: a contact's name only when the
+            caller may see that contact. Absent when capture recorded no sender.
 
     AttachmentListResponse:
       type: object

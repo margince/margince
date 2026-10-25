@@ -5668,6 +5668,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "files.empty":
     "Chưa có tệp nào trên deal này. Tải lên một tệp, hoặc liên kết một email có tệp đính kèm.",
   "files.originUnknown": "người gửi không rõ",
+  "files.origin.mail": "Từ {who} · {subject}",
   "files.hiddenBadge": "Đã ẩn",
   "files.hide": "Ẩn khỏi deal này",
   "files.unhide": "Hiển thị lại trên deal này",

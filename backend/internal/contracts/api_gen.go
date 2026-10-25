@@ -27816,7 +27816,7 @@ type Attachment struct {
 	// Checksum sha256 of the bytes, for integrity/dedupe.
 	Checksum *string `json:"checksum,omitempty"`
 
-	// CompanyId The account this file rolls up to, kept as a read path rather than a second parent. Visibility stays the primary parent's, and this is maintained on relink and merge so a file follows the record it belongs to.
+	// CompanyId The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
 	CompanyId   *openapi_types.UUID `json:"company_id,omitempty"`
 	ContentType *string             `json:"content_type,omitempty"`
 
@@ -27830,6 +27830,9 @@ type Attachment struct {
 	EntityType AttachmentEntityType `json:"entity_type"`
 	Filename   string               `json:"filename"`
 	Id         openapi_types.UUID   `json:"id"`
+
+	// Origin The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail.
+	Origin *AttachmentOrigin `json:"origin,omitempty"`
 
 	// Pinned Held at the top of the account's library. An assertion by a human, like the state.
 	Pinned *bool  `json:"pinned,omitempty"`
@@ -27910,6 +27913,22 @@ type AttachmentExtractionAcceptResponse struct {
 type AttachmentListResponse struct {
 	Data []Attachment `json:"data"`
 	Page PageInfo     `json:"page"`
+}
+
+// AttachmentOrigin The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail.
+type AttachmentOrigin struct {
+	// ActivityId The mail to open.
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Kind The activity kind the file arrived with: email, message.
+	Kind string `json:"kind"`
+
+	// OccurredAt When the mail was sent or received.
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// Sender One address on a message, resolved to a contact or a seat when it is one.
+	Sender  *EmailParty `json:"sender,omitempty"`
+	Subject *string     `json:"subject,omitempty"`
 }
 
 // AttachmentReadStarted The reading `readAttachmentForFields` started, or the one already in flight it joined.

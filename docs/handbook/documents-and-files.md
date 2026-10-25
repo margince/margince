@@ -27,6 +27,12 @@ To attach or upload a file to a contact in Margince, open the contact, choose it
 The file then shows under **Documents**; click its title to download it. On an archived contact, or one you may not edit, **Add document** is turned off.
 Also called: upload a file to a contact, add an attachment to a contact, store a CV.
 
+### Which email did a file come from?
+To see which email a file came from in Margince, open the contact's or the company's **Documents** tab. A file that arrived with a captured email shows that email under its name: "From {who} · {subject}". Click the line to open the email.
+- The line shows only when you may read the email. A file from an email kept to a smaller audience is not listed for anyone outside that audience.
+- An uploaded file has no such line.
+Also called: email attachment sender, where a document came from.
+
 ### How do I upload a PDF to a deal?
 To upload a PDF to a deal in Margince, open the deal, choose its **Documents** tab and click **Add document** in the **Files** panel.
 1. Open **Deals** in the sidebar and open the deal.

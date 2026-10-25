@@ -322,6 +322,9 @@ func listAttachments(ctx context.Context, tx pgx.Tx, entityType string, entityID
 		}
 		page = storekit.Page{HasMore: true, NextCursor: next}
 	}
+	if err := withMailOrigins(ctx, tx, out); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	return out, page, nil
 }
 

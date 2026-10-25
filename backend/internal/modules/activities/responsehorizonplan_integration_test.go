@@ -31,12 +31,13 @@ var planCopySuffix = regexp.MustCompile(`_\d+$`)
 //
 //nolint:tagliatelle // fixed by the server's plan format
 type planNode struct {
-	NodeType  string     `json:"Node Type"`
-	Alias     string     `json:"Alias"`
-	IndexName string     `json:"Index Name"`
-	IndexCond string     `json:"Index Cond"`
-	Filter    string     `json:"Filter"`
-	Plans     []planNode `json:"Plans"`
+	NodeType     string     `json:"Node Type"`
+	RelationName string     `json:"Relation Name"`
+	Alias        string     `json:"Alias"`
+	IndexName    string     `json:"Index Name"`
+	IndexCond    string     `json:"Index Cond"`
+	Filter       string     `json:"Filter"`
+	Plans        []planNode `json:"Plans"`
 }
 
 func (n planNode) walk(visit func(planNode)) {

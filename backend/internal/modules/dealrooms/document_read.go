@@ -84,7 +84,7 @@ const inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
 	  OR (a.entity_type = 'activity' AND EXISTS (
 	        SELECT 1 FROM activity_link l
 	         WHERE l.activity_id = a.entity_id AND l.entity_type = 'deal' AND l.deal_id = r.deal_id)
-	      AND NOT (a.content_type LIKE 'image/%' AND COALESCE(a.byte_size, 0) < 65536)
+	      AND NOT (COALESCE(a.content_type, '') LIKE 'image/%' AND COALESCE(a.byte_size, 0) < 65536)
 	      AND EXISTS (
 	        SELECT 1 FROM activity m
 	         WHERE m.id = a.entity_id AND m.archived_at IS NULL
