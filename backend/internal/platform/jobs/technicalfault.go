@@ -36,6 +36,7 @@ import (
 	"slices"
 	"syscall"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -66,6 +67,17 @@ var technicalFaults = []technicalFault{
 		class:    "interrupted",
 		sentence: "the job's work was cancelled before it finished",
 		remedy:   "At a worker shutdown, nothing to do: the attempt is retried. A job interrupted at every shutdown runs longer than the worker's drain window, and the window (with the termination grace period around it) is what to raise. A job cancelled on purpose stays cancelled.",
+	},
+	{
+		// After isInterrupted, so a job cancelled under a live statement keeps
+		// its own class. A statement the server stopped reaches here either way.
+		match:    isStatementStopped,
+		class:    "statement_stopped",
+		sentence: "the database stopped a statement before it answered",
+		remedy: "Most often a spent statement budget: the work is too much for one statement, so " +
+			"narrow it or raise the budget the job binds with database.BoundStatement. An operator " +
+			"cancelling a backend reads the same way, and so does a worker's own shutdown reaching " +
+			"the server first.",
 	},
 	{
 		match:    isDNSFailure,
@@ -128,6 +140,16 @@ var technicalFaults = []technicalFault{
 // deadline is not this: a job that outran its own timeout is isTimeout's.
 func isInterrupted(err error) bool {
 	return errors.Is(err, context.Canceled)
+}
+
+// isStatementStopped answers a statement the server stopped: SQLSTATE 57014.
+//
+// Postgres raises it for a spent `statement_timeout`, an operator cancelling
+// the backend, and a client going away, and says which nowhere. So the class
+// claims only that the statement stopped. A caller holding the request's
+// context can narrow it, as modules/search does.
+func isStatementStopped(err error) bool {
+	return storekit.IsQueryCanceled(err)
 }
 
 // isDNSFailure answers the one shape that never fixes itself on retry.
