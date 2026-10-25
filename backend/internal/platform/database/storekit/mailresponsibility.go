@@ -83,7 +83,7 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 	}
 	for _, record := range records {
 		switch record.source {
-		case "login", provedMailboxSource:
+		case loginSource, provedMailboxSource:
 			claim(record.seat, record.label, 2)
 		case "user":
 			claim(record.seat, record.label, 1)
@@ -116,6 +116,7 @@ func MailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][]string, er
 }
 
 const (
+	loginSource            = "login"
 	provedMailboxSource    = "proved_mailbox"
 	withdrawnMailboxSource = "withdrawn_mailbox"
 )

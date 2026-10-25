@@ -41,7 +41,7 @@ func WorkspaceSeatAddresses(ctx context.Context, tx pgx.Tx) (SeatAddresses, erro
 		if address == "" || !record.decidesNew() {
 			continue
 		}
-		if record.source == "login" {
+		if record.source == loginSource {
 			set.logins[address] = struct{}{}
 		}
 		if provenSeatSource(record.source) {
@@ -62,7 +62,7 @@ func WorkspaceSeatAddresses(ctx context.Context, tx pgx.Tx) (SeatAddresses, erro
 
 func provenSeatSource(source string) bool {
 	switch source {
-	case "login", provedMailboxSource, "provider":
+	case loginSource, provedMailboxSource, "provider":
 		return true
 	}
 	return false
