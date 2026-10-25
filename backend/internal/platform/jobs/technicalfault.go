@@ -74,10 +74,11 @@ var technicalFaults = []technicalFault{
 		match:    isStatementStopped,
 		class:    "statement_stopped",
 		sentence: "the database stopped a statement before it answered",
-		remedy: "Most often a spent statement budget: the work is too much for one statement, so " +
-			"narrow it or raise the budget the job binds with database.BoundStatement. An operator " +
-			"cancelling a backend reads the same way, and so does a worker's own shutdown reaching " +
-			"the server first.",
+		remedy: "Most often the work is too much for one statement. No job binds its own " +
+			"budget, so the ceiling that stopped it is the pool's statement_timeout: narrow the " +
+			"statement, or bind the job's own with database.BoundStatement. An operator " +
+			"cancelling a backend reads the same way, and so does a worker's own shutdown " +
+			"reaching the server first.",
 	},
 	{
 		match:    isDNSFailure,
@@ -142,12 +143,12 @@ func isInterrupted(err error) bool {
 	return errors.Is(err, context.Canceled)
 }
 
-// isStatementStopped answers a statement the server stopped: SQLSTATE 57014.
+// isStatementStopped answers a statement the server stopped.
 //
-// Postgres raises it for a spent `statement_timeout`, an operator cancelling
-// the backend, and a client going away, and says which nowhere. So the class
-// claims only that the statement stopped. A caller holding the request's
-// context can narrow it, as modules/search does.
+// `storekit.IsQueryCanceled` documents which causes share that SQLSTATE and
+// why it cannot say which. This classifier cannot narrow it either: a caller
+// needs the request's context to, as modules/search has, and `ClassFor` is
+// exported without one.
 func isStatementStopped(err error) bool {
 	return storekit.IsQueryCanceled(err)
 }
