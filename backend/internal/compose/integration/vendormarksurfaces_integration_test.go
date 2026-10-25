@@ -14,11 +14,11 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-
-	"github.com/jackc/pgx/v5"
 )
 
 func markAsVendor(t *testing.T, contact ids.UUID) {
