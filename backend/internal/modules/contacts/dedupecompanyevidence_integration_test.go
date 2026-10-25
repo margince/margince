@@ -8,11 +8,11 @@ package contacts
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -57,33 +57,39 @@ func TestASimilarCompanyNameFilesOnlyWithASharedFact(t *testing.T) {
 		filed bool
 	}{
 		"nothing shared": {share: func(*dedupeEnv, context.Context, *testing.T, ids.CompanyID, ids.CompanyID) {}},
-		"one phone number, written two ways": {filed: true,
+		"one phone number, written two ways": {
+			filed: true,
 			share: func(e *dedupeEnv, ctx context.Context, t *testing.T, brand, line ids.CompanyID) {
 				e.statePhone(ctx, t, brand, "+49 89 1234567")
 				e.statePhone(ctx, t, line, "0049 89 123 45 67")
-			}},
-		"a person employed at both": {filed: true,
+			},
+		},
+		"a contact employed at both": {
+			filed: true,
 			share: func(e *dedupeEnv, _ context.Context, t *testing.T, brand, line ids.CompanyID) {
-				person := mustContact(t, e, "Greta Hoffmann")
-				employ(t, e, person, brand)
-				employ(t, e, person, line)
-			}},
-		"a person who left one of them": {
+				colleague := mustContact(t, e, "Greta Hoffmann")
+				employ(t, e, colleague, brand)
+				employ(t, e, colleague, line)
+			},
+		},
+		"a contact who left one of them": {
 			share: func(e *dedupeEnv, ctx context.Context, t *testing.T, brand, line ids.CompanyID) {
-				person := mustContact(t, e, "Greta Hoffmann")
-				employ(t, e, person, brand)
-				left := time.Now().AddDate(-1, 0, 0)
+				colleague := mustContact(t, e, "Greta Hoffmann")
+				employ(t, e, colleague, brand)
+				left := clocktest.Now(t).AddDate(-1, 0, 0)
 				if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
-					Kind: employmentKind, ContactID: &person, CompanyID: &line, EndedAt: &left, Source: "manual",
+					Kind: employmentKind, ContactID: &colleague, CompanyID: &line, EndedAt: &left, Source: "manual",
 				}); err != nil {
 					t.Fatalf("record the past employment: %v", err)
 				}
-			}},
+			},
+		},
 		"numbers that differ": {
 			share: func(e *dedupeEnv, ctx context.Context, t *testing.T, brand, line ids.CompanyID) {
 				e.statePhone(ctx, t, brand, "+49 89 1234567")
 				e.statePhone(ctx, t, line, "+49 89 7654321")
-			}},
+			},
+		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -153,8 +159,8 @@ func TestOneBrandFilesOnTheNameAlone(t *testing.T) {
 	}
 }
 
-// The nightly close step asks the filing rule's own question, so an open pair
-// filed on a name alone closes, and the same pair with a shared fact stays.
+// The nightly close step asks the filing rule's own question. An open pair
+// filed on a name alone closes; the same pair with a shared fact stays.
 func TestTheRecheckClosesASimilarNamePairWithNoSharedFact(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

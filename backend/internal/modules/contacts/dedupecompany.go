@@ -94,10 +94,8 @@ type CompanyCandidateScore struct {
 	// different legal entities in the world; telling those apart is a human's
 	// call, which is the fuzzy tier's own rule.
 	ExactName bool
-	// SameBrand says the two names are one name once legal forms and market
-	// filler words are removed ("Fabrikam GmbH", "Fabrikam"). Such a pair is
-	// filed on the name alone; any other name pair needs a second shared fact
-	// (dedupecompanyevidence.go).
+	// SameBrand says the names are one once legal forms and filler words are
+	// removed. Only such a pair files on its name alone (keepCorroborated).
 	SameBrand bool
 }
 
@@ -492,18 +490,3 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 	best.ExactName, best.SameBrand = exact, sameBrand
 	return best
 }
-
-// companyNamesAreTheSame answers whether two names are one name.
-//
-// Strict on purpose: case, accents and spacing are noise in a name, and
-// everything else is signal. A legal suffix is NOT folded away — see
-// CompanyCandidateScore.ExactName for why that distinction is the whole point.
-func companyNamesAreTheSame(left, right string) bool {
-	l, r := foldedNameKey(left), foldedNameKey(right)
-	return l != "" && l == r
-}
-
-// collapseSpaces reduces every run of whitespace to one space. A name read off
-// a web page carries the spacing of its markup, and "Baqend  GmbH" is not a
-// different company from "Baqend GmbH".
-func collapseSpaces(s string) string { return strings.Join(strings.Fields(s), " ") }

@@ -330,8 +330,8 @@ func readLeadSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (leadSide, bool, 
 }
 
 // companyPairStillFiled re-scores two companies with the name pairing the
-// filing path uses, held to the same second fact (keepCorroborated), and keeps
-// a pair whose domains still nest (domainNests).
+// filing path uses and holds it to the same second fact (keepCorroborated). It
+// keeps a pair whose domains still nest (domainNests).
 func companyPairStillFiled(ctx context.Context, tx pgx.Tx, pair openPair) (bool, float64, error) {
 	var leftDisplay, leftLegal, rightDisplay, rightLegal string
 	err := tx.QueryRow(ctx, `

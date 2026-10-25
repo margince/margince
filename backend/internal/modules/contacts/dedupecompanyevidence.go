@@ -5,14 +5,15 @@ package contacts
 
 // A similar company name alone is weak evidence: "Kim Achterberg" and "Kim
 // Fontaine" share a leading given name and score over the review bar. So the
-// fuzzy tier files a name pair only when the two names are one brand, or the
-// two companies share an address, a phone number or a person employed at both
-// now. A shared live domain is not asked here: uq_company_domain keeps a live
-// domain on one company, and the exact and subdomain lanes file nested ones.
+// fuzzy tier files a name pair only when the two names are one brand. Any
+// other name pair needs an address, a phone number or a current contact in
+// common. A shared live domain is not asked here: uq_company_domain keeps it
+// on one company, and the exact and subdomain lanes file nested ones.
 
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -24,7 +25,7 @@ import (
 
 // keepCorroborated keeps the name rivals a pair may be filed for. A subject
 // not stored yet (a create) has nothing to share, so only same-brand rivals
-// stay; the duplicate scan reads the new company again once it is stored.
+// stay. The duplicate scan reads the new company again once it is stored.
 func keepCorroborated(ctx context.Context, tx pgx.Tx, subject *ids.CompanyID,
 	ranked []CompanyCandidateScore,
 ) ([]CompanyCandidateScore, error) {
@@ -52,15 +53,14 @@ func keepCorroborated(ctx context.Context, tx pgx.Tx, subject *ids.CompanyID,
 
 // companyEvidence is what one company could share with another.
 type companyEvidence struct {
-	addressKey   string
-	phones       []string
-	sharesPerson bool
+	addressKey    string
+	phones        []string
+	sharesContact bool
 }
 
 // companiesSharingEvidence answers which rivals share an address, a phone
-// number or a currently employed person with the subject, in one statement
-// over the primary key, uq_company_fact and the relationship company and
-// contact indexes.
+// number or a currently employed contact with the subject. It is one statement,
+// over the primary key, uq_company_fact and the relationship indexes.
 func companiesSharingEvidence(ctx context.Context, tx pgx.Tx, subject ids.CompanyID,
 	rivals []ids.CompanyID,
 ) (map[ids.CompanyID]bool, error) {
@@ -91,7 +91,7 @@ func companiesSharingEvidence(ctx context.Context, tx pgx.Tx, subject ids.Compan
 		var phones []string
 		var held companyEvidence
 		if err := rows.Scan(&id, &line1, &line2, &city, &region, &postal, &country,
-			&phones, &held.sharesPerson); err != nil {
+			&phones, &held.sharesContact); err != nil {
 			return nil, fmt.Errorf("contacts: reading what similar companies share: %w", err)
 		}
 		held.addressKey = streetAddressKey(line1, line2, city, region, postal, country)
@@ -111,14 +111,12 @@ func companiesSharingEvidence(ctx context.Context, tx pgx.Tx, subject ids.Compan
 
 // shares reports whether the rival holds one fact in common with this company.
 func (own companyEvidence) shares(rival companyEvidence) bool {
-	if rival.sharesPerson || (own.addressKey != "" && own.addressKey == rival.addressKey) {
+	if rival.sharesContact || (own.addressKey != "" && own.addressKey == rival.addressKey) {
 		return true
 	}
 	for _, phone := range own.phones {
-		for _, other := range rival.phones {
-			if phone == other {
-				return true
-			}
+		if slices.Contains(rival.phones, phone) {
+			return true
 		}
 	}
 	return false

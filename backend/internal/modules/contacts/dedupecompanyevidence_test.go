@@ -6,7 +6,7 @@ package contacts
 import "testing"
 
 // A pair over the review bar stands on its name alone only when the names are
-// one brand once legal forms and filler words are removed.
+// one brand. Legal forms and filler words do not count.
 func TestOnlyOneBrandStandsOnTheNameAlone(t *testing.T) {
 	cases := []struct {
 		candidate, stored string
