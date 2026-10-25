@@ -38570,6 +38570,8 @@ export interface components {
             value: number | null;
             /** Format: date-time */
             occurred_at?: string;
+            /** @description How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant. */
+            occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: uuid */
             owner_id?: string;
             source_type?: string;

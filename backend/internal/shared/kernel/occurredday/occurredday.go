@@ -198,9 +198,15 @@ func dateEndSQL(alias string) string {
 // a day entry when its date begins in the installation zone (Begins). It is
 // the order a calendar reads, and where "after the meeting" begins.
 func StartSQL(alias string) string {
-	return fmt.Sprintf(`(CASE WHEN %[1]s.occurred_precision = 'day'
-		THEN date_trunc('day', %[1]s.occurred_at AT TIME ZONE 'UTC') AT TIME ZONE `+installationZoneSQL+`
-		ELSE %[1]s.occurred_at END)`, alias)
+	return StartAtSQL(alias+".occurred_at", alias+".occurred_precision")
+}
+
+// StartAtSQL is StartSQL for an activity time held elsewhere than its own
+// row: at is the instant stored the way occurred_at is, precision its kind.
+func StartAtSQL(at, precision string) string {
+	return fmt.Sprintf(`(CASE WHEN %[2]s = 'day'
+		THEN date_trunc('day', %[1]s AT TIME ZONE 'UTC') AT TIME ZONE `+installationZoneSQL+`
+		ELSE %[1]s END)`, at, precision)
 }
 
 // WithinSQL is "the activity under alias falls in the period [from, to)", both
@@ -208,23 +214,36 @@ func StartSQL(alias string) string {
 // falls in it where its date begins in the installation zone (StartSQL). So a
 // period of whole local dates holds the day entries those dates name, no more.
 func WithinSQL(alias, from, to string) string {
-	return "(" + FromSQL(alias, from) + " AND " + BeforeSQL(alias, to) + ")"
+	return WithinAtSQL(alias+".occurred_at", alias+".occurred_precision", from, to)
+}
+
+// WithinAtSQL is WithinSQL for an activity time held elsewhere (StartAtSQL).
+func WithinAtSQL(at, precision, from, to string) string {
+	return "(" + fromAtSQL(at, precision, from) + " AND " + beforeAtSQL(at, precision, to) + ")"
 }
 
 // FromSQL is WithinSQL's lower edge alone. A date begins at or before its
 // anchor, so `occurred_at >= from` holds every row that passes and keeps a
 // range scan.
 func FromSQL(alias, from string) string {
-	return fmt.Sprintf(`(%[1]s.occurred_at >= %[2]s AND (%[1]s.occurred_precision = 'instant' OR %[3]s >= %[2]s))`,
-		alias, from, StartSQL(alias))
+	return fromAtSQL(alias+".occurred_at", alias+".occurred_precision", from)
+}
+
+func fromAtSQL(at, precision, from string) string {
+	return fmt.Sprintf(`(%[1]s >= %[3]s AND (%[2]s = 'instant' OR %[4]s >= %[3]s))`,
+		at, precision, from, StartAtSQL(at, precision))
 }
 
 // BeforeSQL is WithinSQL's upper edge alone. A date begins at most 26 hours
 // before its anchor (UTC+14), the bound that keeps a range scan.
 func BeforeSQL(alias, to string) string {
-	return fmt.Sprintf(`(%[1]s.occurred_at < CAST(%[2]s AS timestamptz) + interval '26 hours'
-		AND (%[1]s.occurred_precision = 'instant' AND %[1]s.occurred_at < %[2]s OR %[1]s.occurred_precision = 'day' AND %[3]s < %[2]s))`,
-		alias, to, StartSQL(alias))
+	return beforeAtSQL(alias+".occurred_at", alias+".occurred_precision", to)
+}
+
+func beforeAtSQL(at, precision, to string) string {
+	return fmt.Sprintf(`(%[1]s < CAST(%[3]s AS timestamptz) + interval '26 hours'
+		AND (%[2]s = 'instant' AND %[1]s < %[3]s OR %[2]s = 'day' AND %[4]s < %[3]s))`,
+		at, precision, to, StartAtSQL(at, precision))
 }
 
 // DatesSQL is "the day entry under alias names a date in [from, before)", both

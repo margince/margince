@@ -59,12 +59,12 @@ func reportingCohorts(frame crmcontracts.ReportingContext, facts []reporting.Fac
 	previous := reportingPrevious(frame)
 	out := make([]reporting.Fact, 0, len(facts)*2)
 	for _, fact := range facts {
-		if fact.Row.OccurredAt == nil {
+		if fact.At() == nil {
 			fact.ContextID = reportingState
 			out = append(out, fact)
 			continue
 		}
-		at := *fact.Row.OccurredAt
+		at := *fact.At()
 		if reportingInWindow(at, frame.Interval) {
 			fact.ContextID = reportingInterval
 			out = append(out, fact)

@@ -50,7 +50,7 @@ func readReportingAccepted(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	}
 	// Primary credit is deduplicated before narrowing the SDR population.
 	earliest, evaluated, limit := b.add(reportingEarliest(frame)), b.add(frame.EvaluatedAt), b.add(reportingFactLimit+1)
-	query := fmt.Sprintf(`SELECT credit.id::text,credit.handoff_id,'Accepted opportunity',credit.submitter_id_at_change,COALESCE(u.display_name,''),credit.occurred_at,'accepted_handoff'
+	query := fmt.Sprintf(`SELECT credit.id::text,credit.handoff_id,'Accepted opportunity',credit.submitter_id_at_change,COALESCE(u.display_name,''),credit.occurred_at,NULL::text,NULL::timestamptz,'accepted_handoff'
  FROM (SELECT DISTINCT ON (e.deal_id_at_change) e.* FROM sdr_handoff_event e JOIN sdr_handoff h ON h.id=e.handoff_id
  WHERE e.to_status='accepted' AND e.deal_id_at_change IS NOT NULL ORDER BY e.deal_id_at_change,e.occurred_at,e.id) credit
  LEFT JOIN app_user u ON u.id=credit.submitter_id_at_change
@@ -67,7 +67,8 @@ func readOutcomeFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reporti
 	facts, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (reporting.Fact, error) {
 		fact := reporting.Fact{Metric: metric, SourceType: source}
 		var owner *ids.UUID
-		err := row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, &fact.Provenance)
+		err := row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt,
+			&fact.Row.OccurredPrecision, &fact.PlacedAt, &fact.Provenance)
 		one := 1.0
 		fact.Row.Value = &one
 		if owner != nil {

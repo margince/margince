@@ -52411,6 +52411,11 @@ components:
           format: double
           nullable: true
         occurred_at: *id001
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: >-
+            How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC
+            date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
         owner_id: *id002
         source_type:
           type: string

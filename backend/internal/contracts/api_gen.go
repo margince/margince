@@ -48573,14 +48573,17 @@ type ReportingEvidenceRef struct {
 
 // ReportingEvidenceRow defines model for ReportingEvidenceRow.
 type ReportingEvidenceRow struct {
-	Key        string              `json:"key"`
-	Label      string              `json:"label"`
-	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
-	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
-	Restricted bool                `json:"restricted"`
-	SourceId   *openapi_types.UUID `json:"source_id,omitempty"`
-	SourceType *string             `json:"source_type,omitempty"`
-	Value      *float64            `json:"value"`
+	Key        string     `json:"key"`
+	Label      string     `json:"label"`
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
+	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
+	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	Restricted        bool                `json:"restricted"`
+	SourceId          *openapi_types.UUID `json:"source_id,omitempty"`
+	SourceType        *string             `json:"source_type,omitempty"`
+	Value             *float64            `json:"value"`
 }
 
 // ReportingExecution defines model for ReportingExecution.
