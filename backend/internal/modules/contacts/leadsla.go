@@ -267,20 +267,14 @@ func answeredBy(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline time
 // leadTouchesFor answers this lead's activities that answer by the deadline
 // (occurredday.ProvenSQL) in the shape isFirstResponseActivity reads.
 //
-// The same columns and the same hadInbound sub-select as leadResponseTouches,
-// asked from the other end: that one starts from ONE activity and finds the
-// leads it is linked to, which is what an event subscriber knows; this starts
-// from one LEAD and finds its activities, which is what a scan knows. Neither
-// can be expressed as the other without asking the database for rows its
-// caller has no use for.
+// It reads the same columns and hadInbound (inboundBeforeSQL) as
+// leadResponseTouches, asked from the other end. That one starts from one
+// activity and finds its leads, which an event subscriber knows. This starts
+// from one lead and finds its activities, which a scan knows. Neither can be
+// the other without reading rows its caller has no use for.
 func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline time.Time) ([]leadResponseTouch, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT coalesce(a.direction, ''), a.captured_by, a.occurred_at,
-		       EXISTS (SELECT 1 FROM activity_link li JOIN activity ai ON ai.id = li.activity_id
-		               WHERE li.lead_id = $1 AND ai.direction = 'inbound'
-		                 AND ai.archived_at IS NULL AND `+auth.ActivityAvailableClause("ai")+`
-		                 AND ai.occurred_at < a.occurred_at -- occurred_at raw: an inbound before the touch, an ordering of rows
-		               ),
+		SELECT coalesce(a.direction, ''), a.captured_by, a.occurred_at, `+inboundBeforeSQL("$1", "a")+`,
 		       a.kind, coalesce(a.meeting_status, ''), a.source, `+occurredday.ProvenSQL("a")+`
 		FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		WHERE l.lead_id = $1 AND a.archived_at IS NULL

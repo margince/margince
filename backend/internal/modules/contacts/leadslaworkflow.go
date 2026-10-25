@@ -190,12 +190,23 @@ const (
 // humanCapturedPrefix is the captured_by namespace of a human author.
 var humanCapturedPrefix = string(principal.PrincipalHuman) + ":"
 
-// mayAnswerSQL holds for every activity under alias that isFirstResponseActivity
-// can accept: an outbound, or a note a rep typed. A sweep reads it to skip the
-// rest, and TestMayAnswerSQLAdmitsEveryAcceptedTouch holds it to the Go rule.
-func mayAnswerSQL(alias string) string {
-	return fmt.Sprintf(`(%[1]s.direction = '%[2]s' OR (%[1]s.kind = '%[3]s' AND %[1]s.source = '%[4]s' AND %[1]s.captured_by LIKE '%[5]s%%'))`,
-		alias, touchOutbound, touchNote, activitySourceManual, humanCapturedPrefix)
+// mayAnswerSQL is isFirstResponseActivity for the activity under alias, linked
+// to lead. It admits a human's outbound, any outbound after the lead wrote in,
+// or a note a rep typed. TestMayAnswerSQLAgreesWithTheGoRule holds the two together.
+func mayAnswerSQL(lead, alias string) string {
+	human := fmt.Sprintf(`%s.captured_by LIKE '%s%%'`, alias, humanCapturedPrefix)
+	return fmt.Sprintf(`((%[1]s.direction = '%[2]s' AND (%[5]s OR %[6]s))
+		OR (%[1]s.kind = '%[3]s' AND %[1]s.source = '%[4]s' AND %[5]s))`,
+		alias, touchOutbound, touchNote, activitySourceManual, human, inboundBeforeSQL(lead, alias))
+}
+
+// inboundBeforeSQL is a touch's hadInbound: the lead had written in before the
+// activity under alias.
+func inboundBeforeSQL(lead, alias string) string {
+	return fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link li JOIN activity ai ON ai.id = li.activity_id
+		WHERE li.lead_id = %[1]s AND ai.direction = 'inbound' AND ai.archived_at IS NULL AND %[3]s
+		  AND ai.occurred_at < %[2]s.occurred_at -- occurred_at raw: an inbound before the touch, an ordering of rows
+		)`, lead, alias, auth.ActivityAvailableClause("ai"))
 }
 
 // humanLoggedNote is the ONE spelling of "a rep typed this note into the
@@ -226,12 +237,7 @@ func (s *Store) leadResponseTouches(ctx context.Context, activityID ids.Activity
 	var out []leadResponseTouch
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT l.lead_id, coalesce(a.direction, ''), a.captured_by, a.occurred_at,
-			       EXISTS (SELECT 1 FROM activity_link li JOIN activity ai ON ai.id = li.activity_id
-			               WHERE li.lead_id = l.lead_id AND ai.direction = 'inbound'
-			                 AND ai.archived_at IS NULL AND `+auth.ActivityAvailableClause("ai")+`
-			                 AND ai.occurred_at < a.occurred_at -- occurred_at raw: an inbound before the touch, an ordering of rows
-		               ),
+			SELECT l.lead_id, coalesce(a.direction, ''), a.captured_by, a.occurred_at, `+inboundBeforeSQL("l.lead_id", "a")+`,
 			       a.kind, coalesce(a.meeting_status, ''), a.source, `+occurredday.ProvenSQL("a")+`
 			FROM activity_link l JOIN activity a ON a.id = l.activity_id
 			WHERE l.activity_id = $1 AND l.lead_id IS NOT NULL AND a.archived_at IS NULL

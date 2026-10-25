@@ -6,7 +6,8 @@
 package contacts
 
 // The day-answer sweep reads only the leads a day touch can still answer. A
-// lead it can never stamp is not read again on every scan.
+// lead it can never stamp is not read again on every scan: its own enquiry,
+// or an agent's outbound before the lead wrote in.
 
 import (
 	"context"
@@ -20,16 +21,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
-// seedDayTouch links a day entry dated date to lead, as a capture commits it.
-// An empty direction is a note's, which has none.
+// seedDayTouch links a day entry a rep logged, dated date, to lead. An empty
+// direction is a note's, which has none.
 func (e *promoteConsentEnv) seedDayTouch(t *testing.T, lead ids.LeadID, kind, direction string, date time.Time) {
+	t.Helper()
+	e.seedDayTouchBy(t, lead, kind, direction, "human:"+e.user.String(), date)
+}
+
+// seedDayTouchBy is seedDayTouch for the author capturedBy.
+func (e *promoteConsentEnv) seedDayTouchBy(t *testing.T, lead ids.LeadID, kind, direction, capturedBy string, date time.Time) {
 	t.Helper()
 	id := ids.NewV7()
 	ctx := context.Background()
 	if _, err := e.owner.Exec(ctx,
 		`INSERT INTO activity (id, kind, subject, direction, occurred_at, occurred_precision, source, captured_by)
 		 VALUES ($1, $2, 'Touch', NULLIF($3, ''), $4, 'day', 'manual', $5)`,
-		id, kind, direction, occurredday.Anchor(date), "human:"+e.user.String()); err != nil {
+		id, kind, direction, occurredday.Anchor(date), capturedBy); err != nil {
 		t.Fatalf("seeding the day %s: %v", kind, err)
 	}
 	if _, err := e.owner.Exec(ctx,
@@ -74,10 +81,15 @@ func TestTheDaySweepReadsOnlyLeadsADayTouchCanAnswer(t *testing.T) {
 	e.seedDayTouch(t, enquiryOnly, "email", "inbound", date)
 	called := e.seedBareLead(t, "called@day.test", date)
 	e.seedDayTouch(t, called, "call", "outbound", date)
+	agentWrote := e.seedBareLead(t, "agent@day.test", date)
+	e.seedDayTouchBy(t, agentWrote, "email", "outbound", "agent:x", date)
 
 	leads := e.dayAnswerCandidatesAt(t, date.AddDate(0, 0, 1).Add(time.Hour), ids.LeadID{})
 	if slices.Contains(leads, enquiryOnly) {
 		t.Error("the sweep reads a lead whose only ended day touch is its own enquiry, on every scan")
+	}
+	if slices.Contains(leads, agentWrote) {
+		t.Error("the sweep reads a lead whose only ended day touch is an agent's outbound before it wrote in, on every scan")
 	}
 	if !slices.Contains(leads, called) {
 		t.Error("the sweep skips a lead with no enquiry and an ended day call, which the subscriber would stamp")
@@ -98,29 +110,35 @@ func TestTheDaySweepReadsOnlyLeadsADayTouchCanAnswer(t *testing.T) {
 	}
 }
 
-// mayAnswerSQL is a necessary condition of isFirstResponseActivity: every touch
-// the Go rule accepts, the SQL admits. Postgres judges each touch of the grid.
-func TestMayAnswerSQLAdmitsEveryAcceptedTouch(t *testing.T) {
+// mayAnswerSQL is isFirstResponseActivity in SQL. Postgres judges each touch of
+// the grid as the Go rule does, for a lead that wrote in and one that did not.
+func TestMayAnswerSQLAgreesWithTheGoRule(t *testing.T) {
 	e := setupPromoteConsent(t)
+	date := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
+	wroteIn := e.seedBareLead(t, "wrote@day.test", date)
+	e.seedDayTouch(t, wroteIn, "email", "inbound", date)
+	cold := e.seedBareLead(t, "cold@day.test", date)
 	accepted, refused := 0, 0
 	for _, direction := range []string{"", "inbound", touchOutbound} {
 		for _, kind := range []string{"email", "call", "meeting", touchNote} {
 			for _, source := range []string{activitySourceManual, "connector"} {
 				for _, capturedBy := range []string{humanCapturedPrefix + "x", "agent:x", "system:x"} {
-					touch := leadResponseTouch{direction: direction, kind: kind, source: source, capturedBy: capturedBy, hadInbound: true}
-					var admits bool
-					if err := e.owner.QueryRow(context.Background(), `SELECT coalesce(`+mayAnswerSQL("a")+`, false)
-						FROM (VALUES (NULLIF($1, ''), $2::text, $3::text, $4::text)) AS a(direction, kind, source, captured_by)`,
-						direction, kind, source, capturedBy).Scan(&admits); err != nil {
-						t.Fatal(err)
-					}
-					if isFirstResponseActivity(touch) {
-						accepted++
-						if !admits {
-							t.Errorf("mayAnswerSQL refuses %+v, which isFirstResponseActivity accepts", touch)
+					for lead, hadInbound := range map[ids.LeadID]bool{wroteIn: true, cold: false} {
+						touch := leadResponseTouch{direction: direction, kind: kind, source: source, capturedBy: capturedBy, hadInbound: hadInbound}
+						var admits bool
+						if err := e.owner.QueryRow(context.Background(), `SELECT coalesce(`+mayAnswerSQL("$5::uuid", "a")+`, false)
+							FROM (VALUES (NULLIF($1, ''), $2::text, $3::text, $4::text, $6::timestamptz))
+							  AS a(direction, kind, source, captured_by, occurred_at)`,
+							direction, kind, source, capturedBy, lead, date.AddDate(0, 0, 1)).Scan(&admits); err != nil {
+							t.Fatal(err)
 						}
-					} else if !admits {
-						refused++
+						if accepts := isFirstResponseActivity(touch); accepts != admits {
+							t.Errorf("mayAnswerSQL says %v for %+v, isFirstResponseActivity %v", admits, touch, accepts)
+						} else if accepts {
+							accepted++
+						} else {
+							refused++
+						}
 					}
 				}
 			}
