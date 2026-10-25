@@ -160,7 +160,7 @@ func TestAVCardImportSkipsAnErasedAddressAndLandsTheRest(t *testing.T) {
 	if len(results) != 2 || results[0].Outcome != contacts.VCardSkipped || results[1].Outcome != contacts.VCardCreated {
 		t.Fatalf("the cards landed %+v, want the erased one skipped and the clean one created", results)
 	}
-	if !strings.Contains(results[0].Reason, "erased") {
+	if !strings.Contains(results[0].Reason, "erasure list") {
 		t.Errorf("the skip reason %q does not say why", results[0].Reason)
 	}
 }
