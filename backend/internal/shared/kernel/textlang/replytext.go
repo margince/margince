@@ -237,7 +237,7 @@ func quoteBoundary(runes []rune, reading quoteReading) int {
 		if atLineStart && !unicode.IsSpace(runes[offset]) {
 			line := lineAt(runes, offset)
 			own := ownHeaders && isOwnHeader(line, offset) &&
-				!(secondSenderQuotes && senderSeen && opensReplyHeader(runes, offset, line))
+				(!secondSenderQuotes || !senderSeen || !opensReplyHeader(runes, offset, line))
 			if startsQuote(line) && !own &&
 				(!passMarked || !opensMarkedQuote(runes, offset, line)) {
 				return offset
