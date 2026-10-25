@@ -89,7 +89,6 @@ export function TimelineActions({
         activityId={activity.id}
         kind={activity.kind}
         offersEmail={activity.offers_email}
-        automaticKind={activity.automatic_kind}
         channelProvider={activity.channel_provider ?? undefined}
         entityType={entityType}
         entityId={entityId}

@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -43,8 +44,14 @@ func (s *Store) ConversationStandingFor(ctx context.Context, id ids.ActivityID) 
 	var out ConversationStanding
 	// One snapshot, so the content gate and the reads it guards see one state.
 	err := s.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
-		if _, err := readActivityContent(ctx, tx, id, storekit.LiveOnly); err != nil {
+		activity, err := readActivityContent(ctx, tx, id, storekit.LiveOnly)
+		if err != nil {
 			return err
+		}
+		// A call, meeting, note or task is written about, not replied into: it has no thread to join.
+		if slices.Contains(writtenAboutKinds, activity.Kind) {
+			out = ConversationStanding{OnConversation: true}
+			return nil
 		}
 		onThread, err := s.onThread(ctx, tx, id, actor.UserID)
 		if err != nil {

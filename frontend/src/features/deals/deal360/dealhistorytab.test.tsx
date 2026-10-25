@@ -131,7 +131,7 @@ describe("DealHistoryTab", () => {
         is_done: false,
         captured_by: "system",
         automatic_kind: "product",
-        offers_email: true,
+        offers_email: false,
       },
       {
         ...CALL_ACTIVITY,

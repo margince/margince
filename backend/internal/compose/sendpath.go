@@ -335,19 +335,19 @@ func newCommsAdapter(
 	}
 }
 
-// colleagueDomains adapts the own-domain store to the seam the activities
+// ColleagueDomains adapts the own-domain store to the seam the activities
 // handlers take. The module may not import capture, and the reply-address
 // question needs to know who is ours by DOMAIN rather than by seat — a
 // co-worker with no login is still not somebody to compose a reply to.
-type colleagueDomains struct{ store *capture.OwnDomainStore }
+type ColleagueDomains struct{ store *capture.OwnDomainStore }
 
 // ColleagueDomainsFor is the own-domain reader the activities handlers address
 // a reply past.
-func ColleagueDomainsFor(pool *pgxpool.Pool) activities.ColleagueDomains {
-	return colleagueDomains{store: capture.NewOwnDomainStore(InstallationDB(pool))}
+func ColleagueDomainsFor(pool *pgxpool.Pool) ColleagueDomains {
+	return ColleagueDomains{store: capture.NewOwnDomainStore(InstallationDB(pool))}
 }
 
-func (c colleagueDomains) Covers(ctx context.Context) (func(address string) bool, error) {
+func (c ColleagueDomains) Covers(ctx context.Context) (func(address string) bool, error) {
 	own, err := c.store.Colleagues(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading who counts as a colleague: %w", err)

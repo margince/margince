@@ -248,6 +248,7 @@ describe("TimelineActions", () => {
       id: "t2",
       kind: "task",
       automatic_kind: "product",
+      offers_email: false,
     };
     render(
       <>

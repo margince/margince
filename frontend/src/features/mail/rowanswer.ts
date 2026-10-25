@@ -5,10 +5,7 @@ type Kind = Activity["kind"];
 
 // The row's verb and the dialog's framing both read this, so a call row cannot open
 // a dialog that calls the email a reply. An unnamed kind is a mail anchor not yet read.
-export function rowAnswer(
-  kind: Kind | undefined,
-  automaticKind?: Activity["automatic_kind"],
-): "reply" | "about" | null {
+export function rowAnswer(kind: Kind | undefined): "reply" | "about" {
   switch (kind) {
     case undefined:
     case "email":
@@ -17,9 +14,7 @@ export function rowAnswer(
     case "call":
     case "note":
     case "meeting":
-      return "about";
     case "task":
-      // Work the product filed has no correspondent to write to.
-      return automaticKind === "product" ? null : "about";
+      return "about";
   }
 }

@@ -394,7 +394,7 @@ export function ComposeWindow({
                 transports={transports}
                 onTransportChange={changeTransport}
                 staleThread={staleThread}
-                answering={answering}
+                answering={thread.replying ? answering : undefined}
                 viewerId={names.viewerId}
                 nameOf={names.nameOf}
                 activityId={activityId}

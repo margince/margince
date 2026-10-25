@@ -27,7 +27,6 @@ export function ChannelReplyAction({
   activityId,
   kind,
   offersEmail = false,
-  automaticKind,
   channelProvider,
   entityType,
   entityId,
@@ -40,7 +39,6 @@ export function ChannelReplyAction({
   kind: Activity["kind"];
   /** The server can fill To for a new email about this row (`offers_email`). */
   offersEmail?: boolean;
-  automaticKind?: Activity["automatic_kind"];
   channelProvider?: string;
   entityType: RelinkKind;
   entityId: string;
@@ -85,10 +83,10 @@ export function ChannelReplyAction({
     contactId,
     channelProvider,
   );
-  const answer = rowAnswer(kind, automaticKind);
+  const answer = rowAnswer(kind);
   // A written-about row is withheld through `offers_email`, which the server
   // answers false for it, so only mail reaches the withheld branch below.
-  if (!reachable || answer === null || (answer === "about" && !offersEmail)) {
+  if (!reachable || (answer === "about" && !offersEmail)) {
     return null;
   }
   const withheld = answer === "reply" && contentWithheld;

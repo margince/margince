@@ -220,9 +220,12 @@ fix it.
 last mail to that address came back, and none has gone through after it. Send it
 all the same, or use another address.
 
-**A colleague's mailbox** gets a note, and you can still send. Your reply goes
-to the recipients in **To**, from your own mailbox and under your name. When
-you are not on the thread, the note says so and names the deal owner.
+**A colleague's mailbox** gets a note on a reply, and you can still send. Your
+reply goes to the recipients in **To**, from your own mailbox and under your name.
+
+**A thread you are not on** gets a note on a reply, and you can still send. The
+note reads "You are not on this thread". If the email is filed under a deal you
+can see that has an owner, it also names that owner.
 
 **A mailbox that cannot send** is refused, with the fix. The mailbox is
 connected only to read mail, without permission to send. Reconnect it and allow

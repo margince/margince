@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // writtenAboutKinds are the kinds a rep writes about rather than replies to.
@@ -25,9 +26,9 @@ var writtenAboutKinds = []crmcontracts.ActivityKind{
 	crmcontracts.ActivityKindNote, crmcontracts.ActivityKindTask,
 }
 
-// offeredEmailCandidatesSQL keeps a row with one readable live linked contact
-// whose address is not a seat's login. offeredEmails drops our own domains.
-const offeredEmailCandidatesSQL = `
+// offeredEmailCandidatesSQL keeps a live row with one readable live linked contact
+// whose address is not a seat's login. A task the product filed has nobody to write to.
+var offeredEmailCandidatesSQL = `
 	SELECT c.activity_id, c.full_name, c.address
 	  FROM (SELECT l.activity_id, p.full_name,
 	               coalesce((SELECT pe.email FROM contact_email pe
@@ -37,7 +38,8 @@ const offeredEmailCandidatesSQL = `
 	          FROM activity a
 	          JOIN activity_link l ON l.activity_id = a.id AND l.contact_id IS NOT NULL
 	          JOIN contact p ON p.id = l.contact_id AND p.archived_at IS NULL
-	         WHERE a.id = ANY($1) AND a.kind = ANY($2) %s) c
+	         WHERE a.id = ANY($1) AND a.kind = ANY($2) AND a.archived_at IS NULL
+	           AND (a.kind <> '` + string(crmcontracts.ActivityKindTask) + `' OR ` + relstrength.OriginIsEngagementSQL("a") + `) %s) c
 	 WHERE c.linked = 1 AND c.address <> ''
 	   AND NOT EXISTS (SELECT 1 FROM app_user seat WHERE lower(seat.email) = lower(c.address))`
 

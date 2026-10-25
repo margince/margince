@@ -273,7 +273,7 @@ describe("what a rep is shown", () => {
         translate("en", "sendPermission.reason.claimContradicts"),
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText(/does not match this conversation/)).toBeVisible();
+    expect(screen.getByText(/does not match this thread/)).toBeVisible();
     expect(
       screen.queryByText(translate("en", "sendPermission.reason.other")),
     ).toBeNull();

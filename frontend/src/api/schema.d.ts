@@ -34476,7 +34476,7 @@ export interface components {
             readonly source_activity_id?: string | null;
             /** @description Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360. */
             links?: components["schemas"]["ActivityLink"][];
-            /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient. */
+            /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient. */
             offers_email: boolean;
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
@@ -35147,7 +35147,10 @@ export interface components {
          *     address of its one live linked contact the caller may read. Links to companies,
          *     deals and other records do not count. Two or more such contacts, none, a contact
          *     without an address, a shared mailbox, a seat's login or a colleague's address
-         *     answer empty.
+         *     answer empty, and so does a task the product filed itself. None of these kinds has
+         *     a conversation to join: each answers `viewer_on_conversation` true, `mailbox_user_ids`
+         *     empty and `deal_owner_user_id` null. `POST /activities/{id}/draft-email` fills its
+         *     `to` by the same rule.
          *
          *     One contact rather than a list. A reply is written to somebody, and a group
          *     thread degrades to the most likely counterparty rather than to nobody.

@@ -24928,7 +24928,7 @@ type Activity struct {
 	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    time.Time              `json:"occurred_at"`
 
-	// OffersEmail Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
+	// OffersEmail Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
 	OffersEmail bool                    `json:"offers_email"`
 	Raw         *map[string]interface{} `json:"raw,omitempty"`
 
@@ -47844,7 +47844,10 @@ type ReplaceChannelTokenRequest struct {
 // address of its one live linked contact the caller may read. Links to companies,
 // deals and other records do not count. Two or more such contacts, none, a contact
 // without an address, a shared mailbox, a seat's login or a colleague's address
-// answer empty.
+// answer empty, and so does a task the product filed itself. None of these kinds has
+// a conversation to join: each answers `viewer_on_conversation` true, `mailbox_user_ids`
+// empty and `deal_owner_user_id` null. `POST /activities/{id}/draft-email` fills its
+// `to` by the same rule.
 //
 // One contact rather than a list. A reply is written to somebody, and a group
 // thread degrades to the most likely counterparty rather than to nobody.

@@ -108,10 +108,12 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 	}
 	// Whose mailbox this arrived in, which is a different question from who a
 	// reply goes to: the names above are the counterparty, this is our own side.
-	mailboxes, err := h.store.MailboxesFor(ctx, anchor)
-	if err != nil {
-		writeStoreErr(w, r, err)
-		return
+	var mailboxes []ids.UUID
+	if !recipient.WrittenAbout {
+		if mailboxes, err = h.store.MailboxesFor(ctx, anchor); err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
 	}
 	seats := make([]openapi_types.UUID, 0, len(mailboxes))
 	for _, seat := range mailboxes {
@@ -137,8 +139,8 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 	})
 }
 
-// offeredAddress is what the composer prefills. A written-about row offers its filed
-// contact, and only here: an automation stages unread and stays on ReplyAddressFor.
+// offeredAddress is what the composer and a draft prefill. A written-about row offers its
+// filed contact, and only here: an automation stages unread and stays on ReplyAddressFor.
 func (h Handlers) offeredAddress(ctx context.Context, anchor ids.ActivityID, recipient ReplyRecipient) (string, error) {
 	if recipient.WrittenAbout {
 		return recipient.FiledAddress, nil
@@ -180,7 +182,11 @@ func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID) (stri
 // counterparty produce the same empty field, and only the log tells them
 // apart afterwards.
 func (h Handlers) replyAddresses(ctx context.Context, anchor ids.ActivityID) *[]openapi_types.Email {
-	address, err := h.replyAddress(ctx, anchor)
+	recipient, err := h.store.ReplyRecipientFor(ctx, anchor)
+	address := ""
+	if err == nil {
+		address, err = h.offeredAddress(ctx, anchor, recipient)
+	}
 	if err != nil {
 		slog.WarnContext(ctx, "reply address unavailable; drafting without a recipient", "err", err)
 		return nil

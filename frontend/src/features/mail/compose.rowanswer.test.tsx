@@ -61,7 +61,6 @@ function Verb({
       activityId={activity.id}
       kind={activity.kind}
       offersEmail={activity.offers_email}
-      automaticKind={activity.automatic_kind}
       entityType={page.type}
       entityId={page.id}
       contactId={page.contactId}
@@ -169,6 +168,44 @@ describe("what a row offers to write", () => {
     ).toBeTruthy();
   });
 
+  // Whose thread it is matters only to a reply. A new email written about a
+  // call joins no thread, so the same answer draws no notice there.
+  it.each([
+    ["an email row, as a reply", EMAIL, "Reply", true],
+    ["a call row, as a new email", ADDRESSED_CALL, "Write email", false],
+  ] as const)(
+    "on %s, says whose thread it is only on a reply",
+    async (_, activity, verb, shown) => {
+      const user = userEvent.setup();
+      draw([activity], CONTACT_PAGE, {
+        "GET /me": () =>
+          jsonResponse({
+            user: { id: "u-lars", display_name: "Lars", email: "l@demo.test" },
+            role_keys: [],
+          }),
+        [`GET /activities/${activity.id}/reply-recipient`]: () =>
+          jsonResponse({
+            full_name: "Anna Weber",
+            first_name: "Anna",
+            address: "anna@example.test",
+            mailbox_user_ids: ["u-charlotte"],
+            viewer_on_conversation: false,
+            deal_owner_user_id: null,
+          }),
+      });
+
+      await user.click(await screen.findByRole("button", { name: verb }));
+      const dialog = await screen.findByRole("dialog");
+      await within(await toField(dialog)).findByText("anna@example.test");
+
+      const notice = within(dialog).queryByText(/You are not on this thread/);
+      expect(notice !== null).toBe(shown);
+      if (!shown) {
+        expect(within(dialog).queryByText(/colleague/)).toBeNull();
+      }
+    },
+  );
+
   // The addressed call beside each row is the positive control in one render.
   it.each([
     [
@@ -185,8 +222,13 @@ describe("what a row offers to write", () => {
       }),
     ],
     [
-      "a task the product filed",
-      row({ id: "t", kind: "task", automatic_kind: "product" }),
+      "a product task the server does not offer",
+      row({
+        id: "t",
+        kind: "task",
+        automatic_kind: "product",
+        offers_email: false,
+      }),
     ],
   ] as const)("offers nothing on %s", (_, activity) => {
     draw([ADDRESSED_CALL, activity], DEAL_PAGE);
