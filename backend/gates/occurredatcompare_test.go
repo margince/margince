@@ -40,6 +40,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -104,6 +105,8 @@ type rawCompare struct {
 	swallows bool
 	// handed marks the column passed to a helper as text, waived in Go.
 	handed bool
+	// returned marks a helper's raw aggregate that its caller orders.
+	returned bool
 }
 
 func TestWhetherAnActivityHappenedIsAskedOfItsOwner(t *testing.T) {
@@ -114,6 +117,7 @@ func TestWhetherAnActivityHappenedIsAskedOfItsOwner(t *testing.T) {
 		Exempt:  gatekit.Waive(map[string]string{}),
 	}
 	seen := 0
+	helpers := map[string]bool{}
 	root := gatekit.ModuleRoot(t)
 	for _, src := range scope.Files(t) {
 		if strings.HasPrefix(filepath.Clean(src.Path), occurredAtOwner) {
@@ -126,17 +130,141 @@ func TestWhetherAnActivityHappenedIsAskedOfItsOwner(t *testing.T) {
 		found := rawOccurredAtCompares(src.Path, src.File, text)
 		seen += len(found)
 		judgeRawCompares(t, found)
+		maps.Copy(helpers, rawTimeHelpers(src.File))
 	}
 	if seen < minRawOccurredAtCompares {
 		t.Errorf("the census found %d raw occurred_at comparisons, want at least %d: it reads a smaller tree than it should",
 			seen, minRawOccurredAtCompares)
 	}
+	callers := gatekit.Scope{
+		Roots:   []string{"internal"},
+		Subject: func(_ string, file *ast.File) bool { return len(helperCalls(file, helpers)) > 0 },
+		Exempt:  gatekit.Waive(map[string]string{}),
+	}
+	for _, src := range callers.Files(t) {
+		text, err := os.ReadFile(filepath.Join(root, src.Path)) // #nosec G304 -- a swept file of the trusted module tree
+		if err != nil {
+			t.Fatal(err)
+		}
+		judgeRawCompares(t, helperCompares(src.Path, src.File, text, helpers))
+	}
+}
+
+// rawTimeAggregate is an activity row's occurred_at aggregated raw.
+var rawTimeAggregate = regexp.MustCompile(`(?i)\b(?:max|min)\(\s*` + aliasedColumn + `\s*\)`)
+
+// rawTimeHelpers names each function in file that hands back SQL text holding
+// an activity's occurred_at aggregated raw. A caller ordering what it returns
+// compares the column where the literal census cannot see it.
+func rawTimeHelpers(file *ast.File) map[string]bool {
+	out := map[string]bool{}
+	whole := tablesIn(gatekit.SQLStatementsOf(file)...)
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil || fn.Type.Results == nil || len(fn.Type.Results.List) != 1 {
+			continue
+		}
+		if result, ok := fn.Type.Results.List[0].Type.(*ast.Ident); !ok || result.Name != "string" {
+			continue
+		}
+		declared := tablesIn(gatekit.SQLStatementsOf(fn)...)
+		ast.Inspect(fn.Body, func(n ast.Node) bool {
+			lit, ok := n.(*ast.BasicLit)
+			if !ok {
+				return true
+			}
+			text, _ := gatekit.LiteralText(lit)
+			for _, at := range rawTimeAggregate.FindAllStringSubmatchIndex(text, -1) {
+				if comparesActivity(matchedAlias(text, at), tablesIn(text), declared, whole) {
+					out[fn.Name.Name] = true
+				}
+			}
+			return true
+		})
+	}
+	return out
+}
+
+// helperCalls is each call in file to a function helpers names.
+func helperCalls(file *ast.File, helpers map[string]bool) []*ast.CallExpr {
+	var out []*ast.CallExpr
+	ast.Inspect(file, func(n ast.Node) bool {
+		if call, ok := n.(*ast.CallExpr); ok && helpers[calleeName(call)] {
+			out = append(out, call)
+		}
+		return true
+	})
+	return out
+}
+
+// helperCompares is each raw-time helper call in file that a string joined
+// beside it orders, as `helper(x) + " > " + bound`. A Go waiver on the call's
+// line or the one above carries its reason.
+func helperCompares(path string, file *ast.File, source []byte, helpers map[string]bool) []rawCompare {
+	var out []rawCompare
+	waivers, line := goWaivers(file, source), sourceLine(file, source)
+	ast.Inspect(file, func(n ast.Node) bool {
+		join, ok := n.(*ast.BinaryExpr)
+		if !ok || join.Op != token.ADD {
+			return true
+		}
+		operands := joinedOperands(join)
+		for i, operand := range operands {
+			call, ok := operand.(*ast.CallExpr)
+			if !ok || !helpers[calleeName(call)] || !orderedBeside(operands, i) {
+				continue
+			}
+			compare := rawCompare{where: path + ": " + calleeName(call) + "(…)", returned: true}
+			for _, waived := range []int{line(call.Pos()), line(call.Pos()) - 1} {
+				if reason, found := waivers[waived]; found {
+					compare.waived, compare.reason = true, reason
+				}
+			}
+			out = append(out, compare)
+		}
+		return false
+	})
+	return out
+}
+
+// joinedOperands flattens a chain of + into its operands, left to right.
+func joinedOperands(expr ast.Expr) []ast.Expr {
+	if join, ok := expr.(*ast.BinaryExpr); ok && join.Op == token.ADD {
+		return append(joinedOperands(join.X), joinedOperands(join.Y)...)
+	}
+	return []ast.Expr{expr}
+}
+
+// orderedBeside says whether the literal after operand i opens with an ordering
+// operator or the one before it ends with one.
+func orderedBeside(operands []ast.Expr, i int) bool {
+	text := func(at int) (string, bool) {
+		if at < 0 || at >= len(operands) {
+			return "", false
+		}
+		lit, ok := operands[at].(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
+			return "", false
+		}
+		return gatekit.LiteralText(lit)
+	}
+	if after, ok := text(i + 1); ok && orderAfter.MatchString(after) {
+		if op := orderAfter.FindStringSubmatch(after)[1]; op != "<>" && op != "!=" {
+			return true
+		}
+	}
+	before, ok := text(i - 1)
+	return ok && orderBefore.MatchString(before)
 }
 
 func judgeRawCompares(t *testing.T, found []rawCompare) {
 	t.Helper()
 	for _, compare := range found {
 		switch {
+		case !compare.waived && compare.returned:
+			t.Errorf("%s orders an activity's occurred_at that the helper aggregates raw. Have the helper place "+
+				"each row with occurredday.StartSQL, or say why on its line or the one above: // occurred_at raw: <reason>",
+				compare.where)
 		case !compare.waived && compare.handed:
 			t.Errorf("%s is handed to a helper as text, which compares it where the census cannot see. Pass the "+
 				"alias to an occurredday function, or say why on its line or the one above: // occurred_at raw: <reason>",
@@ -631,6 +759,43 @@ func TestTheCensusSeesAColumnHandedToAHelper(t *testing.T) {
 	if got := sourceCompares(t, far); len(got) != 1 || got[0].waived {
 		t.Errorf("a waiver two lines up reached the call: %+v", got)
 	}
+}
+
+// A helper handing back an activity's occurred_at aggregated raw is a finding
+// where a caller orders it, on either side, unless a waiver stands beside it.
+func TestTheCensusSeesARawTimeAHelperHandsBack(t *testing.T) {
+	t.Parallel()
+	const raw = "package p\nfunc cited(e string) string { return `(SELECT max(a.occurred_at) FROM activity a WHERE ` + e + `)` }\n"
+	const placed = "package p\nfunc cited(e string) string { return `(SELECT max(` + occurredday.StartSQL(\"a\") + `) FROM activity a)` }\n"
+	for name, c := range map[string]struct {
+		source string
+		want   int
+	}{
+		"ordered after it":      {raw + "func f(b string) string { return ` AND ` + cited(\"x\") + ` > ` + b }\n", 1},
+		"ordered before it":     {raw + "func f(b string) string { return ` AND ` + b + ` <= ` + x.cited(\"x\") }\n", 1},
+		"selected, not ordered": {raw + "func f() string { return `SELECT ` + cited(\"x\") + ` AS at` }\n", 0},
+		"another table's time": {"package p\nfunc cited() string { return `(SELECT max(au.occurred_at) FROM audit_log au)` }\n" +
+			"func f(b string) string { return cited() + ` > ` + b }\n", 0},
+		"placed by the owner": {placed + "func f(b string) string { return cited(\"x\") + ` > ` + b }\n", 0},
+	} {
+		if got := helperSourceCompares(t, c.source); len(got) != c.want || (c.want > 0 && got[0].waived) {
+			t.Errorf("%s: the census found %+v, want %d unwaived", name, got, c.want)
+		}
+	}
+	waived := raw + "func f(b string) string {\n\t// occurred_at raw: a retention age, not a date\n\treturn cited(\"x\") + ` > ` + b\n}\n"
+	if got := helperSourceCompares(t, waived); len(got) != 1 || !got[0].waived {
+		t.Errorf("a waived helper comparison read as %+v", got)
+	}
+}
+
+// helperSourceCompares runs the helper census over a planted Go file.
+func helperSourceCompares(t *testing.T, source string) []rawCompare {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), "seeded.go", source, parser.ParseComments)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return helperCompares("seeded.go", file, []byte(source), rawTimeHelpers(file))
 }
 
 // seededCompares runs the census over SQL planted in a constant.

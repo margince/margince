@@ -87,11 +87,11 @@ func scoutEvidenceSQL(in func(string) string, document string) string {
 	   WHERE s.kind IN ('new_opportunity', 'commitment_made')
 	     AND (s.kind <> 'new_opportunity' OR (` + scoutBuyerSignal("s") + ` AND ` + unlinkedCommercialMatter("s") + `))
 	     AND s.status = 'open' AND s.archived_at IS NULL AND s.visibility = 'workspace'
-	     AND ` + in("source.occurred_at" /* occurred_at raw: the time a signal cites carries no precision */) + `
+	     AND ` + in("source.occurred_at" /* occurred_at raw: a signal's cited time is placed already */) + `
 	     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
 	           WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
 	             WHERE ca.id = ` + storekit.CitedActivityID("cite") + ` AND ` + workspaceEvidence("ca") + `))
-	     AND ` + scoutCandidate("s.resolved_company_id", "source.occurred_at" /* occurred_at raw: the time a signal cites carries no precision */) + `
+	     AND ` + scoutCandidate("s.resolved_company_id", "source.occurred_at" /* occurred_at raw: a signal's cited time is placed already */) + `
 	  UNION ALL
 	  SELECT filed.company_id, 'attachment', at.id, a.occurred_at, a.occurred_precision = 'day', NULL,
 	         coalesce(nullif(at.checksum, ''), at.id::text), NULL::text
