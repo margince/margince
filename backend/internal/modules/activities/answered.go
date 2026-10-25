@@ -139,7 +139,7 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 const answerMailColumns = `answer_mail.id, answer_mail.kind, answer_mail.channel_provider,
 	answer_mail.direction, answer_mail.counterparty_outbound_attested, answer_mail.restricted_at,
 	answer_mail.audience, answer_mail.source_activity_id, answer_mail.archived_at,
-	answer_mail.occurred_at, answer_mail.subject`
+	answer_mail.occurred_at, answer_mail.occurred_precision, answer_mail.subject`
 
 // touchAnswerArm is a logged call or held meeting among the activities walk
 // names for the sender's contact.
