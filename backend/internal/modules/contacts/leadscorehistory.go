@@ -22,6 +22,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// ScoreCapturedLeadTx gives a lead that capture just inserted the score and
+// first history point a hand-created lead gets from CreateLead.
+//
+// Capture owns the INSERT and cannot import this module, so compose hands it
+// this function. It scores the title and origin the row stored, the same
+// inputs the create path scores.
+func ScoreCapturedLeadTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) error {
+	var title, origin *string
+	if err := tx.QueryRow(ctx, `SELECT title, origin FROM lead WHERE id = $1`, leadID).Scan(&title, &origin); err != nil {
+		return fmt.Errorf("read captured lead for scoring: %w", err)
+	}
+	fit, err := scoreNewLead(ctx, tx, deref(title), origin)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE lead SET score = $2 WHERE id = $1`, leadID, fit.Score); err != nil {
+		return fmt.Errorf("score captured lead: %w", err)
+	}
+	return appendLeadScoreHistory(ctx, tx, leadID, fit.Score, fit, nil)
+}
+
 // appendLeadScoreHistory records one point in the series.
 //
 // `displayed` is what the lead row now carries — the human's number while

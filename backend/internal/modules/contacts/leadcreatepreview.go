@@ -96,12 +96,17 @@ func (s *Store) PreviewLeadCreationForActor(ctx context.Context, in CreateLeadIn
 }
 
 func initialLeadScore(ctx context.Context, tx pgx.Tx, in CreateLeadInput) (LeadScoring, error) {
+	return scoreNewLead(ctx, tx, deref(in.Title), in.Origin)
+}
+
+// scoreNewLead is the score every new lead opens with, whoever writes the row.
+func scoreNewLead(ctx context.Context, tx pgx.Tx, title string, origin *string) (LeadScoring, error) {
 	intents, err := LoadOriginIntents(ctx, tx)
 	if err != nil {
 		return LeadScoring{}, err
 	}
 	// New leads have no behavioral signals to age.
-	return ScoreLeadDetail(deref(in.Title), intents.Of(in.Origin), nil, time.Time{}), nil
+	return ScoreLeadDetail(title, intents.Of(origin), nil, time.Time{}), nil
 }
 
 func (s *Store) previewCreatedLeadMatch(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []fieldcatalog.Column) (*crmcontracts.Lead, error) {

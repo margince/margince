@@ -85,6 +85,11 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 	if !created {
 		return ref, nil, nil, nil
 	}
+	if s.scoreLead != nil {
+		if err := s.scoreLead(ctx, tx, id); err != nil {
+			return datasource.EntityRef{}, nil, nil, fmt.Errorf("capture: score new lead: %w", err)
+		}
+	}
 	auditID, err := storekit.Audit(ctx, tx, "create", "lead", id.UUID, nil, fields)
 	if err != nil {
 		return datasource.EntityRef{}, nil, nil, err
