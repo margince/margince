@@ -5814,6 +5814,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "docs.category.email": "E-Mail-Anhang",
   "docs.category.message": "Nachrichtenanhang",
   "docs.category.other": "Sonstiges",
+  "docs.category.link": "Gesendete Links",
   "files.title": "Dateien",
   "files.empty":
     "Noch keine Dateien an diesem Deal. Lade eine Datei hoch oder verknüpfe eine E-Mail mit Anhang.",

@@ -1372,11 +1372,12 @@ public.attachment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/ma
 public.attachment.activity_id uuid gen=- def=-
 public.attachment.archived_at timestamp with time zone gen=- def=-
 public.attachment.attachment_byte_size_js_safe CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))
-public.attachment.attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text])))
+public.attachment.attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text, 'link'::text])))
 public.attachment.attachment_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES contract(id) ON DELETE SET NULL
 public.attachment.attachment_doc_state_check CHECK ((doc_state = ANY (ARRAY['draft'::text, 'current'::text, 'final'::text, 'superseded'::text])))
 public.attachment.attachment_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
 public.attachment.attachment_external_identity_complete CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))
+public.attachment.attachment_link_shape CHECK ((((category = 'link'::text) = (url IS NOT NULL)) AND ((category <> 'link'::text) OR ((storage_key = ''::text) AND bytes_withheld AND (url ~ '^https?://'::text) AND (length(url) <= 2048)))))
 public.attachment.attachment_pkey PRIMARY KEY (id)
 public.attachment.attachment_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES attachment(id) ON DELETE SET NULL (supersedes_id)
 public.attachment.attachment_supersedes_not_self CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))
@@ -1406,6 +1407,7 @@ public.attachment.supersedes_id uuid gen=- def=-
 public.attachment.title text gen=- def=-
 public.attachment.trg_attachment_updated CREATE TRIGGER trg_attachment_updated BEFORE UPDATE ON public.attachment FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.attachment.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.attachment.url text gen=- def=-
 public.attachment_account_ix CREATE INDEX attachment_account_ix ON public.attachment USING btree (company_id, pinned DESC, created_at DESC) WHERE (archived_at IS NULL)
 public.attachment_contract_ix CREATE INDEX attachment_contract_ix ON public.attachment USING btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))
 public.attachment_external_part_key CREATE UNIQUE INDEX attachment_external_part_key ON public.attachment USING btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)

@@ -5663,6 +5663,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.category.email": "Tệp đính kèm email",
   "docs.category.message": "Tệp đính kèm tin nhắn",
   "docs.category.other": "Khác",
+  "docs.category.link": "Liên kết đã gửi",
   "files.title": "Tệp",
   "files.empty":
     "Chưa có tệp nào trên deal này. Tải lên một tệp, hoặc liên kết một email có tệp đính kèm.",

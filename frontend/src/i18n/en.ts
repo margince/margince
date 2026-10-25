@@ -5875,6 +5875,7 @@ export const en = {
   "docs.category.email": "Email attachment",
   "docs.category.message": "Message attachment",
   "docs.category.other": "Other",
+  "docs.category.link": "Links sent",
   "files.title": "Files",
   "files.empty":
     "No files on this deal yet. Upload a file, or link an email with an attachment.",

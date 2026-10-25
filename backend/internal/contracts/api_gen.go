@@ -2070,6 +2070,7 @@ const (
 	AttachmentCategoryContract          AttachmentCategory = "contract"
 	AttachmentCategoryEmailAttachment   AttachmentCategory = "email_attachment"
 	AttachmentCategoryLegal             AttachmentCategory = "legal"
+	AttachmentCategoryLink              AttachmentCategory = "link"
 	AttachmentCategoryMessageAttachment AttachmentCategory = "message_attachment"
 	AttachmentCategoryOffer             AttachmentCategory = "offer"
 	AttachmentCategoryOther             AttachmentCategory = "other"
@@ -2083,6 +2084,8 @@ func (e AttachmentCategory) Valid() bool {
 	case AttachmentCategoryEmailAttachment:
 		return true
 	case AttachmentCategoryLegal:
+		return true
+	case AttachmentCategoryLink:
 		return true
 	case AttachmentCategoryMessageAttachment:
 		return true
@@ -22899,6 +22902,7 @@ const (
 	ListCompanyDocumentsParamsCategoryContract          ListCompanyDocumentsParamsCategory = "contract"
 	ListCompanyDocumentsParamsCategoryEmailAttachment   ListCompanyDocumentsParamsCategory = "email_attachment"
 	ListCompanyDocumentsParamsCategoryLegal             ListCompanyDocumentsParamsCategory = "legal"
+	ListCompanyDocumentsParamsCategoryLink              ListCompanyDocumentsParamsCategory = "link"
 	ListCompanyDocumentsParamsCategoryMessageAttachment ListCompanyDocumentsParamsCategory = "message_attachment"
 	ListCompanyDocumentsParamsCategoryOffer             ListCompanyDocumentsParamsCategory = "offer"
 	ListCompanyDocumentsParamsCategoryOther             ListCompanyDocumentsParamsCategory = "other"
@@ -22912,6 +22916,8 @@ func (e ListCompanyDocumentsParamsCategory) Valid() bool {
 	case ListCompanyDocumentsParamsCategoryEmailAttachment:
 		return true
 	case ListCompanyDocumentsParamsCategoryLegal:
+		return true
+	case ListCompanyDocumentsParamsCategoryLink:
 		return true
 	case ListCompanyDocumentsParamsCategoryMessageAttachment:
 		return true
@@ -23373,6 +23379,7 @@ const (
 	ListDealDocumentsParamsCategoryContract          ListDealDocumentsParamsCategory = "contract"
 	ListDealDocumentsParamsCategoryEmailAttachment   ListDealDocumentsParamsCategory = "email_attachment"
 	ListDealDocumentsParamsCategoryLegal             ListDealDocumentsParamsCategory = "legal"
+	ListDealDocumentsParamsCategoryLink              ListDealDocumentsParamsCategory = "link"
 	ListDealDocumentsParamsCategoryMessageAttachment ListDealDocumentsParamsCategory = "message_attachment"
 	ListDealDocumentsParamsCategoryOffer             ListDealDocumentsParamsCategory = "offer"
 	ListDealDocumentsParamsCategoryOther             ListDealDocumentsParamsCategory = "other"
@@ -23386,6 +23393,8 @@ func (e ListDealDocumentsParamsCategory) Valid() bool {
 	case ListDealDocumentsParamsCategoryEmailAttachment:
 		return true
 	case ListDealDocumentsParamsCategoryLegal:
+		return true
+	case ListDealDocumentsParamsCategoryLink:
 		return true
 	case ListDealDocumentsParamsCategoryMessageAttachment:
 		return true
@@ -27734,7 +27743,7 @@ type AtRiskRelationships struct {
 type Attachment struct {
 	ByteSize *int64 `json:"byte_size,omitempty"`
 
-	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read.
+	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes.
 	BytesWithheld *bool `json:"bytes_withheld,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
@@ -27742,6 +27751,10 @@ type Attachment struct {
 
 	// Category What kind of document this is. Closed vocabulary; `other` is the
 	// honest default, not a fallback for an unknown value.
+	//
+	// `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+	// Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+	// and the category cannot be set or changed through a metadata patch.
 	//
 	// `email_attachment` and `message_attachment` record PROVENANCE rather than
 	// content: capture derives them from the transport the file arrived on, so a
@@ -27780,10 +27793,17 @@ type Attachment struct {
 
 	// Title A display name distinct from the filename, showing what a reader looks for rather than what arrived.
 	Title *string `json:"title,omitempty"`
+
+	// Url The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download.
+	Url *string `json:"url,omitempty"`
 }
 
 // AttachmentCategory What kind of document this is. Closed vocabulary; `other` is the
 // honest default, not a fallback for an unknown value.
+//
+// `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+// Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+// and the category cannot be set or changed through a metadata patch.
 //
 // `email_attachment` and `message_attachment` record PROVENANCE rather than
 // content: capture derives them from the transport the file arrived on, so a

@@ -34937,6 +34937,10 @@ export interface components {
              * @description What kind of document this is. Closed vocabulary; `other` is the
              *     honest default, not a fallback for an unknown value.
              *
+             *     `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+             *     Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+             *     and the category cannot be set or changed through a metadata patch.
+             *
              *     `email_attachment` and `message_attachment` record PROVENANCE rather than
              *     content: capture derives them from the transport the file arrived on, so a
              *     file that came with a Telegram message is not reported as an email one. The
@@ -34947,7 +34951,7 @@ export interface components {
              *     uploaded file, which has no arrival to claim (422 `category_not_assertable`).
              * @enum {string}
              */
-            category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other";
+            category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
             /** @description A display name distinct from the filename, showing what a reader looks for rather than what arrived. */
             title?: string | null;
             /**
@@ -34972,8 +34976,10 @@ export interface components {
              * @description The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
-            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. */
+            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes. */
             readonly bytes_withheld?: boolean;
+            /** @description The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download. */
+            readonly url?: string | null;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -79597,7 +79603,7 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
-                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other";
+                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
                 include_hidden?: boolean;
             };
             header?: never;
@@ -80782,7 +80788,7 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
-                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other";
+                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
                 doc_state?: "draft" | "current" | "final" | "superseded";
                 pinned_only?: boolean;
                 /** @description Only the paper filed against this agreement (CONTRACT-DDL-5). */

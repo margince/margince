@@ -12,6 +12,7 @@ import {
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { attachmentAnchor } from "../../lib/attachmentlink";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -54,6 +55,7 @@ const CATEGORY_LABELS: Record<Category, MessageKey> = {
   email_attachment: "docs.category.email",
   message_attachment: "docs.category.message",
   other: "docs.category.other",
+  link: "docs.category.link",
 };
 
 // The chips a reader can press. `contract` is absent because the agreements
@@ -67,6 +69,7 @@ const FILTER_CATEGORIES: readonly Category[] = [
   "email_attachment",
   "message_attachment",
   "other",
+  "link",
 ];
 
 const STATE_LABELS: Record<DocState, MessageKey> = {
@@ -331,11 +334,7 @@ function DocumentRow({
               if somebody gave it one, else the filename: a display name is what
               a reader looks for; the filename is what arrived, and it is what
               the saved file is called. */}
-          <a
-            className="co-rowlink rec-title"
-            href={`/v1/attachments/${doc.id}`}
-            download={doc.filename}
-          >
+          <a className="co-rowlink rec-title" {...attachmentAnchor(doc)}>
             {doc.title || doc.filename}
           </a>
           {/* What qualifies the file, on one quiet line under its name: the

@@ -28539,7 +28539,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - name: category
           in: query
-          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other] }
+          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other, link] }
         - name: include_hidden
           in: query
           schema: { type: boolean, default: false }
@@ -29826,7 +29826,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - name: category
           in: query
-          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other] }
+          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other, link] }
         - name: doc_state
           in: query
           schema: { type: string, enum: [draft, current, final, superseded] }
@@ -47920,10 +47920,14 @@ components:
         checksum: { type: [string, 'null'], description: 'sha256 of the bytes, for integrity/dedupe.' }
         category:
           type: string
-          enum: [contract, offer, legal, email_attachment, message_attachment, other]
+          enum: [contract, offer, legal, email_attachment, message_attachment, other, link]
           description: |
             What kind of document this is. Closed vocabulary; `other` is the
             honest default, not a fallback for an unknown value.
+
+            `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+            Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+            and the category cannot be set or changed through a metadata patch.
 
             `email_attachment` and `message_attachment` record PROVENANCE rather than
             content: capture derives them from the transport the file arrived on, so a
@@ -47973,6 +47977,14 @@ components:
           description: >-
             True for a file a private message carried that was recorded by name, size and
             type only: no bytes were kept, so there is nothing to download (404) or read.
+            Also true for a `link` row, which is a pointer and has no bytes.
+        url:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            The address of a `link` row, and null for every other category. It is an http or https
+            address on a known document host. The reader renders it as an outbound link to open in
+            a new tab, never as a download.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         created_at: { type: string, format: date-time }

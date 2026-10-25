@@ -170,6 +170,43 @@ describe("the contact's files tab", () => {
     expect(signed.getAttribute("download")).toBe("signed.pdf");
   });
 
+  it("opens a document link in a new tab instead of downloading it", async () => {
+    stub({
+      data: [
+        attachment({
+          id: "l-1",
+          entity_id: "a-1",
+          filename: "Q4 plan",
+          category: "link",
+          url: "https://docs.google.com/presentation/d/abc/edit",
+          bytes_withheld: true,
+        }),
+        attachment({
+          id: "l-2",
+          entity_id: "a-1",
+          filename: "tricky",
+          category: "link",
+          url: "javascript:alert(1)",
+          bytes_withheld: true,
+        }),
+      ],
+      page: { has_more: false },
+    });
+    show(<ContactFilesTab contactId="p-1" />);
+
+    const link = await screen.findByRole("link", { name: "Q4 plan" });
+    expect(link.getAttribute("href")).toBe(
+      "https://docs.google.com/presentation/d/abc/edit",
+    );
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.hasAttribute("download")).toBe(false);
+    expect(screen.getByRole("button", { name: /Links sent/ })).toBeTruthy();
+
+    const tricky = screen.getByRole("link", { name: "tricky" });
+    expect(tricky.getAttribute("href")).toBe("/v1/attachments/l-2");
+  });
+
   it("prefers the title a human gave over the filename that arrived", async () => {
     stub({
       data: [

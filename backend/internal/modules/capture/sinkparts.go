@@ -58,6 +58,10 @@ type FileKeeper interface {
 	// with no bytes stored: the name, size and type, and nothing to open.
 	RecordWithheld(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 		from FileSource, files []CapturedFile) error
+	// RecordLinks writes a row for each document link a message carried, with
+	// no bytes: the address and the text it was shown under.
+	RecordLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+		from FileSource, links []MailLink) error
 }
 
 // CapturedFile is one file a message carried, already bounded, renamed safely
@@ -225,7 +229,10 @@ func (s *Sink) keepParts(
 	if err := s.recordParts(ctx, tx, activityID, rec, fields, staged); err != nil {
 		return rec, err
 	}
-	return rec, s.recordWithheldParts(ctx, tx, activityID, rec, fields, withheldParts)
+	if err := s.recordWithheldParts(ctx, tx, activityID, rec, fields, withheldParts); err != nil {
+		return rec, err
+	}
+	return rec, s.recordLinks(ctx, tx, activityID, rec, fields)
 }
 
 // recordWithheldParts names the files a private message carried, on rows with

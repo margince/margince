@@ -24,3 +24,4 @@
 1792863000_every_sender_may_direct_a_send.down.sql | role | updates only the fixed set of system roles, at most three rows per workspace
 1792887435_the_sender_kind_check_knows_vendor_pitch.down.sql | capture_pending_counterparty | runs only on a rollback and rewrites only rows judged vendor_pitch since the upgrade, one per sender address
 1792889569_a_stored_country_is_checked_against_its_postal_code.up.sql | * | the procedural bodies are trigger functions that delete the one check row of the record being updated, in tables this migration creates empty; the migration changes no existing row
+1792896282_a_document_link_is_a_row.down.sql | attachment | a rollback deletes only the link rows this release adds, written since the release by live capture and the bounded repair task, at most 25 per captured mail

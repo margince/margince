@@ -192,6 +192,36 @@ type capturedFileRow struct {
 	key      string
 	checksum *string
 	withheld bool
+	// url is set for a document link, which has no bytes: the row is a pointer.
+	url *string
+}
+
+// sizeColumn is the byte_size to store: a link has no size, so none rather than 0.
+func (r capturedFileRow) sizeColumn() *int {
+	if r.url != nil {
+		return nil
+	}
+	return &r.byteSize
+}
+
+// auditImage is the metadata an audit row holds for a captured file. A link
+// carries its host and never its address, because a share link can hold an
+// access key.
+//
+//craft:ignore naked-any the audit image is the open JSON object storekit.Audit takes
+func (r capturedFileRow) auditImage(activityID ids.ActivityID, from CapturedFileSource) map[string]any {
+	image := map[string]any{
+		"entity_type":      linkEntityActivity,
+		"entity_id":        activityID.String(),
+		fieldCategory:      from.Category,
+		"byte_size":        r.sizeColumn(),
+		"source_system":    from.System,
+		fieldBytesWithheld: r.withheld,
+	}
+	if r.url != nil {
+		image["url_host"] = linkHostOf(*r.url)
+	}
+	return image
 }
 
 // No allowlist here, unlike UploadAttachment: a sender's file is evidence of what
@@ -213,17 +243,17 @@ func insertCapturedAttachment(
 			id, entity_type, entity_id, filename, content_type,
 			byte_size, storage_key, checksum, source, captured_by,
 			category, activity_id,
-			external_source_id, external_part_id, declared_type, bytes_withheld)
+			external_source_id, external_part_id, declared_type, bytes_withheld, url)
 		VALUES ($1, 'activity', $2, $3, $4,
 		        $5, $6, $7, $8, $9,
 		        $10, $2,
-		        $11, $12, $13, $14)
+		        $11, $12, $13, $14, $15)
 		ON CONFLICT (external_source_id, external_part_id)
 		  WHERE external_source_id IS NOT NULL DO NOTHING`,
 		row.id, activityID, row.file.Filename, nullIfEmpty(row.file.ContentType),
-		row.byteSize, row.key, row.checksum, from.System, from.CapturedBy,
+		row.sizeColumn(), row.key, row.checksum, from.System, from.CapturedBy,
 		from.Category, providerMessageKey(from), row.file.PartID,
-		nullIfEmpty(row.file.DeclaredType), row.withheld)
+		nullIfEmpty(row.file.DeclaredType), row.withheld, row.url)
 	if err != nil {
 		return fmt.Errorf("record a captured file: %w", err)
 	}
@@ -236,14 +266,7 @@ func insertCapturedAttachment(
 	// Every mutation leaves an audit row. The image is metadata only — never
 	// the bytes and never anything a sender wrote beyond the name we already
 	// sanitized — matching how a captured activity is audited (ADR-0072/A118).
-	if _, err := storekit.Audit(ctx, tx, "create", "attachment", row.id, nil, map[string]any{
-		"entity_type":      linkEntityActivity,
-		"entity_id":        activityID.String(),
-		"category":         from.Category,
-		"byte_size":        row.byteSize,
-		"source_system":    from.System,
-		fieldBytesWithheld: row.withheld,
-	}); err != nil {
+	if _, err := storekit.Audit(ctx, tx, "create", "attachment", row.id, nil, row.auditImage(activityID, from)); err != nil {
 		return fmt.Errorf("audit a captured file: %w", err)
 	}
 	return nil
