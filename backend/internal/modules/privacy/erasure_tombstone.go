@@ -42,7 +42,8 @@ const (
 )
 
 // certifyErasure ends the cascade: it suppresses the subject's channel
-// identities, then writes the tombstone that certifies every count.
+// identities, then writes the tombstone that certifies every count. A request
+// whose erasure is already certified keeps that tombstone and its account.
 func certifyErasure(ctx context.Context, tx *tallyTx, subject ids.ContactID, reason string,
 	identities []channelIdentity, uncounted []string, counts contactErasureCounts,
 ) (erasureaccount.Account, error) {
@@ -51,6 +52,12 @@ func certifyErasure(ctx context.Context, tx *tallyTx, subject ids.ContactID, rea
 		return erasureaccount.Account{}, err
 	}
 	counts.channelIdentitiesSuppressed = suppressed
+	if fulfillingCase(reason) != (ids.UUID{}) {
+		prior, certified, err := certifiedErasure(ctx, tx, reason, subject.UUID)
+		if err != nil || certified {
+			return prior, err
+		}
+	}
 	account := erasureaccount.Account{Rows: tx.counted(), Uncounted: uncounted}
 	return account, tombstoneContactErasure(ctx, tx, subject, reason, counts, account)
 }
@@ -87,24 +94,6 @@ func tombstoneContactErasure(ctx context.Context, tx pgx.Tx, subject ids.Contact
 		return err
 	}
 	return storekit.EmitEventForEntity(ctx, tx, auditID, "contact", subject.UUID, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason))
-}
-
-// priorErasure answers the account of the erasure a "dsr:<id>" reason already
-// carried out on contact. Any other reason names no single erasure.
-func (e *Eraser) priorErasure(ctx context.Context, contact ids.UUID, reason string) (erasureaccount.Account, bool, error) {
-	if fulfillingCase(reason) == (ids.UUID{}) {
-		return erasureaccount.Account{}, false, nil
-	}
-	var (
-		account erasureaccount.Account
-		done    bool
-	)
-	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		account, done, err = certifiedErasure(ctx, tx, reason, contact)
-		return err
-	})
-	return account, done, err
 }
 
 // CertifiedErasureTx answers the account the tombstone of reason certifies,

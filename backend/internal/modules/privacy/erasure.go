@@ -84,16 +84,14 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 // work, for the proof a closed privacy request keeps. The cascade runs on a
 // tallyTx, so every statement it makes is counted.
 //
-// A request's erasure runs once: a replay of "dsr:<id>" on a contact that
-// request erased answers the first account and runs nothing.
+// A replay of "dsr:<id>" runs the cascade again, which is idempotent and
+// erases what was written since. It certifies once: the first tombstone stays
+// the only one, and its account is the answer.
 //
 //nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
 func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erased erasureaccount.Account, err error) {
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return erasureaccount.Account{}, err
-	}
-	if prior, done, err := e.priorErasure(ctx, contactID, reason); err != nil || done {
-		return prior, err
 	}
 	subject := ids.From[ids.ContactKind](contactID)
 	err = e.db.Tx(ctx, func(raw pgx.Tx) error {

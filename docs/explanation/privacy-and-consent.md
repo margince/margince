@@ -262,9 +262,10 @@ since rotated.
   statement touched, by table and verb, so a new arm is counted without a change here. A row two
   statements touch counts twice. Objects outside the database, such as attachment files, are
   named as not counted. The tombstone carries this account, and so does the proof.
-- **A request erases once.** A replay of reason `dsr:<request-id>` answers the account of the
-  tombstone that reason already carries and runs nothing. So a close that failed after its erasure
-  committed stores the first account when it is retried.
+- **A request certifies its erasure once.** A replay of reason `dsr:<request-id>` runs the whole
+  erasure again, so text written about the subject since the first run goes too. It writes no
+  second tombstone or event, and answers the account the first tombstone carries. So a close that
+  failed after its erasure committed stores the first account when it is retried.
 - **A proof lasts three years past its year.** `ProofKeepUntil` dates it to the first day of the
   year after that, with the year and that day both read in `installation.timezone`. The
   `privacy_request_proof_expiry` job deletes it in the first month of that year, unless the case

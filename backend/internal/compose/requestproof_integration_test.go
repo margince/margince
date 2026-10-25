@@ -144,10 +144,22 @@ func TestFulfillingAnErasureWritesOneProofWithTheErasuresOwnAccount(t *testing.T
 	closing := `{"status":"fulfilled","resolution":"erased","identity_check":"id_document","requester_email":"Henrike@Proof.test"}`
 
 	e.patch(t, request, closing)
+	first := e.tombstone(t, request)
+	// The erased contact refuses a new link. So the later text lands on the
+	// timeline it already has, as an edit of the note would write it.
+	const later = "Noch eine Nachricht nach der Loeschung"
+	e.WsExec(t, `UPDATE activity SET body = $2 WHERE id IN (
+		SELECT activity_id FROM activity_link WHERE contact_id = $1)`, contact, later)
 	e.patch(t, request, closing)
 
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE body = $1`, later); n != 0 {
+		t.Fatalf("the replay left %d note(s) written after the first erasure", n)
+	}
 	if n := e.proofCount(t, request); n != 1 {
 		t.Fatalf("%d proofs after a fulfilment and its replay, want 1", n)
+	}
+	if again := e.tombstone(t, request); !maps.Equal(again.Rows, first.Rows) {
+		t.Fatalf("the replay changed the certified account from %v to %v", first.Rows, again.Rows)
 	}
 	if tombstones, events := e.erasureTrail(t, contact, request); tombstones != 1 || events != 1 {
 		t.Fatalf("%d erase tombstones and %d events after a replay, want 1 and 1", tombstones, events)

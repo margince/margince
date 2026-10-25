@@ -49,9 +49,9 @@ func requestProofDataTask() datatask.Task {
 		},
 	}
 	return datatask.Task{
-		ID: "core/1792887178_privacy_request_proofs", Version: 1,
+		ID: "core/1792894391_privacy_request_proofs", Version: 1,
 		Title:    "Recording the proof of privacy requests answered earlier",
-		Requires: []string{"core/1792887178"},
+		Requires: []string{"core/1792894391"},
 		Steps:    []datatask.Step{step},
 	}
 }
