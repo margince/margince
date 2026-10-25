@@ -56425,10 +56425,10 @@ type ListActivitiesParams struct {
 	// ThreadKey One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread.
 	ThreadKey *string `form:"thread_key,omitempty" json:"thread_key,omitempty"`
 
-	// OccurredAfter Only activities that occurred at or after this instant (inclusive). Pairs with `occurred_before` for a date range; either may stand alone.
+	// OccurredAfter Only activities that occurred at or after this instant (inclusive). A `day` entry is placed where its date begins in the installation's time zone. Pairs with `occurred_before` for a date range; either may stand alone.
 	OccurredAfter *time.Time `form:"occurred_after,omitempty" json:"occurred_after,omitempty"`
 
-	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`.
+	// OccurredBefore Only activities that occurred strictly before this instant (exclusive), a `day` entry placed where its date begins in the installation's time zone. So a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`, both in that zone.
 	OccurredBefore *time.Time `form:"occurred_before,omitempty" json:"occurred_before,omitempty"`
 
 	// WaitingReply Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.

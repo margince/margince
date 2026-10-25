@@ -2578,12 +2578,12 @@ paths:
           in: query
           schema: {type: string, format: date-time}
           description: >-
-            Only activities that occurred at or after this instant (inclusive). Pairs with `occurred_before` for a date range; either may stand alone.
+            Only activities that occurred at or after this instant (inclusive). A `day` entry is placed where its date begins in the installation's time zone. Pairs with `occurred_before` for a date range; either may stand alone.
         - name: occurred_before
           in: query
           schema: {type: string, format: date-time}
           description: >-
-            Only activities that occurred strictly before this instant (exclusive), so a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`.
+            Only activities that occurred strictly before this instant (exclusive), a `day` entry placed where its date begins in the installation's time zone. So a day range is `occurred_after=<day 00:00>&occurred_before=<next day 00:00>`, both in that zone.
         - name: waiting_reply
           in: query
           schema: {type: boolean}

@@ -21,7 +21,8 @@ import (
 
 // The account's 30-day count holds the thirty dates up to today. A day call
 // dated today, the window's last date, counts though its stored noon is still
-// ahead east of UTC+12. The date before the window does not, nor tomorrow's.
+// ahead east of UTC+12. The date before the window does not, nor tomorrow's,
+// nor a call at the instant read.
 func TestADayCallCountsInTheThirtyDaysItsDateFallsIn(t *testing.T) {
 	for _, zone := range []string{"Pacific/Auckland", "Pacific/Kiritimati"} {
 		t.Run(zone, func(t *testing.T) {
@@ -31,12 +32,14 @@ func TestADayCallCountsInTheThirtyDaysItsDateFallsIn(t *testing.T) {
 			today := occurredday.AnchorIn(now, loc)
 			inside, buyer := logCallsOn(t, e, "Inside Freight", today, today.AddDate(0, 0, -29))
 			outside, _ := logCallsOn(t, e, "Outside Freight", today.AddDate(0, 0, -30), today.AddDate(0, 0, 1))
-			instant, subject := now.Add(-time.Hour), "Called an hour ago"
-			if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-				Kind: "call", Subject: &subject, Source: "manual", OccurredAt: &instant,
-				Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: buyer}},
-			}); err != nil {
-				t.Fatal(err)
+			// The window is half open: a call at the very instant read is not in it yet.
+			for subject, at := range map[string]time.Time{"Called an hour ago": now.Add(-time.Hour), "Calling now": now} {
+				if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+					Kind: "call", Subject: &subject, Source: "manual", OccurredAt: &at,
+					Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: buyer}},
+				}); err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			for company, want := range map[ids.UUID]int{inside: 3, outside: 0} {

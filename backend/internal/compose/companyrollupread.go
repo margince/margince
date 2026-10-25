@@ -399,7 +399,7 @@ func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UU
 }
 
 // companyActivityCount30d counts live activities that reach any included
-// company from asOf−30d, a day entry by its date, and have happened by asOf.
+// company in [asOf−30d, asOf), a day entry by its date, and have happened by asOf.
 // The upper bound keeps a future-dated activity (a scheduled call, a
 // clock-skewed import) out of a count that claims to describe the PAST 30 days.
 //
@@ -417,7 +417,7 @@ func companyActivityCount30d(ctx context.Context, tx pgx.Tx, included []ids.UUID
 		FROM activity a
 		WHERE `+activities.CompanyLinkedActivityExistsAny(1)+`
 		  AND a.archived_at IS NULL
-		  AND `+occurredday.FromSQL("a", "$2")+` AND `+occurredday.HappenedSQL("a", "$3"),
+		  AND `+occurredday.WithinSQL("a", "$2", "$3")+` AND `+occurredday.HappenedSQL("a", "$3"),
 		included, asOf.AddDate(0, 0, -30), asOf).Scan(&count)
 	return count, err
 }
