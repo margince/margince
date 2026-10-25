@@ -105,6 +105,13 @@ func InteractionCountsSQL(alias string) string {
 		" AND " + WrittenByHumanSQL(alias)
 }
 
+// InteractionCountsAtSQL is InteractionCountsSQL for a reading made at now: a
+// row dated after now has not happened, so it is no one's latest touch. The
+// contact strength folds render it with their bound clock, never the database's.
+func InteractionCountsAtSQL(alias, now string) string {
+	return "(" + InteractionCountsSQL(alias) + " AND " + alias + ".occurred_at <= " + now + ")"
+}
+
 // InteractionRolesSQL lists the participant roles that make a party part of an
 // exchange. The graph fold and the seats-without-mailbox notice both read it,
 // so a role added for one cannot be missed by the other.
