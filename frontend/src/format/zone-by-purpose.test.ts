@@ -555,6 +555,14 @@ const pinnedZones: { file: string; why: string }[] = [
     file: "features/settings/users-admin.stories.tsx",
     why: "Installation-settings fixtures backing the users-admin story rows.",
   },
+  {
+    file: "design-system/standingtimeline.test.tsx",
+    why: "A day entry dated today is stored at noon UTC, which is later than a late evening in UTC+14; only that zone shows the line still draws it.",
+  },
+  {
+    file: "features/contacts/contactmemory.test.tsx",
+    why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the card prints the date the entry names.",
+  },
 ];
 
 type Finding = { file: string; line: number; text: string };

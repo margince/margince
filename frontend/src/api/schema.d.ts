@@ -29678,6 +29678,8 @@ export interface components {
             generated_by?: components["schemas"]["WrittenBy"];
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`, from the newest activity the entry folds. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /** @description How many captured activities this entry folds, so the reader knows whether it is one message or a long exchange. */
             activity_count: number;
             /**
@@ -30803,6 +30805,8 @@ export interface components {
             activity_id?: string | null;
             /** Format: date-time */
             occurred_at?: string | null;
+            /** @description How to read `occurred_at`, from the activity it names. `day` means only its date is known, its UTC date, so a client draws no time. `instant` on a row with no such time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             /**
              * @description The canonical email row behind `activity_id`, when that activity is an email this reader may receive a summary of. The move's basis then opens the message it rests on instead of only naming it.
              *     Carried on this shape as well as on `CompanyBriefEvidence` because the deal card's basis is its own wire type, and a reader that could open a cited message on the brief but not on the move would be the same citation behaving differently on two pages. Same rules as there: withheld carries no words, absence proves nothing, never stored.

@@ -45,11 +45,15 @@ func followUpMove(f facts, met activities.AwaitingReply) crmcontracts.DealStatus
 	if subject == "" {
 		subject = said.Say(statusWords.Meeting)
 	}
-	held := met.SentAt
+	held := untimed(&meetingID, fmt.Sprintf(said.Say(statusWords.Met), subject))
+	held.OccurredAt = &met.SentAt
+	dateOnly := met.Precision == activities.PrecisionDay
+	if dateOnly {
+		held.OccurredPrecision = crmcontracts.OccurredPrecisionOccurredPrecisionDay
+	}
 	return move(ActionDraftEmail,
-		fmt.Sprintf(said.Say(statusWords.FollowUp), said.since(f.now, met.SentAt, f.loc)),
-		map[string]any{argActivityID: meetingID, argLinks: links},
-		crmcontracts.DealNextBestActionEvidence{ActivityId: &meetingID, OccurredAt: &held, Text: fmt.Sprintf(said.Say(statusWords.Met), subject)})
+		fmt.Sprintf(said.Say(statusWords.FollowUp), said.since(f.now, met.SentAt, dateOnly, f.loc)),
+		map[string]any{argActivityID: meetingID, argLinks: links}, held)
 }
 
 // followUpMeeting is the meeting a stored follow-up move names: a draft that

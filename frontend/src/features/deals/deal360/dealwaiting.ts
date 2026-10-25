@@ -36,11 +36,7 @@ export function waitingSince(
     (row) => row.activity_id === card.reply_to && row.occurred_at,
   );
   if (fromMove?.occurred_at) {
-    return {
-      at: fromMove.occurred_at,
-      // Evidence carries no precision of its own; its message summary does.
-      precision: fromMove.email_summary?.occurred_precision ?? "instant",
-    };
+    return { at: fromMove.occurred_at, precision: fromMove.occurred_precision };
   }
   const row = timeline.find((activity) => activity.id === card.reply_to);
   return row

@@ -90,6 +90,24 @@ func TestAnOutstandingRequestOffersAnEvidenceLinkedTask(t *testing.T) {
 	}
 }
 
+// The basis carries the precision of the mail it cites, so a reader counts a
+// day email from its date. A row with no time reads as an instant.
+func TestTheMovesBasisCarriesItsMailsPrecision(t *testing.T) {
+	request := inboundMail(time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC))
+	request.OccurredPrecision = crmcontracts.OccurredPrecisionOccurredPrecisionDay
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{request}}
+	mv := decideMove(f)
+	if len(mv.Evidence) != 1 || mv.Evidence[0].OccurredPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+		t.Fatalf("basis = %+v, want the day mail's precision", mv.Evidence)
+	}
+	task := facts{deal: openDeal(), now: testNow, loc: time.UTC,
+		openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Agree the next step"}}}
+	if got := decideMove(task).Evidence; len(got) != 1 || got[0].OccurredAt != nil ||
+		got[0].OccurredPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionInstant {
+		t.Fatalf("an undated basis = %+v, want no time read as an instant", got)
+	}
+}
+
 func TestTheMoveAndReplyToNameTheSameMail(t *testing.T) {
 	for _, status := range []crmcontracts.DealStatus{crmcontracts.DealStatusOpen, crmcontracts.DealStatusWon, crmcontracts.DealStatusLost} {
 		t.Run(string(status), func(t *testing.T) {

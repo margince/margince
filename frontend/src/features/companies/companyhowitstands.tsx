@@ -137,6 +137,7 @@ export function CompanyHowItStands({
         <StandingTimeline
           label={view.company.display_name}
           asOf={view.as_of}
+          record={zone}
           gap={gap}
           events={events}
           marks={activityMarks(view.activities?.data ?? [], {

@@ -21,6 +21,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
@@ -89,7 +90,7 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 		return move(ActionOpenMeetingBrief,
 			fmt.Sprintf(said.Say(statusWords.Prepare), said.until(f.now, meetingDay(meeting, f.loc), f.loc)),
 			map[string]any{argActivityID: activityID},
-			crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: fmt.Sprintf(said.Say(statusWords.Booked), subject)})
+			untimed(&activityID, fmt.Sprintf(said.Say(statusWords.Booked), subject)))
 	}
 	// A follow-up owed after a meeting outranks open work. The open task is
 	// often this card's own generic step, and the buyer waits on the mail.
@@ -102,7 +103,7 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 		task := f.openTasks[0]
 		activityID := openapi_types.UUID(task.ID)
 		return move(ActionOpenTask, fmt.Sprintf(said.Say(statusWords.Complete), task.Subject), map[string]any{argActivityID: activityID},
-			crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: task.Subject})
+			untimed(&activityID, task.Subject))
 	}
 	if request, ok := unansweredInbound(f); ok {
 		if request.EmailSummary != nil && request.EmailSummary.RequestHasReminder != nil && *request.EmailSummary.RequestHasReminder {
@@ -153,7 +154,7 @@ func farMeetingMove(f facts) crmcontracts.DealStatusCardMove {
 	return move(ActionOpenMeetingBrief,
 		fmt.Sprintf(said.Say(statusWords.FarMeeting), said.until(f.now, meetingDay(meeting, f.loc), f.loc)),
 		map[string]any{argActivityID: activityID},
-		crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: fmt.Sprintf(said.Say(statusWords.Booked), subject)})
+		untimed(&activityID, fmt.Sprintf(said.Say(statusWords.Booked), subject)))
 }
 
 // quietDealMove is the deal nobody has arranged anything on: open, contacted,
@@ -248,7 +249,7 @@ func sinceLastContact(f facts) string {
 	if !ok {
 		return said.Say(statusWords.Never)
 	}
-	return said.since(f.now, last.OccurredAt, f.loc)
+	return said.since(f.now, last.OccurredAt, activitywhen.IsDay(last.OccurredPrecision), f.loc)
 }
 
 // The stakeholder roles this file reasons about. They are the wire values
@@ -380,7 +381,8 @@ func lastContact(f facts) (crmcontracts.Activity, bool) {
 		if a.AutomaticKind != nil {
 			automatic = relstrength.AutomaticKind(*a.AutomaticKind)
 		}
-		if !a.OccurredAt.After(f.now) && relstrength.InteractionCounts(string(a.Kind), status, automatic) {
+		if occurredday.Begun(a.OccurredAt, activitywhen.IsDay(a.OccurredPrecision), f.now, f.loc) &&
+			relstrength.InteractionCounts(string(a.Kind), status, automatic) {
 			return a, true
 		}
 	}
@@ -394,7 +396,7 @@ func nextStepReason(f facts) string {
 		return said.Say(statusWords.NoContactNext)
 	}
 	return fmt.Sprintf(said.Say(statusWords.QuietNext),
-		said.since(f.now, last.OccurredAt, f.loc))
+		said.since(f.now, last.OccurredAt, activitywhen.IsDay(last.OccurredPrecision), f.loc))
 }
 
 func lastContactEvidence(f facts) []crmcontracts.DealNextBestActionEvidence {
@@ -416,12 +418,20 @@ func lastContactEvidence(f facts) []crmcontracts.DealNextBestActionEvidence {
 // truth about that row.
 func evidenceOf(a crmcontracts.Activity, text string) crmcontracts.DealNextBestActionEvidence {
 	id := a.Id
-	out := crmcontracts.DealNextBestActionEvidence{Text: text, ActivityId: &id}
+	out := untimed(&id, text)
 	if !a.OccurredAt.IsZero() {
 		at := a.OccurredAt
-		out.OccurredAt = &at
+		out.OccurredAt, out.OccurredPrecision = &at, a.OccurredPrecision
 	}
 	return out
+}
+
+// untimed cites a record by id alone. The wire reads a row with no time as an
+// instant.
+func untimed(id *openapi_types.UUID, text string) crmcontracts.DealNextBestActionEvidence {
+	return crmcontracts.DealNextBestActionEvidence{
+		ActivityId: id, Text: text, OccurredPrecision: crmcontracts.OccurredPrecisionOccurredPrecisionInstant,
+	}
 }
 
 // subjectOf names a row for a reader. A withheld row is named by its kind:
@@ -448,8 +458,10 @@ func (said statusCopy) subjectOf(a crmcontracts.Activity) string {
 	return *a.Subject
 }
 
-func (said statusCopy) since(now, then time.Time, loc *time.Location) string {
-	return said.spell(elapsed.Days(then, now, loc))
+// since spells the days from an activity to now. A day entry counts from its
+// own date, not from where its stored noon falls in loc.
+func (said statusCopy) since(now, then time.Time, dateOnly bool, loc *time.Location) string {
+	return said.spell(occurredday.DaysSince(then, dateOnly, now, loc))
 }
 
 // meetingDay is when the booked meeting falls for a day count. A day meeting

@@ -88,8 +88,7 @@ function fromEntry(entry: Entry): Said {
     provider: entry.channel_provider ?? null,
     direction: entry.direction,
     occurredAt: entry.occurred_at,
-    // The thread projection carries no precision; its times are instants.
-    occurredPrecision: "instant",
+    occurredPrecision: entry.occurred_precision,
     title: entry.title,
     status: entry.status ?? null,
     emailId:

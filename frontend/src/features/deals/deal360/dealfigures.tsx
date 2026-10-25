@@ -188,6 +188,7 @@ export function DealTimeline({
         name: inputs.deal.name,
       })}
       asOf={inputs.asOf}
+      record={words.zone}
       gap={timelineGap(inputs, words)}
       events={timelineEvents(inputs, words)}
       marks={activityMarks(inputs.activities, {

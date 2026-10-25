@@ -29,7 +29,8 @@ import {
 //
 // A field `x_at` is an activity time too where its record carries
 // `x_precision`. A precision handed to the owner must trace to a wire
-// precision, or stand in for one the wire left out. Any other literal passes
+// precision. Or it is `instant` for an `x_precision` the wire left out, handed
+// beside that record's own `x_at`. Any other literal passes
 // only when the time it is paired with reads no activity time. That is the
 // sibling reaching the same owner call, or else that call's own time.
 //
@@ -174,7 +175,8 @@ function census(program: ts.Program, files: string[]): Census {
     dirname(node.getSourceFile().fileName) === here;
   // Data flows from each key to each node in its set.
   const flows = new Map<ts.Node, Set<ts.Node>>();
-  const reads: { site: Site; targets: ts.Node[] }[] = [];
+  // Each activity time read, with the field it was read from.
+  const reads: { site: Site; targets: ts.Node[]; field: string }[] = [];
   const unjudged: Site[] = [];
   const seeds: ts.Node[] = [];
   const formatFunctions: { name: string; params: ts.Node[] }[] = [];
@@ -247,7 +249,7 @@ function census(program: ts.Program, files: string[]): Census {
         const read = activityTime(leaf.expression, leaf.name.text);
         if (read === null) unjudged.push(siteOf(leaf));
         if (read) {
-          reads.push({ site: siteOf(leaf), targets });
+          reads.push({ site: siteOf(leaf), targets, field: fieldOf(leaf) });
           continue;
         }
       }
@@ -418,7 +420,16 @@ function census(program: ts.Program, files: string[]): Census {
     const read = activityTime(node.parent, name);
     if (read === null) unjudged.push(siteOf(node));
     if (read) {
-      reads.push({ site: siteOf(node), targets: [node] });
+      const from = node.parent.parent;
+      const receiver =
+        ts.isVariableDeclaration(from) && from.initializer
+          ? receiverText(from.initializer)
+          : undefined;
+      reads.push({
+        site: siteOf(node),
+        targets: [node],
+        field: receiver === undefined ? name : `${receiver}.${name}`,
+      });
       return;
     }
     const property = checker.getTypeAtLocation(node.parent).getProperty(name);
@@ -617,10 +628,12 @@ function census(program: ts.Program, files: string[]): Census {
   const wirePrecision = (node: ts.Node) =>
     (ts.isPropertySignature(node) || ts.isPropertyDeclaration(node)) &&
     node.name.getText().endsWith("_precision");
-  // A literal standing in for a precision the wire may leave out.
-  const wireDefault = (literal: ts.Node) => {
+  // `instant` standing in for an optional `x_precision` the wire left out. It
+  // must sit beside its own time: `x_at`, read off the same record.
+  const wireDefault = (literal: ts.StringLiteralLike, time: ts.Node) => {
     const parent = literal.parent;
     if (
+      literal.text !== "instant" ||
       !ts.isBinaryExpression(parent) ||
       parent.operatorToken.kind !== ts.SyntaxKind.QuestionQuestionToken ||
       parent.right !== literal ||
@@ -629,16 +642,25 @@ function census(program: ts.Program, files: string[]): Census {
       return false;
     }
     const field = checker.getSymbolAtLocation(parent.left);
-    return (
-      parent.left.name.text.endsWith("_precision") &&
-      field !== undefined &&
-      (field.flags & ts.SymbolFlags.Optional) !== 0
+    const sibling = fieldOf(parent.left).match(/^(.*)_precision$/)?.[1];
+    if (
+      sibling === undefined ||
+      field === undefined ||
+      (field.flags & ts.SymbolFlags.Optional) === 0
+    ) {
+      return false;
+    }
+    const reaching = upstream([time]);
+    return reads.some(
+      (read) =>
+        read.field === `${sibling}_at` &&
+        read.targets.some((target) => reaching.has(target)),
     );
   };
   const proven = (origin: ts.Node, time: ts.Node) =>
     wirePrecision(origin) ||
     (ts.isStringLiteralLike(origin) &&
-      (wireDefault(origin) || pairedClean(origin, time)));
+      (wireDefault(origin, time) || pairedClean(origin, time)));
   // A precision field the owner declares is a sink too, paired with its `at`.
   const ownerSource = program.getSourceFile(owner);
   if (ownerSource === undefined) throw new Error("the owner is not read");
@@ -675,6 +697,15 @@ function census(program: ts.Program, files: string[]): Census {
     unjudged,
     readers,
   };
+}
+
+// A field read as `receiver.name`, optional chains spelled as plain reads.
+function fieldOf(access: ts.PropertyAccessExpression): string {
+  return `${receiverText(access.expression)}.${access.name.text}`;
+}
+
+function receiverText(node: ts.Expression): string {
+  return node.getText().replace(/\s+/g, "").replaceAll("?.", ".");
 }
 
 // The args, fields or props written beside a literal, at the nearest call,
@@ -856,6 +887,9 @@ describe("an activity's time reaches a clock only through its precision", () => 
       "const day35 = new Intl.DateTimeFormat('en', { day: 'numeric' }); day35.format(new Date(activity.occurred_at));",
       "void (item.source !== 'task' ? formatDate(item.due_at ?? '', 'en', zone) : '');",
       "formatDateTime(touch.last_inbound_at ?? '', 'en', zone);",
+      "formatActivityWhen(touch.last_inbound_at ?? '', touch.last_inbound_precision ?? 'day', 'en', zone);",
+      "formatActivityWhen(touch.last_inbound_at ?? '', touch.last_outbound_precision ?? 'instant', 'en', zone);",
+      "formatActivityWhen(touch.last_inbound_at ?? '', touch.summary?.last_inbound_precision ?? 'instant', 'en', zone);",
     ];
     const sound = [
       "formatActivityWhen(activity.occurred_at, activity.occurred_precision, 'en', zone);",
@@ -901,7 +935,7 @@ function plant(lines: string[]): number[] {
     "declare const zone: string;",
     "declare const t: Translator;",
     'declare const item: components["schemas"]["WorklistItem"];',
-    "declare const touch: { last_inbound_at?: string; last_inbound_precision?: OccurredPrecision };",
+    "declare const touch: { last_inbound_at?: string; last_inbound_precision?: OccurredPrecision; last_outbound_precision?: OccurredPrecision; summary?: { last_inbound_precision?: OccurredPrecision } };",
     "void [formatDate, formatDayMonth, calendarDay, activityDay, formatActivityWhen, activityAgo];",
   ].join(" ");
   const source = [preamble, ...lines].join("\n");

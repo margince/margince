@@ -129,6 +129,7 @@ export function LeadHowItStands({
             name: leadIdentityName(lead) || t("lead.unnamed"),
           })}
           asOf={asOf}
+          record={record}
           events={timeline.events}
           gap={timeline.gap}
           marks={activityMarks(thread.activities, {

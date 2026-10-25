@@ -41565,7 +41565,7 @@ components:
         gains an activity — cost follows usage, and a cold record costs nothing. When no model
         lane exists the deterministic floor (subject + direction + count) occupies the same
         slot, so the card never blanks.
-      required: [key, channel, direction, title, summary, occurred_at, activity_count]
+      required: [key, channel, direction, title, summary, occurred_at, occurred_precision, activity_count]
       properties:
         key:
           type: string
@@ -41591,6 +41591,11 @@ components:
           description: One sentence about what the conversation was, not what it contained.
         generated_by: { $ref: '#/components/schemas/WrittenBy' }
         occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: >-
+            How to read `occurred_at`, from the newest activity the entry folds. `day` means only
+            its date is known, its UTC date, so a client draws no time.
         activity_count:
           type: integer
           minimum: 1
@@ -43193,11 +43198,16 @@ components:
 
     DealNextBestActionEvidence:
       type: object
-      required: [text]
+      required: [text, occurred_precision]
       properties:
         text: { type: string }
         activity_id: { type: [string, 'null'], format: uuid }
         occurred_at: { type: [string, 'null'], format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: >-
+            How to read `occurred_at`, from the activity it names. `day` means only its date is
+            known, its UTC date, so a client draws no time. `instant` on a row with no such time.
         email_summary:
           allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
           readOnly: true

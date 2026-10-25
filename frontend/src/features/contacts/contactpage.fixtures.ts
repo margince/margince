@@ -209,6 +209,7 @@ export const populated: View = {
       summary: "Dana asked to push the retrofit review back a week.",
       generated_by: "deterministic",
       occurred_at: "2026-08-01T10:15:00Z",
+      occurred_precision: "instant",
       activity_count: 3,
       status: "unanswered",
       linked_deal_id: null,

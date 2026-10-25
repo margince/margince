@@ -35948,6 +35948,9 @@ type ConversationMemoryEntry struct {
 	LinkedDealId *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 	OccurredAt   time.Time           `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`, from the newest activity the entry folds. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Status The state a reader acts on: `replied`, `unanswered`, `awaiting_them`, or null when the entry carries no such claim. Derived from direction and what followed it.
 	Status *ConversationMemoryEntryStatus `json:"status,omitempty"`
 
@@ -37547,7 +37550,10 @@ type DealNextBestActionEvidence struct {
 	// Carried on this shape as well as on `CompanyBriefEvidence` because the deal card's basis is its own wire type, and a reader that could open a cited message on the brief but not on the move would be the same citation behaving differently on two pages. Same rules as there: withheld carries no words, absence proves nothing, never stored.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 	OccurredAt   *time.Time    `json:"occurred_at,omitempty"`
-	Text         string        `json:"text"`
+
+	// OccurredPrecision How to read `occurred_at`, from the activity it names. `day` means only its date is known, its UTC date, so a client draws no time. `instant` on a row with no such time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Text              string            `json:"text"`
 }
 
 // DealRoleProposalResult defines model for DealRoleProposalResult.

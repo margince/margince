@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { UTC_ZONE } from "../format/timezone";
 import {
   StandingTimeline,
   type TimelineEvent,
@@ -23,6 +24,7 @@ const events: TimelineEvent[] = [
 const mark = (
   over: Partial<TimelineMark> & Pick<TimelineMark, "key" | "at">,
 ): TimelineMark => ({
+  precision: "instant",
   kind: "email",
   direction: "inbound",
   what: "Email",
@@ -32,11 +34,16 @@ const mark = (
   ...over,
 });
 
-const draw = (marks: TimelineMark[], extra: Partial<TimelineEvent>[] = []) =>
+const draw = (
+  marks: TimelineMark[],
+  extra: Partial<TimelineEvent>[] = [],
+  record = UTC_ZONE,
+) =>
   render(
     <StandingTimeline
       label="Brandt over time"
       asOf="2026-08-13T09:00:00Z"
+      record={record}
       events={[
         ...events,
         ...extra.map((e, i) => ({
@@ -96,6 +103,21 @@ describe("marks on the line", () => {
   it("never draws a mark outside the span the events set, so marks cannot stretch the axis", () => {
     draw([mark({ key: "old", at: "2025-01-10" })]);
 
+    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+  });
+
+  // Read at 23:00 on 13 Aug in Kiritimati: a day entry for the 13th is stored
+  // at noon UTC, later than that instant, and has still happened.
+  it("draws a day entry dated today, which the owner admits as begun", () => {
+    const today = "2026-08-13T12:00:00Z";
+    draw(
+      [mark({ key: "day", at: today, precision: "day" })],
+      [],
+      "Pacific/Kiritimati",
+    );
+    expect(screen.getByRole("button", { name: "Email" })).toBeInTheDocument();
+    cleanup();
+    draw([mark({ key: "later", at: today })], [], "Pacific/Kiritimati");
     expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
   });
 

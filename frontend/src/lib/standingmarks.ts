@@ -60,6 +60,7 @@ export function activityMarks(
       return {
         key: row.id,
         at: row.occurred_at,
+        precision: row.occurred_precision,
         kind: row.kind,
         direction: direction ?? undefined,
         what,
