@@ -328,3 +328,26 @@ describe("CompanyRail", () => {
     ).toBeTruthy();
   });
 });
+
+describe("a stored country that does not fit the postal code and city", () => {
+  it("flags the address with the country they resolve to and keeps the stored one", () => {
+    stub();
+    const misfiled = {
+      ...company,
+      address: { postal_code: "10115", city: "Berlin", country: "AT" },
+      address_country_mismatch: { resolved_country: "DE" },
+    };
+    renderRail({ view: view({ company: misfiled }) });
+    expect(screen.getByText("Berlin, AT")).toBeInTheDocument();
+    expect(
+      screen.getByText("Postal code and city are in Germany"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no flag when the server reports no mismatch", () => {
+    stub();
+    renderRail();
+    expect(screen.getByText("Munich, DE")).toBeInTheDocument();
+    expect(screen.queryByText(/Postal code and city are in/)).toBeNull();
+  });
+});

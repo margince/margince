@@ -1372,11 +1372,12 @@ public.attachment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/ma
 public.attachment.activity_id uuid gen=- def=-
 public.attachment.archived_at timestamp with time zone gen=- def=-
 public.attachment.attachment_byte_size_js_safe CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))
-public.attachment.attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text])))
+public.attachment.attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text, 'link'::text])))
 public.attachment.attachment_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES contract(id) ON DELETE SET NULL
 public.attachment.attachment_doc_state_check CHECK ((doc_state = ANY (ARRAY['draft'::text, 'current'::text, 'final'::text, 'superseded'::text])))
 public.attachment.attachment_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
 public.attachment.attachment_external_identity_complete CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))
+public.attachment.attachment_link_shape CHECK ((((category = 'link'::text) = (url IS NOT NULL)) AND ((category <> 'link'::text) OR ((storage_key = ''::text) AND bytes_withheld AND (url ~ '^https?://'::text) AND (length(url) <= 2048)))))
 public.attachment.attachment_pkey PRIMARY KEY (id)
 public.attachment.attachment_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES attachment(id) ON DELETE SET NULL (supersedes_id)
 public.attachment.attachment_supersedes_not_self CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))
@@ -1406,6 +1407,7 @@ public.attachment.supersedes_id uuid gen=- def=-
 public.attachment.title text gen=- def=-
 public.attachment.trg_attachment_updated CREATE TRIGGER trg_attachment_updated BEFORE UPDATE ON public.attachment FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.attachment.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.attachment.url text gen=- def=-
 public.attachment_account_ix CREATE INDEX attachment_account_ix ON public.attachment USING btree (company_id, pinned DESC, created_at DESC) WHERE (archived_at IS NULL)
 public.attachment_contract_ix CREATE INDEX attachment_contract_ix ON public.attachment USING btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))
 public.attachment_external_part_key CREATE UNIQUE INDEX attachment_external_part_key ON public.attachment USING btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)
@@ -2452,12 +2454,26 @@ public.company.source text NOT NULL gen=- def=-
 public.company.source_author_id uuid gen=- def=-
 public.company.source_author_name text gen=- def=-
 public.company.source_system text gen=- def=-
+public.company.trg_company_address_country_stale CREATE TRIGGER trg_company_address_country_stale AFTER UPDATE OF address_postal_code, address_city, address_country ON public.company FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_address_country_goes_stale()
 public.company.trg_company_geocode_stale CREATE TRIGGER trg_company_geocode_stale BEFORE UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country ON public.company FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_goes_stale()
 public.company.trg_company_no_cycle CREATE TRIGGER trg_company_no_cycle BEFORE INSERT OR UPDATE OF parent_company_id ON public.company FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()
 public.company.trg_company_updated CREATE TRIGGER trg_company_updated BEFORE UPDATE ON public.company FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.company.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.company.version bigint NOT NULL gen=- def=1
 public.company.visibility text NOT NULL gen=- def='workspace'::text
+public.company_address_country acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_address_country.checked_at timestamp with time zone NOT NULL gen=- def=-
+public.company_address_country.company_address_country_codes_are_alpha2 CHECK ((array_to_string(countries, ','::text) ~ '^([A-Z]{2}(,[A-Z]{2})*)?$'::text))
+public.company_address_country.company_address_country_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_address_country.company_address_country_pkey PRIMARY KEY (company_id)
+public.company_address_country.company_id uuid NOT NULL gen=- def=-
+public.company_address_country.countries text[] NOT NULL gen=- def=-
+public.company_address_country_goes_stale() secdef=false cfg=- acl=- BEGIN
+  DELETE FROM company_address_country WHERE company_id = NEW.id;
+  RETURN NULL;
+END;
+
+public.company_address_country_pkey CREATE UNIQUE INDEX company_address_country_pkey ON public.company_address_country USING btree (company_id)
 public.company_brief acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.company_brief.company_brief_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_brief.company_brief_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
@@ -3079,6 +3095,7 @@ public.contact.source_author_id uuid gen=- def=-
 public.contact.source_author_name text gen=- def=-
 public.contact.source_system text gen=- def=-
 public.contact.title text gen=- def=-
+public.contact.trg_contact_address_country_stale CREATE TRIGGER trg_contact_address_country_stale AFTER UPDATE OF address_postal_code, address_city, address_country ON public.contact FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION contact_address_country_goes_stale()
 public.contact.trg_contact_updated CREATE TRIGGER trg_contact_updated BEFORE UPDATE ON public.contact FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.contact.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.version bigint NOT NULL gen=- def=1
@@ -3100,6 +3117,19 @@ public.contact_acquisition_evidence.source_entity_id uuid gen=- def=-
 public.contact_acquisition_evidence.source_entity_type text gen=- def=-
 public.contact_acquisition_evidence_by_contact CREATE INDEX contact_acquisition_evidence_by_contact ON public.contact_acquisition_evidence USING btree (contact_id, captured_at DESC)
 public.contact_acquisition_evidence_pkey CREATE UNIQUE INDEX contact_acquisition_evidence_pkey ON public.contact_acquisition_evidence USING btree (id)
+public.contact_address_country acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.contact_address_country.checked_at timestamp with time zone NOT NULL gen=- def=-
+public.contact_address_country.contact_address_country_codes_are_alpha2 CHECK ((array_to_string(countries, ','::text) ~ '^([A-Z]{2}(,[A-Z]{2})*)?$'::text))
+public.contact_address_country.contact_address_country_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.contact_address_country.contact_address_country_pkey PRIMARY KEY (contact_id)
+public.contact_address_country.contact_id uuid NOT NULL gen=- def=-
+public.contact_address_country.countries text[] NOT NULL gen=- def=-
+public.contact_address_country_goes_stale() secdef=false cfg=- acl=- BEGIN
+  DELETE FROM contact_address_country WHERE contact_id = NEW.id;
+  RETURN NULL;
+END;
+
+public.contact_address_country_pkey CREATE UNIQUE INDEX contact_address_country_pkey ON public.contact_address_country USING btree (contact_id)
 public.contact_brief acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact_brief.contact_brief_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_brief.contact_brief_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
@@ -4462,6 +4492,14 @@ public.geocode_cache.lon double precision NOT NULL gen=- def=-
 public.geocode_cache.provider text NOT NULL gen=- def=-
 public.geocode_cache.query text NOT NULL gen=- def=-
 public.geocode_cache_pkey CREATE UNIQUE INDEX geocode_cache_pkey ON public.geocode_cache USING btree (query)
+public.geocode_country_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.geocode_country_cache.country_codes text[] NOT NULL gen=- def=-
+public.geocode_country_cache.geocode_country_cache_codes_are_alpha2 CHECK ((array_to_string(country_codes, ','::text) ~ '^([A-Z]{2}(,[A-Z]{2})*)?$'::text))
+public.geocode_country_cache.geocode_country_cache_pkey PRIMARY KEY (query)
+public.geocode_country_cache.provider text NOT NULL gen=- def=-
+public.geocode_country_cache.query text NOT NULL gen=- def=-
+public.geocode_country_cache.resolved_at timestamp with time zone NOT NULL gen=- def=-
+public.geocode_country_cache_pkey CREATE UNIQUE INDEX geocode_country_cache_pkey ON public.geocode_country_cache USING btree (query)
 public.graph_contact_edge acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.graph_contact_edge.computed_at timestamp with time zone NOT NULL gen=- def=now()
 public.graph_contact_edge.contact_a uuid NOT NULL gen=- def=-

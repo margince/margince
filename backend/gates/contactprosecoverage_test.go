@@ -40,6 +40,7 @@ import (
 // a table PII-bearing; this gate narrows how many can go unconsidered, and does
 // not close the question.
 var contactProseWithoutSubjectData = gatekit.Waive(map[string]string{
+	"contact_address_country":        "the country codes a public geocoder gave for the contact's postal code and city, and when it was asked. No prose. The erasure clears the address, and the address trigger deletes this row in the same statement; ON DELETE CASCADE takes it with a deleted contact",
 	"tag_suggestion":                 "a proposal that a workspace tag fits a record: state is an enum and captured_by the scout principal. It holds no text about the subject; the evidence it cites is activity ids, and the activities themselves are erased and exported where they live. ON DELETE CASCADE from contact takes it with an erased contact",
 	"relationship":                   "the edge itself, whose prose columns are vocabulary rather than prose about anybody: kind, role, employment_status, the two precisions, source and the captured_by principal. Held under Art. 5 accountability, which is why the registry's own comment names it as deliberately out",
 	"contact_consent":                "the consent state machine: lawful_basis, policy_version, source and state are enums and a version string. The subject's identity lives on the contact row this points at, and the proof of what they agreed to is the point of keeping it",

@@ -15,6 +15,7 @@ import { undoAction, useToast } from "../../design-system/toast";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { attachmentAnchor } from "../../lib/attachmentlink";
 import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -43,6 +44,7 @@ const CATEGORY_LABELS: Record<Category, MessageKey> = {
   email_attachment: "docs.category.email",
   message_attachment: "docs.category.message",
   other: "docs.category.other",
+  link: "docs.category.link",
 };
 
 // Enough for a working set; the area is not a library somebody pages through.
@@ -225,11 +227,7 @@ function FileName({ doc }: Readonly<{ doc: DealDocument }>) {
   const file = doc.attachment;
   return (
     <span className={doc.hidden ? "deal-file deal-file-hidden" : "deal-file"}>
-      <a
-        className="cell-link"
-        href={`/v1/attachments/${file.id}`}
-        download={file.filename}
-      >
+      <a className="cell-link" {...attachmentAnchor(file)}>
         {file.title || file.filename}
       </a>
       {doc.hidden ? <Badge>{t("files.hiddenBadge")}</Badge> : null}

@@ -26658,6 +26658,11 @@ export interface components {
         } & {
             [key: string]: unknown;
         }) | null;
+        /** @description The stored address country does not fit the postal code and city. A background check asks the geocoder for the postal code and city alone, reads the countries of up to five places they name, and flags the stored country only when it is none of them. The stored country is never changed. Editing the postal code, city or country clears the result until the next check, and a result older than 180 days is checked again. */
+        AddressCountryMismatch: {
+            /** @description ISO-3166 alpha-2 code of the best-ranked country the postal code and city resolve to. */
+            resolved_country: string;
+        };
         /** @description Money as integer minor-units + ISO-4217 currency. Never a float. */
         Money: {
             /**
@@ -27219,6 +27224,8 @@ export interface components {
                 [key: string]: unknown;
             };
             address?: components["schemas"]["Address"];
+            /** @description Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code. */
+            readonly address_country_mismatch?: components["schemas"]["AddressCountryMismatch"];
             emails?: components["schemas"]["ContactEmail"][];
             /**
              * Format: email
@@ -27581,6 +27588,8 @@ export interface components {
             /** @enum {string|null} */
             size_band?: null | "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1001-5000" | "5000+";
             address?: components["schemas"]["Address"];
+            /** @description Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code. */
+            readonly address_country_mismatch?: components["schemas"]["AddressCountryMismatch"];
             /** Format: uuid */
             owner_id?: string | null;
             /**
@@ -34931,6 +34940,10 @@ export interface components {
              * @description What kind of document this is. Closed vocabulary; `other` is the
              *     honest default, not a fallback for an unknown value.
              *
+             *     `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+             *     Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+             *     and the category cannot be set or changed through a metadata patch.
+             *
              *     `email_attachment` and `message_attachment` record PROVENANCE rather than
              *     content: capture derives them from the transport the file arrived on, so a
              *     file that came with a Telegram message is not reported as an email one. The
@@ -34941,7 +34954,7 @@ export interface components {
              *     uploaded file, which has no arrival to claim (422 `category_not_assertable`).
              * @enum {string}
              */
-            category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other";
+            category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
             /** @description A display name distinct from the filename, showing what a reader looks for rather than what arrived. */
             title?: string | null;
             /**
@@ -34966,8 +34979,10 @@ export interface components {
              * @description The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
-            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. */
+            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes. */
             readonly bytes_withheld?: boolean;
+            /** @description The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download. */
+            readonly url?: string | null;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -79614,7 +79629,7 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
-                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other";
+                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
                 include_hidden?: boolean;
             };
             header?: never;
@@ -80799,7 +80814,7 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
-                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other";
+                category?: "contract" | "offer" | "legal" | "email_attachment" | "message_attachment" | "other" | "link";
                 doc_state?: "draft" | "current" | "final" | "superseded";
                 pinned_only?: boolean;
                 /** @description Only the paper filed against this agreement (CONTRACT-DDL-5). */

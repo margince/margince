@@ -648,3 +648,41 @@ func withheldVerdict(ctx context.Context, t *testing.T, db *database.DB, sourceI
 	}
 	return verdict
 }
+
+// A mail that links a Google Slides deck and an ordinary page records the deck
+// once. The test runs the real sink and the real keeper.
+func TestACapturedMailsDocumentLinkBecomesALinkRow(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	rec := mailRecord("msg-with-link-" + tag)
+	fields, ok := rec.Fields.(capture.ActivityFields)
+	if !ok {
+		t.Fatalf("fixture fields are %T", rec.Fields)
+	}
+	fields.Envelope = &capture.MailEnvelope{Links: []capture.MailLink{
+		{URL: "https://example.net/pricing", Text: "Pricing"},
+		{URL: "https://docs.google.com/presentation/d/abc/edit#slide=1", Text: "Q4 plan"},
+	}}
+	rec.Fields = fields
+
+	for pull := 1; pull <= 2; pull++ {
+		if _, err := sink.Upsert(ctx, rec); err != nil {
+			t.Fatalf("pull %d: %v", pull, err)
+		}
+	}
+
+	var rows, withheld int
+	var category, filename, storageKey string
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*), min(category), min(filename), min(storage_key), bool_and(bytes_withheld)::int
+			  FROM attachment WHERE external_source_id = $1`,
+			connector.EmailSourceSystem+":msg-with-link-"+tag).Scan(&rows, &category, &filename, &storageKey, &withheld)
+	}); err != nil {
+		t.Fatalf("read the link rows: %v", err)
+	}
+	if rows != 1 || category != "link" || filename != "Q4 plan" || withheld != 1 || storageKey != "" {
+		t.Errorf("rows=%d category=%q filename=%q withheld=%d key=%q; want only the deck, as a link named by its text with no bytes",
+			rows, category, filename, withheld, storageKey)
+	}
+}

@@ -265,3 +265,39 @@ describe("the address in the About group", () => {
     expect(screen.queryByText(/@brandt\.example/)).toBeNull();
   });
 });
+
+describe("a postal address whose country does not fit", () => {
+  function About({ page }: Readonly<{ page: typeof view }>) {
+    return <RecordDetails sections={useContactAboutSections(page)} />;
+  }
+  const berlin = { postal_code: "10115", city: "Berlin", country: "AT" };
+
+  function show(contact: (typeof view)["contact"]) {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read"] }, { seat: "full" }),
+    });
+    render(
+      <StoryProviders>
+        <About page={{ ...view, contact }} />
+      </StoryProviders>,
+    );
+  }
+
+  it("flags the address with the country the postal code and city name", async () => {
+    show({
+      ...view.contact,
+      address: berlin,
+      address_country_mismatch: { resolved_country: "DE" },
+    });
+    expect(
+      await screen.findByText("Postal code and city are in Germany"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Berlin, AT")).toBeInTheDocument();
+  });
+
+  it("shows no flag when the server reports no mismatch", async () => {
+    show({ ...view.contact, address: berlin });
+    expect(await screen.findByText("Berlin, AT")).toBeInTheDocument();
+    expect(screen.queryByText(/Postal code and city are in/)).toBeNull();
+  });
+});

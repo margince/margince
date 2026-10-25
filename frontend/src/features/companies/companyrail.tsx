@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { mapCompanyUpdate } from "../../components/companyform";
 import {
   LIFECYCLE_LABELS,
@@ -187,23 +188,29 @@ export function useRowBuilders(company: Company, edit: Edit) {
       />
     ),
   });
+  // `flag` sits beside the value rather than inside it, so the edit button's
+  // label does not swallow what the flag says.
   const compound = (
     which: CompoundField,
     label: string,
     reading: ReactNode | undefined,
+    flag?: ReactNode,
   ): DetailRow => ({
     key: which,
     term: label,
     empty: !reading,
     value: (
-      <CompoundFieldValue
-        company={company}
-        which={which}
-        label={label}
-        reading={reading}
-        canEdit={edit.canEdit}
-        readOnlyReason={edit.reason}
-      />
+      <>
+        <CompoundFieldValue
+          company={company}
+          which={which}
+          label={label}
+          reading={reading}
+          canEdit={edit.canEdit}
+          readOnlyReason={edit.reason}
+        />
+        {flag && <> {flag}</>}
+      </>
     ),
   });
   return { text, choice, compound };
@@ -255,7 +262,16 @@ function useAboutRows(
         label: t(LIFECYCLE_LABELS[value]),
       })),
     ),
-    compound("address", t("co.address.summary"), addressLine(company)),
+    compound(
+      "address",
+      t("co.address.summary"),
+      addressLine(company),
+      company.address_country_mismatch && (
+        <AddressCountryMismatchBadge
+          mismatch={company.address_country_mismatch}
+        />
+      ),
+    ),
     ...(wayIn
       ? [
           {

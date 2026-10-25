@@ -120,3 +120,27 @@ describe("the ways to reach a contact in the header", () => {
     expect(screen.queryByText(/@brandt\.example/)).toBeNull();
   });
 });
+
+describe("a contact whose country does not fit the postal code and city", () => {
+  const berlin = { postal_code: "10115", city: "Berlin", country: "AT" };
+
+  it("flags the city with the country they resolve to", () => {
+    show("manual", {
+      ...archivedContact,
+      address: berlin,
+      address_country_mismatch: { resolved_country: "DE" },
+    });
+
+    expect(screen.getByText("Berlin")).toBeInTheDocument();
+    expect(
+      screen.getByText("Postal code and city are in Germany"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no flag when the server reports no mismatch", () => {
+    show("manual", { ...archivedContact, address: berlin });
+
+    expect(screen.getByText("Berlin")).toBeInTheDocument();
+    expect(screen.queryByText(/Postal code and city are in/)).toBeNull();
+  });
+});

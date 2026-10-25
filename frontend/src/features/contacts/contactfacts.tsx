@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { rosterOwnerName } from "../../components/entityref";
 import { ContactLink } from "../../design-system/contactlink";
 import { OffsiteLink } from "../../design-system/offsitelink";
@@ -77,7 +78,17 @@ export function ContactFacts({
         </Fact>
       )}
       {contact.address?.city && (
-        <Fact label={t("create.city")}>{contact.address.city}</Fact>
+        <Fact label={t("create.city")}>
+          {contact.address.city}
+          {contact.address_country_mismatch && (
+            <>
+              {" "}
+              <AddressCountryMismatchBadge
+                mismatch={contact.address_country_mismatch}
+              />
+            </>
+          )}
+        </Fact>
       )}
       {typeof contact.social?.linkedin === "string" && (
         <Fact label={t("contact.page.linkedin")}>

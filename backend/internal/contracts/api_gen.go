@@ -2070,6 +2070,7 @@ const (
 	AttachmentCategoryContract          AttachmentCategory = "contract"
 	AttachmentCategoryEmailAttachment   AttachmentCategory = "email_attachment"
 	AttachmentCategoryLegal             AttachmentCategory = "legal"
+	AttachmentCategoryLink              AttachmentCategory = "link"
 	AttachmentCategoryMessageAttachment AttachmentCategory = "message_attachment"
 	AttachmentCategoryOffer             AttachmentCategory = "offer"
 	AttachmentCategoryOther             AttachmentCategory = "other"
@@ -2083,6 +2084,8 @@ func (e AttachmentCategory) Valid() bool {
 	case AttachmentCategoryEmailAttachment:
 		return true
 	case AttachmentCategoryLegal:
+		return true
+	case AttachmentCategoryLink:
 		return true
 	case AttachmentCategoryMessageAttachment:
 		return true
@@ -22899,6 +22902,7 @@ const (
 	ListCompanyDocumentsParamsCategoryContract          ListCompanyDocumentsParamsCategory = "contract"
 	ListCompanyDocumentsParamsCategoryEmailAttachment   ListCompanyDocumentsParamsCategory = "email_attachment"
 	ListCompanyDocumentsParamsCategoryLegal             ListCompanyDocumentsParamsCategory = "legal"
+	ListCompanyDocumentsParamsCategoryLink              ListCompanyDocumentsParamsCategory = "link"
 	ListCompanyDocumentsParamsCategoryMessageAttachment ListCompanyDocumentsParamsCategory = "message_attachment"
 	ListCompanyDocumentsParamsCategoryOffer             ListCompanyDocumentsParamsCategory = "offer"
 	ListCompanyDocumentsParamsCategoryOther             ListCompanyDocumentsParamsCategory = "other"
@@ -22912,6 +22916,8 @@ func (e ListCompanyDocumentsParamsCategory) Valid() bool {
 	case ListCompanyDocumentsParamsCategoryEmailAttachment:
 		return true
 	case ListCompanyDocumentsParamsCategoryLegal:
+		return true
+	case ListCompanyDocumentsParamsCategoryLink:
 		return true
 	case ListCompanyDocumentsParamsCategoryMessageAttachment:
 		return true
@@ -23373,6 +23379,7 @@ const (
 	ListDealDocumentsParamsCategoryContract          ListDealDocumentsParamsCategory = "contract"
 	ListDealDocumentsParamsCategoryEmailAttachment   ListDealDocumentsParamsCategory = "email_attachment"
 	ListDealDocumentsParamsCategoryLegal             ListDealDocumentsParamsCategory = "legal"
+	ListDealDocumentsParamsCategoryLink              ListDealDocumentsParamsCategory = "link"
 	ListDealDocumentsParamsCategoryMessageAttachment ListDealDocumentsParamsCategory = "message_attachment"
 	ListDealDocumentsParamsCategoryOffer             ListDealDocumentsParamsCategory = "offer"
 	ListDealDocumentsParamsCategoryOther             ListDealDocumentsParamsCategory = "other"
@@ -23386,6 +23393,8 @@ func (e ListDealDocumentsParamsCategory) Valid() bool {
 	case ListDealDocumentsParamsCategoryEmailAttachment:
 		return true
 	case ListDealDocumentsParamsCategoryLegal:
+		return true
+	case ListDealDocumentsParamsCategoryLink:
 		return true
 	case ListDealDocumentsParamsCategoryMessageAttachment:
 		return true
@@ -25137,6 +25146,12 @@ type Address struct {
 	PostalCode           *string                `json:"postal_code,omitempty"`
 	Region               *string                `json:"region,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// AddressCountryMismatch The stored address country does not fit the postal code and city. A background check asks the geocoder for the postal code and city alone, reads the countries of up to five places they name, and flags the stored country only when it is none of them. The stored country is never changed. Editing the postal code, city or country clears the result until the next check, and a result older than 180 days is checked again.
+type AddressCountryMismatch struct {
+	// ResolvedCountry ISO-3166 alpha-2 code of the best-ranked country the postal code and city resolve to.
+	ResolvedCountry string `json:"resolved_country"`
 }
 
 // AdvanceDealRequest defines model for AdvanceDealRequest.
@@ -27731,7 +27746,7 @@ type AtRiskRelationships struct {
 type Attachment struct {
 	ByteSize *int64 `json:"byte_size,omitempty"`
 
-	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read.
+	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes.
 	BytesWithheld *bool `json:"bytes_withheld,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
@@ -27739,6 +27754,10 @@ type Attachment struct {
 
 	// Category What kind of document this is. Closed vocabulary; `other` is the
 	// honest default, not a fallback for an unknown value.
+	//
+	// `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+	// Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+	// and the category cannot be set or changed through a metadata patch.
 	//
 	// `email_attachment` and `message_attachment` record PROVENANCE rather than
 	// content: capture derives them from the transport the file arrived on, so a
@@ -27777,10 +27796,17 @@ type Attachment struct {
 
 	// Title A display name distinct from the filename, showing what a reader looks for rather than what arrived.
 	Title *string `json:"title,omitempty"`
+
+	// Url The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download.
+	Url *string `json:"url,omitempty"`
 }
 
 // AttachmentCategory What kind of document this is. Closed vocabulary; `other` is the
 // honest default, not a fallback for an unknown value.
+//
+// `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+// Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+// and the category cannot be set or changed through a metadata patch.
 //
 // `email_attachment` and `message_attachment` record PROVENANCE rather than
 // content: capture derives them from the transport the file arrived on, so a
@@ -31389,8 +31415,11 @@ type CommunicationReviewState string
 // Company A company. Mirrors the `company` table.
 type Company struct {
 	// Address Structured postal address.
-	Address    *Address   `json:"address,omitempty"`
-	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	Address *Address `json:"address,omitempty"`
+
+	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
+	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
+	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
 
 	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Null means the main offering.
 	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
@@ -34415,8 +34444,11 @@ type ConsumerMailDomainListResponse struct {
 // Contact A contact. Mirrors the `contact` table.
 type Contact struct {
 	// Address Structured postal address.
-	Address    *Address   `json:"address,omitempty"`
-	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	Address *Address `json:"address,omitempty"`
+
+	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
+	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
+	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
 
 	// Author Who created this contact in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a contact somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
@@ -64971,6 +65003,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["address_country_mismatch"]; found {
+		err = json.Unmarshal(raw, &a.AddressCountryMismatch)
+		if err != nil {
+			return fmt.Errorf("error reading 'address_country_mismatch': %w", err)
+		}
+		delete(object, "address_country_mismatch")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -65285,6 +65325,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AddressCountryMismatch != nil {
+		object["address_country_mismatch"], err = json.Marshal(a.AddressCountryMismatch)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'address_country_mismatch': %w", err)
+		}
+	}
+
 	if a.ArchivedAt != nil {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
@@ -65567,6 +65614,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["address_country_mismatch"]; found {
+		err = json.Unmarshal(raw, &a.AddressCountryMismatch)
+		if err != nil {
+			return fmt.Errorf("error reading 'address_country_mismatch': %w", err)
+		}
+		delete(object, "address_country_mismatch")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -65846,6 +65901,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.AddressCountryMismatch != nil {
+		object["address_country_mismatch"], err = json.Marshal(a.AddressCountryMismatch)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'address_country_mismatch': %w", err)
 		}
 	}
 
