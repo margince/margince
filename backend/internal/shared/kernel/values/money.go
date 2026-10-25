@@ -10,6 +10,9 @@ import "regexp"
 // copies, which the config schema also states.
 const CurrencyPattern = `^[A-Z]{3}$`
 
+// currencyField is the request field a currency refusal names.
+const currencyField = "currency"
+
 var iso4217 = regexp.MustCompile(CurrencyPattern)
 
 // ValidCurrency answers whether s has the shape of an ISO-4217 code. It is the
@@ -31,7 +34,7 @@ type Money struct {
 
 func NewMoney(amountMinor int64, currency string) (Money, error) {
 	if !ValidCurrency(currency) {
-		return Money{}, &ParseError{Field: "currency", Code: "currency_malformed",
+		return Money{}, &ParseError{Field: currencyField, Code: "currency_malformed",
 			Message: "currency is the three-letter ISO-4217 code, uppercase"}
 	}
 	return Money{amountMinor: amountMinor, currency: currency}, nil
@@ -45,7 +48,7 @@ func (m Money) IsZero() bool       { return m == Money{} }
 // a number (P11); the caller converts explicitly or errors out.
 func (m Money) Add(o Money) (Money, error) {
 	if m.currency != o.currency {
-		return Money{}, &ParseError{Field: "currency", Code: "currency_mismatch",
+		return Money{}, &ParseError{Field: currencyField, Code: "currency_mismatch",
 			Message: "cannot add " + o.currency + " to " + m.currency + " without an explicit conversion"}
 	}
 	return Money{amountMinor: m.amountMinor + o.amountMinor, currency: m.currency}, nil
