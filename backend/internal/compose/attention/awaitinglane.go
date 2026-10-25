@@ -44,7 +44,7 @@ type AwaitedReply struct {
 	DealID     ids.UUID
 	// Recipients is who a meeting follow-up goes to, ContactID first.
 	Recipients []ids.UUID
-	// Precision says a meeting's SentAt is a date's anchor when it is day.
+	// Precision says SentAt is a date's anchor when it is day.
 	Precision crmcontracts.OccurredPrecision
 	// Present when the reader may read the message, which is what the
 	// composer drafts the follow-up from.
@@ -166,6 +166,7 @@ func classifyAwaiting(awaited AwaitedReply, asOf time.Time) ranked {
 	}
 	sent := awaited.SentAt
 	row.OccurredAt = &sent
+	row.OccurredPrecision = precisionOf(&awaited.Precision)
 	anchor := openapi_types.UUID(awaited.ActivityID)
 	row.Move = &crmcontracts.WorklistMove{Action: crmcontracts.WorklistMoveActionDraftReply, ActivityId: &anchor}
 	return ranked{

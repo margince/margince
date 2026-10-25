@@ -41,6 +41,7 @@ func (w attentionAwaiting) AwaitingReplies(
 		awaited := attention.AwaitedReply{
 			ActivityID: row.ActivityID, Subject: row.Subject, SentAt: row.SentAt,
 			ContactID: row.ContactID, CompanyID: row.CompanyID, DealID: row.DealID,
+			Precision: crmcontracts.OccurredPrecision(row.Precision),
 		}
 		if summary, ok := summaries[row.ActivityID]; ok {
 			awaited.EmailSummary = &summary

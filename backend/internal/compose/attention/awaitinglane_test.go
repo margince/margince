@@ -208,3 +208,19 @@ func TestNoMeetingFollowUpRowIsDrawnWithoutAnAction(t *testing.T) {
 		}
 	}
 }
+
+func TestAFollowUpToADayEmailSaysItsTimeIsADate(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2026, 9, 6, 9, 0, 0, 0, time.UTC)
+	awaited := AwaitedReply{
+		ActivityID: ids.NewV7(), SentAt: at.Add(-3 * 24 * time.Hour), ContactID: ids.NewV7(),
+		Precision: crmcontracts.OccurredPrecisionOccurredPrecisionDay,
+	}
+	if got := classifyAwaiting(awaited, at).item.OccurredPrecision; got != crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+		t.Errorf("precision = %q, want day", got)
+	}
+	awaited.Precision = ""
+	if got := classifyAwaiting(awaited, at).item.OccurredPrecision; got != crmcontracts.OccurredPrecisionOccurredPrecisionInstant {
+		t.Errorf("precision = %q, want instant", got)
+	}
+}

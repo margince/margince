@@ -52,8 +52,8 @@ type AwaitingReply struct {
 	// Recipients is who a meeting follow-up goes to, best first; ContactID is
 	// the first of them. Empty on a sent message.
 	Recipients []ids.UUID
-	// Precision is how to read a meeting's SentAt; empty on a sent message,
-	// whose time is always an instant.
+	// Precision is how to read SentAt: a logged day email or a meeting dated
+	// only by day names its date, not a moment.
 	Precision string
 }
 
@@ -173,7 +173,7 @@ func scanFollowUps(rows pgx.Rows, what string) ([]AwaitingReply, error) {
 	var out []AwaitingReply
 	for rows.Next() {
 		var r AwaitingReply
-		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.ContactID, &r.CompanyID, &r.DealID); err != nil {
+		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.ContactID, &r.CompanyID, &r.DealID, &r.Precision); err != nil {
 			return nil, fmt.Errorf("activities: reading %s: %w", what, err)
 		}
 		out = append(out, r)
@@ -221,7 +221,8 @@ var awaitingRepliesSQL = `
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.deal_id ORDER BY wl.deal_id::text)
 	                 FILTER (WHERE wl.deal_id IS NOT NULL))[1],
-	                '00000000-0000-0000-0000-000000000000'::uuid)
+	                '00000000-0000-0000-0000-000000000000'::uuid),
+	       a.occurred_precision
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	 WHERE a.kind = 'email'

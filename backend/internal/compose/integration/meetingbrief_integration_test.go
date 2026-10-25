@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -414,6 +415,47 @@ func TestMeetingBriefRecallsWhenThisRoomLastMet(t *testing.T) {
 	}
 	if strings.Contains(recalled, "Unrelated") {
 		t.Errorf("recalled = %q, but nobody from this room was in that meeting", recalled)
+	}
+}
+
+// A day entry dated today has not ended, so the room has not yet met on it.
+func TestMeetingBriefRecallsADayMeetingOnlyOnceItsDateIsOver(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
+
+	newDayMeeting := func(subject string, date time.Time) {
+		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, occurred_precision, source, captured_by)
+			VALUES ($1, 'meeting', $2, $3, 'day', 'manual', 'human:x')`, subject, occurredday.Anchor(date))
+		LinkActivity(t, owner, id, "contact", ours)
+		seatInRoom(t, owner, e.WS, id, ours)
+	}
+	newDayMeeting("Held yesterday", roomFixedNow.AddDate(0, 0, -1))
+	newDayMeeting("Dated today", roomFixedNow)
+
+	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
+	LinkActivity(t, owner, meeting, "contact", ours)
+	seatInRoom(t, owner, e.WS, meeting, ours)
+
+	brief, err := meetingBriefService(e).Get(e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms), meeting)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	var recalled strings.Builder
+	for _, section := range brief.Sections {
+		if section.Kind != "company_context" {
+			continue
+		}
+		for _, sentence := range section.Sentences {
+			recalled.WriteString(sentence.Text + "\n")
+		}
+	}
+	if !strings.Contains(recalled.String(), "Held yesterday") {
+		t.Errorf("recalled = %q, want the day meeting whose date is over", recalled.String())
+	}
+	if strings.Contains(recalled.String(), "Dated today") {
+		t.Errorf("recalled = %q, but a day meeting dated today has not ended", recalled.String())
 	}
 }
 
