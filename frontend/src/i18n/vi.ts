@@ -5823,7 +5823,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.filesTotal_other": "{count} tệp · {size}",
   "compose.filesLimit": "Tối đa {most} tệp mỗi thư.",
   "compose.newEmailTo": "Email mới gửi {name}",
-  "compose.filedUnder": "Lưu tại",
+  "compose.filedUnder": "Xếp vào",
   "compose.discardMessage": "Xóa bản nháp",
   "compose.draftSaving": "Đang lưu…",
   "compose.earlierThreads_one": "{count} chuỗi thư trước",

@@ -61,8 +61,8 @@ export function DockedWindow({
    * In the bar rather than in the content. The content is a writing surface
    * with a floor under it, and a row above the fields comes out of that floor.
    *
-   * The bar is also what a folded window keeps, so the reference survives the
-   * window being put away.
+   * The folded bar does not carry it: that bar is one button, and a link inside
+   * a button is markup no reader can use.
    */
   aside?: ReactNode;
   state: DockState;
@@ -178,11 +178,14 @@ export function DockedWindow({
   });
   const lift = (event: PointerEvent<HTMLDivElement>) => {
     const node = box.current;
-    // The bar's own buttons keep their press; only its open field slides.
+    // The bar's own controls keep their press; only its open field slides.
+    // Links as well as buttons: capturing the pointer retargets the click at
+    // the bar, and a reference beside the title could not be followed.
     if (
       !node ||
       sheet ||
-      (event.target instanceof Element && event.target.closest("button"))
+      (event.target instanceof Element &&
+        event.target.closest("button, a[href]"))
     ) {
       return;
     }

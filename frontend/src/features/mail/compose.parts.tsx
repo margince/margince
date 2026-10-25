@@ -93,6 +93,9 @@ export function MailSendNotices({
  * Drawn wherever the composer is, the record's own page included. What sits
  * behind the window changes while it stays open. A link that came and went with
  * the page would be the harder of the two to read.
+ *
+ * A folded window shows its bar and not this. That bar is one button, and a
+ * link inside a button is markup no reader can use.
  */
 export function ComposeAbout({
   kind,
