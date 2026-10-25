@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -163,6 +164,12 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 // connector-captured on the same medium and provider. A thread key alone is
 // shared across media, and a hand-typed activity says whatever its author typed.
 //
+// The thread key is the sender's References root, so it proves nothing alone.
+// The copying mail must come from a sender the receiving server authenticated.
+// One of our seats must also have written to that same sender on the thread
+// (correspondence.ConversationSQL). A stranger who forges the key of
+// a thread we wrote on to somebody else shares no correspondent with it.
+//
 // Named by anchor when there is one and by thread key otherwise, the same
 // choice repliedIntoThisConversation makes, so staging and transmit agree.
 func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (bool, error) {
@@ -183,9 +190,8 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 			  FROM activity a
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.thread_key = $6
-			   AND a.direction = 'inbound'
 			   AND a.archived_at IS NULL
-			   AND a.captured_by LIKE 'connector:%'
+			   AND `+correspondence.AuthenticatedInboundSQL("a")+`
 			   AND p.role IN ('to', 'cc')
 			   AND `+participantIsTheSubject+`
 			   AND EXISTS (
@@ -197,11 +203,8 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 			       SELECT 1
 			         FROM activity ours
 			         JOIN activity_participant op ON op.activity_id = ours.id
-			        WHERE ours.thread_key = a.thread_key
-			          AND ours.kind = a.kind
-			          AND ours.channel_provider IS NOT DISTINCT FROM a.channel_provider
-			          AND ours.archived_at IS NULL
-			          AND ours.direction = 'outbound'
+			        WHERE `+correspondence.ConversationSQL("ours", "a")+`
+			          AND `+correspondence.OurOutboundSQL("ours")+`
 			          AND ours.captured_by LIKE 'connector:%'
 			          AND op.role = 'from'
 			          AND op.user_id IS NOT NULL)
