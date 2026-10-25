@@ -81,11 +81,10 @@ func primaryEmployersOf(ctx context.Context, tx pgx.Tx, company ids.CompanyID) (
 // fileMergedEmployerTwins files the same-employer twins the merge created for
 // the contacts whose current primary employer it changed.
 //
-// Every lane lock of every such contact is taken first, in one global order
-// (subject keys, address bases, names, each sorted across all contacts). The
-// per-contact re-check then re-takes locks it already holds. Locking contact
-// by contact would let a contact's name lane be held while waiting on the next
-// contact's address lock, against a writer holding the reverse pair.
+// Every lane lock of every such contact is taken first, in one global order:
+// subject keys, address bases, names, each sorted across all contacts. The
+// re-check then re-takes locks it already holds. Locking contact by contact
+// could hold one name lane while waiting on the next contact's address lock.
 func fileMergedEmployerTwins(ctx context.Context, tx pgx.Tx, before map[ids.ContactID]ids.CompanyID, by string) error {
 	moved := make([]contactSubject, 0, len(before))
 	for contact, was := range before {

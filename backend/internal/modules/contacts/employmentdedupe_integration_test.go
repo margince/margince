@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/filedpairs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -184,7 +185,7 @@ func TestMergingCompaniesDoesNotRecheckContactsWhoseCurrentEmployerStays(t *test
 	employ(t, e, mustContact(t, e, "Marlene Wiesinger"), survivor)
 	ended := mustContact(t, e, "Marlene Wiesingr")
 	sideRole := mustContact(t, e, "Marlene Wiesinge")
-	past := time.Now().AddDate(-1, 0, 0)
+	past := clocktest.Now(t).AddDate(-1, 0, 0)
 	no := false
 	for _, edge := range []CreateRelationshipInput{
 		{Kind: employmentKind, ContactID: &ended, CompanyID: &retired, Source: "manual", EndedAt: &past},

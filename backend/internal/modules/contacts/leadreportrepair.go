@@ -28,9 +28,9 @@ var endOfTime = time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC)
 // remain (leadBehavioralSignals, ladderStepFor, isFirstResponseActivity).
 //
 // This is the one step DOWN the ladder, so it is not AdvanceLeadStatus.
-// Only a step the system set is lowered, and never below the last status a
-// human placed: a later system advance overwrote status_set_by, so the audit
-// trail is where that human step survives. A lead a human placed keeps its status.
+// Only a step the system set is lowered. It never goes below the last status a
+// human placed, which survives in the audit trail because a later system
+// advance overwrote status_set_by. A lead a human placed keeps its status.
 // A first-response stamp that matches no remaining touch (a human's disposition
 // wrote it) stays.
 func ReDeriveLeadFromRemainingTouchesTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time) error {

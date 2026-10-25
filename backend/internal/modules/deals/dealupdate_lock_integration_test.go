@@ -24,6 +24,9 @@ import (
 func waitUntilBlockedBy(ctx context.Context, t *testing.T, e *configEnv, blocker int) {
 	t.Helper()
 	for ctx.Err() == nil {
+		if _, err := e.owner.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+			t.Fatalf("clearing the activity snapshot: %v", err)
+		}
 		var waiting bool
 		if err := e.owner.QueryRow(ctx,
 			`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY (pg_blocking_pids(pid)))`, blocker,
@@ -37,7 +40,7 @@ func waitUntilBlockedBy(ctx context.Context, t *testing.T, e *configEnv, blocker
 	t.Fatal("no writer ever blocked on the reassigning transaction")
 }
 
-// asFormerOwner holds every deal verb over the caller's OWN deals only.
+// asFormerOwner holds every deal verb over the caller's own deals only.
 func (e *configEnv) asFormerOwner() context.Context {
 	return principal.WithActor(e.asDealWriter(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,
@@ -75,8 +78,8 @@ func seedOwnedDeal(t *testing.T, e *configEnv) (deal ids.DealID, from, to ids.St
 }
 
 // refusedAfterReassignment runs write as the deal's former owner while an
-// uncommitted transaction reassigns the deal, commits the reassignment once
-// the write waits on it, and answers what the write returned.
+// uncommitted transaction reassigns the deal. It commits the reassignment once
+// the write waits on it and answers what the write returned.
 func refusedAfterReassignment(t *testing.T, e *configEnv, deal ids.DealID, write func(ctx context.Context) error) error {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
