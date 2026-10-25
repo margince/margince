@@ -18,7 +18,7 @@ func TestTranscriptExplanationLanguageKeepsEveryOutcomeAndCount(t *testing.T) {
 	for _, language := range []string{"de", "vi"} {
 		said := transcriptCopyFor(language)
 		for _, count := range []int{1, 2} {
-			staged := transcriptStaging{tasks: count, watched: count, proposals: make([]ids.UUID, count), withheld: map[CommitmentOutcome]int{CommitmentOutcome(activities.CommitmentHistorical): count}}
+			staged := transcriptStaging{taskHolders: []holderCount{{"Anna Example", count}}, watched: count, proposals: make([]ids.UUID, count), proposalHolders: []holderCount{{"Anna Example", count}}, withheld: map[CommitmentOutcome]int{CommitmentOutcome(activities.CommitmentHistorical): count}}
 			got := said.transcriptReadDetail(count, staged)
 			if strings.Count(got, fmt.Sprint(count)) != 4 || got == transcriptCopyFor("en").transcriptReadDetail(count, staged) {
 				t.Fatalf("%s changed the outcome counts or kept English: %s", language, got)

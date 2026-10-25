@@ -246,9 +246,28 @@ func (p *TranscriptProposer) fail(
 // transcriptStaging is what one reading did with the promises it found.
 type transcriptStaging struct {
 	proposals []ids.UUID
-	tasks     int
 	watched   int
 	withheld  map[CommitmentOutcome]int
+	// Who each written task and each staged suggestion went to, read back from
+	// the rows the dispatcher wrote so the sentence follows what happened.
+	taskHolders     []holderCount
+	proposalHolders []holderCount
+}
+
+// holderCount is how many items one seat received, by the seat's display name.
+type holderCount struct {
+	name  string
+	count int
+}
+
+func (s *transcriptStaging) addHolder(list *[]holderCount, name string) {
+	for at := range *list {
+		if (*list)[at].name == name {
+			(*list)[at].count++
+			return
+		}
+	}
+	*list = append(*list, holderCount{name: name, count: 1})
 }
 
 // stage hands each promise to the commitment rule, under one bundle id.
@@ -280,8 +299,17 @@ func (p *TranscriptProposer) stage(
 		switch outcome {
 		case CommitmentProposed, CommitmentHistoricalProposed:
 			out.proposals = append(out.proposals, id)
+			name, err := holderName(ctx, tx, `SELECT u.display_name FROM approval a JOIN app_user u ON u.id = a.on_behalf_of WHERE a.id = $1`, id)
+			if err != nil {
+				return transcriptStaging{}, err
+			}
+			out.addHolder(&out.proposalHolders, name)
 		case CommitmentTaskWritten:
-			out.tasks++
+			name, err := holderName(ctx, tx, `SELECT u.display_name FROM activity t JOIN app_user u ON u.id = t.assignee_id WHERE t.id = $1 AND t.archived_at IS NULL`, id)
+			if err != nil {
+				return transcriptStaging{}, err
+			}
+			out.addHolder(&out.taskHolders, name)
 		case CommitmentWatched:
 			out.watched++
 		case CommitmentRemembered, CommitmentRetained:
@@ -290,4 +318,19 @@ func (p *TranscriptProposer) stage(
 		}
 	}
 	return out, nil
+}
+
+// holderName reads the display name of the seat a dispatched row belongs to. A
+// row whose seat is gone answers an empty name, which the sentence words as
+// "a colleague". query is a compile-time literal taking the row id.
+func holderName(ctx context.Context, tx pgx.Tx, query string, rowID ids.UUID) (string, error) {
+	var name string
+	err := tx.QueryRow(ctx, query, rowID).Scan(&name)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("compose: reading who a transcript commitment went to: %w", err)
+	}
+	return name, nil
 }

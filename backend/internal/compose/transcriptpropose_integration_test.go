@@ -751,6 +751,9 @@ func TestAConfidentPromiseByANamedColleagueIsTheirTaskWithoutAsking(t *testing.T
 		t.Errorf("the task reads %q, want it held by the colleague, written by the reader, keyed as a commitment (%q)",
 			task, want)
 	}
+	if read.StatusDetail == nil || *read.StatusDetail != "added 1 task for Priya Raman" {
+		t.Errorf("the report says %v, want it to name the colleague the task went to", read.StatusDetail)
+	}
 }
 
 // A promise read unsurely is proposed to the colleague who made it, and
@@ -765,6 +768,9 @@ func TestAnUnsurePromiseIsProposedToTheColleagueWhoMadeIt(t *testing.T) {
 	}
 	if e.taskCount(t) != 0 {
 		t.Fatal("an unsure promise was written as a task before anybody accepted it")
+	}
+	if read.StatusDetail == nil || *read.StatusDetail != "sent 1 suggestion to Priya Raman to confirm" {
+		t.Errorf("the report says %v, want it to name who the suggestion waits on", read.StatusDetail)
 	}
 	priya := e.As(e.Rep2, []ids.UUID{e.Team1}, transcriptPerms)
 	if _, err := e.svc.Decide(priya, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), true, nil); err != nil {

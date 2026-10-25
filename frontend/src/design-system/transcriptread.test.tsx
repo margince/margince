@@ -336,6 +336,55 @@ describe("reading a transcript for its next steps", () => {
     expect(screen.queryByText("1 suggestion reviewed")).toBeNull();
   });
 
+  it("names the colleague a suggestion went to instead of calling it unavailable", async () => {
+    stubReads({
+      stored: report({
+        proposal_ids: ["ap-1"],
+        status_detail: "sent 1 suggestion to Anna Example to confirm",
+      }),
+      approvalStatus: 404,
+    });
+    render(<TranscriptReadCard activityId="a-1" />);
+
+    expect(
+      await screen.findByText("sent 1 suggestion to Anna Example to confirm"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Status unavailable/)).toBeNull();
+  });
+
+  it("refreshes the record timeline and task reads when a running reading turns done", async () => {
+    let status: Report["status"] = "running";
+    stubReads({
+      stored: report({ status: "running" }),
+      read: () => jsonResponse(report({ status })),
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidated = vi.spyOn(client, "invalidateQueries");
+    rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <TranscriptReadCard activityId="a-1" />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Reading…")).toBeTruthy();
+    expect(invalidated).not.toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["tasks"] }),
+    );
+
+    status = "done";
+    await client.refetchQueries({ queryKey: ["transcript-read"] });
+
+    await waitFor(() =>
+      expect(invalidated).toHaveBeenCalledWith({ queryKey: ["tasks"] }),
+    );
+    expect(invalidated).toHaveBeenCalledWith(
+      expect.objectContaining({ predicate: expect.any(Function) }),
+    );
+  });
+
   it("offers a first reading, and no outcome, on a transcript nobody has read", async () => {
     stubReads({});
     render(<TranscriptReadCard activityId="a-1" />);

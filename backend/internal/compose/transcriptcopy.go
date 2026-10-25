@@ -13,13 +13,14 @@ type transcriptCopy struct{ langcopy.Spoken }
 
 func transcriptCopyFor(language string) transcriptCopy { return transcriptCopy{langcopy.For(language)} }
 
-var transcriptWords = struct{ TasksOne, Tasks, WatchedOne, Watched, ProposalsOne, Proposals, WithheldOne, Withheld, Empty, AlreadyKnown, History, Incomplete, SourceUnknown, Contradicted, Cancelled, Pending, SourceMissing, Completed, Conditional, Optional, Request, Unclear, NoPromiser, NotTranscript, TooLong, Blank, Missing, Refused, NoModel langcopy.Phrase }{
-	TasksOne:      langcopy.Phrase{En: "added %d task for a colleague", De: "%d Aufgabe für ein Teammitglied erstellt", Vi: "Đã thêm %d công việc cho đồng nghiệp"},
-	Tasks:         langcopy.Phrase{En: "added %d tasks for colleagues", De: "%d Aufgaben für Teammitglieder erstellt", Vi: "Đã thêm %d công việc cho đồng nghiệp"},
+var transcriptWords = struct{ TasksOne, Tasks, WatchedOne, Watched, ProposalsOne, Proposals, Colleague, WithheldOne, Withheld, Empty, AlreadyKnown, History, Incomplete, SourceUnknown, Contradicted, Cancelled, Pending, SourceMissing, Completed, Conditional, Optional, Request, Unclear, NoPromiser, NotTranscript, TooLong, Blank, Missing, Refused, NoModel langcopy.Phrase }{
+	TasksOne:      langcopy.Phrase{En: "added %d task for %s", De: "%d Aufgabe für %s erstellt", Vi: "Đã thêm %d công việc cho %s"},
+	Tasks:         langcopy.Phrase{En: "added %d tasks for %s", De: "%d Aufgaben für %s erstellt", Vi: "Đã thêm %d công việc cho %s"},
 	WatchedOne:    langcopy.Phrase{En: "noted %d commitment the customer made", De: "%d Zusage des Kunden erfasst", Vi: "Đã ghi nhận %d cam kết của khách hàng"},
 	Watched:       langcopy.Phrase{En: "noted %d commitments the customer made", De: "%d Zusagen des Kunden erfasst", Vi: "Đã ghi nhận %d cam kết của khách hàng"},
-	ProposalsOne:  langcopy.Phrase{En: "%d proposal awaits your decision", De: "%d Vorschlag wartet auf deine Entscheidung", Vi: "%d đề xuất đang chờ quyết định"},
-	Proposals:     langcopy.Phrase{En: "%d proposals await your decision", De: "%d Vorschläge warten auf deine Entscheidung", Vi: "%d đề xuất đang chờ quyết định"},
+	ProposalsOne:  langcopy.Phrase{En: "sent %d suggestion to %s to confirm", De: "%d Vorschlag zur Bestätigung an %s gesendet", Vi: "Đã gửi %d đề xuất đến %s để xác nhận"},
+	Colleague:     langcopy.Phrase{En: "a colleague", De: "ein Teammitglied", Vi: "một đồng nghiệp"},
+	Proposals:     langcopy.Phrase{En: "sent %d suggestions to %s to confirm", De: "%d Vorschläge zur Bestätigung an %s gesendet", Vi: "Đã gửi %d đề xuất đến %s để xác nhận"},
 	WithheldOne:   langcopy.Phrase{En: "%d commitment: %s", De: "%d Zusage: %s", Vi: "%d cam kết: %s"},
 	Withheld:      langcopy.Phrase{En: "%d commitments: %s", De: "%d Zusagen: %s", Vi: "%d cam kết: %s"},
 	Empty:         langcopy.Phrase{En: "this transcript states no next steps clearly enough to propose one", De: "Dieses Transkript nennt keine nächsten Schritte eindeutig genug für einen Vorschlag.", Vi: "Bản chép lời không nêu rõ bước tiếp theo nào để đề xuất."},  //nolint:misspell // German translation uses German spelling.

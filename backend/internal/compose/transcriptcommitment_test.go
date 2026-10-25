@@ -12,8 +12,8 @@ import (
 )
 
 func TestTranscriptReadReportsEveryKindOfResult(t *testing.T) {
-	detail := transcriptCopyFor("en").transcriptReadDetail(4, transcriptStaging{tasks: 1, watched: 1, proposals: []ids.UUID{ids.NewV7()}, withheld: map[CommitmentOutcome]int{CommitmentOutcome(activities.CommitmentHistorical): 1, CommitmentOutcome(activities.CommitmentSourceUnknown): 1}})
-	for _, want := range []string{"1 task", "1 commitment", "1 proposal", "1 commitment: kept as history", "1 commitment: needs a verified source date"} {
+	detail := transcriptCopyFor("en").transcriptReadDetail(4, transcriptStaging{taskHolders: []holderCount{{"Lars Example", 1}}, watched: 1, proposals: []ids.UUID{ids.NewV7()}, proposalHolders: []holderCount{{"Anna Example", 1}}, withheld: map[CommitmentOutcome]int{CommitmentOutcome(activities.CommitmentHistorical): 1, CommitmentOutcome(activities.CommitmentSourceUnknown): 1}})
+	for _, want := range []string{"added 1 task for Lars Example", "1 commitment", "sent 1 suggestion to Anna Example to confirm", "1 commitment: kept as history", "1 commitment: needs a verified source date"} {
 		if !strings.Contains(detail, want) {
 			t.Errorf("detail %q omits %q", detail, want)
 		}
@@ -38,5 +38,17 @@ func TestTranscriptSemanticReasonsDescribeTheReading(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("%s: %q omits %q", state, got, want)
 		}
+	}
+}
+
+func TestTranscriptReadNamesWhoEachTaskAndSuggestionWentTo(t *testing.T) {
+	staged := transcriptStaging{
+		taskHolders:     []holderCount{{"Lars Example", 1}, {"Anna Example", 2}},
+		proposalHolders: []holderCount{{"", 1}},
+	}
+	got := transcriptCopyFor("en").transcriptReadDetail(4, staged)
+	want := "added 1 task for Lars Example; added 2 tasks for Anna Example; sent 1 suggestion to a colleague to confirm"
+	if got != want {
+		t.Fatalf("detail = %q, want %q", got, want)
 	}
 }

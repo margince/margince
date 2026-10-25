@@ -102,14 +102,14 @@ func transcriptCommitmentBody(owner string, sourceLines []int) string {
 // without asking is said here because no question shows it.
 func (said transcriptCopy) transcriptReadDetail(found int, staged transcriptStaging) string {
 	var details []string
-	if staged.tasks > 0 {
-		details = append(details, said.count(staged.tasks, transcriptWords.TasksOne, transcriptWords.Tasks))
+	for _, group := range staged.taskHolders {
+		details = append(details, said.count(group.count, transcriptWords.TasksOne, transcriptWords.Tasks, said.holderName(group.name)))
 	}
 	if staged.watched > 0 {
 		details = append(details, said.count(staged.watched, transcriptWords.WatchedOne, transcriptWords.Watched))
 	}
-	if len(staged.proposals) > 0 {
-		details = append(details, said.count(len(staged.proposals), transcriptWords.ProposalsOne, transcriptWords.Proposals))
+	for _, group := range staged.proposalHolders {
+		details = append(details, said.count(group.count, transcriptWords.ProposalsOne, transcriptWords.Proposals, said.holderName(group.name)))
 	}
 	for _, reason := range slices.Sorted(maps.Keys(staged.withheld)) {
 		details = append(details, said.count(staged.withheld[reason], transcriptWords.WithheldOne, transcriptWords.Withheld, said.transcriptWithheldReason(reason)))
@@ -121,6 +121,15 @@ func (said transcriptCopy) transcriptReadDetail(found int, staged transcriptStag
 		return said.Say(transcriptWords.Empty)
 	}
 	return said.Say(transcriptWords.AlreadyKnown)
+}
+
+// holderName is how a sentence calls the seat a task or suggestion went to. A
+// seat without a name is still somebody, so the sentence says that much.
+func (said transcriptCopy) holderName(name string) string {
+	if strings.TrimSpace(name) == "" {
+		return said.Say(transcriptWords.Colleague)
+	}
+	return name
 }
 
 func (said transcriptCopy) transcriptWithheldReason(outcome CommitmentOutcome) string {
