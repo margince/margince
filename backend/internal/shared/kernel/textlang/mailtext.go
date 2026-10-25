@@ -91,7 +91,7 @@ func MessageOpening(body string, maxRunes int) string {
 func cutAtQuote(body string) string {
 	runes := []rune(body)
 	if offset := quoteStart(runes); offset >= 0 {
-		return string(runes[:offset])
+		return textcut.Runes(body, offset)
 	}
 	return body
 }
