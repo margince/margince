@@ -10,7 +10,10 @@ package mailcopy
 // compares the weekly labels against the panel's, which is the only thing that
 // can say whether a translation is the right one. What is here is the lookup.
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestALanguageThisBuildCarriesIsWrittenInIt(t *testing.T) {
 	t.Parallel()
@@ -75,5 +78,24 @@ func TestEveryEntryIsFilledIn(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestConfirmConsentBodyHasNoForcedLineBreak(t *testing.T) {
+	for _, lang := range []string{"en", "de", "vi"} {
+		if body := For(lang).ConfirmConsentBody; strings.Contains(body, "\n") {
+			t.Errorf("%s: ConfirmConsentBody breaks a sentence with a newline: %q", lang, body)
+		}
+	}
+}
+
+func TestNoticeBodyBreaksOnlyBetweenSentences(t *testing.T) {
+	for _, lang := range []string{"en", "de", "vi"} {
+		body := For(lang).NoticeBody
+		for i, r := range body {
+			if r == '\n' && (i == 0 || body[i-1] != '.') {
+				t.Errorf("%s: NoticeBody breaks mid-sentence at byte %d: %q", lang, i, body)
+			}
+		}
 	}
 }

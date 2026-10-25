@@ -78,11 +78,22 @@ func MessageOpening(body string, maxRunes int) string {
 	if maxRunes <= 0 {
 		return ""
 	}
-	text := strings.TrimSpace(authoredText(stripMailHeaders(body)))
+	text := strings.TrimSpace(authoredText(stripMailHeaders(cutAtQuote(body))))
 	if cut := textcut.Runes(text, maxRunes); cut != text {
 		return strings.TrimSpace(cut)
 	}
 	return text
+}
+
+// cutAtQuote drops the quoted thread before the envelope is stripped.
+// stripMailHeaders reads a quote block that follows the envelope as more
+// envelope and would otherwise remove its headers and pass the quote on.
+func cutAtQuote(body string) string {
+	runes := []rune(body)
+	if offset := quoteStart(runes); offset >= 0 {
+		return textcut.Runes(body, offset)
+	}
+	return body
 }
 
 // stripMailHeaders drops the leading From:/To: block the capture path writes

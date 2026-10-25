@@ -49,6 +49,8 @@ type SMTP struct {
 	Username    string
 	Password    string
 	FromAddress string
+	// Now stamps the Date header; the wall clock when nil.
+	Now func() time.Time
 }
 
 // Send submits the message through the configured relay. TLS is
@@ -62,7 +64,7 @@ func (s SMTP) Send(ctx context.Context, to, subject, textBody string) error {
 }
 
 // SendIdentified is Send with the Message-ID header set to messageID. An
-// empty messageID writes no header and leaves the identity to the relay.
+// empty messageID gets one minted on the sender's domain.
 //
 // Once the relay accepts the DATA terminator the message is sent, so a QUIT
 // that fails after it is logged and the send still succeeds. Reporting it

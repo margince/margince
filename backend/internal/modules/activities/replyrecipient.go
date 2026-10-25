@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
@@ -36,6 +37,11 @@ import (
 // drafter with no name — and a draft that opens "Hallo," is correct there,
 // where one that guesses is not.
 type ReplyRecipient struct {
+	// ContactID is the contact the reply is addressed to, so the language of
+	// that contact's own mail can be told from other participants' mail.
+	// Empty unless that contact is also the message's top-ranked participant,
+	// so a readable CC never stands in for a sender this caller may not read.
+	ContactID string
 	// FullName as recorded, for the drafter to greet by.
 	FullName string
 	// FirstName is what a familiar greeting uses. Split here rather than in
@@ -57,6 +63,15 @@ type ReplyRecipient struct {
 	// FiledAddress is the reachable address of a written-about row's one readable linked
 	// contact, never a seat's or a shared mailbox's. Several linked contacts leave it empty.
 	FiledAddress string
+}
+
+// GreetingNames are the first name (or full name when there is none) and the
+// surname a greeting uses.
+func (r ReplyRecipient) GreetingNames() (greeting, surname string) {
+	if r.FirstName != "" {
+		return r.FirstName, r.LastName
+	}
+	return r.FullName, r.LastName
 }
 
 // ReplyRecipientFor names the contact a reply to this activity is written to.
@@ -94,12 +109,8 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		if err != nil {
 			return err
 		}
-		if written = slices.Contains(writtenAboutKinds, activity.Kind); written {
-			offered, err := offeredEmails(ctx, tx, []ids.UUID{id.UUID})
-			if err != nil {
-				return err
-			}
-			filed = offered[id.UUID]
+		if written, filed, err = writtenAboutAddress(ctx, tx, id, activity.Kind); err != nil {
+			return err
 		}
 
 		// ONE statement: the row scope, the archived test and the name are
@@ -126,32 +137,41 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// a "to" recipient (our own outbound, where the addressee is the
 		// counterparty), then anyone else on it, then the bare link.
 		q := `
-			SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
-			       coalesce((SELECT pe.email
-			                   FROM contact_email pe
-			                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
+				SELECT p.id, p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
+				       coalesce((SELECT pe.email
+				                   FROM contact_email pe
+				                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
 			contactaddress.ReachableOrder + `
-			                  LIMIT 1), '')
-			  FROM contact p
-			  JOIN (
-			       SELECT contact_id,
-			              CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
-			              created_at, id
-			         FROM activity_participant
-			        WHERE activity_id = $1 AND contact_id IS NOT NULL
-			       UNION ALL
-			       SELECT contact_id, 4 AS rank, created_at, id
-			         FROM activity_link
-			        WHERE activity_id = $1 AND contact_id IS NOT NULL
-			  ) c ON c.contact_id = p.id
-			 WHERE p.archived_at IS NULL`
+				                  LIMIT 1), ''),
+				       p.id IS NOT DISTINCT FROM (
+				            SELECT top.contact_id FROM activity_participant top
+				             WHERE top.activity_id = $1 AND top.contact_id IS NOT NULL
+				             ORDER BY CASE top.role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END,
+				                      top.created_at, top.id
+				             LIMIT 1)
+				  FROM contact p
+				  JOIN (
+				       SELECT contact_id,
+				              CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
+				              created_at, id
+				         FROM activity_participant
+				        WHERE activity_id = $1 AND contact_id IS NOT NULL
+				       UNION ALL
+				       SELECT contact_id, 4 AS rank, created_at, id
+				         FROM activity_link
+				        WHERE activity_id = $1 AND contact_id IS NOT NULL
+				  ) c ON c.contact_id = p.id
+				 WHERE p.archived_at IS NULL`
 		if scope != "" {
 			q += ` AND (` + scope + `)`
 		}
 		q += ` ORDER BY c.rank, c.created_at, c.id LIMIT 1`
 
+		var contactID ids.UUID
 		var address string
-		err = tx.QueryRow(ctx, q, args...).Scan(&out.FullName, &out.FirstName, &out.LastName, &address)
+		var topParticipant bool
+		err = tx.QueryRow(ctx, q, args...).Scan(
+			&contactID, &out.FullName, &out.FirstName, &out.LastName, &address, &topParticipant)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Linked to nobody, or to a contact out of scope. Both mean no
 			// name, which the floor renders as an unnamed greeting rather
@@ -171,6 +191,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// recipient would greet "steireif Partnernet," which is worse than
 		// either. The empty recipient is already this type's documented answer
 		// for "no name", and the floor opens without one.
+		out.ContactID = addresseeID(contactID, topParticipant)
 		if mailrole.GreetsNobody(out.FullName, address) {
 			out = ReplyRecipient{}
 		}
@@ -181,6 +202,28 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 	}
 	out.WrittenAbout, out.FiledAddress = written, filed
 	return out, nil
+}
+
+// writtenAboutAddress says whether a reply to this kind writes about the record,
+// and the address it offers when it does.
+func writtenAboutAddress(ctx context.Context, tx pgx.Tx, id ids.ActivityID, kind crmcontracts.ActivityKind) (bool, string, error) {
+	if !slices.Contains(writtenAboutKinds, kind) {
+		return false, "", nil
+	}
+	offered, err := offeredEmails(ctx, tx, []ids.UUID{id.UUID})
+	if err != nil {
+		return false, "", err
+	}
+	return true, offered[id.UUID], nil
+}
+
+// addresseeID names the contact only when it is also the message's top-ranked
+// participant, so a readable CC never stands in for an unreadable sender.
+func addresseeID(contact ids.UUID, topParticipant bool) string {
+	if !topParticipant {
+		return ""
+	}
+	return contact.String()
 }
 
 // GreetingName is the one name a floor draft greets by, or empty.

@@ -57,7 +57,7 @@ type summaryCopy struct {
 // textlang.Shipped and ask this map directly.
 var summaryByLang = map[textlang.Lang]summaryCopy{
 	textlang.English: {
-		draftFollowUp:      "Draft a follow-up on %q — a %s on %s left no next step planned",
+		draftFollowUp:      "Draft a follow-up on %q — the %s on %s left no next step planned",
 		followUpSubject:    "Follow up on %s",
 		followUpBody:       "Follow up on the %s from %s. No next step is on the timeline yet.",
 		followUpBodyQuoted: "Follow up on the %s “%s” from %s. No next step is on the timeline yet.",
