@@ -85,6 +85,19 @@ func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time) (*Service
 	if s.awaiting == nil || s.taskScope == TasksOwnedBy || s.taskScope == TasksUnassigned {
 		return &scoped, nil
 	}
+	var loc *time.Location
+	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+		var zoneErr error
+		loc, zoneErr = s.location(ctx)
+		return zoneErr
+	})
+	if err != nil {
+		slog.Log(ctx, laneFailureLevel(ctx), "the installation zone failed, so follow-ups cannot be aged", "error", err)
+		failed := func(source string) *crmcontracts.WorklistSourceUnavailable {
+			return &crmcontracts.WorklistSourceUnavailable{Source: source, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed}
+		}
+		return &scoped, []*crmcontracts.WorklistSourceUnavailable{failed(sourceAwaitingReply), failed(sourceMeetingFollowUp)}
+	}
 	replies, cut, repliesErr := s.readFollowUps(ctx, sourceAwaitingReply, asOf, s.awaiting.AwaitingReplies)
 	meetings, meetingsCut, meetingsErr := s.readFollowUps(ctx, sourceMeetingFollowUp, asOf, s.awaiting.MeetingFollowUps)
 	scoped.followUps = followUpRead{
@@ -92,10 +105,10 @@ func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time) (*Service
 		read: repliesErr == nil, cut: cut, meetingsRead: meetingsErr == nil, meetingsCut: meetingsCut,
 	}
 	for _, row := range replies {
-		scoped.followUps.rows = append(scoped.followUps.rows, classifyAwaiting(row, asOf))
+		scoped.followUps.rows = append(scoped.followUps.rows, classifyAwaiting(row, asOf, loc))
 	}
 	for _, meeting := range meetings {
-		if row, actionable := classifyMeetingFollowUp(meeting, asOf); actionable {
+		if row, actionable := classifyMeetingFollowUp(meeting, asOf, loc); actionable {
 			scoped.followUps.rows = append(scoped.followUps.rows, row)
 		}
 	}
@@ -130,8 +143,8 @@ func (s *Service) readFollowUps(
 // classifyAwaiting is one follow-up row. It is the reader's own promise to
 // keep the conversation going, so it ranks with promises, below a customer
 // who is waiting on them.
-func classifyAwaiting(awaited AwaitedReply, asOf time.Time) ranked {
-	days := daysSince(awaited.SentAt, asOf)
+func classifyAwaiting(awaited AwaitedReply, asOf time.Time, loc *time.Location) ranked {
+	days := calendarDaysSince(awaited.SentAt, asOf, loc)
 	row := crmcontracts.WorklistItem{
 		Id:           awaited.ActivityID.String(),
 		Source:       sourceAwaitingReply,
@@ -176,8 +189,8 @@ func classifyAwaiting(awaited AwaitedReply, asOf time.Time) ranked {
 // meeting is not a message to answer, so the composer writes a fresh message
 // to everyone it was with. With nobody on file the row opens the deal or the
 // company instead; with neither there is nothing to act on, and no row.
-func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time) (ranked, bool) {
-	days := daysSince(met.SentAt, asOf)
+func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time, loc *time.Location) (ranked, bool) {
+	days := calendarDaysSince(met.SentAt, asOf, loc)
 	row := crmcontracts.WorklistItem{
 		Id:           met.ActivityID.String(),
 		Source:       sourceMeetingFollowUp,
