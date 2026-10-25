@@ -11,7 +11,6 @@ package contacts
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -33,76 +32,17 @@ const (
 // protect a name the way an explicit edit does.
 const DisplayNameRepairActor = "system:participant_backfill"
 
+// InitialsRepairActor is the principal the initials data task's batches bind.
+// Its rewrite of capture's guess is still capture's, so a name learned later
+// may replace it.
+const InitialsRepairActor = "system:datatask:core/1792896243_initials_display_names"
+
 // StaleDisplayNamesTx answers up to limit contacts whose display name the
 // repair may replace with the pair their split columns carry. The repair's
 // selector reads it, and RefreshDisplayNameTx asks the same statement about one
 // contact. So a row the selector offers is one the writer accepts.
 func StaleDisplayNamesTx(ctx context.Context, tx pgx.Tx, limit int) ([]ids.ContactID, error) {
 	return captureGuessedDisplayNamesTx(ctx, tx, nil, nil, repairRule, limit)
-}
-
-// initialsNamedPageSize is how many capture-named contacts one read of the
-// initials selector examines.
-const initialsNamedPageSize = 200
-
-// InitialsDisplayName is a contact whose display is capture's guess from an
-// address that only spells initials, with the local part that should replace it.
-type InitialsDisplayName struct {
-	ID       ids.ContactID
-	FullName string
-	Proposed string
-}
-
-// InitialsNamedDisplayNamesTx answers up to limit contacts whose display name is
-// only the guess capture made from an initials-only address ("Dv" for dv@). It
-// is read-only, so it is also the preview of what the repair writes. It pages
-// the shared statement by id until it has limit accepted contacts or runs out,
-// so contacts it declines cannot starve the page.
-func InitialsNamedDisplayNamesTx(ctx context.Context, tx pgx.Tx, limit int) ([]InitialsDisplayName, error) {
-	var accepted []InitialsDisplayName
-	var after *ids.ContactID
-	for len(accepted) < limit {
-		rule := displayRule{unsplitMaxLen: maxInitialsDisplayLen, after: after}
-		page, err := captureGuessedDisplayNamesTx(ctx, tx, nil, nil, rule, initialsNamedPageSize)
-		if err != nil {
-			return nil, err
-		}
-		for _, id := range page {
-			candidate, ok, err := initialsCandidateTx(ctx, tx, id)
-			if err != nil {
-				return nil, err
-			}
-			if ok && len(accepted) < limit {
-				accepted = append(accepted, candidate)
-			}
-		}
-		if len(page) < initialsNamedPageSize {
-			break
-		}
-		after = &page[len(page)-1]
-	}
-	return accepted, nil
-}
-
-// initialsCandidateTx reads one contact's display and live address and applies
-// initialsDisplayReplacement.
-func initialsCandidateTx(ctx context.Context, tx pgx.Tx, id ids.ContactID) (InitialsDisplayName, bool, error) {
-	var fullName, email string
-	err := tx.QueryRow(ctx, `
-		SELECT p.full_name, e.email
-		  FROM contact p
-		  JOIN LATERAL (SELECT e.email FROM contact_email e
-		                 WHERE e.contact_id = p.id AND e.archived_at IS NULL`+
-		ReachableEmailOrder+` LIMIT 1) e ON true
-		 WHERE p.id = $1`, id).Scan(&fullName, &email)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return InitialsDisplayName{}, false, nil
-	}
-	if err != nil {
-		return InitialsDisplayName{}, false, fmt.Errorf("contacts: reading the address contact %s shows: %w", id, err)
-	}
-	proposed, ok := initialsDisplayReplacement(fullName, email)
-	return InitialsDisplayName{ID: id, FullName: fullName, Proposed: proposed}, ok, nil
 }
 
 // displayNameIsStaleTx is StaleDisplayNamesTx asked about one contact.
@@ -133,11 +73,11 @@ func displayNameIsCapturesGuessTx(ctx context.Context, tx pgx.Tx, contactID ids.
 // keepWhenPairShown keeps a display that already holds both halves.
 // unsplitMaxLen, when above zero, offers only contacts with no split columns and
 // a display no longer than that.
-// after is the keyset the page resumes from.
+// among, when set, asks only about those contacts.
 type displayRule struct {
 	needPair, keepWhenPairShown bool
 	unsplitMaxLen               int
-	after                       *ids.ContactID
+	among                       []ids.UUID
 }
 
 var (
@@ -151,8 +91,8 @@ var (
 //
 // Origin is captureorigin.ContactSQL, which the mailbox purge reads too.
 //
-// Any later audit row naming full_name protects the name, unless capture or the
-// repair wrote it. A human or an agent chose it, by update or by restore.
+// Any later audit row naming full_name protects the name, unless capture, the
+// repair or the initials task wrote it. A human or an agent chose it, by update or by restore.
 //
 // The pair is the split columns, or the one the fill is about to write. A
 // display containing both nonblank halves says at least as much as the pair,
@@ -176,7 +116,7 @@ func captureGuessedDisplayNamesTx(
 		   AND `+captureorigin.ContactSQL("$2", "$3", "$4")+`
 		   AND ($12 = 0 OR (p.first_name IS NULL AND p.last_name IS NULL
 		                    AND char_length(p.full_name) <= $12))
-		   AND ($13::uuid IS NULL OR p.id > $13)
+		   AND ($13::uuid[] IS NULL OR p.id = ANY($13))
 		   AND (NOT $5 OR (n.first <> '' AND n.last <> ''))
 		   AND NOT ($10 AND n.first <> '' AND n.last <> ''
 		            AND strpos(lower(p.full_name), lower(n.first)) > 0
@@ -186,12 +126,12 @@ func captureGuessedDisplayNamesTx(
 		        WHERE a.entity_type = 'contact' AND a.entity_id = p.id
 		          AND a.action <> 'create'
 		          AND (a.after ? 'full_name' OR a.before ? 'full_name')
-		          AND NOT (`+captureWriterSQL("a.actor_id", "$2", "$3", "$9")+` OR a.actor_id = $11))
+		          AND NOT (`+captureWriterSQL("a.actor_id", "$2", "$3", "$9")+` OR a.actor_id IN ($11, $14)))
 		 ORDER BY p.id
 		 LIMIT $6`,
 		only, CaptureVerdictActor, CaptureAcceptActor, vcardSource, rule.needPair, limit,
 		first, last, DisplayNameRepairActor, rule.keepWhenPairShown, enrichCapturedBy,
-		rule.unsplitMaxLen, rule.after)
+		rule.unsplitMaxLen, rule.among, InitialsRepairActor)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading whose display name a contact carries: %w", err)
 	}

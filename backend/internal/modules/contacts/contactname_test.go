@@ -324,23 +324,25 @@ func TestParseContactNameNeverReportsHalfAName(t *testing.T) {
 func TestInitialsDisplayReplacementReplacesOnlyTheAddressGuess(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name, fullName, email, want string
-		ok                          bool
+		name, fullName, header, email, want string
+		ok                                  bool
 	}{
-		{"the guess is replaced", "Dv", "dv@example.com", "dv", true},
-		{"dotted initials", "D V", "d.v@example.com", "d.v", true},
-		{"a typed name stays", "Daniel Vogt", "dv@example.com", "", false},
-		{"an address that is a name stays", "Dv", "anna@example.com", "", false},
-		{"a name that is not the guess stays", "DV", "dv@example.com", "", false},
-		{"an already repaired name is not offered again", "dv", "dv@example.com", "", false},
+		{"the guess is replaced", "Dv", "", "dv@example.com", "dv", true},
+		{"dotted initials", "D V", "", "d.v@example.com", "d.v", true},
+		{"a header that names nobody leaves the address to decide", "Dv", "billing", "dv@example.com", "dv", true},
+		{"a header that spelled the same name stays", "Dv", "DV", "dv@example.com", "", false},
+		{"a typed name stays", "Daniel Vogt", "", "dv@example.com", "", false},
+		{"an address that is a name stays", "Dv", "", "anna@example.com", "", false},
+		{"a name that is not the guess stays", "DV", "", "dv@example.com", "", false},
+		{"an already repaired name is not offered again", "dv", "", "dv@example.com", "", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got, ok := initialsDisplayReplacement(tc.fullName, tc.email)
+			got, ok := initialsDisplayReplacement(tc.fullName, tc.header, tc.email)
 			if got != tc.want || ok != tc.ok {
-				t.Errorf("initialsDisplayReplacement(%q, %q) = %q, %v; want %q, %v",
-					tc.fullName, tc.email, got, ok, tc.want, tc.ok)
+				t.Errorf("initialsDisplayReplacement(%q, %q, %q) = %q, %v; want %q, %v",
+					tc.fullName, tc.header, tc.email, got, ok, tc.want, tc.ok)
 			}
 		})
 	}
