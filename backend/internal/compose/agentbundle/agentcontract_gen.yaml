@@ -9711,7 +9711,7 @@ components:
         paid:
           type: boolean
           description: >-
-            True when a person started the run and it spent credits. A value from an automatic run is never paid, because automatic runs take only free categories.
+            True when a seat started the run and it spent credits. A value from an automatic run is never paid, because automatic runs take only free categories.
         trigger: {$ref: '#/components/schemas/ProviderRunTrigger'}
         requested_by:
           type: [string, 'null']

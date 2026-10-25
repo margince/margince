@@ -29703,7 +29703,7 @@ type BoughtField struct {
 	// AppliedAt When the run wrote it.
 	AppliedAt time.Time `json:"applied_at"`
 
-	// Paid True when a person started the run and it spent credits. A value from an automatic run is never paid, because automatic runs take only free categories.
+	// Paid True when a seat started the run and it spent credits. A value from an automatic run is never paid, because automatic runs take only free categories.
 	Paid bool `json:"paid"`
 
 	// Provider A licensed data provider registered in THIS installation; the domain/run contract

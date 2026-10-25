@@ -94,7 +94,7 @@ function attributeFacts(
   });
 }
 
-// What started the provider's newest run on this contact; a person's run names
+// What started the provider's newest run on this contact; a manual run names
 // the seat, an automatic one names itself.
 function RunTrigger({ field }: Readonly<{ field: BoughtField }>) {
   const t = useT();

@@ -18,9 +18,9 @@ var svgPathArity = map[byte]int{
 }
 
 // splitImplicitPathRepeats rewrites every path so each parameter set carries
-// its own command letter. The renderer passes the whole parameter list of a
-// repeated arc to its arc routine, so every arc after the first in one command
-// is drawn with the first arc's radii and end point.
+// its own command letter. The renderer hands its arc routine the whole
+// parameter list of a repeated arc. Every later arc then takes the first arc's
+// radii and end point.
 func splitImplicitPathRepeats(src []byte) []byte {
 	return svgPathDataAttr.ReplaceAllFunc(src, func(match []byte) []byte {
 		parts := svgPathDataAttr.FindSubmatch(match)
@@ -111,39 +111,48 @@ func readPathParams(d string, pos int, cmd byte) ([]string, int, bool) {
 
 func scanPathNumber(d string, pos int) (string, int, bool) {
 	start := pos
-	if pos < len(d) && (d[pos] == '+' || d[pos] == '-') {
-		pos++
-	}
-	digits := 0
-	for pos < len(d) && d[pos] >= '0' && d[pos] <= '9' {
-		pos++
-		digits++
-	}
+	pos = skipSign(d, pos)
+	pos, digits := skipDigits(d, pos)
 	if pos < len(d) && d[pos] == '.' {
-		pos++
-		for pos < len(d) && d[pos] >= '0' && d[pos] <= '9' {
-			pos++
-			digits++
-		}
+		var fraction int
+		pos, fraction = skipDigits(d, pos+1)
+		digits += fraction
 	}
 	if digits == 0 {
 		return "", pos, false
 	}
-	if pos < len(d) && (d[pos] == 'e' || d[pos] == 'E') {
-		exp := pos + 1
-		if exp < len(d) && (d[exp] == '+' || d[exp] == '-') {
-			exp++
-		}
-		if exp < len(d) && d[exp] >= '0' && d[exp] <= '9' {
-			for exp < len(d) && d[exp] >= '0' && d[exp] <= '9' {
-				exp++
-			}
-			pos = exp
-		}
-	}
+	pos = skipExponent(d, pos)
 	tok := d[start:pos]
 	if _, err := strconv.ParseFloat(tok, 64); err != nil {
 		return "", pos, false
 	}
 	return tok, pos, true
+}
+
+func skipSign(d string, pos int) int {
+	if pos < len(d) && (d[pos] == '+' || d[pos] == '-') {
+		return pos + 1
+	}
+	return pos
+}
+
+func skipDigits(d string, pos int) (int, int) {
+	start := pos
+	for pos < len(d) && d[pos] >= '0' && d[pos] <= '9' {
+		pos++
+	}
+	return pos, pos - start
+}
+
+// skipExponent takes an exponent only when digits follow it, so the "e" of a
+// following command letter is never swallowed.
+func skipExponent(d string, pos int) int {
+	if pos >= len(d) || (d[pos] != 'e' && d[pos] != 'E') {
+		return pos
+	}
+	end, digits := skipDigits(d, skipSign(d, pos+1))
+	if digits == 0 {
+		return pos
+	}
+	return end
 }

@@ -27318,7 +27318,7 @@ export interface components {
              * @description When the run wrote it.
              */
             applied_at: string;
-            /** @description True when a person started the run and it spent credits. A value from an automatic run is never paid, because automatic runs take only free categories. */
+            /** @description True when a seat started the run and it spent credits. A value from an automatic run is never paid, because automatic runs take only free categories. */
             paid: boolean;
             trigger: components["schemas"]["ProviderRunTrigger"];
             /**

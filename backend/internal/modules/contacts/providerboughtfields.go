@@ -5,11 +5,9 @@ package contacts
 
 // Which values on a contact a provider run put there and still owns.
 //
-// Two readers ask it: the contact read, which marks those values as the
-// provider's, and the revert behind "Delete provider data", which takes them back. Both read the
-// same per-table predicate below, so the page cannot mark a value the revert
-// would leave standing because it no longer counts as the purchase's. The
-// revert adds its own conditions on top (deletability); it never loosens these.
+// The contact read marks those values, and "Delete provider data" takes them
+// back. Both read the per-table predicate below, so the page marks no value the
+// revert would leave standing. The revert adds conditions; it never loosens these.
 //
 // Every predicate relates a target row `t` to its provider_applied_field row `f`.
 
@@ -52,18 +50,18 @@ var boughtPredicates = map[string]string{
 }
 
 // boughtFieldsSQL lists one contact's ledger rows whose target still holds the
-// provider value, newest first, with the run that wrote it and whether that run
-// spent credits, formatted with the contact's placeholder and the employment
-// visibility clause. Automatic runs take only free categories, so a run is paid
-// only when a person started it and it reserved credits.
+// provider value, newest first, with the run that wrote it. It is formatted with
+// the contact's placeholder and the employment visibility clause. Automatic runs
+// take only free categories, so a run is paid only when a seat started it and it
+// spent credits.
 const boughtFieldsSQL = `
 	SELECT f.target_table, f.target_field, f.target_row_id, f.provider, f.applied_at,
-	       r.trigger, CASE WHEN r.trigger = 'manual' THEN r.requested_by END,
-	       r.trigger = 'manual' AND EXISTS (
-	         SELECT 1 FROM provider_run_reservation v
-	          WHERE v.run_id = r.id AND COALESCE(v.actual_credits, v.reserved_credits) > 0)
+	       run.trigger, CASE WHEN run.trigger = 'manual' THEN run.requested_by END,
+	       run.trigger = 'manual' AND ` + storekit.ProviderRunCharges + ` AND EXISTS (
+	         SELECT 1 FROM provider_run_reservation r
+	          WHERE r.run_id = run.id AND ` + storekit.ProviderChargedCredits + ` > 0)
 	  FROM provider_applied_field f
-	  JOIN provider_run r ON r.id = f.run_id
+	  JOIN provider_run run ON run.id = f.run_id
 	 WHERE f.contact_id = $%d
 	   AND ((f.target_table = 'contact'
 	         AND EXISTS (SELECT 1 FROM contact t WHERE ` + boughtTitleSQL + `))

@@ -299,7 +299,7 @@ describe("bought values on the contact page", () => {
     ).toBeNull();
   });
 
-  it("says a person requested a paid run and keeps the bought wording", async () => {
+  it("says a seat requested a paid run and keeps the bought wording", async () => {
     const requested = {
       ...view.contact,
       bought_fields: (view.contact.bought_fields ?? []).map((f) => ({

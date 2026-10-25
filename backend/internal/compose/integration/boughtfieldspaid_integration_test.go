@@ -30,7 +30,7 @@ func boughtFieldOf(t *testing.T, e *Env, store *contacts.Store, subject ids.UUID
 	return crmcontracts.BoughtField{}
 }
 
-func TestAProviderValueIsPaidOnlyWhenAPersonsRunSpentCredits(t *testing.T) {
+func TestAProviderValueIsPaidOnlyWhenASeatsRunSpentCredits(t *testing.T) {
 	cases := map[string]struct {
 		trigger     string
 		credits     int
@@ -38,10 +38,10 @@ func TestAProviderValueIsPaidOnlyWhenAPersonsRunSpentCredits(t *testing.T) {
 		wantTrigger crmcontracts.ProviderRunTrigger
 		wantSeat    bool
 	}{
-		"catch-up sweep":          {"automatic_backfill", 0, false, crmcontracts.ProviderRunTriggerAutomaticBackfill, false},
-		"new contact":             {"automatic_create", 0, false, crmcontracts.ProviderRunTriggerAutomaticCreate, false},
-		"person without spending": {"manual", 0, false, crmcontracts.ProviderRunTriggerManual, true},
-		"person who spent":        {"manual", 3, true, crmcontracts.ProviderRunTriggerManual, true},
+		"catch-up sweep":        {"automatic_backfill", 0, false, crmcontracts.ProviderRunTriggerAutomaticBackfill, false},
+		"new contact":           {"automatic_create", 0, false, crmcontracts.ProviderRunTriggerAutomaticCreate, false},
+		"seat without spending": {"manual", 0, false, crmcontracts.ProviderRunTriggerManual, true},
+		"seat who spent":        {"manual", 3, true, crmcontracts.ProviderRunTriggerManual, true},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

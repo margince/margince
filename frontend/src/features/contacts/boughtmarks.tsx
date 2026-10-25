@@ -10,9 +10,9 @@ import { useRecordZone } from "../../lib/recordzone";
 
 // What a data provider put on a contact, marked where it stands on the record.
 // The server decides which values still hold what the run wrote
-// (`bought_fields`) and whether the run spent credits (`paid`), so a value a
-// colleague has since corrected carries no mark and a value "Delete provider
-// data" took back is gone with its mark.
+// (`bought_fields`) and whether the run spent credits (`paid`). A value a
+// colleague has since corrected carries no mark. A value "Delete provider data"
+// took back is gone with its mark.
 
 type Contact = components["schemas"]["Contact"];
 export type BoughtField = components["schemas"]["BoughtField"];
