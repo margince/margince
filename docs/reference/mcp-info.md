@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 124.9 KB |
+| Tool catalog | 126.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32873 |
+| Approx. wire tokens | 33148 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 19% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 32.1 KB | 25% | Yes, every step |
-| Input schemas | 59.6 KB | 47% | Yes, every step |
+| Descriptions (incl. governance clause) | 32.4 KB | 25% | Yes, every step |
+| Input schemas | 60.2 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
-| **Description + input schema** | **91.6 KB** | **73%** | **the recurring cost** |
+| **Description + input schema** | **92.7 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -65,7 +65,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1386 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
-| [`change_state`](#change_state) | Move a lead, deal or project on |  |  | 866 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1117 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 553 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1704 |
+| [`find_records`](#find_records) | Find records | yes |  | 1714 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -1794,23 +1794,27 @@ record's own fields, and create_record with record_type offer to make an offer w
 
 ### change_state
 
-**Move a lead, deal or project on**
+**Move a lead, deal, project or partner**
 
 ```text
-Move a lead, deal or project on. qualify fills what a lead's own data already implies, today the
-company name from its email domain, and names the fields still empty. promote turns a lead who has
-genuinely engaged into a contact. disqualify closes out a lead going nowhere. demote reverses a
-promotion. move_deal moves a deal to a stage, with a note. move_project moves a project to a phase;
-closed closes it. promote needs a trigger naming the engagement; cold outreach nobody answered never
-promotes. demote needs a reason and is refused once the contact owns a deal. move_deal to a won or
-lost stage waits for a human; to an open stage it runs at once. move_project to closed needs a
-reason and leaves the project's tasks open. When the user asked for the close, report what is still
-open and close: an open task is news for them, not a reason to hold back. read_workspace topic
-pipelines gives the stage ids. Use update_record for a record's other fields, and enrich to learn
-about a company from its website. A promotion answers with the new contact's id. A staged answer's
-approval id is what the retry carries; do not report the change until the retry has answered.
-(Governance: runs immediately for demote, disqualify, move_project, promote, qualify; decided per
-call from its arguments for move_deal; requires passport scope "write".)
+Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own
+data already implies, today the company name from its email domain, and names the fields still
+empty. promote turns a lead who has genuinely engaged into a contact. disqualify closes out a lead
+going nowhere. demote reverses a promotion. move_deal moves a deal to a stage, with a note.
+move_project moves a project to a phase; closed closes it. set_up_partner starts a partner program
+on a company, with company_id, partner_role and optionally relationship_stage, next_step and
+next_step_due_at. promote needs a trigger naming the engagement; cold outreach nobody answered never
+promotes. demote needs a reason and is refused once the contact owns a deal. set_up_partner always
+waits for a human, takes no margin tier (a human sets that on the company's Partner tab) and is
+refused for a company that already is a partner. move_deal to a won or lost stage waits for a human;
+to an open stage it runs at once. move_project to closed needs a reason and leaves the project's
+tasks open. When the user asked for the close, report what is still open and close: an open task is
+news for them, not a reason to hold back. read_workspace topic pipelines gives the stage ids. Use
+update_record for a record's other fields, and enrich to learn about a company from its website. A
+promotion answers with the new contact's id. A staged answer's approval id is what the retry
+carries; do not report the change until the retry has answered. (Governance: runs immediately for
+demote, disqualify, move_project, promote, qualify; a human approves first for set_up_partner;
+decided per call from its arguments for move_deal; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1825,12 +1829,18 @@ call from its arguments for move_deal; requires passport scope "write".)
         "move_deal",
         "move_project",
         "promote",
-        "qualify"
+        "qualify",
+        "set_up_partner"
       ],
       "type": "string"
     },
     "approval_id": {
-      "description": "demote, disqualify, move_deal, move_project, promote only: Set on approved retry",
+      "description": "demote, disqualify, move_deal, move_project, promote, set_up_partner only: Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
+    "company_id": {
+      "description": "set_up_partner: the company",
       "format": "uuid",
       "type": "string"
     },
@@ -1861,8 +1871,26 @@ call from its arguments for move_deal; requires passport scope "write".)
       "description": "move_deal only: Required when the target stage closes the deal as lost",
       "type": "string"
     },
+    "next_step": {
+      "description": "set_up_partner only",
+      "type": "string"
+    },
+    "next_step_due_at": {
+      "description": "set_up_partner only",
+      "format": "date",
+      "type": "string"
+    },
     "note": {
       "description": "move_deal only: Logged as a note on the deal's timeline after the move",
+      "type": "string"
+    },
+    "partner_role": {
+      "description": "set_up_partner, required: hosting, consulting or strategic",
+      "enum": [
+        "hosting",
+        "consulting",
+        "strategic"
+      ],
       "type": "string"
     },
     "project_id": {
@@ -1873,6 +1901,22 @@ call from its arguments for move_deal; requires passport scope "write".)
     "reason": {
       "description": "demote, required: why the promotion is reversed. move_project: required when to_phase is closed. Recorded in the audit trail",
       "minLength": 1,
+      "type": "string"
+    },
+    "relationship_stage": {
+      "description": "set_up_partner only",
+      "enum": [
+        "research",
+        "identified",
+        "contacted",
+        "in_conversation",
+        "fit_confirmed",
+        "agreement_pending",
+        "active",
+        "active_referring",
+        "dormant",
+        "no_fit"
+      ],
       "type": "string"
     },
     "to_phase": {
@@ -3181,6 +3225,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "project_id": {
+          "type": "string"
+        },
+        "relationship_mark": {
           "type": "string"
         },
         "relationship_type": {

@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -155,5 +156,102 @@ func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name str
 	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
 		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: held.Error()}, nil
 	}
+	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardErasedAddress}, nil
+	}
 	return VCardResult{}, err
+}
+
+// vcardExistsReason is what a model-read card gets when its address already
+// belongs to a contact. A reading of a photo is a guess about the print, and a
+// guess must not overwrite a record.
+const vcardExistsReason = "this contact already exists; a card read from a photo never changes an existing contact"
+
+// skipModelReadMatch reports a model-read card whose address matches a contact.
+// The contact is named only when the caller may read it, as in the near-match
+// arm of importOneVCard.
+func skipModelReadMatch(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, result *VCardResult) error {
+	result.Outcome = VCardSkipped
+	result.Reason = vcardExistsReason
+	visible, err := auth.VisibleTo(ctx, tx, entityContact, contactID.UUID)
+	if err != nil {
+		return fmt.Errorf("contacts: probing a matched contact's visibility: %w", err)
+	}
+	if visible {
+		result.ContactID = &contactID
+	}
+	return nil
+}
+
+// proposeModelReadCard reports a model-read card nobody matched. Nothing is
+// written: the staging call that follows turns it into an approval, and the
+// contact exists only once a human accepts that.
+func proposeModelReadCard(ctx context.Context, tx pgx.Tx, source ids.UUID, result *VCardResult) error {
+	narrowed, err := sourceIsNarrowed(ctx, tx, source)
+	if err != nil {
+		return err
+	}
+	if narrowed {
+		result.Outcome = VCardSkipped
+		result.Reason = vcardSourceNarrowed
+		return nil
+	}
+	result.Outcome = VCardProposed
+	return nil
+}
+
+// attachVCardEmployer creates the company the card names and the employment
+// edge to it. A card with no COMPANY leaves the contact unemployed, which is a
+// contact.
+func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) error {
+	name := strings.TrimSpace(entry.Company)
+	if name == "" {
+		return nil
+	}
+	companyID, err := s.employerByName(ctx, tx, name)
+	if err != nil {
+		return err
+	}
+	role := strings.TrimSpace(entry.Title)
+	edge := CreateRelationshipInput{
+		Kind:      employmentKind,
+		ContactID: &contactID,
+		CompanyID: companyID,
+		Source:    vcardSource,
+	}
+	if role != "" {
+		edge.Role = &role
+	}
+	_, err = s.CreateRelationshipTx(ctx, tx, edge)
+	return err
+}
+
+// employerByName finds the company the card names, or creates it.
+//
+// Without the lookup, two cards from one company create two companies.
+// Every employee of Acme arrives with `ORG:Acme`. A create-only path turns a
+// ten-card export into ten Acmes that a human then has to merge.
+func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*ids.CompanyID, error) {
+	var existing ids.CompanyID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM company
+		 WHERE lower(display_name) = lower($1) AND archived_at IS NULL AND merged_into_id IS NULL
+		 ORDER BY created_at
+		 LIMIT 1`, name).Scan(&existing)
+	switch {
+	case err == nil:
+		return &existing, nil
+	case errors.Is(err, pgx.ErrNoRows):
+		company, createErr := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
+			DisplayName: name,
+			Source:      vcardSource,
+		}, CustomColumns{})
+		if createErr != nil {
+			return nil, createErr
+		}
+		made := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+		return &made, nil
+	default:
+		return nil, fmt.Errorf("looking for the card's employer: %w", err)
+	}
 }

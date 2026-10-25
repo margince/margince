@@ -417,6 +417,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.precisionMonth": "Nur Monat",
   "approval.preview.mergeTags":
     "Das Quell-Tag auf den gezeigten Datensätzen durch das verbleibende Tag ersetzen. Wenn beide Tags vorhanden sind, nur die doppelte Quell-Zuordnung entfernen. Das Quell-Tag archivieren und seinen Namen zur erneuten Verwendung freigeben; er bleibt nicht als Alias erhalten.",
+  "approval.preview.partnerTierUnset":
+    "Margenstufe: nicht gesetzt. Ein Mensch legt sie im Partner-Tab des Unternehmens fest.",
   "approval.preview.mergeTagSource": "Zu entfernendes Tag",
   "approval.preview.mergeTagTarget": "Verbleibendes Tag",
   "approval.preview.mergeTagMove": "Datensatz, der das verbleibende Tag erhält",
@@ -2124,6 +2126,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.vat_status": "USt-Status",
   "history.field.visibility": "Sichtbarkeit",
   "history.field.parent_company_id": "Muttergesellschaft",
+  "history.field.relationship_mark": "Beziehungsmarkierung",
   "history.field.partner_attribution": "Partnerzuordnung",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Projekt",
@@ -2224,6 +2227,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kontakte, Unternehmen, Deals, Projekte, Produkte, Aktivitäten, Leads durchsuchen…",
   "search.prompt": "Gib einen Suchbegriff ein.",
   "search.empty": "Keine Treffer für „{q}“.",
+  "search.nearMatches": "Meintest du:",
   "search.group.contact": "Kontakte",
   "search.group.company": "Unternehmen",
   "search.group.deal": "Deals",
@@ -3508,6 +3512,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.merge_records": "Datensätze zusammenführen",
   "approval.kind.merge_tags": "Tags zusammenführen",
   "approval.kind.archive_tag": "Tag stilllegen",
+  "approval.kind.set_up_partner": "Partnerprogramm einrichten",
   "approval.kind.change_record_parts": "Teile eines Datensatzes ändern",
   "approval.kind.update_record": "Datensatz aktualisieren",
   "approval.kind.create_record": "Datensatz erstellen",
@@ -5553,11 +5558,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.saving": "Wird erstellt…",
   "create.contact": "Neuer Kontakt",
   "vcardImport.action": "vCards importieren",
-  "vcardImport.title": "vCards importieren",
-  "vcardImport.fileLabel": "vCard-Datei",
+  "vcardImport.title": "Visitenkarten importieren",
+  "vcardImport.fileLabel": "vCard-Datei oder Kartenfoto",
   "vcardImport.whichFile":
-    "Eine .vcf-Datei, das Exportformat für Kontakte aus Telefonen und E-Mail-Programmen. Eine Karte stammt vom Kontakt selbst, daher brauchen importierte Karten keine Freigabe.",
-  "vcardImport.choose": ".vcf-Datei auswählen",
+    "Eine .vcf-Datei, das Exportformat für Kontakte aus Telefonen und E-Mail-Programmen, oder ein Foto von einer oder mehreren Visitenkarten. Eine vCard stammt vom Kontakt selbst, daher brauchen importierte vCards keine Freigabe. Ein Foto liest ein Modell und kann sich irren, deshalb wartet jede aus einem Foto gelesene Karte auf deine Freigabe.",
+  "vcardImport.choose": "Datei oder Foto auswählen",
   "vcardImport.working": "Karten werden gelesen…",
   "vcardImport.back": "Zurück zu den Kontakten",
   "vcardImport.noCards": "Die Datei enthält keine Karten.",
@@ -5566,6 +5571,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "vcardImport.outcome.created": "Hinzugefügt",
   "vcardImport.outcome.updated": "Fehlende Felder ergänzt",
   "vcardImport.outcome.needsReview": "Mögliches Duplikat",
+  "vcardImport.outcome.proposed": "Wartet auf Freigabe",
   "vcardImport.outcome.skipped": "Übersprungen",
   "create.quickCapture": "Schnellerfassung",
   "create.quickCaptureSaved": "{name} gespeichert",
@@ -6163,13 +6169,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unanswered":
     "Die Versandprüfung konnte nicht abgeschlossen werden. Beim Senden wird die Prüfung erneut ausgeführt.",
   "sendPermission.reason.objected":
-    "Die empfangende Person hat dem Marketing widersprochen. Das kann hier niemand aufheben, auch kein Admin.",
+    "Die empfangende Person hat dem Marketing widersprochen. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
   "sendPermission.reason.withdrawn":
-    "Die empfangende Person hat ihre Einwilligung widerrufen. Das kann hier niemand aufheben, auch kein Admin.",
+    "Die empfangende Person hat ihre Einwilligung widerrufen. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
   "sendPermission.reason.restricted":
-    "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Das kann hier niemand aufheben, auch kein Admin.",
+    "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
   "sendPermission.reason.askedUsToStop":
-    "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Das kann hier niemand aufheben, auch kein Admin.",
+    "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur ein Admin kann trotzdem senden, eine Nachricht nach der anderen.",
   "sendPermission.reason.bounced":
     "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
   "sendPermission.reason.tooMany":
@@ -7721,6 +7727,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du darfst dieses Mitglied nicht als verantwortlich eintragen, daher bist du für seine Zeilen verantwortlich.",
   "import.reason.owner_unknown":
     "Kein Mitglied hat diese E-Mail-Adresse, daher bist du verantwortlich; ein Lead bleibt nicht zugewiesen. Betroffene Zeilen: {rows}.",
+  "import.reason.address_erased":
+    "Wer diese E-Mail-Adresse besitzt, hat die Löschung verlangt und darf nicht erneut gespeichert werden, daher wurde die Zeile nicht importiert.",
   "import.reason.address_not_split":
     "Die Adresse ließ sich nicht in Straße, Postleitzahl und Ort aufteilen, daher bleibt sie in der ersten Adresszeile.",
   "import.reason.phone_needs_country":
@@ -15009,6 +15017,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.created_at": "Erstellt",
   "filters.field.hosting_provider": "Hosting",
   "filters.field.last_activity_at": "Letzte Aktivität",
+  "filters.field.location": "Standort",
   "filters.field.mail_provider": "E-Mail-System",
   "filters.field.operated_service": "Betriebener Dienst",
   "filters.field.owner_team_id": "Verantwortliches Team",
@@ -15043,6 +15052,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.op.atLeast": "ist mindestens",
   "filters.op.lessThan": "ist kleiner als",
   "filters.op.atMost": "ist h\u00f6chstens",
+  "filters.op.withinRadius": "liegt im Umkreis von",
+  "filters.sentence.radiusOf": "{km} km um {place}",
   "filters.join.and": "und",
   "filters.join.or": "oder",
   "filters.sentence.clause": "{field} {op} {value}",

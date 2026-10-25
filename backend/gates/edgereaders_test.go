@@ -134,6 +134,7 @@ var predicateEdgeReads = gatekit.Waive(map[string]string{
 // than the disclosure this change fixes: the sweep's correctness depends on
 // seeing every edge, and it runs as the system principal precisely so it does.
 var lifecycleEdgeReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/dedupecompanyevidence.go:readCompanyEvidence":    "the second-fact check of the company dedupe name lane asks whether one contact is employed at both companies now. One boolean per rival leaves it, deciding whether a review pair is filed or kept; no edge, endpoint or pair reaches any caller. Callers are those of fuzzyCompany and the system-only nightly re-check",
 	"internal/modules/privacy/reportingquestions.go:heldQuestionSource":         "Retention lifecycle checks legal holds on every record behind a kept question answer before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	"internal/modules/privacy/reportingquestions.go:subjectQuestionSources":     "Subject access and erasure follow the rights-case subject to every kept question answer a record about them was counted in, regardless of the operator's own visibility; the ids stay inside that export or erasure.",
 	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",

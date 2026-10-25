@@ -188,6 +188,11 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		return commsauthz.Decision{}, nil, err
 	}
 	if res.Supported {
+		var denied bool
+		d, denied = putClaimToEvidence(d, req.Context, res.Category)
+		if denied {
+			return d, nil, nil
+		}
 		// The same question the contact arm asks: the evidence arms never read
 		// contact_consent, so a lead who withdrew would be sent the very message
 		// they stopped.
@@ -208,6 +213,11 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		return allowOn(d, res), nil, nil
 	}
 
+	if unsupportedClaimAwaitsAnswer(req.Context, purposeKey) {
+		d.Verdict = commsauthz.VerdictReview
+		d.ReasonCode = res.Reason
+		return d, nil, nil
+	}
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err

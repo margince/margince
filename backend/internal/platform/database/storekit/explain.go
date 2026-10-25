@@ -197,7 +197,7 @@ func (q Query) explainTree(ctx context.Context, p Predicate, arg func(any) int) 
 			return err
 		}
 		node.Hidden = reading.hidden
-		leaf.value, leaf.hasValue, leaf.linked, leaf.reference = reading.expr, !reading.hidden, reading.linked, field.References
+		leaf.value, leaf.hasValue, leaf.linked, leaf.reference = reading.expr, !reading.hidden && !reading.valueless, reading.linked, field.References
 		leaves = append(leaves, leaf)
 		return nil
 	}

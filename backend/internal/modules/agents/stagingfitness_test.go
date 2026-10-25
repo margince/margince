@@ -107,6 +107,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 		"relink_activities": fmt.Sprintf(
 			`{"activity_ids":[%q],"entity_type":"deal","entity_id":%q}`, activity, deal),
 		"disqualify_lead":       fmt.Sprintf(`{"lead_id":%q}`, lead),
+		"set_up_partner":        fmt.Sprintf(`{"company_id":%q,"partner_role":"consulting"}`, company),
 		"demote_lead":           fmt.Sprintf(`{"lead_id":%q,"reason":"too early"}`, lead),
 		"advance_project_phase": fmt.Sprintf(`{"project_id":%q,"to_phase":"delivering"}`, project),
 		"merge_tags":            fmt.Sprintf(`{"tag_id":%q,"into_tag_id":%q}`, tagA, tagB),
@@ -134,7 +135,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 func registerEveryStageableFamily(r *Registry, p datasource.SystemOfRecordProvider, comms Comms) {
 	RegisterCoreTools(r, p, fixedStages{semantic: "won"}, nil, noConflicts{}, nil, nil, nil)
 	RegisterCommsTools(r, comms, p)
-	RegisterLifecycleTools(r, p, nil, nil, nil, nil)
+	RegisterLifecycleTools(r, p, nil, nil, nil, nil, inertLifecycle{})
 	RegisterTagTools(r, stagingTags{})
 	RegisterImportTools(r, stagingImports{})
 	RegisterEnrichTool(r, p, nil)

@@ -33,6 +33,18 @@ func TestEverySearchTypeEnumIsTheSearchModulesBranchTable(t *testing.T) {
 	}
 }
 
+// SearchNearMatch.type lists the entities whose branch declares a nearName.
+func TestSearchNearMatchTypeEnumIsTheNearNamedBranches(t *testing.T) {
+	t.Parallel()
+	named := searchableEntitiesFromSource(t, nearNamed)
+	enum := propertyEnum(t, "SearchNearMatch", "type", false)
+	slices.Sort(named)
+	slices.Sort(enum)
+	if !slices.Equal(enum, named) {
+		t.Errorf("%s's SearchNearMatch.type enum is %v and the near-named branches are %v", contractFile, enum, named)
+	}
+}
+
 // searchTypeEnums reads every spelling of the searchable types off the
 // contract, keyed by where it stands. A spelling that cannot be found fails
 // rather than shrinking the census.

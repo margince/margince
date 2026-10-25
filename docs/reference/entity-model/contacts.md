@@ -490,7 +490,7 @@ The 45 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-32 columns · primary key `(id)` · referenced by 45 foreign keys
+34 columns · primary key `(id)` · referenced by 45 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -513,6 +513,8 @@ The 45 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `photo_object_key` | `text` |  |  |
 | `photo_origin` | `text` |  |  |
 | `quarantined_at` | `timestamp with time zone` |  |  |
+| `relationship_mark` | `text` |  | Set when the workspace's relationship to this contact is not an ordinary one. |
+| `relationship_mark_set_by` | `text` |  |  |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
 | `title` | `text` |  | Denormalized current title; authoritative title is on the employment relationship. |
@@ -541,6 +543,8 @@ The 45 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_narrowing_reason_check`: `CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict', 'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided'])))`
 - `contact_narrowing_reason_only_when_owner`: `CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner')))`
 - `contact_owner_private_names_its_owner`: `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
+- `contact_relationship_mark_check`: `CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'])))`
+- `contact_relationship_mark_set_by_pairs`: `CHECK (((relationship_mark IS NULL) = (relationship_mark_set_by IS NULL)))`
 - `contact_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `contact_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `contact_visibility_check`: `CHECK ((visibility = ANY (ARRAY['workspace', 'owner'])))`

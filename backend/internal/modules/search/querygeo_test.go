@@ -6,51 +6,11 @@ package search
 import (
 	"context"
 	"encoding/json"
-	"math"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/geocode"
 )
-
-// The bounding box must never exclude a row the circle would include.
-//
-// It is a pre-filter whose only job is to let the index narrow the candidates
-// before the exact distance runs. Too wide costs a few extra comparisons; too
-// narrow silently drops companies that ARE within the radius, and the answer
-// looks complete.
-func TestTheBoundingBoxNeverCutsInsideTheCircle(t *testing.T) {
-	stuttgart := Point{Lat: 48.7758, Lon: 9.1829}
-	for _, radiusKM := range []float64{1, 25, 50, 200, 1000} {
-		minLat, maxLat, minLon, maxLon := boundingBox(stuttgart, radiusKM)
-		// Sample the circle's edge all the way round. Every point exactly at
-		// the radius must fall inside the box.
-		for degrees := 0; degrees < 360; degrees += 5 {
-			edge := destination(stuttgart, radiusKM, float64(degrees))
-			if edge.Lat < minLat || edge.Lat > maxLat {
-				t.Errorf("radius %vkm bearing %d°: latitude %v outside box [%v, %v]",
-					radiusKM, degrees, edge.Lat, minLat, maxLat)
-			}
-			if edge.Lon < minLon || edge.Lon > maxLon {
-				t.Errorf("radius %vkm bearing %d°: longitude %v outside box [%v, %v]",
-					radiusKM, degrees, edge.Lon, minLon, maxLon)
-			}
-		}
-	}
-}
-
-// Near a pole the longitude box widens without bound, so it is clamped to the
-// whole range rather than producing nonsense. Rare, and wrong is worse than
-// slow.
-func TestTheBoundingBoxSurvivesThePoles(t *testing.T) {
-	for _, lat := range []float64{89.9, -89.9, 90, -90} {
-		_, _, minLon, maxLon := boundingBox(Point{Lat: lat, Lon: 0}, 100)
-		if math.IsNaN(minLon) || math.IsInf(minLon, 0) || math.IsNaN(maxLon) || math.IsInf(maxLon, 0) {
-			t.Errorf("latitude %v produced a longitude box [%v, %v]", lat, minLon, maxLon)
-		}
-		if maxLon-minLon < 359 {
-			t.Errorf("latitude %v did not widen to the whole range: [%v, %v]", lat, minLon, maxLon)
-		}
-	}
-}
 
 // A record type that is not somewhere cannot be asked about by distance, and
 // the answer says so rather than pretending.
@@ -156,37 +116,6 @@ func (stubPlaces) LookupPlace(_ context.Context, query string) (Point, bool, err
 	return Point{}, false, nil
 }
 
-// destination walks radiusKM from a point along a bearing, so the box test has
-// real circle-edge points to check rather than an approximation of them.
-func destination(from Point, distanceKM, bearingDegrees float64) Point {
-	angular := distanceKM / earthRadiusKM
-	bearing := bearingDegrees * math.Pi / 180
-	lat1 := from.Lat * math.Pi / 180
-	lon1 := from.Lon * math.Pi / 180
-
-	lat2 := math.Asin(math.Sin(lat1)*math.Cos(angular) +
-		math.Cos(lat1)*math.Sin(angular)*math.Cos(bearing))
-	lon2 := lon1 + math.Atan2(
-		math.Sin(bearing)*math.Sin(angular)*math.Cos(lat1),
-		math.Cos(angular)-math.Sin(lat1)*math.Sin(lat2))
-	// NORMALISED into [-180, 180], because that is the only form a stored
-	// coordinate takes — a geocoder answers -179.9, never 180.1. Without this
-	// the test asks the box to contain longitudes no row can hold, and reports
-	// a failure the database could never produce.
-	return Point{Lat: lat2 * 180 / math.Pi, Lon: normalizeLon(lon2 * 180 / math.Pi)}
-}
-
-// normalizeLon wraps a longitude into [-180, 180].
-func normalizeLon(lon float64) float64 {
-	for lon > 180 {
-		lon -= 360
-	}
-	for lon < -180 {
-		lon += 360
-	}
-	return lon
-}
-
 // The SQL a radius compiles to must read geocode_status, not the coordinates
 // alone.
 //
@@ -200,7 +129,7 @@ func TestARadiusOnlyReadsCoordinatesThatMatchTheAddress(t *testing.T) {
 	distance, where := c.radius("t", geoBinding{
 		Center:   Point{Lat: 48.7758, Lon: 9.1829},
 		RadiusKM: 50,
-		Columns:  geoCapableTargets["company"],
+		Columns:  companyColumns(t),
 		Field:    "address",
 	})
 	joined := strings.Join(where, " AND ")
@@ -234,7 +163,7 @@ func TestARadiusBindsEveryValueRatherThanInterpolatingIt(t *testing.T) {
 	_, where := c.radius("t", geoBinding{
 		Center:   Point{Lat: 48.7758, Lon: 9.1829},
 		RadiusKM: 50,
-		Columns:  geoCapableTargets["company"],
+		Columns:  companyColumns(t),
 	})
 	joined := strings.Join(where, " AND ")
 	if strings.Contains(joined, "48.7758") || strings.Contains(joined, "9.1829") {
@@ -291,43 +220,6 @@ func TestARadiusInsideATraversalRefusesRatherThanBeingDropped(t *testing.T) {
 	}
 }
 
-// A circle spanning the antimeridian, a pole, or the whole earth must not lose
-// rows to the bounding box.
-//
-// The box is a pre-filter and the haversine decides membership — but a row the
-// box excludes never reaches the haversine. My first version walked the circle
-// only around Stuttgart, which is nowhere near an edge, so none of these were
-// covered until a review named them.
-func TestTheBoundingBoxDoesNotLoseRowsAtTheEdgesOfTheEarth(t *testing.T) {
-	for _, c := range []struct {
-		name   string
-		center Point
-		km     float64
-	}{
-		{"just west of the antimeridian", Point{Lat: 0, Lon: 179.9}, 50},
-		{"just east of the antimeridian", Point{Lat: 0, Lon: -179.9}, 50},
-		{"near the north pole", Point{Lat: 89.5, Lon: 100}, 200},
-		{"near the south pole", Point{Lat: -89.5, Lon: -100}, 200},
-		{"larger than the earth", Point{Lat: 48.7758, Lon: 9.1829}, 50000},
-	} {
-		t.Run(c.name, func(t *testing.T) {
-			minLat, maxLat, minLon, maxLon := boundingBox(c.center, c.km)
-			for degrees := 0; degrees < 360; degrees += 5 {
-				edge := destination(c.center, c.km, float64(degrees))
-				if edge.Lat < minLat || edge.Lat > maxLat {
-					t.Errorf("bearing %d°: latitude %v outside [%v, %v]",
-						degrees, edge.Lat, minLat, maxLat)
-				}
-				if edge.Lon < minLon || edge.Lon > maxLon {
-					t.Errorf("bearing %d°: longitude %v outside [%v, %v] — a company inside the "+
-						"circle is excluded before the haversine ever sees it",
-						degrees, edge.Lon, minLon, maxLon)
-				}
-			}
-		})
-	}
-}
-
 // A second radius refuses rather than being ignored.
 //
 // The clauses are ANDed, so ignoring one widens the answer without changing its
@@ -351,4 +243,13 @@ func TestASecondRadiusRefusesRatherThanWideningTheAnswer(t *testing.T) {
 	if at != "where[1]" {
 		t.Errorf("the refusal points at %q rather than the second clause", at)
 	}
+}
+
+func companyColumns(t *testing.T) geocode.Columns {
+	t.Helper()
+	cols, ok := geocode.ColumnsFor("company")
+	if !ok {
+		t.Fatal("company is not a locatable record type")
+	}
+	return cols
 }

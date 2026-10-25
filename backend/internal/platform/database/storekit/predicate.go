@@ -75,6 +75,9 @@ const (
 	OpIn       = "in"
 	OpContains = "contains"
 	OpExists   = "exists"
+	// OpWithinRadius is the one operator of a FieldDistance field. Its operand
+	// is decoded and checked by radiusOperand.
+	OpWithinRadius = "within_radius"
 )
 
 // operatorsByType is the typed-operator matrix: ordering only for
@@ -94,6 +97,7 @@ var operatorsByType = map[FieldType]map[string]bool{
 	FieldCurrency: {OpEq: true, OpNeq: true, OpGt: true, OpGte: true, OpLt: true, OpLte: true, OpIn: true, OpExists: true},
 	FieldDate:     {OpEq: true, OpNeq: true, OpGt: true, OpGte: true, OpLt: true, OpLte: true, OpExists: true},
 	FieldBoolean:  {OpEq: true, OpNeq: true, OpExists: true},
+	FieldDistance: {OpWithinRadius: true},
 }
 
 // operatorOrder is the one reading order for an operator list: equality,
@@ -101,7 +105,7 @@ var operatorsByType = map[FieldType]map[string]bool{
 // so iterating it directly would answer a different order on every call and
 // make a vocabulary response unstable between two identical requests.
 var operatorOrder = []string{
-	OpEq, OpNeq, OpGt, OpGte, OpLt, OpLte, OpIn, OpContains, OpExists,
+	OpEq, OpNeq, OpGt, OpGte, OpLt, OpLte, OpIn, OpContains, OpExists, OpWithinRadius,
 }
 
 // linkOperators are the operators a correlated-link leaf can express, and the
@@ -341,6 +345,9 @@ func compileShapedLeaf(p Predicate, field Field, arg func(any) int) (sql string,
 		return "FALSE", true, nil
 	case field.Link != "":
 		sql, err = compileLinkLeaf(p, field, arg)
+		return sql, true, err
+	case field.Type == FieldDistance:
+		sql, err = compileDistanceLeaf(p, field, arg)
 		return sql, true, err
 	case field.Instant && p.Op != OpExists:
 		sql, err = compileInstantLeaf(p, field, arg)

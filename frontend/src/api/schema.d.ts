@@ -742,7 +742,8 @@ export interface paths {
         };
         /**
          * List contacts (live by default; cursor-paginated).
-         * @description Default view excludes archived rows (`archived_at IS NULL`). Leads never appear here.
+         * @description Default view excludes archived rows (`archived_at IS NULL`) and contacts carrying a
+         *     `relationship_mark`. A text search (`q`) still finds a marked contact. Leads never appear here.
          */
         get: operations["listContacts"];
         put?: never;
@@ -750,7 +751,8 @@ export interface paths {
          * Create a contact.
          * @description With name + email returns 201 and a stable `id` (UUID) that round-trips on GET
          *     (features/01 §1.1 AC). If the email already exists on a live contact, returns 409
-         *     with the existing contact id (features/01 §1.3). Writes one audit row + one
+         *     with the existing contact id. An email on the erasure list
+         *     answers 422 naming `emails` with code `address_erased`. Writes one audit row + one
          *     `contact.created` event.
          */
         post: operations["createContact"];
@@ -829,6 +831,41 @@ export interface paths {
          *     is a separate, recorded act.
          */
         post: operations["importVCards"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/card-photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read a photo of business cards and propose the contacts it shows.
+         * @description A model reads the photo and returns one card per business card it can see. Nothing is
+         *     written to a contact: every card that is not an exact match goes to the approval queue
+         *     as a `vcard_create` approval that only the importing member can see and decide.
+         *
+         *     Per card, in reading order: `proposed` — nobody matched, waiting on an approval.
+         *     `needs_review` — the card resembles a contact, waiting on an approval that names the
+         *     candidate. `skipped` — the card states no name, carries a sending system's address, or
+         *     its email already belongs to a contact; a card read from a photo never changes an
+         *     existing contact. A photo that shows more than 20 cards is refused whole.
+         *
+         *     JPEG, PNG, GIF and WebP are accepted. HEIC and HEIF are refused with `422` and code
+         *     `unsupported_type`; the photo must be saved as JPEG or PNG first. A photo larger than
+         *     8,388,608 bytes is refused with `413` before it is read. The reading runs inside
+         *     the request. `422` with code `no_cards` means the photo shows no business card, and `422`
+         *     with `not_readable` means the configured model cannot read photos or the reply could not
+         *     be used. `501` means the installation has no model configured.
+         */
+        post: operations["importCardPhoto"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2939,6 +2976,45 @@ export interface paths {
          */
         put: operations["upsertPartner"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}/partner/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set up a partner program on a company that has none, with no margin tier.
+         * @description The answer the `set_up_partner` agent tool gives, run by the same tool on both doors. It
+         *     creates the company's partner program with a role, a relationship stage and a next step,
+         *     and adds `partner` to its `relationship_types`. The certification status starts at
+         *     `applied`. The margin tier stays unset: it is the rate the commission ledger multiplies a
+         *     won deal by, so a human sets it on the company's Partner tab through `PUT /companies/{id}/partner`.
+         *     A body naming `margin_tier` is refused.
+         *
+         *     Confirm-first for an agent: the call stages one approval and answers 403 `approval_required`
+         *     naming it. A human who may update both partners and companies approves it. Repeat the same
+         *     call with that id as `approval_id`, or as the `X-Approval-Token` header. A human's own call
+         *     is its approval.
+         *
+         *     A company that already has a live partner program answers 409 `partner_row_exists`.
+         *     A program ends only when the company is archived.
+         *
+         *     A retry with the same `idempotency_key` answers the first call's result. An
+         *     `Idempotency-Key` header is taken as that key.
+         */
+        post: operations["setUpPartner"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7080,6 +7156,7 @@ export interface paths {
          *     dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
          *     for idempotent re-import. A `project_id` that names no project the caller can read
          *     answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
+         *     An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
          */
         post: operations["createLead"];
         delete?: never;
@@ -25839,7 +25916,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -27110,6 +27187,11 @@ export interface components {
         };
         /** @description A contact. Mirrors the `contact` table. */
         Contact: {
+            /**
+             * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+             * @enum {string|null}
+             */
+            relationship_mark?: "vendor_marketing" | null;
             /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
             readonly legal_hold?: boolean;
             tags?: components["schemas"]["RowTag"][];
@@ -27302,11 +27384,12 @@ export interface components {
              * @description `created` — nobody matched, so the card became a contact, their company and the edge
              *     between them. `updated` — an exact match, filled only where the record was empty.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+             *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
              *     `skipped` — the card states no name, carries a sending system's address, or matches a
              *     contact the caller may not write; `reason` says which.
              * @enum {string}
              */
-            outcome: "created" | "updated" | "needs_review" | "skipped";
+            outcome: "created" | "updated" | "needs_review" | "proposed" | "skipped";
             /**
              * Format: uuid
              * @description The contact created or updated, or — for `needs_review` — the candidate the card resembles.
@@ -27353,6 +27436,11 @@ export interface components {
         };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdateContactRequest: {
+            /**
+             * @description Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
+             * @enum {string|null}
+             */
+            relationship_mark?: "vendor_marketing" | null;
             full_name?: string;
             first_name?: string | null;
             last_name?: string | null;
@@ -37620,8 +37708,12 @@ export interface components {
              */
             name: string;
             /**
-             * @description The six custom-field types, plus `id` for a reference to another record and
-             *     `domain` for a host column. The type decides the operators, which is why it is here.
+             * @description The six custom-field types, plus `id` for a reference to another record,
+             *     `domain` for a host column and `distance` for a place on the earth. A `distance`
+             *     field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
+             *     `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
+             *     name the builder showed for the center. Only companies that have a located address
+             *     can match. The type decides the operators, which is why it is here.
              *
              *     `domain` also decides what happens to the VALUE, and it is the only type that does:
              *     the operand is folded to the host the column stores, so
@@ -37632,13 +37724,13 @@ export interface components {
              *     a folded value has no fragment to match against.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "id" | "domain";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "id" | "domain" | "distance";
             /**
              * @description The operator subset this field's type admits (LVS-PARAM-1), in one
              *     stable order. An operator absent here is one the engine refuses for
              *     this field, so a builder can disable it rather than discover it.
              */
-            operators: ("eq" | "neq" | "gt" | "lt" | "gte" | "lte" | "in" | "contains" | "exists")[];
+            operators: ("eq" | "neq" | "gt" | "lt" | "gte" | "lte" | "in" | "contains" | "exists" | "within_radius")[];
             /**
              * @description Whether this is a workspace-defined custom-field column. Where true,
              *     `name` is the catalog's `column_name` — join on it to show an admin's
@@ -40882,6 +40974,17 @@ export interface components {
             page: components["schemas"]["PageInfo"];
             /** @description On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole. */
             types_with_more?: ("contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
+            /** @description Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor. */
+            near_matches?: components["schemas"]["SearchNearMatch"][];
+        };
+        SearchNearMatch: {
+            /** @enum {string} */
+            type: "contact" | "company" | "deal" | "lead";
+            /** Format: uuid */
+            id: string;
+            title: string;
+            /** @description The company beside a lead's name, as a lead hit carries it. */
+            snippet?: string;
         };
         ContextEntityRef: {
             /**
@@ -42670,6 +42773,19 @@ export interface components {
             /** Format: date */
             next_step_due_at?: string | null;
             served_segments?: string[] | null;
+        };
+        /**
+         * @description What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
+         *     or `served_segments`: the tier is a human's choice, and the others are set after set-up.
+         */
+        SetUpPartnerRequest: {
+            /** @enum {string} */
+            partner_role: "hosting" | "consulting" | "strategic";
+            /** @enum {string} */
+            relationship_stage?: "research" | "identified" | "contacted" | "in_conversation" | "fit_confirmed" | "agreement_pending" | "active" | "active_referring" | "dormant" | "no_fit";
+            next_step?: string;
+            /** Format: date */
+            next_step_due_at?: string;
         };
         ConsentPurpose: {
             /** Format: uuid */
@@ -51027,6 +51143,11 @@ export interface operations {
                  *     itself), and not otherwise.
                  */
                 ai_written?: components["parameters"]["AiWritten"];
+                /**
+                 * @description Without it the list leaves out marked contacts, unless `q` is given. `vendor_marketing`
+                 *     returns only contacts carrying that mark; `any` returns marked and unmarked alike.
+                 */
+                relationship_mark?: "vendor_marketing" | "any";
                 /** @description Filter to a single owner. */
                 owner_id?: string;
                 /**
@@ -51251,6 +51372,49 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    importCardPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The photo. Its bytes must be the image type it claims to be.
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description What became of each card in the photo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VCardImportReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            413: components["responses"]["PayloadTooLarge"];
+            422: components["responses"]["ValidationError"];
+            /** @description The installation has no model configured to read photos. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getContact: {
@@ -54019,6 +54183,54 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setUpPartner: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+                 *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+                 *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+                 */
+                "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
+                /**
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetUpPartnerRequest"];
+            };
+        };
+        responses: {
+            /** @description The partner program as set up, with no margin tier. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Partner"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

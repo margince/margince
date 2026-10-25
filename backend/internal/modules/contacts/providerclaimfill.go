@@ -160,11 +160,13 @@ func fillEmail(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerName st
 	// record and this one by construction is not there yet. Without this, a
 	// contact created from a business card and enriched brings a contact who
 	// exercised Art. 17 back as a live, mailable record.
-	suppressed, err := storekit.EmailSuppressed(ctx, tx, address.String())
-	if err != nil {
+	if err := storekit.RefuseErasedEmail(ctx, tx, fieldEmail, address.String()); err != nil {
+		if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+			return nothingFilled, nil
+		}
 		return nothingFilled, fmt.Errorf("contacts: checking a bought address against the erasure list: %w", err)
 	}
-	if suppressed || refuseMachineAddress(address.String()) != nil {
+	if refuseMachineAddress(address.String()) != nil {
 		return nothingFilled, nil
 	}
 	// The base lock before the address is written. The hand-off already holds

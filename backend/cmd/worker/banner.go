@@ -109,17 +109,16 @@ func graphWatchNote(cfg workerConfig, runs bool) string {
 //
 // A line naming the variable is what turns that into a question an operator
 // can answer.
-func announceGeocoding(baseURL string, stdout io.Writer) {
-	if !geocode.Configured(baseURL) {
+func announceGeocoding(setting string, stdout io.Writer) {
+	baseURL, on := geocode.Resolve(setting)
+	if !on {
 		_, _ = fmt.Fprintln(stdout,
-			"worker geocoding OFF (MARGINCE_GEOCODE_BASE_URL unset) — company addresses "+
+			"worker geocoding OFF (MARGINCE_GEOCODE_BASE_URL=off) — company addresses "+
 				"keep no coordinates and every within_radius query answers unavailable")
 		return
 	}
 	where := baseURL
-	if baseURL == "public" {
-		// Named rather than echoed: "public" is the flag's word, and an
-		// operator reading the log wants to know whose service this is.
+	if baseURL == geocode.PublicBaseURL {
 		where = geocode.PublicBaseURL + " (OpenStreetMap's own; 4 requests/minute)"
 	}
 	_, _ = fmt.Fprintf(stdout, "worker geocoding company addresses via %s\n", where)

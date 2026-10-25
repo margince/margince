@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -40,8 +41,11 @@ type UpdateContactInput struct {
 	// the sender classifier publishes contacts with no human approving it, and
 	// its owner must be able to take that back.
 	Visibility *string
-	Social     map[string]any
-	Address    *crmcontracts.Address
+	// RelationshipMark marks the contact; clearing it goes through Clear. The
+	// setter is read from the signed-in principal, never from the caller.
+	RelationshipMark *relationshipmark.Mark
+	Social           map[string]any
+	Address          *crmcontracts.Address
 	// Emails replaces the contact's live addresses when non-nil. nil is "not
 	// supplied" and leaves the stored rows standing, exactly as Social is —
 	// the distinction matters for an import whose file carried no email
@@ -99,7 +103,11 @@ func (s *Store) updateContactInTx(
 		return out, err
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
-	p, err := buildContactPatch(current, in)
+	setter, err := relationshipMarkSetter(ctx, in)
+	if err != nil {
+		return out, err
+	}
+	p, err := buildContactPatch(current, in, setter)
 	if err != nil {
 		return out, err
 	}
@@ -182,7 +190,7 @@ func contactChangeImages(
 	return before, after
 }
 
-func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput) (*storekit.Patch, error) {
+func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput, markSetter string) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
 	if in.FullName != nil {
 		name, err := httperr.RequireNonBlank("full_name", *in.FullName)
@@ -207,6 +215,9 @@ func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput) (*st
 		p.Set("visibility", current.Visibility, *in.Visibility)
 	}
 	if err := storekit.ApplyClears(p, in.Clear, clearableContactColumns(current)); err != nil {
+		return nil, err
+	}
+	if err := patchRelationshipMark(p, current, in, markSetter); err != nil {
 		return nil, err
 	}
 	if err := setAddress(p, current.Address, in.Address, in.Trail); err != nil {

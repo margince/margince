@@ -6709,6 +6709,21 @@ func (e ConsumerMailDomainKind) Valid() bool {
 	}
 }
 
+// Defines values for ContactRelationshipMark.
+const (
+	ContactRelationshipMarkVendorMarketing ContactRelationshipMark = "vendor_marketing"
+)
+
+// Valid indicates whether the value is a known member of the ContactRelationshipMark enum.
+func (e ContactRelationshipMark) Valid() bool {
+	switch e {
+	case ContactRelationshipMarkVendorMarketing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactVisibility.
 const (
 	ContactVisibilityOwner     ContactVisibility = "owner"
@@ -10362,15 +10377,16 @@ func (e FilterVocabularyResource) Valid() bool {
 
 // Defines values for FilterVocabularyFieldOperators.
 const (
-	FilterVocabularyFieldOperatorsContains FilterVocabularyFieldOperators = "contains"
-	FilterVocabularyFieldOperatorsEq       FilterVocabularyFieldOperators = "eq"
-	FilterVocabularyFieldOperatorsExists   FilterVocabularyFieldOperators = "exists"
-	FilterVocabularyFieldOperatorsGt       FilterVocabularyFieldOperators = "gt"
-	FilterVocabularyFieldOperatorsGte      FilterVocabularyFieldOperators = "gte"
-	FilterVocabularyFieldOperatorsIn       FilterVocabularyFieldOperators = "in"
-	FilterVocabularyFieldOperatorsLt       FilterVocabularyFieldOperators = "lt"
-	FilterVocabularyFieldOperatorsLte      FilterVocabularyFieldOperators = "lte"
-	FilterVocabularyFieldOperatorsNeq      FilterVocabularyFieldOperators = "neq"
+	FilterVocabularyFieldOperatorsContains     FilterVocabularyFieldOperators = "contains"
+	FilterVocabularyFieldOperatorsEq           FilterVocabularyFieldOperators = "eq"
+	FilterVocabularyFieldOperatorsExists       FilterVocabularyFieldOperators = "exists"
+	FilterVocabularyFieldOperatorsGt           FilterVocabularyFieldOperators = "gt"
+	FilterVocabularyFieldOperatorsGte          FilterVocabularyFieldOperators = "gte"
+	FilterVocabularyFieldOperatorsIn           FilterVocabularyFieldOperators = "in"
+	FilterVocabularyFieldOperatorsLt           FilterVocabularyFieldOperators = "lt"
+	FilterVocabularyFieldOperatorsLte          FilterVocabularyFieldOperators = "lte"
+	FilterVocabularyFieldOperatorsNeq          FilterVocabularyFieldOperators = "neq"
+	FilterVocabularyFieldOperatorsWithinRadius FilterVocabularyFieldOperators = "within_radius"
 )
 
 // Valid indicates whether the value is a known member of the FilterVocabularyFieldOperators enum.
@@ -10393,6 +10409,8 @@ func (e FilterVocabularyFieldOperators) Valid() bool {
 	case FilterVocabularyFieldOperatorsLte:
 		return true
 	case FilterVocabularyFieldOperatorsNeq:
+		return true
+	case FilterVocabularyFieldOperatorsWithinRadius:
 		return true
 	default:
 		return false
@@ -10437,6 +10455,7 @@ const (
 	FilterVocabularyFieldTypeBoolean     FilterVocabularyFieldType = "boolean"
 	FilterVocabularyFieldTypeCurrency    FilterVocabularyFieldType = "currency"
 	FilterVocabularyFieldTypeDate        FilterVocabularyFieldType = "date"
+	FilterVocabularyFieldTypeDistance    FilterVocabularyFieldType = "distance"
 	FilterVocabularyFieldTypeDomain      FilterVocabularyFieldType = "domain"
 	FilterVocabularyFieldTypeId          FilterVocabularyFieldType = "id"
 	FilterVocabularyFieldTypeMultiselect FilterVocabularyFieldType = "multiselect"
@@ -10453,6 +10472,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeCurrency:
 		return true
 	case FilterVocabularyFieldTypeDate:
+		return true
+	case FilterVocabularyFieldTypeDistance:
 		return true
 	case FilterVocabularyFieldTypeDomain:
 		return true
@@ -11497,6 +11518,7 @@ const (
 	ImportReasonCodeActivityTypeUnknown          ImportReasonCode = "activity_type_unknown"
 	ImportReasonCodeActivityTypeUnnamed          ImportReasonCode = "activity_type_unnamed"
 	ImportReasonCodeActivityUnlinked             ImportReasonCode = "activity_unlinked"
+	ImportReasonCodeAddressErased                ImportReasonCode = "address_erased"
 	ImportReasonCodeAddressNotSplit              ImportReasonCode = "address_not_split"
 	ImportReasonCodeAmountNegative               ImportReasonCode = "amount_negative"
 	ImportReasonCodeAuthorTooLong                ImportReasonCode = "author_too_long"
@@ -11623,6 +11645,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeActivityTypeUnnamed:
 		return true
 	case ImportReasonCodeActivityUnlinked:
+		return true
+	case ImportReasonCodeAddressErased:
 		return true
 	case ImportReasonCodeAddressNotSplit:
 		return true
@@ -16846,6 +16870,30 @@ func (e SchedulingProfileProvider) Valid() bool {
 	}
 }
 
+// Defines values for SearchNearMatchType.
+const (
+	SearchNearMatchTypeCompany SearchNearMatchType = "company"
+	SearchNearMatchTypeContact SearchNearMatchType = "contact"
+	SearchNearMatchTypeDeal    SearchNearMatchType = "deal"
+	SearchNearMatchTypeLead    SearchNearMatchType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the SearchNearMatchType enum.
+func (e SearchNearMatchType) Valid() bool {
+	switch e {
+	case SearchNearMatchTypeCompany:
+		return true
+	case SearchNearMatchTypeContact:
+		return true
+	case SearchNearMatchTypeDeal:
+		return true
+	case SearchNearMatchTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SearchResponseTypesWithMore.
 const (
 	SearchResponseTypesWithMoreActivity      SearchResponseTypesWithMore = "activity"
@@ -17278,6 +17326,69 @@ func (e SetTransitionPolicyRequestMode) Valid() bool {
 	case SetTransitionPolicyRequestModeSetTransitionModeAuto:
 		return true
 	case SetTransitionPolicyRequestModeSetTransitionModePropose:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetUpPartnerRequestPartnerRole.
+const (
+	SetUpPartnerRequestPartnerRoleConsulting SetUpPartnerRequestPartnerRole = "consulting"
+	SetUpPartnerRequestPartnerRoleHosting    SetUpPartnerRequestPartnerRole = "hosting"
+	SetUpPartnerRequestPartnerRoleStrategic  SetUpPartnerRequestPartnerRole = "strategic"
+)
+
+// Valid indicates whether the value is a known member of the SetUpPartnerRequestPartnerRole enum.
+func (e SetUpPartnerRequestPartnerRole) Valid() bool {
+	switch e {
+	case SetUpPartnerRequestPartnerRoleConsulting:
+		return true
+	case SetUpPartnerRequestPartnerRoleHosting:
+		return true
+	case SetUpPartnerRequestPartnerRoleStrategic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetUpPartnerRequestRelationshipStage.
+const (
+	SetUpPartnerRequestRelationshipStageActive           SetUpPartnerRequestRelationshipStage = "active"
+	SetUpPartnerRequestRelationshipStageActiveReferring  SetUpPartnerRequestRelationshipStage = "active_referring"
+	SetUpPartnerRequestRelationshipStageAgreementPending SetUpPartnerRequestRelationshipStage = "agreement_pending"
+	SetUpPartnerRequestRelationshipStageContacted        SetUpPartnerRequestRelationshipStage = "contacted"
+	SetUpPartnerRequestRelationshipStageDormant          SetUpPartnerRequestRelationshipStage = "dormant"
+	SetUpPartnerRequestRelationshipStageFitConfirmed     SetUpPartnerRequestRelationshipStage = "fit_confirmed"
+	SetUpPartnerRequestRelationshipStageIdentified       SetUpPartnerRequestRelationshipStage = "identified"
+	SetUpPartnerRequestRelationshipStageInConversation   SetUpPartnerRequestRelationshipStage = "in_conversation"
+	SetUpPartnerRequestRelationshipStageNoFit            SetUpPartnerRequestRelationshipStage = "no_fit"
+	SetUpPartnerRequestRelationshipStageResearch         SetUpPartnerRequestRelationshipStage = "research"
+)
+
+// Valid indicates whether the value is a known member of the SetUpPartnerRequestRelationshipStage enum.
+func (e SetUpPartnerRequestRelationshipStage) Valid() bool {
+	switch e {
+	case SetUpPartnerRequestRelationshipStageActive:
+		return true
+	case SetUpPartnerRequestRelationshipStageActiveReferring:
+		return true
+	case SetUpPartnerRequestRelationshipStageAgreementPending:
+		return true
+	case SetUpPartnerRequestRelationshipStageContacted:
+		return true
+	case SetUpPartnerRequestRelationshipStageDormant:
+		return true
+	case SetUpPartnerRequestRelationshipStageFitConfirmed:
+		return true
+	case SetUpPartnerRequestRelationshipStageIdentified:
+		return true
+	case SetUpPartnerRequestRelationshipStageInConversation:
+		return true
+	case SetUpPartnerRequestRelationshipStageNoFit:
+		return true
+	case SetUpPartnerRequestRelationshipStageResearch:
 		return true
 	default:
 		return false
@@ -18817,6 +18928,21 @@ func (e UpdateCompanyRequestVisibility) Valid() bool {
 	}
 }
 
+// Defines values for UpdateContactRequestRelationshipMark.
+const (
+	UpdateContactRequestRelationshipMarkVendorMarketing UpdateContactRequestRelationshipMark = "vendor_marketing"
+)
+
+// Valid indicates whether the value is a known member of the UpdateContactRequestRelationshipMark enum.
+func (e UpdateContactRequestRelationshipMark) Valid() bool {
+	switch e {
+	case UpdateContactRequestRelationshipMarkVendorMarketing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateContactRequestVisibility.
 const (
 	UpdateContactRequestVisibilityOwner     UpdateContactRequestVisibility = "owner"
@@ -19592,6 +19718,7 @@ func (e UserStatus) Valid() bool {
 const (
 	VCardImportResultOutcomeVCardImportResultOutcomeCreated     VCardImportResultOutcome = "created"
 	VCardImportResultOutcomeVCardImportResultOutcomeNeedsReview VCardImportResultOutcome = "needs_review"
+	VCardImportResultOutcomeVCardImportResultOutcomeProposed    VCardImportResultOutcome = "proposed"
 	VCardImportResultOutcomeVCardImportResultOutcomeSkipped     VCardImportResultOutcome = "skipped"
 	VCardImportResultOutcomeVCardImportResultOutcomeUpdated     VCardImportResultOutcome = "updated"
 )
@@ -19602,6 +19729,8 @@ func (e VCardImportResultOutcome) Valid() bool {
 	case VCardImportResultOutcomeVCardImportResultOutcomeCreated:
 		return true
 	case VCardImportResultOutcomeVCardImportResultOutcomeNeedsReview:
+		return true
+	case VCardImportResultOutcomeVCardImportResultOutcomeProposed:
 		return true
 	case VCardImportResultOutcomeVCardImportResultOutcomeSkipped:
 		return true
@@ -22873,6 +23002,24 @@ func (e ListContactsParamsCapturedByKind) Valid() bool {
 	case ListContactsParamsCapturedByKindHuman:
 		return true
 	case ListContactsParamsCapturedByKindSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListContactsParamsRelationshipMark.
+const (
+	ListContactsParamsRelationshipMarkAny             ListContactsParamsRelationshipMark = "any"
+	ListContactsParamsRelationshipMarkVendorMarketing ListContactsParamsRelationshipMark = "vendor_marketing"
+)
+
+// Valid indicates whether the value is a known member of the ListContactsParamsRelationshipMark enum.
+func (e ListContactsParamsRelationshipMark) Valid() bool {
+	switch e {
+	case ListContactsParamsRelationshipMarkAny:
+		return true
+	case ListContactsParamsRelationshipMarkVendorMarketing:
 		return true
 	default:
 		return false
@@ -34328,6 +34475,9 @@ type Contact struct {
 	// showing that a conversation exists even when a reply cannot currently be delivered.
 	Reachability *[]ContactReachability `json:"reachability,omitempty"`
 
+	// RelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
+
 	// Social { linkedin, twitter, github, ... }
 	Social *map[string]interface{} `json:"social,omitempty"`
 	Source string                  `json:"source"`
@@ -34353,6 +34503,9 @@ type Contact struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ContactRelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+type ContactRelationshipMark string
 
 // ContactVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
 type ContactVisibility string
@@ -39086,8 +39239,12 @@ type FilterVocabularyField struct {
 	// `id`, so only a core field can carry a reference.
 	References *FilterVocabularyFieldReferences `json:"references,omitempty"`
 
-	// Type The six custom-field types, plus `id` for a reference to another record and
-	// `domain` for a host column. The type decides the operators, which is why it is here.
+	// Type The six custom-field types, plus `id` for a reference to another record,
+	// `domain` for a host column and `distance` for a place on the earth. A `distance`
+	// field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
+	// `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
+	// name the builder showed for the center. Only companies that have a located address
+	// can match. The type decides the operators, which is why it is here.
 	//
 	// `domain` also decides what happens to the VALUE, and it is the only type that does:
 	// the operand is folded to the host the column stores, so
@@ -39113,8 +39270,12 @@ type FilterVocabularyFieldOperators string
 // `id`, so only a core field can carry a reference.
 type FilterVocabularyFieldReferences string
 
-// FilterVocabularyFieldType The six custom-field types, plus `id` for a reference to another record and
-// `domain` for a host column. The type decides the operators, which is why it is here.
+// FilterVocabularyFieldType The six custom-field types, plus `id` for a reference to another record,
+// `domain` for a host column and `distance` for a place on the earth. A `distance`
+// field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
+// `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
+// name the builder showed for the center. Only companies that have a located address
+// can match. The type decides the operators, which is why it is here.
 //
 // `domain` also decides what happens to the VALUE, and it is the only type that does:
 // the operand is folded to the host the column stores, so
@@ -49199,10 +49360,26 @@ type SearchHitEmployer struct {
 	CompanyName string             `json:"company_name"`
 }
 
+// SearchNearMatch defines model for SearchNearMatch.
+type SearchNearMatch struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Snippet The company beside a lead's name, as a lead hit carries it.
+	Snippet *string             `json:"snippet,omitempty"`
+	Title   string              `json:"title"`
+	Type    SearchNearMatchType `json:"type"`
+}
+
+// SearchNearMatchType defines model for SearchNearMatch.Type.
+type SearchNearMatchType string
+
 // SearchResponse defines model for SearchResponse.
 type SearchResponse struct {
 	Data []SearchResult `json:"data"`
-	Page PageInfo       `json:"page"`
+
+	// NearMatches Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor.
+	NearMatches *[]SearchNearMatch `json:"near_matches,omitempty"`
+	Page        PageInfo           `json:"page"`
 
 	// TypesWithMore On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
 	TypesWithMore *[]SearchResponseTypesWithMore `json:"types_with_more,omitempty"`
@@ -50036,6 +50213,21 @@ type SetTransitionPolicyRequest struct {
 
 // SetTransitionPolicyRequestMode defines model for SetTransitionPolicyRequest.Mode.
 type SetTransitionPolicyRequestMode string
+
+// SetUpPartnerRequest What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
+// or `served_segments`: the tier is a human's choice, and the others are set after set-up.
+type SetUpPartnerRequest struct {
+	NextStep          *string                               `json:"next_step,omitempty"`
+	NextStepDueAt     *openapi_types.Date                   `json:"next_step_due_at,omitempty"`
+	PartnerRole       SetUpPartnerRequestPartnerRole        `json:"partner_role"`
+	RelationshipStage *SetUpPartnerRequestRelationshipStage `json:"relationship_stage,omitempty"`
+}
+
+// SetUpPartnerRequestPartnerRole defines model for SetUpPartnerRequest.PartnerRole.
+type SetUpPartnerRequestPartnerRole string
+
+// SetUpPartnerRequestRelationshipStage defines model for SetUpPartnerRequest.RelationshipStage.
+type SetUpPartnerRequestRelationshipStage string
 
 // SettingLock A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`.
 type SettingLock struct {
@@ -51889,9 +52081,12 @@ type UpdateContactRequest struct {
 	// `Contact360.dead_addresses` already names which address bounced; until now the
 	// contract's own remedy for that was to visit the contact page, because the write
 	// existed on create and nowhere else.
-	Phones *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social *map[string]interface{} `json:"social,omitempty"`
-	Title  *string                 `json:"title,omitempty"`
+	Phones *[]ContactPhoneInput `json:"phones,omitempty"`
+
+	// RelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
+	RelationshipMark *UpdateContactRequestRelationshipMark `json:"relationship_mark,omitempty"`
+	Social           *map[string]interface{}               `json:"social,omitempty"`
+	Title            *string                               `json:"title,omitempty"`
 
 	// Visibility Who may see this contact: `workspace` for everyone in the company,
 	// `owner` for the contact named by `owner_id` alone.
@@ -51917,6 +52112,9 @@ type UpdateContactRequest struct {
 	Visibility           *UpdateContactRequestVisibility `json:"visibility,omitempty"`
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
+
+// UpdateContactRequestRelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
+type UpdateContactRequestRelationshipMark string
 
 // UpdateContactRequestVisibility Who may see this contact: `workspace` for everyone in the company,
 // `owner` for the contact named by `owner_id` alone.
@@ -52950,6 +53148,7 @@ type VCardImportResult struct {
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
 	// between them. `updated` — an exact match, filled only where the record was empty.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 	// `skipped` — the card states no name, carries a sending system's address, or matches a
 	// contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
@@ -52961,6 +53160,7 @@ type VCardImportResult struct {
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
 // between them. `updated` — an exact match, filled only where the record was empty.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 // `skipped` — the card states no name, carries a sending system's address, or matches a
 // contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
@@ -57712,6 +57912,22 @@ type UpsertPartnerParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// SetUpPartnerParams defines parameters for SetUpPartner.
+type SetUpPartnerParams struct {
+	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+	// It is held for 24h per caller and tool, not per path: the same key on two records of one
+	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
 // UpdateCompanyProfileFieldParams defines parameters for UpdateCompanyProfileField.
 type UpdateCompanyProfileFieldParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -58050,6 +58266,10 @@ type ListContactsParams struct {
 	// itself), and not otherwise.
 	AiWritten *AiWritten `form:"ai_written,omitempty" json:"ai_written,omitempty"`
 
+	// RelationshipMark Without it the list leaves out marked contacts, unless `q` is given. `vendor_marketing`
+	// returns only contacts carrying that mark; `any` returns marked and unmarked alike.
+	RelationshipMark *ListContactsParamsRelationshipMark `form:"relationship_mark,omitempty" json:"relationship_mark,omitempty"`
+
 	// OwnerId Filter to a single owner.
 	OwnerId *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
 
@@ -58090,6 +58310,9 @@ type ListContactsParams struct {
 // ListContactsParamsCapturedByKind defines parameters for ListContacts.
 type ListContactsParamsCapturedByKind string
 
+// ListContactsParamsRelationshipMark defines parameters for ListContacts.
+type ListContactsParamsRelationshipMark string
+
 // ListContactsParamsTagMode defines parameters for ListContacts.
 type ListContactsParamsTagMode string
 
@@ -58115,6 +58338,12 @@ type CreateContactParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ImportCardPhotoMultipartBody defines parameters for ImportCardPhoto.
+type ImportCardPhotoMultipartBody struct {
+	// File The photo. Its bytes must be the image type it claims to be.
+	File openapi_types.File `json:"file"`
 }
 
 // QuickCaptureContactParams defines parameters for QuickCaptureContact.
@@ -63125,6 +63354,9 @@ type MergeCompanyJSONRequestBody MergeCompanyJSONBody
 // UpsertPartnerJSONRequestBody defines body for UpsertPartner for application/json ContentType.
 type UpsertPartnerJSONRequestBody = UpsertPartnerRequest
 
+// SetUpPartnerJSONRequestBody defines body for SetUpPartner for application/json ContentType.
+type SetUpPartnerJSONRequestBody = SetUpPartnerRequest
+
 // UpdateCompanyProfileFieldJSONRequestBody defines body for UpdateCompanyProfileField for application/json ContentType.
 type UpdateCompanyProfileFieldJSONRequestBody = UpdateCompanyProfileFieldRequest
 
@@ -63184,6 +63416,9 @@ type CreateConsentPurposeJSONRequestBody = CreateConsentPurposeRequest
 
 // CreateContactJSONRequestBody defines body for CreateContact for application/json ContentType.
 type CreateContactJSONRequestBody = CreateContactRequest
+
+// ImportCardPhotoMultipartRequestBody defines body for ImportCardPhoto for multipart/form-data ContentType.
+type ImportCardPhotoMultipartRequestBody ImportCardPhotoMultipartBody
 
 // DismissRelationshipNudgesJSONRequestBody defines body for DismissRelationshipNudges for application/json ContentType.
 type DismissRelationshipNudgesJSONRequestBody = DismissRelationshipNudgesRequest
@@ -65505,6 +65740,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "reachability")
 	}
 
+	if raw, found := object["relationship_mark"]; found {
+		err = json.Unmarshal(raw, &a.RelationshipMark)
+		if err != nil {
+			return fmt.Errorf("error reading 'relationship_mark': %w", err)
+		}
+		delete(object, "relationship_mark")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -65746,6 +65989,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["reachability"], err = json.Marshal(a.Reachability)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'reachability': %w", err)
+		}
+	}
+
+	if a.RelationshipMark != nil {
+		object["relationship_mark"], err = json.Marshal(a.RelationshipMark)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'relationship_mark': %w", err)
 		}
 	}
 
@@ -72744,6 +72994,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "phones")
 	}
 
+	if raw, found := object["relationship_mark"]; found {
+		err = json.Unmarshal(raw, &a.RelationshipMark)
+		if err != nil {
+			return fmt.Errorf("error reading 'relationship_mark': %w", err)
+		}
+		delete(object, "relationship_mark")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -72833,6 +73091,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["phones"], err = json.Marshal(a.Phones)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phones': %w", err)
+		}
+	}
+
+	if a.RelationshipMark != nil {
+		object["relationship_mark"], err = json.Marshal(a.RelationshipMark)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'relationship_mark': %w", err)
 		}
 	}
 
@@ -75366,6 +75631,9 @@ type ServerInterface interface {
 	// Create/update the partner extension on a company (adds `partner` to its relationship types).
 	// (PUT /companies/{id}/partner)
 	UpsertPartner(w http.ResponseWriter, r *http.Request, id Id, params UpsertPartnerParams)
+	// Set up a partner program on a company that has none, with no margin tier.
+	// (POST /companies/{id}/partner/setup)
+	SetUpPartner(w http.ResponseWriter, r *http.Request, id Id, params SetUpPartnerParams)
 	// The company's confirmed profile fields (company_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it.
 	// (GET /companies/{id}/profile-fields)
 	ListCompanyProfileFields(w http.ResponseWriter, r *http.Request, id Id)
@@ -75510,6 +75778,9 @@ type ServerInterface interface {
 	// Create a contact.
 	// (POST /contacts)
 	CreateContact(w http.ResponseWriter, r *http.Request, params CreateContactParams)
+	// Read a photo of business cards and propose the contacts it shows.
+	// (POST /contacts/card-photos)
+	ImportCardPhoto(w http.ResponseWriter, r *http.Request)
 	// Set several lapsed contacts aside at once — the Worklist's "Dismiss all".
 	// (PUT /contacts/nudge-dismissals)
 	DismissRelationshipNudges(w http.ResponseWriter, r *http.Request)
@@ -78915,6 +79186,12 @@ func (_ Unimplemented) UpsertPartner(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Set up a partner program on a company that has none, with no margin tier.
+// (POST /companies/{id}/partner/setup)
+func (_ Unimplemented) SetUpPartner(w http.ResponseWriter, r *http.Request, id Id, params SetUpPartnerParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The company's confirmed profile fields (company_profile_field). A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it.
 // (GET /companies/{id}/profile-fields)
 func (_ Unimplemented) ListCompanyProfileFields(w http.ResponseWriter, r *http.Request, id Id) {
@@ -79200,6 +79477,12 @@ func (_ Unimplemented) ListContacts(w http.ResponseWriter, r *http.Request, para
 // Create a contact.
 // (POST /contacts)
 func (_ Unimplemented) CreateContact(w http.ResponseWriter, r *http.Request, params CreateContactParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read a photo of business cards and propose the contacts it shows.
+// (POST /contacts/card-photos)
+func (_ Unimplemented) ImportCardPhoto(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -94375,6 +94658,83 @@ func (siw *ServerInterfaceWrapper) UpsertPartner(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// SetUpPartner operation middleware
+func (siw *ServerInterfaceWrapper) SetUpPartner(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetUpPartnerParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey ToolIdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetUpPartner(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListCompanyProfileFields operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanyProfileFields(w http.ResponseWriter, r *http.Request) {
 
@@ -96193,6 +96553,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "relationship_mark" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "relationship_mark", r.URL.Query(), &params.RelationshipMark, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "relationship_mark"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "relationship_mark", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "owner_id" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_id", r.URL.Query(), &params.OwnerId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
@@ -96335,6 +96708,26 @@ func (siw *ServerInterfaceWrapper) CreateContact(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateContact(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ImportCardPhoto operation middleware
+func (siw *ServerInterfaceWrapper) ImportCardPhoto(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ImportCardPhoto(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -121756,6 +122149,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/companies/{id}/partner", wrapper.UpsertPartner)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/companies/{id}/partner/setup", wrapper.SetUpPartner)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/profile-fields", wrapper.ListCompanyProfileFields)
 	})
 	r.Group(func(r chi.Router) {
@@ -121898,6 +122294,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts", wrapper.CreateContact)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/card-photos", wrapper.ImportCardPhoto)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/contacts/nudge-dismissals", wrapper.DismissRelationshipNudges)

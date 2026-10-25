@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -185,14 +186,12 @@ func (o radiusOperand) namesACenter() bool {
 	return byName != byPoint
 }
 
-// plausibleCenter rejects a point that is not on the earth. It is the cheapest
-// place to catch a transposed lat/lon pair, which otherwise produces
-// confidently wrong distances rather than an error anyone notices.
+// plausibleCenter applies geocode.PlausiblePoint to a center given as a point.
 func (o radiusOperand) plausibleCenter() bool {
 	if o.Lat == nil || o.Lon == nil {
 		return true
 	}
-	return *o.Lat >= -90 && *o.Lat <= 90 && *o.Lon >= -180 && *o.Lon <= 180
+	return geocode.PlausiblePoint(geocode.Point{Lat: *o.Lat, Lon: *o.Lon})
 }
 
 // geoOperandMatches checks the radius operand's shape. The operator does not

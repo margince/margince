@@ -401,6 +401,8 @@ export const en = {
   "approval.preview.precisionMonth": "Month only",
   "approval.preview.mergeTags":
     "Replace the source tag on the shown records with the surviving tag. Where both tags are present, remove only the duplicate source assignment. Archive the source tag and release its name for reuse; it is not retained as an alias.",
+  "approval.preview.partnerTierUnset":
+    "Margin tier: not set. A human sets it on the company’s Partner tab.",
   "approval.preview.mergeTagSource": "Tag to remove",
   "approval.preview.mergeTagTarget": "Tag to keep",
   "approval.preview.mergeTagMove": "Record that gains the surviving tag",
@@ -2050,6 +2052,7 @@ export const en = {
   "history.field.vat_status": "VAT status",
   "history.field.visibility": "Visibility",
   "history.field.parent_company_id": "Parent company",
+  "history.field.relationship_mark": "Relationship mark",
   "history.field.partner_attribution": "Partner attribution",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
@@ -2171,6 +2174,7 @@ export const en = {
     "Search contacts, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Enter a search term.",
   "search.empty": "No matches for “{q}”.",
+  "search.nearMatches": "Did you mean:",
   "search.group.contact": "Contacts",
   "search.group.company": "Companies",
   "search.group.deal": "Deals",
@@ -3512,6 +3516,7 @@ export const en = {
   "approval.kind.merge_records": "Merge records",
   "approval.kind.merge_tags": "Merge tags",
   "approval.kind.archive_tag": "Retire a tag",
+  "approval.kind.set_up_partner": "Set up a partner program",
   "approval.kind.change_record_parts": "Change a record’s parts",
   "approval.kind.update_record": "Update record",
   "approval.kind.create_record": "Create record",
@@ -5621,11 +5626,11 @@ export const en = {
   // what it says. The label names the ACT, not the source, because the same
   // form takes a conference badge and a business card.
   "vcardImport.action": "Import vCards",
-  "vcardImport.title": "Import vCards",
-  "vcardImport.fileLabel": "vCard file",
+  "vcardImport.title": "Import business cards",
+  "vcardImport.fileLabel": "vCard file or card photo",
   "vcardImport.whichFile":
-    "A .vcf file, the contact export format of phones and mail clients. A card comes from its owner, so imported cards skip approval.",
-  "vcardImport.choose": "Select .vcf file",
+    "A .vcf file, the contact export format of phones and mail clients, or a photo of one or more business cards. A vCard comes from its owner, so imported vCards skip approval. A photo is read by a model and can be wrong, so every card read from a photo waits for your approval.",
+  "vcardImport.choose": "Select file or photo",
   "vcardImport.working": "Reading cards…",
   "vcardImport.back": "Back to contacts",
   "vcardImport.noCards": "The file contains no cards.",
@@ -5633,6 +5638,7 @@ export const en = {
   "vcardImport.outcome.created": "Added",
   "vcardImport.outcome.updated": "Missing fields added",
   "vcardImport.outcome.needsReview": "Possible duplicate",
+  "vcardImport.outcome.proposed": "Waiting for approval",
   "vcardImport.outcome.skipped": "Skipped",
   "create.quickCapture": "Quick capture",
   "create.quickCaptureSaved": "{name} saved",
@@ -6212,13 +6218,13 @@ export const en = {
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
-    "The recipient objected to marketing. No one here can lift this, including an administrator.",
+    "The recipient objected to marketing. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.withdrawn":
-    "The recipient withdrew consent. No one here can lift this, including an administrator.",
+    "The recipient withdrew consent. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.restricted":
-    "The recipient’s data is under a processing restriction. No one here can lift this, including an administrator.",
+    "The recipient’s data is under a processing restriction. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.askedUsToStop":
-    "The recipient asked not to be contacted. No one here can lift this, including an administrator.",
+    "The recipient asked not to be contacted. Only an administrator can still send past this, one message at a time.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.tooMany":
@@ -7791,6 +7797,8 @@ export const en = {
     "You cannot make this user an owner, so you become the owner of their rows.",
   "import.reason.owner_unknown":
     "No user has this email, so you become the owner; a lead stays unassigned. Rows naming it: {rows}.",
+  "import.reason.address_erased":
+    "Whoever owns this email address asked to be erased and not to be stored again, so the row was not imported.",
   "import.reason.address_not_split":
     "Address could not be split into street, postal code and city, so it stays in the first address line.",
   "import.reason.phone_needs_country":
@@ -14967,6 +14975,7 @@ export const en = {
   "filters.field.created_at": "Created",
   "filters.field.hosting_provider": "Hosting",
   "filters.field.last_activity_at": "Last activity",
+  "filters.field.location": "Location",
   "filters.field.mail_provider": "Mail system",
   "filters.field.operated_service": "Operated service",
   "filters.field.owner_team_id": "Owner team",
@@ -15001,6 +15010,8 @@ export const en = {
   "filters.op.atLeast": "is at least",
   "filters.op.lessThan": "is less than",
   "filters.op.atMost": "is at most",
+  "filters.op.withinRadius": "is within",
+  "filters.sentence.radiusOf": "{km} km of {place}",
   "filters.join.and": "and",
   "filters.join.or": "or",
   "filters.sentence.clause": "{field} {op} {value}",

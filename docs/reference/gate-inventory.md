@@ -435,6 +435,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contactscrub_test.go` | H2 | Erasing a contact and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |
 | `dedupespine_test.go` | H2 | Every INSERT site for contacts, companies and leads is derived from the tree and must ask the duplicate-matching engine with full inputs. |
 | `effectredemption_test.go` | H2 | Every approval effect redeems the approval it ran. |
+| `erasuresuppressionreach_test.go` | H2 | Every writer of an address or channel account asks the erasure list. |
 | `gopinsrenovatereach_test.go` | H3 | Every Go pin this tree holds is one Renovate can move, and it moves them together. |
 | `importheavywork_test.go` | H2 | An import's rows are written only by the worker. |
 | `liveprobelock_test.go` | H2 | A live-probed write of a held row locks its subject. |
@@ -472,6 +473,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `noopifmatch_test.go` | H2 | An update that skips its write because nothing changes still answers the If-Match. |
 | `positionalrowscan_test.go` | H2 | A positional row mapping may only target a struct its own package declares. |
 | `promptversionderived_test.go` | H2 | A cached answer is keyed by a fingerprint, and the fingerprint has to move when the prompt that produced the answer moves. |
+| `relationshipmarkvocabulary_test.go` | H1 | The relationship mark is spelled twice: relationshipmark.Values() and the column's CHECK. |
 | `replyverdictvocabulary_test.go` | H1 | The reply verdict is spelled in three places, and they have to agree. |
 | `resetwireshape_test.go` | H2 | The reset-data 200 body has the keys the contract's required list names, in the hand-written resetDataResponse struct. |
 | `retentionseedcoverage_test.go` | H1 | Every scope the retention engine can act on ships a default, or says why not. |

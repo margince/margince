@@ -60,6 +60,11 @@ func manualDedupeContact(ctx context.Context, tx pgx.Tx, in CreateContactInput) 
 	if err != nil {
 		return ContactResolution{}, err
 	}
+	// The subject locks come before the phone lane, in the order lockorder.go
+	// states.
+	if err := storekit.LockSubjectKeys(ctx, tx, nil, emails); err != nil {
+		return ContactResolution{}, err
+	}
 	if err := lockPhoneLane(ctx, tx, phones); err != nil {
 		return ContactResolution{}, err
 	}
@@ -183,6 +188,7 @@ func manualDedupeCompany(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) 
 		DisplayName: in.DisplayName,
 		LegalName:   deref(in.LegalName),
 		Domains:     domains,
+		Address:     in.Address,
 	})
 }
 

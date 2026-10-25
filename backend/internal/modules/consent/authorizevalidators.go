@@ -90,6 +90,8 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	switch category {
 	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup:
 		return g.validateRequestedFollowup(ctx, tx, subject, w, category)
+	case commsauthz.CategoryActiveDealFollowup:
+		return validateDealFollowup(ctx, tx, req, subject)
 	case commsauthz.CategoryInvoiceOrPayment:
 		return validateInvoice(ctx, tx, req, subject)
 	case commsauthz.CategoryContractNotice:
@@ -126,12 +128,7 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 // time in a different table would be asking them to restate what the CRM
 // already knows.
 func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
-	// AUTHORSHIP, through the shared reader. An earlier version asked
-	// activity_link — a FILING link with no author concept — which read "some
-	// inbound activity is filed under this contact". A caller may post an
-	// activity with direction=inbound and a link to any contact they can read,
-	// so that let anybody manufacture their own evidence.
-	found, err := wroteToUsWithin(ctx, tx, subject, time.Now().Add(-w.reply))
+	found, err := repliedOrWasRecorded(ctx, tx, subject, time.Now().Add(-w.reply))
 	if err != nil {
 		return resolution{}, err
 	}
@@ -151,6 +148,46 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject
 	return resolution{
 		Category:  category,
 		Basis:     commsauthz.BasisSubjectInitiatedCorrespondence,
+		Supported: true,
+	}, nil
+}
+
+// repliedOrWasRecorded asks whether the subject wrote to us, or somebody
+// recorded that they asked to hear from us, inside the window.
+//
+// A contact is asked through latestQualifyingEvent, the reader the legacy
+// correspondence verdict uses. So a recorded "requested by the subject" or an
+// in-person exchange supports a composer send, and both readers agree. A lead
+// has no qualifying event, because the table is keyed on contacts. It keeps
+// the authorship test alone, which wroteToUsWithin spells for both kinds.
+func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, since time.Time) (bool, error) {
+	if subject.Kind != entityContact {
+		return wroteToUsWithin(ctx, tx, subject, since)
+	}
+	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since)
+	if err != nil {
+		return false, err
+	}
+	return source != sourceNone, nil
+}
+
+// validateDealFollowup answers a follow-up on a deal the sender picked. It reads
+// the picked deal through liveDealInLinks. So "an open deal the recipient is a
+// stakeholder on" is asked one way for the links and for the picked deal.
+func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
+	if req.Evidence.DealID == (ids.UUID{}) {
+		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
+	}
+	live, err := liveDealInLinks(ctx, tx, []ids.UUID{req.Evidence.DealID}, subject)
+	if err != nil {
+		return resolution{}, err
+	}
+	if !live {
+		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
+	}
+	return resolution{
+		Category:  commsauthz.CategoryActiveDealFollowup,
+		Basis:     commsauthz.BasisLegitimateInterests,
 		Supported: true,
 	}, nil
 }

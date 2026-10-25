@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -109,6 +110,10 @@ type ContactSpec struct {
 	// was done to obtain them. Distinct from Source, which says which surface
 	// typed it in. The zero value records unknown_legacy rather than nothing.
 	Acquisition Acquisition
+	// RelationshipMark marks the contact at birth, and RelationshipMarkSetBy says
+	// who decided it (`agent:<id>` or `human:<uuid>`). Both or neither.
+	RelationshipMark      relationshipmark.Mark
+	RelationshipMarkSetBy string
 	// Quarantined flags the impersonation tells capture screens for; the row
 	// is still created, because hiding suspicious mail is worse than labeling
 	// it.
@@ -128,6 +133,8 @@ type ContactSpec struct {
 	// Active is the custom-field catalog for `contact`; nil on the capture
 	// paths, which carry no request body to source extra columns from.
 	Active []fieldcatalog.Column
+
+	erasure storekit.ErasureAdmission
 }
 
 // createContact is the one INSERT INTO contact.
@@ -152,24 +159,24 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 		id, spec.FullName, spec.FirstName, spec.LastName, spec.Title, spec.OwnerID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.Visibility, spec.Quarantined, spec.ConvertedFromLeadID,
-		spec.SourceSystem, spec.Narrowing,
+		spec.SourceSystem, spec.Narrowing, string(spec.RelationshipMark), spec.RelationshipMarkSetBy,
 	})
 	cfCols, cfHolders, args, err := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
 	if err != nil {
 		return ids.ContactID{}, err
 	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason`+authorCols+cfCols+`)
+		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason, relationship_mark, relationship_mark_set_by`+authorCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
 		         coalesce(NULLIF($15, ''), 'workspace'),
-		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18, NULLIF($19, '')`+authorHolders+cfHolders+`)`,
+		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18, NULLIF($19, ''), NULLIF($20, ''), NULLIF($21, '')`+authorHolders+cfHolders+`)`,
 		args...); err != nil {
 		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
 	}
 	if err := replaceContactSocial(ctx, tx, wsID, id, spec.Social); err != nil {
 		return ids.ContactID{}, err
 	}
-	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails); err != nil {
+	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails, spec.erasure); err != nil {
 		return ids.ContactID{}, err
 	}
 	if err := insertContactPhones(ctx, tx, id, spec.Source, spec.CapturedBy, spec.Phones); err != nil {

@@ -395,6 +395,8 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"TestAnAgentAttachesAPDFToEveryRecordKindAndListsItWhereTheTabDoes (compose/documentseam_integration_test.go) holds its answer to its schema",
 	"decide_duplicate": "needs a filed review-queue pair, which a create under a second passport produces; " +
 		"TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt (choicecards_mcp_integration_test.go) calls it through the served registry and holds its answer to its schema, which this sweep's census cannot read from here",
+	"set_up_partner": "waits for a human even when a passport acts as its user, so it always answers with a staged approval; " +
+		"TestAnApprovedAssistantSetUpStartsAProgramWithNoTier (partnersetuptoolroutes_integration_test.go) drives it through approval and the approved retry",
 	"book_meeting":         "needs a live calendar provider",
 	"invite_meeting":       "needs a writable calendar registry, working hours and a booking vault; this lane composes an empty SendPath",
 	"send_email":           "needs an outbound mail provider",

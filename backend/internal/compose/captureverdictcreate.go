@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -35,7 +36,9 @@ import (
 // rather than left reading `real`. Erasure outranks a verdict, and a ledger (or
 // a SAR built from it) that reports `real` for someone with no record would be
 // describing a contact who does not exist.
-func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
+func (e *CounterpartyVerdictEngine) createCounterparty(
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, mark relationshipmark.Mark,
+) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, e.contacts, e.tagFiler, counterpartyCreation{
 		DispositionID: row.ID,
 		Email:         row.Email,
@@ -45,6 +48,7 @@ func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx p
 		ActivityID:    row.ActivityID,
 		Source:        verdictReason,
 		CapturedBy:    verdictActor,
+		Mark:          mark,
 	})
 	if err != nil {
 		return "", err
@@ -68,6 +72,7 @@ func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx p
 // drift apart between them.
 func (e *CounterpartyVerdictEngine) createOwnerScopedCounterparty(
 	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, reason contacts.NarrowingReason,
+	mark relationshipmark.Mark,
 ) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, e.contacts, e.tagFiler, counterpartyCreation{
 		DispositionID:   row.ID,
@@ -79,6 +84,7 @@ func (e *CounterpartyVerdictEngine) createOwnerScopedCounterparty(
 		Source:          verdictReason,
 		CapturedBy:      verdictActor,
 		NarrowedBecause: reason,
+		Mark:            mark,
 	})
 	if err != nil {
 		return "", err
@@ -114,6 +120,9 @@ type counterpartyCreation struct {
 	// SkipLeadPromotion leaves a lead holding the address where it is, for a
 	// human accept whose decider may not promote one.
 	SkipLeadPromotion bool
+	// Mark is the relationship mark a contact this creation makes is born with;
+	// it is stamped as set by CapturedBy. Empty marks nothing.
+	Mark relationshipmark.Mark
 }
 
 // counterpartyCreated reports what a `real` answer produced that its caller has
@@ -155,6 +164,7 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 		OwnerScoped:       in.NarrowedBecause != "",
 		NarrowedBecause:   in.NarrowedBecause,
 		SkipLeadPromotion: in.SkipLeadPromotion,
+		RelationshipMark:  in.Mark,
 	})
 	if errors.Is(err, contacts.ErrCounterpartyIsSeat) {
 		return counterpartyCreated{Suppressed: true, SeatAddress: true}, nil
@@ -215,7 +225,7 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 // Both keep the record — the owner corresponded with somebody real — and both
 // keep it owner-scoped. Anything else is the ordinary shared contact.
 func (e *CounterpartyVerdictEngine) createContactForVerdict(
-	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty,
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, mark relationshipmark.Mark,
 ) (string, error) {
 	reason, err := e.contactStaysTheOwners(ctx, tx, row)
 	if err != nil {
@@ -233,9 +243,9 @@ func (e *CounterpartyVerdictEngine) createContactForVerdict(
 		if err := capture.MarkWithheldFromWorkspaceTx(ctx, tx, row.ID); err != nil {
 			return "", err
 		}
-		return e.createOwnerScopedCounterparty(ctx, tx, row, reason)
+		return e.createOwnerScopedCounterparty(ctx, tx, row, reason, mark)
 	}
-	triageDomain, err := e.createCounterparty(ctx, tx, row)
+	triageDomain, err := e.createCounterparty(ctx, tx, row, mark)
 	if err != nil {
 		return "", err
 	}
@@ -302,4 +312,26 @@ func (e *CounterpartyVerdictEngine) correctRefusedVerdict(ctx context.Context, t
 	return e.pending.CorrectResolution(ctx, tx, id,
 		capture.PendingStatusReal, capture.PendingStatusSuppressed,
 		"the address was erased before the verdict landed")
+}
+
+// createVendorPitchContact is the `vendor_pitch` effect. The sender becomes a
+// contact carrying the vendor_marketing mark. The mail stays attached to
+// somebody, and the lists and briefs that read relationships skip them.
+//
+// The model's answer alone never marks. It answers the direction of the offer.
+// "Nobody here answered" is a fact the ledger holds. A prospect who wrote first
+// and was answered is a vendor to nobody. If the address wrote back on a thread
+// the workspace started, the ordinary `contact` effect runs with no mark. It
+// runs the same way when the workspace has provably written to the address.
+func (e *CounterpartyVerdictEngine) createVendorPitchContact(
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty,
+) (string, error) {
+	corresponds, err := e.pending.CorrespondsWith(ctx, tx, row.Email)
+	if err != nil {
+		return "", err
+	}
+	if row.WroteBack || corresponds {
+		return e.createContactForVerdict(ctx, tx, row, "")
+	}
+	return e.createContactForVerdict(ctx, tx, row, relationshipmark.VendorMarketing)
 }

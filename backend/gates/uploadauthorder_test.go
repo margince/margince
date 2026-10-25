@@ -58,6 +58,8 @@ var uploadParseAuthorizedByCaller = map[string]string{
 	"decodeCompanyLogoUpload": "its only caller, uploadCompanyMark, reads the anchor company " +
 		"first, and GetAnchorCompany requires company.read",
 	"readImportUpload": "its only caller, stageImportSource, requires import_run.create before it calls this",
+	"readCardPhotoUpload": "its only caller, ImportCardPhoto, requires contact.create and contact.update " +
+		"before it calls this",
 }
 
 func TestEveryMultipartParseRefusesBeforeItReads(t *testing.T) {

@@ -416,6 +416,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.precisionMonth": "Chỉ tháng",
   "approval.preview.mergeTags":
     "Thay nhãn nguồn trên các bản ghi được hiển thị bằng nhãn giữ lại. Nếu đã có cả hai nhãn, chỉ xóa gán nhãn nguồn trùng lặp. Lưu trữ nhãn nguồn và cho phép dùng lại tên; tên không được giữ làm bí danh.",
+  "approval.preview.partnerTierUnset":
+    "Bậc biên lợi nhuận: chưa đặt. Một thành viên đặt bậc này ở tab Đối tác của công ty.",
   "approval.preview.mergeTagSource": "Nhãn sẽ xóa",
   "approval.preview.mergeTagTarget": "Nhãn giữ lại",
   "approval.preview.mergeTagMove": "Bản ghi sẽ nhận nhãn giữ lại",
@@ -2055,6 +2057,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.vat_status": "Trạng thái VAT",
   "history.field.visibility": "Phạm vi hiển thị",
   "history.field.parent_company_id": "Công ty mẹ",
+  "history.field.relationship_mark": "Nhãn quan hệ",
   "history.field.partner_attribution": "Ghi công đối tác",
   "history.field.partner_company_id": "Đối tác",
   "history.field.project_id": "Dự án",
@@ -2155,6 +2158,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm liên hệ, công ty, deal, dự án, sản phẩm, hoạt động, lead…",
   "search.prompt": "Nhập từ khóa tìm kiếm.",
   "search.empty": "Không có kết quả cho “{q}”.",
+  "search.nearMatches": "Có phải bạn muốn tìm:",
   "search.group.contact": "Liên hệ",
   "search.group.company": "Công ty",
   "search.group.deal": "Deal",
@@ -3414,6 +3418,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.merge_records": "Gộp hồ sơ",
   "approval.kind.merge_tags": "Gộp thẻ",
   "approval.kind.archive_tag": "Ngừng dùng thẻ",
+  "approval.kind.set_up_partner": "Thiết lập chương trình đối tác",
   "approval.kind.change_record_parts": "Thay đổi các phần của hồ sơ",
   "approval.kind.update_record": "Cập nhật hồ sơ",
   "approval.kind.create_record": "Tạo hồ sơ",
@@ -5411,11 +5416,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.saving": "Đang tạo…",
   "create.contact": "Liên hệ mới",
   "vcardImport.action": "Nhập vCard",
-  "vcardImport.title": "Nhập vCard",
-  "vcardImport.fileLabel": "Tệp vCard",
+  "vcardImport.title": "Nhập danh thiếp",
+  "vcardImport.fileLabel": "Tệp vCard hoặc ảnh danh thiếp",
   "vcardImport.whichFile":
-    "Tệp .vcf, định dạng xuất danh bạ của điện thoại và ứng dụng thư. Danh thiếp do chính chủ cung cấp, nên danh thiếp nhập vào không cần qua bước duyệt.",
-  "vcardImport.choose": "Chọn tệp .vcf",
+    "Tệp .vcf, định dạng xuất danh bạ của điện thoại và ứng dụng thư, hoặc ảnh chụp một hay nhiều danh thiếp. vCard do chính chủ cung cấp, nên vCard nhập vào không cần qua bước duyệt. Ảnh do mô hình đọc và có thể sai, nên mỗi danh thiếp đọc từ ảnh đều chờ bạn duyệt.",
+  "vcardImport.choose": "Chọn tệp hoặc ảnh",
   "vcardImport.working": "Đang đọc danh thiếp…",
   "vcardImport.back": "Quay lại Liên hệ",
   "vcardImport.noCards": "Tệp này không chứa danh thiếp nào.",
@@ -5423,6 +5428,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "vcardImport.outcome.created": "Đã thêm",
   "vcardImport.outcome.updated": "Đã thêm trường còn thiếu",
   "vcardImport.outcome.needsReview": "Có thể là bản trùng",
+  "vcardImport.outcome.proposed": "Đang chờ duyệt",
   "vcardImport.outcome.skipped": "Đã bỏ qua",
   "create.quickCapture": "Ghi nhanh",
   "create.quickCaptureSaved": "Đã lưu {name}",
@@ -5999,13 +6005,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unanswered":
     "Lần kiểm tra trước khi gửi chưa hoàn tất. Khi gửi sẽ kiểm tra lại.",
   "sendPermission.reason.objected":
-    "Người nhận đã phản đối tin tiếp thị. Không ai ở đây có thể gỡ hạn chế này, kể cả quản trị viên.",
+    "Người nhận đã phản đối tin tiếp thị. Chỉ quản trị viên mới có thể vẫn gửi, từng thư một.",
   "sendPermission.reason.withdrawn":
-    "Người nhận đã rút lại sự đồng ý. Không ai ở đây có thể gỡ hạn chế này, kể cả quản trị viên.",
+    "Người nhận đã rút lại sự đồng ý. Chỉ quản trị viên mới có thể vẫn gửi, từng thư một.",
   "sendPermission.reason.restricted":
-    "Dữ liệu của người nhận đang bị hạn chế xử lý. Không ai ở đây có thể gỡ hạn chế này, kể cả quản trị viên.",
+    "Dữ liệu của người nhận đang bị hạn chế xử lý. Chỉ quản trị viên mới có thể vẫn gửi, từng thư một.",
   "sendPermission.reason.askedUsToStop":
-    "Người nhận đã yêu cầu không được liên hệ. Không ai ở đây có thể gỡ hạn chế này, kể cả quản trị viên.",
+    "Người nhận đã yêu cầu không được liên hệ. Chỉ quản trị viên mới có thể vẫn gửi, từng thư một.",
   "sendPermission.reason.bounced":
     "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
   "sendPermission.reason.tooMany":
@@ -7491,6 +7497,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không thể đặt thành viên này làm người chịu trách nhiệm nên bạn trở thành người chịu trách nhiệm các hàng của họ.",
   "import.reason.owner_unknown":
     "Không có thành viên nào có email này nên bạn trở thành người chịu trách nhiệm; lead vẫn chưa giao. Số hàng nêu email này: {rows}.",
+  "import.reason.address_erased":
+    "Chủ của địa chỉ email này đã yêu cầu xóa và không được lưu lại, nên hàng không được nhập.",
   "import.reason.address_not_split":
     "Không tách được địa chỉ thành đường, mã bưu chính và thành phố nên địa chỉ vẫn nằm ở dòng địa chỉ đầu tiên.",
   "import.reason.phone_needs_country":
@@ -14597,6 +14605,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.field.created_at": "Ngày tạo",
   "filters.field.hosting_provider": "Nhà cung cấp máy chủ",
   "filters.field.last_activity_at": "Hoạt động gần nhất",
+  "filters.field.location": "Vị trí",
   "filters.field.mail_provider": "Hệ thống thư",
   "filters.field.operated_service": "Dịch vụ vận hành",
   "filters.field.owner_team_id": "Nhóm chịu trách nhiệm",
@@ -14631,6 +14640,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.op.atLeast": "\u00edt nh\u1ea5t l\u00e0",
   "filters.op.lessThan": "nh\u1ecf h\u01a1n",
   "filters.op.atMost": "nhi\u1ec1u nh\u1ea5t l\u00e0",
+  "filters.op.withinRadius": "n\u1eb1m trong b\u00e1n k\u00ednh",
+  "filters.sentence.radiusOf": "{km} km quanh {place}",
   "filters.join.and": "và",
   "filters.join.or": "hoặc",
   "filters.sentence.clause": "{field} {op} {value}",

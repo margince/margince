@@ -16,6 +16,7 @@ const (
 	ReasonDuplicateEmail             ReasonCode = "duplicate_email"
 	ReasonContactUnnamed             ReasonCode = "contact_unnamed"
 	ReasonContactEmailHeld           ReasonCode = "contact_email_held"
+	ReasonAddressErased              ReasonCode = "address_erased"
 	ReasonCompanyNameEmpty           ReasonCode = "company_name_empty"
 	ReasonDomainHeld                 ReasonCode = "domain_held"
 	ReasonLinkedinHeld               ReasonCode = "linkedin_held"
@@ -135,6 +136,11 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.English:    "This email address is already held in the CRM, so the row cannot create a second contact under it.",
 		textlang.German:     "Diese E-Mail-Adresse ist im CRM bereits vergeben, daher kann die Zeile keinen zweiten Kontakt damit anlegen.",
 		textlang.Vietnamese: "Địa chỉ email này đã có trong CRM nên hàng không thể tạo liên hệ thứ hai với nó.",
+	}},
+	ReasonAddressErased: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "Whoever owns this email address asked to be erased and not to be stored again, so the row was not imported.",
+		textlang.German:     "Wer diese E-Mail-Adresse besitzt, hat die Löschung verlangt und darf nicht erneut gespeichert werden, daher wurde die Zeile nicht importiert.",
+		textlang.Vietnamese: "Chủ của địa chỉ email này đã yêu cầu xóa và không được lưu lại, nên hàng không được nhập.",
 	}},
 	ReasonCompanyNameEmpty: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "The mapped display_name is empty, so the row names no company.",

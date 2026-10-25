@@ -38,6 +38,7 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   // half a reader has to check before releasing it.
   merge_tags: "approval.kind.merge_tags",
   archive_tag: "approval.kind.archive_tag",
+  set_up_partner: "approval.kind.set_up_partner",
   change_record_parts: "approval.kind.change_record_parts",
   update_record: "approval.kind.update_record",
   create_record: "approval.kind.create_record",

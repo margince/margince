@@ -368,6 +368,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		if linkedInClaimed(err) {
 			return skippedFor(linkedInClaimedWhy), nil
 		}
+		if refusedAsErased(err) {
+			return skippedFor(addressErasedWhy), nil
+		}
 		return migration.EnsureResult{}, err
 	}
 	if err := w.tagExisting(ctx, id, row); err != nil {
