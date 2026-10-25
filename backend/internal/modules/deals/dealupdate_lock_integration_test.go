@@ -22,8 +22,9 @@ import (
 // test commits the competing write only after the update has reached its lock.
 func waitForLockWaiter(ctx context.Context, t *testing.T, e *configEnv) {
 	t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
-	for time.Now().Before(deadline) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	for ctx.Err() == nil {
 		var waiting int
 		if err := e.owner.QueryRow(ctx,
 			`SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock'`,
