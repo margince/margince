@@ -211,7 +211,7 @@ func (r capturedFileRow) sizeColumn() *int {
 //craft:ignore naked-any the audit image is the open JSON object storekit.Audit takes
 func (r capturedFileRow) auditImage(activityID ids.ActivityID, from CapturedFileSource) map[string]any {
 	image := map[string]any{
-		"entity_type":      linkEntityActivity,
+		fieldEntityType:    linkEntityActivity,
 		"entity_id":        activityID.String(),
 		fieldCategory:      from.Category,
 		"byte_size":        r.sizeColumn(),
