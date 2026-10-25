@@ -158,10 +158,11 @@ const gmailAuthServer = "mx.google.com"
 // owner's provider attested as sent, the owner typed that address. So the
 // colleague whose exact login it is gets bound, as StampFurtherParticipants
 // binds a Cc on such a mail. They may then read their copy even when a
-// members_only hold keeps the workspace out.
+// members_only hold keeps the workspace out. No other seat address is recorded.
+// The attendance arm reads only rows with a user_id.
 func insertCounterpartyParticipant(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role, kind string,
-	counterparty connector.Counterparty, address, channelUserID string, owner ids.UUID,
+	counterparty connector.Counterparty, address, channelUserID string, owner ids.UUID, us workspaceParties,
 ) error {
 	var bound *ids.UUID
 	if kind == kindEmail && counterparty.SentByOwner() && address != "" {
@@ -171,6 +172,12 @@ func insertCounterpartyParticipant(
 		}
 		if !seat.IsZero() {
 			bound = &seat
+		}
+	}
+	if bound == nil && address != "" && us.Covers(address) {
+		address = ""
+		if channelUserID == "" {
+			return nil
 		}
 	}
 	return insertParticipant(ctx, tx, activityID, role, bound, nil, address, channelUserID)
