@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 325 |
-| Columns | 3839 |
-| Foreign keys | 531 |
+| Tables | 328 |
+| Columns | 3850 |
+| Foreign keys | 533 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -40,8 +40,8 @@ Ranked by how many foreign keys point at them.
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 30 | 141 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 34 | 45 |
-| [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 43 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 34 | 46 |
+| [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 44 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 66 | 38 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 25 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 40 | 17 |
@@ -103,7 +103,7 @@ erDiagram
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 43 |
 | [consent](consent.md) | 19 |
-| [contacts](contacts.md) | 45 |
+| [contacts](contacts.md) | 48 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
 | [customfields](customfields.md) | 1 |
@@ -176,7 +176,7 @@ erDiagram
 | [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 4 | 0 |
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 9 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 13 | 0 |
-| [`attachment`](activities.md#attachment) | activities | 27 | 6 |
+| [`attachment`](activities.md#attachment) | activities | 28 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 12 | 0 |
 | [`audit_log`](platform.md#audit_log) | platform | 14 | 2 |
 | [`auth_token`](identity.md#auth_token) | identity | 7 | 0 |
@@ -221,7 +221,8 @@ erDiagram
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
-| [`company`](contacts.md#company) | contacts | 44 | 43 |
+| [`company`](contacts.md#company) | contacts | 44 | 44 |
+| [`company_address_country`](contacts.md#company_address_country) | contacts | 3 | 0 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 10 | 0 |
 | [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 22 | 1 |
@@ -242,8 +243,9 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 10 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 34 | 45 |
+| [`contact`](contacts.md#contact) | contacts | 34 | 46 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 10 | 1 |
+| [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |
 | [`contact_confirm_submission`](consent.md#contact_confirm_submission) | consent | 11 | 0 |
@@ -306,6 +308,7 @@ erDiagram
 | [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 26 | 2 |
 | [`fx_rate`](deals.md#fx_rate) | deals | 6 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
+| [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |
 | [`graph_contact_edge`](search.md#graph_contact_edge) | search | 6 | 0 |
 | [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 10 | 0 |
 | [`idempotency_key`](compose.md#idempotency_key) | compose | 10 | 0 |

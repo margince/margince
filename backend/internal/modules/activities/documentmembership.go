@@ -51,6 +51,14 @@ func documentMembership(holder string, pos int) string {
 		//craft:ignore panic-in-domain a holder outside the three constants is a coding error, never request data
 		panic("activities: no document membership for holder " + holder)
 	}
-	return fmt.Sprintf("at.archived_at IS NULL AND NOT at.bytes_withheld AND ((%s) OR %s)",
-		own, mailFileMembership(linked))
+	return fmt.Sprintf("at.archived_at IS NULL AND (NOT at.bytes_withheld OR at.category = '%s') AND ((%s) OR %s)",
+		categoryLink, own, mailFileMembership(linked))
+}
+
+// arrivedWithMessage says an attachment is a file that came with its message. A
+// link row is a pointer the message mentioned, not a file it carried. The
+// paperclip count and the mail's file list both leave it out through this one
+// fragment.
+func arrivedWithMessage(alias string) string {
+	return alias + ".category <> '" + categoryLink + "'"
 }

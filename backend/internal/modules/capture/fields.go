@@ -82,9 +82,19 @@ type MailEnvelope struct {
 	// LinkHosts are the hosts the body's web links lead to, with a known
 	// redirect wrapper already unwrapped.
 	LinkHosts []string
+	// Links are the web addresses behind LinkHosts, in first-seen order, with
+	// the text a reader sees on each. They come from the same walk as LinkHosts.
+	Links []MailLink
 	// LinksTruncated says the parser stopped before it read every link, so
 	// LinkHosts may miss one.
 	LinksTruncated bool
+}
+
+// MailLink is one web address a mail body links to and the text shown on it,
+// empty for an address written out in plain text.
+type MailLink struct {
+	URL  string
+	Text string
 }
 
 // LeadFields is a captured prospect bound for the lead pool — never

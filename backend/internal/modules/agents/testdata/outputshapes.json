@@ -799,6 +799,9 @@
           "captured_by": {
             "type": "string"
           },
+          "category": {
+            "type": "string"
+          },
           "checksum": {
             "type": "string"
           },
@@ -821,6 +824,9 @@
             "type": "string"
           },
           "filename": {
+            "type": "string"
+          },
+          "url": {
             "type": "string"
           }
         },
@@ -5883,6 +5889,9 @@
                 "captured_by": {
                   "type": "string"
                 },
+                "category": {
+                  "type": "string"
+                },
                 "checksum": {
                   "type": "string"
                 },
@@ -5905,6 +5914,9 @@
                   "type": "string"
                 },
                 "filename": {
+                  "type": "string"
+                },
+                "url": {
                   "type": "string"
                 }
               },

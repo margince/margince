@@ -232,6 +232,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"conversation_claim.task_activity_id": "PENDING WRITER: the column has no writer. The task an extracted commitment creates is written through the tasks substrate's own gated path, and this entry is replaced with that gate when the routing edge lands",
 	// Owned child rows: the row is an attribute of its visible parent,
 	// written only through the parent's own gated paths.
+	"company_address_country.company_id": "child row: the address-country check for a company's own address, written only by the address_country_check sweep (contacts/addresscountrycheck.go) for the id its due read selected after auth.Require, and deleted by the trigger on the company's address columns. No caller names the company it keys on",
+	"contact_address_country.contact_id": "child row: the address-country check for a contact's own address, written only by the address_country_check sweep (contacts/addresscountrycheck.go) for the id its due read selected after auth.Require, and deleted by the trigger on the contact's address columns. No caller names the contact it keys on",
 	"company_geocode_state.company_id": "child row: the sidecar for a company's own coordinate lookup, and no caller ever names the company it keys on. " +
 		"The row is created by enqueueGeocode inside UpdateCompany's transaction, for the id that write was already addressing (contacts/company.go), " +
 		"and touched afterwards only by AddressForGeocode and recordGeocodeAfter (contacts/geocode.go). " +

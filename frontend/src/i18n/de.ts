@@ -1783,6 +1783,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.forecast_snapshot": "Täglicher Prognose-Snapshot",
   "systemJob.geocode": "Adresssuche für Unternehmen",
   "systemJob.geocode_backfill": "Nachholen der Adresssuche",
+  "systemJob.address_country_check": "Abgleich des Adresslands",
   "systemJob.graph_edge": "Aktualisierung der Beziehungsstärke",
   "systemJob.graph_edge_reconcile": "Aktualisierung der Beziehungsstärke",
   "systemJob.handbook_corpus": "Indexierung des Handbuchs",
@@ -5598,6 +5599,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.industry": "Branche",
   "create.sizeBand": "Unternehmensgröße",
   "co.address.summary": "Adresse",
+  "co.address.countryMismatch": "Postleitzahl und Ort liegen in {country}",
 
   "create.addressLine1": "Straße und Hausnummer",
   "create.addressLine2": "Adresszusatz",
@@ -5819,6 +5821,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "docs.category.email": "E-Mail-Anhang",
   "docs.category.message": "Nachrichtenanhang",
   "docs.category.other": "Sonstiges",
+  "docs.category.link": "Gesendete Links",
   "files.title": "Dateien",
   "files.empty":
     "Noch keine Dateien an diesem Deal. Lade eine Datei hoch oder verknüpfe eine E-Mail mit Anhang.",

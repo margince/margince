@@ -719,7 +719,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## attachment
 
-27 columns · primary key `(id)` · referenced by 6 foreign keys
+28 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -745,6 +745,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `storage_key` | `text` | yes |  |
 | `supersedes_id` | `uuid` |  | The document this one replaces. |
 | `title` | `text` |  | A display name distinct from the filename, showing what a reader looks for rather than what arrived. |
+| `url` | `text` |  | The address of a `link` row, and null for every other category. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -761,10 +762,11 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 **Rules**
 
 - `attachment_byte_size_js_safe`: `CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))`
-- `attachment_category_check`: `CHECK ((category = ANY (ARRAY['contract', 'offer', 'legal', 'email_attachment', 'message_attachment', 'other'])))`
+- `attachment_category_check`: `CHECK ((category = ANY (ARRAY['contract', 'offer', 'legal', 'email_attachment', 'message_attachment', 'other', 'link'])))`
 - `attachment_doc_state_check`: `CHECK ((doc_state = ANY (ARRAY['draft', 'current', 'final', 'superseded'])))`
 - `attachment_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])))`
 - `attachment_external_identity_complete`: `CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))`
+- `attachment_link_shape`: `CHECK ((((category = 'link') = (url IS NOT NULL)) AND ((category <> 'link') OR ((storage_key = '') AND bytes_withheld AND (url ~ '^https?://') AND (length(url) <= 2048)))))`
 - `attachment_supersedes_not_self`: `CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))`
 
 **Indexes**
@@ -773,6 +775,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `attachment_contract_ix`: `btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))`
 - `attachment_external_part_key`: `unique, btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)`
 - `attachment_pkey`: `unique, btree (id)`
+- `attachment_supersedes_ix`: `btree (supersedes_id) WHERE (supersedes_id IS NOT NULL)`
 - `idx_attachment_entity`: `btree (entity_type, entity_id) WHERE (archived_at IS NULL)`
 
 **Triggers**

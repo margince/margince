@@ -28539,7 +28539,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - name: category
           in: query
-          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other] }
+          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other, link] }
         - name: include_hidden
           in: query
           schema: { type: boolean, default: false }
@@ -29826,7 +29826,7 @@ paths:
         - $ref: '#/components/parameters/Limit'
         - name: category
           in: query
-          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other] }
+          schema: { type: string, enum: [contract, offer, legal, email_attachment, message_attachment, other, link] }
         - name: doc_state
           in: query
           schema: { type: string, enum: [draft, current, final, superseded] }
@@ -37659,6 +37659,21 @@ components:
         country: { type: [string, 'null'], description: 'ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.' }
       additionalProperties: true
 
+    AddressCountryMismatch:
+      type: object
+      description: >-
+        The stored address country does not fit the postal code and city. A background check
+        asks the geocoder for the postal code and city alone, reads the countries of up to five
+        places they name, and flags the stored country only when it is none of them. The stored
+        country is never changed. Editing the postal code, city or country clears the result
+        until the next check, and a result older than 180 days is checked again.
+      required: [resolved_country]
+      properties:
+        resolved_country:
+          type: string
+          pattern: '^[A-Z]{2}$'
+          description: ISO-3166 alpha-2 code of the best-ranked country the postal code and city resolve to.
+
     Money:
       type: object
       description: Money as integer minor-units + ISO-4217 currency. Never a float.
@@ -38402,6 +38417,13 @@ components:
           additionalProperties: true
           description: '{ linkedin, twitter, github, ... }'
         address: { $ref: '#/components/schemas/Address' }
+        address_country_mismatch:
+          readOnly: true
+          description: >-
+            Present only when the stored address country is none of the countries the postal
+            code and city resolve to. Absent when one of them matches, when the address has not
+            been checked yet, or when it carries no postal code, city or assigned country code.
+          allOf: [{ $ref: '#/components/schemas/AddressCountryMismatch' }]
         emails:
           type: array
           items: { $ref: '#/components/schemas/ContactEmail' }
@@ -38867,6 +38889,13 @@ components:
           type: [string, 'null']
           enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']
         address: { $ref: '#/components/schemas/Address' }
+        address_country_mismatch:
+          readOnly: true
+          description: >-
+            Present only when the stored address country is none of the countries the postal
+            code and city resolve to. Absent when one of them matches, when the address has not
+            been checked yet, or when it carries no postal code, city or assigned country code.
+          allOf: [{ $ref: '#/components/schemas/AddressCountryMismatch' }]
         owner_id: { type: [string, 'null'], format: uuid }
         visibility:
           type: string
@@ -47961,10 +47990,14 @@ components:
         checksum: { type: [string, 'null'], description: 'sha256 of the bytes, for integrity/dedupe.' }
         category:
           type: string
-          enum: [contract, offer, legal, email_attachment, message_attachment, other]
+          enum: [contract, offer, legal, email_attachment, message_attachment, other, link]
           description: |
             What kind of document this is. Closed vocabulary; `other` is the
             honest default, not a fallback for an unknown value.
+
+            `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
+            Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
+            and the category cannot be set or changed through a metadata patch.
 
             `email_attachment` and `message_attachment` record PROVENANCE rather than
             content: capture derives them from the transport the file arrived on, so a
@@ -48014,6 +48047,14 @@ components:
           description: >-
             True for a file a private message carried that was recorded by name, size and
             type only: no bytes were kept, so there is nothing to download (404) or read.
+            Also true for a `link` row, which is a pointer and has no bytes.
+        url:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            The address of a `link` row, and null for every other category. It is an http or https
+            address on a known document host. The reader renders it as an outbound link to open in
+            a new tab, never as a download.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         created_at: { type: string, format: date-time }

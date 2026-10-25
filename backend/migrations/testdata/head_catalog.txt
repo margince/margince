@@ -1375,11 +1375,12 @@ public.attachment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/ma
 public.attachment.activity_id uuid gen=- def=-
 public.attachment.archived_at timestamp with time zone gen=- def=-
 public.attachment.attachment_byte_size_js_safe CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))
-public.attachment.attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text])))
+public.attachment.attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text, 'link'::text])))
 public.attachment.attachment_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES contract(id) ON DELETE SET NULL
 public.attachment.attachment_doc_state_check CHECK ((doc_state = ANY (ARRAY['draft'::text, 'current'::text, 'final'::text, 'superseded'::text])))
 public.attachment.attachment_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
 public.attachment.attachment_external_identity_complete CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))
+public.attachment.attachment_link_shape CHECK ((((category = 'link'::text) = (url IS NOT NULL)) AND ((category <> 'link'::text) OR ((storage_key = ''::text) AND bytes_withheld AND (url ~ '^https?://'::text) AND (length(url) <= 2048)))))
 public.attachment.attachment_pkey PRIMARY KEY (id)
 public.attachment.attachment_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES attachment(id) ON DELETE SET NULL (supersedes_id)
 public.attachment.attachment_supersedes_not_self CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))
@@ -1409,6 +1410,7 @@ public.attachment.supersedes_id uuid gen=- def=-
 public.attachment.title text gen=- def=-
 public.attachment.trg_attachment_updated CREATE TRIGGER trg_attachment_updated BEFORE UPDATE ON public.attachment FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.attachment.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.attachment.url text gen=- def=-
 public.attachment_account_ix CREATE INDEX attachment_account_ix ON public.attachment USING btree (company_id, pinned DESC, created_at DESC) WHERE (archived_at IS NULL)
 public.attachment_contract_ix CREATE INDEX attachment_contract_ix ON public.attachment USING btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))
 public.attachment_external_part_key CREATE UNIQUE INDEX attachment_external_part_key ON public.attachment USING btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)
@@ -1434,6 +1436,7 @@ public.attachment_extraction.status text NOT NULL gen=- def='queued'::text
 public.attachment_extraction.status_detail text gen=- def=-
 public.attachment_extraction_pkey CREATE UNIQUE INDEX attachment_extraction_pkey ON public.attachment_extraction USING btree (id)
 public.attachment_pkey CREATE UNIQUE INDEX attachment_pkey ON public.attachment USING btree (id)
+public.attachment_supersedes_ix CREATE INDEX attachment_supersedes_ix ON public.attachment USING btree (supersedes_id) WHERE (supersedes_id IS NOT NULL)
 public.audit_log acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false
 public.audit_log.action text NOT NULL gen=- def=-
 public.audit_log.actor_id text NOT NULL gen=- def=-
@@ -2174,6 +2177,7 @@ public.comms_outbound_attachments_well_formed(files jsonb) secdef=false cfg=- ac
 public.comms_outbound_bounced_idx CREATE INDEX comms_outbound_bounced_idx ON public.comms_outbound USING btree (bounced_at DESC) WHERE (bounced_at IS NOT NULL)
 public.comms_outbound_controller_payload CREATE INDEX comms_outbound_controller_payload ON public.comms_outbound USING btree (payload_expires_at) WHERE (payload_ref IS NOT NULL)
 public.comms_outbound_due CREATE INDEX comms_outbound_due ON public.comms_outbound USING btree (delivery_due_at) WHERE ((delivery_due_at IS NOT NULL) AND (status <> 'sent'::text))
+public.comms_outbound_link_ix CREATE INDEX comms_outbound_link_ix ON public.comms_outbound USING btree (link_id) WHERE (link_id IS NOT NULL)
 public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_unique ON public.comms_outbound USING btree (message_id)
 public.comms_outbound_one_delivery_per_instruction CREATE UNIQUE INDEX comms_outbound_one_delivery_per_instruction ON public.comms_outbound USING btree (instruction_id) WHERE (instruction_id IS NOT NULL)
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
@@ -2387,6 +2391,7 @@ public.communication_suppression.purpose_id uuid gen=- def=-
 public.communication_suppression.recorded_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_suppression.revoked_at timestamp with time zone gen=- def=-
 public.communication_suppression.source text NOT NULL gen=- def=-
+public.communication_suppression_carried_from_ix CREATE INDEX communication_suppression_carried_from_ix ON public.communication_suppression USING btree (carried_from) WHERE (carried_from IS NOT NULL)
 public.communication_suppression_live_address CREATE INDEX communication_suppression_live_address ON public.communication_suppression USING btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_one_live_bounce CREATE UNIQUE INDEX communication_suppression_one_live_bounce ON public.communication_suppression USING btree (lower(address)) WHERE ((kind = 'hard_bounce'::text) AND (address IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_pkey CREATE UNIQUE INDEX communication_suppression_pkey ON public.communication_suppression USING btree (id)
@@ -2455,12 +2460,26 @@ public.company.source text NOT NULL gen=- def=-
 public.company.source_author_id uuid gen=- def=-
 public.company.source_author_name text gen=- def=-
 public.company.source_system text gen=- def=-
+public.company.trg_company_address_country_stale CREATE TRIGGER trg_company_address_country_stale AFTER UPDATE OF address_postal_code, address_city, address_country ON public.company FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_address_country_goes_stale()
 public.company.trg_company_geocode_stale CREATE TRIGGER trg_company_geocode_stale BEFORE UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country ON public.company FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_goes_stale()
 public.company.trg_company_no_cycle CREATE TRIGGER trg_company_no_cycle BEFORE INSERT OR UPDATE OF parent_company_id ON public.company FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()
 public.company.trg_company_updated CREATE TRIGGER trg_company_updated BEFORE UPDATE ON public.company FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.company.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.company.version bigint NOT NULL gen=- def=1
 public.company.visibility text NOT NULL gen=- def='workspace'::text
+public.company_address_country acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_address_country.checked_at timestamp with time zone NOT NULL gen=- def=-
+public.company_address_country.company_address_country_codes_are_alpha2 CHECK ((array_to_string(countries, ','::text) ~ '^([A-Z]{2}(,[A-Z]{2})*)?$'::text))
+public.company_address_country.company_address_country_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_address_country.company_address_country_pkey PRIMARY KEY (company_id)
+public.company_address_country.company_id uuid NOT NULL gen=- def=-
+public.company_address_country.countries text[] NOT NULL gen=- def=-
+public.company_address_country_goes_stale() secdef=false cfg=- acl=- BEGIN
+  DELETE FROM company_address_country WHERE company_id = NEW.id;
+  RETURN NULL;
+END;
+
+public.company_address_country_pkey CREATE UNIQUE INDEX company_address_country_pkey ON public.company_address_country USING btree (company_id)
 public.company_brief acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.company_brief.company_brief_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_brief.company_brief_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
@@ -3082,6 +3101,7 @@ public.contact.source_author_id uuid gen=- def=-
 public.contact.source_author_name text gen=- def=-
 public.contact.source_system text gen=- def=-
 public.contact.title text gen=- def=-
+public.contact.trg_contact_address_country_stale CREATE TRIGGER trg_contact_address_country_stale AFTER UPDATE OF address_postal_code, address_city, address_country ON public.contact FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION contact_address_country_goes_stale()
 public.contact.trg_contact_updated CREATE TRIGGER trg_contact_updated BEFORE UPDATE ON public.contact FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.contact.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.version bigint NOT NULL gen=- def=1
@@ -3103,6 +3123,19 @@ public.contact_acquisition_evidence.source_entity_id uuid gen=- def=-
 public.contact_acquisition_evidence.source_entity_type text gen=- def=-
 public.contact_acquisition_evidence_by_contact CREATE INDEX contact_acquisition_evidence_by_contact ON public.contact_acquisition_evidence USING btree (contact_id, captured_at DESC)
 public.contact_acquisition_evidence_pkey CREATE UNIQUE INDEX contact_acquisition_evidence_pkey ON public.contact_acquisition_evidence USING btree (id)
+public.contact_address_country acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.contact_address_country.checked_at timestamp with time zone NOT NULL gen=- def=-
+public.contact_address_country.contact_address_country_codes_are_alpha2 CHECK ((array_to_string(countries, ','::text) ~ '^([A-Z]{2}(,[A-Z]{2})*)?$'::text))
+public.contact_address_country.contact_address_country_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.contact_address_country.contact_address_country_pkey PRIMARY KEY (contact_id)
+public.contact_address_country.contact_id uuid NOT NULL gen=- def=-
+public.contact_address_country.countries text[] NOT NULL gen=- def=-
+public.contact_address_country_goes_stale() secdef=false cfg=- acl=- BEGIN
+  DELETE FROM contact_address_country WHERE contact_id = NEW.id;
+  RETURN NULL;
+END;
+
+public.contact_address_country_pkey CREATE UNIQUE INDEX contact_address_country_pkey ON public.contact_address_country USING btree (contact_id)
 public.contact_brief acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact_brief.contact_brief_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_brief.contact_brief_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
@@ -3236,6 +3269,7 @@ public.contact_phone.trg_contact_phone_updated CREATE TRIGGER trg_contact_phone_
 public.contact_phone.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_phone.version bigint NOT NULL gen=- def=1
 public.contact_phone_pkey CREATE UNIQUE INDEX contact_phone_pkey ON public.contact_phone USING btree (id)
+public.contact_phone_superseded_phone_ix CREATE INDEX contact_phone_superseded_phone_ix ON public.contact_phone USING btree (superseded_phone_id) WHERE (superseded_phone_id IS NOT NULL)
 public.contact_pkey CREATE UNIQUE INDEX contact_pkey ON public.contact USING btree (id)
 public.contact_profile_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact_profile_field.captured_by text NOT NULL gen=- def=-
@@ -3765,6 +3799,7 @@ public.deal_room_document.title text NOT NULL gen=- def=-
 public.deal_room_document.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_room_document.uq_deal_room_document_in_room UNIQUE (id, room_id)
 public.deal_room_document.version bigint NOT NULL gen=- def=1
+public.deal_room_document_attachment_ix CREATE INDEX deal_room_document_attachment_ix ON public.deal_room_document USING btree (attachment_id)
 public.deal_room_document_pkey CREATE UNIQUE INDEX deal_room_document_pkey ON public.deal_room_document USING btree (id)
 public.deal_room_engagement acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_room_engagement.deal_room_engagement_document_fkey FOREIGN KEY (document_id, room_id) REFERENCES deal_room_document(id, room_id) ON DELETE RESTRICT
@@ -3871,6 +3906,7 @@ public.deal_room_thread.source text NOT NULL gen=- def=-
 public.deal_room_thread.state text NOT NULL gen=- def='open'::text
 public.deal_room_thread.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_room_thread.version bigint NOT NULL gen=- def=1
+public.deal_room_thread_attachment_ix CREATE INDEX deal_room_thread_attachment_ix ON public.deal_room_thread USING btree (attachment_id) WHERE (attachment_id IS NOT NULL)
 public.deal_room_thread_pkey CREATE UNIQUE INDEX deal_room_thread_pkey ON public.deal_room_thread USING btree (id)
 public.deal_stage_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_stage_evidence.author_side text NOT NULL gen=- def=-
@@ -4465,6 +4501,14 @@ public.geocode_cache.lon double precision NOT NULL gen=- def=-
 public.geocode_cache.provider text NOT NULL gen=- def=-
 public.geocode_cache.query text NOT NULL gen=- def=-
 public.geocode_cache_pkey CREATE UNIQUE INDEX geocode_cache_pkey ON public.geocode_cache USING btree (query)
+public.geocode_country_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.geocode_country_cache.country_codes text[] NOT NULL gen=- def=-
+public.geocode_country_cache.geocode_country_cache_codes_are_alpha2 CHECK ((array_to_string(country_codes, ','::text) ~ '^([A-Z]{2}(,[A-Z]{2})*)?$'::text))
+public.geocode_country_cache.geocode_country_cache_pkey PRIMARY KEY (query)
+public.geocode_country_cache.provider text NOT NULL gen=- def=-
+public.geocode_country_cache.query text NOT NULL gen=- def=-
+public.geocode_country_cache.resolved_at timestamp with time zone NOT NULL gen=- def=-
+public.geocode_country_cache_pkey CREATE UNIQUE INDEX geocode_country_cache_pkey ON public.geocode_country_cache USING btree (query)
 public.graph_contact_edge acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.graph_contact_edge.computed_at timestamp with time zone NOT NULL gen=- def=now()
 public.graph_contact_edge.contact_a uuid NOT NULL gen=- def=-
@@ -6044,6 +6088,7 @@ public.preference_token.preference_token_token_key UNIQUE (token)
 public.preference_token.revoked_at timestamp with time zone gen=- def=-
 public.preference_token.revoked_reason text gen=- def=-
 public.preference_token.token text NOT NULL gen=- def=-
+public.preference_token_contact_email_ix CREATE INDEX preference_token_contact_email_ix ON public.preference_token USING btree (contact_email_id) WHERE (contact_email_id IS NOT NULL)
 public.preference_token_pkey CREATE UNIQUE INDEX preference_token_pkey ON public.preference_token USING btree (id)
 public.preference_token_token_key CREATE UNIQUE INDEX preference_token_token_key ON public.preference_token USING btree (token)
 public.privacy_notice_case acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -7969,7 +8014,7 @@ public.voice_build_deferred_due CREATE INDEX voice_build_deferred_due ON public.
 public.voice_build_one_active CREATE UNIQUE INDEX voice_build_one_active ON public.voice_build USING btree (voice_profile_id) WHERE (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text]))
 public.voice_build_pkey CREATE UNIQUE INDEX voice_build_pkey ON public.voice_build USING btree (id)
 public.voice_build_poll CREATE INDEX voice_build_poll ON public.voice_build USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.voice_build_profile_fk CREATE INDEX voice_build_profile_fk ON public.voice_build USING btree (voice_profile_id)
+public.voice_build_profile_version_ix CREATE INDEX voice_build_profile_version_ix ON public.voice_build USING btree (voice_profile_id, result_version)
 public.voice_build_requester_fk CREATE INDEX voice_build_requester_fk ON public.voice_build USING btree (requested_by) WHERE (requested_by IS NOT NULL)
 public.voice_corpus_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.voice_corpus_source.archived_at timestamp with time zone gen=- def=-
@@ -8037,7 +8082,7 @@ public.voice_learning_signal.voice_learning_signal_version_fkey FOREIGN KEY (voi
 public.voice_learning_signal.voice_learning_signal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.voice_learning_signal.voice_profile_id uuid NOT NULL gen=- def=-
 public.voice_learning_signal_pkey CREATE UNIQUE INDEX voice_learning_signal_pkey ON public.voice_learning_signal USING btree (id)
-public.voice_learning_signal_profile_fk CREATE INDEX voice_learning_signal_profile_fk ON public.voice_learning_signal USING btree (voice_profile_id)
+public.voice_learning_signal_profile_version_ix CREATE INDEX voice_learning_signal_profile_version_ix ON public.voice_learning_signal USING btree (voice_profile_id, profile_version)
 public.voice_learning_signal_retention CREATE INDEX voice_learning_signal_retention ON public.voice_learning_signal USING btree (retention_until) WHERE (content_erased_at IS NULL)
 public.voice_profile acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.voice_profile.active_source_hash text gen=- def=-
@@ -8087,6 +8132,7 @@ public.voice_profile_delta.voice_profile_delta_profile_fkey FOREIGN KEY (voice_p
 public.voice_profile_delta.voice_profile_delta_to_fkey FOREIGN KEY (voice_profile_id, to_version) REFERENCES voice_profile_version(voice_profile_id, profile_version)
 public.voice_profile_delta.voice_profile_delta_to_version_check CHECK ((to_version >= 1))
 public.voice_profile_delta.voice_profile_id uuid NOT NULL gen=- def=-
+public.voice_profile_delta_from_version_ix CREATE INDEX voice_profile_delta_from_version_ix ON public.voice_profile_delta USING btree (voice_profile_id, from_version)
 public.voice_profile_delta_history CREATE INDEX voice_profile_delta_history ON public.voice_profile_delta USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.voice_profile_delta_pkey CREATE UNIQUE INDEX voice_profile_delta_pkey ON public.voice_profile_delta USING btree (id)
 public.voice_profile_owner_fk CREATE INDEX voice_profile_owner_fk ON public.voice_profile USING btree (owner_id) WHERE (owner_id IS NOT NULL)
@@ -8130,6 +8176,7 @@ public.voice_profile_version.voice_profile_version_version_js_safe CHECK (((vers
 public.voice_profile_version_history CREATE INDEX voice_profile_version_history ON public.voice_profile_version USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.voice_profile_version_one_active CREATE UNIQUE INDEX voice_profile_version_one_active ON public.voice_profile_version USING btree (voice_profile_id) WHERE (status = 'active'::text)
 public.voice_profile_version_pkey CREATE UNIQUE INDEX voice_profile_version_pkey ON public.voice_profile_version USING btree (id)
+public.voice_profile_version_predecessor_ix CREATE INDEX voice_profile_version_predecessor_ix ON public.voice_profile_version USING btree (voice_profile_id, predecessor_version)
 public.webhook_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.webhook_delivery.attempts integer NOT NULL gen=- def=0
 public.webhook_delivery.claimed_until timestamp with time zone gen=- def=-

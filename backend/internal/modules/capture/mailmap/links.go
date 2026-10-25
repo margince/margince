@@ -13,8 +13,11 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"golang.org/x/net/html"
+
+	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
 // maxLinkHosts bounds how many distinct hosts one message reports. Past it the
@@ -37,41 +40,91 @@ const maxRedirectDepth = 5
 // characters that end an address in running prose.
 var plainLink = regexp.MustCompile(`(?i)https?://[^\s<>"'()\[\]]+`)
 
-// linkHosts lists the hosts the body's web links lead to, lowercased and in
-// first-seen order. Both bodies are read. A sender can put one link in the
-// HTML part and another in the plain part a mail client may never show.
-// truncated says some link was not read to its end.
-func linkHosts(plain, htmlBody string) (hosts []string, truncated bool) {
-	seen := map[string]bool{}
-	add := func(raw string) {
-		host, settled := linkTarget(raw)
+// maxLinks bounds how many distinct addresses one message reports, and
+// maxAnchorRunes how much visible link text is kept for each.
+const (
+	maxLinks       = 1000
+	maxAnchorRunes = 200
+)
+
+// walkLinks lists the web addresses the body's links lead to in first-seen
+// order, each with its visible text. Both bodies are read. A sender can put one
+// link in the HTML part and another in the plain part a mail client may never
+// show. truncated says some link was not read to its end or some address was
+// dropped past maxLinks.
+func walkLinks(plain, htmlBody string) (links []capture.MailLink, truncated bool) {
+	at := map[string]int{}
+	add := func(raw, text string) {
+		target, settled := resolveLink(raw)
 		switch {
 		case !settled:
 			truncated = true
-		case host == "" || seen[host]:
+		case target == nil:
+		default:
+			address := target.String()
+			if i, seen := at[address]; seen {
+				if links[i].Text == "" {
+					links[i].Text = text
+				}
+				return
+			}
+			if len(links) >= maxLinks {
+				truncated = true
+				return
+			}
+			at[address] = len(links)
+			links = append(links, capture.MailLink{URL: address, Text: text})
+		}
+	}
+	for _, raw := range plainLink.FindAllString(plain, -1) {
+		add(raw, "")
+	}
+	anchors, complete := anchorLinks(htmlBody)
+	for _, anchor := range anchors {
+		add(anchor.href, anchor.text)
+	}
+	return links, truncated || !complete
+}
+
+// linkHosts lists the hosts the body's web links lead to, lowercased and in
+// first-seen order. It reads the same walk as the addresses.
+func linkHosts(plain, htmlBody string) (hosts []string, truncated bool) {
+	links, truncated := walkLinks(plain, htmlBody)
+	hosts, over := hostsOf(links)
+	return hosts, truncated || over
+}
+
+// hostsOf is the distinct hosts of links, at most maxLinkHosts of them; over
+// says a further host was left out.
+func hostsOf(links []capture.MailLink) (hosts []string, over bool) {
+	seen := map[string]bool{}
+	for _, link := range links {
+		target, ok := webURL(link.URL)
+		if !ok {
+			continue
+		}
+		host := strings.TrimSuffix(strings.ToLower(target.Hostname()), ".")
+		switch {
+		case seen[host]:
 		case len(hosts) >= maxLinkHosts:
-			truncated = true
+			over = true
 		default:
 			seen[host] = true
 			hosts = append(hosts, host)
 		}
 	}
-	for _, raw := range plainLink.FindAllString(plain, -1) {
-		add(raw)
-	}
-	hrefs, complete := anchorHrefs(htmlBody)
-	for _, raw := range hrefs {
-		add(raw)
-	}
-	return hosts, truncated || !complete
+	return hosts, over
 }
 
-// anchorHrefs returns the href of each link element in an HTML body, and
-// whether the walk read the whole body. It uses the HTML5 parser with
-// scripting off, because that is how a mail client renders. A token walk
+// anchor is one link element: its href and the text a reader sees.
+type anchor struct{ href, text string }
+
+// anchorLinks returns the href and visible text of each link element in an
+// HTML body, and whether the walk read the whole body. It uses the HTML5 parser
+// with scripting off, because that is how a mail client renders. A token walk
 // reads <svg><style>, script escapes and <noscript> differently, and a sender
 // can hide a link in that gap.
-func anchorHrefs(src string) ([]string, bool) {
+func anchorLinks(src string) ([]anchor, bool) {
 	if len(src) > maxLinkHTMLBytes || !withinTagBound(src) {
 		return nil, false
 	}
@@ -79,18 +132,41 @@ func anchorHrefs(src string) ([]string, bool) {
 	if err != nil {
 		return nil, false
 	}
-	var hrefs []string
+	var anchors []anchor
 	for node := range doc.Descendants() {
 		if node.Type != html.ElementNode || (node.Data != "a" && node.Data != "area") {
 			continue
 		}
 		for _, attr := range node.Attr {
 			if attr.Key == "href" {
-				hrefs = append(hrefs, attr.Val)
+				anchors = append(anchors, anchor{href: attr.Val, text: anchorText(node)})
 			}
 		}
 	}
-	return hrefs, true
+	return anchors, true
+}
+
+// anchorText is the visible text under a link element: whitespace collapsed,
+// control characters dropped, cut at maxAnchorRunes.
+func anchorText(node *html.Node) string {
+	var b strings.Builder
+	for text := range node.Descendants() {
+		if text.Type == html.TextNode {
+			b.WriteString(text.Data)
+			b.WriteByte(' ')
+		}
+	}
+	clean := strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return ' '
+		}
+		return r
+	}, b.String())
+	runes := []rune(strings.Join(strings.Fields(clean), " "))
+	if len(runes) > maxAnchorRunes {
+		runes = runes[:maxAnchorRunes]
+	}
+	return string(runes)
 }
 
 // withinTagBound reports whether a linear token walk of src ends within
@@ -106,26 +182,36 @@ func withinTagBound(src string) bool {
 }
 
 // linkTarget is the host a web link really leads to, or "" for anything that
-// is not an http or https address. Known redirect wrappers are unwrapped until
-// none is left, because a wrapper's host says nothing about where the reader
-// lands. settled is false when a wrapper names no web address or the chain is
-// deeper than maxRedirectDepth. Each target is shorter than its wrapper, so a
-// chain cannot repeat; the depth limit is the only stop needed.
+// is not an http or https address. See resolveLink for how wrappers are read.
 func linkTarget(raw string) (host string, settled bool) {
+	target, settled := resolveLink(raw)
+	if target == nil {
+		return "", settled
+	}
+	return strings.TrimSuffix(strings.ToLower(target.Hostname()), "."), settled
+}
+
+// resolveLink is the address a web link really leads to, or nil for anything
+// that is not an http or https address. Known redirect wrappers are unwrapped
+// until none is left, because a wrapper's host says nothing about where the
+// reader lands. settled is false when a wrapper names no web address or the
+// chain is deeper than maxRedirectDepth. Each target is shorter than its
+// wrapper, so a chain cannot repeat; the depth limit is the only stop needed.
+func resolveLink(raw string) (target *url.URL, settled bool) {
 	target, ok := webURL(raw)
 	if !ok {
-		return "", true
+		return nil, true
 	}
 	for range maxRedirectDepth {
 		inner, wrapped := unwrapRedirect(target)
 		if !wrapped {
-			return strings.TrimSuffix(strings.ToLower(target.Hostname()), "."), true
+			return target, true
 		}
 		if target, ok = webURL(inner); !ok {
-			return "", false
+			return nil, false
 		}
 	}
-	return "", false
+	return nil, false
 }
 
 func webURL(raw string) (*url.URL, bool) {

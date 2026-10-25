@@ -1734,6 +1734,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.forecast_snapshot": "Ảnh chụp dự báo hằng ngày",
   "systemJob.geocode": "Tra cứu địa chỉ công ty",
   "systemJob.geocode_backfill": "Tra cứu địa chỉ còn tồn đọng",
+  "systemJob.address_country_check": "Kiểm tra quốc gia của địa chỉ",
   "systemJob.graph_edge": "Cập nhật độ mạnh của quan hệ",
   "systemJob.graph_edge_reconcile": "Cập nhật độ mạnh của quan hệ",
   "systemJob.handbook_corpus": "Lập chỉ mục sổ tay",
@@ -5455,6 +5456,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.industry": "Ngành",
   "create.sizeBand": "Quy mô công ty",
   "co.address.summary": "Địa chỉ",
+  "co.address.countryMismatch": "Mã bưu chính và thành phố thuộc {country}",
 
   "create.addressLine1": "Số nhà và tên đường",
   "create.addressLine2": "Địa chỉ dòng 2",
@@ -5668,6 +5670,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.category.email": "Tệp đính kèm email",
   "docs.category.message": "Tệp đính kèm tin nhắn",
   "docs.category.other": "Khác",
+  "docs.category.link": "Liên kết đã gửi",
   "files.title": "Tệp",
   "files.empty":
     "Chưa có tệp nào trên deal này. Tải lên một tệp, hoặc liên kết một email có tệp đính kèm.",

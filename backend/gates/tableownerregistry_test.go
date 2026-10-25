@@ -103,6 +103,9 @@ var tableOwners = map[string]string{
 	"company_fact_revision":          "internal/modules/contacts",
 	"company_geocode_state":          "internal/modules/contacts",
 	"geocode_cache":                  "internal/modules/contacts",
+	"geocode_country_cache":          "internal/modules/contacts",
+	"company_address_country":        "internal/modules/contacts",
+	"contact_address_country":        "internal/modules/contacts",
 	// What a technical lookup last read for one company, per public source,
 	// and what those sources answered. The cache is installation-global for
 	// the same reason geocode_cache is — a domain's DNS records are the same
