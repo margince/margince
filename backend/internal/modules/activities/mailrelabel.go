@@ -58,11 +58,14 @@ func ResetStaleMailLabelsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limi
 	return StaleMailLabelPage{Scanned: scanned, Reset: int(tag.RowsAffected())}, nil
 }
 
+// staleLabelCounter is what both a transaction and a data task's estimate read with.
+type staleLabelCounter interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
 // CountStaleMailLabels counts, up to maximum+1, the mail ResetStaleMailLabelsTx
 // would reset.
-func CountStaleMailLabels(ctx context.Context, q interface {
-	QueryRow(context.Context, string, ...any) pgx.Row
-}, maximum int64) (int64, error) {
+func CountStaleMailLabels(ctx context.Context, q staleLabelCounter, maximum int64) (int64, error) {
 	var count int64
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT a.id `+staleMailLabelScope+` LIMIT $1) stale`, maximum+1).Scan(&count)
 	return count, err
