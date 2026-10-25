@@ -131,6 +131,11 @@ func addressableContactClause(ctx context.Context, arg func(any) int) (string, e
 // meetingEndSQL is when the meeting under alias a ended.
 var meetingEndSQL = occurredday.EndSQL("a")
 
+// followUpFromSQL is where a follow-up to the meeting under alias a may start.
+// That is its end for an hour, and the start of its date for a day.
+var followUpFromSQL = `(CASE WHEN a.occurred_precision = 'day' THEN ` + occurredday.StartSQL("a") +
+	` ELSE ` + meetingEndSQL + ` END)`
+
 // meetingFollowUpsSQL: every rule sits before the cap.
 //
 //  1. as of, 2. content gate on a, 3. link visibility on wl, 4. the follow-up
@@ -200,8 +205,8 @@ var meetingFollowUpsSQL = `
 	                      AND later.direction IS DISTINCT FROM 'inbound'
 	                      AND %[6]s
 	                      AND %[7]s
-	                      AND later.occurred_at >= ` + meetingEndSQL + `
-	                      AND later.occurred_at <= $%[1]d)
+	                      AND later.occurred_at >= ` + followUpFromSQL + `
+	                      AND ` + occurredday.BegunSQL("later", "$%[1]d::timestamptz") + `)
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[10]s)
 	   AND NOT ` + readerSetAsideSQL("$%[8]d", "%[9]s") + `
 	 GROUP BY a.id, a.subject, a.occurred_at, a.occurred_precision, attendees.recipients
@@ -209,8 +214,9 @@ var meetingFollowUpsSQL = `
 	 LIMIT %[11]d`
 
 // meetingHeldSQL is a meeting somebody said took place: its outcome was saved
-// as held, and its start has passed. A booked or unmarked past meeting owes
-// an outcome, which the outcome lane asks for once; it owes no follow-up yet.
+// as held, and it has started (occurredday.BegunSQL). A booked or unmarked
+// past meeting owes an outcome, which the outcome lane asks for once; it owes
+// no follow-up yet.
 func meetingHeldSQL(alias, now string) string {
-	return "(" + alias + ".meeting_status = 'held' AND " + alias + ".occurred_at <= " + now + ")"
+	return "(" + alias + ".meeting_status = 'held' AND " + occurredday.BegunSQL(alias, now) + ")"
 }

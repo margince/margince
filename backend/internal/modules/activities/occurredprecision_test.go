@@ -39,11 +39,13 @@ func TestPrecisionRefusalsAnswer422NamingTheField(t *testing.T) {
 	}
 }
 
-// The event names the precision only when it changed. A day moved to another
-// date keeps its precision, and a new time on an instant implies one.
-func TestTheUpdateEventNamesThePrecisionOnlyWhenItChanged(t *testing.T) {
+// The event names the precision whenever it names the time, as the audit
+// images do, and when the precision alone changed. A patch naming neither
+// names no precision.
+func TestTheUpdateEventNamesThePrecisionBesideTheTime(t *testing.T) {
 	t.Parallel()
 	day, instant := PrecisionDay, PrecisionInstant
+	anchor := time.Date(2026, 3, 9, 12, 0, 0, 0, time.UTC)
 	stored := func(precision string) crmcontracts.Activity {
 		return crmcontracts.Activity{OccurredPrecision: crmcontracts.OccurredPrecision(precision)}
 	}
@@ -52,10 +54,11 @@ func TestTheUpdateEventNamesThePrecisionOnlyWhenItChanged(t *testing.T) {
 		current crmcontracts.Activity
 		want    string
 	}{
-		"a day moved to a day":      {UpdateActivityInput{OccurredPrecision: &day}, stored(PrecisionDay), ""},
-		"an instant given a time":   {UpdateActivityInput{OccurredPrecision: &instant}, stored(PrecisionInstant), ""},
-		"an instant made a day":     {UpdateActivityInput{OccurredPrecision: &day}, stored(PrecisionInstant), PrecisionDay},
-		"a day given a real time":   {UpdateActivityInput{OccurredPrecision: &instant}, stored(PrecisionDay), PrecisionInstant},
+		"a day moved to a day":      {UpdateActivityInput{OccurredAt: &anchor, OccurredPrecision: &day}, stored(PrecisionDay), PrecisionDay},
+		"an instant given a time":   {UpdateActivityInput{OccurredAt: &anchor, OccurredPrecision: &instant}, stored(PrecisionInstant), PrecisionInstant},
+		"an instant made a day":     {UpdateActivityInput{OccurredAt: &anchor, OccurredPrecision: &day}, stored(PrecisionInstant), PrecisionDay},
+		"a day given a real time":   {UpdateActivityInput{OccurredAt: &anchor, OccurredPrecision: &instant}, stored(PrecisionDay), PrecisionInstant},
+		"a day restated as a day":   {UpdateActivityInput{OccurredPrecision: &day}, stored(PrecisionDay), ""},
 		"a patch naming no time at": {UpdateActivityInput{}, stored(PrecisionDay), ""},
 	} {
 		got := ""

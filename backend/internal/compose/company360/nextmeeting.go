@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // nextMeetingSection reads the soonest meeting on the account that has not
@@ -44,7 +45,8 @@ import (
 // happens. Ordering by anything else would put a long-booked meeting behind one
 // entered this morning for next month.
 //
-// A day meeting is next for its whole date (activities.MeetingAheadSQL).
+// A day meeting is next for its whole date (occurredday.AheadSQL), and sorts
+// by when that date begins.
 //
 // One query, not two. The 360 has a fixed query budget
 // (TestCompany360CostDoesNotGrowWithTheAccount). A section that reads the row
@@ -90,10 +92,10 @@ func nextMeetingSection(
 		  AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
 		  AND %[4]s
 		  AND %[1]s AND %[2]s%[5]s
-		ORDER BY a.occurred_at, a.id
+		ORDER BY %[6]s, a.id
 		LIMIT 1`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), room,
-		activities.MeetingAheadSQL("a", fmt.Sprintf("$%d", nowPos)), opts.projectScope(arg)),
+		occurredday.AheadSQL("a", fmt.Sprintf("$%d", nowPos)), opts.projectScope(arg), occurredday.StartSQL("a")),
 		args...,
 	).Scan(&id, &occurred, &meeting.OccurredPrecision, &meeting.Subject, &dealID, &attendees)
 	if errors.Is(err, pgx.ErrNoRows) {

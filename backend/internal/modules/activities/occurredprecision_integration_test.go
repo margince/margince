@@ -309,7 +309,7 @@ func TestADayMadeAnInstantWithoutATimeIsRefused(t *testing.T) {
 }
 
 // A day moved to another date audits the precision beside the time. Its event
-// moves the time and names no precision, since that did not change.
+// names the precision beside the time too, so a consumer reads a date.
 func TestADayMovedToAnotherDateKeepsItsPrecisionInTheTrail(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
@@ -326,8 +326,8 @@ func TestADayMovedToAnotherDateKeepsItsPrecisionInTheTrail(t *testing.T) {
 	if before[fieldOccurredPrecision] != PrecisionDay || after[fieldOccurredPrecision] != PrecisionDay {
 		t.Errorf("the audit says %v -> %v, want day on both sides", before[fieldOccurredPrecision], after[fieldOccurredPrecision])
 	}
-	if got := lastUpdatedPrecision(t, e, meeting); got != "" {
-		t.Errorf("activity.updated names occurred_precision %q for an unchanged day", got)
+	if got := lastUpdatedPrecision(t, e, meeting); got != PrecisionDay {
+		t.Errorf("activity.updated names occurred_precision %q beside the moved time, want day", got)
 	}
 }
 

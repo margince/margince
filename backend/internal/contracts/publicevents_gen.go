@@ -1001,7 +1001,7 @@ type PublicEventActivityChangedFields struct {
 	// OccurredAt The activity's new occurred_at (absent when this update did not touch it).
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
-	// OccurredPrecision How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried only when this update changed the precision.
+	// OccurredPrecision How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried whenever this update names occurred_at, and when it changed the precision alone.
 	OccurredPrecision *PublicEventActivityChangedFieldsOccurredPrecision `json:"occurred_precision,omitempty"`
 
 	// OutboundAttested True when the sender's own provider filing attested the message as their outbound mail, whether it was stored as received or as unattested outbound (absent otherwise).
@@ -1035,7 +1035,7 @@ type PublicEventActivityChangedFieldsDirection string
 // PublicEventActivityChangedFieldsMeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
 type PublicEventActivityChangedFieldsMeetingStatus string
 
-// PublicEventActivityChangedFieldsOccurredPrecision How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried only when this update changed the precision.
+// PublicEventActivityChangedFieldsOccurredPrecision How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried whenever this update names occurred_at, and when it changed the precision alone.
 type PublicEventActivityChangedFieldsOccurredPrecision string
 
 // PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded. Somebody decided what to do about a waiting message, and the Worklist stopped showing it (activities/disposition.go). Who it stopped showing it to is not on the wire. `not_sales` settles what the message is and holds for everybody. `snoozed` and `not_mine` belong to the one reader who set them. A reader marking a message done is announced as activity.marked_handled, since this enum is closed at v1. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.

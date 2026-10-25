@@ -123,29 +123,6 @@ func TestTheMeetingsLaneAsksForTodaysDayMeetingsByDate(t *testing.T) {
 	}
 }
 
-// A day meeting is drawn above the timed ones, as a calendar's all-day row.
-func TestTheMeetingsLanePutsDayMeetingsFirst(t *testing.T) {
-	t.Parallel()
-	asOf := time.Date(2026, 3, 10, 9, 0, 0, 0, time.UTC)
-	lanes := &laneWindows{rows: []Meeting{
-		{ID: ids.NewV7(), Subject: "Review", StartsAt: asOf.Add(time.Hour)},
-		{ID: ids.NewV7(), Subject: "Trade fair", StartsAt: asOf.Add(3 * time.Hour), Precision: crmcontracts.OccurredPrecisionOccurredPrecisionDay},
-		{ID: ids.NewV7(), Subject: "Lunch call", StartsAt: asOf.Add(4 * time.Hour)},
-	}}
-	svc := &Service{meetings: lanes}
-	ahead, err := svc.meetingsAhead(context.Background(), asOf, asOf.Add(12*time.Hour))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var got []string
-	for _, meeting := range ahead {
-		got = append(got, meeting.Subject)
-	}
-	if len(got) != 3 || got[0] != "Trade fair" || got[1] != "Review" || got[2] != "Lunch call" {
-		t.Errorf("the lane holds %v, want [Trade fair Review Lunch call]", got)
-	}
-}
-
 // A day meeting asks what happened only once its date is over in the
 // installation zone: the outcome lane's day range ends at today's date.
 func TestADayMeetingOwesAnOutcomeOnlyAfterItsDate(t *testing.T) {

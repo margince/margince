@@ -113,3 +113,56 @@ func TestADayBeginsAtItsOwnDatesMidnight(t *testing.T) {
 		}
 	}
 }
+
+// A day entry has happened from the first minute of its date in the zone that
+// says which date is today. That holds east and west of UTC, never a day early.
+func TestADayEntryHasHappenedFromTheStartOfItsDate(t *testing.T) {
+	t.Parallel()
+	anchor := Anchor(time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC))
+	for _, name := range []string{"Pacific/Auckland", "Asia/Tokyo", "UTC", "America/Los_Angeles", "Pacific/Kiritimati"} {
+		loc := zone(t, name)
+		for _, c := range []struct {
+			asOf time.Time
+			want bool
+		}{
+			{time.Date(2025, 3, 8, 23, 59, 0, 0, loc), false},
+			{time.Date(2025, 3, 9, 0, 0, 0, 0, loc), true},
+			{time.Date(2025, 3, 10, 9, 0, 0, 0, loc), true},
+		} {
+			if got := Begun(anchor, true, c.asOf, loc); got != c.want {
+				t.Errorf("%s at %v: begun = %v, want %v", name, c.asOf, got, c.want)
+			}
+		}
+	}
+}
+
+// An instant has happened once the clock reaches it, whatever the zone.
+func TestAnInstantHasHappenedOnceTheClockReachesIt(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2025, 3, 9, 12, 0, 0, 0, time.UTC)
+	tokyo := zone(t, "Asia/Tokyo")
+	if Begun(at, false, at.Add(-time.Minute), tokyo) {
+		t.Error("an instant a minute ahead has happened")
+	}
+	if !Begun(at, false, at, tokyo) {
+		t.Error("an instant at the clock has not happened")
+	}
+}
+
+// A day entry dated today is zero days old, even where its stored noon is
+// already tomorrow's local morning.
+func TestADayEntryDatedTodayIsZeroDaysOld(t *testing.T) {
+	t.Parallel()
+	auckland := zone(t, "Pacific/Auckland")
+	anchor := Anchor(time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC))
+	morning := time.Date(2025, 3, 9, 9, 0, 0, 0, auckland)
+	if got := DaysSince(anchor, true, morning, auckland); got != 0 {
+		t.Errorf("a day entry dated today is %d days old, want 0", got)
+	}
+	if got := DaysSince(anchor, true, morning.AddDate(0, 0, 3), auckland); got != 3 {
+		t.Errorf("three days on it is %d days old, want 3", got)
+	}
+	if got := DaysSince(morning.Add(-time.Hour), false, morning, auckland); got != 0 {
+		t.Errorf("an instant an hour ago is %d days old, want 0", got)
+	}
+}

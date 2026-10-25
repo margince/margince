@@ -986,7 +986,7 @@ export interface components {
              */
             occurred_at?: string;
             /**
-             * @description How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried only when this update changed the precision.
+             * @description How to read the activity's occurred_at from now on: `day` when only its date is known, its UTC date. Carried whenever this update names occurred_at, and when it changed the precision alone.
              * @enum {string}
              */
             occurred_precision?: "instant" | "day";

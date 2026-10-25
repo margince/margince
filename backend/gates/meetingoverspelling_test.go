@@ -32,8 +32,18 @@ var (
 	// second check below reads.
 	meetingOverDealsOwner = filepath.Join(
 		repoRoot, "backend", "internal", "modules", "deals", "nextstep.go")
-	// meetingEndSpelling is start plus duration, in any alias's spelling.
-	meetingEndSpelling = regexp.MustCompile(`make_interval\(\s*secs\s*=>\s*coalesce\([^)]*duration_seconds`)
+	// meetingEndSpelling is start plus duration, in any alias's spelling: as an
+	// interval made from seconds, or seconds multiplied by one.
+	meetingEndSpelling = regexp.MustCompile(`make_interval\(\s*secs\s*=>\s*coalesce\([^)]*duration_seconds|` +
+		`duration_seconds[^']*\*\s*interval\s*'1\s*second'`)
+	// meetingSlotSpellings hold a host's calendar hour, which only an instant
+	// has, so they add a duration to a start no day meeting reaches.
+	meetingSlotSpellings = gatekit.Waive(map[string]string{
+		filepath.Join("internal", "modules", "activities", "scheduling.go"): "the host's busy hours for booking, read " +
+			"with occurred_precision = 'instant': a day meeting holds no hour of the calendar",
+		filepath.Join("internal", "modules", "activities", "scheduling_occupancy.go"): "the slots a host's meetings " +
+			"hold, and a meeting that holds one is an instant (refuseDayHeldSlot)",
+	})
 )
 
 // meetingEndLiterals counts the string literals in file that spell a meeting's end.
@@ -66,6 +76,9 @@ func TestAMeetingsEndIsSpelledOnce(t *testing.T) {
 			owned = true
 			continue
 		}
+		if meetingSlotSpellings.Waived(t, filepath.Clean(src.Path)) {
+			continue
+		}
 		t.Errorf("%s spells a meeting's end itself. Ask occurredday.EndSQL, or "+
 			"storekit.MeetingIsOverSQL for \"is it over\": a copy misses the day "+
 			"meeting that ends with its date, not at its stored noon", src.Path)
@@ -73,6 +86,25 @@ func TestAMeetingsEndIsSpelledOnce(t *testing.T) {
 	if !owned {
 		t.Errorf("%s no longer spells a meeting's end where this census looks, so it "+
 			"would report a pass having seen nothing. Re-derive the pattern from the owner", meetingEndOwner)
+	}
+	meetingSlotSpellings.AssertAllMatched(t)
+}
+
+// The census sees both spellings of an end, so a copy written the other way
+// is still a finding.
+func TestTheMeetingEndCensusSeesBothSpellings(t *testing.T) {
+	t.Parallel()
+	for _, literal := range []string{
+		"m.occurred_at + make_interval(secs => coalesce(m.duration_seconds, 0))",
+		"m.occurred_at + coalesce(m.duration_seconds, 0) * interval '1 second'",
+		"occurred_at+(CASE WHEN x THEN duration_seconds ELSE 3600 END)*interval '1 second'",
+	} {
+		if !meetingEndSpelling.MatchString(literal) {
+			t.Errorf("the census does not see %q", literal)
+		}
+	}
+	if meetingEndSpelling.MatchString("m.duration_seconds > 0 AND m.kind = 'meeting'") {
+		t.Error("the census reads a bare duration as a meeting's end")
 	}
 }
 

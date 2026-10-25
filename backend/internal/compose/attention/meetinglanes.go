@@ -16,8 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Meetings is today's booked meetings that have not happened yet. Optional: nil
-// means this feed does not read meetings, which is not a day with none in it.
+// Meetings is today's booked meetings that have not happened yet: the day
+// meetings first, as a calendar's all-day row, then by start, all within limit.
+// Optional: nil means this feed does not read meetings, which is not a day with
+// none in it.
 //
 // Scoped like the task lane, because a meeting is somebody's — off one seat's
 // calendar, or naming them as a participant. Answering it unscoped puts one

@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -132,12 +133,12 @@ func dimension(
 // readableMeetings is meetingsAround behind the activity grant readNextMeeting
 // asks. A reader without it gets no meeting dates and a rating made from what
 // they may see, so the rating cannot tell them a meeting exists.
-func (a *assembly) readableMeetings() (last, next *time.Time, err error) {
+func (a *assembly) readableMeetings() (last relstrength.Dated, next *time.Time, err error) {
 	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return nil, nil, nil
+			return relstrength.Dated{}, nil, nil
 		}
-		return nil, nil, err
+		return relstrength.Dated{}, nil, err
 	}
 	return a.meetingsAround()
 }
@@ -150,14 +151,14 @@ func (a *assembly) readableMeetings() (last, next *time.Time, err error) {
 // neither. Nil is "no meeting on
 // record", a fact about the reading rather than a claim that none happened:
 // the caller may hold no scope over the activity that would prove otherwise.
-func (a *assembly) meetingsAround() (last, next *time.Time, err error) {
+func (a *assembly) meetingsAround() (last relstrength.Dated, next *time.Time, err error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(a.companyID.UUID)
 	nowPos := arg(a.now)
 	activityScope, err := auth.ActivityDiscoverClause(a.ctx, "a", arg)
 	if err != nil {
-		return nil, nil, err
+		return relstrength.Dated{}, nil, err
 	}
 	if activityScope == "" {
 		activityScope = scopeAll
@@ -169,26 +170,26 @@ func (a *assembly) meetingsAround() (last, next *time.Time, err error) {
 		activityScope, activities.CompanyLinkedActivityExists(companyPos)) + a.opts.projectScope(arg)
 	now := fmt.Sprintf("$%d", nowPos)
 	rows, err := a.tx.Query(a.ctx, fmt.Sprintf(`
-		(SELECT 'last' AS side, a.occurred_at FROM activity a
+		(SELECT 'last' AS side, a.occurred_at, a.occurred_precision FROM activity a
 		  WHERE %[1]s AND %[2]s
 		  ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1)
 		UNION ALL
-		(SELECT 'next', a.occurred_at FROM activity a
+		(SELECT 'next', a.occurred_at, a.occurred_precision FROM activity a
 		  WHERE %[1]s AND %[3]s
-		  ORDER BY a.occurred_at, a.id LIMIT 1)`,
-		where, relstrength.MeetingTookPlaceSQL("a", now), relstrength.MeetingAheadSQL("a", now)), args...)
+		  ORDER BY %[4]s, a.id LIMIT 1)`,
+		where, relstrength.MeetingTookPlaceSQL("a", now), relstrength.MeetingAheadSQL("a", now), occurredday.StartSQL("a")), args...)
 	if err != nil {
-		return nil, nil, fmt.Errorf("read the account's meetings: %w", err)
+		return relstrength.Dated{}, nil, fmt.Errorf("read the account's meetings: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var side string
+		var side, precision string
 		var at time.Time
-		if err := rows.Scan(&side, &at); err != nil {
-			return nil, nil, err
+		if err := rows.Scan(&side, &at, &precision); err != nil {
+			return relstrength.Dated{}, nil, err
 		}
 		if side == "last" {
-			last = &at
+			last = relstrength.Dated{At: &at, DateOnly: precision == string(crmcontracts.OccurredPrecisionOccurredPrecisionDay)}
 			continue
 		}
 		next = &at

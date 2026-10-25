@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -65,8 +66,8 @@ const lastTouchCompanyAlias = "co"
 // form, so the header can never disagree with the list under it. It carries the
 // caller's activity row scope, so a rep sees the last message THEY may read
 // rather than the account's true last one.
-// A message dated after now has not been sent yet, so it is neither side's last
-// word: a scheduled send must not hide the real last one.
+// A message that has not happened yet (occurredday.BegunSQL) is neither side's
+// last word: a scheduled send must not hide the real last one.
 func LastTouchFor(
 	ctx context.Context, tx pgx.Tx, companyIDs []ids.CompanyID, now time.Time, opts AssembleOptions,
 ) (map[ids.CompanyID]LastTouch, error) {
@@ -99,7 +100,7 @@ func LastTouchFor(
 		touched += " AND " + scope
 	}
 	touched += opts.projectScope(arg)
-	touched += fmt.Sprintf(" AND a.occurred_at <= $%d", arg(now))
+	touched += " AND " + occurredday.BegunSQL("a", fmt.Sprintf("$%d", arg(now)))
 	// Both direction clocks skip a called-off meeting and automatic mail, as
 	// the last contact does through InteractionCountsSQL. DirectionClockSQL
 	// rather than InteractionCountsSQL: a direction clock answers when a

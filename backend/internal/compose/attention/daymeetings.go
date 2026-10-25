@@ -8,7 +8,6 @@ package attention
 
 import (
 	"context"
-	"slices"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -28,23 +27,7 @@ func (s *Service) meetingsAhead(ctx context.Context, asOf, until time.Time) ([]M
 	}
 	today := occurredday.AnchorIn(asOf, loc)
 	window := MeetingWindow{From: asOf, Until: until, DaysFrom: today, DaysUntil: today.AddDate(0, 0, 1)}
-	ahead, err := s.meetings.Today(ctx, window, plannedCap, s.taskScope, s.taskOwner)
-	return dayMeetingsFirst(ahead), err
-}
-
-// dayMeetingsFirst puts the day meetings ahead of the timed ones, as a
-// calendar draws its all-day row. The read already holds the lane's cap.
-func dayMeetingsFirst(ahead []Meeting) []Meeting {
-	slices.SortStableFunc(ahead, func(a, b Meeting) int {
-		switch day := isDayPrecision(a.Precision); {
-		case day == isDayPrecision(b.Precision):
-			return 0
-		case day:
-			return -1
-		}
-		return 1
-	})
-	return ahead
+	return s.meetings.Today(ctx, window, plannedCap, s.taskScope, s.taskOwner)
 }
 
 // meetingsOwingAnOutcome is the outcome lane: meetings since unansweredSince

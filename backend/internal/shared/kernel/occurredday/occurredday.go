@@ -68,6 +68,37 @@ func Ended(at, asOf time.Time, zone *time.Location) bool {
 	return at.Before(AnchorIn(asOf, zone))
 }
 
+// Begun reports whether an activity has happened at asOf: an instant once
+// asOf reaches it, a day entry once its date has begun in zone. BegunSQL is the
+// same rule in SQL.
+func Begun(at time.Time, dateOnly bool, asOf time.Time, zone *time.Location) bool {
+	if dateOnly {
+		return !at.After(AnchorIn(asOf, zone))
+	}
+	return !at.After(asOf)
+}
+
+// DaysSince counts the calendar days from the date an activity names to
+// today's date in zone. A day entry dated today is zero days old.
+func DaysSince(at time.Time, dateOnly bool, asOf time.Time, zone *time.Location) int {
+	year, month, day := DateIn(at, dateOnly, zone).Date()
+	return elapsed.Days(time.Date(year, month, day, 12, 0, 0, 0, zone), asOf, zone)
+}
+
+// BegunSQL is Begun for the activity under alias at asOf, both SQL the caller
+// renders. A day entry stored at or before asOf is at or before today's anchor
+// too. So one bound on occurred_at holds both arms and keeps a range scan.
+func BegunSQL(alias, asOf string) string {
+	return fmt.Sprintf(`(%[1]s.occurred_at <= greatest(%[2]s, %[3]s) AND (%[1]s.occurred_precision = 'day' OR %[1]s.occurred_at <= %[2]s))`,
+		alias, asOf, todayAnchorSQL(asOf))
+}
+
+// todayAnchorSQL is AnchorIn(asOf, installation zone) in SQL.
+func todayAnchorSQL(asOf string) string {
+	return `((date_trunc('day', CAST(` + asOf + ` AS timestamptz) AT TIME ZONE ` + installationZoneSQL +
+		`) + interval '12 hours') AT TIME ZONE 'UTC')`
+}
+
 // EndSQL is when the activity under alias ends. An instant ends at its start
 // plus its duration. A day entry ends with its date in the installation zone,
 // Ended's rule. alias is SQL the caller renders, never request text.
@@ -75,6 +106,25 @@ func EndSQL(alias string) string {
 	return fmt.Sprintf(`(CASE WHEN %[1]s.occurred_precision = 'day'
 		THEN (date_trunc('day', %[1]s.occurred_at AT TIME ZONE 'UTC') + interval '1 day') AT TIME ZONE `+installationZoneSQL+`
 		ELSE %[1]s.occurred_at + make_interval(secs => coalesce(%[1]s.duration_seconds, 0)) END)`, alias)
+}
+
+// StartSQL is when the activity under alias starts: an instant at its time,
+// a day entry when its date begins in the installation zone (Begins). It is
+// the order a calendar reads, and where "after the meeting" begins.
+func StartSQL(alias string) string {
+	return fmt.Sprintf(`(CASE WHEN %[1]s.occurred_precision = 'day'
+		THEN date_trunc('day', %[1]s.occurred_at AT TIME ZONE 'UTC') AT TIME ZONE `+installationZoneSQL+`
+		ELSE %[1]s.occurred_at END)`, alias)
+}
+
+// AheadSQL is "the activity under alias has not happened yet" at now. That is
+// an instant that starts later, or a day entry whose date has not ended
+// (Ended). A date ends less than 25 hours after its anchor, a bound that keeps
+// a range scan.
+func AheadSQL(alias, now string) string {
+	return fmt.Sprintf(`((%[1]s.occurred_precision = 'instant' AND %[1]s.occurred_at > %[2]s)
+		OR (%[1]s.occurred_precision = 'day' AND %[1]s.occurred_at > CAST(%[2]s AS timestamptz) - interval '25 hours'
+		    AND %[3]s > %[2]s))`, alias, now, EndSQL(alias))
 }
 
 // installationZoneSQL is the installation zone as SQL reads it: the row of

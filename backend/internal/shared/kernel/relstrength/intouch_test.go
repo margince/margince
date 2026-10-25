@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 func TestReadInTouchCountsMeetingsAsContact(t *testing.T) {
@@ -31,7 +33,7 @@ func TestReadInTouchCountsMeetingsAsContact(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := ReadInTouch(optionalDaysAgo(tc.inbound), optionalDaysAgo(tc.met), optionalDaysAhead(tc.booked), now, time.UTC)
+			got := ReadInTouch(Dated{At: optionalDaysAgo(tc.inbound)}, Dated{At: optionalDaysAgo(tc.met)}, optionalDaysAhead(tc.booked), now, time.UTC)
 			if got.Basis != tc.wantBasis || got.Days != tc.wantDays {
 				t.Fatalf("reading = %s after %d days, want %s after %d", got.Basis, got.Days, tc.wantBasis, tc.wantDays)
 			}
@@ -49,7 +51,7 @@ func TestReadInTouchCountsMeetingsAsContact(t *testing.T) {
 // anybody yet and must not keep a quiet account off "at risk".
 func TestAMessageDatedAheadIsNotContact(t *testing.T) {
 	t.Parallel()
-	got := ReadInTouch(optionalDaysAhead(3), nil, nil, now, time.UTC)
+	got := ReadInTouch(Dated{At: optionalDaysAhead(3)}, Dated{}, nil, now, time.UTC)
 	if got.Basis != InTouchNever || got.Current() {
 		t.Fatalf("reading = %s (current %v), want never — the message has not been sent yet", got.Basis, got.Current())
 	}
@@ -59,9 +61,26 @@ func TestAMessageDatedAheadIsNotContact(t *testing.T) {
 // counts only as the booking the caller passes separately.
 func TestAMeetingAheadIsNotOneHeld(t *testing.T) {
 	t.Parallel()
-	got := ReadInTouch(daysAgo(77), optionalDaysAhead(3), nil, now, time.UTC)
+	got := ReadInTouch(Dated{At: daysAgo(77)}, Dated{At: optionalDaysAhead(3)}, nil, now, time.UTC)
 	if got.Basis != InTouchQuiet {
 		t.Fatalf("basis = %s, want %s — a meeting that has not happened yet is not contact we had", got.Basis, InTouchQuiet)
+	}
+}
+
+// A message logged for today's date has been written from the start of that
+// date, before its stored noon, and is zero days old. Auckland's morning is
+// still the evening before by UTC.
+func TestAMessageDatedTodayIsContactBeforeItsStoredNoon(t *testing.T) {
+	t.Parallel()
+	auckland, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatal(err)
+	}
+	morning := time.Date(2026, 3, 10, 9, 0, 0, 0, auckland)
+	today := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
+	got := ReadInTouch(Dated{At: &today, DateOnly: true}, Dated{}, nil, morning, auckland)
+	if got.Basis != InTouchWrote || got.Days != 0 {
+		t.Fatalf("reading = %s after %d days, want %s after 0", got.Basis, got.Days, InTouchWrote)
 	}
 }
 
@@ -127,11 +146,11 @@ func optionalDaysAhead(n int) *time.Time {
 func TestTookPlaceAndAheadSplitByTheClock(t *testing.T) {
 	t.Parallel()
 	past := MeetingTookPlaceSQL("m", "$9")
-	if !strings.Contains(past, MeetingCountsSQL("m")) || !strings.Contains(past, "m.occurred_at <= $9") {
+	if !strings.Contains(past, MeetingCountsSQL("m")) || !strings.Contains(past, occurredday.BegunSQL("m", "$9")) {
 		t.Errorf("took place = %q, want a meeting nobody called off that already started", past)
 	}
 	ahead := MeetingAheadSQL("m", "$9")
-	if !strings.Contains(ahead, "m.occurred_at > $9") || strings.Contains(ahead, "held") {
+	if !strings.Contains(ahead, occurredday.AheadSQL("m", "$9")) || strings.Contains(ahead, "held") {
 		t.Errorf("ahead = %q, want an untracked or booked meeting still to come", ahead)
 	}
 }

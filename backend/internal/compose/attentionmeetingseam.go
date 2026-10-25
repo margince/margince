@@ -22,9 +22,9 @@ import (
 // store, the same gated list every other activity surface reads.
 //
 // Window, status and order are all SQL predicates, so the limit cuts a list
-// that is already the lane: soonest open meeting first. Filtering or sorting
-// after the limit let canceled rows or later meetings fill the page and hide
-// the next one the rep has to prepare.
+// that is already the lane. The day meetings come first, as a calendar's
+// all-day row, then the soonest open timed one. Filtering or sorting after the
+// limit let canceled rows or later meetings hide the next one to prepare.
 type attentionMeetings struct{ store *activities.Store }
 
 // soonestFirst is the store's ascending order on the meeting's start.
@@ -34,6 +34,27 @@ func (m attentionMeetings) Today(
 	ctx context.Context, window attention.MeetingWindow, limit int,
 	scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.Meeting, error) {
+	days := attention.MeetingWindow{From: window.From, Until: window.From, DaysFrom: window.DaysFrom, DaysUntil: window.DaysUntil}
+	rows, err := m.openIn(ctx, days, limit, scope, owner)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) < limit {
+		timed := attention.MeetingWindow{From: window.From, Until: window.Until, DaysFrom: window.DaysUntil, DaysUntil: window.DaysUntil}
+		hours, err := m.openIn(ctx, timed, limit-len(rows), scope, owner)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, hours...)
+	}
+	return m.named(ctx, rows)
+}
+
+// openIn reads the open meetings of one window, soonest first, up to limit.
+func (m attentionMeetings) openIn(
+	ctx context.Context, window attention.MeetingWindow, limit int,
+	scope attention.TaskScope, owner ids.UUID,
+) ([]crmcontracts.Activity, error) {
 	kind := string(crmcontracts.ActivityKindMeeting)
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window), Limit: &limit,
@@ -43,9 +64,11 @@ func (m attentionMeetings) Today(
 		return nil, nil
 	}
 	rows, _, err := m.store.ListActivities(ctx, in)
-	if err != nil {
-		return nil, err
-	}
+	return rows, err
+}
+
+// named turns the lane's rows into meetings, each with who it is with.
+func (m attentionMeetings) named(ctx context.Context, rows []crmcontracts.Activity) ([]attention.Meeting, error) {
 	ahead := make([]attention.Meeting, 0, len(rows))
 	for _, row := range rows {
 		if !meetingStillWorthPreparing(row) || !meetingReadable(row) {

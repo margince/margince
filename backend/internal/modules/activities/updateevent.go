@@ -11,7 +11,8 @@ import (
 
 // Events describe requested fields; audit images describe the persisted row.
 // Body content stays out of events because it can be large and private. The
-// precision is named only when it changed, since a new time alone implies one.
+// precision is named whenever the time is, as in the audit images. A consumer
+// then never reads a day's stored noon as an hour.
 func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.Activity) crmcontracts.PublicEventActivityChangedFields {
 	var fields crmcontracts.PublicEventActivityChangedFields
 	if in.Subject != nil {
@@ -24,8 +25,7 @@ func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.A
 	if in.OccurredAt != nil {
 		fields.OccurredAt = in.OccurredAt
 	}
-	if in.OccurredPrecision != nil && *in.OccurredPrecision != string(current.OccurredPrecision) {
-		precision := crmcontracts.PublicEventActivityChangedFieldsOccurredPrecision(*in.OccurredPrecision)
+	if precision := eventPrecision(in, current); precision != "" {
 		fields.OccurredPrecision = &precision
 	}
 	if in.DueAt != nil {
@@ -46,6 +46,19 @@ func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.A
 		fields.MeetingStatus = &status
 	}
 	return fields
+}
+
+// eventPrecision is the precision an update event names: the patch's whenever
+// it names a time or a new precision, empty when it names neither.
+func eventPrecision(in UpdateActivityInput, current crmcontracts.Activity) crmcontracts.PublicEventActivityChangedFieldsOccurredPrecision {
+	precision := string(current.OccurredPrecision)
+	if in.OccurredPrecision != nil {
+		precision = *in.OccurredPrecision
+	}
+	if in.OccurredAt == nil && precision == string(current.OccurredPrecision) {
+		return ""
+	}
+	return crmcontracts.PublicEventActivityChangedFieldsOccurredPrecision(precision)
 }
 
 // precisionBesideTime puts the precision in both audit images whenever the time

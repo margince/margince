@@ -48,14 +48,6 @@ type BookedMeeting struct {
 	Precision string
 }
 
-// MeetingAheadSQL is "the meeting under alias has not happened yet" at the
-// placeholder now. That is an hour that starts later, or a day whose date has
-// not ended in the installation zone. The record pages' next meeting reads it.
-func MeetingAheadSQL(alias, now string) string {
-	return fmt.Sprintf(`(%[1]s.occurred_at > %[2]s OR (%[1]s.occurred_precision = 'day' AND %[3]s > %[2]s))`,
-		alias, now, occurredday.EndSQL(alias))
-}
-
 // NextBookedMeetingInput narrows the question to one record.
 type NextBookedMeetingInput struct {
 	// EntityType and EntityID name the record the meeting must be linked to,
@@ -63,7 +55,7 @@ type NextBookedMeetingInput struct {
 	EntityType string
 	EntityID   ids.UUID
 	// After is the caller's clock, injected so a test can pin it: a meeting must
-	// still be ahead of it (MeetingAheadSQL).
+	// still be ahead of it (occurredday.AheadSQL).
 	After time.Time
 }
 
@@ -125,7 +117,7 @@ func nextBookedMeeting(
 		fmt.Sprintf("a.kind = $%d", arg(string(crmcontracts.ActivityKindMeeting))),
 		activityLive,
 		"(a.meeting_status IS NULL OR a.meeting_status = 'booked')",
-		MeetingAheadSQL("a", fmt.Sprintf("$%d", arg(in.After))),
+		occurredday.AheadSQL("a", fmt.Sprintf("$%d", arg(in.After))),
 		fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id
 			AND l.entity_type = $%d AND l.%s = $%d)`,
 			arg(in.EntityType), column, arg(in.EntityID)),
@@ -138,7 +130,7 @@ func nextBookedMeeting(
 	err = tx.QueryRow(ctx, `SELECT a.id, a.subject, a.occurred_at, a.occurred_precision
 		FROM activity a
 		WHERE `+joinAnd(where)+`
-		ORDER BY a.occurred_at, a.id
+		ORDER BY `+occurredday.StartSQL("a")+`, a.id
 		LIMIT 1`, args...).Scan(&meeting.ID, &subject, &meeting.StartsAt, &meeting.Precision)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return BookedMeeting{}, false, nil

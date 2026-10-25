@@ -19,8 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -189,12 +189,14 @@ func (a *assembly) readHealth() error {
 	}
 	health := crmcontracts.Company360Health{}
 
-	if inbound := a.out.LastInboundAt; inbound != nil {
+	precision := a.out.LastInboundPrecision
+	inbound := relstrength.Dated{At: a.out.LastInboundAt, DateOnly: precision != nil && activitywhen.IsDay(*precision)}
+	if inbound.At != nil {
 		loc, err := a.zone()
 		if err != nil {
 			return err
 		}
-		days := elapsed.Days(*inbound, a.now, loc)
+		days := occurredday.DaysSince(*inbound.At, inbound.DateOnly, a.now, loc)
 		health.DaysSinceLastInbound = &days
 	}
 
@@ -237,13 +239,13 @@ func (a *assembly) readHealth() error {
 	if err != nil {
 		return err
 	}
-	health.LastMeetingAt = lastMeeting
+	health.LastMeetingAt = lastMeeting.At
 
 	loc, err := a.zone()
 	if err != nil {
 		return err
 	}
-	touch := relstrength.ReadInTouch(a.out.LastInboundAt, lastMeeting, nextMeeting, a.now, loc)
+	touch := relstrength.ReadInTouch(inbound, lastMeeting, nextMeeting, a.now, loc)
 	rateHealthDimensions(&health, a.out.StateStrip, touch)
 
 	a.out.Health = &health

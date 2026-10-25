@@ -234,7 +234,7 @@ var waitingRepliesSQL = `
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
-	   AND a.occurred_at <= $%[1]d
+	   AND ` + occurredday.BegunSQL("a", "$%[1]d::timestamptz") + `
 	   AND %[2]s
 	   -- Entity narrowing goes HERE, before WaitingScanCap's LIMIT below: a
 	   -- record's own wait can sit outside the oldest WaitingScanCap threads
@@ -416,7 +416,7 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 			  AND back.kind = a.kind
 			  AND back.channel_provider IS NOT DISTINCT FROM a.channel_provider
 			  AND back.occurred_at > mine.set_at
-			  AND back.occurred_at <= %[1]s)
+			  AND %[5]s)
 		-- The rule the brief's queue applies (storekit.MeetingIsOverSQL), and
 		-- kind = 'meeting' is what makes reopen_ref mean a meeting rather than
 		-- any activity id.
@@ -425,7 +425,7 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 			WHERE m.id = mine.reopen_ref AND m.kind = '%[2]s'
 			  AND %[4]s)
 		ELSE false
-	END)`, asOf, KindMeeting, backContent, storekit.MeetingIsOverSQL("m", asOf))
+	END)`, asOf, KindMeeting, backContent, storekit.MeetingIsOverSQL("m", asOf), occurredday.BegunSQL("back", asOf))
 }
 
 // bookedMeetingSQL is when the soonest booked meeting with this message's

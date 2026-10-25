@@ -116,18 +116,20 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	inbound := fmt.Sprintf(`a.direction = 'inbound' AND %s AND %s`, sender, humanClock)
 	exchange := fmt.Sprintf(`%s AND %s AND (a.direction IS DISTINCT FROM 'inbound' OR %s)`,
 		relstrength.InteractionCountsSQL("a"), relstrength.LastActivityCountsSQL("a", "now()"), sender)
+	// One newest row per direction carries its time and its precision together.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT c.id,
-		       (SELECT max(a.occurred_at) %[1]s AND %[2]s),
-		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'outbound' AND %[5]s),
+		SELECT c.id, inbound.touched_at, outbound.touched_at,
 		       (SELECT max(a.occurred_at) %[1]s AND %[2]s AND NOT %[6]s),
-		       (SELECT max(a.occurred_at) %[1]s AND %[7]s),
-		       (SELECT max(a.occurred_at) %[1]s AND %[7]s
-		           AND a.occurred_at < (SELECT max(a.occurred_at) %[1]s AND %[2]s)),
-		       coalesce((SELECT a.occurred_precision %[1]s AND %[2]s %[8]s), ''),
-		       coalesce((SELECT a.occurred_precision %[1]s AND a.direction = 'outbound' AND %[5]s %[8]s), ''),
-		       coalesce((SELECT a.occurred_precision %[1]s AND %[7]s %[8]s), '')
+		       exchange.touched_at,
+		       (SELECT max(a.occurred_at) %[1]s AND %[7]s AND a.occurred_at < inbound.touched_at),
+		       coalesce(inbound.touched_precision, ''), coalesce(outbound.touched_precision, ''), coalesce(exchange.touched_precision, '')
 		FROM contact c
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		                     %[1]s AND %[2]s %[8]s) inbound ON true
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		                     %[1]s AND a.direction = 'outbound' AND %[5]s %[8]s) outbound ON true
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		                     %[1]s AND %[7]s %[8]s) exchange ON true
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
 		reached, inbound, wantedPos, visible, humanClock, activities.ImportedHistorySQL, exchange, newestRow), args...)
 	if err != nil {
@@ -150,6 +152,5 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	return out, nil
 }
 
-// newestRow picks the row a max(a.occurred_at) beside it names, so its
-// precision is read off the same row as the date.
+// newestRow picks a direction's newest row, the one max(a.occurred_at) names.
 const newestRow = "ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1"

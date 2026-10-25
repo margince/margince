@@ -12,7 +12,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // InTouchDays is how long since they last wrote or we last met before contact
@@ -45,17 +45,17 @@ func InteractionCounts(kind, meetingStatus string, automatic AutomaticKind) bool
 }
 
 // MeetingTookPlaceSQL is a meeting that counts as contact we had: not called
-// off, and already started. A `booked` row stays booked after it happens,
-// because few users ever mark a meeting held.
+// off, and already started (occurredday.BegunSQL). A `booked` row stays booked
+// after it happens, because few users ever mark a meeting held.
 func MeetingTookPlaceSQL(alias, now string) string {
-	return "(" + MeetingCountsSQL(alias) + " AND " + alias + ".occurred_at <= " + now + ")"
+	return "(" + MeetingCountsSQL(alias) + " AND " + occurredday.BegunSQL(alias, now) + ")"
 }
 
-// MeetingAheadSQL is a meeting still to come that nobody called off. A `held`
-// row dated ahead is a data error, not a booking.
+// MeetingAheadSQL is a meeting still to come (occurredday.AheadSQL) that nobody
+// called off. A `held` row dated ahead is a data error, not a booking.
 func MeetingAheadSQL(alias, now string) string {
 	return "((" + alias + ".meeting_status IS NULL OR " + alias + ".meeting_status = 'booked') AND " +
-		alias + ".occurred_at > " + now + ")"
+		occurredday.AheadSQL(alias, now) + ")"
 }
 
 // NotCalledOffSQL admits any activity row except a meeting that was canceled or
@@ -82,10 +82,11 @@ func LastActivityKindSQL(alias string) string {
 
 // LastActivityCountsSQL admits an activity row to a record's last-activity
 // clock: a kind that moves it, not a called-off meeting, and already happened
-// at now. The last_activity_of_* functions carry its text rendered with now().
+// at now (occurredday.BegunSQL). The last_activity_of_* functions carry its
+// text rendered with now().
 func LastActivityCountsSQL(alias, now string) string {
 	return "(" + LastActivityKindSQL(alias) + " AND " + NotCalledOffSQL(alias) + " AND " +
-		alias + ".occurred_at <= " + now + ")"
+		occurredday.BegunSQL(alias, now) + ")"
 }
 
 // InteractionCountsSQL is the whole test for an activity row that counts as an
@@ -117,6 +118,18 @@ const (
 	InTouchNever  = "never"  // no word and no meeting, ever
 )
 
+// Dated is when an activity happened, and whether that names only a date: a
+// day entry's stored anchor. A nil At is no activity.
+type Dated struct {
+	At       *time.Time
+	DateOnly bool
+}
+
+// begun reports whether d names an activity that has happened at now.
+func (d Dated) begun(now time.Time, loc *time.Location) bool {
+	return d.At != nil && occurredday.Begun(*d.At, d.DateOnly, now, loc)
+}
+
 // InTouch is one account's contact reading. Days counts from the latest of
 // their last message and our last meeting, and is zero when there was none.
 type InTouch struct {
@@ -131,30 +144,30 @@ func (r InTouch) Current() bool {
 }
 
 // ReadInTouch folds the three dates every in-touch question rests on. A
-// message or meeting dated after now has not happened, so it never counts as
+// message or meeting that has not happened (occurredday.Begun) never counts as
 // contact we had; a meeting ahead counts only as nextMeeting. Days are counted
 // by the calendar of loc, the zone the reader sees the dates in.
-func ReadInTouch(lastInbound, lastMeeting, nextMeeting *time.Time, now time.Time, loc *time.Location) InTouch {
+func ReadInTouch(lastInbound, lastMeeting Dated, nextMeeting *time.Time, now time.Time, loc *time.Location) InTouch {
 	latest, basis := lastInbound, InTouchWrote
-	if latest != nil && latest.After(now) {
-		latest = nil
+	if !latest.begun(now, loc) {
+		latest = Dated{}
 	}
-	if lastMeeting != nil && !lastMeeting.After(now) && (latest == nil || lastMeeting.After(*latest)) {
+	if lastMeeting.begun(now, loc) && (latest.At == nil || lastMeeting.At.After(*latest.At)) {
 		latest, basis = lastMeeting, InTouchMet
 	}
 	var reading InTouch
-	if latest != nil {
-		reading.Days = elapsed.Days(*latest, now, loc)
+	if latest.At != nil {
+		reading.Days = occurredday.DaysSince(*latest.At, latest.DateOnly, now, loc)
 	}
 	if nextMeeting != nil && nextMeeting.After(now) {
 		reading.BookedAt = nextMeeting
 	}
 	switch {
-	case latest != nil && reading.Days <= InTouchDays:
+	case latest.At != nil && reading.Days <= InTouchDays:
 		reading.Basis = basis
 	case reading.BookedAt != nil:
 		reading.Basis = InTouchBooked
-	case latest != nil:
+	case latest.At != nil:
 		reading.Basis = InTouchQuiet
 	default:
 		reading.Basis = InTouchNever
