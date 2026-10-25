@@ -47,11 +47,15 @@ import (
 // Each entry says what the file does about a HELD activity, which is the
 // question this door raises and the one the census next door cannot ask.
 var auditTrailReaders = gatekit.Waive(map[string]string{
+	"erasure_tombstone.go": "reads the evidence column of a contact's erase tombstone, by its reason, to answer the account a request's erasure already certified. It selects no before/after image, so no activity's subject or body passes through it",
+
 	"auditlog.go": "the compliance log. It withholds the IMAGE of an activity the reader may not see — UnscrubbedImageSQL, plus content_readable from the audience arm — while keeping the ROW, because a trail with holes in it is its own defect. A statutorily held activity is a DIFFERENT rule and is not withheld here: an admin can read its subject through this door. That is #2138's open half, deferred with its reasons rather than answered by whoever touched this file last",
 
 	"fieldhistory.go": "the per-field history, projecting before/after to render one column's changes. Its window is bounded by scrubBoundary, so everything strictly older than a certified scrub is withheld — the erasure question. The retention-hold question rides the same open decision as the compliance log above",
 
 	"edgehistory.go": "the history of the LINKS a record is an end of. It projects no image columns of its own: the shared column list carries them, and the rows it adds are edge rows whose images are the edge's, not the activity's",
+
+	"auditattribution.go": "resolves who made a change from the audit rows a history table links. It selects the shared projection but copies only the actor columns into its result, so no before/after image of any record, a held activity's included, leaves it",
 
 	"edgeerasure.go": "not a reader served to anybody — it is the erasure path's own write-side probe, and UnscrubbedImageSQL appears here because it is what erasure asks about, not what it shows",
 })

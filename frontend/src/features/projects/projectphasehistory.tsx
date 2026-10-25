@@ -9,6 +9,7 @@ import { formatDayMonth } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
+import { phaseMoverSentence } from "./projectphasemover";
 import { OverviewSection, type Project360, stateOf } from "./projectsections";
 import { phaseName } from "./projectstanding.words";
 
@@ -66,12 +67,8 @@ function VisitRow({
         to: formatDayMonth(leftAt, locale, zone),
       })
     : t("project.history.since", { date: from });
-  const name = visit.changed_by.display_name ?? t("project.history.bySystem");
-  const why =
-    visit.reason ??
-    (visit.from_phase
-      ? t("project.history.by", { name })
-      : t("project.history.openedBy", { name }));
+  const who = phaseMoverSentence(visit.changed_by, !visit.from_phase, t);
+  const why = visit.reason ? `${who} · ${visit.reason}` : who;
   const days = daysPast(
     Date.parse(visit.changed_at),
     Date.parse(leftAt ?? asOf),

@@ -301,22 +301,30 @@ function renderUnderAToastRegion(
 // only when the reader moved the day. It then keeps the meeting's time of day
 // in the record zone.
 describe("the start a meeting outcome saves", () => {
+  type User = ReturnType<typeof userEvent.setup>;
+
   async function openAndSave(
     zone: string,
-    day?: string,
-    client?: QueryClient,
+    moveDay?: (user: User) => Promise<void>,
   ): Promise<void> {
     const user = userEvent.setup();
-    renderUnderAToastRegion(zone, client);
+    renderUnderAToastRegion(zone);
     await user.click(await screen.findByRole("button", { name: /update/i }));
     await screen.findByDisplayValue("Discovery call with Turbinenbau");
-    if (day !== undefined) {
-      fireEvent.change(screen.getByLabelText("Date"), {
-        target: { value: day },
-      });
-    }
+    await moveDay?.(user);
     await user.click(screen.getByRole("button", { name: /^log$/i }));
   }
+
+  // The day as an English reader types it, over the one the box shows.
+  const typed = (day: string) => async (user: User) => {
+    await user.tripleClick(screen.getByRole("textbox", { name: "Date" }));
+    await user.keyboard(day.split("-").reverse().join("/"));
+  };
+
+  const picked = (dayName: string) => async (user: User) => {
+    await user.click(screen.getByRole("button", { name: /^Choose date/ }));
+    await user.click(await screen.findByRole("button", { name: dayName }));
+  };
 
   it.each(["Asia/Bangkok", "America/New_York"])(
     "sends no start when the day stayed, in %s",
@@ -333,19 +341,21 @@ describe("the start a meeting outcome saves", () => {
     },
   );
 
-  it.each([
-    ["Asia/Bangkok", "2026-01-16"],
-    ["America/New_York", "2026-01-16"],
-  ])("keeps the time of day on the next day, in %s", async (zone, nextDay) => {
-    const sent: Record<string, unknown>[] = [];
-    stubWithMeetingRead(sent);
-    await openAndSave(zone, nextDay);
+  it.each(["Asia/Bangkok", "America/New_York"])(
+    "keeps the time of day on the next day, in %s",
+    async (zone) => {
+      const sent: Record<string, unknown>[] = [];
+      stubWithMeetingRead(sent);
+      await openAndSave(zone, picked("Friday, 16 January 2026"));
 
-    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
-    expect(sent[0]).toMatchObject({
-      occurred_at: "2026-01-16T14:00:00.000Z",
-    });
-  });
+      expect(
+        await screen.findByText(/Meeting outcome recorded/i),
+      ).not.toBeNull();
+      expect(sent[0]).toMatchObject({
+        occurred_at: "2026-01-16T14:00:00.000Z",
+      });
+    },
+  );
 
   it("files a meeting moved onto today at now while its hour is still to come", async () => {
     // 17:00 in Bangkok; the meeting's 21:00 has not come yet.
@@ -353,7 +363,7 @@ describe("the start a meeting outcome saves", () => {
     vi.setSystemTime(new Date("2026-01-20T10:00:00Z"));
     const sent: Record<string, unknown>[] = [];
     stubWithMeetingRead(sent);
-    await openAndSave("Asia/Bangkok", "2026-01-20");
+    await openAndSave("Asia/Bangkok", typed("2026-01-20"));
 
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     const filed = Date.parse(String(sent[0]?.occurred_at));
@@ -367,12 +377,32 @@ describe("the start a meeting outcome saves", () => {
     vi.setSystemTime(new Date("2026-01-20T15:00:00Z"));
     const sent: Record<string, unknown>[] = [];
     stubWithMeetingRead(sent);
-    await openAndSave("Asia/Bangkok", "2026-01-20");
+    await openAndSave("Asia/Bangkok", typed("2026-01-20"));
 
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     expect(sent[0]).toMatchObject({
       occurred_at: "2026-01-20T14:00:00.000Z",
     });
+  });
+
+  it("marks the record's today, under the cap, while the browser is a day ahead", async () => {
+    // 10:00Z is the 19th at 23:00 in Pago Pago and the 20th from UTC-10 eastward.
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-01-20T10:00:00Z"));
+    stubWithMeetingRead([]);
+    const user = userEvent.setup();
+    renderUnderAToastRegion("Pacific/Pago_Pago");
+    await user.click(await screen.findByRole("button", { name: /update/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /^Choose date/ }),
+    );
+    const today = await screen.findByRole("button", { name: "Today" });
+    expect(today).toHaveProperty("disabled", false);
+    await user.click(today);
+
+    expect(
+      screen.getByRole<HTMLInputElement>("textbox", { name: "Date" }).value,
+    ).toBe("19/01/2026");
   });
 
   it("sends nothing when the picked day does not exist in the record zone", async () => {
@@ -382,7 +412,7 @@ describe("the start a meeting outcome saves", () => {
       ...CAPTURED_MEETING,
       occurred_at: "2011-12-29T22:00:00Z",
     });
-    await openAndSave("Pacific/Apia", "2011-12-30");
+    await openAndSave("Pacific/Apia", typed("2011-12-30"));
 
     expect(
       await screen.findByText(/does not exist in the company’s time zone/i),

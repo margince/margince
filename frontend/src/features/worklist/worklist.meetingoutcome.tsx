@@ -38,7 +38,9 @@ import { ifMatch, requireVersion } from "../../api/version";
 import { ActivityBodyField } from "../../components/activitybodyfield";
 import { useMeetingOutcome } from "../../components/taskactions";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
@@ -176,6 +178,8 @@ function MeetingOutcomeDialog({
   const [draft, setDraft] = useState<OutcomeDraft | null>(null);
   const [seed, setSeed] = useState<OutcomeSeed | null>(null);
   const [dayRefused, setDayRefused] = useState(false);
+  const latestDay =
+    isoOrBlank(calendarDay(new Date(), recordZone)) || undefined;
   // The SAME read the task detail makes, and keyed the same way, so a write
   // that invalidates ["activity", id] refreshes whichever of the two is open.
   const meeting = useActivity(id);
@@ -251,7 +255,10 @@ function MeetingOutcomeDialog({
             className="form-stack"
             onSubmit={(event) => {
               event.preventDefault();
-              if (save.isPending) {
+              if (
+                save.isPending ||
+                refuseUnreadableField(event.currentTarget)
+              ) {
                 return;
               }
               let occurredAt: string | undefined;
@@ -299,18 +306,17 @@ function MeetingOutcomeDialog({
               </Field>
               <Field label={t("log.date")}>
                 {(control) => (
-                  <TextInput
+                  <DateInput
                     {...control}
-                    type="date"
-                    value={draft.day}
+                    value={isoOrBlank(draft.day)}
                     // A meeting cannot have happened in the future, and the cap
                     // makes the box say so rather than leaving the server to.
-                    max={calendarDay(new Date(), recordZone)}
+                    max={latestDay}
+                    today={latestDay}
                     onChange={(event) => {
                       setDayRefused(false);
                       setDraft({ ...draft, day: event.target.value });
                     }}
-                    onClick={(event) => event.currentTarget.showPicker?.()}
                   />
                 )}
               </Field>

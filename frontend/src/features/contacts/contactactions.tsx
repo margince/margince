@@ -155,6 +155,7 @@ export function ContactActions({
       <CallAction
         appearance="icon"
         number={primaryPhone(view.contact.phones)?.phone}
+        record={{ entityType: "contact", entityId: contactId }}
         label={t("contact.action.call")}
         word={t("record.verb.call")}
         reason={t("contact.action.noPhone")}

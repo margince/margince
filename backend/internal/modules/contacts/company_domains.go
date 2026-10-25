@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -143,9 +144,9 @@ func ensureCompanyDomainsUnclaimed(ctx context.Context, tx pgx.Tx, domains []Com
 func insertCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, source, by string, domains []CompanyDomainInput) error {
 	for _, d := range domains {
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
-			 VALUES ($1, lower($2), $3, $4, $5)`,
-			companyID, d.Domain, d.IsPrimary, source, by); err != nil {
+			`INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by, domain_folded)
+			 VALUES ($1, lower($2), $3, $4, $5, $6)`,
+			companyID, d.Domain, d.IsPrimary, source, by, owndomain.StoredOwn(d.Domain)); err != nil {
 			if name, ok := storekit.UniqueViolation(err); ok {
 				if name == "uq_company_domain" {
 					return &DuplicateDomainError{Domain: d.Domain}

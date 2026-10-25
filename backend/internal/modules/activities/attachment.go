@@ -32,7 +32,7 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 const attachmentColumns = `at.id, at.entity_type, at.entity_id, at.filename,
 	at.content_type, at.byte_size, at.checksum, at.source, at.captured_by, at.created_at,
 	at.category, at.title, at.doc_state, at.pinned, at.supersedes_id, at.company_id,
-	at.contract_id, at.bytes_withheld`
+	at.contract_id, at.bytes_withheld, at.url`
 
 // attachmentSource marks how the row was captured; a direct upload is "upload".
 const attachmentSource = "upload"
@@ -41,6 +41,7 @@ const attachmentSource = "upload"
 const (
 	fieldEntityType = "entity_type"
 	fieldEntityID   = "entity_id"
+	fieldCategory   = "category"
 )
 
 // ensureAttachmentParentVisible enforces that the caller can see the parent
@@ -274,8 +275,19 @@ func listAttachments(ctx context.Context, tx pgx.Tx, entityType string, entityID
 	lim := storekit.ClampLimit(limit)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	where := sprintf(`at.entity_type = $%d AND at.entity_id = $%d AND at.archived_at IS NULL`,
-		arg(entityType), arg(entityID))
+	var where string
+	if entityType == holderContact {
+		// A contact's Documents also holds the files of mails linked to it, each
+		// gated on its own mail.
+		visible, err := visibleParentClause(ctx, arg)
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		where = documentMembership(holderContact, arg(entityID)) + " AND " + visible
+	} else {
+		where = sprintf(`at.entity_type = $%d AND at.entity_id = $%d AND at.archived_at IS NULL`,
+			arg(entityType), arg(entityID))
+	}
 	if cursor != nil && *cursor != "" {
 		c, err := storekit.DecodeCursor(*cursor)
 		if err != nil {
@@ -350,6 +362,7 @@ type attachmentScan struct {
 	contractID  *ids.UUID
 
 	bytesWithheld bool
+	url           *string
 }
 
 // targets are the Scan destinations, in attachmentColumns order.
@@ -358,7 +371,7 @@ func (c *attachmentScan) targets() []any {
 		&c.aid, &c.entityType, &c.entityID, &c.att.Filename,
 		&c.contentType, &c.byteSize, &c.checksum, &c.att.Source, &c.capturedBy, &c.att.CreatedAt,
 		&c.category, &c.att.Title, &c.docState, &c.att.Pinned, &c.supersedes, &c.companyID, &c.contractID,
-		&c.bytesWithheld,
+		&c.bytesWithheld, &c.url,
 	}
 }
 
@@ -382,6 +395,7 @@ func (c *attachmentScan) attachment() crmcontracts.Attachment {
 	att.ContractId = uuidOrNil(c.contractID)
 	withheld := c.bytesWithheld
 	att.BytesWithheld = &withheld
+	att.Url = c.url
 	return att
 }
 

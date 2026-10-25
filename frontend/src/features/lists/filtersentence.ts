@@ -28,9 +28,11 @@ import { fieldLabel, type VocabularyField } from "../../lib/filterdata";
 import {
   type FilterOp,
   isGroup,
+  isRadiusOperand,
   isRelativeDate,
   type Leaf,
   type Node,
+  type RadiusOperand,
 } from "../../lib/segmentpredicate";
 import { useTagCatalog } from "./tagadmin.queries";
 
@@ -51,6 +53,7 @@ const OPERATOR_KEY: Record<FilterOp, MessageKey> = {
   in: "filters.op.in",
   contains: "filters.op.contains",
   exists: "filters.op.exists",
+  within_radius: "filters.op.withinRadius",
 };
 
 /** The four whose reading changes on a quantity. */
@@ -247,6 +250,20 @@ function relativeDateWords(
   return undefined;
 }
 
+/** A radius as "50 km of Stuttgart", or of its coordinates when no place was named. */
+export function radiusText(
+  operand: RadiusOperand,
+  t: Translator,
+  locale: Locale,
+): string {
+  return t("filters.sentence.radiusOf", {
+    km: formatNumber(operand.radius_km, locale),
+    place:
+      operand.label ??
+      `${formatNumber(operand.lat, locale)}, ${formatNumber(operand.lon, locale)}`,
+  });
+}
+
 /** A clause's operand as the filter states it, or "" where it states none yet. */
 function operandText(
   operand: unknown,
@@ -262,6 +279,9 @@ function operandText(
   }
   if (Array.isArray(operand)) {
     return operand.map((one) => scalarText(one, field, words)).join(", ");
+  }
+  if (isRadiusOperand(operand)) {
+    return radiusText(operand, words.t, words.locale);
   }
   if (isRelativeDate(operand)) {
     return words.plural("lists.why.daysAgo", operand.days_ago, {

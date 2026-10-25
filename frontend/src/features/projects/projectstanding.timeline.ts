@@ -9,13 +9,14 @@ import { lastUpdate } from "./projectstanding";
 // on the ladder and in Phase history.
 
 type Project360 = components["schemas"]["Project360"];
+type PhaseMover = components["schemas"]["PrincipalAttribution"];
 
 type Moment<What extends string, Extra> = Readonly<
   { key: string; at: string; kind: TimelineEventKind; what: What } & Extra
 >;
 
 export type ProjectMoment =
-  | Moment<"opened", { phase: string; by: string | null }>
+  | Moment<"opened", { phase: string; by: PhaseMover | null }>
   | Moment<"signed", { title: string }>
   | Moment<"won", { name: string; amountMinor?: number; currency?: string }>
   | Moment<"due", { subject: string }>
@@ -37,7 +38,7 @@ function openedMoment(view: Project360): ProjectMoment[] {
       kind: Date.parse(at) > Date.parse(view.as_of) ? "ahead" : "done",
       what: "opened",
       phase: first?.to_phase ?? "initiative",
-      by: first?.changed_by.display_name ?? null,
+      by: first?.changed_by ?? null,
     },
   ];
 }

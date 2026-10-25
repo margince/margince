@@ -256,7 +256,7 @@ func TestMaterialEventsRungAnswersEachArmOfTheOffer(t *testing.T) {
 	// offered is a conversation the extractor would read: every arm satisfied,
 	// nothing done to it yet. Each case below breaks exactly one thing.
 	offered := ThreadReading{
-		Known: true, ReachesOneAccount: true, IsOneBodyOfWork: true,
+		Known: true, HasAHumanSender: true, ReachesOneAccount: true, IsOneBodyOfWork: true,
 		IsFullyOpen: true, IsFullyRead: true, HasANamedReader: true, HasSettled: true, HasMoved: true,
 	}
 	with := func(edit func(*ThreadReading)) *ThreadReading {
@@ -329,6 +329,11 @@ func TestMaterialEventsRungAnswersEachArmOfTheOffer(t *testing.T) {
 			name: "with no reader a finding could answer to", facts: emailOnAThread,
 			reading: with(func(r *ThreadReading) { r.HasANamedReader = false }),
 			status:  trace.StatusSkipped, reason: trace.ReasonNoNamedReader,
+		},
+		{
+			name: "written only by sending systems", facts: emailOnAThread,
+			reading: with(func(r *ThreadReading) { r.HasAHumanSender = false; r.ReachesOneAccount = false }),
+			status:  trace.StatusSkipped, reason: trace.ReasonFromSendingSystems,
 		},
 		{
 			name: "still moving", facts: emailOnAThread,

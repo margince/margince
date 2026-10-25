@@ -104,9 +104,17 @@ func TestADeclinedInvitationIsOwedNothingUnlessItAsks(t *testing.T) {
 	if owedNow(t, e, seedCalendarMail(t, e, "DECLINECOUNTER", OwedVerdictInformsUs)) {
 		t.Error("a calendar reply the classifier says informs us is owed")
 	}
-	// An invitation from a contact is a request for an answer, as it was.
-	if !owedNow(t, e, seedCalendarMail(t, e, "REQUEST", "")) {
-		t.Error("an unjudged invitation from a contact is no longer owed")
+	// An invitation asks for an RSVP, never for a written reply, unless judged.
+	for _, method := range []string{"REQUEST", "CANCEL", "PUBLISH"} {
+		if owedNow(t, e, seedCalendarMail(t, e, method, "")) {
+			t.Errorf("an unjudged %s from a contact is owed a reply", method)
+		}
+	}
+	if !owedNow(t, e, seedCalendarMail(t, e, "REQUEST", OwedVerdictAsksUs)) {
+		t.Error("an invitation the classifier says asks us is not owed")
+	}
+	if !owedNow(t, e, seedCalendarMail(t, e, "", "")) {
+		t.Error("plain unjudged mail from a contact is no longer owed, so the cases above prove nothing")
 	}
 }
 
@@ -130,11 +138,13 @@ func TestACalendarReplyARepTookOnStaysOwed(t *testing.T) {
 	}
 }
 
-// The record offers unjudged mail as a request to take on; a decline is not one.
+// The record offers unjudged mail as a request to take on; a calendar copy is
+// not one.
 func TestTheRecordOffersNoUnjudgedCalendarReplyForReview(t *testing.T) {
 	e := setupLoad(t)
 	decline := seedCalendarMail(t, e, "REPLY", "")
 	invitation := seedCalendarMail(t, e, "REQUEST", "")
+	plain := seedCalendarMail(t, e, "", "")
 	asOf := requestInstant.Add(time.Hour)
 	review, _, err := storeKnowing(e).ListActivities(e.as(), ListActivitiesInput{RequestReviewAsOf: &asOf})
 	if err != nil {
@@ -147,8 +157,11 @@ func TestTheRecordOffersNoUnjudgedCalendarReplyForReview(t *testing.T) {
 	if offered[decline] {
 		t.Error("an unjudged calendar reply is offered as a request to take on")
 	}
-	if !offered[invitation] {
-		t.Error("an unjudged invitation is no longer offered for review")
+	if offered[invitation] {
+		t.Error("an unjudged invitation is offered as a request to take on")
+	}
+	if !offered[plain] {
+		t.Error("unjudged plain mail is no longer offered for review, so the cases above prove nothing")
 	}
 }
 

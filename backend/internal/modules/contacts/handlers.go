@@ -37,6 +37,10 @@ type Handlers struct {
 	// create proposal. See WithVCardReviewStager for why it is injected.
 	stageVCardReview func(ctx context.Context, entry VCardEntry, candidate *ids.ContactID) error
 
+	// readCardPhoto reads a photo of business cards. Nil is an installation
+	// with no model, and the photo route then answers 501.
+	readCardPhoto CardPhotoReader
+
 	store *Store
 	// listMembers resolves a list read's list_id; nil while lists are off.
 	listMembers storekit.ListMemberFilterResolver
@@ -215,6 +219,15 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 	}
 	if dupEmail, ok := errors.AsType[*DuplicateEmailError](err); ok {
 		httperr.Write(w, r, httperr.Duplicate("duplicate_email", duplicateID(dupEmail.ExistingID.UUID)))
+		return
+	}
+	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
+		// No id and no owner: the caller learns the address is taken and
+		// whether its holder was asked, nothing about the record.
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict, Code: "contact_held_by_colleague", Detail: held.Error(),
+			Details: map[string]any{"share_requested": held.ShareRequested},
+		})
 		return
 	}
 	if dupDomain, ok := errors.AsType[*DuplicateDomainError](err); ok {

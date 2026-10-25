@@ -277,8 +277,9 @@ function meetingAhead(view: Contact360, words: StandingWords): TimelineEvent[] {
   ];
 }
 
-/** The silence since the newest message either way. Its sub says whose move
- *  it is, on the same rule as the head's "Your move". */
+/** The silence since the newest exchange of any kind, a meeting included, as
+ *  the backend counts it. Its sub says whose move it is, on the same rule as
+ *  the head's "Your move". */
 export function contactGap(
   view: Contact360,
   words: StandingWords,
@@ -286,7 +287,7 @@ export function contactGap(
   if (omitted(view, "last_touch")) {
     return undefined;
   }
-  const from = newest(view.last_inbound_at, view.last_outbound_at);
+  const from = view.last_contact_at ?? undefined;
   if (!from) {
     return undefined;
   }
@@ -308,14 +309,4 @@ export function contactGap(
       ? t("standing.noReply")
       : t("co.strip.engagement.waiting_on_them"),
   };
-}
-
-function newest(
-  a: string | null | undefined,
-  b: string | null | undefined,
-): string | undefined {
-  if (!a || !b) {
-    return a ?? b ?? undefined;
-  }
-  return Date.parse(a) >= Date.parse(b) ? a : b;
 }

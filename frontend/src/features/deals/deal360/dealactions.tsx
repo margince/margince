@@ -20,7 +20,7 @@ import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
 import { ArchiveAction } from "../../../components/archive";
 import { ExtensionEntries } from "../../../components/extensionentries";
-import { LogActivityAction } from "../../../components/logactivity";
+import { LogActivityAction } from "../../../components/logactivity.action";
 import { searchCompanyContacts } from "../../../components/meetingattendees";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
@@ -35,6 +35,7 @@ import { navigate } from "../../../lib/router";
 import { useMe } from "../../../lib/session";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
+import { CorrectCloseDayAction } from "./correctcloseday";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
@@ -275,12 +276,18 @@ export function DealActions({
             told about it — absent, not refused. An archived closed deal keeps
             it, refused: the reader came asking whether this can come back. */}
         {(deal.status === "won" || deal.status === "lost") && (
-          <ReopenAction
-            dealId={deal.id}
-            dealVersion={deal.version}
-            openStages={openStages}
-            disabledReasonId={refusedReasonId}
-          />
+          <>
+            <CorrectCloseDayAction
+              deal={deal}
+              disabledReasonId={refusedReasonId}
+            />
+            <ReopenAction
+              dealId={deal.id}
+              dealVersion={deal.version}
+              openStages={openStages}
+              disabledReasonId={refusedReasonId}
+            />
+          </>
         )}
         <ArchiveAction
           disabledReasonId={refusedReasonId}

@@ -32,6 +32,7 @@ const DSRS = {
       status: "open",
       due_at: "2026-08-01T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-07-01T00:00:00Z",
     },
     {
@@ -42,6 +43,7 @@ const DSRS = {
       resolution: "sent by post",
       due_at: "2026-07-12T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-06-01T00:00:00Z",
     },
     {
@@ -53,6 +55,7 @@ const DSRS = {
       assignee_id: "u-1",
       due_at: "2099-11-30T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-06-01T00:00:00Z",
     },
     {
@@ -64,6 +67,7 @@ const DSRS = {
       resolution: "No record of this address",
       due_at: "2026-05-01T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-04-01T00:00:00Z",
     },
   ],

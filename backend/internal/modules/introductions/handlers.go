@@ -104,6 +104,26 @@ func (h Handlers) CreateIntroRequest(w http.ResponseWriter, r *http.Request, id 
 	h.writeAsk(w, r, newID, http.StatusCreated)
 }
 
+// RecordIntroduction records an introduction that already happened.
+func (h Handlers) RecordIntroduction(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var body crmcontracts.RecordIntroductionInput
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	newID, err := h.store.Record(r.Context(), NewRecorded{
+		ContactID:      ids.UUID(id),
+		IntroducerUser: ids.UUID(body.IntroducerUserId),
+		IntroducedUser: ids.UUID(body.IntroducedUserId),
+		On:             body.IntroducedOn.Time,
+		Channel:        string(body.Channel),
+	})
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	h.writeAsk(w, r, newID, http.StatusCreated)
+}
+
 // DecideIntroRequest records the colleague's answer.
 func (h Handlers) DecideIntroRequest(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var body crmcontracts.IntroRequestDecisionInput
@@ -170,6 +190,7 @@ func wire(r *Request) crmcontracts.IntroRequest {
 		IntroducerUserId: openapi_types.UUID(r.IntroducerUser),
 		RouteType:        crmcontracts.ContactGraphRouteType(r.RouteType),
 		InternalReason:   r.InternalReason,
+		Origin:           crmcontracts.IntroOrigin(r.Origin),
 		Status:           crmcontracts.IntroRequestStatus(r.Status),
 		NameDropAllowed:  r.NameDropAllowed,
 		FallbackPolicy:   crmcontracts.IntroFallbackPolicy(r.FallbackPolicy),
@@ -188,6 +209,10 @@ func wire(r *Request) crmcontracts.IntroRequest {
 	}
 	if r.ForwardableNote != "" {
 		out.ForwardableNote = &r.ForwardableNote
+	}
+	if r.RecordedChannel != nil {
+		channel := crmcontracts.IntroRecordedChannel(*r.RecordedChannel)
+		out.RecordedChannel = &channel
 	}
 	out.ThroughContactId = wireID(r.ThroughContactID)
 	out.SuggestedUserId = wireID(r.SuggestedUserID)

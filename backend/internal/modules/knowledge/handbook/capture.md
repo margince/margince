@@ -4,7 +4,6 @@
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part
 of Margince that connects to your mailbox, your calendar and your chat. It files
 what arrives against the right contacts, their companies and projects.
-
 Connecting a mailbox or calendar, and importing your older mail, is its own
 page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
 
@@ -39,6 +38,8 @@ A skipped message is not tried again.
 message is not only internal. It then stores the message and adds it to the
 timelines of the contacts on it, with its links and attachments. The audit log
 records that this happened, never the subject or the body. Mail whose text Margince could not read in full is explained in [When a mail cannot be read](when-a-mail-cannot-be-read.md).
+
+When Margince captures a message, it stores passwords, PINs, access keys and tokens in the subject and text as `[masked]` behind their label. A message stored before Margince masked them can still show them. Text inside attachments is not masked.
 
 **4. Deciding about the sender.** See the ladder below.
 
@@ -98,21 +99,22 @@ It is also listed when the names are close and the mail domain is the employer's
 Nothing is merged by itself. The same check runs when an edit or a data provider adds an address.
 Colleagues see the pair only once the sender has been judged a business contact. A sender kept private, for example because the message is held, is not shown to them.
 
+### Mail with a lead on it
+
+A captured email or meeting goes on the timeline of each open lead whose exact email address is on it. Case does not matter, and `lena@acme.example.org` is not `lena@acme.example`.
+Mail from before the lead goes on it only for an imported lead whose address no other lead ever had. A qualified or disqualified lead gets no mail, and no lead gets mail from a mail system or a sender judged spam or a newsletter. One message goes on at most 25 records, contacts first.
+It does not change who may read the mail: a colleague on the lead sees that a limited email exists, not what it says.
+
 ## When nothing matches
 
-An unknown sender goes into a queue, which Margince works through every 10
-minutes.
+An unknown sender goes into a queue, which Margince works through every 10 minutes.
 
-**An AI model is asked one question:** what kind of sender is this? It is asked
-once per *sender*, never per message, and only for senders the plain rules could
-not sort. The answers it can give:
+**An AI model is asked one question:** what kind of sender is this? It is asked once per *sender*, never per message, and only for senders the plain rules could not sort. The answers it can give:
 
-- **A contact**: create the contact, and check whether the domain should get a
-  company.
-- **A role mailbox** or **a company sender**: keep the mail visible, create no
-  contact.
-- **A newsletter**, **something transactional**, or **spam**: hide the mail and
-  mark the domain as not a company.
+- **A contact**: create the contact, and check whether the domain should get a company.
+- **A role mailbox** or **a company sender**: keep the mail visible, create no contact.
+- **A vendor pitch**: a named sender selling you something you never asked for. The mail stays visible and the sender becomes a contact marked **Vendor / marketing**. Default contact lists leave it out, and its brief suggests no next step. A sender you have written to, or who answered your thread, is an ordinary contact.
+- **A newsletter**, **something transactional**, or **spam**: hide the mail and mark the domain as not a company.
 
 Calendar notifications and meeting notes from Google are never hidden this way.
 They are the record that a meeting took place, so Margince keeps them visible

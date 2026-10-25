@@ -3,7 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Mail, Phone } from "lucide-react";
+import { CallStartProvider } from "../lib/callstart";
 import { WriteToProvider } from "../lib/writeto";
+import {
+  callMessengersRoute,
+  installFetchStub,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CallAction } from "./callaction";
 import { ContactLink } from "./contactlink";
 
@@ -11,19 +17,28 @@ import { ContactLink } from "./contactlink";
 // decision the component owns: a value in the shape its scheme admits becomes
 // an action, and anything else stays as text with the fact intact.
 //
-// The shell's composer host is stood in for by a provider that opens nothing:
-// the story is about the affordance, and without a host the address would be
-// drawn as the reader's own mail client's link.
+// Providers that open nothing stand in for the shell's composer and call log
+// hosts. The story is about the affordance, and without a host the address
+// would be drawn as the reader's own mail client's link.
 const meta: Meta<typeof ContactLink> = {
   title: "Components/Navigation/Contact link",
   component: ContactLink,
   parameters: { layout: "padded" },
   decorators: [
-    (Story) => (
-      <WriteToProvider writeTo={() => {}}>
-        <Story />
-      </WriteToProvider>
-    ),
+    (Story) => {
+      installFetchStub({
+        "GET /installation/settings": callMessengersRoute(),
+      });
+      return (
+        <StoryProviders>
+          <WriteToProvider writeTo={() => {}}>
+            <CallStartProvider start={() => {}}>
+              <Story />
+            </CallStartProvider>
+          </WriteToProvider>
+        </StoryProviders>
+      );
+    },
   ],
 };
 export default meta;
@@ -38,7 +53,7 @@ export const Email: Story = {
 
 export const Phone_: Story = {
   name: "Phone",
-  args: { kind: "phone", value: "+33 6 12 44 08 91" },
+  args: { kind: "phone", value: "+33 6 12 44 08 91", record: dana },
 };
 
 export const WithIcon: Story = {
@@ -49,7 +64,7 @@ export const WithIcon: Story = {
       <ContactLink kind="email" value="dana@brandt.example" record={dana}>
         <Mail size={13} aria-hidden="true" /> dana@brandt.example
       </ContactLink>
-      <ContactLink kind="phone" value="+33 6 12 44 08 91">
+      <ContactLink kind="phone" value="+33 6 12 44 08 91" record={dana}>
         <Phone size={13} aria-hidden="true" /> +33 6 12 44 08 91
       </ContactLink>
     </div>
@@ -89,7 +104,12 @@ export const EmailVerb: Story = {
         address="dana@brandt.example"
         record={dana}
       />
-      <CallAction appearance="button" number="+33 6 12 44 08 91" label="Call" />
+      <CallAction
+        appearance="button"
+        number="+33 6 12 44 08 91"
+        label="Call"
+        record={dana}
+      />
     </div>
   ),
 };

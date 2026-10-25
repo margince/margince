@@ -3,7 +3,6 @@ import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import "@testing-library/jest-dom/vitest";
 import {
   cleanup,
-  fireEvent,
   render,
   screen,
   waitFor,
@@ -274,13 +273,11 @@ it("uses local inclusive custom dates without querying an incomplete range", asy
     "Custom interval",
   );
   const before = fetch.mock.calls.length;
-  fireEvent.change(screen.getByLabelText("From"), {
-    target: { value: "2026-03-28" },
-  });
+  await user.type(screen.getByLabelText("From"), "28/03/2026");
+  await user.tab();
   expect(fetch.mock.calls).toHaveLength(before);
-  fireEvent.change(screen.getByLabelText("Through"), {
-    target: { value: "2026-03-29" },
-  });
+  await user.type(screen.getByLabelText("Through"), "29/03/2026");
+  await user.tab();
   await waitFor(() => {
     const requests = fetch.mock.calls.map(
       ([input]) =>

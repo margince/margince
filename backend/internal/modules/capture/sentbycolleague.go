@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -132,7 +133,7 @@ func stampMessageEnds(
 // server is whatever the seat chose.
 func fromAuthenticated(rec connector.NormalizedRecord, from string) bool {
 	auth := rec.SenderAuthentication
-	domain := domainOfAddress(from)
+	domain := owndomain.OfAddress(from)
 	return rec.CapturedBy == "connector:"+providerGmail && auth.Server == gmailAuthServer &&
 		domain != "" && strings.EqualFold(auth.DMARCPassDomain, domain)
 }
@@ -152,3 +153,40 @@ func senderIsMachine(rec connector.NormalizedRecord, fields ActivityFields) bool
 
 // gmailAuthServer is the authserv-id Gmail names in its Authentication-Results.
 const gmailAuthServer = "mx.google.com"
+
+// insertCounterpartyParticipant stamps the other end of a message. On mail the
+// owner's provider attested as sent, the owner typed that address. So the
+// colleague whose exact login it is gets bound, as StampFurtherParticipants
+// binds a Cc on such a mail. They may then read their copy even when a
+// members_only hold keeps the workspace out.
+func insertCounterpartyParticipant(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role, kind string,
+	counterparty connector.Counterparty, address, channelUserID string, owner ids.UUID,
+) error {
+	var bound *ids.UUID
+	if kind == kindEmail && counterparty.SentByOwner() && address != "" {
+		seat, err := recipientColleagueTx(ctx, tx, address, owner)
+		if err != nil {
+			return err
+		}
+		if !seat.IsZero() {
+			bound = &seat
+		}
+	}
+	return insertParticipant(ctx, tx, activityID, role, bound, nil, address, channelUserID)
+}
+
+// recipientColleagueTx is the seat, other than the owner, whose login is
+// address; zero when there is none. An archived seat does not count.
+func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner ids.UUID) (ids.UUID, error) {
+	var seat ids.UUID
+	err := tx.QueryRow(ctx, `SELECT id FROM app_user WHERE lower(email) = $1 AND id <> $2 AND archived_at IS NULL`,
+		address, owner).Scan(&seat)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.Nil, nil
+	}
+	if err != nil {
+		return ids.Nil, fmt.Errorf("capture: reading whether a recipient is a colleague: %w", err)
+	}
+	return seat, nil
+}

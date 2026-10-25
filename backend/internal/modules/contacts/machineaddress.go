@@ -35,6 +35,8 @@ func refuseMachineAddress(email string) error {
 
 const vcardMachineAddress = "the card's address belongs to a sending system, not a human"
 
+const vcardErasedAddress = "the card's address is on the erasure list and is not stored again"
+
 // cardNamesASendingSystem reports whether any address on a card is one
 // refuseMachineAddress refuses. The import asks it before the dedupe match, so
 // a card matching an existing contact cannot carry the address onto it either.

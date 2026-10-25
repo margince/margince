@@ -471,12 +471,9 @@ func TestATypedQueryAnswersTheAskersOwnPopulation(t *testing.T) {
 	}
 }
 
-// Asking for the workspace is REFUSED, not quietly narrowed.
-//
-// Narrowing would answer a different question than the one asked, with nothing
-// on the answer saying so — and a caller who could assert a wider population
-// and be silently given a smaller one has no way to tell the two apart from a
-// genuinely small one.
+// Asking for a colleague is refused, and asking for the workspace answers the
+// whole workspace. A narrower answer than the one asked for looks the same as
+// a small one.
 func TestATypedQueryRefusesAPopulationTheAskerCannotMeasure(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
@@ -486,12 +483,24 @@ func TestATypedQueryRefusesAPopulationTheAskerCannotMeasure(t *testing.T) {
 
 	_, err := e.askAnalytics(e.ownLensRepCtx(e.Rep1), t, analyticsquery.Query{
 		Entity:    "open-deals-per-company",
+		ScopeKind: ScopeKindOwner,
+		ScopeID:   e.Rep3.String(),
+		Measures:  []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("asking for a colleague answered %v, want a refusal — a caller "+
+			"given a narrower answer than they asked for cannot tell it from a small one", err)
+	}
+	whole, err := e.askAnalytics(e.ownLensRepCtx(e.Rep1), t, analyticsquery.Query{
+		Entity:    "open-deals-per-company",
 		ScopeKind: ScopeKindWorkspace,
 		Measures:  []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
 	})
-	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("asking for the whole workspace answered %v, want a refusal — a caller "+
-			"given a narrower answer than they asked for cannot tell it from a small one", err)
+	if err != nil {
+		t.Fatalf("asking for the whole workspace was refused: %v", err)
+	}
+	if got := whole.Rows[0]["deals"]; got != float64(7) && got != int64(7) {
+		t.Fatalf("the workspace total is %v, want all 7 seeded deals", got)
 	}
 }
 
@@ -596,19 +605,20 @@ func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
 	}
 	q := analyticsquery.Query{
 		Entity:    "open-deals-per-company",
-		ScopeKind: ScopeKindWorkspace,
+		ScopeKind: ScopeKindOwner,
+		ScopeID:   e.Rep3.String(),
 		Measures:  []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
 	}
 
-	// Saved by a seat that MAY measure the workspace, and the answer says 14.
+	// Saved by the colleague on a wide seat, and the answer is their own 7.
 	wide := e.wideLensCtx(e.Rep3)
 	answer, err := e.askAnalytics(wide, t, q)
 	if err != nil {
 		t.Fatalf("the wider seat's question was refused: %v", err)
 	}
-	if got := answer.Rows[0]["deals"]; got != float64(14) && got != int64(14) {
-		t.Fatalf("the wide answer is %v, want 14 — the rest of this case compares "+
-			"against it and says nothing if it was not the whole installation", got)
+	if got := answer.Rows[0]["deals"]; got != float64(7) && got != int64(7) {
+		t.Fatalf("the wide answer is %v, want 7 — the rest of this case compares "+
+			"against it and says nothing if it was not the colleague's whole book", got)
 	}
 	var runID ids.UUID
 	if err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(wide,
@@ -620,13 +630,10 @@ func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
 		t.Fatalf("saving the run: %v", err)
 	}
 
-	// Opened by a rep who may measure only their own. The stored question asks
-	// for the workspace, and that is now a scope THIS reader may not have — so
-	// the refusal is the same one they would meet asking directly.
-	// The read's own refusal is what this asserts, so it is captured rather
-	// than returned: returning it would roll the transaction back and report
-	// the same error through a second path, and a transaction failure would
-	// then be indistinguishable from the refusal being looked for.
+	// Opened by a rep who may measure only their own, so the stored question
+	// about a colleague meets the refusal they would meet asking directly.
+	// The refusal is captured, not returned. A returned one rolls the
+	// transaction back, and a failed transaction then looks like the refusal.
 	var readErr error
 	if err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(e.ownLensRepCtx(e.Rep1),
 		func(ctx context.Context, tx pgx.Tx) error {
@@ -635,8 +642,8 @@ func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
 		}); err != nil {
 		t.Fatalf("opening the saved run: %v", err)
 	}
-	if !errors.Is(readErr, apperrors.ErrPermissionDenied) {
-		t.Fatalf("a rep opening a workspace-scoped run answered %v, want the refusal "+
+	if !errors.Is(readErr, apperrors.ErrNotFound) {
+		t.Fatalf("a rep opening a colleague-scoped run answered %v, want the refusal "+
 			"they would get asking it themselves — a saved link that answers wider "+
 			"than its reader is a way to read somebody else's numbers", readErr)
 	}

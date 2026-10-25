@@ -12,6 +12,7 @@
 // All but `today` are pure and take their zone (or the reader's own wall clock)
 // as input, so nothing here has to be tested against the machine's own zone.
 
+import type { ISODate } from "./datepattern";
 import {
   DAY_MS,
   endOfDayInZone,
@@ -187,8 +188,13 @@ export function dueInstant(day: string, zone: string): string {
 export function localDateTimeValue(utcIso: string): string {
   const at = new Date(utcIso);
   const pad = (value: number) => String(value).padStart(2, "0");
-  const day = `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
-  return `${day}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+  return `${isoDay(at)}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
+/** The day a `Date` falls on in the reader's own zone, as `YYYY-MM-DD`. */
+export function isoDay(at: Date): ISODate {
+  const pad = (value: number, width = 2) => String(value).padStart(width, "0");
+  return `${pad(at.getFullYear(), 4)}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}` as ISODate;
 }
 
 // The instant that is NOON of a picked calendar day in a named zone — for a

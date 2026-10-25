@@ -74,6 +74,9 @@ const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   date_format: "dmy",
   time_format: "24h",
   base_currency_locked: false,
+  call_whatsapp: true,
+  call_telegram: true,
+  call_zalo: true,
 };
 
 // A fresh installation's port, read from its default.

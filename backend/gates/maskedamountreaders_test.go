@@ -303,7 +303,6 @@ var calleeGatedMaskedAmountReads = gatekit.Waive(map[string]string{
 // nobody can check from the statement it is written beside.
 var writePreimageMaskedAmountReads = gatekit.Waive(map[string]string{
 	"internal/modules/deals/basecurrencyfreezewrite.go:frozenBefore":   "the frozen base amount a re-price or a reopen is about to overwrite. amount_minor_base is an internal column on no contract, so the writer has no pre-image to hand over and reads the row for one; recording nil instead would write \"there was no converted amount\" into the audit diff of every reopen, which is the row a reversal reads to put the old figure back",
-	"internal/modules/deals/forecasthistory.go:recordForecastMovement": "INSERT INTO deal_forecast_history … SELECT FROM deal: the deal's state copied into its forecast trail, in the write's own transaction and after the patch landed. The statement answers a row count and no figure. Nothing in this tree READS that table yet, so the obligation belongs to whoever writes the first such read rather than to somebody who has already met it",
 	"internal/modules/deals/offer_dealsync.go:syncDealAmountFromOffer": "the deal's current price under a row lock, so an accepted offer's gross can be compared against it and the audit diff can name what it replaced. The comparison is what keeps an accept re-pricing at the figure already held out of the forecast trail. The pre-image it reads reaches only that diff: the money the function returns in p.After() is the offer's own gross, which its caller supplied",
 })
 

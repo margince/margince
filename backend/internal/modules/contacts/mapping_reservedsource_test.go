@@ -26,7 +26,7 @@ import (
 func TestLeadCreateInputRefusesTheImporterNamespace(t *testing.T) {
 	reserved := "mirror:legacy_crm"
 	_, err := LeadCreationInput(crmcontracts.CreateLeadRequest{
-		Source:       "manual",
+		Source:       new("manual"),
 		SourceSystem: &reserved, SourceId: new("501"),
 	})
 	var refused *provenance.ReservedError
@@ -41,7 +41,7 @@ func TestLeadCreateInputRefusesTheImporterNamespace(t *testing.T) {
 func TestLeadCreateInputAcceptsAnOrdinarySourceSystem(t *testing.T) {
 	ordinary := "legacy_crm"
 	in, err := LeadCreationInput(crmcontracts.CreateLeadRequest{
-		Source:       "manual",
+		Source:       new("manual"),
 		SourceSystem: &ordinary, SourceId: new("501"),
 	})
 	if err != nil {
@@ -71,7 +71,7 @@ func TestEveryProvenanceWireRefusesTheImporterNamespace(t *testing.T) {
 		t.Errorf("company: err = %v, want the namespace refused", err)
 	}
 	if _, err := LeadCreationInput(crmcontracts.CreateLeadRequest{
-		FullName: new("Planted"), Source: reserved,
+		FullName: new("Planted"), Source: new(reserved),
 	}); !errors.As(err, &refused) {
 		t.Errorf("lead source: err = %v, want the namespace refused", err)
 	}
@@ -147,7 +147,7 @@ func TestTheRecordWiresRefuseTheImporterNamespaceOnSourceSystem(t *testing.T) {
 func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	namespaced := "mirror:hubspot"
 	in, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
-		Source:   "manual",
+		Source:   new("manual"),
 		FullName: new("Imported"), SourceSystem: &namespaced, SourceId: new("501"),
 	})
 	if err != nil {
@@ -165,7 +165,7 @@ func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	} {
 		planted := engine
 		_, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
-			Source:   "manual",
+			Source:   new("manual"),
 			FullName: new("Planted"), SourceSystem: &planted, SourceId: new("planted"),
 		})
 		if _, ok := errors.AsType[*provenance.ReservedError](err); !ok {
@@ -176,7 +176,7 @@ func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	// `source` is guarded independently of the admission.
 	var sourceRefused *provenance.ReservedError
 	if _, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
-		FullName: new("Planted"), Source: "mirror:hubspot",
+		FullName: new("Planted"), Source: new("mirror:hubspot"),
 	}); !errors.As(err, &sourceRefused) {
 		t.Errorf("source: err = %v, want the namespace refused on source", err)
 	} else if sourceRefused.Field != "source" {
@@ -187,7 +187,7 @@ func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 	// is still refused, or the admission would have leaked to every caller.
 	var clientRefused *provenance.ReservedError
 	if _, err := LeadCreationInput(crmcontracts.CreateLeadRequest{
-		Source:   "manual",
+		Source:   new("manual"),
 		FullName: new("Planted"), SourceSystem: &namespaced, SourceId: new("501"),
 	}); !errors.As(err, &clientRefused) {
 		t.Errorf("the client door admitted the importer namespace: %v", err)
@@ -230,7 +230,7 @@ func TestALeadFromAContactNamesNoSourceSystem(t *testing.T) {
 	namespaced := "mirror:hubspot"
 	contact := openapi_types.UUID(ids.NewV7())
 	_, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
-		Source:    "manual",
+		Source:    new("manual"),
 		ContactId: &contact, SourceSystem: &namespaced, SourceId: new("501"),
 	})
 	if err == nil {

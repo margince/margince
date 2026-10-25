@@ -10,11 +10,7 @@ import {
   Textarea,
   TextInput,
 } from "../../design-system/atoms";
-import {
-  DateInput,
-  type ISODate,
-  isISODate,
-} from "../../design-system/dateinput";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { DecisionEvidence } from "../../design-system/decisioncard.content";
 import {
   decisionEvidence,
@@ -22,6 +18,7 @@ import {
 } from "../../design-system/decisioncard.payload";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { isRealCalendarDay } from "../../format/calendarday";
@@ -346,13 +343,6 @@ export function editableSeed(entry: EditableField, staged: unknown): string {
   return entry.as === "date" && !isRealCalendarDay(staged) ? "" : staged;
 }
 
-// The seeded value narrowed to what the date control's own type accepts. The
-// seed already dropped anything unshowable, so this is the type narrowing and
-// not a second rule.
-function isoOrBlank(staged: string | undefined): ISODate | "" {
-  return staged && isISODate(staged) ? staged : "";
-}
-
 /**
  * The inline staged-draft editor: the string fields of the proposed_change, in
  * the shape the kind declared for them, going up as `edited_payload`.
@@ -385,7 +375,7 @@ export function StagedEditor({
 }>) {
   const t = useT();
   return (
-    <div className="form-stack approval-editor">
+    <div className="form-stack approval-editor" data-date-scope>
       {fields.map((entry) => (
         <Field
           key={entry.field}
@@ -412,10 +402,8 @@ export function StagedEditor({
             ) : entry.as === "date" ? (
               <DateInput
                 {...control}
-                // A staged date the control cannot show is shown as empty
-                // rather than passed through: the element would blank a
-                // malformed value on its own, and an empty box a reader can
-                // fill beats one that silently drops what they typed.
+                // A staged date that is not a day shows as an empty box the
+                // reader can fill, not as text the field would refuse.
                 value={isoOrBlank(draft[entry.field])}
                 onChange={(event) => onChange(entry.field, event.target.value)}
               />
@@ -445,7 +433,11 @@ export function StagedEditor({
             variant="primary"
             pending={pending}
             disabled={disabled}
-            onClick={onApprove}
+            onClick={(event) => {
+              if (!refuseUnreadableField(event.currentTarget)) {
+                onApprove();
+              }
+            }}
           >
             {acceptLabel ?? t("decision.approveEdited")}
           </Button>

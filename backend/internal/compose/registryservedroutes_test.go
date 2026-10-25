@@ -213,7 +213,11 @@ type toolShape struct {
 }
 
 func shapeDifferences(at string, declared *openapi3.Schema, answered toolShape) []string {
-	if !declared.Type.Is(answered.Type) {
+	// A nullable member is declared [T, "null"] and answered as T: the tool's
+	// schema states absence through `required`, not through a null type.
+	nullableOfAnswered := declared.Type.Includes("null") && len(declared.Type.Slice()) == 2 && declared.Type.Includes(answered.Type)
+	agrees := declared.Type.Is(answered.Type) || nullableOfAnswered
+	if !agrees {
 		return []string{at + " is " + strings.Join(declared.Type.Slice(), ",") + " in the contract and " +
 			answered.Type + " in the tool's output"}
 	}

@@ -112,7 +112,7 @@ describe("ProjectScreen", () => {
     expect(
       screen.getByRole("button", { name: "Phase one licence" }),
     ).toBeTruthy();
-    expect(screen.getByText("Since 1 Jun · opened by Me")).toBeTruthy();
+    expect(screen.getByText("Since 1 Jun · Me opened it")).toBeTruthy();
     expect(
       screen.getByText(/No contract is filed under this project/),
     ).toBeTruthy();
@@ -130,6 +130,54 @@ describe("ProjectScreen", () => {
     expect(
       screen.queryByRole("region", { name: en["record.timeline"] }),
     ).toBeNull();
+  });
+
+  it("names an agent move, its reason and an unrecorded move on the phase history", async () => {
+    projectsBackend({
+      view: project360({
+        phase_history: {
+          data: [
+            {
+              id: "ph-1",
+              from_phase: null,
+              to_phase: "initiative",
+              reason: null,
+              changed_at: "2026-06-01T09:00:00Z",
+            },
+            {
+              id: "ph-2",
+              from_phase: "initiative",
+              to_phase: "delivering",
+              reason: "Contract signed",
+              changed_at: "2026-06-10T09:00:00Z",
+              changed_by: {
+                actor_type: "agent",
+                actor_id: "agent:p-1",
+                actor_name: null,
+                on_behalf_of: "u-1",
+                on_behalf_of_name: "Anna Weber",
+                agent_client: "Claude",
+                passport_id: "p-1",
+              },
+            },
+          ],
+          phase_durations: [
+            { phase: "initiative", seconds: 777_600, current: false },
+            { phase: "delivering", seconds: 1_900_800, current: true },
+          ],
+        },
+      }),
+    });
+    render(<ProjectScreen id="p-1" />);
+    expect(
+      await screen.findByText(
+        "Since 10 Jun · Anna Weber, via Claude, moved it · Contract signed",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("1 Jun → 10 Jun · Who made this move was not recorded"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/System/)).toBeNull();
   });
 
   it("opens the stakeholders and the companies from the More menu", async () => {

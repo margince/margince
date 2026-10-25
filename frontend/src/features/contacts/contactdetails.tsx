@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { ADDRESS_FIELDS, addressFrom } from "../../components/companyform";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
@@ -110,13 +111,17 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           "phone",
           t("create.phone"),
           phone && (
-            <>
-              <ContactLink kind="phone" value={phone.phone} />
+            <span className="fieldgrid-handle">
+              <ContactLink
+                kind="phone"
+                value={phone.phone}
+                record={{ entityType: "contact", entityId: contact.id }}
+              />
               <BoughtMark
                 bought={bought.get(`phone:${phone.id}`)}
                 subject={phone.phone}
               />
-            </>
+            </span>
           ),
           Boolean(phone),
         ),
@@ -146,7 +151,22 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           </>,
           Boolean(contact.title),
         ),
-        field("address", t("co.address.summary"), address, address !== ""),
+        field(
+          "address",
+          t("co.address.summary"),
+          <>
+            {address}
+            {contact.address_country_mismatch && (
+              <>
+                {" "}
+                <AddressCountryMismatchBadge
+                  mismatch={contact.address_country_mismatch}
+                />
+              </>
+            )}
+          </>,
+          address !== "",
+        ),
       ],
     },
     {
@@ -254,7 +274,11 @@ export function ContactDetails({
           phones: contact.phones?.length
             ? contact.phones.map((phone) => (
                 <span key={phone.phone} className="fieldgrid-handle">
-                  <ContactLink kind="phone" value={phone.phone} />
+                  <ContactLink
+                    kind="phone"
+                    value={phone.phone}
+                    record={{ entityType: "contact", entityId: contact.id }}
+                  />
                   <span className="t-caption">
                     {t(PHONE_TYPE_LABEL[phone.phone_type ?? "work"])}
                   </span>

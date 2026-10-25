@@ -60,7 +60,12 @@ type Input struct {
 	// omitted when empty so a company without one keeps the fingerprint it
 	// had. The model is shown the code worded in the prompt language
 	// (encodeInput), which the language component of the fingerprint covers.
-	Industry      string `json:"industry,omitempty"`
+	Industry string `json:"industry,omitempty"`
+	// AssessAgainst is the legal entity whose offering this company is judged
+	// against, empty for the main one. The offering read and the model request
+	// both take it from here, so the cache key and the prompt use one value. It
+	// stays out of the JSON because the offering fingerprint carries its effect.
+	AssessAgainst string `json:"-"`
 	ProfileFields []crmcontracts.CompanyProfileField
 	Facts         []crmcontracts.CompanyFact
 }
@@ -97,6 +102,7 @@ func BuildInput(ctx context.Context, facts Facts, id ids.CompanyID) (Input, erro
 		CompanyID:     id.String(),
 		Name:          company.DisplayName,
 		Industry:      companyIndustry(company),
+		AssessAgainst: assessAgainstOf(company),
 		ProfileFields: fields,
 		Facts:         extracted,
 	}, nil
@@ -144,4 +150,11 @@ func companyIndustry(company crmcontracts.Company) string {
 		return ""
 	}
 	return strings.TrimSpace(string(*company.Industry))
+}
+
+func assessAgainstOf(company crmcontracts.Company) string {
+	if company.AssessAgainstEntityId == nil {
+		return ""
+	}
+	return company.AssessAgainstEntityId.String()
 }

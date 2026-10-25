@@ -251,6 +251,17 @@ func resolveWindow(
 		time.Date(monday.Year(), monday.Month(), monday.Day(), 0, 0, 0, 0, zone), zone)
 }
 
+// ForecastScopeHoldsDeals answers whether the forecast's population holds a
+// deal, with the unowned rule ForecastDeals reads under.
+func ForecastScopeHoldsDeals(ctx context.Context, tx pgx.Tx, scope forecasting.Scope) (bool, error) {
+	requested := requestedFromForecastScope(scope)
+	if scope.Kind == ScopeKindManagedTeams {
+		// A resolved-only kind: asking for the default again re-derives it.
+		requested = RequestedScope{}
+	}
+	return scopeHoldsDeals(ctx, tx, requested, unownedIsExcluded)
+}
+
 // ForecastWritableScope answers the population a caller may ASSERT about, in
 // the forecast module's own vocabulary.
 //
@@ -261,7 +272,7 @@ func resolveWindow(
 func ForecastWritableScope(
 	ctx context.Context, tx pgx.Tx, requested forecasting.Scope,
 ) (forecasting.Scope, error) {
-	resolved, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(requested))
+	resolved, err := ResolveAssertionScope(ctx, tx, requestedFromForecastScope(requested))
 	if err != nil {
 		return forecasting.Scope{}, err
 	}

@@ -36,6 +36,7 @@ const (
 	leadStatusColumn  = "status"
 	leadScoreColumn   = "score"
 	leadSourceColumn  = "source"
+	leadOriginColumn  = "origin"
 	createdAtColumn   = "created_at"
 	updatedAtColumn   = "updated_at"
 	// lastActivityColumn is the timeline clock contact and company carry
@@ -66,6 +67,7 @@ var leadListFields = map[string]storekit.SortField{
 	lastActivityColumn: {Kind: storekit.KindTimestamp, Expr: orderByLeadLastActivity},
 	leadNextTaskField:  {Kind: storekit.KindTimestamp, Expr: orderByLeadNextTaskDue},
 	leadSourceColumn:   {Kind: fieldcatalog.TypeText, Expr: orderByLeadSourceLabel},
+	leadOriginColumn:   {Kind: fieldcatalog.TypeText, Expr: orderByLeadOriginLabel},
 }
 
 // leadNextTaskField is what the Next task header sorts by: when the next open
@@ -95,6 +97,12 @@ func orderByLeadNextTaskDue(ctx context.Context, arg func(any) int) (string, err
 // otherwise arrange the list by an identifier no reader can see.
 func orderByLeadSourceLabel(context.Context, func(any) int) (string, error) {
 	return leadSourceLabelSQL, nil
+}
+
+// orderByLeadOriginLabel orders by the words the Origin column prints, for the
+// reason orderByLeadSourceLabel gives.
+func orderByLeadOriginLabel(context.Context, func(any) int) (string, error) {
+	return leadOriginLabelSQL, nil
 }
 
 // ListLeads is the row-scoped lead list read: quick-find, the status and
@@ -176,6 +184,9 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	if in.Source != nil {
 		where = append(where, leadSourceClause(*in.Source, arg))
 	}
+	if in.Origin != nil {
+		where = append(where, leadOriginClause(*in.Origin, arg))
+	}
 	if in.SLAState != nil {
 		where = append(where, slaStateClause(ctx, policy, *in.SLAState, arg))
 	}
@@ -210,9 +221,9 @@ const leadQuickFindExpr = `(coalesce(full_name, '') || ' ' || coalesce(company_n
 
 func leadQuickFindClause(query string, arg func(any) int) string {
 	pos := arg(strings.TrimSpace(query))
-	return storekit.SQLf(`(%s OR email = lower($%d)
+	return storekit.SQLf(`(%s
 		OR lower(rtrim(linkedin_url, '/')) = lower(rtrim($%d, '/')))`,
-		storekit.QuickFindClause(pos, leadQuickFindExpr), pos, pos)
+		storekit.QuickFindClauseWith(pos, leadQuickFindExpr, storekit.LeadEmails), pos)
 }
 
 // scanLeadPage drains one list query's rows: each lead plus, under a

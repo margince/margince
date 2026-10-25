@@ -27,6 +27,7 @@ const (
 	// this report reads, guaranteed by the deal_closed_at CHECK.
 	colClosedAt = "t.closed_at"
 	colSource   = "t.source"
+	colOrigin   = "t.origin"
 	// The company's size band, read over win-loss's join to company. The
 	// alias is `company` because `t` is the deal and `ref` is what the row-scope
 	// clause binds its own subquery to.
@@ -39,6 +40,7 @@ const (
 	fieldDaysToClose = "days_to_close"
 
 	fieldSource        = "source"
+	fieldOrigin        = "origin"
 	fieldSizeBand      = "size_band"
 	fieldPeriodYear    = "period_year"
 	fieldPeriodQuarter = "period_quarter"

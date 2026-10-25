@@ -23,6 +23,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -140,7 +141,7 @@ func TestANullResolutionClearsAnOpenRequestsAnswer(t *testing.T) {
 func TestAClosedRequestKeepsItsAnswer(t *testing.T) {
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "closed@dsr.test")
-	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent"}`); w.Code != http.StatusOK {
+	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent","identity_check":"id_document"}`); w.Code != http.StatusOK {
 		t.Fatalf("fulfilling → %d: %s", w.Code, w.Body)
 	}
 
@@ -158,7 +159,7 @@ func TestAClosedRequestKeepsItsAnswer(t *testing.T) {
 func TestAClosedRequestRefusesAnotherAnswerAndAcceptsItsOwn(t *testing.T) {
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "rewrite@dsr.test")
-	if w := e.patchDSR(t, request.ID, `{"status":"rejected","resolution":"first answer"}`); w.Code != http.StatusOK {
+	if w := e.patchDSR(t, request.ID, `{"status":"rejected","resolution":"first answer","identity_check":"id_document"}`); w.Code != http.StatusOK {
 		t.Fatalf("rejecting → %d: %s", w.Code, w.Body)
 	}
 
@@ -177,8 +178,10 @@ func TestAClosedRequestRefusesAnotherAnswerAndAcceptsItsOwn(t *testing.T) {
 func TestARepeatedErasureFulfilmentIsAccepted(t *testing.T) {
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
-	erase := func(context.Context, ids.UUID, string) error { return nil }
-	in := UpdateDSRInput{Status: new("fulfilled"), Resolution: new("erased on request")}
+	erase := func(context.Context, ids.UUID, string) (erasureaccount.Account, error) {
+		return erasureaccount.Empty(), nil
+	}
+	in := UpdateDSRInput{Status: new("fulfilled"), Resolution: new("erased on request"), Proof: idDocumentChecked}
 
 	for attempt := 1; attempt <= 2; attempt++ {
 		if _, err := e.store.FulfilErasure(e.ctx, request.ID, in, erase); err != nil {
@@ -224,7 +227,7 @@ func (e *dsrEnv) auditedResolutionClaims(t *testing.T, id ids.UUID) []any {
 func TestResendingTheStoredAnswerWritesNoAuditRow(t *testing.T) {
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "audit-claim@dsr.test")
-	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent"}`); w.Code != http.StatusOK {
+	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent","identity_check":"id_document"}`); w.Code != http.StatusOK {
 		t.Fatalf("fulfilling → %d: %s", w.Code, w.Body)
 	}
 	if w := e.patchDSR(t, request.ID, `{"resolution":"package sent"}`); w.Code != http.StatusOK {

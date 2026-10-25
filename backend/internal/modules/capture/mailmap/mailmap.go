@@ -20,6 +20,7 @@ import (
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -99,7 +100,7 @@ type Message struct {
 	openRecipients   []string
 	directRecipients []string
 	recipientsUnread bool
-	linkHosts        []string
+	links            []capture.MailLink
 	linksCut         bool
 	listMail         bool
 }
@@ -225,7 +226,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		openRecipients:   allAddresses(toList, ccList),
 		directRecipients: allAddresses(toList),
 		recipientsUnread: toErr != nil || ccErr != nil,
-		linkHosts:        walked.links,
+		links:            walked.links,
 		linksCut:         walked.linksCut,
 		listMail:         viaGroup || header.Get("List-Id") != "" || header.Get("List-Unsubscribe") != "",
 		parts:            parts,
@@ -405,6 +406,8 @@ func (m Message) ID() string { return m.messageID }
 // The counterparty (From/To) is folded into a compact header on the body —
 // the activity schema has no dedicated participant column, and the timeline
 // needs to show who the mail was with.
+//
+// Subject and body carry credentials masked; Raw keeps the original.
 func (m Message) ToRecord(connectorName string, raw []byte) connector.NormalizedRecord {
 	source := connectorName + ":" + m.messageID
 	body, stored := m.storedBody()
@@ -413,15 +416,16 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 		EntityType: datasource.EntityActivity,
 		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: m.messageID},
 		Fields: capture.ActivityFields{
-			Kind:             "email",
-			Subject:          m.subject,
-			Body:             body,
-			OccurredAt:       m.occurredAt,
-			Direction:        m.direction,
-			HasCalendarPart:  m.hasCalendarPart,
-			CalendarMethod:   m.calendarMethod,
-			BodyCompleteness: stored,
-			Envelope:         m.envelope(),
+			Kind:              "email",
+			Subject:           credentialmask.MaskText(m.subject),
+			Body:              body,
+			OccurredAt:        m.occurredAt,
+			Direction:         m.direction,
+			HasCalendarPart:   m.hasCalendarPart,
+			CalendarMethod:    m.calendarMethod,
+			BodyCompleteness:  stored,
+			CredentialsMasked: m.masksCredentials(),
+			Envelope:          m.envelope(),
 		},
 		Source:               source,
 		CapturedBy:           "connector:" + connectorName,
@@ -446,9 +450,10 @@ func (m Message) envelope() *capture.MailEnvelope {
 	if m.listMail {
 		return nil
 	}
+	hosts, hostsOver := hostsOf(m.links)
 	return &capture.MailEnvelope{
 		OpenRecipients: m.openRecipients, DirectRecipients: m.directRecipients, RecipientsUnreadable: m.recipientsUnread,
-		LinkHosts: m.linkHosts, LinksTruncated: m.linksCut,
+		LinkHosts: hosts, Links: m.links, LinksTruncated: m.linksCut || hostsOver,
 	}
 }
 

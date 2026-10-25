@@ -90,6 +90,13 @@ type CompanyContext struct {
 	Scopes        []CompanyContextSection
 	Fingerprint   string
 	GeneratedAt   time.Time
+	// Confirmed says the offering these scopes describe carries the minimum a
+	// reader may rely on: a name, an offer summary and an ideal customer.
+	Confirmed bool
+	// OfferingID is the legal entity the context describes, the default entity
+	// for the main offering. It is the zero id on an installation with none.
+	OfferingID   ids.LegalEntityID
+	OfferingName string
 }
 
 var profileContextScopes = map[string]CompanyContextScope{
@@ -114,22 +121,22 @@ var profileContextScopes = map[string]CompanyContextScope{
 	fieldRegisterNumber:    CompanyContextAdministrative,
 }
 
-// GetCompanyContext reads and assembles the selected anchor-company scopes
-// under the normal workspace transaction and company visibility gate.
-func (s *Store) GetCompanyContext(ctx context.Context, requested []CompanyContextScope) (CompanyContext, error) {
+// GetCompanyContext reads and assembles the selected scopes of one offering
+// under the normal workspace transaction. The zero selector reads the anchor
+// company through its visibility gate; an entity selector reads that legal
+// entity's own offering profile.
+func (s *Store) GetCompanyContext(ctx context.Context, requested []CompanyContextScope, offering OfferingSelector) (CompanyContext, error) {
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return CompanyContext{}, err
 	}
+	if !offering.EntityID.IsZero() {
+		if err := auth.Require(ctx, legalEntityObject, principal.ActionRead); err != nil {
+			return CompanyContext{}, err
+		}
+	}
 	var out CompanyContext
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		companyID, err := anchorCompany(ctx, tx, false)
-		if err != nil {
-			return err
-		}
-		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
-			return err
-		}
-		company, err := readAnchorCompany(ctx, tx, companyID)
+		offered, err := readOffering(ctx, tx, offering)
 		if err != nil {
 			return err
 		}
@@ -137,7 +144,9 @@ func (s *Store) GetCompanyContext(ctx context.Context, requested []CompanyContex
 		if err := tx.QueryRow(ctx, `SELECT transaction_timestamp()`).Scan(&generatedAt); err != nil {
 			return fmt.Errorf("read company context timestamp: %w", err)
 		}
-		out = assembleCompanyContext(company, requested, generatedAt)
+		out = assembleCompanyContext(offered.company, requested, generatedAt)
+		out.Confirmed = offered.company.MinimumComplete
+		out.OfferingID, out.OfferingName = offered.id, offered.name
 		return nil
 	})
 	if err != nil {
@@ -208,7 +217,7 @@ func assembleCompanyContext(company Company, requested []CompanyContextScope, ge
 		CompanyID:     company.CompanyID,
 		SchemaVersion: 1,
 		Scopes:        ordered,
-		Fingerprint:   fingerprintCompanyContext(ordered),
+		Fingerprint:   fingerprintCompanyContext(company.DisplayName, ordered),
 		GeneratedAt:   generatedAt,
 	}
 }
@@ -254,8 +263,12 @@ func companyContextItemKey(item CompanyContextItem) string {
 	return strings.Join([]string{item.Key, item.Value, item.Source, item.CapturedBy, item.SourceURL, confidence}, "\x00")
 }
 
-func fingerprintCompanyContext(sections []CompanyContextSection) string {
+// The display name is hashed because callers cache it beside the facts, and a
+// rename must not leave the cached name stale.
+func fingerprintCompanyContext(displayName string, sections []CompanyContextSection) string {
 	var canonical strings.Builder
+	canonical.WriteString(displayName)
+	canonical.WriteByte('\n')
 	for _, section := range sections {
 		canonical.WriteString(string(section.Scope))
 		canonical.WriteByte('\n')

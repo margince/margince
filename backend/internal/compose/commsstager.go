@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -338,9 +337,9 @@ func actionsForRefusal(ctx context.Context, review consent.Review) []string {
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return nil
 	}
-	// A holder of the grant directs the send; anyone else overrules a refusal
-	// the engine lets a rep overrule, with their own reason.
-	if auth.Require(ctx, consent.EntityCommunicationException, principal.ActionCreate) == nil {
+	// Whoever may direct past every refusal directs the send; anyone else
+	// overrules a refusal the engine lets a rep overrule, with their own reason.
+	if review.DirectableBy(ctx) {
 		return []string{"direct_send"}
 	}
 	if len(review.Overrulable()) == 0 {

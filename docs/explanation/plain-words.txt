@@ -734,7 +734,6 @@ jitter
 job
 join
 journey
-jpeg
 judge
 jurisdiction
 just
@@ -1037,7 +1036,6 @@ plan
 platform
 plugin
 plus
-png
 pod
 point
 policy

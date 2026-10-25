@@ -154,7 +154,7 @@ func stageReviewsWith(
 		// The index is ImportVCards' own position in the slice it was handed, so
 		// the bound is a belt on a contract that already holds — but a panic in
 		// an unattended writer is worth one comparison.
-		if r.Outcome != contacts.VCardNeedsReview || r.Index < 0 || r.Index >= len(entries) {
+		if !r.Outcome.AwaitsApproval() || r.Index < 0 || r.Index >= len(entries) {
 			continue
 		}
 		eligible++

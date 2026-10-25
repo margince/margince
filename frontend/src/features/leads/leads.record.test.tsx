@@ -13,6 +13,7 @@ import {
   lead,
   openLeadActions,
   render,
+  SHIPPED_LEAD_ORIGINS,
   stubFetch,
   stubFetchWithMe,
 } from "./leads.testkit";
@@ -78,6 +79,61 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     expect(patchBody).toMatchObject({ title: "VP Sales" });
     expect(patchBody).not.toHaveProperty("status");
     expect(patchBody).not.toHaveProperty("score");
+  });
+
+  it("reads where the lead came from and how the row was added as two facts", async () => {
+    stubFetch(async (url) => {
+      if (url.endsWith("/v1/lead-origins")) {
+        return jsonResponse(SHIPPED_LEAD_ORIGINS);
+      }
+      return jsonResponse({
+        ...lead,
+        origin: "referral",
+        origin_label: "Referral",
+        origin_detail: "Berlin summit",
+        source: "mirror:csv:pipedrive-export:lead:l-7",
+        imported_from: "pipedrive-export",
+      });
+    });
+    render(<LeadScreen id="l-1" />);
+
+    const origin = await screen.findByText("Origin");
+    expect(origin.closest("div")).toHaveTextContent("Referral");
+    expect(screen.getByText("Berlin summit")).toBeTruthy();
+    const added = screen.getByText("Added via");
+    expect(added.closest("div")).toHaveTextContent(
+      "Imported from pipedrive-export",
+    );
+    expect(screen.queryByText(/mirror:csv/)).toBeNull();
+  });
+
+  it("moves the origin with a PATCH that carries the origin and no source", async () => {
+    let patchBody: Record<string, unknown> | null = null;
+    stubFetch(async (url, method, request) => {
+      if (method === "PATCH") {
+        patchBody = JSON.parse(await request.text());
+        return jsonResponse({ ...lead, origin: "partner", version: 2 });
+      }
+      if (url.endsWith("/v1/lead-origins")) {
+        return jsonResponse(SHIPPED_LEAD_ORIGINS);
+      }
+      return jsonResponse(lead);
+    });
+    render(<LeadScreen id="l-1" />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Show \d+ empty fields?$/ }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Origin" }),
+    );
+    // The picker opens on the click that started editing.
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Partner" }),
+    );
+
+    await waitFor(() => expect(patchBody).toBeTruthy());
+    expect(patchBody).toMatchObject({ origin: "partner" });
+    expect(patchBody).not.toHaveProperty("source");
   });
 
   it("preserves the Qualify button and reads the score, status and company", async () => {

@@ -34,7 +34,7 @@ func TestAFailedOwnerChartGetsNoZeroRowsPerMember(t *testing.T) {
 		Points:   []crmcontracts.ReportingPoint{},
 	}
 	frame := crmcontracts.ReportingContext{MemberIds: []openapi_types.UUID{openapi_types.UUID(ids.NewV7())}}
-	if err := (&Service{}).ownerTargets(context.Background(), nil, frame, &chart); err != nil {
+	if err := (&Service{}).ownerTargets(context.Background(), nil, targetReach{}, frame, &chart); err != nil {
 		t.Fatal(err)
 	}
 	if len(chart.Points) != 0 {

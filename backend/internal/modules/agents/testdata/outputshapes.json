@@ -799,6 +799,9 @@
           "captured_by": {
             "type": "string"
           },
+          "category": {
+            "type": "string"
+          },
           "checksum": {
             "type": "string"
           },
@@ -821,6 +824,9 @@
             "type": "string"
           },
           "filename": {
+            "type": "string"
+          },
+          "url": {
             "type": "string"
           }
         },
@@ -5880,6 +5886,9 @@
                 "captured_by": {
                   "type": "string"
                 },
+                "category": {
+                  "type": "string"
+                },
                 "checksum": {
                   "type": "string"
                 },
@@ -5902,6 +5911,9 @@
                   "type": "string"
                 },
                 "filename": {
+                  "type": "string"
+                },
+                "url": {
                   "type": "string"
                 }
               },
@@ -10256,10 +10268,31 @@
                       "format": "date-time"
                     },
                     "changed_by": {
-                      "type": "string"
-                    },
-                    "changed_by_name": {
-                      "type": "string"
+                      "type": "object",
+                      "properties": {
+                        "actor_id": {
+                          "type": "string"
+                        },
+                        "actor_name": {
+                          "type": "string"
+                        },
+                        "actor_type": {
+                          "type": "string"
+                        },
+                        "agent_client": {
+                          "type": "string"
+                        },
+                        "on_behalf_of_name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "actor_id",
+                        "actor_name",
+                        "actor_type",
+                        "agent_client",
+                        "on_behalf_of_name"
+                      ]
                     },
                     "from_phase": {
                       "type": "string"
@@ -10273,8 +10306,6 @@
                   },
                   "required": [
                     "changed_at",
-                    "changed_by",
-                    "changed_by_name",
                     "from_phase",
                     "reason",
                     "to_phase"
@@ -11963,6 +11994,32 @@
           "coverage": {
             "type": "string"
           },
+          "near_matches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "record_type": {
+                  "type": "string"
+                },
+                "snippet": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "record_type",
+                "title"
+              ]
+            }
+          },
           "next_cursor": {
             "type": "string"
           },
@@ -12718,6 +12775,167 @@
     ]
   },
   "send_outbound": null,
+  "set_up_partner": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "archived_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cert_status": {
+            "type": "string"
+          },
+          "company_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "gate_metrics": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "last_contact_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "margin_tier": {
+            "type": "string"
+          },
+          "masked_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "next_step": {
+            "type": "string"
+          },
+          "next_step_due_at": {
+            "type": "string"
+          },
+          "partner_fit_override_reason": {
+            "type": "string"
+          },
+          "partner_fit_score": {
+            "type": "integer"
+          },
+          "partner_fit_score_computed": {
+            "type": "integer"
+          },
+          "partner_role": {
+            "type": "string"
+          },
+          "relationship_health": {
+            "type": "string"
+          },
+          "relationship_stage": {
+            "type": "string"
+          },
+          "served_segments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cert_status",
+          "company_id",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
   "update_record": {
     "type": "object",
     "properties": {
@@ -13101,6 +13319,34 @@
       "data": {
         "type": "object",
         "properties": {
+          "capture_gaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "display_name": {
+                  "type": "string"
+                },
+                "invited": {
+                  "type": "boolean"
+                },
+                "last_on_thread_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "display_name",
+                "invited",
+                "last_on_thread_at",
+                "user_id"
+              ]
+            }
+          },
           "colleagues": {
             "type": "array",
             "items": {
@@ -13140,6 +13386,7 @@
           }
         },
         "required": [
+          "capture_gaps",
           "colleagues",
           "contact_id"
         ]

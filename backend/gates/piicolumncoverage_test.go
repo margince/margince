@@ -225,6 +225,9 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"lead": {
 		"captured_by",
+		// A key of the closed lead_origin list, which names no one. The note
+		// beside it, origin_detail, is free text and the redaction clears it.
+		"origin",
 		"source",
 		"source_id",
 		"source_system",
@@ -233,6 +236,10 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"contact": {
 		"captured_by",
+		// A closed vocabulary and the principal that chose it; neither holds
+		// anything a subject wrote.
+		"relationship_mark",
+		"relationship_mark_set_by",
 		"source",
 		// Which system the record was imported FROM — a system's name, not the
 		// subject's, drawn from the closed set an importer writes. What the

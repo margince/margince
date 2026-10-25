@@ -7,7 +7,7 @@ A lead is someone you may sell to. A deal is one opportunity with one company, a
 
 > "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it."
 
-A lead needs only a source. Email and LinkedIn address are the fields used to
+A lead needs no origin. Email and LinkedIn address are the fields used to
 find copies of one lead; a second live lead with the same email is refused.
 
 ### How do I create a lead?
@@ -15,7 +15,7 @@ To create a lead in Margince, open **Leads** in the sidebar and choose **New lea
 1. Enter the **Full name** (required).
 2. You may fill **Email**, **LinkedIn URL**, **Title** and **Company** (free text, not a link to a company record).
 3. Pick the **Owner** (required; **Unassigned** is one of the choices).
-4. Pick the **Source** (required). It starts on the first source in the list, most often "Created manually".
+4. Pick the **Origin** if you know it: where the lead came from, such as a referral or an event. You may add an **Origin note**, such as the event name. Only the origin counts for the score, and a lead with none gets no points for it.
 5. Fill any custom fields, then choose **Create**.
 Many leads at once come in through Settings → **Data import**.
 Also called: add a prospect, new lead.
@@ -138,7 +138,7 @@ Also called: restore a lead, undo a disqualification.
 ### How do I edit a lead?
 To edit a lead in Margince, open it from **Leads** and click the value to change in its **Details** panel. Each field changes in place, with no Edit button.
 1. Click a value, change it, and press Enter or pick from the list. Esc cancels. **Email** opens a small form with **Save**.
-2. Fields: **Full name**, **Email**, **Title**, **Company**, **Owner**, **Company routing key**, **Project**, **Source**, custom fields.
+2. Fields: **Full name**, **Email**, **Title**, **Company**, **Owner**, **Company routing key**, **Project**, **Origin**, **Origin note**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
 Also called: update a lead, rename a lead, correct a prospect.
 
@@ -285,7 +285,7 @@ A project page in Margince brings together everything filed under the work. Its 
 The large column opens with the figures **Open deals**, **Won deals**, **Open commitments** and **Activity**. Then come **Delivery health**, and the **Deals** card with **New deal**.
 Then comes **Open commitments**: open tasks filed under the project, soonest due first, late ones marked **Overdue**. The timeline follows.
 
-The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. Files attached to the project's deals stay on the deals.
+The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**. Files attached to the project's deals stay on the deals.
 
 ### How do I edit or rename a project?
 To edit or rename a project in Margince, open it from **Projects** and choose **More actions** → **Edit project**. Change the fields and choose **Save**.

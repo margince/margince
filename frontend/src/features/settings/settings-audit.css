@@ -1,5 +1,5 @@
-/* Three dials a line, two in a narrow column, so a date keeps room for its
-   picker. Fixed tracks and a viewport query: these tracks set the bar's width. */
+/* Three dials a line, two in a narrow column. Two date shells need 306px and the bar
+   has 93px less than the viewport, so below 25rem (399px) it is one column. */
 .auditlog-dials {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -10,6 +10,11 @@
 @media (width < 64rem) {
   .auditlog-dials {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (width < 25rem) {
+  .auditlog-dials {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

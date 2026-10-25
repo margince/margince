@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -160,8 +161,9 @@ func TestSnapshotsOfAnotherPopulationAreNotListed(t *testing.T) {
 	}
 }
 
-// The REST door reads the same store method the tool does, so what it serves is
-// pinned here against the real handler rather than assumed from the method.
+// The REST door reads the same store method the tool does. What it serves is
+// pinned here against the real handler. A seat the write authority refuses
+// reads the totals and is listed no snapshot.
 func TestTheForecastEndpointListsThePeriodsSnapshots(t *testing.T) {
 	t.Parallel()
 	e := setupSnapshot(t)
@@ -170,36 +172,50 @@ func TestTheForecastEndpointListsThePeriodsSnapshots(t *testing.T) {
 		Period: period, Scope: scope, TakenAt: time.Date(2046, time.February, 1, 9, 0, 0, 0, time.UTC),
 	})
 
-	handlers := NewHandlers(e.store,
-		func(context.Context, pgx.Tx, Period, Scope, time.Time, string) ([]Deal, Scope, bool, error) {
-			return nil, scope, false, nil
-		},
-		func(context.Context, pgx.Tx, PeriodKind, time.Time) (Period, string, error) {
-			return period, "EUR", nil
-		},
-		nil,
-		func(context.Context, pgx.Tx, Period, Scope, time.Time, string) (ConversionHistory, error) {
-			return ConversionHistory{}, nil
-		},
-		func(context.Context, pgx.Tx) (ForwardMeasure, error) { return values.MeasureCommitEvidence, nil },
-		func() time.Time { return time.Date(2046, time.February, 14, 12, 0, 0, 0, time.UTC) },
-	)
-	rec := httptest.NewRecorder()
-	handlers.GetForecast(rec, httptest.NewRequest(http.MethodGet, "/v1/forecast", nil).WithContext(e.as()),
-		crmcontracts.GetForecastParams{})
-	if rec.Code != http.StatusOK {
-		t.Fatalf("GET /v1/forecast answered %d: %s", rec.Code, rec.Body)
+	listed := func(resolve ResolveScopeFunc) []struct {
+		ID      string `json:"id"`
+		Trigger string `json:"trigger"`
+	} {
+		t.Helper()
+		handlers := NewHandlers(e.store,
+			func(context.Context, pgx.Tx, Period, Scope, time.Time, string) ([]Deal, Scope, bool, error) {
+				return nil, scope, false, nil
+			},
+			func(context.Context, pgx.Tx, PeriodKind, time.Time) (Period, string, error) {
+				return period, "EUR", nil
+			},
+			resolve,
+			func(context.Context, pgx.Tx, Period, Scope, time.Time, string) (ConversionHistory, error) {
+				return ConversionHistory{}, nil
+			},
+			func(context.Context, pgx.Tx) (ForwardMeasure, error) { return values.MeasureCommitEvidence, nil },
+			func(context.Context, pgx.Tx, Scope) (bool, error) { return true, nil },
+			func() time.Time { return time.Date(2046, time.February, 14, 12, 0, 0, 0, time.UTC) },
+		)
+		rec := httptest.NewRecorder()
+		handlers.GetForecast(rec, httptest.NewRequest(http.MethodGet, "/v1/forecast", nil).WithContext(e.as()),
+			crmcontracts.GetForecastParams{})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET /v1/forecast answered %d: %s", rec.Code, rec.Body)
+		}
+		var body struct {
+			Snapshots []struct {
+				ID      string `json:"id"`
+				Trigger string `json:"trigger"`
+			} `json:"snapshots"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		return body.Snapshots
 	}
-	var body struct {
-		Snapshots []struct {
-			ID      string `json:"id"`
-			Trigger string `json:"trigger"`
-		} `json:"snapshots"`
+
+	asserting := listed(func(_ context.Context, _ pgx.Tx, requested Scope) (Scope, error) { return requested, nil })
+	if len(asserting) != 1 || asserting[0].ID != id.String() || asserting[0].Trigger != TriggerRecheck {
+		t.Fatalf("the endpoint served snapshots %+v, want the one frozen (%s)", asserting, id)
 	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
-		t.Fatal(err)
-	}
-	if len(body.Snapshots) != 1 || body.Snapshots[0].ID != id.String() || body.Snapshots[0].Trigger != TriggerRecheck {
-		t.Fatalf("the endpoint served snapshots %+v, want the one frozen (%s)", body.Snapshots, id)
+	refused := listed(func(context.Context, pgx.Tx, Scope) (Scope, error) { return Scope{}, apperrors.ErrPermissionDenied })
+	if len(refused) != 0 {
+		t.Fatalf("a seat that may not assert about the workspace was listed snapshots %+v", refused)
 	}
 }

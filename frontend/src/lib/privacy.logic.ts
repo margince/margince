@@ -1,3 +1,4 @@
+import type { components } from "../api/schema";
 import type { StatusKind } from "../design-system/statusbadge";
 import type { MessageKey } from "../i18n/en";
 import { problemFieldErrors } from "./problem";
@@ -58,6 +59,65 @@ export const DSR_STATUS_LABEL: Record<DsrStatus, MessageKey> = {
   fulfilled: "privacy.statusFulfilled",
   rejected: "privacy.statusRejected",
 };
+
+export type IdentityCheck = NonNullable<
+  components["schemas"]["UpdateDataSubjectRequest"]["identity_check"]
+>;
+
+export const IDENTITY_CHECKS: readonly IdentityCheck[] = [
+  "confirm_link",
+  "address_on_file",
+  "id_document",
+  "in_person",
+  "not_verified",
+];
+
+export const IDENTITY_CHECK_LABEL: Record<IdentityCheck, MessageKey> = {
+  confirm_link: "privacy.identityCheck.confirm_link",
+  address_on_file: "privacy.identityCheck.address_on_file",
+  id_document: "privacy.identityCheck.id_document",
+  in_person: "privacy.identityCheck.in_person",
+  not_verified: "privacy.identityCheck.not_verified",
+};
+
+// What the officer drafts for a close: the answer and what the request's proof
+// records about it.
+export type DsrClosing = Readonly<{
+  resolution: string;
+  identityCheck: IdentityCheck | "";
+  requesterEmail: string;
+}>;
+
+// A close to `next` needs its answer and the identity check, and an identity
+// nobody could check closes only as rejected. The server takes a confirm-link
+// case without the check; the form asks every time, so one rule covers both.
+export function closingReady(
+  next: DsrStatus,
+  closing: DsrClosing,
+  storedResolution: string | null | undefined,
+): boolean {
+  return (
+    Boolean(closing.resolution.trim() || storedResolution) &&
+    closing.identityCheck !== "" &&
+    !(next === "fulfilled" && closing.identityCheck === "not_verified")
+  );
+}
+
+// The patch body that moves a request to `status`. Blank text is omitted: an
+// empty string is a value the server would write.
+export function closingBody(
+  status: DsrStatus,
+  closing: DsrClosing,
+): components["schemas"]["UpdateDataSubjectRequest"] {
+  const body: components["schemas"]["UpdateDataSubjectRequest"] = { status };
+  const answer = closing.resolution.trim();
+  if (answer) body.resolution = answer;
+  if (!isTerminal(status)) return body;
+  if (closing.identityCheck) body.identity_check = closing.identityCheck;
+  const address = closing.requesterEmail.trim();
+  if (address) body.requester_email = address;
+  return body;
+}
 
 // Rejected is an outcome the officer chose, not a breakage, so it stays grey.
 export const DSR_STATUS_KIND: Record<DsrStatus, StatusKind> = {

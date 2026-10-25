@@ -12,13 +12,13 @@ import { formatNumber } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { leadWriteKeys } from "../../lib/leadkeys";
-import { useLeadDisqualifyReasons } from "../../lib/leadsources";
 import {
   ProblemError,
   problemMessageOf,
   throwProblem,
   unwrap,
 } from "../../lib/problem";
+import { useLeadDisqualifyReasons } from "./leadhandling";
 
 type Lead = components["schemas"]["Lead"];
 

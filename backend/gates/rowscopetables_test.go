@@ -569,5 +569,13 @@ const (
 	// linked to, so the repair can re-derive each. It runs as the system actor
 	// over the whole workspace, and the id is only handed to
 	// contacts.ReDeriveLeadFromRemainingTouchesTx, which probes writability.
-	modulesTierUnscopedCeiling = 136
+	//
+	// 137: projects.LinkPhaseHistoryTx pages over phase-history rows under the
+	// system principal and matches each to its audit row. It returns the
+	// history row ids only to advance the cursor; none leaves the server.
+	//
+	// 138: contacts.SignatureFieldSourcesTx pages the signature fields for the
+	// repair data task, as the system actor over the whole workspace. The ids
+	// go only to RetractSignatureFieldsByIDTx, ratified in writesWithoutARowProbe.
+	modulesTierUnscopedCeiling = 138
 )

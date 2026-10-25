@@ -90,7 +90,7 @@ func exactLanes(ctx context.Context, tx pgx.Tx, c ContactCandidate) ([]exactLane
 	if err != nil {
 		return nil, err
 	}
-	phoneHits, err := exactContactByPhone(ctx, tx, c.Phones)
+	phoneHits, err := exactContactByPhone(ctx, tx, c.Phones, c.ExcludeID)
 	if err != nil {
 		return nil, err
 	}

@@ -117,6 +117,30 @@ func normalize(domain string) string {
 	return ascii
 }
 
+// CarveOutKey returns the form a carve-out is stored and matched under.
+// A host at or below a subdomain baseline entry is kept as typed.
+// The carve-out then reaches only that host, never its siblings under the entry.
+// Otherwise it is the registrable domain, as Hostname gives it.
+func CarveOutKey(domain string) (string, bool) {
+	base, ok := Hostname(domain)
+	if !ok {
+		return "", false
+	}
+	pinned := baseline()
+	host := normalize(domain)
+	for candidate := host; candidate != base; {
+		if _, hit := pinned[candidate]; hit {
+			return host, true
+		}
+		_, rest, found := strings.Cut(candidate, ".")
+		if !found {
+			break
+		}
+		candidate = rest
+	}
+	return base, true
+}
+
 // Matcher decides consumer-provider membership against the pinned baseline (the
 // vendored dataset plus this repo's own pins) with a deployment overlay: extra
 // adds domains the baseline misses, never carves out a false positive. never

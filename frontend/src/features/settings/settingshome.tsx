@@ -11,6 +11,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { RoleBadge } from "../../design-system/rbac";
 import { useTooltip } from "../../design-system/tooltip";
 import { useT } from "../../i18n";
+import { opensElsewhere } from "../../lib/linkclick";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import {
@@ -38,13 +39,7 @@ import { SettingsSearchBox } from "./settingssearchbox";
  * buttons in the first place.
  */
 function opensInThisTab(event: MouseEvent<HTMLAnchorElement>): boolean {
-  return (
-    event.button === 0 &&
-    !event.metaKey &&
-    !event.ctrlKey &&
-    !event.shiftKey &&
-    !event.altKey
-  );
+  return event.button === 0 && !opensElsewhere(event);
 }
 
 /**

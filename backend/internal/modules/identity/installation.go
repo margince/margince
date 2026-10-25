@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -257,10 +258,10 @@ func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in Ins
 
 	var userID ids.UserID
 	if err := tx.QueryRow(ctx,
-		`INSERT INTO app_user (email, password_hash, display_name, timezone, must_change_password)
-		 VALUES (lower($1), $2, $3, $4, $5) RETURNING id`,
+		`INSERT INTO app_user (email, password_hash, display_name, timezone, must_change_password, email_domain_folded)
+		 VALUES (lower($1), $2, $3, $4, $5, $6) RETURNING id`,
 		boot.AdminEmail, hash, boot.AdminName, boot.Timezone,
-		origin == originConfigured).Scan(&userID); err != nil {
+		origin == originConfigured, owndomain.StoredOfAddress(boot.AdminEmail)).Scan(&userID); err != nil {
 		return ids.WorkspaceID{}, err
 	}
 	if err := seedSystemRolesForBootstrap(ctx, tx, userID); err != nil {

@@ -20,7 +20,7 @@ import { ConfirmModal } from "../../../design-system/confirmmodal";
 import {
   DateInput,
   type ISODate,
-  isISODate,
+  isoOrBlank,
 } from "../../../design-system/dateinput";
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { Select } from "../../../design-system/select";
@@ -80,7 +80,7 @@ function accessOf(state: DealRoom["state"]): RoomAccess | "" {
 // last second of that day in UTC, as the room's page reads an end date.
 function dayOf(instant: string | null | undefined): ISODate | "" {
   const day = instant ? instant.slice(0, 10) : "";
-  return isISODate(day) ? day : "";
+  return isoOrBlank(day);
 }
 const endOfDay = (day: string) =>
   day === "" ? null : new Date(`${day}T23:59:59Z`).toISOString();
@@ -246,11 +246,7 @@ export function ManageRoomDialog({
                 {...control}
                 value={endDay}
                 disabled={finished}
-                onChange={(event) =>
-                  setEndDay(
-                    isISODate(event.target.value) ? event.target.value : "",
-                  )
-                }
+                onChange={(event) => setEndDay(event.target.value)}
               />
             )}
           </Field>

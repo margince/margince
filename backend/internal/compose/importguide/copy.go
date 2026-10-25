@@ -88,9 +88,9 @@ var Columns = withActivityColumns(map[string]Column{
 		Vi: "Thẻ, phân cách bằng dấu chấm phẩy. Thẻ chưa có sẽ được tạo, và bản xem trước lần nhập liệt kê các thẻ này.",
 	}, Example: same("Partner; DACH")},
 	"address.line1": {Description: langcopy.Phrase{
-		En: "Street and house number.",
-		De: "Straße und Hausnummer.",
-		Vi: "Số nhà và tên đường.",
+		En: "Street and house number. A whole address here, with no other address column, is split into its parts.",
+		De: "Straße und Hausnummer. Eine ganze Adresse hier, ohne weitere Adressspalte, wird in ihre Teile aufgeteilt.",
+		Vi: "Số nhà và tên đường. Một địa chỉ đầy đủ ở đây, khi không có cột địa chỉ nào khác, được tách thành các phần.",
 	}, Example: same("Hauptstraße 5")},
 	"address.line2": {Description: langcopy.Phrase{
 		En: "A second address line: building, floor or suite.",
@@ -157,6 +157,16 @@ var Columns = withActivityColumns(map[string]Column{
 		De: "Wo der Lead steht: new, contacted oder engaged. Leer bedeutet new. Ein Lead wird in Margince qualifiziert oder disqualifiziert, daher kann eine Datei das nicht setzen.",
 		Vi: "Lead đang ở giai đoạn nào: new, contacted hoặc engaged. Để trống nghĩa là new. Lead được xác nhận đủ điều kiện hoặc loại ngay trong Margince, nên tệp không thể đặt hai trạng thái này.",
 	}, Example: same("contacted")},
+	"lead.origin": {Description: langcopy.Phrase{
+		En: "Where the lead came from, as your old CRM words it. A value that matches an origin in Settings by name is filed under it. Any other value is kept as a note on the lead and the origin stays empty. A lead that already has an origin keeps it.",
+		De: "Woher der Lead kam, so wie dein altes CRM es nennt. Ein Wert, der dem Namen einer Herkunft in den Einstellungen entspricht, wird dieser zugeordnet. Jeder andere Wert bleibt als Notiz am Lead, die Herkunft bleibt leer. Hat der Lead schon eine Herkunft, behält er sie.",
+		Vi: "Lead đến từ đâu, theo cách CRM cũ của bạn ghi. Giá trị trùng tên với một nguồn gốc trong Cài đặt sẽ được xếp vào nguồn gốc đó. Giá trị khác được giữ làm ghi chú trên lead và nguồn gốc để trống. Lead đã có nguồn gốc thì giữ nguyên.",
+	}, Example: same("Referral")},
+	"lead.origin_detail": {Description: langcopy.Phrase{
+		En: "A short note beside the origin, for example the event or who referred the lead. A lead that already has a note keeps it.",
+		De: "Eine kurze Notiz zur Herkunft, zum Beispiel die Veranstaltung oder wer den Lead empfohlen hat. Hat der Lead schon eine Notiz, behält er sie.",
+		Vi: "Ghi chú ngắn bên cạnh nguồn gốc, ví dụ sự kiện hoặc ai đã giới thiệu lead. Lead đã có ghi chú thì giữ nguyên.",
+	}, Example: same("Berlin summit")},
 	"contact.company_name": {Description: langcopy.Phrase{
 		En: "The company this contact works for, by its exact name. Exactly one company must carry the name, or no link is made and the import preview says why.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet, mit seinem genauen Namen. Genau ein Unternehmen muss diesen Namen tragen, sonst wird keine Verknüpfung angelegt, und die Importvorschau nennt den Grund.",

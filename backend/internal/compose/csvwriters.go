@@ -128,6 +128,7 @@ func newCSVWriters(
 			WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
 			WithGrantCarrier(identity.NewServiceFor(db)).
+			WithShareRequests(contactShareRequests(db.Pool())).
 			WithInstallationRenamer(installationRenamer(db.Pool())),
 		deals:            dealsStoreOver(db),
 		activities:       activities.NewStore(db),
@@ -353,7 +354,7 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		// is one bad row, not a failed run: skip it with the reason and let the
 		// rest of the file land. Unhandled, this error aborts the whole
 		// migration, which is the wrong answer to a typo in a spreadsheet.
-		if _, ok := errors.AsType[*contacts.DuplicateEmailError](err); ok {
+		if contacts.IsClaimedEmail(err) {
 			return skippedFor(duplicateEmailWhy), nil
 		}
 		if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
@@ -366,6 +367,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		}
 		if linkedInClaimed(err) {
 			return skippedFor(linkedInClaimedWhy), nil
+		}
+		if refusedAsErased(err) {
+			return skippedFor(addressErasedWhy), nil
 		}
 		return migration.EnsureResult{}, err
 	}
@@ -402,7 +406,7 @@ func (w *csvWriters) apply(
 	case migration.ObjectCompany:
 		in := companyUpdateFrom(changed, typed)
 		in.IfVersion = w.reviewedVersion(id)
-		merged, given, err := addressMergedOnto(current, in.Address)
+		merged, given, err := addressMergedOnto(current, in.Address, changed)
 		if err != nil {
 			return err
 		}
@@ -421,7 +425,7 @@ func (w *csvWriters) apply(
 		_, err = w.contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
 		return err
 	case migration.ObjectContact:
-		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), current, source)
+		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), changed, current, source)
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)
 	}

@@ -534,7 +534,7 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 
 	first, err := store.GetCompanyContext(ctx, []contacts.CompanyContextScope{
 		contacts.CompanyContextOffer, contacts.CompanyContextPositioning,
-	})
+	}, contacts.OfferingSelector{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -549,7 +549,7 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 	}
 	again, err := store.GetCompanyContext(ctx, []contacts.CompanyContextScope{
 		contacts.CompanyContextPositioning, contacts.CompanyContextOffer,
-	})
+	}, contacts.OfferingSelector{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -567,7 +567,7 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 	}
 	changed, err := store.GetCompanyContext(ctx, []contacts.CompanyContextScope{
 		contacts.CompanyContextOffer, contacts.CompanyContextPositioning,
-	})
+	}, contacts.OfferingSelector{})
 	if err != nil {
 		t.Fatal(err)
 	}

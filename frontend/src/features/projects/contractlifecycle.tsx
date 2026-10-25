@@ -6,14 +6,16 @@ import { useEffect, useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
+import { Button, Field, Modal } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import {
   DrawerBody,
   DrawerFoot,
   DrawerHead,
 } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
@@ -198,6 +200,9 @@ export function ContractRenewModal({
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
+            if (refuseUnreadableField(event.currentTarget)) {
+              return;
+            }
             if (invalid === null) {
               renew.mutate({
                 predecessor: contract,
@@ -453,10 +458,9 @@ export function ContractCancelModal({
         <p>{t("contracts.cancel.hint")}</p>
         <Field label={t("contracts.cancel.noticeOn")} required>
           {(props) => (
-            <TextInput
+            <DateInput
               {...props}
-              type="date"
-              value={noticeOn}
+              value={isoOrBlank(noticeOn)}
               onChange={(e) => setNoticeOn(e.target.value)}
             />
           )}
@@ -467,10 +471,9 @@ export function ContractCancelModal({
           required
         >
           {(props) => (
-            <TextInput
+            <DateInput
               {...props}
-              type="date"
-              value={effectiveOn}
+              value={isoOrBlank(effectiveOn)}
               onChange={(e) => setEffectiveOn(e.target.value)}
             />
           )}
@@ -483,7 +486,11 @@ export function ContractCancelModal({
           variant="danger"
           reason={invalid ? t(invalid) : undefined}
           pending={cancel.isPending}
-          onClick={() => cancel.mutate({ contract, noticeOn, effectiveOn })}
+          onClick={(event) => {
+            if (!refuseUnreadableField(event.currentTarget)) {
+              cancel.mutate({ contract, noticeOn, effectiveOn });
+            }
+          }}
         >
           {t("contracts.cancel.submit")}
         </Button>

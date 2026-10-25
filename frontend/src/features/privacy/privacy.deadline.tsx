@@ -126,9 +126,7 @@ export function DsrDeadlineFields({
           <DateInput
             {...control}
             value={draft.receivedOn}
-            onChange={(event) =>
-              onChange({ receivedOn: asDay(event.target.value) })
-            }
+            onChange={(event) => onChange({ receivedOn: event.target.value })}
           />
         )}
       </Field>
@@ -165,21 +163,10 @@ export function DsrDeadlineFields({
           <DateInput
             {...control}
             value={draft.earlierDue}
-            onChange={(event) =>
-              onChange({ earlierDue: asDay(event.target.value) })
-            }
+            onChange={(event) => onChange({ earlierDue: event.target.value })}
           />
         )}
       </Field>
     </>
   );
-}
-
-// A date input reports "" or YYYY-MM-DD, nothing else.
-function isDay(value: string): value is ISODate {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
-}
-
-function asDay(value: string): ISODate | "" {
-  return isDay(value) ? value : "";
 }

@@ -122,6 +122,7 @@ components:
         - intro_request.created
         - intro_request.decided
         - intro_request.completed
+        - intro_request.recorded
         - intro_request.replied
         - intro_request.closed
         - consent.changed
@@ -1744,8 +1745,9 @@ components:
       x-entity-type: lead_source
       x-version: 1
       description: >-
-        Payload for lead_source.changed. A lead source was added, edited or
-        removed (contacts/leadsource.go). It rides the lead stream because
+        Deprecated: the lead source list no longer feeds the score, and a
+        separate breaking change retires it. Payload for lead_source.changed.
+        A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because
         every lead carries a source value. A subscriber that renders or groups
         by source re-reads the catalog on this event. The payload carries
         `key` and not `label`. The key is what leads carry and what a
@@ -2765,6 +2767,29 @@ components:
               IntroRequestCompletedIntroduced,
               IntroRequestCompletedNameDropped,
             ]
+      additionalProperties: false
+
+    PublicEventIntroRequestRecorded:
+      type: object
+      x-event-type: intro_request.recorded
+      x-entity-type: contact
+      x-version: 1
+      description: >-
+        Payload for intro_request.recorded, a colleague recorded an introduction
+        that already happened outside Margince. It is not intro_request.completed.
+        That event means an ask was marked done, and its consumers must not see
+        a row that never had an ask. `introducer_user_id` made the
+        introduction and `introduced_user_id` was introduced.
+      required:
+        - intro_request_id
+        - contact_id
+        - introducer_user_id
+        - introduced_user_id
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        introducer_user_id: { type: string, format: uuid }
+        introduced_user_id: { type: string, format: uuid }
       additionalProperties: false
 
     PublicEventIntroRequestReplied:

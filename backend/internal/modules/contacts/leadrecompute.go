@@ -57,14 +57,14 @@ func (s *Store) RecomputeLeadScore(ctx context.Context, leadID ids.LeadID, now t
 // human's lead.score is sticky and the machine value goes to score_computed.
 // With no override, score tracks the machine value and score_computed is null.
 func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time) error {
-	var title, source, overrideReason *string
+	var title, origin, overrideReason *string
 	var currentScore int
 	var currentComputed *int
 	var status string
 	err := tx.QueryRow(ctx,
-		`SELECT title, source, score, score_override_reason, score_computed, status
+		`SELECT title, origin, score, score_override_reason, score_computed, status
 		   FROM lead WHERE id = $1 AND archived_at IS NULL`,
-		leadID).Scan(&title, &source, &currentScore, &overrideReason, &currentComputed, &status)
+		leadID).Scan(&title, &origin, &currentScore, &overrideReason, &currentComputed, &status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil // archived or gone: nothing to score
 	}
@@ -75,7 +75,7 @@ func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now
 		return nil // promoted/disqualified leads keep their last score
 	}
 
-	scored, err := scoreLeadFor(ctx, tx, leadID, now, title, source)
+	scored, err := scoreLeadFor(ctx, tx, leadID, now, title, origin)
 	if err != nil {
 		return err
 	}
@@ -118,11 +118,12 @@ func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now
 	})
 }
 
-// scoreLeadFor is the weighted-signal formula over a lead's title and source,
-// plus the signals the database holds for it. The title and source are
-// arguments because an edit scores the values it is about to write.
+// scoreLeadFor is the weighted-signal formula over a lead's title and origin,
+// plus the signals the database holds for it. The title and origin are
+// arguments because an edit scores the values it is about to write. The row's
+// source (how it reached Margince) is not an input.
 func scoreLeadFor(
-	ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time, title, source *string,
+	ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time, title, origin *string,
 ) (LeadScoring, error) {
 	signals, err := leadBehavioralSignals(ctx, tx, leadID)
 	if err != nil {
@@ -134,11 +135,11 @@ func scoreLeadFor(
 	if err != nil {
 		return LeadScoring{}, err
 	}
-	intents, err := loadSourceIntents(ctx, tx)
+	intents, err := LoadOriginIntents(ctx, tx)
 	if err != nil {
 		return LeadScoring{}, err
 	}
-	return ScoreLeadDetail(deref(title), intents.Of(deref(source)), signals, now).withManual(manual), nil
+	return ScoreLeadDetail(deref(title), intents.Of(origin), signals, now).withManual(manual), nil
 }
 
 // fieldKeyScoreComputed names the machine score on the audit trail and

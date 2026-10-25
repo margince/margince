@@ -6,6 +6,7 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { DateInput, isoOrBlank } from "../design-system/dateinput";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -140,6 +141,15 @@ export function fieldControl(
         placeholder={field.placeholder}
         rows={3}
         maxLength={field.maxLength}
+        onChange={(event) => setValue(event.target.value)}
+      />
+    );
+  }
+  if (field.type === "date") {
+    return (
+      <DateInput
+        {...control}
+        value={isoOrBlank(value)}
         onChange={(event) => setValue(event.target.value)}
       />
     );

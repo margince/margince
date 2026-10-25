@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -113,5 +114,8 @@ func refoldClocksTx(ctx context.Context, tx pgx.Tx, targets storekit.LastActivit
 	if err := contacts.RefoldClocksTx(ctx, tx, targets); err != nil {
 		return err
 	}
-	return deals.RefoldClocksTx(ctx, tx, targets.Deals)
+	if err := deals.RefoldClocksTx(ctx, tx, targets.Deals); err != nil {
+		return err
+	}
+	return projects.RefoldClocksTx(ctx, tx, targets.Projects)
 }

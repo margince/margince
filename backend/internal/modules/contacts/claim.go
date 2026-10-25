@@ -86,6 +86,11 @@ func (s *Store) ClaimRecord(ctx context.Context, recordType string, id ids.UUID,
 				return err
 			}
 		}
+		if recordType == entityContact {
+			if err := s.followShareOwnerTx(ctx, tx, ids.From[ids.ContactKind](id), claim.Before, &actor.UserID); err != nil {
+				return err
+			}
+		}
 		return emitOwnerChanged(ctx, tx, auditID, recordType, id, actor.UserID)
 	})
 	return out, err

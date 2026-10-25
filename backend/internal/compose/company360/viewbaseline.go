@@ -258,3 +258,59 @@ func actingUser(ctx context.Context) (ids.UserID, error) {
 	}
 	return ids.From[ids.UserKind](p.UserID), nil
 }
+
+// keyVisitsSQL deletes a page's marks whose record is gone, as the cascade
+// would have. It clears the marker on the rest, so the trigger keys them. It
+// writes no last_viewed_at, so only RecordVisit moves a mark. The marker
+// filter makes a replay change nothing.
+const keyVisitsSQL = `
+	WITH page AS (
+	    SELECT v.id, NOT COALESCE(CASE v.entity_type
+	             WHEN 'company' THEN EXISTS (SELECT 1 FROM company r WHERE r.id = v.entity_id)
+	             WHEN 'contact' THEN EXISTS (SELECT 1 FROM contact r WHERE r.id = v.entity_id)
+	           END, false) AS gone
+	      FROM user_record_view v
+	     WHERE v.entity_unkeyed AND v.id > $1
+	     ORDER BY v.id
+	     LIMIT $2
+	       FOR UPDATE
+	), dropped AS (
+	    DELETE FROM user_record_view v USING page WHERE v.id = page.id AND page.gone RETURNING v.id
+	), keyed AS (
+	    UPDATE user_record_view v SET entity_unkeyed = false
+	      FROM page WHERE v.id = page.id AND NOT page.gone
+	    RETURNING v.id
+	)
+	SELECT id FROM dropped UNION ALL SELECT id FROM keyed ORDER BY id`
+
+// KeyVisitsTx keys one page of the marks written before the entity keys, after
+// the given id. It returns the page's ids, each of which it changed.
+func KeyVisitsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, keyVisitsSQL, after, limit)
+	if err != nil {
+		return nil, fmt.Errorf("company360: keying visits: %w", err)
+	}
+	changed, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("company360: keying visits: %w", err)
+	}
+	return changed, nil
+}
+
+// EstimateUnkeyedVisits counts, up to limit+1, the marks KeyVisitsTx still has
+// to inspect.
+func EstimateUnkeyedVisits(ctx context.Context, q interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, limit int64,
+) (int64, error) {
+	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
+		return 0, err
+	}
+	var count int64
+	err := q.QueryRow(ctx, `SELECT count(*) FROM (
+		SELECT 1 FROM user_record_view WHERE entity_unkeyed LIMIT $1) unkeyed`, limit+1).Scan(&count)
+	return count, err
+}

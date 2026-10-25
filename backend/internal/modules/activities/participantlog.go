@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -35,6 +36,7 @@ const (
 	linkEntityContact  = "contact"
 	linkEntityCompany  = "company"
 	linkEntityDeal     = "deal"
+	linkEntityLead     = "lead"
 	linkEntityActivity = "activity"
 	linkEntityProject  = "project"
 )
@@ -222,11 +224,11 @@ func insertParticipantRow(ctx context.Context, tx pgx.Tx, activityID ids.Activit
 	// operation. Guarding here rather than pre-checking also avoids a race
 	// with a member being archived between the check and the insert.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, contact_id, role, address)
-		SELECT $1, $2, $3, $4, NULLIF($5, '')
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, role, address, address_domain_folded)
+		SELECT $1, $2, $3, $4, NULLIF($5, ''), $6
 		 WHERE $2::uuid IS NULL
 		    OR EXISTS (SELECT 1 FROM app_user u WHERE u.id = $2)
-		ON CONFLICT DO NOTHING`, activityID, userID, contactID, role, address); err != nil {
+		ON CONFLICT DO NOTHING`, activityID, userID, contactID, role, address, owndomain.StoredOfAddress(address)); err != nil {
 		return fmt.Errorf("activities: recording who was in a logged interaction: %w", err)
 	}
 	return nil

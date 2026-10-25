@@ -30,7 +30,7 @@ func extractText(root *message.Entity) walkedBody {
 	// held back takes what is left.
 	walk.files.settle()
 	text, completeness := walk.text(), walk.completeness()
-	links, linksCut := linkHosts(walk.plain, walk.html)
+	links, linksCut := walkLinks(walk.plain, walk.html)
 	if text == "" {
 		// A forward as attachment says nothing of its own; the original does.
 		// Its words are the original's, not the sender's, and the completeness
@@ -40,7 +40,7 @@ func extractText(root *message.Entity) walkedBody {
 		case inner == nil:
 		case inner.text() != "":
 			text, completeness = inner.text(), capture.BodyForwarded
-			links, linksCut = linkHosts(inner.plain, inner.html)
+			links, linksCut = walkLinks(inner.plain, inner.html)
 		case inner.completeness() == capture.BodyUnreadable:
 			completeness = capture.BodyUnreadable
 		}
@@ -56,7 +56,7 @@ func extractText(root *message.Entity) walkedBody {
 // hosts its links lead to, its files and its calendar payload.
 type walkedBody struct {
 	text         string
-	links        []string
+	links        []capture.MailLink
 	linksCut     bool
 	parts        []Part
 	drops        []PartDrop

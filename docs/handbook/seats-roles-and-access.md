@@ -201,6 +201,14 @@ When you cannot see a record in Margince, one of three things is true. The recor
 Ask the record's owner to share it with you (**Share** on the record). Or ask them to choose **All users in the company** behind the access chip under the record's name. An admin's role does not open a private record either: only a share does. A record you can read but not edit gives a different refusal: "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access."
 Also called: record missing, access denied, 404, cannot open a contact.
 
+### Why can't I create a contact a colleague already has?
+A contact that capture made from a colleague's mail can be private to that colleague. When you create a contact with the same email address, Margince refuses it, so the CRM does not hold the contact twice. It says "A colleague already has this contact. Margince asked them to share it with you."
+
+Your colleague then finds a request in **Review**: "Mira Voss asks you to share this contact." **Accept** shares it with you for writing, or for reading if your seat may only read. **Decline** closes the request. Another try does not ask again while a request is open or after your colleague declined. After a decline Margince says only "A colleague already has this contact."
+
+The refusal does not name the contact or its owner.
+Also called: contact already exists, email already taken, hidden contact.
+
 ### How do I share a record with a colleague?
 To share one contact, company, lead, deal or project with a colleague or a team, open the record and choose **Share**. Then fill in **Share this record**.
 1. Open the record and choose **Share** in its header.

@@ -111,6 +111,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`intro_request.completed`](#intro_requestcompleted) | contact | 1 |
 | [`intro_request.created`](#intro_requestcreated) | contact | 1 |
 | [`intro_request.decided`](#intro_requestdecided) | contact | 1 |
+| [`intro_request.recorded`](#intro_requestrecorded) | contact | 1 |
 | [`intro_request.replied`](#intro_requestreplied) | contact | 1 |
 | [`lead.created`](#leadcreated) | lead | 1 |
 | [`lead.demoted`](#leaddemoted) | lead | 1 |
@@ -1020,6 +1021,19 @@ Payload for intro_request.decided. The colleague gave one of the four bounded an
 | `data.intro_request_id` | string (uuid) | yes |  |
 | `data.introducer_user_id` | string (uuid) | yes |  |
 
+### `intro_request.recorded`
+
+Record: `contact` · version 1
+
+Payload for intro_request.recorded, a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed. That event means an ask was marked done, and its consumers must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.contact_id` | string (uuid) | yes |  |
+| `data.intro_request_id` | string (uuid) | yes |  |
+| `data.introduced_user_id` | string (uuid) | yes |  |
+| `data.introducer_user_id` | string (uuid) | yes |  |
+
 ### `intro_request.replied`
 
 Record: `contact` · version 1
@@ -1124,7 +1138,7 @@ Payload for lead_disqualify_reason.changed. A disqualification reason was added,
 
 Record: `lead_source` · version 1
 
-Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
+Deprecated: the lead source list no longer feeds the score, and a separate breaking change retires it. Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|

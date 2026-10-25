@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId } from "react";
+import { type MouseEvent, type ReactNode, useId } from "react";
 import { Button } from "./atoms";
 import { useTooltip } from "./tooltip";
 import "./iconaction.css";
@@ -80,7 +80,9 @@ type IconActionPress = {
 type IconActionLink = {
   /** Where the glyph goes (a `tel:`), drawn as a link with the same square. */
   href: string;
-} & { [Key in Exclude<keyof IconActionPress, "href">]?: never };
+  /** Runs beside the navigation, never instead of it. */
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+} & { [Key in Exclude<keyof IconActionPress, "href" | "onClick">]?: never };
 
 /**
  * A verb whose glyph is its whole label: one `label` is its `aria-label` and its tooltip.
@@ -134,6 +136,7 @@ export function IconAction(
         <a
           className={`btn btn-${props.variant ?? "ghost"} btn-icon`}
           href={props.href}
+          onClick={props.onClick}
           aria-label={label}
           aria-describedby={describedBy}
           data-testid={props.testId}

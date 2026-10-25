@@ -23,12 +23,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -148,8 +150,10 @@ func (d attentionDecay) Lapsed(
 		return nil, false, apperrors.ErrPermissionDenied
 	}
 	now := d.now()
+	// One day looser than the rule. The derivation counts calendar days in the
+	// installation zone, so it can reach QuietDays before the instant does.
 	read := search.QuietRead{
-		QuietBefore:  now.AddDate(0, 0, -relstrength.QuietDays),
+		QuietBefore:  now.AddDate(0, 0, -(relstrength.QuietDays - 1)),
 		TouchedAfter: now.AddDate(0, 0, -quietSuggestionCeilingDays),
 		Limit:        decayCandidateCap,
 		// Contacts this reader set aside, and senders capture judged
@@ -224,7 +228,19 @@ func (d attentionDecay) quietPage(
 	for _, found := range quiet {
 		candidates = append(candidates, ids.From[ids.ContactKind](found.Edge.ContactID))
 	}
-	changed, err := d.store.RelationshipChangesForContacts(ctx, tx, candidates, now)
+	touched, err := contact360.LastTouchFor(ctx, tx, candidates, contact360.AssembleOptions{})
+	if err != nil {
+		return quietPageResult{}, err
+	}
+	touches := make(map[ids.ContactID]relstrength.Touches, len(touched))
+	for id, touch := range touched {
+		touches[id] = touch.Touches()
+	}
+	zone, err := identity.ZoneAppliedTx(ctx, tx)
+	if err != nil {
+		return quietPageResult{}, err
+	}
+	changed, err := d.store.RelationshipChangesForContacts(ctx, tx, candidates, now, touches, zone)
 	if err != nil {
 		return quietPageResult{}, err
 	}
@@ -358,7 +374,10 @@ func (f attentionDealFacts) Figures(
 // store: every field here is one the activity already held and this seam once
 // dropped, and a copy that stops happening is invisible — the lane still
 // returns the right NUMBER of rows, each one just quietly missing a fact.
-func taskFromActivity(row crmcontracts.Activity) attention.Task {
+//
+// reader is whose reminder the row may be, zero for none. A row whose content
+// is withheld is never raised, as the reminder read leaves it out.
+func taskFromActivity(row crmcontracts.Activity, reader ids.UUID, asOf time.Time) attention.Task {
 	linkType, linkID := primaryLink(row)
 	task := attention.Task{
 		LeadResponseEscalation: row.SourceSystem != nil && *row.SourceSystem == leadSLATaskSource,
@@ -367,6 +386,7 @@ func taskFromActivity(row crmcontracts.Activity) attention.Task {
 		DueAt:                  row.DueAt,
 		LinkType:               linkType,
 		LinkID:                 linkID,
+		ReminderDue:            contentReadable(row) && activities.ReminderDueFor(row, reader, asOf),
 	}
 	if row.SourceActivityId != nil {
 		task.SourceActivityID = new(ids.UUID(*row.SourceActivityId))
@@ -387,6 +407,10 @@ func taskFromActivity(row crmcontracts.Activity) attention.Task {
 		task.Version = &version
 	}
 	return task
+}
+
+func contentReadable(row crmcontracts.Activity) bool {
+	return row.ContentState == nil || *row.ContentState != crmcontracts.ActivityContentStateWithheld
 }
 
 // attentionOverdue counts overdue tasks per assignee for the team board.
@@ -431,6 +455,8 @@ func (t attentionTasks) CountOpenForViewer(
 	if !ok {
 		return 0, nil
 	}
+	// The reminders the page lists ahead of the day are counted with it.
+	in.OrRemindersDue = scope == attention.TasksMine
 	return t.store.CountActivities(ctx, in)
 }
 

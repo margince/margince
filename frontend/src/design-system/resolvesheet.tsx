@@ -4,9 +4,10 @@
 import { type ReactNode, useId, useState } from "react";
 import { Button, Field, Modal, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
-import { DateInput, type ISODate, isISODate } from "./dateinput";
+import { DateInput, type ISODate } from "./dateinput";
 import { DrawerBody, DrawerFoot, DrawerHead } from "./drawerbands";
 import { ErrorLine } from "./errorline";
+import { refuseUnreadableField } from "./formvalidity";
 import { Heading } from "./heading";
 
 // Answering a finding from the nightly input check.
@@ -112,7 +113,7 @@ export function ResolveSheet({
                 <DateInput
                   {...control}
                   value={remindAt}
-                  onChange={(event) => setRemindAt(asDate(event.target.value))}
+                  onChange={(event) => setRemindAt(event.target.value)}
                 />
               )}
             </Field>
@@ -126,7 +127,7 @@ export function ResolveSheet({
                 <DateInput
                   {...control}
                   value={expiresAt}
-                  onChange={(event) => setExpiresAt(asDate(event.target.value))}
+                  onChange={(event) => setExpiresAt(event.target.value)}
                 />
               )}
             </Field>
@@ -140,8 +141,8 @@ export function ResolveSheet({
         <Button
           variant="primary"
           disabled={!complete || pending}
-          onClick={() => {
-            if (outcome === "") {
+          onClick={(event) => {
+            if (outcome === "" || refuseUnreadableField(event.currentTarget)) {
               return;
             }
             // Only the fields this outcome takes. Sending an expiry with a
@@ -160,15 +161,6 @@ export function ResolveSheet({
       </DrawerFoot>
     </Modal>
   );
-}
-
-// asDate narrows what the element reported.
-//
-// The input only ever reports YYYY-MM-DD or the empty string, and dateinput
-// ships the predicate for exactly this — asserting the type instead would claim
-// what a check can establish.
-function asDate(raw: string): ISODate | "" {
-  return isISODate(raw) ? raw : "";
 }
 
 // The two answers that take a finding off every screen. They are the reason

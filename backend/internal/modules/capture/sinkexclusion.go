@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -82,6 +83,7 @@ var _ connector.PreStoreJudge = (*Sink)(nil)
 // Upsert would refuse to admit is not judged here (false, nil); the full path
 // then answers for it exactly as it always did.
 func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedRecord) (bool, error) {
+	rec = maskCapturedCredentials(rec)
 	if _, err := admitRecord(ctx, rec); err != nil {
 		return false, nil //nolint:nilerr // not judged here; the full capture path answers for an unadmitted record
 	}
@@ -117,7 +119,7 @@ func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) 
 	domains := make([]string, 0, len(rec.Addresses))
 	for _, a := range rec.Addresses {
 		addresses = append(addresses, strings.ToLower(strings.TrimSpace(a)))
-		if d := domainOfAddress(a); d != "" {
+		if d := owndomain.OfAddress(a); d != "" {
 			domains = append(domains, d)
 		}
 	}

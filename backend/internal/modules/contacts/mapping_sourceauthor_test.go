@@ -35,7 +35,7 @@ func TestTheRecordImporterDoorsCarryTheAuthor(t *testing.T) {
 	})
 	assertAuthor(t, "company", companyIn.Author, err, seat)
 	leadIn, err := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{
-		Source:   "manual",
+		Source:   new("manual"),
 		FullName: new("Imported"), SourceSystem: &hubspot, SourceAuthorId: &seat, SourceAuthorName: &name,
 	})
 	assertAuthor(t, "lead", leadIn.Author, err, seat)
@@ -46,7 +46,7 @@ func TestTheRecordClientDoorsRefuseAnAuthor(t *testing.T) {
 	name := "Anna Müller"
 	_, contactErr := ContactCreationInput(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
 	_, companyErr := CompanyCreationInput(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
-	_, leadErr := LeadCreationInput(crmcontracts.CreateLeadRequest{Source: "manual", FullName: new("X"), SourceSystem: &legacy, SourceAuthorName: &name})
+	_, leadErr := LeadCreationInput(crmcontracts.CreateLeadRequest{Source: new("manual"), FullName: new("X"), SourceSystem: &legacy, SourceAuthorName: &name})
 	for record, err := range map[string]error{"contact": contactErr, "company": companyErr, "lead": leadErr} {
 		assertAuthorRefused(t, record, err, "reserved_source_author")
 	}
@@ -58,7 +58,7 @@ func TestTheRecordImporterDoorsRefuseAnAuthorFromNowhere(t *testing.T) {
 	name := "Anna Müller"
 	_, contactErr := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceAuthorName: &name})
 	_, companyErr := companyCreateInputFromImporter(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "X", SourceAuthorName: &name})
-	_, leadErr := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{Source: "manual", FullName: new("X"), SourceAuthorName: &name})
+	_, leadErr := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{Source: new("manual"), FullName: new("X"), SourceAuthorName: &name})
 	for record, err := range map[string]error{"contact": contactErr, "company": companyErr, "lead": leadErr} {
 		assertAuthorRefused(t, record, err, "source_author_needs_a_source")
 	}

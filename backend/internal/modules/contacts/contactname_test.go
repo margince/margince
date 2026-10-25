@@ -77,6 +77,13 @@ func TestParseContactNameReadsTheAddressWhenTheHeaderNamesNobody(t *testing.T) {
 			name:  "the english twin of kontakt names nobody either",
 			email: "contact@bajricsanel.example", wantFull: "contact",
 		},
+		{name: "a header name DV keeps the display-name path", display: "DV", email: "dv@example.com", wantFull: "Dv"},
+		{name: "initials are shown as the local part", email: "dv@example.com", wantFull: "dv"},
+		{name: "another initials pair", email: "lr@example.com", wantFull: "lr"},
+		{name: "dotted initials are not split", email: "d.v@example.com", wantFull: "d.v"},
+		{name: "a plus tag does not turn initials into a name", email: "dv+crm@example.com", wantFull: "dv"},
+		{name: "a short real first name still reads", email: "kai@example.com", wantFull: "Kai"},
+		{name: "three letters stay a name", email: "dvo@example.com", wantFull: "Dvo"},
 		{
 			name:  "plus-addressing is a routing tag, not a name",
 			email: "anna.weber+crm@example.com", wantFull: "Anna Weber",
@@ -311,5 +318,30 @@ func TestParseContactNameNeverReportsHalfAName(t *testing.T) {
 			t.Errorf("ParseContactName(%q, %q): Confident=%v disagrees with first %q last %q",
 				in.display, in.email, got.Confident, got.First, got.Last)
 		}
+	}
+}
+
+func TestInitialsDisplayReplacementReplacesOnlyTheAddressGuess(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name, fullName, email, want string
+		ok                          bool
+	}{
+		{"the guess is replaced", "Dv", "dv@example.com", "dv", true},
+		{"dotted initials", "D V", "d.v@example.com", "d.v", true},
+		{"a typed name stays", "Daniel Vogt", "dv@example.com", "", false},
+		{"an address that is a name stays", "Dv", "anna@example.com", "", false},
+		{"a name that is not the guess stays", "DV", "dv@example.com", "", false},
+		{"an already repaired name is not offered again", "dv", "dv@example.com", "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, ok := initialsDisplayReplacement(tc.fullName, tc.email)
+			if got != tc.want || ok != tc.ok {
+				t.Errorf("initialsDisplayReplacement(%q, %q) = %q, %v; want %q, %v",
+					tc.fullName, tc.email, got, ok, tc.want, tc.ok)
+			}
+		})
 	}
 }

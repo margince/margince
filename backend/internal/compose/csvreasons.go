@@ -8,7 +8,10 @@ package compose
 // and carry the same code.
 
 import (
+	"errors"
+
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // The three "held" reasons name the row's own value and nothing about the
@@ -19,11 +22,13 @@ var (
 	linkedInClaimedWhy      = migration.Why(migration.ReasonLinkedinHeld)
 	domainClaimedWhy        = migration.Why(migration.ReasonDomainHeld)
 	contactEmailClaimedWhy  = migration.Why(migration.ReasonContactEmailHeld)
+	addressErasedWhy        = migration.Why(migration.ReasonAddressErased)
 	duplicateEmailWhy       = migration.Why(migration.ReasonDuplicateEmail)
 	naturalKeyTakenWhy      = migration.Why(migration.ReasonNaturalKeyTaken)
 	ownerRefusedWhy         = migration.Why(migration.ReasonOwnerRefused)
 	unknownOwnerWhy         = migration.WhyCount(migration.ReasonOwnerUnknown, "rows", 1)
 	newTagWhy               = migration.Why(migration.ReasonTagNew)
+	addressNotSplitWhy      = migration.Why(migration.ReasonAddressNotSplit)
 	createdTagWhy           = migration.Why(migration.ReasonTagCreated)
 	contactUnnamedWhy       = migration.Why(migration.ReasonContactUnnamed)
 	companyNameEmptyWhy     = migration.Why(migration.ReasonCompanyNameEmpty)
@@ -49,4 +54,11 @@ func skippedWithProblem(problem *migration.SkippedRow) migration.EnsureResult {
 	res := skippedFor(problem.Why())
 	res.SkipReason, res.Problem = problem.Reason, problem
 	return res
+}
+
+// refusedAsErased reports whether a row was refused because its address belongs
+// to an erased subject. The import skips that row and lands the rest.
+func refusedAsErased(err error) bool {
+	_, erased := errors.AsType[*storekit.ErasedIdentifierError](err)
+	return erased
 }

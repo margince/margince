@@ -246,12 +246,14 @@ var prebuiltReports = map[string]reportSpec{
 			fieldStatus:  colStatus,
 			fieldOwnerID: colOwnerID,
 			fieldSource:  colSource,
+			fieldOrigin:  colOrigin,
 		},
 		measures: map[string]string{},
 		filters: map[string]string{
 			fieldStatus:  colStatus,
 			fieldOwnerID: colOwnerID,
 			fieldSource:  colSource,
+			fieldOrigin:  colOrigin,
 		},
 		defaultBy: []string{fieldStatus},
 		defaultAggs: []reportAggregate{

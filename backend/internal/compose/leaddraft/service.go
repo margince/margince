@@ -15,6 +15,7 @@ import (
 	"log/slog"
 
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -128,7 +129,7 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	envelope := s.envelope.Resolve(ctx,
-		draftfloor.Written{Body: contactdraft.CorrespondenceTextOf(activities), Rewrite: req.RewriteOf, Purpose: req.Intent},
+		draftfloor.Written{Thread: draftcore.LanguageEvidenceOf(activities, s.envelope.Now()), Rewrite: req.RewriteOf, Purpose: req.Intent},
 		ConversationState(activities, s.envelope.Now()))
 	in := FromLead(lead, activities, req, envelope)
 	grounding, err := in.Grounding()

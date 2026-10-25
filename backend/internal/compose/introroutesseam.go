@@ -33,5 +33,6 @@ import (
 // does, including the introductions reader that stamps route availability.
 func NewContactGraphReads(pool *pgxpool.Pool, db *database.DB) network.Reads {
 	return network.NewReads(pool, contacts.NewStore(db)).
-		WithAskedRoutes(introductions.NewStore(db, time.Now))
+		WithAskedRoutes(introductions.NewStore(db, time.Now)).
+		WithSeatGaps(contactSeatGaps)
 }

@@ -16,6 +16,7 @@ import {
   jsonResponse,
   lead,
   render,
+  SHIPPED_LEAD_ORIGINS,
   stubFetch,
   stubFetchWithMe,
 } from "./leads.testkit";
@@ -364,9 +365,39 @@ describe("LeadsScreen — rich create (P-15)", () => {
       linkedin_url: linkedin,
       company_name: "Otto Fischer GmbH",
       owner_id: "u-9",
-      source: "manual",
       status: "new",
     });
+    expect(posted).not.toHaveProperty("source");
+  });
+
+  it("files the lead under the origin and note the form carries, and sends no source", async () => {
+    let posted: Record<string, unknown> | null = null;
+    stubFetch(async (url, method, request) => {
+      if (method === "POST" && url.includes("/leads")) {
+        posted = JSON.parse(await request.text());
+        return jsonResponse({ ...lead, id: "l-new" }, 201);
+      }
+      if (url.endsWith("/v1/lead-origins")) {
+        return jsonResponse(SHIPPED_LEAD_ORIGINS);
+      }
+      return emptyPage();
+    });
+    const user = userEvent.setup();
+    render(<LeadsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    const form = within(screen.getByRole("dialog"));
+    await user.type(form.getByLabelText("Full name *"), "Otto Fischer");
+    await user.click(form.getByRole("combobox", { name: "Origin" }));
+    await user.click(await screen.findByRole("option", { name: "Referral" }));
+    await user.type(form.getByLabelText("Origin note"), "Berlin summit");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(posted).toBeTruthy());
+    expect(posted).toMatchObject({
+      origin: "referral",
+      origin_detail: "Berlin summit",
+    });
+    expect(posted).not.toHaveProperty("source");
   });
 
   it("finds an exact email duplicate before POST and links to it", async () => {
@@ -431,7 +462,7 @@ describe("LeadsScreen — archived marking (P-3)", () => {
 });
 
 describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
-  it("opens on my queue and sends the source filter to the server", async () => {
+  it("opens on my queue and sends the origin filter to the server", async () => {
     const { urls } = stubFetchWithMe(async (url) => {
       if (url.includes("/leads")) {
         return jsonResponse({
@@ -453,14 +484,14 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
     expect(leadReads.length).toBeGreaterThan(0);
     expect(leadReads.every((url) => url.includes("owner_id=u-9"))).toBe(true);
 
-    await pickFilter("Source", "Web form");
+    await pickFilter("Origin", "Website");
     await waitFor(() =>
       expect(
         urls.some(
           (url) =>
             url.includes("/leads?") &&
             url.includes("owner_id=u-9") &&
-            url.includes("source=webform"),
+            url.includes("origin=website"),
         ),
       ).toBe(true),
     );

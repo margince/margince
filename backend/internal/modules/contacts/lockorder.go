@@ -6,8 +6,10 @@ package contacts
 // The lock order of every contact writer that runs the duplicate lanes:
 //
 //  1. existing contact rows the writer changes or lands on;
-//  2. the lane locks: phone, then address base, then name (plain and digraph);
-//  3. new rows, and lead rows.
+//  2. the subject locks of the addresses (storekit.LockSubjectKeys), the
+//     mutex an erasure holds, which the erasure-list check takes again;
+//  3. the lane locks: phone, then address base, then name (plain and digraph);
+//  4. new rows, and lead rows.
 //
 // So a writer holding a lane lock never waits on an existing contact. A create
 // takes the lanes and then writes a new contact. An edit locks its contact and
@@ -22,11 +24,16 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // lockContactLanes takes the address-base and name locks for a contact that
 // will hold these addresses under this name, in the lane order above.
 func lockContactLanes(ctx context.Context, tx pgx.Tx, emails []string, name string) error {
+	if err := storekit.LockSubjectKeys(ctx, tx, nil, emails); err != nil {
+		return err
+	}
 	if err := lockAddressBaseLane(ctx, tx, emails); err != nil {
 		return err
 	}

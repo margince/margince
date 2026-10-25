@@ -271,7 +271,7 @@ func resolveOrCreateColdStartCompany(ctx context.Context, tx pgx.Tx, host, by st
 	if err != nil {
 		return ids.CompanyID{}, false, err
 	}
-	if err := match.recordIfReview(ctx, tx, companyID, coldStartSource, by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, companyID, coldStartSource, by); err != nil {
 		return ids.CompanyID{}, false, err
 	}
 	return companyID, true, nil
@@ -422,5 +422,9 @@ func coldStartCandidate(host string, fields []ColdStartFieldInput) (CompanyCandi
 		nameSource = nameSourceDossier
 	}
 
-	return CompanyCandidate{DisplayName: displayName, LegalName: legal, Domains: []string{host}}, nameSource
+	candidate := CompanyCandidate{DisplayName: displayName, LegalName: legal, Domains: []string{host}}
+	if address, split := SplitAddressText(fieldValue(fields, fieldRegisteredAddress)); split {
+		candidate.Address = &address
+	}
+	return candidate, nameSource
 }

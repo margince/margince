@@ -88,6 +88,10 @@ export function ContactMemory({
                         appearance="button"
                         label={t("record.verb.call")}
                         number={number}
+                        record={{
+                          entityType: "contact",
+                          entityId: view.contact.id,
+                        }}
                       />
                     </>
                   ) : (

@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { Button, Field } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { refuseUnreadableField } from "../design-system/formvalidity";
 import { useSinglePress } from "../design-system/presslatch";
 import { RecordFormDialog } from "../design-system/recordformdialog";
 import { useT } from "../i18n";
@@ -105,9 +106,14 @@ export function RecordFormBody({
   // Enter in a field submits without touching Save, so the form holds the
   // same latch the button does.
   const singlePress = useSinglePress(pending);
-  const submit = singlePress((event: FormEvent) => {
+  const submit = singlePress((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!pending && !requiredMissing && refusals.size === 0)
+    if (
+      !pending &&
+      !requiredMissing &&
+      refusals.size === 0 &&
+      !refuseUnreadableField(event.currentTarget)
+    )
       onSubmit(submittedValues(fields, values), rows);
   });
   const stack = (

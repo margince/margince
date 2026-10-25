@@ -135,6 +135,9 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 	"Envelope": "nil is the right answer for a unit, for the reason HasCalendarPart's is: the To and Cc " +
 		"lists and the link hosts are read from a raw RFC822 message, and a unit hands over none. Nil " +
 		"leaves the Bcc and foreign-link facts unjudged, so the unit's message ranks as it did",
+	"CredentialsMasked": "false is the right answer for a unit. The sink masks every record it is handed " +
+		"and sets the flag itself when that changed the text; a unit stating it would claim a mask the " +
+		"core never performed, and the flag decides which replay proof applies",
 	"judged": "unexported, and the sink sets it from Envelope. A unit stating it would state the " +
 		"conclusion the sink exists to draw",
 })

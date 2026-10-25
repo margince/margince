@@ -4,6 +4,7 @@
 import { Mail } from "lucide-react";
 import type { ReactNode } from "react";
 import { mailbox } from "../format/contacturi";
+import type { CallRecord } from "../lib/callstart";
 import { useWriteTo, type WriteToRecord } from "../lib/writeto";
 import { Button } from "./button";
 import { CallAction, linkVerb } from "./callaction";
@@ -46,7 +47,11 @@ type ContactValue = {
   // wrapping width) names that here; by default the text is plain.
   textClassName?: string;
 } & (
-  | { kind: "phone" }
+  | {
+      kind: "phone";
+      // The contact a call to this number is logged on.
+      record: CallRecord;
+    }
   | {
       kind: "email";
       // The record a message to this address is filed under.
@@ -99,6 +104,7 @@ export function ContactLink(props: Contact) {
       <CallAction
         appearance="value"
         number={value}
+        record={props.record}
         className={className}
         textClassName={textClassName}
       >

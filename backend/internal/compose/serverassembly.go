@@ -87,6 +87,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithProfileVerdictReader(profileverdicts.MergeReader(InstallationDB(pool))).
 		WithFeedbackCarryReader(ai.NewFeedbackStore(InstallationDB(pool))).
 		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
+		WithShareRequests(contactShareRequests(pool)).
 		WithInstallationRenamer(installationRenamer(pool))
 }
 
@@ -246,7 +247,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.forecastHandlers = forecasting.NewHandlers(
 		newForecastStoreFor(pool),
 		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
-		ForecastConversionHistory, ForecastForwardMeasure,
+		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals,
 		func() time.Time { return time.Now().UTC() },
 	)
 	// The floor comes from the constant rather than a setting for now: one
@@ -479,6 +480,7 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 			return identity.InstallationNameForPublicPage(ctx, pool)
 		})).
 		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
+		WithInstallationZone(identity.ZoneAppliedTx).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
 		// The controller particulars form reads and writes through the settings
 		// store; without it every read and write of the form is a server fault.

@@ -62,6 +62,7 @@ var pinExemptWrites = gatekit.Waive(map[string]string{
 	"sendEmailTool":        "the effect is a NEW activity, on the ground sendMessageTool states. The target is what the message is ABOUT, and the version of a record nobody is editing binds nothing the approval rests on",
 	"sendCompanyEmailTool": "the effect is a NEW activity and the call anchors on no row at all — its links carry the target. There is no operand row whose version could condition the send",
 	"bookMeetingTool":      "a booking creates its own row and anchors on no existing one; the links name what it is about. Nothing it writes has a prior version",
+	"setUpPartner":         "the write is conditioned on the partner program NOT existing, checked under the company's row lock inside the write's own transaction (contacts.UpsertPartner with MustCreate), and a program is the only thing it creates. The company's own version does not move when a program is set up, so a pin on it would condition the write on a column the write never changes",
 	"mergeRecords":         "the merge conditions itself on both endpoints INSIDE its own transaction, under the locks it takes on the pair (contacts/merge.go). A pin here would be a third answer to a question the write already asks race-free, and only about the survivor — the source is the half a caller-supplied pin could never cover",
 	"relinkThread":         "a thread is MANY activity rows reached by key, and one pin cannot condition many rows. Its sibling relinkActivity takes one because it names exactly one activity; the batch shape is what makes the pin unrepresentable rather than forgotten, and relinkbatch.go re-checks each row under its own lock",
 	"relinkActivities":     "the batch form of relinkThread's reason: the call names a LIST of activities and a single version could only ever condition one of them. The per-row check under the write's own lock is what holds here, and it holds for every row rather than for one",
@@ -101,7 +102,7 @@ func TestEveryStageableWriteAppliesTheVersionItStages(t *testing.T) {
 	registry := NewRegistry(&recordingApprovals{}, nil)
 	RegisterCoreTools(registry, elsewhereProvider{}, fixedStages{semantic: "won"}, nil, noConflicts{}, nil, nil, nil)
 	RegisterCommsTools(registry, &recordingComms{}, elsewhereProvider{})
-	RegisterLifecycleTools(registry, elsewhereProvider{}, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
+	RegisterLifecycleTools(registry, elsewhereProvider{}, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
 
 	pinned := 0
 	for name, tool := range registry.tools {

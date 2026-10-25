@@ -93,6 +93,14 @@ func (s Server) QualifyLead(w http.ResponseWriter, r *http.Request, id crmcontra
 		pathArgument{"lead_id", id.String()})
 }
 
+// SetUpPartner serves set_up_partner, on the company the path names. The body
+// passes through as the tool's arguments, so a margin_tier in it meets the
+// tool's own refusal.
+func (s Server) SetUpPartner(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.SetUpPartnerParams) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "set_up_partner", reservedArgs{params.IdempotencyKey, params.XApprovalToken},
+		pathArgument{refColCompany, id.String()})
+}
+
 // QueryWorkspace serves query_workspace.
 func (s Server) QueryWorkspace(w http.ResponseWriter, r *http.Request) {
 	serveToolBody(w, r, s.toolRegistry.Invoke, "query_workspace")

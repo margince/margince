@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "composite": true,
+    // Incremental, not composite: composite turns on declaration emit, and the
+    // inferred type of the en catalog outgrows what it will serialize (TS7056).
+    "incremental": true,
     "tsBuildInfoFile": "node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2022",
     "lib": ["ES2022", "ES2023.Intl", "DOM", "DOM.Iterable"],

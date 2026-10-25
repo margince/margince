@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -208,4 +209,33 @@ func resolvePayload(t *testing.T, payload json.RawMessage) agents.ResolveEntitie
 		t.Fatalf("unreadable resolve payload %s: %v", payload, err)
 	}
 	return answer
+}
+
+// The resolver reads the workspace's own consumer-mail list, not only the
+// shipped one: a domain an admin listed must never resolve to a company.
+func TestADomainOnTheWorkspacesConsumerMailListResolvesToNoCompany(t *testing.T) {
+	e := setupQuery(t)
+	company := e.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
+		VALUES ($1, $2, 'Kleinpost Kunde GmbH', 'manual', 'human:x')`, e.Rep1)
+	if _, err := e.Owner.Exec(context.Background(),
+		`INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
+		 VALUES ($1, 'kleinpost.example', true, 'manual', 'human:x')`, company); err != nil {
+		t.Fatalf("seeding the company's domain: %v", err)
+	}
+	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
+	const payload = `{"candidates":[{"kind":"company","ref":"card","domains":["kleinpost.example"]}]}`
+
+	before := resolvePayload(t, invokeResolve(e.admin(), t, registry, payload).Data)
+	if len(before.Candidates) != 1 || before.Candidates[0].Decision != agents.ResolveDecisionMatched {
+		t.Fatalf("control: the address must resolve to the company that claims its domain, got %+v", before.Candidates)
+	}
+	if _, err := capture.NewFreemailDomains(e.DB()).Add(
+		listAdminCtx(e.WS, e.Rep1, adminGrant), "kleinpost.example", capture.FreemailKindExtra); err != nil {
+		t.Fatalf("listing the domain as consumer mail: %v", err)
+	}
+
+	after := resolvePayload(t, invokeResolve(e.admin(), t, registry, payload).Data)
+	if len(after.Candidates) != 1 || after.Candidates[0].Decision == agents.ResolveDecisionMatched {
+		t.Errorf("a domain on the workspace's consumer-mail list still resolved to a company: %+v", after.Candidates)
+	}
 }

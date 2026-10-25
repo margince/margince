@@ -187,7 +187,7 @@ admin can also change under Settings.
 | `certlog_base_url` | `MARGINCE_CERTLOG_BASE_URL` | `--certlog-base-url` | `string` | — | worker | Base URL of a certificate log, or public for a free public one; unset makes no outbound lookups of what a company runs. |
 | `connector_state_key` | `MARGINCE_CONNECTOR_STATE_KEY` | `--connector-state-key` | `string`, secret | — | api | HMAC key of at least 32 bytes signing the OAuth connect state; required for the Gmail and Graph connect flows. |
 | `dsn` | `MARGINCE_DSN` | `--dsn` | `string`, secret | — | api, migrate, worker | Postgres DSN of the runtime app role; migrate falls back to it when `MARGINCE_OWNER_DSN` is unset. |
-| `geocode_base_url` | `MARGINCE_GEOCODE_BASE_URL` | `--geocode-base-url` | `string` | — | api, worker | Nominatim base URL, or public; set it on the api and the worker together, or a lookup is never queued. |
+| `geocode_base_url` | `MARGINCE_GEOCODE_BASE_URL` | `--geocode-base-url` | `string` | — | api, worker | Nominatim base URL; unset or public uses the public service, off stops the lookup of map points; give the api and the worker the same value, or a lookup is never queued. |
 | `gmail_client_id` | `MARGINCE_GMAIL_CLIENT_ID` | `--gmail-client-id` | `string` | — | api, worker | Google OAuth client id of the Gmail capture connector. |
 | `gmail_client_secret` | `MARGINCE_GMAIL_CLIENT_SECRET` | `--gmail-client-secret` | `string`, secret | — | api, worker | Google OAuth client secret of the Gmail capture connector. |
 | `gmail_jwks_url` | `MARGINCE_GMAIL_JWKS_URL` | `--gmail-jwks-url` | `string` | — | api | Override of the Google OIDC JWKS URL, for test and dev. |
@@ -348,6 +348,9 @@ admin can also change under Settings.
 | `installation.agent_window_hours` | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | — | `int`, 1 to 168, stored | `24` | api, worker | Hours in the window the agent limits count over; set at boot, it also keeps a length an admin saved for the next reset from taking over. |
 | `installation.agent_writes_per_window` | `MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW` | — | `int`, 10 to 5000, stored | `200` | api, worker | Changing calls one agent passport may make per window. |
 | `installation.base_language` | `MARGINCE_INSTALLATION_BASE_LANGUAGE` | — | `string`, stored | `en` | api, worker | The language AI writes the shared record in: en, de or vi. |
+| `installation.call_telegram` | `MARGINCE_INSTALLATION_CALL_TELEGRAM` | — | `bool`, stored | `true` | api, worker | Show a Telegram chat link next to a contact's phone number that starts with a country code. |
+| `installation.call_whatsapp` | `MARGINCE_INSTALLATION_CALL_WHATSAPP` | — | `bool`, stored | `true` | api, worker | Show a WhatsApp chat link next to a contact's phone number that starts with a country code. |
+| `installation.call_zalo` | `MARGINCE_INSTALLATION_CALL_ZALO` | — | `bool`, stored | `true` | api, worker | Show a Zalo chat link next to a contact's phone number that starts with a country code. |
 | `installation.close_date_sweep_interval_seconds` | `MARGINCE_INSTALLATION_CLOSE_DATE_SWEEP_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the close-date sweeps. |
 | `installation.country` | `MARGINCE_INSTALLATION_COUNTRY` | — | `string`, stored | `""` | api, worker | Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none. |
 | `installation.date_format` | `MARGINCE_INSTALLATION_DATE_FORMAT` | — | `string`, stored | `locale` | api, worker | How dates are written: locale, dmy, mdy or ymd. |
@@ -520,12 +523,14 @@ every write that commits would leave its outbox row with nothing to send it.
 ### Lookups on public services
 
 `--geocode-base-url` and `--vat-check-base-url` are read by both roles: the worker does the lookup,
-and the api decides whether to queue one. Set each on both roles or on none. The value `public`
+and the api decides whether to queue one. Give each the same value on both roles. The value `public`
 picks the public service of each, which this installation asks one request at a time:
 
-- **Geocoding** uses the public Nominatim service, for a test only. Its rules let a scheduled client
-  send 4 requests a minute, so Margince waits 15 seconds between requests. Unset, company addresses
-  get no map point, and a `within_radius` query answers `distance_ranking_unavailable`.
+- **Map points** are looked up by default. Unset or `public` uses the public Nominatim service. Its rules let
+  a scheduled client send 4 requests a minute, so Margince waits 15 seconds between requests. The
+  value `off` switches the lookup off: company addresses get no map point, and a `within_radius`
+  query answers `distance_ranking_unavailable`. Any other value is the base URL of your own
+  Nominatim.
 - **VAT checks** use the VIES service of the EU, with 2 seconds between checks. Unset, Margince
   stores the VAT ID of a company as its web page stated it.
 - **`--certlog-base-url`**, on the worker, turns on the technical lookup. That reads what a company

@@ -1,4 +1,4 @@
-name: courteous_cold_pitch_is_spam
+name: courteous_cold_pitch_is_a_vendor_pitch
 task: capture_counterparty_verdict
 site: verdict
 source: hand_authored
@@ -37,7 +37,7 @@ fixture:
     Financial Broker | Financial Consultant
 expect:
   outcome: accepted
-  answer: spam
+  answer: vendor_pitch
   rubric: >
     The address is a personal one, deliberately. It was authored as `info-fbc@`,
     which the deterministic role list settles as a role mailbox before the model
@@ -52,7 +52,7 @@ expect:
     and created a junk contact.
     What makes it spam is the DIRECTION of the offer: a stranger this business
     never contacted, pitching their own service, with a referral fee attached.
-    A kind of "spam" scores high. "newsletter" is a near miss — the label is
+    A kind of "vendor_pitch" scores high. "spam" is a near miss: the mail is hidden and no record is made, which is safe but loses the named sender. "newsletter" is also a near miss — the label is
     less precise but both resolve to noise, so no record is made either way.
     "contact" scores zero: it is the answer that shipped the defect.
   bands:

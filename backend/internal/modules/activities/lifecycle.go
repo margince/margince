@@ -275,6 +275,7 @@ func admitActivityPatch(
 	if err := renormalizeTranscriptPatch(current, in); err != nil {
 		return crmcontracts.Activity{}, held, err
 	}
+	maskMailPatch(current, in)
 	if !held && in.Subject != nil && current.Kind == crmcontracts.ActivityKindTask {
 		subject, err := taskSubject(*in.Subject)
 		if err != nil {
@@ -318,6 +319,9 @@ func admitActivityPatch(
 		if err := ensureAssigneeCanHoldWork(ctx, tx, in.AssigneeID); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
+	}
+	if !held {
+		endPassedReminder(current, in)
 	}
 	return current, held, nil
 }

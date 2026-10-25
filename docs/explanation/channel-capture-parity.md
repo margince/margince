@@ -31,6 +31,7 @@ meets depends on the credential model, not the kind:
 | --- | --- | --- | --- | --- |
 | 1. workspace mail-sharing floor | the workspace | yes | **yes** | no |
 | 2. counterparty hold | the other side, stored per seat | yes | **yes** | no |
+| 2. every party is a member (`members_only`) | the workspace's member addresses | yes | no | no |
 | 3. a marker set on the message | the message's own subject | yes | **yes** | no |
 | 4. thread verdict taken over from the thread | the delivering mailbox | yes | no | no |
 | 5. mailbox posture | the delivering mailbox | yes | no | no |

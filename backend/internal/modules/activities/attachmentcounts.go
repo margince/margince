@@ -37,6 +37,7 @@ func AttachmentCountsFor(
 		SELECT at.entity_id, count(*)
 		  FROM attachment at
 		 WHERE at.entity_type = 'activity' AND at.entity_id = ANY($1) AND at.archived_at IS NULL
+		   AND `+arrivedWithMessage("at")+`
 		 GROUP BY at.entity_id`, activityIDs)
 	if err != nil {
 		return nil, fmt.Errorf("activities: counting what came with a page of messages: %w", err)

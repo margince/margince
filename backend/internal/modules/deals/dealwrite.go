@@ -11,14 +11,9 @@ package deals
 // re-dating under a held lock. They differ in what guards the write and in what
 // else their transaction does.
 //
-// What they may not differ in is whether the forecast move is recorded, because
-// deal_forecast_history's completeness is a property of its READERS: a
-// reconstruction that omits one writer's moves is a partial sum wearing the
-// label of a total. So recording is not a step a writer performs. It is what
-// applying a deal patch means, and the two seams below are where it means it.
-//
-// TestEveryDealRowWriteRecordsTheForecastItMoved holds it: a patch applied to
-// the deal row from a function that does not record fails that gate.
+// What they share is the patch. Each applies through a seam below, so the
+// audit trail records the same before and after values whichever flow wrote
+// the row.
 
 import (
 	"context"
@@ -50,24 +45,12 @@ const dealTable = "deal"
 func applyDealPatchGuarded(ctx context.Context, tx pgx.Tx, id ids.DealID,
 	p *storekit.Patch, ifVersion *int64,
 ) error {
-	if err := p.ApplyGuarded(ctx, tx, dealTable, id.UUID, ifVersion); err != nil {
-		return err
-	}
-	return recordForecastMovement(ctx, tx, id, p.After())
+	return p.ApplyGuarded(ctx, tx, dealTable, id.UUID, ifVersion)
 }
 
 // applyDealPatchLocked is the internal-flow write: the caller took the row lock
 // before the reads that decided this patch, so the decision cannot have gone
 // stale under it.
-//
-// The row it records is the row the LOCK names, not one the caller passes
-// alongside. ApplyLocked writes where the lock points, so a second id would be a
-// second answer to "which deal is this" — and the two disagreeing would write
-// one deal's figures into another deal's history, with both rows resolving and
-// nothing to notice. A guard the caller supplies is not a guard.
 func applyDealPatchLocked(ctx context.Context, tx pgx.Tx, p *storekit.Patch, lock storekit.RowLock) error {
-	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-		return err
-	}
-	return recordForecastMovement(ctx, tx, ids.From[ids.DealKind](lock.ID()), p.After())
+	return p.ApplyLocked(ctx, tx, lock)
 }

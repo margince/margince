@@ -86,6 +86,9 @@ func (q Query) SelectedValues(ctx context.Context, tx pgx.Tx, p Predicate, recor
 		if err != nil {
 			return nil, err
 		}
+		if reading.valueless {
+			continue
+		}
 		if reading.hidden {
 			hidden = append(hidden, name)
 			continue

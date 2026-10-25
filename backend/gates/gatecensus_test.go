@@ -54,7 +54,7 @@ const (
 	// Permitting the marker without counting it would let it spread quietly and
 	// reopen the class these rules close; pinned, every new one moves a number a
 	// reviewer sees.
-	wantFixtureAnnotations = 74
+	wantFixtureAnnotations = 76
 )
 
 // censusDecl is one package-level declaration this census governs — a map from

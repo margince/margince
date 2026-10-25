@@ -11,6 +11,7 @@ import type { MessageKey } from "../../i18n/en";
 import { openAnalyticsSection } from "../../lib/analytics.address";
 import { unwrap } from "../../lib/problem";
 import { rowCount, rowMoney } from "./analytics.cells";
+import { MyTargets } from "./analytics.outcomes.targets";
 import { MEETING_STATUSES } from "./analytics.questions.values";
 
 // What a reading says when the row it needs is not there. THREE facts, not one:
@@ -124,6 +125,7 @@ export function MyOutcomesView({
 
   return (
     <>
+      <MyTargets self={self} locale={locale} />
       <Panel title={t("analytics.myPipeline")}>
         <PanelBody>
           <StatStrip>

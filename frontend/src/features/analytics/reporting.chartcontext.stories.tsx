@@ -26,3 +26,19 @@ export const PartialCoverage: StoryObj = {
     );
   },
 };
+
+// A figure missing what the reader may not see says so beside its period.
+export const Withheld: StoryObj = {
+  render: () => {
+    const [chart] = reportingStoryEvaluation.charts;
+    if (!chart) throw new Error("the reporting fixture carries no chart");
+    return (
+      <StoryProviders>
+        <ChartContext
+          chart={{ ...chart, coverage: { status: "ok", withheld: true } }}
+          evaluation={reportingStoryEvaluation}
+        />
+      </StoryProviders>
+    );
+  },
+};

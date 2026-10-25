@@ -8,8 +8,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createContext, runInContext } from "node:vm";
 import { build, type InlineConfig } from "vite";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { SERVICE_WORKER_URL } from "../src/lib/pwa";
 import { LOCALES } from "../src/i18n";
+import { SERVICE_WORKER_URL } from "../src/lib/pwa";
 import spaConfig from "../vite.config";
 import { pwa, workerCacheName } from "./vite-pwa";
 

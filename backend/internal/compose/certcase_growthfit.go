@@ -151,7 +151,7 @@ func ourOfferingContext(byScope map[string][]growthFitContextItem) (contacts.Com
 // provider, standing where the database read stands in production.
 type fixtureCompanyContext struct{ served contacts.CompanyContext }
 
-func (f fixtureCompanyContext) GetCompanyContext(context.Context, []contacts.CompanyContextScope) (contacts.CompanyContext, error) {
+func (f fixtureCompanyContext) GetCompanyContext(context.Context, []contacts.CompanyContextScope, contacts.OfferingSelector) (contacts.CompanyContext, error) {
 	return f.served, nil
 }
 

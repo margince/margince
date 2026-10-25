@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -192,7 +193,7 @@ func TestTheCohortRepairReachesMailUnderAnAliasAddedLater(t *testing.T) {
 			return err
 		}
 		return insertContactEmails(ctx, tx, ws, res.ContactID, "manual", "human:test",
-			[]ContactEmailInput{{Email: alias, EmailType: "work", Position: 1}})
+			[]ContactEmailInput{{Email: alias, EmailType: "work", Position: 1}}, storekit.RefuseErased)
 	}); err != nil {
 		t.Fatal(err)
 	}

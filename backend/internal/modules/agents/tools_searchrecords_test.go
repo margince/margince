@@ -270,3 +270,34 @@ func TestAGroupedPageNamesTheTypesWithMore(t *testing.T) {
 		}
 	}
 }
+
+func TestANearMatchIsReadBackAndANoteSaysItIsNoMatch(t *testing.T) {
+	kept, gone := ids.NewV7(), ids.NewV7()
+	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
+		kept: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+	}}
+	engine := &rankingProbe{page: RecordSearchPage{NearMatches: []RecordNearMatch{
+		{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: kept}, Title: "Anna Kowalczyk"},
+		{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: gone}, Title: "Gone Kowalczyk"},
+	}}}
+	raw, err := searchRecordsOver(provider, engine).Handle(searchReader(), json.RawMessage(`{"q":"kowalcyk"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := searchedPage(t, raw)
+	if !engine.asked.NearMatches {
+		t.Error("search_records did not ask the engine for near matches")
+	}
+	if len(page.Records) != 0 || len(page.NearMatches) != 1 || page.NearMatches[0].ID != kept {
+		t.Fatalf("the answer is %s, want only the readable near match", raw)
+	}
+	if page.Coverage != CoverageCompleteExact {
+		t.Errorf("coverage = %q, want %q: the exact set is complete and empty", page.Coverage, CoverageCompleteExact)
+	}
+	if len(page.Notes) != 1 || page.Notes[0].Code != CodeNearMatchesOnly {
+		t.Errorf("notes = %+v, want one %s note", page.Notes, CodeNearMatchesOnly)
+	}
+	if strings.Contains(string(raw), "Gone Kowalczyk") {
+		t.Errorf("an unreadable near match leaked: %s", raw)
+	}
+}

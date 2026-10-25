@@ -22,7 +22,8 @@ import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { metricLabel } from "./reporting.model";
+import { metricLabel, unitLabel } from "./reporting.model";
+import { useReportingCatalog } from "./reporting.queries";
 
 type Framework = components["schemas"]["ReportingFramework"];
 export function ReportingDefinitions() {
@@ -30,12 +31,7 @@ export function ReportingDefinitions() {
   const t = useT();
   const [section, setSection] = useState("definitions");
   const canPublish = useCanWrite("reporting_framework", "update");
-  const catalog = useQuery({
-    queryKey: ["reporting-catalog"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/metrics"));
-    },
-  });
+  const catalog = useReportingCatalog();
   const framework = useQuery({
     enabled: canPublish && section === "setup",
     queryKey: ["reporting-framework"],
@@ -78,15 +74,7 @@ export function ReportingDefinitions() {
                         {t("reporting.revision", {
                           revision: String(metric.version),
                         })}{" "}
-                        ·{" "}
-                        {metric.unit === "count"
-                          ? t("reporting.countUnit")
-                          : metric.unit === "days"
-                            ? t("reporting.daysUnit")
-                            : metric.unit === "money"
-                              ? t("reporting.amountUnit")
-                              : "%"}{" "}
-                        ·{" "}
+                        · {unitLabel(metric.unit, t)} ·{" "}
                         {t(
                           metric.temporal_basis === "event_period"
                             ? "reporting.period"

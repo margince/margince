@@ -45,6 +45,7 @@ export function checkLabel(
     no_economic_buyer: "review.noEconomicBuyer",
     buyer_silent: "review.buyerSilent",
     commit_unpriced: "review.commitUnpriced",
+    stage_exit_unmet: "review.stageExitUnmet",
   };
   return (known[type] ?? "review.unknownCheck") as Parameters<
     ReturnType<typeof useT>

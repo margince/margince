@@ -387,6 +387,8 @@ var replayableOperations = map[string]replayTarget{
 	// The two administered lead vocabularies are gated like the field catalog
 	// they extend — auth.Require on "custom_field" in every store entry point —
 	// and their rows are workspace-shared config with no owner column.
+	"POST /v1/lead-origins":              {object: objectCustomField, rowNote: noOwnerCatalog},
+	"PATCH /v1/lead-origins/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/lead-sources":              {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/lead-sources/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/acquisition-sources":       {object: objectCustomField, rowNote: noOwnerCatalog},

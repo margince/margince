@@ -251,6 +251,36 @@ function ReportRemainder({
   );
 }
 
+// One query per card and scope, shared by every reader of it. A screen that
+// needs the card's population flag asks through the same key and costs no
+// second request.
+export function useReportRun(
+  card: CardKey,
+  scope?: AnalyticsScope,
+  enabled = true,
+) {
+  const report = reportOf(card);
+  return useQuery({
+    enabled,
+    queryKey: ["report", card, scope ? scopeKey(scope) : null],
+    queryFn: async () => {
+      return unwrap(
+        await api.POST("/reports/{report}", {
+          params: { path: { report } },
+          // An empty list and an absent one both take the report's declared defaults
+          // (report.go branches on len==0). So the delivery reports' empty plans ask
+          // for what their specs declare.
+          body: {
+            scope: scope ? reportScope(scope) : undefined,
+            group_by: REPORT_GROUP_BY[card],
+            aggregates: REPORT_AGGREGATES[card],
+          },
+        }),
+      );
+    },
+  });
+}
+
 // One report: its own query, its own explain disclosure, its own card. A
 // section may hold several, and each has to load, fail and be explained on its
 // own. A single query per screen would show one spinner for both of a
@@ -274,24 +304,7 @@ export function ReportCard({
   const report = reportOf(card);
   const title = t(CARD_TITLE[card] ?? ENTITY_LABEL_KEY[report]);
 
-  const reportQuery = useQuery({
-    queryKey: ["report", card, scope ? scopeKey(scope) : null],
-    queryFn: async () => {
-      return unwrap(
-        await api.POST("/reports/{report}", {
-          params: { path: { report } },
-          // An empty list and an absent one both take the report's declared defaults
-          // (report.go branches on len==0). So the delivery reports' empty plans ask
-          // for what their specs declare.
-          body: {
-            scope: scope ? reportScope(scope) : undefined,
-            group_by: REPORT_GROUP_BY[card],
-            aggregates: REPORT_AGGREGATES[card],
-          },
-        }),
-      );
-    },
-  });
+  const reportQuery = useReportRun(card, scope);
 
   return (
     <QueryGate query={reportQuery} pendingLabel={title}>

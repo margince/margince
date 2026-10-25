@@ -86,6 +86,9 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	if approval.Kind == operationMergeTags {
 		return r.tagMergePreview(ctx, approval, out)
 	}
+	if approval.Kind == operationSetUpPartner {
+		return r.partnerSetUpPreview(ctx, approval, out)
+	}
 	if approval.Kind == operationCommitImport {
 		return r.importPreview(ctx, approval, out)
 	}

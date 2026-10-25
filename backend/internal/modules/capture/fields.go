@@ -49,6 +49,9 @@ type ActivityFields struct {
 	// BodyCompleteness says how much of a mail's text the parser decoded. Zero
 	// for anything not parsed from a mail, which is stored as complete.
 	BodyCompleteness BodyCompleteness
+	// CredentialsMasked says masking changed this record's subject or body. Only
+	// then may equal text fail to prove one message (replaymaskedproof.go).
+	CredentialsMasked bool
 
 	// SentByColleague is the live seat who wrote a mail this mailbox holds a
 	// copy of (asSentByColleagueTx); zero for every other record.
@@ -76,9 +79,19 @@ type MailEnvelope struct {
 	// LinkHosts are the hosts the body's web links lead to, with a known
 	// redirect wrapper already unwrapped.
 	LinkHosts []string
+	// Links are the web addresses behind LinkHosts, in first-seen order, with
+	// the text a reader sees on each. They come from the same walk as LinkHosts.
+	Links []MailLink
 	// LinksTruncated says the parser stopped before it read every link, so
 	// LinkHosts may miss one.
 	LinksTruncated bool
+}
+
+// MailLink is one web address a mail body links to and the text shown on it,
+// empty for an address written out in plain text.
+type MailLink struct {
+	URL  string
+	Text string
 }
 
 // LeadFields is a captured prospect bound for the lead pool — never
@@ -89,6 +102,12 @@ type LeadFields struct {
 	Email       string
 	CompanyName string
 	Title       string
+	// Origin is where the prospect came from, a lead_origin key, and empty for a
+	// connector that carries none. The table's foreign key refuses an unknown
+	// key, so the sink needs no catalog of its own. OriginDetail is the
+	// connector's own wording beside it.
+	Origin       string
+	OriginDetail string
 	// Unowned declines ownership on the granting human's behalf, for a capture
 	// that is a RECORD rather than an assignment.
 	//

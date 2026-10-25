@@ -22,7 +22,12 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
 import { leadWriteKeys } from "../../lib/leadkeys";
-import { sourcePickOptions, useLeadSources } from "../../lib/leadsources";
+import {
+  addedViaFor,
+  originLabelFor,
+  originPickOptions,
+  useLeadOrigins,
+} from "../../lib/leadorigins";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { ProblemError } from "../../lib/problem";
 import { useRecordTags } from "../../lib/tags.queries";
@@ -37,7 +42,8 @@ type TextKey =
   | "phone"
   | "title"
   | "company_name"
-  | "candidate_company_key";
+  | "candidate_company_key"
+  | "origin_detail";
 
 function isBlank(value: string | null | undefined): boolean {
   return !value?.trim();
@@ -51,7 +57,7 @@ function isBlank(value: string | null | undefined): boolean {
 function useFieldSave(lead: Lead) {
   const t = useT();
   const queryClient = useQueryClient();
-  return (key: TextKey | "source", required = false) =>
+  return (key: TextKey | "origin", required = false) =>
     async (next: string) => {
       if (required && !next.trim()) {
         throw new ProblemError({ detail: t("record.fieldRequired") });
@@ -131,7 +137,7 @@ function useAboutRows(
 ): DetailRow[] {
   const t = useT();
   const { locale } = useLocale();
-  const sources = useLeadSources();
+  const origins = useLeadOrigins();
   const tags = useRecordTags("lead", lead.id, !lead.archived_at);
   const mayTag = useCanWriteRecord("lead", lead);
   const save = useFieldSave(lead);
@@ -157,8 +163,11 @@ function useAboutRows(
       />
     ),
   });
-  const sourceOptions = sourcePickOptions(sources.data?.data, lead.source, t);
-  const connector = (lead.source ?? "").startsWith("connector:");
+  // "Not set" is a real choice: choosing it sends null and the lead scores neutral.
+  const originOptions = [
+    { value: "", label: t("lead.originNone") },
+    ...originPickOptions(origins.data, lead.origin),
+  ];
   const rows: DetailRow[] = [
     text("company_name", "create.companyName"),
     text("title", "create.contactTitle"),
@@ -177,23 +186,31 @@ function useAboutRows(
     },
     text("phone", "create.phone"),
     {
-      key: "source",
-      term: t("lead.source"),
+      key: "origin",
+      term: t("lead.origin"),
+      empty: !lead.origin,
       value: (
         <InlineChoice
-          label={t("lead.source")}
+          label={t("lead.origin")}
           hideLabel
-          value={lead.source ?? ""}
-          options={sourceOptions}
+          value={lead.origin ?? ""}
+          options={originOptions}
           render={(value) =>
-            sourceOptions.find((option) => option.value === value)?.label ??
-            value
+            value === ""
+              ? t("field.unset")
+              : (originLabelFor(lead, origins.data) ?? value)
           }
-          canEdit={canEdit && !connector}
-          readOnlyReason={connector ? t("lead.sourceFromConnector") : reason}
-          onSave={save("source")}
+          canEdit={canEdit}
+          readOnlyReason={reason}
+          onSave={save("origin")}
         />
       ),
+    },
+    text("origin_detail", "lead.originDetail"),
+    {
+      key: "added_via",
+      term: t("lead.addedVia"),
+      value: addedViaFor(lead, t),
     },
     {
       key: "received",

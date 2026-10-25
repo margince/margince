@@ -5,8 +5,9 @@
 
 package gates
 
-// last_activity_at on deal, contact and company skips a called-off meeting and
-// counts only what has happened. relstrength.LastActivityCountsSQL spells both.
+// last_activity_at on deal, contact, company and project skips a task and a
+// called-off meeting, and counts only what has happened.
+// relstrength.LastActivityCountsSQL spells all three.
 //
 // The last_activity_of_* SQL functions fold the column and cannot call Go, so
 // their migration carries the rule's rendered text. This gate holds every arm
@@ -20,19 +21,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// meetingRuleClocks are the recency functions a called-off meeting must not
-// move. last_activity_of_project keeps its own rule and is not one of them.
-var meetingRuleClocks = []string{"last_activity_of_deal", "last_activity_of_contact", "last_activity_of_company"}
+// meetingRuleClocks are the recency functions a task or a called-off meeting
+// must not move.
+var meetingRuleClocks = []string{
+	"last_activity_of_deal", "last_activity_of_contact", "last_activity_of_company", "last_activity_of_project",
+}
 
 // gatekit:fixture the Go reads of a record's last touch that do not read
 // last_activity_at, each with what it computes.
 var meetingRuleReaders = map[string]string{
-	"internal/modules/deals/health.go":         "deal health's recency evidence",
-	"internal/modules/contacts/lead_read.go":   "a lead's last activity",
-	"internal/compose/contact360/lasttouch.go": "a contact's last inbound and outbound touch",
-	"internal/modules/deals/quietfacts.go":     "a deal's last interaction each way, cited in the close-date review",
-	"internal/modules/activities/lasttouch.go": "the last genuine engagement that holds back a no-activity reminder",
-	"internal/modules/deals/lastemail.go":      "the newest email on a deal's board card",
+	"internal/modules/deals/health.go":               "deal health's recency evidence",
+	"internal/modules/contacts/lead_read.go":         "a lead's last activity",
+	"internal/compose/contact360/lasttouch.go":       "a contact's last inbound and outbound touch",
+	"internal/modules/deals/quietfacts.go":           "a deal's last interaction each way, cited in the close-date review",
+	"internal/modules/activities/lasttouch.go":       "the last genuine engagement that holds back a no-activity reminder",
+	"internal/modules/deals/lastemail.go":            "the newest email on a deal's board card",
+	"internal/modules/activities/projectcoverage.go": "the project page's last update",
 }
 
 func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
@@ -50,12 +54,10 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 			t.Errorf("%s: no activity join found, so the gate cannot see this function's shape", name)
 			continue
 		}
-		for i, arm := range arms {
-			if !strings.Contains(arm, rule) {
-				t.Errorf("%s: activity arm %d of %d does not carry %q, so a canceled or no-show meeting, "+
-					"or one still ahead, can keep the record looking recently active. Replace the function in a "+
-					"new migration with the rule's current text in every arm.", name, i+1, len(arms), rule)
-			}
+		if missing := armsMissing(body, rule); len(missing) > 0 {
+			t.Errorf("%s: activity arms %v of %d do not carry %q, so a task, a canceled or no-show meeting, "+
+				"or one still ahead, can keep the record looking recently active. Replace the function in a "+
+				"new migration with the rule's current text in every arm.", name, missing, len(arms), rule)
 		}
 	}
 	for file, what := range meetingRuleReaders {
@@ -68,6 +70,33 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 			t.Errorf("%s no longer calls relstrength.LastActivityCountsSQL, so %s can count a called-off "+
 				"meeting, or one still ahead, as a touch", file, what)
 		}
+	}
+}
+
+// armsMissing answers the 1-based activity arms of body that do not carry rule.
+func armsMissing(body, rule string) []int {
+	var missing []int
+	for i, arm := range activityArms(body) {
+		if !strings.Contains(arm, rule) {
+			missing = append(missing, i+1)
+		}
+	}
+	return missing
+}
+
+// TestTheClockGateSeesAMissingKindBound proves the arm check fails on a body
+// that keeps the meeting and time halves of the rule and drops the kind half.
+func TestTheClockGateSeesAMissingKindBound(t *testing.T) {
+	t.Parallel()
+	rule := relstrength.LastActivityCountsSQL("a", "now()")
+	kind := relstrength.LastActivityKindSQL("a")
+	if !strings.Contains(rule, kind) {
+		t.Fatalf("LastActivityCountsSQL %q does not carry the kind bound %q", rule, kind)
+	}
+	stripped := strings.Replace(rule, kind+" AND ", "", 1)
+	body := "SELECT max(a.occurred_at) FROM activity_link l JOIN activity a ON a.id = l.activity_id AND " + stripped
+	if missing := armsMissing(body, rule); len(missing) != 1 {
+		t.Fatalf("a body without the kind bound passed the arm check: %q", body)
 	}
 }
 

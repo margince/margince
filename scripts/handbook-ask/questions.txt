@@ -225,3 +225,6 @@ can I only get a message when a deal is won
 how do I change the company reporting time zone
 how do I mark a meeting as held
 how do I record that a customer did not show up to a meeting
+what happens after I press Call on a contact
+how do I open a WhatsApp chat with a contact
+how do I turn off the Telegram or Zalo links on phone numbers

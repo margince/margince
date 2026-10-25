@@ -363,12 +363,12 @@ func fileKeeper(pool *pgxpool.Pool, blob blobstore.Store) capture.FileKeeper {
 	return capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(blob)}
 }
 
-// A file on a message filed against a company rolls up to that company, which
-// is what makes the account's document library one indexed read instead of a
-// union over every kind of parent. It is NOT what authorizes the file — that
-// stays the activity — so a message filed against nobody rolls up to nothing
-// and its file is reachable from the timeline alone.
-func TestACapturedFileRollsUpToTheCompanyItsMessageIsFiledUnder(t *testing.T) {
+// A captured file carries no company stamp, whether its message is filed
+// against a company or against nobody. The company's library reads a mail's
+// files through the message's links as they are at read time. A stamp
+// written here would only go stale (held by
+// TestAMailFileReachesEveryRecordTheMailIsLinkedTo).
+func TestACapturedFileCarriesNoCompanyStamp(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
 
@@ -383,40 +383,22 @@ func TestACapturedFileRollsUpToTheCompanyItsMessageIsFiledUnder(t *testing.T) {
 		t.Fatalf("seed the company: %v", err)
 	}
 
-	rec := withFiles(mailRecord("msg-filed-"+tag), onePDF())
-	rec.Links = []datasource.EntityRef{{Type: datasource.EntityCompany, ID: companyID}}
-	if _, err := sink.Upsert(ctx, rec); err != nil {
-		t.Fatalf("capture: %v", err)
+	filed := withFiles(mailRecord("msg-filed-"+tag), onePDF())
+	filed.Links = []datasource.EntityRef{{Type: datasource.EntityCompany, ID: companyID}}
+	for _, rec := range []connector.NormalizedRecord{filed, withFiles(mailRecord("msg-unfiled-"+tag), onePDF())} {
+		if _, err := sink.Upsert(ctx, rec); err != nil {
+			t.Fatalf("capture: %v", err)
+		}
 	}
 
-	files := filesFor(ctx, t, db, "msg-filed-"+tag)
-	if len(files) != 1 {
-		t.Fatalf("stored %d files, want 1", len(files))
-	}
-	if files[0].company == nil || *files[0].company != companyID.String() {
-		t.Errorf("company_id = %v, want the company the message is filed under (%s)",
-			files[0].company, companyID)
-	}
-}
-
-// And one filed against nobody rolls up to nothing rather than to the wrong
-// company. An empty roll-up keeps the file out of every account library; a
-// guessed one puts it in somebody else's.
-func TestACapturedFileFiledAgainstNobodyRollsUpToNothing(t *testing.T) {
-	ctx, db, tag := captureWorkspace(t)
-	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
-
-	if _, err := sink.Upsert(ctx, withFiles(mailRecord("msg-unfiled-"+tag), onePDF())); err != nil {
-		t.Fatalf("capture: %v", err)
-	}
-
-	files := filesFor(ctx, t, db, "msg-unfiled-"+tag)
-	if len(files) != 1 {
-		t.Fatalf("stored %d files, want 1", len(files))
-	}
-	if files[0].company != nil {
-		t.Errorf("company_id = %v, want none — this message names no company",
-			*files[0].company)
+	for _, source := range []string{"msg-filed-" + tag, "msg-unfiled-" + tag} {
+		files := filesFor(ctx, t, db, source)
+		if len(files) != 1 {
+			t.Fatalf("%s: stored %d files, want 1", source, len(files))
+		}
+		if files[0].company != nil {
+			t.Errorf("%s: company_id = %v, want none", source, *files[0].company)
+		}
 	}
 }
 
@@ -665,4 +647,42 @@ func withheldVerdict(ctx context.Context, t *testing.T, db *database.DB, sourceI
 		t.Fatalf("reading the withheld breadcrumb: %v", err)
 	}
 	return verdict
+}
+
+// A mail that links a Google Slides deck and an ordinary page records the deck
+// once. The test runs the real sink and the real keeper.
+func TestACapturedMailsDocumentLinkBecomesALinkRow(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	rec := mailRecord("msg-with-link-" + tag)
+	fields, ok := rec.Fields.(capture.ActivityFields)
+	if !ok {
+		t.Fatalf("fixture fields are %T", rec.Fields)
+	}
+	fields.Envelope = &capture.MailEnvelope{Links: []capture.MailLink{
+		{URL: "https://example.net/pricing", Text: "Pricing"},
+		{URL: "https://docs.google.com/presentation/d/abc/edit#slide=1", Text: "Q4 plan"},
+	}}
+	rec.Fields = fields
+
+	for pull := 1; pull <= 2; pull++ {
+		if _, err := sink.Upsert(ctx, rec); err != nil {
+			t.Fatalf("pull %d: %v", pull, err)
+		}
+	}
+
+	var rows, withheld int
+	var category, filename, storageKey string
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*), min(category), min(filename), min(storage_key), bool_and(bytes_withheld)::int
+			  FROM attachment WHERE external_source_id = $1`,
+			connector.EmailSourceSystem+":msg-with-link-"+tag).Scan(&rows, &category, &filename, &storageKey, &withheld)
+	}); err != nil {
+		t.Fatalf("read the link rows: %v", err)
+	}
+	if rows != 1 || category != "link" || filename != "Q4 plan" || withheld != 1 || storageKey != "" {
+		t.Errorf("rows=%d category=%q filename=%q withheld=%d key=%q; want only the deck, as a link named by its text with no bytes",
+			rows, category, filename, withheld, storageKey)
+	}
 }

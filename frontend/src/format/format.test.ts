@@ -10,6 +10,7 @@ import {
   formatDayMonthNearYear,
   formatDayRange,
   formatDuration,
+  formatHours,
   formatMoney,
   formatMoneyCompact,
   formatMoneyOrAbsent,
@@ -496,5 +497,18 @@ describe("formatMoneyWhole", () => {
   it("drops the cents of a whole amount and keeps them otherwise", () => {
     expect(formatMoneyWhole(4_800_000, "EUR", "en")).toBe("€48,000");
     expect(formatMoneyWhole(4_800_050, "EUR", "en")).toBe("€48,000.50");
+  });
+});
+
+describe("formatHours", () => {
+  it("keeps one decimal in the reader's notation and unit word", () => {
+    expect(formatHours(3.5, "en")).toMatch(/^3\.5\s*hr/);
+    expect(formatHours(3.5, "de")).toMatch(/^3,5\s*Std\./);
+    expect(formatHours(3.5, "vi")).toMatch(/^3,5\s*giờ$/);
+  });
+
+  it("rounds a long fraction to one decimal and drops a whole one", () => {
+    expect(formatHours(2.04, "en")).toMatch(/^2\s*hr/);
+    expect(formatHours(12.26, "en")).toMatch(/^12\.3\s*hr/);
   });
 });

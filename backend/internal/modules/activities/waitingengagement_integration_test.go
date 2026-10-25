@@ -21,12 +21,15 @@ package activities
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -97,8 +100,8 @@ func (e *loadEnv) waitingFrom(t *testing.T, subject, address string, contact ids
 	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
 		VALUES ($1, 'email', 'inbound', $2, now() - interval '2 days', $3, 'seed', 'system')`,
 		activity, subject, "thread-"+activity.String())
-	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address)
-		VALUES ($1, $2, 'from', $3)`, ids.NewV7(), activity, address)
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address, address_domain_folded)
+		VALUES ($1, $2, 'from', $3, $4)`, ids.NewV7(), activity, address, owndomain.StoredOfAddress(address))
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
 		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), activity, contact)
 	return activity
@@ -169,6 +172,39 @@ func TestASubdomainOfOursIsAlsoOurs(t *testing.T) {
 	}
 	if _, ok := present(t, s, e, lookalike); !ok {
 		t.Error("a different company whose domain ends with ours was excluded")
+	}
+}
+
+// An own domain typed in unicode is stored folded, and so is each sender's
+// domain. So every spelling of an address at it is a colleague here, as on the
+// reply path, and a lookalike is a customer.
+func TestEverySpellingOfAnInternationalOwnDomainIsAColleague(t *testing.T) {
+	e := setupLoad(t)
+	contact := e.buyer(t)
+	own := owndomain.New([]string{"bücher.example"})
+	s := storeKnowing(e, own.Domains()...)
+	colleague := map[string]bool{
+		"anna@bücher.example":        true,
+		"ANNA@BÜCHER.EXAMPLE":        true,
+		"anna@xn--bcher-kva.example": true,
+		"anna@ｂücher.example":        true,
+		"anna@post.bücher.example":   true,
+		"anna@bücher-other.example":  false,
+		"anna@bücher.example.evil":   false,
+	}
+	for address, ours := range colleague {
+		if own.Covers(address) != ours {
+			t.Fatalf("owndomain.Set.Covers(%q) = %v; the fixture expects %v", address, !ours, ours)
+		}
+		wait := e.waitingFromToRep(t, "Re: "+address, address, contact)
+		rows, err := s.WaitingReplies(e.as(), clocktest.Now(t))
+		if err != nil {
+			t.Fatalf("reading who is waiting: %v", err)
+		}
+		waiting := slices.ContainsFunc(rows, func(row WaitingReply) bool { return row.ActivityID == wait })
+		if waiting == ours {
+			t.Errorf("%s: waiting = %v, but the reply path reads it as a colleague = %v", address, waiting, ours)
+		}
 	}
 }
 

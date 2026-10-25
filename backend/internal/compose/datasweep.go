@@ -70,7 +70,7 @@ var preservedResetTables = map[string]bool{
 	// reasons — are installation configuration on the same footing as
 	// `setting`: the migration seeds the built-ins and an administrator shapes
 	// the rest, and neither is a record of this workspace's customers.
-	"lead_source": true, "lead_disqualify_reason": true,
+	"lead_source": true, "lead_origin": true, "lead_disqualify_reason": true,
 	// The SDR handoff reasons, on the same footing and seeded the same way.
 	"sdr_handoff_reason": true,
 	// Installation configuration beside the users kept; only the migration seeds the default.
