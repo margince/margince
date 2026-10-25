@@ -39,9 +39,11 @@ import { useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { isOption } from "../../lib/options";
 import {
+  closingBody,
   DSR_KIND_LABEL,
   DSR_STATUS_FACETS,
   DSR_STATUS_LABEL,
+  type DsrClosing,
   type DsrStatusFacet,
   isIllegalTransition,
   isLegalHold,
@@ -73,8 +75,6 @@ import "./privacy.css";
 
 type CreateDataSubjectRequest =
   components["schemas"]["CreateDataSubjectRequest"];
-type UpdateDataSubjectRequest =
-  components["schemas"]["UpdateDataSubjectRequest"];
 type DsrKind = CreateDataSubjectRequest["kind"];
 type RequestDeadline = components["schemas"]["RequestDeadline"];
 
@@ -267,12 +267,12 @@ const ERASE_PHRASE = "ERASE";
 // fault.
 function FulfilErasureModal({
   dsr,
-  resolution,
+  closing,
   onClose,
   returnFocusTo,
 }: Readonly<{
   dsr: DataSubjectRequest | null;
-  resolution: string;
+  closing: DsrClosing | null;
   onClose: () => void;
   returnFocusTo: () => HTMLElement | null;
 }>) {
@@ -283,17 +283,15 @@ function FulfilErasureModal({
 
   const patch = useMutation({
     mutationFn: async (
-      fulfilment: Readonly<{ request: DataSubjectRequest; resolution: string }>,
+      fulfilment: Readonly<{
+        request: DataSubjectRequest;
+        closing: DsrClosing;
+      }>,
     ) => {
-      const body: UpdateDataSubjectRequest = { status: "fulfilled" };
-      // Omitted when blank: an empty string is a value the server would write.
-      if (fulfilment.resolution.trim()) {
-        body.resolution = fulfilment.resolution.trim();
-      }
       return unwrap(
         await api.PATCH("/data-subject-requests/{id}", {
           params: { path: { id: fulfilment.request.id } },
-          body,
+          body: closingBody("fulfilled", fulfilment.closing),
         }),
       );
     },
@@ -338,7 +336,9 @@ function FulfilErasureModal({
       // retry. So the confirm stays shut until the operator reopens the dialog
       // against the request's current state.
       confirmDisabled={!phraseMatches(typed, ERASE_PHRASE) || held || movedOn}
-      onConfirm={() => dsr && patch.mutate({ request: dsr, resolution })}
+      onConfirm={() =>
+        dsr && closing && patch.mutate({ request: dsr, closing })
+      }
       pending={patch.isPending}
       error={errorMessage}
       returnFocusTo={returnFocusTo}
@@ -367,7 +367,7 @@ export function PrivacyInboxCard() {
   // One erasure confirm at the card root, carrying the answer the drawer drafted.
   const [fulfilling, setFulfilling] = useState<{
     dsr: DataSubjectRequest;
-    resolution: string;
+    closing: DsrClosing;
   } | null>(null);
 
   // `privacy_request:read`: the rows name whoever exercised an Art. 15/17
@@ -475,15 +475,13 @@ export function PrivacyInboxCard() {
             titleId={detailTitleId}
             nowMs={nowMs}
             onClose={() => toggle(open.id)}
-            onFulfilErasure={(dsr, resolution) =>
-              setFulfilling({ dsr, resolution })
-            }
+            onFulfilErasure={(dsr, closing) => setFulfilling({ dsr, closing })}
           />
         )}
       </CardBoundary>
       <FulfilErasureModal
         dsr={fulfilling?.dsr ?? null}
-        resolution={fulfilling?.resolution ?? ""}
+        closing={fulfilling?.closing ?? null}
         onClose={() => setFulfilling(null)}
         // The fulfil verb is gone once the request closes; the drawer's title stays.
         returnFocusTo={() => document.getElementById(detailTitleId)}

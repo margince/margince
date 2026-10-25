@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -132,7 +133,7 @@ func stampMessageEnds(
 // server is whatever the seat chose.
 func fromAuthenticated(rec connector.NormalizedRecord, from string) bool {
 	auth := rec.SenderAuthentication
-	domain := domainOfAddress(from)
+	domain := owndomain.OfAddress(from)
 	return rec.CapturedBy == "connector:"+providerGmail && auth.Server == gmailAuthServer &&
 		domain != "" && strings.EqualFold(auth.DMARCPassDomain, domain)
 }

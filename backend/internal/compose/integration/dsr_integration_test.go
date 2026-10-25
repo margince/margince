@@ -42,6 +42,7 @@ func TestDataSubjectRequestLifecycle(t *testing.T) {
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
 		"status": "fulfilled", "resolution": "erased contact + activities per retention policy",
+		"identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfill → %d", status)
 	}

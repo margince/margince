@@ -1746,6 +1746,7 @@ export const en = {
   "systemJob.linkedin_rematch": "LinkedIn import matching",
   "systemJob.list_checker": "Live list check",
   "systemJob.mail_draft_retention": "Mail draft cleanup",
+  "systemJob.privacy_request_proof_expiry": "Privacy request proof cleanup",
   "systemJob.waiting_horizon_refresh": "Reply time measurement",
   "systemJob.meeting_delivery": "Calendar delivery",
   "systemJob.merge": "Record merge",
@@ -8537,6 +8538,25 @@ export const en = {
   "privacy.assignee": "Assignee",
   "privacy.resolution": "Resolution",
   "privacy.resolutionRequired": "Closing a request needs its answer.",
+  "privacy.identityCheck": "How the identity was checked",
+  "privacy.identityCheckHint":
+    "Kept in the proof of this request until three years after the end of the year it closes.",
+  "privacy.identityCheckPick": "Choose how",
+  "privacy.identityCheck.confirm_link":
+    "The subject used the link mailed to them",
+  "privacy.identityCheck.address_on_file":
+    "It came from an address the record holds",
+  "privacy.identityCheck.id_document": "An identity document was seen",
+  "privacy.identityCheck.in_person": "The requester was met face to face",
+  "privacy.identityCheck.not_verified": "It could not be checked",
+  "privacy.requesterEmail": "Requester’s email address",
+  "privacy.requesterEmailHint":
+    "Optional. Leave it empty when the request came through the subject’s own link or names the address.",
+  "privacy.disputeOpen": "A complaint about this request is open",
+  "privacy.disputeHint":
+    "While a complaint is open, the proof of this request is kept past its retention date.",
+  "privacy.openDispute": "Record a complaint",
+  "privacy.closeDispute": "Close the complaint",
   "privacy.movedOn":
     "Someone else decided this request first. Review its current state.",
   "privacy.inProgress": "In progress",

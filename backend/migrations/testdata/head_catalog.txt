@@ -127,15 +127,18 @@ public.activity_audience_member.subject_type text NOT NULL gen=- def=-
 public.activity_audience_member_pkey CREATE UNIQUE INDEX activity_audience_member_pkey ON public.activity_audience_member USING btree (activity_id, subject_type, subject_id)
 public.activity_calendar_method_backfill acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_calendar_method_backfill.activity_calendar_method_backfill_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_calendar_method_backfill.activity_calendar_method_backfill_direction_check CHECK ((direction = ANY (ARRAY['inbound'::text, 'outbound'::text])))
 public.activity_calendar_method_backfill.activity_calendar_method_backfill_outcome_check CHECK ((outcome = ANY (ARRAY['set'::text, 'none'::text, 'unreadable'::text])))
 public.activity_calendar_method_backfill.activity_calendar_method_backfill_pkey PRIMARY KEY (activity_id)
 public.activity_calendar_method_backfill.activity_created_at timestamp with time zone NOT NULL gen=- def=-
 public.activity_calendar_method_backfill.activity_id uuid NOT NULL gen=- def=-
 public.activity_calendar_method_backfill.checked_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_calendar_method_backfill.direction text NOT NULL gen=- def='inbound'::text
 public.activity_calendar_method_backfill.outcome text NOT NULL gen=- def=-
 public.activity_calendar_method_backfill_pkey CREATE UNIQUE INDEX activity_calendar_method_backfill_pkey ON public.activity_calendar_method_backfill USING btree (activity_id)
-public.activity_calendar_method_backfill_resume CREATE INDEX activity_calendar_method_backfill_resume ON public.activity_calendar_method_backfill USING btree (activity_created_at, activity_id)
+public.activity_calendar_method_backfill_resume CREATE INDEX activity_calendar_method_backfill_resume ON public.activity_calendar_method_backfill USING btree (direction, activity_created_at, activity_id)
 public.activity_calendar_method_unread CREATE INDEX activity_calendar_method_unread ON public.activity USING btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email'::text) AND (direction = 'inbound'::text))
+public.activity_calendar_method_unread_outbound CREATE INDEX activity_calendar_method_unread_outbound ON public.activity USING btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email'::text) AND (direction = 'outbound'::text))
 public.activity_class_needs_evidence() secdef=false cfg=- acl=- 
 BEGIN
   IF EXISTS (SELECT 1 FROM activity a
@@ -346,6 +349,7 @@ public.activity_participant.activity_participant_pkey PRIMARY KEY (id)
 public.activity_participant.activity_participant_role_check CHECK ((role = ANY (ARRAY['from'::text, 'to'::text, 'cc'::text, 'bcc'::text, 'attendee'::text, 'organizer'::text])))
 public.activity_participant.activity_participant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.activity_participant.address text gen=- def=-
+public.activity_participant.address_domain_folded text gen=- def=-
 public.activity_participant.channel_user_id text gen=- def=-
 public.activity_participant.contact_id uuid gen=- def=-
 public.activity_participant.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1071,6 +1075,7 @@ public.app_user.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.delivery_hour_local integer gen=- def=-
 public.app_user.display_name text NOT NULL gen=- def=-
 public.app_user.email text NOT NULL gen=- def=-
+public.app_user.email_domain_folded text gen=- def=-
 public.app_user.failed_login_count integer NOT NULL gen=- def=0
 public.app_user.greeting_name text gen=- def=-
 public.app_user.greeting_name_chosen_at timestamp with time zone gen=- def=-
@@ -2503,6 +2508,7 @@ public.company_domain.company_domain_version_js_safe CHECK (((version >= '-90071
 public.company_domain.company_id uuid NOT NULL gen=- def=-
 public.company_domain.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_domain.domain text NOT NULL gen=- def=-
+public.company_domain.domain_folded text gen=- def=-
 public.company_domain.id uuid NOT NULL gen=- def=uuidv7()
 public.company_domain.is_primary boolean NOT NULL gen=- def=false
 public.company_domain.source text NOT NULL gen=- def=-
@@ -3475,6 +3481,7 @@ public.data_subject_request.data_subject_request_contact_id_fkey FOREIGN KEY (co
 public.data_subject_request.data_subject_request_kind_check CHECK ((kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text])))
 public.data_subject_request.data_subject_request_pkey PRIMARY KEY (id)
 public.data_subject_request.data_subject_request_status_check CHECK ((status = ANY (ARRAY['open'::text, 'in_progress'::text, 'fulfilled'::text, 'rejected'::text])))
+public.data_subject_request.dispute_open boolean NOT NULL gen=- def=false
 public.data_subject_request.dsr_assignee_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
 public.data_subject_request.dsr_resolution_shape CHECK (((status <> ALL (ARRAY['fulfilled'::text, 'rejected'::text])) OR (resolution IS NOT NULL)))
 public.data_subject_request.due_at timestamp with time zone NOT NULL gen=- def=-
@@ -4613,6 +4620,7 @@ public.idx_attachment_extraction_activity_settled CREATE INDEX idx_attachment_ex
 public.idx_attachment_extraction_latest CREATE INDEX idx_attachment_extraction_latest ON public.attachment_extraction USING btree (attachment_id, created_at DESC)
 public.idx_audit_actor CREATE INDEX idx_audit_actor ON public.audit_log USING btree (actor_id, occurred_at DESC)
 public.idx_audit_entity CREATE INDEX idx_audit_entity ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC)
+public.idx_audit_erasure_reason CREATE INDEX idx_audit_erasure_reason ON public.audit_log USING btree (((evidence ->> 'reason'::text))) WHERE ((action = 'erase'::text) AND (entity_type = 'contact'::text))
 public.idx_audit_log_batch CREATE INDEX idx_audit_log_batch ON public.audit_log USING btree (batch_id) WHERE (batch_id IS NOT NULL)
 public.idx_audit_scrub_boundary CREATE INDEX idx_audit_scrub_boundary ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))
 public.idx_audit_time CREATE INDEX idx_audit_time ON public.audit_log USING btree (occurred_at DESC)
@@ -6124,6 +6132,33 @@ public.privacy_notice_case_acquisition CREATE UNIQUE INDEX privacy_notice_case_a
 public.privacy_notice_case_delivery CREATE INDEX privacy_notice_case_delivery ON public.privacy_notice_case USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)
 public.privacy_notice_case_due CREATE INDEX privacy_notice_case_due ON public.privacy_notice_case USING btree (due_at, id) WHERE (state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text]))
 public.privacy_notice_case_pkey CREATE UNIQUE INDEX privacy_notice_case_pkey ON public.privacy_notice_case USING btree (id)
+public.privacy_request_proof acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.privacy_request_proof.answered_at timestamp with time zone NOT NULL gen=- def=-
+public.privacy_request_proof.completed_by_id text gen=- def=-
+public.privacy_request_proof.completed_by_type text gen=- def=-
+public.privacy_request_proof.erased_counts jsonb NOT NULL gen=- def='{}'::jsonb
+public.privacy_request_proof.erased_counts_known boolean NOT NULL gen=- def=true
+public.privacy_request_proof.erased_uncounted text[] NOT NULL gen=- def='{}'::text[]
+public.privacy_request_proof.id uuid NOT NULL gen=- def=uuidv7()
+public.privacy_request_proof.identity_check text NOT NULL gen=- def=-
+public.privacy_request_proof.keep_until timestamp with time zone NOT NULL gen=- def=-
+public.privacy_request_proof.privacy_request_proof_actor_type CHECK ((completed_by_type = ANY (ARRAY['human'::text, 'agent'::text, 'connector'::text, 'system'::text])))
+public.privacy_request_proof.privacy_request_proof_counts_object CHECK ((jsonb_typeof(erased_counts) = 'object'::text))
+public.privacy_request_proof.privacy_request_proof_identity_check CHECK ((identity_check = ANY (ARRAY['confirm_link'::text, 'address_on_file'::text, 'id_document'::text, 'in_person'::text, 'not_verified'::text, 'unknown'::text])))
+public.privacy_request_proof.privacy_request_proof_kind CHECK ((request_kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text])))
+public.privacy_request_proof.privacy_request_proof_one_per_request UNIQUE (request_id)
+public.privacy_request_proof.privacy_request_proof_pkey PRIMARY KEY (id)
+public.privacy_request_proof.privacy_request_proof_request_fkey FOREIGN KEY (request_id) REFERENCES data_subject_request(id) ON DELETE CASCADE
+public.privacy_request_proof.privacy_request_proof_result CHECK ((result = ANY (ARRAY['fulfilled'::text, 'rejected'::text])))
+public.privacy_request_proof.received_at timestamp with time zone NOT NULL gen=- def=-
+public.privacy_request_proof.request_id uuid NOT NULL gen=- def=-
+public.privacy_request_proof.request_kind text NOT NULL gen=- def=-
+public.privacy_request_proof.request_number text NOT NULL gen=- def=-
+public.privacy_request_proof.requester_email text gen=- def=-
+public.privacy_request_proof.result text NOT NULL gen=- def=-
+public.privacy_request_proof_keep_until CREATE INDEX privacy_request_proof_keep_until ON public.privacy_request_proof USING btree (keep_until, id)
+public.privacy_request_proof_one_per_request CREATE UNIQUE INDEX privacy_request_proof_one_per_request ON public.privacy_request_proof USING btree (request_id)
+public.privacy_request_proof_pkey CREATE UNIQUE INDEX privacy_request_proof_pkey ON public.privacy_request_proof USING btree (id)
 public.product acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.product.active boolean NOT NULL gen=- def=true
 public.product.archived_at timestamp with time zone gen=- def=-

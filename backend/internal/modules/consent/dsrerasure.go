@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -43,9 +44,10 @@ import (
 // checks out a second pooled connection for its own transaction, the two never
 // contend: this nests one connection deep, well within the pool on the
 // human-driven, admin-only DSR surface.
-func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInput,
-	erase func(ctx context.Context, contactID ids.UUID, reason string) error,
-) (dsrRow, error) {
+//
+// erase answers its counts by category. The proof is written from them, in
+// this transaction, beside the status flip.
+func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInput, erase EraseFunc) (dsrRow, error) {
 	if err := requireDSRAdmin(ctx, principal.ActionUpdate); err != nil {
 		return dsrRow{}, err
 	}
@@ -80,17 +82,31 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 		if !resolved {
 			return unresolvedSubject
 		}
-		if err := erase(ctx, contactID, "dsr:"+current.ID.String()); err != nil {
+		// Read before the erase, which deletes the confirm link the requester's
+		// address is read from.
+		source, err := s.readProofSource(ctx, tx, current, in)
+		if err != nil {
+			return err
+		}
+		erased, err := erase(ctx, contactID, "dsr:"+current.ID.String())
+		if err != nil {
 			if errors.Is(err, apperrors.ErrNotFound) {
 				return unresolvedSubject
 			}
 			return err
 		}
 		out, err = finalizeErasureFulfil(ctx, tx, id, in, current)
-		return err
+		if err != nil {
+			return err
+		}
+		return writeRequestProof(ctx, tx, source, out, &erased)
 	})
 	return out, err
 }
+
+// EraseFunc is the privacy engine's erasure, run in its own transaction. It
+// answers its own account of what it removed or anonymised.
+type EraseFunc func(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error)
 
 // withoutReplayedAnswer drops the officer's text from a repeated fulfilment.
 // The erasure already replaced that text, so the retry is a no-op and not a
@@ -130,7 +146,7 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 	// this statement writes.
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	assignee := dsrAssigneeSet(in, arg)
+	held := dsrHeldSets(in, arg)
 	row := tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE data_subject_request SET
 			  status = 'fulfilled',
@@ -139,7 +155,7 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 			    WHEN coalesce($%d, resolution) IS NULL THEN NULL ELSE '`+erasedResolution+`' END,
 			  contact_id = NULL
 			WHERE id = $%d AND status = $%d
-			RETURNING `+dsrColumns, assignee, arg(in.Resolution), arg(id), arg(current.Status)),
+			RETURNING `+dsrColumns, held, arg(in.Resolution), arg(id), arg(current.Status)),
 		args...)
 	out, err := scanDSR(row)
 	if err != nil {

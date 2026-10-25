@@ -67,16 +67,49 @@ func TestAnInboundMailFromTheBuyerIsBuyerSide(t *testing.T) {
 	}
 }
 
-// A sub-domain is not ours unless it is listed. Folding one in would let
-// anybody who can register a look-alike host author seller-side evidence —
-// and seller-side is the SAFE answer, so the risk runs the other way: a
-// buyer's mail from a look-alike domain would be dismissed as our own.
-func TestALookAlikeSubDomainIsNotOurs(t *testing.T) {
-	side := AuthorSideOf(directionInbound, []Participant{
-		{Role: roleFrom, Address: "spoof@mail.acme-sales.example"},
-	}, ourDomains)
-	if side != AuthorBuyer {
-		t.Fatalf("mail.acme-sales.example was treated as ours (%s); only listed domains are", side)
+// Ours is an exact own domain, folded: a unicode spelling is the same domain
+// as its punycode, in any case.
+func TestAnOwnDomainInAnySpellingIsOurs(t *testing.T) {
+	own := []string{"acme-sales.example", "xn--bcher-kva.example"}
+	for _, address := range []string{"rep@ACME-SALES.example", "anna@bücher.example", "anna@BÜCHER.example", "anna@xn--bcher-kva.example"} {
+		if side := AuthorSideOf(directionInbound, []Participant{{Role: roleFrom, Address: address}}, own); side != AuthorSeller {
+			t.Errorf("%s read as %s; it is at an own domain", address, side)
+		}
+	}
+	if side := AuthorSideOf(directionInbound, []Participant{{Role: roleFrom, Address: "anna@bücher-other.example"}}, own); side != AuthorBuyer {
+		t.Errorf("a lookalike sibling read as %s", side)
+	}
+}
+
+// A subdomain of an own domain that nobody listed proves neither side. A
+// subsidiary there never confirms a milestone as the buyer, and a customer on a
+// delegated subdomain is never read as us.
+func TestAnUnlistedOwnSubdomainSettlesNeitherSide(t *testing.T) {
+	cases := []struct {
+		address string
+		own     []string
+	}{
+		{"spoof@mail.acme-sales.example", ourDomains},
+		{"ines@customer.example.com", []string{"example.com"}},
+		{"anna@post.bücher.example", []string{"xn--bcher-kva.example"}},
+	}
+	for _, c := range cases {
+		participant := Participant{Role: roleFrom, Address: c.address}
+		if side := AuthorSideOf(directionInbound, []Participant{participant}, c.own); side != AuthorUnknown {
+			t.Errorf("%s read as %s, want unknown: an unlisted own subdomain proves neither side", c.address, side)
+		}
+		if CountsAsBuyerParticipant(participant, c.own) {
+			t.Errorf("%s counted as a buyer on the activity", c.address)
+		}
+	}
+	// The listed subdomain itself is ours, and an outside domain is the buyer.
+	listed := []string{"example.com", "customer.example.com"}
+	if side := AuthorSideOf(directionInbound, []Participant{{Role: roleFrom, Address: "rep@customer.example.com"}}, listed); side != AuthorSeller {
+		t.Errorf("a listed own subdomain read as %s", side)
+	}
+	outside := Participant{Role: roleFrom, Address: "ines@customer.test"}
+	if side := AuthorSideOf(directionInbound, []Participant{outside}, listed); side != AuthorBuyer || !CountsAsBuyerParticipant(outside, listed) {
+		t.Errorf("an outside domain read as %s", side)
 	}
 }
 

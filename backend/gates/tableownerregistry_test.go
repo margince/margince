@@ -287,6 +287,7 @@ var tableOwners = map[string]string{
 	"communication_suppression":    "internal/modules/consent",
 	"consent_qualifying_event":     "internal/modules/consent",
 	"data_subject_request":         "internal/modules/consent",
+	"privacy_request_proof":        "internal/modules/consent",
 	"preference_token":             "internal/modules/consent",
 	// The emailed link that shows a contact their own record and carries their
 	// marketing answer back, and what comes back through it. Consent's, because

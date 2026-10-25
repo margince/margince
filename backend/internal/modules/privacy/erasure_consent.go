@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -298,7 +299,31 @@ func tombstoneExceptionExplanations(ctx context.Context, tx pgx.Tx, contactID id
 // (consent/dsr.go) clears it in the same statement that closes it, which is the
 // only place that can: no other transaction may touch a row this one holds.
 func retireRightsCases(ctx context.Context, tx pgx.Tx, contactID ids.UUID, fulfilling ids.UUID) error {
-	if _, err := tx.Exec(ctx, `
+	if _, err := tombstoneRightsCases(ctx, tx, `
+		id IN (SELECT id FROM data_subject_request
+		        WHERE (contact_id = $1 OR subject_ref = $1::text)
+		          AND id IS DISTINCT FROM $2
+		        FOR UPDATE)`, contactID, fulfilling); err != nil {
+		return fmt.Errorf("privacy: retiring the subject's rights cases: %w", err)
+	}
+	return nil
+}
+
+// RetireExpiredRightsCaseTx takes the requester off one closed case whose
+// proof has expired, with the tombstone an erasure writes. It skips a case
+// under dispute, and answers whether it retired the case.
+func RetireExpiredRightsCaseTx(ctx context.Context, tx pgx.Tx, caseID ids.UUID) (bool, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return false, err
+	}
+	retired, err := tombstoneRightsCases(ctx, tx, `id = $1 AND NOT dispute_open`, caseID)
+	return retired == 1, err
+}
+
+// tombstoneRightsCases writes a rights case's tombstone for both callers above:
+// the cases the predicate selects lose their reference and prose.
+func tombstoneRightsCases(ctx context.Context, tx pgx.Tx, predicate string, args ...any) (int64, error) {
+	tag, err := tx.Exec(ctx, `
 		UPDATE data_subject_request
 		   SET subject_ref = 'erased+' || id,
 		       resolution = CASE WHEN resolution IS NULL THEN NULL ELSE 'erased' END,
@@ -309,13 +334,8 @@ func retireRightsCases(ctx context.Context, tx pgx.Tx, contactID ids.UUID, fulfi
 		       -- case nothing will resolve it again, so the link goes.
 		       contact_id = CASE WHEN status IN ('open', 'in_progress')
 		                         THEN contact_id ELSE NULL END
-		 WHERE id IN (SELECT id FROM data_subject_request
-		               WHERE (contact_id = $1 OR subject_ref = $1::text)
-		                 AND id IS DISTINCT FROM $2
-		               FOR UPDATE)`, contactID, fulfilling); err != nil {
-		return fmt.Errorf("privacy: retiring the subject's rights cases: %w", err)
-	}
-	return nil
+		 WHERE `+predicate, args...)
+	return tag.RowsAffected(), err
 }
 
 // fulfillingCase answers which rights case this erasure is being run to fulfil,

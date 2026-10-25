@@ -82,7 +82,7 @@ func eraseBooker(t *testing.T, e *apptest.AppEnv, contactID string) {
 		t.Fatalf("filing the erasure request → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased per Art. 17",
+		"status": "fulfilled", "resolution": "erased per Art. 17", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfilling the erasure request → %d", status)
 	}

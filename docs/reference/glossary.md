@@ -45,6 +45,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Gradion | The company that builds Margince and licenses it. |
 | HNSW | A vector index type, Hierarchical Navigable Small World, that Margince does not use. |
 | HTTPS | HTTP over an encrypted connection. |
+| identity | Who sent a privacy request; closing one records how that was checked. |
 | IMAP | The standard protocol for reading mail from a mail server. |
 | incoming | An incoming webhook: the address a chat tool gives for posting into a channel. |
 | JPEG | A common photo file format, saved as .jpg or .jpeg. |

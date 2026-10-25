@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -76,13 +77,13 @@ func setCompanyDomain(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, w
 
 	var owner ids.CompanyID
 	err = tx.QueryRow(ctx,
-		`INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
-		 VALUES ($1, lower($2), true, 'manual', $3)
+		`INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by, domain_folded)
+		 VALUES ($1, lower($2), true, 'manual', $3, $4)
 		 ON CONFLICT (domain) WHERE archived_at IS NULL
 		 DO UPDATE SET is_primary = true
 		 WHERE company_domain.company_id = EXCLUDED.company_id
 		 RETURNING company_id`,
-		companyID, host, by).Scan(&owner)
+		companyID, host, by, owndomain.StoredOwn(host)).Scan(&owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The probe above said the domain was free, so reaching here means a
 		// concurrent claim landed between the two statements. The unique index

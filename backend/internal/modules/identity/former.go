@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -106,9 +107,9 @@ func (s *Service) CreateFormerMember(ctx context.Context, actor Identity, in For
 			return err
 		}
 		insErr := tx.QueryRow(ctx,
-			`INSERT INTO app_user (email, password_hash, display_name, status)
-			 VALUES (lower($1), NULL, $2, 'deactivated') RETURNING id`,
-			in.Email, in.DisplayName).Scan(&newUserID)
+			`INSERT INTO app_user (email, password_hash, display_name, status, email_domain_folded)
+			 VALUES (lower($1), NULL, $2, 'deactivated', $3) RETURNING id`,
+			in.Email, in.DisplayName, owndomain.StoredOfAddress(in.Email)).Scan(&newUserID)
 		if storekit.IsUniqueViolation(insErr) {
 			return errEmailTaken
 		}

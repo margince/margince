@@ -5,10 +5,9 @@ package compose
 
 // Reading the calendar method of mail captured before capture recorded it.
 //
-// A contact's "Declined" carries a calendar part with method REPLY. A reply to
-// an invitation is owed nothing unless somebody confirmed it asks. Rows from
-// before the column read NULL and stay owed. This pass re-reads each owed row's
-// stored original through mailmap.Parse, the reader live capture uses.
+// A calendar copy, inbound or outbound, waits on nobody's written reply. Rows
+// from before the column read NULL and stay owed or waiting. This pass re-reads
+// each stored original through mailmap.Parse, the reader live capture uses.
 // No subject-line guess: "Declined:" is worded per provider language.
 
 import (

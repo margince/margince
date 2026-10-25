@@ -142,13 +142,14 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company_domain
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `company_id` | `uuid` | yes | Points at `company.id`. |
 | `domain` | `text` | yes | Lowercased, no scheme, no www. |
+| `domain_folded` | `text` |  |  |
 | `is_primary` | `boolean`, default `false` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |

@@ -3,7 +3,12 @@
 
 package activities
 
-import "github.com/margince/margince/backend/internal/platform/database/storekit"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarmethod"
+)
 
 // requestUnsettledSQL uses the activity alias a. Classification records intent;
 // a topic label, a deal outcome and elapsed time do not prove fulfillment.
@@ -73,17 +78,26 @@ var confirmedRequestSQL = `a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL
 
 var outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `)`
 
-// calendarResponseSQL is an attendee answering an invitation (RFC 5546 REPLY,
-// COUNTER, DECLINECOUNTER). Such a message is owed an answer only when
-// confirmed: "Declined" waits on nobody, and its meeting label must not say so.
-// TestTheCalendarResponseReadersAgree holds it to calendarmethod.IsResponse.
-const calendarResponseSQL = `coalesce(a.calendar_method, '') IN ('REPLY', 'COUNTER', 'DECLINECOUNTER')`
+// calendarResponseSQL is an attendee answering an invitation (REPLY, COUNTER,
+// DECLINECOUNTER); calendarInvitationSQL is the organizer's invitation, update
+// or cancellation. Either is owed an answer only when confirmed: "Declined"
+// and "Invitation: Kickoff" wait on nobody's written reply. A mail the
+// calendar-method re-read has not checked yet reads as one too.
+var (
+	calendarResponseSQL   = calendarMethodInSQL(calendarmethod.Responses())
+	calendarInvitationSQL = calendarMethodInSQL(calendarmethod.Invitations())
+	calendarCopySQL       = "(" + calendarResponseSQL + " OR " + calendarInvitationSQL + " OR " + calendarUncheckedSQL + ")"
+)
+
+func calendarMethodInSQL(methods []string) string {
+	return "coalesce(a.calendar_method, '') IN ('" + strings.Join(methods, "', '") + "')"
+}
 
 // A scheduling/commitment label is enough to keep an unjudged candidate for
 // review, never enough to assign it.
 var requestIntentSQL = confirmedRequestSQL + `
  OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting')
-     AND NOT ` + calendarResponseSQL + `)`
+     AND NOT ` + calendarCopySQL + `)`
 
 var requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)`
 
@@ -94,6 +108,6 @@ var requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)
 func reviewableRequestSQL(asOf string) string {
 	return requestUnsettledSQL + ` AND (a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL + `
  OR (a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
-   OR (a.thread_key IS NOT NULL AND NOT ` + calendarResponseSQL + `
+   OR (a.thread_key IS NOT NULL AND NOT ` + calendarCopySQL + `
        AND NOT ` + answeredSQL("a", asOf) + `))))`
 }

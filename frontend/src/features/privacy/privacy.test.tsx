@@ -10,6 +10,7 @@ import { ConsentPurposesCard } from "./privacy.purposes";
 import {
   choose,
   DSRS,
+  draftClose,
   findDsrRow,
   jsonResponse,
   render,
@@ -349,7 +350,7 @@ describe("PrivacyInboxCard", () => {
     expect(within(row).getByText(/closed/i)).toBeInTheDocument();
   });
 
-  it("holds a close until a resolution is written — the server 422s without one", async () => {
+  it("holds a close until its answer and identity check are given — the server 422s without either", async () => {
     stubRoutes();
     render(<RequestsPanel />);
     await userEvent.click(
@@ -360,6 +361,11 @@ describe("PrivacyInboxCard", () => {
     await userEvent.type(
       screen.getByLabelText(/resolution/i),
       "not a data subject",
+    );
+    expect(within(row).getByRole("button", { name: /reject/i })).toBeDisabled();
+    await choose(
+      screen.getByLabelText(en["privacy.identityCheck"]),
+      en["privacy.identityCheck.not_verified"],
     );
     expect(within(row).getByRole("button", { name: /reject/i })).toBeEnabled();
   });
@@ -414,7 +420,7 @@ describe("PrivacyInboxCard", () => {
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
     const row = await findDsrRow("8f3a-contact-uuid");
-    await userEvent.type(screen.getByLabelText(/resolution/i), "done");
+    await draftClose("done");
     await userEvent.click(within(row).getByRole("button", { name: /reject/i }));
     expect(await screen.findByText(/else decided this/i)).toBeInTheDocument();
   });
@@ -446,7 +452,7 @@ describe("PrivacyInboxCard", () => {
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
     const row = await findDsrRow("8f3a-contact-uuid");
-    await userEvent.type(screen.getByLabelText(/resolution/i), "done");
+    await draftClose("done");
     await userEvent.click(within(row).getByRole("button", { name: /reject/i }));
     expect(
       await screen.findByText(en["common.permissionDenied"]),
