@@ -45,11 +45,17 @@ const maxInitialsDisplayLen = maxNameTokens*initialsMaxLetters + maxNameTokens -
 
 // initialsDisplayReplacement answers the local part that should replace a
 // stored full name. It does so only when capture derived that name from the
-// address: the minting header named nobody, and the name equals the guess. A
-// header "DV" folds to the same "Dv", so the string alone proves nothing.
-func initialsDisplayReplacement(fullName, headerDisplayName, email string) (string, bool) {
-	if _, named := headerName(headerDisplayName); named {
+// address. At least one header was read, none named the address, and the name
+// equals the guess. A header "DV" folds to the same "Dv", so the
+// string alone proves nothing.
+func initialsDisplayReplacement(fullName string, headerNames []string, email string) (string, bool) {
+	if len(headerNames) == 0 {
 		return "", false
+	}
+	for _, header := range headerNames {
+		if _, named := headerName(header); named {
+			return "", false
+		}
 	}
 	local, tokens, ok := readableLocalPart(email)
 	if !ok || !readsAsInitials(tokens) || fullName != addressGuessName(tokens) {

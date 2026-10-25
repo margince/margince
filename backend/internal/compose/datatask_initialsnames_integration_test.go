@@ -5,11 +5,12 @@
 
 package compose
 
-// The initials task rewrites "Dv" to "dv" only where the minting mail's stored
-// original shows the header gave the address no name.
+// The initials task rewrites "Dv" to "dv" only on proof. Every readable header
+// of the mails linked as the contact was created gave the address no name.
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -22,12 +23,29 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // captureFromStoredMail stores an inbound Gmail original whose From line is
 // from. It then runs the capture ensure for its sender with the header's
 // display name, as the Gmail sink does.
 func captureFromStoredMail(t *testing.T, e *integration.Env, from, display, email string) ids.ContactID {
+	t.Helper()
+	activity := seedStoredMail(t, e, from, email)
+	res, err := e.Contacts.EnsureCounterparty(e.ConnectorOwnerCtx(e.AdminUser, "gmail"), contacts.EnsureCounterpartyInput{
+		Email: email, DisplayName: display, Domain: email[strings.IndexByte(email, '@')+1:],
+		OwnerID: e.AdminUser, ActivityID: ids.From[ids.ActivityKind](activity),
+		Source: "gmail:" + activity.String(), CapturedBy: "connector:gmail",
+	})
+	if err != nil {
+		t.Fatalf("capturing %q <%s>: %v", display, email, err)
+	}
+	return res.ContactID
+}
+
+// seedStoredMail records an inbound Gmail activity from email and its stored
+// original, whose From line is from, the way the sink stores them.
+func seedStoredMail(t *testing.T, e *integration.Env, from, email string) ids.UUID {
 	t.Helper()
 	owner := integration.OwnerConn(t)
 	sourceID := "initials-" + ids.NewV7().String()
@@ -38,15 +56,37 @@ func captureFromStoredMail(t *testing.T, e *integration.Env, from, display, emai
 		INSERT INTO raw_capture (source_system, source_id, payload) VALUES ('gmail', $1, to_jsonb($2::text))`, sourceID, raw); err != nil {
 		t.Fatalf("seeding the stored original: %v", err)
 	}
-	res, err := e.Contacts.EnsureCounterparty(e.ConnectorOwnerCtx(e.AdminUser, "gmail"), contacts.EnsureCounterpartyInput{
-		Email: email, DisplayName: display, Domain: email[strings.IndexByte(email, '@')+1:],
-		OwnerID: e.AdminUser, ActivityID: ids.From[ids.ActivityKind](activity),
-		Source: "gmail:" + activity.String(), CapturedBy: "connector:gmail",
-	})
-	if err != nil {
-		t.Fatalf("capturing %q <%s>: %v", display, email, err)
+	return activity
+}
+
+// verdictCreatesFromStoredMails stores one mail per From line, all from email,
+// then lets the verdict create the contact. Its cohort promotion links the
+// other mails in the same transaction.
+func verdictCreatesFromStoredMails(t *testing.T, e *integration.Env, email string, froms ...string) ids.ContactID {
+	t.Helper()
+	var first ids.UUID
+	for i, from := range froms {
+		if id := seedStoredMail(t, e, from, email); i == 0 {
+			first = id
+		}
 	}
-	return res.ContactID
+	verdictCtx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), verdictActor)
+	if err := database.WithWorkspaceTx(verdictCtx, e.Pool, func(tx pgx.Tx) error {
+		_, err := createCounterpartyRecords(verdictCtx, tx, e.Contacts, nil, counterpartyCreation{
+			Email: email, Domain: email[strings.IndexByte(email, '@')+1:],
+			OwnerID: e.AdminUser, ActivityID: first, Source: verdictReason, CapturedBy: verdictActor,
+		})
+		return err
+	}); err != nil {
+		t.Fatalf("creating the contact the verdict earned: %v", err)
+	}
+	id := contactIDFor(t, e, email)
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link l JOIN contact p ON p.id = l.contact_id
+		WHERE p.id = $1 AND l.created_at = p.created_at`, id); got != len(froms) {
+		t.Fatalf("the create linked %d mails, want all %d: the cohort is what this test is about", got, len(froms))
+	}
+	plantInitialsGuess(t, e, id)
+	return id
 }
 
 // legacyInitialsContact is a contact capture minted from a bare dv@ before the
@@ -128,21 +168,111 @@ func TestTheInitialsTaskKeepsANameWhoseOriginalIsGone(t *testing.T) {
 	}
 }
 
-func TestTheInitialsTaskKeepsANameWhenTwoMailsCouldHaveMintedIt(t *testing.T) {
+func TestTheInitialsTaskRepairsAVerdictContactWhoseMailsAllNamedNobody(t *testing.T) {
 	e := integration.Setup(t)
-	id := legacyInitialsContact(t, e, "dv@initials.test")
-	other := seedReplayableMail(t, e, "initials-twin-"+ids.NewV7().String(), crlfMessage("From: dv@initials.test", "", "x"))
-	owner := integration.OwnerConn(t)
-	if _, err := owner.Exec(context.Background(), `
-		INSERT INTO activity_link (activity_id, entity_type, contact_id, created_at)
-		SELECT $1, 'contact', p.id, p.created_at FROM contact p WHERE p.id = $2`, other, id); err != nil {
-		t.Fatal(err)
+	id := verdictCreatesFromStoredMails(t, e, "dv@initials.test", "dv@initials.test", "dv@initials.test")
+
+	runInitialsTask(t, e)
+
+	if got := shownName(t, e, id); got != "dv" {
+		t.Errorf("full_name = %q, want the local part: no header named the contact", got)
 	}
+}
+
+func TestTheInitialsTaskKeepsAVerdictContactOneOfWhoseMailsNamedThem(t *testing.T) {
+	e := integration.Setup(t)
+	id := verdictCreatesFromStoredMails(t, e, "dv@initials.test", "dv@initials.test", "DV <dv@initials.test>")
 
 	runInitialsTask(t, e)
 
 	if got := shownName(t, e, id); got != "Dv" {
-		t.Errorf("full_name = %q, want Dv kept: the minting mail is not one exact message", got)
+		t.Errorf("full_name = %q, want Dv kept: one header named the contact", got)
+	}
+}
+
+func TestTheInitialsTaskKeepsANameEveryHeaderSpellingGave(t *testing.T) {
+	for _, header := range []struct{ from, display string }{
+		{`"DV" <dv@initials.test>`, "DV"},
+		{"=?UTF-8?Q?DV?= <dv@initials.test>", "DV"},
+		{`"DV." <dv@initials.test>`, "DV."},
+	} {
+		t.Run(header.from, func(t *testing.T) {
+			e := integration.Setup(t)
+			id := captureFromStoredMail(t, e, header.from, header.display, "dv@initials.test")
+			plantInitialsGuess(t, e, id)
+
+			runInitialsTask(t, e)
+
+			if got := shownName(t, e, id); got != "Dv" {
+				t.Errorf("full_name = %q, want Dv kept: the header %s named the contact", got, header.from)
+			}
+		})
+	}
+}
+
+func TestTheInitialsTaskRollsItsRewriteBackWithItsProgress(t *testing.T) {
+	e := integration.Setup(t)
+	id := legacyInitialsContact(t, e, "dv@initials.test")
+	task := initialsNamesDataTask()
+	original := task.Steps[0].Batch
+	task.Steps[0].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+		out, err := original(ctx, tx, in)
+		if err != nil {
+			return out, err
+		}
+		return out, errors.New("transaction interrupted after domain writes")
+	}
+	runMachineAddressTask(datatask.Acting(e.Admin(), task.ID), t, e, task)
+
+	if got := shownName(t, e, id); got != "Dv" {
+		t.Errorf("full_name = %q, want Dv: the rewrite rolled back with its batch", got)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND actor_id = $2`,
+		id, contacts.InitialsRepairActor); got != 0 {
+		t.Errorf("%d rewrite audit rows escaped the rollback", got)
+	}
+}
+
+func TestTheInitialsTaskReplaysFromTheStartWithoutChangingAnything(t *testing.T) {
+	e := integration.Setup(t)
+	id := legacyInitialsContact(t, e, "dv@initials.test")
+	runInitialsTask(t, e)
+	if got := shownName(t, e, id); got != "dv" {
+		t.Fatalf("full_name = %q after the first run, want dv", got)
+	}
+	ctx := datatask.Acting(e.Admin(), initialsNamesDataTask().ID)
+	step := initialsNamesDataTask().Steps[0]
+	in := datatask.BatchIn{Limit: 1, RunID: ids.NewV7()}
+	for range 200 {
+		var out datatask.BatchOut
+		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			var err error
+			out, err = step.Batch(ctx, tx, in)
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out.Changed != 0 {
+			t.Fatalf("a replay batch changed %d names, want none", out.Changed)
+		}
+		if out.Done {
+			return
+		}
+		in.Cursor = out.Cursor
+	}
+	t.Fatal("the replay never finished its walk")
+}
+
+func TestTheInitialsTaskRefusesAMalformedCursor(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := datatask.Acting(e.Admin(), initialsNamesDataTask().ID)
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, err := initialsNamesDataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"not an id"`), Limit: 10})
+		return err
+	})
+	if err == nil {
+		t.Fatal("a batch accepted a cursor that names no contact")
 	}
 }
 

@@ -323,26 +323,30 @@ func TestParseContactNameNeverReportsHalfAName(t *testing.T) {
 
 func TestInitialsDisplayReplacementReplacesOnlyTheAddressGuess(t *testing.T) {
 	t.Parallel()
+	unnamed := []string{""}
 	cases := []struct {
-		name, fullName, header, email, want string
-		ok                                  bool
+		name, fullName string
+		headers        []string
+		email, want    string
+		ok             bool
 	}{
-		{"the guess is replaced", "Dv", "", "dv@example.com", "dv", true},
-		{"dotted initials", "D V", "", "d.v@example.com", "d.v", true},
-		{"a header that names nobody leaves the address to decide", "Dv", "billing", "dv@example.com", "dv", true},
-		{"a header that spelled the same name stays", "Dv", "DV", "dv@example.com", "", false},
-		{"a typed name stays", "Daniel Vogt", "", "dv@example.com", "", false},
-		{"an address that is a name stays", "Dv", "", "anna@example.com", "", false},
-		{"a name that is not the guess stays", "DV", "", "dv@example.com", "", false},
-		{"an already repaired name is not offered again", "dv", "", "dv@example.com", "", false},
+		{"the guess is replaced", "Dv", unnamed, "dv@example.com", "dv", true},
+		{"dotted initials", "D V", unnamed, "d.v@example.com", "d.v", true},
+		{"every header naming nobody leaves the address to decide", "Dv", []string{"", "billing"}, "dv@example.com", "dv", true},
+		{"no header read proves nothing", "Dv", nil, "dv@example.com", "", false},
+		{"a header that spelled the same name stays", "Dv", []string{"", "DV"}, "dv@example.com", "", false},
+		{"a typed name stays", "Daniel Vogt", unnamed, "dv@example.com", "", false},
+		{"an address that is a name stays", "Dv", unnamed, "anna@example.com", "", false},
+		{"a name that is not the guess stays", "DV", unnamed, "dv@example.com", "", false},
+		{"an already repaired name is not offered again", "dv", unnamed, "dv@example.com", "", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got, ok := initialsDisplayReplacement(tc.fullName, tc.header, tc.email)
+			got, ok := initialsDisplayReplacement(tc.fullName, tc.headers, tc.email)
 			if got != tc.want || ok != tc.ok {
 				t.Errorf("initialsDisplayReplacement(%q, %q, %q) = %q, %v; want %q, %v",
-					tc.fullName, tc.header, tc.email, got, ok, tc.want, tc.ok)
+					tc.fullName, tc.headers, tc.email, got, ok, tc.want, tc.ok)
 			}
 		})
 	}

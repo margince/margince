@@ -18,8 +18,8 @@ import (
 
 // initialsNamesDataTask shows an initials-only address as its local part ("dv"
 // for dv@) on contacts capture named "Dv" before the parser learned that rule.
-// Only the stored original of the minting mail proves the name came from the
-// address, so a contact whose original is gone keeps its name.
+// Only the stored originals of the mails capture read as it created the contact
+// prove the name came from the address. Without one, the name stays.
 func initialsNamesDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792896243_initials_display_names", Version: 1,
@@ -33,7 +33,8 @@ func initialsNamesDataTask() datatask.Task {
 }
 
 // repairInitialsNamesBatch walks contacts by id, a page at a time. A batch
-// inspects at most its limit and reads one stored original per candidate.
+// inspects at most its limit, and each candidate costs it a bounded number of
+// stored originals.
 func repairInitialsNamesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return datatask.BatchOut{}, err
@@ -48,14 +49,11 @@ func repairInitialsNamesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	}
 	changed := 0
 	for _, candidate := range page.Candidates {
-		header, proven, err := mintingHeaderName(ctx, tx, candidate)
+		headers, err := headerNamesOf(ctx, tx, candidate)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
-		if !proven {
-			continue
-		}
-		moved, err := contacts.RepairInitialsDisplayNameTx(ctx, tx, candidate, header)
+		moved, err := contacts.RepairInitialsDisplayNameTx(ctx, tx, candidate, headers)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
@@ -66,28 +64,35 @@ func repairInitialsNamesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	return datatask.AdvanceUUID(in, page.Scanned, changed)
 }
 
-// mintingHeaderName reads the display name the minting mail's header gave the
-// candidate's address. proven is false when the original is gone, is not an
-// RFC822 message, or does not name the address: the name is then kept.
-func mintingHeaderName(ctx context.Context, tx pgx.Tx, candidate contacts.InitialsNameCandidate) (name string, proven bool, err error) {
-	switch candidate.Connector {
-	case sourceGmail, sourceIMAP, sourceGraph:
-	default:
-		return "", false, nil
+// headerNamesOf reads the display name each of the candidate's stored originals
+// gave its address. An original that is gone, is not an RFC822 message, or
+// does not list the address proves nothing either way and adds no name.
+func headerNamesOf(ctx context.Context, tx pgx.Tx, candidate contacts.InitialsNameCandidate) ([]string, error) {
+	var names []string
+	for _, evidence := range candidate.Evidence {
+		switch evidence.Connector {
+		case sourceGmail, sourceIMAP, sourceGraph:
+		default:
+			continue
+		}
+		payload, found, err := readStoredOriginal(ctx, tx, evidence.RawCaptureID)
+		if err != nil {
+			return nil, err
+		}
+		if !found {
+			continue
+		}
+		raw, decodeErr := capture.DecodeStoredOriginal(payload)
+		if decodeErr != nil {
+			continue
+		}
+		name, listed, parseErr := mailmap.CounterpartyNameOf(raw, candidate.Address, evidence.Outbound)
+		if parseErr != nil || !listed {
+			continue
+		}
+		names = append(names, name)
 	}
-	payload, found, err := readStoredOriginal(ctx, tx, candidate.RawCaptureID)
-	if err != nil || !found {
-		return "", false, err
-	}
-	raw, decodeErr := capture.DecodeStoredOriginal(payload)
-	if decodeErr != nil {
-		return "", false, nil //nolint:nilerr // an unreadable original proves nothing, so the name stays
-	}
-	name, proven, parseErr := mailmap.CounterpartyNameOf(raw, candidate.Address)
-	if parseErr != nil {
-		return "", false, nil //nolint:nilerr // an unreadable original proves nothing, so the name stays
-	}
-	return name, proven, nil
+	return names, nil
 }
 
 func estimateInitialsNames(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
