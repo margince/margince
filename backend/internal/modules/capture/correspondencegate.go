@@ -393,7 +393,7 @@ func metInPersonTx(
 		     AND a.archived_at IS NULL
 		     AND a.captured_by LIKE 'connector:%'
 		     AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
-		     AND a.occurred_at <= now() + $2::interval -- occurred_at raw: a connector meeting is an instant, read with a lookahead
+		     AND a.occurred_at <= now() + $2::interval -- occurred_at raw: a 90-day diary horizon; a day entry near its far edge decides nothing
 		     AND (
 		          -- The BARE invitation address, bounded by the address's own
 		          -- tenure. An activity_participant row records what the

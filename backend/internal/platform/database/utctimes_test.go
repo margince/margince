@@ -4,6 +4,7 @@
 package database
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -54,10 +55,15 @@ func TestATimestamptzScansInUTCWhateverTheProcessZone(t *testing.T) {
 // naming another zone does not move it.
 func TestEverySessionReadsDatesInUTC(t *testing.T) {
 	t.Parallel()
-	for _, dsn := range []string{"postgres://h/db", "postgres://h/db?timezone=Europe/Berlin"} {
+	for _, dsn := range []string{"postgres://h/db", "postgres://h/db?timezone=Europe/Berlin", "postgres://h/db?TimeZone=Asia/Tokyo"} {
 		cfg, err := PoolConfig(dsn)
 		if err != nil {
 			t.Fatal(err)
+		}
+		for name, zone := range cfg.ConnConfig.RuntimeParams {
+			if strings.EqualFold(name, "timezone") && (name != "timezone" || zone != "UTC") {
+				t.Errorf("%s: the session sends %s=%s, want only timezone=UTC", dsn, name, zone)
+			}
 		}
 		if got := cfg.ConnConfig.RuntimeParams["timezone"]; got != "UTC" {
 			t.Errorf("%s: the session zone is %q, want UTC", dsn, got)

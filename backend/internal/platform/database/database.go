@@ -95,9 +95,15 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 
 // setSessionUTC reads dates in SQL in the zone Go scans instants in, so a
 // date_trunc or a ::date agrees with Go. A DSN cannot move it, as the two would split.
+// Postgres reads the parameter name in any case, so every spelling goes.
 func setSessionUTC(cfg *pgxpool.Config) {
 	if cfg.ConnConfig.RuntimeParams == nil {
 		cfg.ConnConfig.RuntimeParams = map[string]string{}
+	}
+	for name := range cfg.ConnConfig.RuntimeParams {
+		if strings.EqualFold(name, "timezone") {
+			delete(cfg.ConnConfig.RuntimeParams, name)
+		}
 	}
 	cfg.ConnConfig.RuntimeParams["timezone"] = "UTC"
 }

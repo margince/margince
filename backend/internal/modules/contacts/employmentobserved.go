@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // employmentFirstObservedSQL is the earliest message from any of a contact's
@@ -32,13 +33,13 @@ func employmentFirstObservedSQL(contact, domain, activity, skew string) string {
 		    -- A literal suffix compare, never LIKE — see OnDomain.
 		    AND (split_part(pe.email, '@', 2) = %[2]s
 		         OR right(split_part(pe.email, '@', 2), length(%[2]s) + 1) = '.' || %[2]s)
-		    AND ev.occurred_at <= now() + %[4]s::interval -- occurred_at raw: the instant a message was captured, with clock skew allowed
+		    AND %[4]s
 		),
 		(SELECT ev.occurred_at FROM activity ev
 		  WHERE ev.id = %[3]s
-		    AND ev.occurred_at <= now() + %[4]s::interval -- occurred_at raw: the instant a message was captured, with clock skew allowed
+		    AND %[4]s
 		))`,
-		contact, domain, activity, skew)
+		contact, domain, activity, occurredday.BegunSQL("ev", "now() + "+skew+"::interval"))
 }
 
 // observeEmployment moves an existing edge's first observation earlier when
@@ -55,9 +56,9 @@ func observeEmployment(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInpu
 	)
 	err := tx.QueryRow(ctx, `
 		WITH msg AS (
-			SELECT occurred_at FROM activity
-			 WHERE id = $4
-			   AND occurred_at <= now() + $5::interval -- occurred_at raw: the instant a message was captured, with clock skew allowed
+			SELECT m.occurred_at FROM activity m
+			 WHERE m.id = $4
+			   AND `+occurredday.BegunSQL("m", "now() + $5::interval")+`
 		),
 		edge AS (
 			SELECT r.id, r.first_observed_at
