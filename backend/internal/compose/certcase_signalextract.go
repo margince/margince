@@ -249,9 +249,9 @@ type signalExtractCase struct {
 	expected []signalExtractExpectation
 }
 
-// Run issues the one request this site sends, bare: production wraps the same
-// request in the shape-retry when the brain supports one, and a case that did
-// too would certify the answer a model gives after being told to try again.
+// Run issues the requests one pass sends, bare. Production wraps each in the
+// shape-retry when the brain supports one. A case that did too would certify
+// the answer a model gives after being told to try again.
 func (c *signalExtractCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	// English, pinned, rather than the installation's base language: a
 	// certification record grades a fixed corpus, and a score that moved with a
@@ -266,6 +266,44 @@ func (c *signalExtractCase) Run(ctx context.Context, completer aitasks.Completer
 		return trace, fmt.Errorf("signal_extract/thread_events: %w", err)
 	}
 	trace.Output = resp.Text
+	if len(c.thread.Focus) > 0 {
+		// The fixture is already a second reading, and a pass makes no third.
+		return trace, nil
+	}
+	return c.secondReading(ctx, completer, trace)
+}
+
+// secondReading finishes the pass the way readThread does, so the graded
+// answer is the one the product files. A first reply the engine refuses is
+// graded as it is. A refused second reply leaves the first reading's events,
+// as keepFirstReading does.
+func (c *signalExtractCase) secondReading(
+	ctx context.Context, completer aitasks.Completer, trace aitasks.Trace,
+) (aitasks.Trace, error) {
+	var first extractPayload
+	if json.Unmarshal([]byte(ai.Unfence(trace.Output)), &first) != nil || validateExtractEnvelope(first, c.thread) != "" {
+		return trace, nil
+	}
+	focused, ok := focusedReading(c.thread, first.events())
+	if !ok {
+		return trace, nil
+	}
+	req := extractRequest(focused, string(textlang.English))
+	trace.Requests = append(trace.Requests, req)
+	resp, err := completer.Complete(ctx, req)
+	if err != nil {
+		return trace, fmt.Errorf("signal_extract/thread_events: the second reading: %w", err)
+	}
+	var second extractPayload
+	if json.Unmarshal([]byte(ai.Unfence(resp.Text)), &second) != nil || validateExtractEnvelope(second, focused) != "" {
+		return trace, nil
+	}
+	both := append(first.events(), second.events()...)
+	served, err := json.Marshal(extractPayload{Events: &both})
+	if err != nil {
+		return trace, fmt.Errorf("signal_extract/thread_events: the two readings cannot be joined: %w", err)
+	}
+	trace.Output = string(served)
 	return trace, nil
 }
 

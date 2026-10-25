@@ -188,7 +188,7 @@ func (x *SignalExtractor) askFocusedReading(
 
 // focusedReading is the conversation the second reading sends, or false when
 // there is none to send. It leaves out each message whose only finding was a
-// new need: a model shown a promise and a later new need reports the need and
+// new need. A model shown a promise and a later new need reports the need and
 // drops the promise. A message with a promise or an ending stays, because it
 // is what shows a later message keeping, renewing or voiding a promise.
 func focusedReading(thread settledThread, events []extractedEvent) (settledThread, bool) {
