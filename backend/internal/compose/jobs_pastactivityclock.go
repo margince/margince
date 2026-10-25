@@ -75,7 +75,7 @@ func (w *pastActivityClockWorker) Work(ctx context.Context, _ *river.Job[PastAct
 func RefoldPastActivityClocks(ctx context.Context, db *database.DB) (int, error) {
 	var mark activities.ClockRefoldMark
 	var asOf time.Time
-	var days activities.DayRefoldTargets
+	var days activities.PassedActivities
 	if err := db.Tx(ctx, func(tx pgx.Tx) (err error) {
 		if mark, asOf, err = activities.ClockRefoldStartTx(ctx, tx); err != nil {
 			return err
