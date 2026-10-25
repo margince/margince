@@ -78,7 +78,7 @@ func TestContactGraphKeepsSeatsOutOfTheirCompanyLane(t *testing.T) {
 	}
 }
 
-func agentCoworkerLabels(t *testing.T, e *Env, ctx context.Context, contact ids.UUID) map[string]bool {
+func agentCoworkerLabels(ctx context.Context, t *testing.T, e *Env, contact ids.UUID) map[string]bool {
 	t.Helper()
 	code, graph := readGraph(ctx, t, e, contact)
 	if code != http.StatusOK {
@@ -112,12 +112,12 @@ func TestContactGraphReadsAPassportAgentAsItsUser(t *testing.T) {
 	}
 
 	teams := []ids.UUID{e.Team1}
-	asUser := agentCoworkerLabels(t, e, e.As(e.Rep2, teams, graphPerms), anchor)
-	asAgent := agentCoworkerLabels(t, e, e.AgentFor(t, e.Rep2, teams, graphPerms), anchor)
+	asUser := agentCoworkerLabels(e.As(e.Rep2, teams, graphPerms), t, e, anchor)
+	asAgent := agentCoworkerLabels(e.AgentFor(t, e.Rep2, teams, graphPerms), t, e, anchor)
 	if asUser["Typed Alias"] || asAgent["Typed Alias"] {
 		t.Fatalf("user sees %v, passport agent sees %v, want the typed alias hidden from both", asUser, asAgent)
 	}
-	elsewhere := agentCoworkerLabels(t, e, e.AgentFor(t, e.Rep1, teams, graphPerms), anchor)
+	elsewhere := agentCoworkerLabels(e.AgentFor(t, e.Rep1, teams, graphPerms), t, e, anchor)
 	if !elsewhere["Typed Alias"] {
 		t.Fatalf("an agent for another seat sees %v, want the alias drawn", elsewhere)
 	}

@@ -79,9 +79,9 @@ func TestEmploymentEdgeCreateReportsOnlyThePairsItNotedAsFiled(t *testing.T) {
 	contact, mine, theirs := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	queue := map[ids.UUID]bool{}
 	provider := edgeCreateProvider{
-		stubRecordProvider: stubRecordProvider{rec: stagedRecord(datasource.EntityRelationship, ids.NewV7(), true)},
-		filedByThisCreate:  mine,
-		concurrentFiler:    func() { queue[theirs] = true },
+		rec:               stagedRecord(datasource.EntityRelationship, ids.NewV7(), true),
+		filedByThisCreate: mine,
+		concurrentFiler:   func() { queue[theirs] = true },
 	}
 	queue[mine] = true
 	tool := createRecord{p: provider, duplicates: func(_ context.Context, _ string, _ ids.UUID, only []ids.UUID) ([]DuplicateCandidate, error) {
