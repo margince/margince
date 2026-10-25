@@ -92,7 +92,7 @@ var assignedCountryCodes = slices.Sorted(maps.Keys(assignedCountry))
 func (s *Store) ListAddressCountryChecksDue(
 	ctx context.Context, record CountryCheckedRecord, limit int,
 ) ([]AddressCountryCheck, error) {
-	if err := auth.Require(ctx, string(record), principal.ActionRead); err != nil {
+	if err := requireCountryCheckRead(ctx, record); err != nil {
 		return nil, err
 	}
 	table, err := countryCheckedTable(record)
@@ -138,7 +138,7 @@ func (s *Store) ListAddressCountryChecksDue(
 func (s *Store) RecordAddressCountries(
 	ctx context.Context, check AddressCountryCheck, resolved []string,
 ) (bool, error) {
-	if err := auth.Require(ctx, string(check.Record), principal.ActionUpdate); err != nil {
+	if err := requireCountryCheckWrite(ctx, check.Record); err != nil {
 		return false, err
 	}
 	table, err := countryCheckedTable(check.Record)
@@ -228,10 +228,30 @@ func assignedCodesOf(codes []string) []string {
 // can format another name into the statement.
 func countryCheckedTable(record CountryCheckedRecord) (string, error) {
 	switch record {
-	case CountryCheckedCompany:
-		return "company", nil
-	case CountryCheckedContact:
-		return "contact", nil
+	case CountryCheckedCompany, CountryCheckedContact:
+		return string(record), nil
 	}
 	return "", fmt.Errorf("contacts: %q carries no checked address country", record)
+}
+
+// requireCountryCheckRead and requireCountryCheckWrite name each object and
+// verb as a literal, so the grant scan can resolve every door a check uses.
+func requireCountryCheckRead(ctx context.Context, record CountryCheckedRecord) error {
+	switch record {
+	case CountryCheckedCompany:
+		return auth.Require(ctx, "company", principal.ActionRead)
+	case CountryCheckedContact:
+		return auth.Require(ctx, "contact", principal.ActionRead)
+	}
+	return fmt.Errorf("contacts: %q carries no checked address country", record)
+}
+
+func requireCountryCheckWrite(ctx context.Context, record CountryCheckedRecord) error {
+	switch record {
+	case CountryCheckedCompany:
+		return auth.Require(ctx, "company", principal.ActionUpdate)
+	case CountryCheckedContact:
+		return auth.Require(ctx, "contact", principal.ActionUpdate)
+	}
+	return fmt.Errorf("contacts: %q carries no checked address country", record)
 }
