@@ -90,21 +90,20 @@ export function Triage({
   // queue agree. A message is dated by its arrival, the rest by its own clock.
   // The reader's own pin is the queue's reason, not the card's.
   const arrived = lead.email_summary;
-  const zones = { record: recordZone, viewer: zone };
   const when = arrived
     ? [
         activityDay(
           arrived.occurred_at,
           arrived.occurred_precision,
           locale,
-          zones,
+          zone,
           formatDayMonth,
         ),
         activityTimeOfDay(
           arrived.occurred_at,
           arrived.occurred_precision,
           locale,
-          zones,
+          zone,
         ),
       ]
         .filter(Boolean)

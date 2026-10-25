@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { activityIsAhead } from "../../format/activitywhen";
+import { activityHasHappened } from "../../format/activitywhen";
 import { calendarDaysUntil } from "../../format/daysuntil";
 import { daysLate } from "./companynextbar";
 
@@ -77,7 +77,7 @@ export function latestExchanges(view: Company360, record: string): Activity[] {
       (row) =>
         row.kind !== "task" &&
         !DID_NOT_HAPPEN.has(row.meeting_status ?? "") &&
-        !activityIsAhead(row.occurred_at, row.occurred_precision, asOf, record),
+        activityHasHappened(row, asOf, record),
     )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
     .slice(0, OVERVIEW_ROWS);

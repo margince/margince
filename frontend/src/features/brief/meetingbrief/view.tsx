@@ -15,7 +15,6 @@ import {
 } from "../../../design-system/drawerbands";
 import { Heading } from "../../../design-system/heading";
 import { SurfaceState } from "../../../design-system/surfacestate";
-import type { ActivityWhenFormatter } from "../../../format/activitywhen";
 import { useT } from "../../../i18n";
 import { CoachPanel, MeetingPaths } from "./coaching";
 import { BriefHeader, type MeetingFacts, type PreparedFor } from "./header";
@@ -75,7 +74,6 @@ export function MeetingBriefView({
   titleId,
   onClose,
   scopeSlot,
-  formatWhen,
   formatDay,
 }: Readonly<{
   state: BriefViewState;
@@ -89,7 +87,6 @@ export function MeetingBriefView({
   // The project picker or the scope line, built by the drawer because only it
   // knows what the reader chose.
   scopeSlot?: ReactNode;
-  formatWhen?: ActivityWhenFormatter;
   formatDay?: (utcIso: string) => string;
 }>) {
   const t = useT();
@@ -106,7 +103,6 @@ export function MeetingBriefView({
           brief={brief}
           meeting={meeting}
           preparedFor={preparedFor}
-          formatWhen={formatWhen}
         />
       </DrawerHead>
       <DrawerBody>

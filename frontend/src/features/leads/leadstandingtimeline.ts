@@ -7,13 +7,17 @@ import type {
   TimelineEvent,
   TimelineGap,
 } from "../../design-system/standingtimeline";
-import { activityDay, activityHasBegun } from "../../format/activitywhen";
+import {
+  type ActivityMoment,
+  activityDay,
+  activityDaysAway,
+  activityHasBegun,
+} from "../../format/activitywhen";
 import {
   formatDayMonth,
   formatDuration,
   formatNumber,
 } from "../../format/format";
-import { calendarDaysBetween } from "../../format/format.dates";
 import { leadIdentityName } from "../../format/leadname";
 import type { ReadingContext } from "./leadstandingparts";
 import { nextBookedMeeting } from "./leadstandingparts";
@@ -63,13 +67,12 @@ export function leadTimeline(
   const asOf = Date.parse(ctx.asOf);
   const day = (at: string) => formatDayMonth(at, locale, zone);
   const name = leadIdentityName(lead) || t("lead.unnamed");
-  const zones = { record: ctx.record, viewer: zone };
   const dayOf = (row: Activity) =>
     activityDay(
       row.occurred_at,
       row.occurred_precision,
       locale,
-      zones,
+      zone,
       formatDayMonth,
     );
   const theirs = newestExchange(activities, "inbound", asOf, ctx.record);
@@ -116,7 +119,13 @@ export function leadTimeline(
   return {
     events,
     gap:
-      newest && silence(lead, newest.occurred_at, Boolean(theirsIsLast), ctx),
+      newest &&
+      silence(
+        lead,
+        { at: newest.occurred_at, precision: newest.occurred_precision },
+        Boolean(theirsIsLast),
+        ctx,
+      ),
   };
 }
 
@@ -151,20 +160,23 @@ function firstResponseEvent(
 // no silence worth drawing.
 function silence(
   lead: Lead,
-  from: string,
+  from: ActivityMoment,
   yourMove: boolean,
   ctx: ReadingContext,
 ): TimelineGap | undefined {
-  const days = calendarDaysBetween(
-    new Date(from),
-    new Date(ctx.asOf),
+  const asOf = Date.parse(ctx.asOf);
+  const days = -activityDaysAway(
+    from.at,
+    from.precision,
+    asOf,
     ctx.zone,
+    ctx.record,
   );
   if (lead.archived_at || days < 1) {
     return undefined;
   }
   return {
-    from,
+    from: from.at,
     title: ctx.t("contact.strip.days", {
       count: formatNumber(days, ctx.locale),
     }),

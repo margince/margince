@@ -99,7 +99,7 @@ export function Citations({
               summary.occurred_at,
               summary.occurred_precision,
               locale,
-              { record: recordZone, viewer: recordZone },
+              recordZone,
             )}
             withheld={withheld}
             onOpen={

@@ -8,6 +8,10 @@
 // waiting on them.
 
 import type { components } from "../../../api/schema";
+import {
+  type ActivityMoment,
+  activityDaysAway,
+} from "../../../format/activitywhen";
 
 type DealStatusCard = components["schemas"]["DealStatusCard"];
 type Activity = components["schemas"]["Activity"];
@@ -24,7 +28,7 @@ type Activity = components["schemas"]["Activity"];
 export function waitingSince(
   card: DealStatusCard,
   timeline: readonly Activity[],
-): { at: string } | null {
+): ActivityMoment | null {
   if (!card.reply_to) {
     return null;
   }
@@ -32,8 +36,23 @@ export function waitingSince(
     (row) => row.activity_id === card.reply_to && row.occurred_at,
   );
   if (fromMove?.occurred_at) {
-    return { at: fromMove.occurred_at };
+    return {
+      at: fromMove.occurred_at,
+      // Evidence carries no precision of its own; its message summary does.
+      precision: fromMove.email_summary?.occurred_precision ?? "instant",
+    };
   }
   const row = timeline.find((activity) => activity.id === card.reply_to);
-  return row ? { at: row.occurred_at } : null;
+  return row
+    ? { at: row.occurred_at, precision: row.occurred_precision }
+    : null;
+}
+
+/** How many of the record zone's days the buyer has waited, as of `asOf`. */
+export function daysWaiting(
+  { at, precision }: ActivityMoment,
+  asOf: string,
+  record: string,
+): number {
+  return -activityDaysAway(at, precision, Date.parse(asOf), record, record);
 }

@@ -6,12 +6,12 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { EmailEntry } from "../../design-system/emailentry";
 import { RecordCard } from "../../design-system/recordcard";
-import { formatRecordWhen } from "../../format/activitywhen";
+import { formatActivityWhen } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { companyTabRoute } from "../../lib/companytab";
 import { ENTITY } from "../../lib/entity";
-import { useActivityZones, useRecordZone } from "../../lib/recordzone";
+import { useRecordZone } from "../../lib/recordzone";
 import { navigate, routeHash } from "../../lib/router";
 import {
   type SearchRecordCardType,
@@ -29,7 +29,7 @@ export function SearchHit({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zones = useActivityZones(useRecordZone());
+  const zone = useRecordZone();
   // An email hit IS the canonical row — the same one the timeline draws, from
   // the same server projection. It replaces the generic title-and-snippet
   // rather than sitting beside it: the snippet was a raw 200-character slice
@@ -41,7 +41,12 @@ export function SearchHit({
       <li className="search-hit search-hit-email">
         <EmailEntry
           summary={summary}
-          timestamp={formatRecordWhen(summary, locale, zones)}
+          timestamp={formatActivityWhen(
+            summary.occurred_at,
+            summary.occurred_precision,
+            locale,
+            zone,
+          )}
           onOpen={() => onOpen(summary.activity_id, "email")}
         />
       </li>

@@ -2275,6 +2275,8 @@ export const en = {
   "deal.card.addTask": "Add task: {name}",
   "deal.mail.sent": "Sent {ago}",
   "deal.mail.received": "Received {ago}",
+  "deal.mail.sentOn": "Sent on {date}",
+  "deal.mail.receivedOn": "Received on {date}",
   "deal.mail.none": "No email on this deal yet",
   "deal.mail.viewAll": "View all activity",
   "deal.closesProvisional": "provisional close date, not confirmed by a human",

@@ -142,9 +142,6 @@ function historyMoment(
   precision: OccurredPrecision | undefined,
 ): string {
   return precision
-    ? formatActivityWhen(value, precision, locale, {
-        record: zone,
-        viewer: zone,
-      })
+    ? formatActivityWhen(value, precision, locale, zone)
     : formatDateTime(value, locale, zone);
 }

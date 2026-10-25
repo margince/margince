@@ -3,9 +3,15 @@ import type {
   TimelineEvent,
   TimelineGap,
 } from "../../design-system/standingtimeline";
-import { activityIsAhead } from "../../format/activitywhen";
+import {
+  type ActivityMoment,
+  activityDay,
+  activityDaysAway,
+  activityHasHappened,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
 import { formatMoneyCompact, formatNumber } from "../../format/format";
-import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
+import { formatDayMonth } from "../../format/format.dates";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { ENGAGEMENT_LABELS } from "./company360.strip";
@@ -62,23 +68,18 @@ export function companyTimeline(
         row.kind !== "task" &&
         row.id !== last?.activity_id &&
         !DID_NOT_HAPPEN.has(row.meeting_status ?? "") &&
-        !activityIsAhead(
-          row.occurred_at,
-          row.occurred_precision,
-          asOf,
-          words.zone,
-        ),
+        activityHasHappened(row, asOf, words.zone),
     )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
     .slice(0, PAST_EVENTS);
   const happened = clusters(past)
     .slice(0, PAST_STOPS)
     .reverse()
-    .flatMap((cluster) => pastStop(cluster, words, day));
+    .flatMap((cluster) => pastStop(cluster, words));
   return {
     events: [
       ...happened,
-      ...lastContact(view, rows, words, day),
+      ...lastContact(view, rows, words),
       ...owedAhead(view, words, day),
     ],
     gap: silence(view, words),
@@ -109,8 +110,9 @@ function clusters(newestFirst: readonly Activity[]): Activity[][] {
 function pastStop(
   run: readonly Activity[],
   words: TimelineWords,
-  day: (iso: string) => string,
 ): TimelineEvent[] {
+  const dayOf = (row: Activity) =>
+    activityStopDay(row.occurred_at, row.occurred_precision, words);
   const [newest] = run;
   const oldest = run.at(-1);
   if (!newest || !oldest) {
@@ -127,19 +129,27 @@ function pastStop(
             count: formatNumber(run.length, words.locale),
           }),
       sub: alone
-        ? `${day(newest.occurred_at)} · ${words.t(KIND_WORD[newest.kind])}`
-        : `${day(oldest.occurred_at)}–${day(newest.occurred_at)}`,
+        ? `${dayOf(newest)} · ${words.t(KIND_WORD[newest.kind])}`
+        : `${dayOf(oldest)}–${dayOf(newest)}`,
       kind: "done",
       activityIds: run.map((row) => row.id),
     },
   ];
 }
 
+// An activity's day on the spine; a `day` entry reads its own date.
+function activityStopDay(
+  at: string,
+  precision: OccurredPrecision,
+  words: TimelineWords,
+): string {
+  return activityDay(at, precision, words.locale, words.zone, formatDayMonth);
+}
+
 function lastContact(
   view: Company360,
   rows: readonly Activity[],
   words: TimelineWords,
-  day: (iso: string) => string,
 ): TimelineEvent[] {
   const last = view.last_contact;
   if (!last) {
@@ -153,7 +163,7 @@ function lastContact(
       title: row
         ? activityHeadline(row, words.t)
         : words.t("co.spine.lastSpoke"),
-      sub: `${day(last.at)} · ${words.t(row ? "co.spine.lastSpoke" : KIND_WORD[last.kind])}`,
+      sub: `${activityStopDay(last.at, last.occurred_precision, words)} · ${words.t(row ? "co.spine.lastSpoke" : KIND_WORD[last.kind])}`,
       kind: "last",
       activityIds: [last.activity_id],
     },
@@ -186,7 +196,7 @@ function owedAhead(
       key: `meeting-${meeting.activity_id}`,
       at: meeting.starts_at,
       title: meeting.subject,
-      sub: `${day(meeting.starts_at)} · ${words.t("co.recent.kind.meeting")}`,
+      sub: `${activityStopDay(meeting.starts_at, meeting.occurred_precision, words)} · ${words.t("co.recent.kind.meeting")}`,
       kind: "ahead",
     });
   }
@@ -228,18 +238,28 @@ function silence(
   words: TimelineWords,
 ): TimelineGap | undefined {
   const state = view.state_strip?.engagement?.state;
-  const from =
-    state === "waiting_on_them"
-      ? view.last_outbound_at
-      : state === "waiting_on_us"
-        ? view.last_inbound_at
+  const since: ActivityMoment | undefined =
+    state === "waiting_on_them" && view.last_outbound_at
+      ? {
+          at: view.last_outbound_at,
+          precision: view.last_outbound_precision ?? "instant",
+        }
+      : state === "waiting_on_us" && view.last_inbound_at
+        ? {
+            at: view.last_inbound_at,
+            precision: view.last_inbound_precision ?? "instant",
+          }
         : undefined;
-  if (!from || (state !== "waiting_on_them" && state !== "waiting_on_us")) {
+  if (!since || (state !== "waiting_on_them" && state !== "waiting_on_us")) {
     return undefined;
   }
-  const days = calendarDaysBetween(
-    new Date(from),
-    new Date(view.as_of),
+  const from = since.at;
+  const asOf = Date.parse(view.as_of);
+  const days = -activityDaysAway(
+    from,
+    since.precision,
+    asOf,
+    words.zone,
     words.zone,
   );
   if (days < 1) {

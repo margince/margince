@@ -182,12 +182,8 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "A date-only source's midday falls on the day before west of the record zone, so the case names a zone east of UTC.",
   },
   {
-    file: "features/brief/meetingbrief/view.test.tsx",
-    why: "A date-only meeting's midday lands on another day in the reader's zone, so the case names the record zone and a reader zone far from it.",
-  },
-  {
     file: "format/activitywhen.test.ts",
-    why: "A date-only entry's midday lands on another UTC day in the zones furthest from UTC, so the case names those zones.",
+    why: "A date-only entry's noon UTC lands on another local date in the zones furthest from UTC, so the case names those zones.",
   },
   {
     file: "features/companies/companynextbar.test.ts",

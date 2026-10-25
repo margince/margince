@@ -294,6 +294,7 @@ describe("the next step", () => {
     expect(step).toEqual({
       kind: "meeting",
       at: "2026-08-20T10:00:00Z",
+      precision: "instant",
       subject: "Walkthrough",
     });
   });

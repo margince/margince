@@ -4,7 +4,7 @@
 import type { components } from "../../api/schema";
 import { StatCard } from "../../design-system/atoms";
 import { omitted } from "../../design-system/surfacestate";
-import { activityIsAhead } from "../../format/activitywhen";
+import { activityDay, activityIsAhead } from "../../format/activitywhen";
 import { formatDayMonth } from "../../format/format.dates";
 import type { Locale, useT } from "../../i18n";
 import { WITHHELD_READING } from "./company360health";
@@ -61,7 +61,13 @@ export function NextMeetingStat({
     <StatCard
       onOpen={onOpen}
       {...slot}
-      value={formatDayMonth(meeting.starts_at, locale, recordZone)}
+      value={activityDay(
+        meeting.starts_at,
+        meeting.occurred_precision,
+        locale,
+        recordZone,
+        formatDayMonth,
+      )}
       detail={meeting.subject}
     />
   );

@@ -111,7 +111,7 @@ export function EvidenceSources({
           source.summary.occurred_at,
           source.summary.occurred_precision,
           locale,
-          { record: recordZone, viewer: recordZone },
+          recordZone,
         );
         // The withheld branch states its reason rather than passing an
         // undefined opener: EmailEntry refuses to be silently unopenable, and

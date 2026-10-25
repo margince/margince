@@ -161,7 +161,7 @@ export function entryFieldChanges(
 }
 
 // An activity's time takes the precision stored beside it in the same image.
-// A `day` entry has no clock on either side of a change.
+// An image that carries no precision holds an instant.
 function precisionOf(
   image: Readonly<Record<string, unknown>>,
   field: string,
@@ -173,10 +173,8 @@ function precisionOf(
   switch (image.occurred_precision) {
     case "day":
       return "day";
-    case "instant":
-      return "instant";
     default:
-      return undefined;
+      return "instant";
   }
 }
 

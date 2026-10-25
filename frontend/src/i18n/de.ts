@@ -2325,6 +2325,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.card.addTask": "Aufgabe hinzufügen: {name}",
   "deal.mail.sent": "Gesendet {ago}",
   "deal.mail.received": "Erhalten {ago}",
+  "deal.mail.sentOn": "Gesendet am {date}",
+  "deal.mail.receivedOn": "Erhalten am {date}",
   "deal.mail.none": "Noch keine E-Mail zu diesem Deal",
   "deal.mail.viewAll": "Alle Aktivitäten anzeigen",
   "deal.closesProvisional":

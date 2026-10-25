@@ -86,13 +86,14 @@ describe("historyValue", () => {
     ).toBe("26/08/2026, 09:12");
   });
 
-  // A `day` entry is stored at noon in the record zone; its time is not a
-  // clock anybody set, so only the date shows.
+  // A `day` entry is stored at noon UTC, a time nobody set. Only its UTC date
+  // shows, whatever zone the record keeps.
   it("shows a date-only activity time as its date, with no clock", () => {
-    const at = "2026-08-26T05:00:00Z";
-    expect(historyValue("occurred_at", at, ctx(), "day")).toBe("26/08/2026");
-    expect(historyValue("occurred_at", at, ctx(), "instant")).toBe(
-      "26/08/2026, 12:00",
+    const at = "2026-08-26T12:00:00Z";
+    const east = ctx({ zone: "Pacific/Kiritimati" });
+    expect(historyValue("occurred_at", at, east, "day")).toBe("26/08/2026");
+    expect(historyValue("occurred_at", at, east, "instant")).toBe(
+      "27/08/2026, 02:00",
     );
   });
 

@@ -55,6 +55,36 @@ describe("entryFieldChanges", () => {
     ).toBeUndefined();
   });
 
+  // Moving a date-only entry to another date keeps its precision, and both
+  // images still carry it, so neither side grows a clock.
+  it("reads a day-to-day move as date-only on both sides", () => {
+    const changes = entryFieldChanges({
+      before: {
+        occurred_at: "2026-08-26T12:00:00Z",
+        occurred_precision: "day",
+      },
+      after: { occurred_at: "2026-08-27T12:00:00Z", occurred_precision: "day" },
+    });
+    expect(changes).toEqual([
+      {
+        field: "occurred_at",
+        oldValue: "2026-08-26T12:00:00Z",
+        newValue: "2026-08-27T12:00:00Z",
+        oldPrecision: "day",
+        newPrecision: "day",
+      },
+    ]);
+  });
+
+  it("reads an activity time from an image without a precision as an instant", () => {
+    const [change] = entryFieldChanges({
+      before: { occurred_at: "2026-08-26T09:30:00Z" },
+      after: { occurred_at: "2026-08-27T09:30:00Z" },
+    });
+    expect(change?.oldPrecision).toBe("instant");
+    expect(change?.newPrecision).toBe("instant");
+  });
+
   it("has nothing to show for an entry that carries no images", () => {
     expect(entryFieldChanges({ before: null, after: null })).toEqual([]);
   });

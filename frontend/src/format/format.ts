@@ -421,7 +421,15 @@ export function relativeDays(
   if (!at) {
     return t("contact.strip.never");
   }
-  const days = calendarDaysBetween(new Date(at), now, zone);
+  return daysAgoText(calendarDaysBetween(new Date(at), now, zone), t, locale);
+}
+
+/** A count of dates since a moment, as relativeDays says it. */
+export function daysAgoText(
+  days: number,
+  t: Translator,
+  locale: Locale,
+): string {
   if (days <= 0) {
     return t("contact.strip.today");
   }

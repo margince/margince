@@ -2,7 +2,6 @@ import { Lock, Send } from "lucide-react";
 import { useState } from "react";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
-import { useActivityZones } from "../lib/recordzone";
 import { Avatar, Button } from "./atoms";
 import { attachmentCount, EmailFiles, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
@@ -236,8 +235,7 @@ function ThreadMessage({
   const lead = messageLead(entry, t);
   const visibility = messageVisibilityState(entry);
   const onOpen = threadMessageOpener(entry);
-  const zones = useActivityZones(zone);
-  const day = entryDay(entry, locale, zones);
+  const day = entryDay(entry, locale, zone);
   const content = (
     <>
       <MessageMark entry={entry} />
@@ -259,7 +257,7 @@ function ThreadMessage({
           shows: a one-message thread printed its date twice a hand apart, and
           an older member from another day still needs its own. */}
       <span className="tl-msg-when t-num">
-        {[day !== cardDay && day, entryTimeOfDay(entry, locale, zones)]
+        {[day !== cardDay && day, entryTimeOfDay(entry, locale, zone)]
           .filter(Boolean)
           .join(" ")}
       </span>
@@ -303,7 +301,6 @@ export function ThreadRow({
 }>) {
   const { locale } = useLocale();
   const t = useT();
-  const zones = useActivityZones(zone);
   const [allOpen, setAllOpen] = useState(false);
   const [newest] = group.entries;
   if (newest === undefined) {
@@ -379,7 +376,7 @@ export function ThreadRow({
                 <ThreadMessage
                   entry={entry}
                   zone={zone}
-                  cardDay={entryDay(newest, locale, zones)}
+                  cardDay={entryDay(newest, locale, zone)}
                 />
               </li>
             ))}

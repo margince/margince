@@ -8,11 +8,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { HowItStands } from "../../design-system/howitstands";
 import { NextBar, type NextBarMore } from "../../design-system/nextbar";
 import { Panel, PanelBody } from "../../design-system/panel";
-import {
-  calendarDaysBetween,
-  formatDayMonth,
-  formatNumber,
-} from "../../format/format";
+import { formatDayMonth, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
@@ -28,7 +24,7 @@ import {
 } from "../records/record360";
 import type { DealStandingHead } from "./deal360/dealhowitstands";
 import { dealVerdictTone, verdictSourceCount } from "./deal360/dealstanding";
-import { waitingSince } from "./deal360/dealwaiting";
+import { daysWaiting, waitingSince } from "./deal360/dealwaiting";
 import { useDealSignals } from "./dealsignals";
 import "./dealstatus.css";
 
@@ -458,7 +454,7 @@ function replyLate(
   if (!waiting) {
     return undefined;
   }
-  return calendarDaysBetween(new Date(waiting.at), new Date(asOf), zone);
+  return daysWaiting(waiting, asOf, zone);
 }
 
 // The deal card's "Not now": set aside for this reader until the card names a

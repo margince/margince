@@ -167,7 +167,7 @@ export function useSearchCommands(query: string): SearchArm {
                     hit.email_summary.occurred_at,
                     hit.email_summary.occurred_precision,
                     locale,
-                    { record: zone, viewer: zone },
+                    zone,
                   ),
                 }
               : undefined,

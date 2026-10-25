@@ -168,7 +168,7 @@ function ActivityBody({
             activity.occurred_at,
             activity.occurred_precision,
             locale,
-            { record: zone, viewer: zone },
+            zone,
           )}
           {activity.kind === "task" && activity.due_at && (
             <>

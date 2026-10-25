@@ -271,6 +271,7 @@ describe("the last-contact cell", () => {
       view({
         last_contact: {
           at: "2026-08-13T09:00:00Z",
+          occurred_precision: "instant",
           kind: "meeting",
           activity_id: "00000000-0000-4000-8000-0000000000aa",
         },
@@ -293,6 +294,7 @@ describe("the last-contact cell", () => {
         as_of: "2026-08-17T18:00:00Z",
         last_contact: {
           at: "2026-08-17T08:00:00Z",
+          occurred_precision: "instant",
           kind: "meeting",
           activity_id: "00000000-0000-4000-8000-0000000000aa",
         },

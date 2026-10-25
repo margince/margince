@@ -53,6 +53,7 @@ const standing: components["schemas"]["Company360"] = {
   last_outbound_at: "2026-07-20T10:00:00Z",
   last_contact: {
     at: "2026-08-01T08:00:00Z",
+    occurred_precision: "instant",
     kind: "email",
     activity_id: "a-wrote",
   },

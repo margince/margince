@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { useTooltip } from "../../design-system/tooltip";
-import { isDeadlineRow } from "../../format/activitywhen";
 import { floorFigure, readsAsFloor } from "../../format/figure";
 import {
   formatDateTime,
@@ -15,7 +14,6 @@ import {
 import { pipelineValueDetail } from "../../format/pipelinevalue";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useActivityZones } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { WORKLIST_FILTER_PARAM } from "../worklist/worklist";
 import type { Worklist, WorklistFilter } from "../worklist/worklist.queries";
@@ -219,7 +217,6 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
-  const zones = useActivityZones(viewerZone());
   const readings = day.readings;
   const calendar = calendarDay(day);
   const meetings = meetingsReading(day, calendar);
@@ -283,7 +280,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // reads the same whether that is tomorrow or next month.
           basis={
             calendar.state === "quiet"
-              ? nextMeetingLine(calendar.next, locale, t, zones)
+              ? nextMeetingLine(calendar.next, locale, t, viewerZone())
               : meetingsDetail(meetings, locale, t, plural)
           }
           unavailable={t("brief.readings.unavailable.meetings")}
@@ -362,9 +359,7 @@ function soonestLeadDeadline(day: Worklist): string | null {
   let soonest: string | null = null;
   for (const item of day.queue) {
     const at =
-      isDeadlineRow(item) &&
-      item.source === "task" &&
-      item.subject?.type === "lead"
+      item.source === "task" && item.subject?.type === "lead"
         ? (item.due_at ?? undefined)
         : undefined;
     if (at !== undefined && (soonest === null || at < soonest)) {

@@ -131,8 +131,8 @@ export function leadStanding(
   };
 }
 
-// The captured signal that moved the lead to Engaged, dated on the record's
-// clock as every activity's day is. A lead set by hand keeps the general sentence.
+// The signal that moved the lead to Engaged, dated on the record's clock: it
+// carries no precision. A lead set by hand keeps the general sentence.
 function engagedSentence(
   lead: Lead,
   t: Translator,

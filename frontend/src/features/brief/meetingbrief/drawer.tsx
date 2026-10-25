@@ -14,7 +14,6 @@ import {
   ProjectPicker,
   ScopeLine,
 } from "../../../design-system/projectpicker";
-import { formatActivityWhen } from "../../../format/activitywhen";
 import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { ENTITY, isEntityKind } from "../../../lib/entity";
@@ -66,9 +65,9 @@ export function ContactMeetingBrief({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // The meeting's time is formatted here rather than by the page that opened
-  // the drawer: the locale and the record zone are this tier's to know, and a
-  // caller passing a pre-formatted string would be a second formatter.
+  // The brief's days are formatted here, not by the page that opened the
+  // drawer: the locale and the record zone are this tier's to know. A caller's
+  // pre-formatted string would be a second formatter.
   const zone = useRecordZone();
   // The project the reader chose to prepare for. It belongs to ONE meeting:
   // the same drawer is reused for the next meeting on the page, and a scope
@@ -132,12 +131,6 @@ export function ContactMeetingBrief({
         onOpenEmail={onOpenEmail}
         titleId="contact-meeting-title"
         onClose={onClose}
-        formatWhen={(at, precision) =>
-          formatActivityWhen(at, precision, locale, {
-            record: zone,
-            viewer: zone,
-          })
-        }
         formatDay={(utcIso) => formatDate(utcIso, locale, zone)}
         scopeSlot={
           <>

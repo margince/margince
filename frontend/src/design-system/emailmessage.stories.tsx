@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen } from "storybook/test";
 import type { components } from "../api/schema";
 import { formatActivityWhen } from "../format/activitywhen";
+import { UTC_ZONE } from "../format/timezone";
 import { useLocale } from "../i18n";
 import { en } from "../i18n/en";
 import { StoryProviders } from "../testing/story-utils";
@@ -15,7 +16,7 @@ import { EmailEnvelope } from "./emailmessage";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 
-const ZONE = "Europe/Berlin";
+const ZONE = UTC_ZONE;
 
 function presentation(
   overrides: Partial<EmailPresentation> = {},

@@ -1,6 +1,6 @@
 import type { components } from "../../api/schema";
 import type { StandingPeek } from "../../design-system/standingdims";
-import { activityHasBegun } from "../../format/activitywhen";
+import { activityDay, activityHasBegun } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
@@ -115,7 +115,13 @@ function exchangePeek(
           ((row.email_summary?.direction ?? row.direction) === "outbound"
             ? t("timeline.sent")
             : t("timeline.received")),
-        formatDayMonth(row.occurred_at, locale, zone),
+        activityDay(
+          row.occurred_at,
+          row.occurred_precision,
+          locale,
+          zone,
+          formatDayMonth,
+        ),
       ].join(" · "),
       onOpen: open,
     })),
@@ -169,7 +175,13 @@ function unansweredPeek(
       title: row.subject?.trim() || t("timeline.kind.email"),
       sub: [
         messageDetail(row, t),
-        formatDayMonth(row.occurred_at, locale, zone),
+        activityDay(
+          row.occurred_at,
+          row.occurred_precision,
+          locale,
+          zone,
+          formatDayMonth,
+        ),
       ]
         .filter(Boolean)
         .join(" · "),

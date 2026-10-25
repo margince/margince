@@ -22,11 +22,11 @@ describe("scheduledText — when a meeting owing an outcome was scheduled", () =
     );
   });
 
-  it("names a date-only meeting's date on the record's clock, and no time", () => {
-    // Noon on the 15th in Kiritimati is still the 14th in UTC.
+  it("names a date-only meeting's own date, and no time", () => {
+    // Noon UTC on the 15th is already the 16th in Kiritimati.
     const item = row({
       source: "meeting_outcome",
-      occurred_at: "2026-09-14T22:00:00Z",
+      occurred_at: "2026-09-15T12:00:00Z",
       occurred_precision: "day",
     });
     expect(scheduledText(item, t, "en", "Pacific/Kiritimati")).toBe(
@@ -41,33 +41,33 @@ describe("scheduledText — when a meeting owing an outcome was scheduled", () =
 });
 
 // A meeting row's start is drawn on the reader's clock. A meeting known only
-// by its date is read on the record's, so every colleague sees its day.
+// by its date names that date, so every colleague sees its day.
 describe("whenText — when a meeting starts", () => {
   const say = (
     key: Parameters<typeof translate>[1],
     values?: Record<string, string>,
   ) => translate("en", key, values);
-  // Noon on the 15th in Kiritimati, read by a colleague in Pago Pago.
+  // Noon UTC on the 15th, read by a colleague in Pago Pago at 09:00 that day.
   const meeting = (precision: "day" | "instant") =>
     row({
       source: "meeting",
-      due_at: "2026-09-14T22:00:00Z",
+      due_at: "2026-09-15T12:00:00Z",
       occurred_precision: precision,
     });
   const RECORD = "Pacific/Kiritimati";
   const VIEWER = "Pacific/Pago_Pago";
 
-  it("names a date-only meeting's date in the record zone, even on its day", () => {
-    const sameDay = new Date("2026-09-14T23:00:00Z");
+  it("names a date-only meeting's date, even on its day", () => {
+    const sameDay = new Date("2026-09-15T20:00:00Z");
     expect(whenText(meeting("day"), say, "en", VIEWER, RECORD, sameDay)).toBe(
       say("worklist.when.starts", { when: "15/09/2026" }),
     );
   });
 
   it("names a timed meeting's clock in the reader's zone", () => {
-    const sameDay = new Date("2026-09-14T23:00:00Z");
+    const sameDay = new Date("2026-09-15T20:00:00Z");
     expect(
       whenText(meeting("instant"), say, "en", VIEWER, RECORD, sameDay),
-    ).toBe(say("worklist.when.starts", { when: "11:00" }));
+    ).toBe(say("worklist.when.starts", { when: "01:00" }));
   });
 });

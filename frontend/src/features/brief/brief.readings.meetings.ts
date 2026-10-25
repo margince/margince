@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ActivityZones } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
 import type { Locale, Translator, usePlural } from "../../i18n";
 import { navigate } from "../../lib/router";
@@ -96,9 +95,9 @@ export function nextMeetingLine(
   next: NonNullable<Worklist["next_meeting"]>,
   locale: Locale,
   t: Translator,
-  zones: ActivityZones,
+  zone: string,
 ): string {
-  const date = nextMeetingDay(next, locale, zones);
+  const date = nextMeetingDay(next, locale, zone);
   return next.subject
     ? t("brief.readings.nextMeeting", { date, subject: next.subject })
     : t("brief.readings.nextMeetingUntitled", { date });

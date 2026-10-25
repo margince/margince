@@ -13,14 +13,10 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRoster } from "../../components/entityref";
 import { useSettledValue } from "../../design-system/debouncedsearch";
-import {
-  type ActivityZones,
-  formatActivityWhen,
-} from "../../format/activitywhen";
+import { formatActivityWhen } from "../../format/activitywhen";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { useActivityZones } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
 import { recordNamesIn, useCompany360 } from "../companies/company360";
 import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
@@ -120,7 +116,6 @@ function answeringLineOf(
   anchorRead: ThreadProject,
   t: ReturnType<typeof useT>,
   locale: Locale,
-  zones: ActivityZones,
 ): string {
   if (!answering) {
     return t("compose.newEmail");
@@ -141,7 +136,7 @@ function answeringLineOf(
         anchor.occurred_at,
         anchor.occurred_precision,
         locale,
-        zones,
+        viewerZone(),
       ),
     },
   );
@@ -244,7 +239,6 @@ export function useComposeThread({
   // offered at all, stay those of the record.
   const [search, setSearch] = useState("");
   const searched = useSettledValue(search).trim();
-  const zones = useActivityZones(viewerZone());
   const found = useRecentConversations(
     entityType,
     entityId,
@@ -277,7 +271,7 @@ export function useComposeThread({
     listed: searched ? found : recent,
     search,
     setSearch,
-    answeringLine: answeringLineOf(answering, anchorRead, t, locale, zones),
+    answeringLine: answeringLineOf(answering, anchorRead, t, locale),
     splitColumns: showConversation || offered,
   };
 }

@@ -7,13 +7,18 @@ import type { components } from "../../api/schema";
 import type { PeekContent } from "../../design-system/peek";
 import type { ReadingTone } from "../../design-system/readingtone";
 import type { StandingDim } from "../../design-system/standingdims";
-import { activityDay, activityIsAhead } from "../../format/activitywhen";
 import {
+  type ActivityMoment,
+  activityDay,
+  activityDaysAway,
+  activityIsAhead,
+} from "../../format/activitywhen";
+import {
+  daysAgoText,
   formatDayMonth,
   formatDuration,
   formatNumber,
   formatSignedNumber,
-  relativeDays,
 } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import type { Locale, Translator } from "../../i18n";
@@ -86,8 +91,8 @@ export function ladderDates(
   return dates;
 }
 
-// A rung's date, and the zone it is read in. A captured signal is an activity,
-// and an activity's day belongs to the record's clock.
+// A rung's date, and the zone it is read in. A captured signal carries no
+// precision, so its day is read on the record's clock.
 function enteredAt(
   lead: Lead,
   step: LadderOpenStep,
@@ -257,30 +262,43 @@ function lastTouchAt(
   activities: readonly Activity[],
   asOf: string,
   wholeHistory: boolean,
-): string | undefined {
+): ActivityMoment | undefined {
   const now = Date.parse(asOf);
   const happened = activities
     .filter((row) => movesLastActivity(row, now))
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))[0];
-  if (happened || wholeHistory) {
-    return happened?.occurred_at;
+  if (happened) {
+    return { at: happened.occurred_at, precision: happened.occurred_precision };
   }
   const stored = lead.last_activity_at;
-  return stored && Date.parse(stored) <= now ? stored : undefined;
+  return !wholeHistory && stored && Date.parse(stored) <= now
+    ? { at: stored, precision: "instant" }
+    : undefined;
 }
 
 function lastTouchFigure(
-  at: string | undefined,
+  touch: ActivityMoment | undefined,
   ctx: ReadingContext,
 ): LeadFigure {
-  const { t, locale, zone } = ctx;
+  const { t, locale, zone, record } = ctx;
+  if (touch === undefined) {
+    return {
+      key: "last-touch",
+      label: t("lead.figure.lastTouch"),
+      value: t("standing.noneYet"),
+    };
+  }
+  const { at, precision } = touch;
+  const now = Date.parse(ctx.asOf);
   return {
     key: "last-touch",
     label: t("lead.figure.lastTouch"),
-    value: at ? formatDayMonth(at, locale, zone) : t("standing.noneYet"),
-    detail: at
-      ? relativeDays(at, t, locale, zone, new Date(ctx.asOf))
-      : undefined,
+    value: activityDay(at, precision, locale, zone, formatDayMonth),
+    detail: daysAgoText(
+      -activityDaysAway(at, precision, now, zone, record),
+      t,
+      locale,
+    ),
   };
 }
 
@@ -327,7 +345,7 @@ function meetingFigure(
   meeting: Activity | undefined,
   ctx: ReadingContext,
 ): LeadFigure {
-  const { t, locale, zone, record } = ctx;
+  const { t, locale, zone } = ctx;
   const label = t("lead.figure.nextMeeting");
   if (!meeting) {
     return { key: "meeting", label, value: t("lead.figure.noneBooked") };
@@ -339,7 +357,7 @@ function meetingFigure(
       meeting.occurred_at,
       meeting.occurred_precision,
       locale,
-      { record, viewer: zone },
+      zone,
       formatDayMonth,
     ),
     detail: meeting.subject?.trim() || t("lead.figure.booked"),

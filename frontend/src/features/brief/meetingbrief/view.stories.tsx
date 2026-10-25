@@ -12,8 +12,7 @@ import "../../contacts/contact360.css";
 // cover the four states the body itself can be in, from a fixture.
 //
 // Every date here is fixed rather than relative: the suite runs at +200 days
-// under `make fe-clock-drift` and must reach the same verdict there, so
-// `formatWhen` returns a constant instead of reading a clock.
+// under `make fe-clock-drift` and must reach the same verdict there.
 
 const meta: Meta<typeof MeetingBriefView> = {
   title: "Records/Record 360/Meeting brief/Body",
@@ -33,7 +32,6 @@ function body(state: BriefViewState) {
         onOpenRecord={() => {}}
         titleId="meeting-brief-title"
         onClose={() => {}}
-        formatWhen={() => "24 June, 15:00"}
         formatDay={(iso) => iso.slice(0, 10)}
       />
     </StoryProviders>

@@ -9,7 +9,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatMoneyCompact, MONEY_ABSENT } from "../format/format";
+import {
+  formatDayMonth,
+  formatMoneyCompact,
+  MONEY_ABSENT,
+} from "../format/format";
 import { LocaleProvider } from "../i18n";
 import { lastEmailAgo } from "../testing/dealmail";
 import { DealCard } from "./dealcard";
@@ -293,6 +297,30 @@ describe("DealCard + PipelineBoard", () => {
 
     render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
     expect(screen.queryByText("Last email:")).toBeNull();
+  });
+
+  // A `day` mail has no hour to count an age from, so the chip names its day.
+  // A short date keeps the dense chip on one line.
+  it("dates a date-only last email by its day and month", () => {
+    render(
+      <DealCard
+        deal={{
+          ...deal,
+          lastEmail: {
+            at: "2026-09-14T12:00:00Z",
+            precision: "day",
+            measuredAt: Date.parse("2026-09-15T12:00:00Z"),
+            direction: "outbound",
+          },
+        }}
+        href="#/deals/d1"
+        zone="Pacific/Kiritimati"
+      />,
+    );
+    // The 14th even in Kiritimati, where its noon UTC is the 15th.
+    const day = formatDayMonth("2026-09-14T12:00:00Z", "en", "UTC");
+    expect(screen.getByText(day)).toBeTruthy();
+    expect(screen.queryByText(/ago/)).toBeNull();
   });
 
   // Given an aside, the line is a flyout's trigger: what the caller read from

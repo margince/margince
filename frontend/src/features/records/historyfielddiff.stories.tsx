@@ -3,13 +3,18 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen } from "storybook/test";
+import { UTC_ZONE } from "../../format/timezone";
 import { StoryProviders } from "../../testing/story-utils";
 import { HistoryFieldDiff } from "./historyfielddiff";
 
 // An activity time's change, each side read at its own precision. A side
 // that knows only its day names that day and no clock.
 
-const VALUES = { currency: null, locale: "en", zone: "Europe/Berlin" } as const;
+const VALUES = {
+  currency: null,
+  locale: "en",
+  zone: UTC_ZONE,
+} as const;
 
 const meta = {
   title: "Records/Record 360/Record history/Activity time change",

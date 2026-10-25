@@ -69,6 +69,7 @@ describe("companyTimeline", () => {
       {
         last_contact: {
           at: "2026-08-01T08:00:00Z",
+          occurred_precision: "instant",
           kind: "email",
           activity_id: "a-2",
         },

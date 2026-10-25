@@ -10,11 +10,12 @@ import { AvatarStack } from "../../design-system/avatarstack";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { PanelBody, PanelRow } from "../../design-system/panel";
 import {
+  activityDay,
+  activityDaysAway,
   activityTimeSpan,
   type OccurredPrecision,
 } from "../../format/activitywhen";
 import { dateTileParts } from "../../format/datetile";
-import { calendarDaysUntil } from "../../format/daysuntil";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
@@ -60,17 +61,17 @@ function useMeetingSpan(
 ): string | null {
   const { locale } = useLocale();
   const zone = useRecordZone();
-  return activityTimeSpan(start, end, precision, locale, {
-    record: zone,
-    viewer: zone,
-  });
+  return activityTimeSpan(start, end, precision, locale, zone);
 }
 
 // The day as a small calendar page: weekday over day over month.
-function DateTile({ at }: Readonly<{ at: string }>) {
+function DateTile({
+  at,
+  precision,
+}: Readonly<{ at: string; precision: OccurredPrecision }>) {
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const tile = dateTileParts(at, locale, zone);
+  const tile = activityDay(at, precision, locale, zone, dateTileParts);
   return (
     <time className="pe-meeting-date" dateTime={at}>
       <span className="pe-meeting-date-edge">{tile.weekday}</span>
@@ -84,14 +85,20 @@ function DateTile({ at }: Readonly<{ at: string }>) {
 // is drawn in and from the read's own `as_of`.
 function DaysAway({
   at,
+  precision,
   asOf,
   lead,
-}: Readonly<{ at: string; asOf: string; lead?: boolean }>) {
+}: Readonly<{
+  at: string;
+  precision: OccurredPrecision;
+  asOf: string;
+  lead?: boolean;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const days = calendarDaysUntil(at, zone, new Date(asOf));
+  const days = activityDaysAway(at, precision, Date.parse(asOf), zone, zone);
   if (days < 0) return null;
   const label =
     days === 0
@@ -186,7 +193,10 @@ export function MeetingRow({
   return (
     <PanelRow>
       <article className="pe-meeting">
-        <DateTile at={activity.occurred_at} />
+        <DateTile
+          at={activity.occurred_at}
+          precision={activity.occurred_precision}
+        />
         <div className="pe-meeting-body">
           <div className="pe-meeting-headline">
             <MeetingTitle
@@ -195,7 +205,13 @@ export function MeetingRow({
             >
               {title}
             </MeetingTitle>
-            {asOf && <DaysAway at={activity.occurred_at} asOf={asOf} />}
+            {asOf && (
+              <DaysAway
+                at={activity.occurred_at}
+                precision={activity.occurred_precision}
+                asOf={asOf}
+              />
+            )}
             <MeetingStatus
               outcome={activity.meeting_status}
               invitation={activity.invitation_status}
@@ -268,13 +284,18 @@ export function NextMeetingCard({
   return (
     <PanelBody>
       <article className="pe-meeting pe-meeting-lead">
-        <DateTile at={next.starts_at} />
+        <DateTile at={next.starts_at} precision={next.occurred_precision} />
         <div className="pe-meeting-body">
           <div className="pe-meeting-headline">
             <MeetingTitle activityId={next.activity_id} opens={opens} lead>
               {next.subject ?? t("contact.meetings.untitled")}
             </MeetingTitle>
-            <DaysAway at={next.starts_at} asOf={asOf} lead />
+            <DaysAway
+              at={next.starts_at}
+              precision={next.occurred_precision}
+              asOf={asOf}
+              lead
+            />
             <MeetingStatus
               invitation={invitation?.status ?? activity?.invitation_status}
             />

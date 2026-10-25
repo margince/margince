@@ -21,7 +21,7 @@ export function scheduledText(
       item.occurred_at,
       item.occurred_precision,
       locale,
-      { record, viewer: record },
+      record,
     ),
   });
 }

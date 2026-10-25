@@ -109,8 +109,8 @@ export const BookedMeeting: Story = {
   },
 };
 
-// A meeting known only by its day is still ahead for the whole of that day,
-// so the figure keeps naming it after noon has passed.
+// A meeting known only by its day is still ahead for the whole of that day.
+// The figure keeps naming it after noon UTC has passed.
 export const MeetingOnlyItsDayKnown: Story = {
   render: () =>
     renderStanding([

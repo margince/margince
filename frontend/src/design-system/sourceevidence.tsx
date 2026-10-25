@@ -73,10 +73,7 @@ export function SourceEvidence({
       <SourceEmailPanel
         activityId={activityId}
         formatWhen={(at, precision) =>
-          formatActivityWhen(at, precision, locale, {
-            record: recordZone,
-            viewer: recordZone,
-          })
+          formatActivityWhen(at, precision, locale, recordZone)
         }
       />
     );
@@ -89,7 +86,7 @@ export function SourceEvidence({
             source.occurred_at,
             source.occurred_precision,
             locale,
-            { record: recordZone, viewer: recordZone },
+            recordZone,
           ),
           source.subject,
         ]

@@ -19,7 +19,10 @@ import { Avatar } from "../../design-system/atoms";
 import { type Fact, FactList } from "../../design-system/factlist";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatDateTime } from "../../format/format";
+import {
+  formatActivityWhen,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useContact360 } from "../contacts/contact360";
@@ -199,11 +202,14 @@ function ContactFacts({
 // leave the reader to guess whether the fact was missing or the silence real.
 function spoken(
   at: string | null | undefined,
+  precision: OccurredPrecision,
   t: Translator,
   locale: Locale,
   zone: string,
 ): string {
-  return at ? formatDateTime(at, locale, zone) : t("worklist.pane.never");
+  return at
+    ? formatActivityWhen(at, precision, locale, zone)
+    : t("worklist.pane.never");
 }
 
 /** The two moments as any read spells them: the contact's own page and a
@@ -211,7 +217,9 @@ function spoken(
  *  the same names. */
 export type TouchMoments = Readonly<{
   last_inbound_at?: string | null;
+  last_inbound_precision?: OccurredPrecision;
   last_outbound_at?: string | null;
+  last_outbound_precision?: OccurredPrecision;
 }>;
 
 /** Whose moments they are, which is what the two terms name: a company row
@@ -252,11 +260,24 @@ export function lastTouch(
   return [
     {
       term: t(inbound),
-      value: spoken(moments.last_inbound_at, t, locale, zone),
+      value: spoken(
+        moments.last_inbound_at,
+        // A time sent without its precision is an instant.
+        moments.last_inbound_precision ?? "instant",
+        t,
+        locale,
+        zone,
+      ),
     },
     {
       term: t(outbound),
-      value: spoken(moments.last_outbound_at, t, locale, zone),
+      value: spoken(
+        moments.last_outbound_at,
+        moments.last_outbound_precision ?? "instant",
+        t,
+        locale,
+        zone,
+      ),
     },
   ];
 }

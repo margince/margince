@@ -2256,6 +2256,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.card.addTask": "Thêm việc cần làm: {name}",
   "deal.mail.sent": "Đã gửi {ago}",
   "deal.mail.received": "Đã nhận {ago}",
+  "deal.mail.sentOn": "Đã gửi ngày {date}",
+  "deal.mail.receivedOn": "Đã nhận ngày {date}",
   "deal.mail.none": "Chưa có email nào về deal này",
   "deal.mail.viewAll": "Xem toàn bộ hoạt động",
   "deal.closesProvisional": "ngày chốt tạm tính, chưa ai xác nhận",

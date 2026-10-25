@@ -10,13 +10,9 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import {
-  type ActivityZones,
-  activityTimeOfDay,
-} from "../../format/activitywhen";
+import { activityTimeOfDay } from "../../format/activitywhen";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
-import { useActivityZones } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import {
@@ -82,7 +78,7 @@ export function SchedulePanel({
 }: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zones = useActivityZones(viewerZone());
+  const zone = viewerZone();
   const titleId = useId();
   if (scheduleIsEmpty(day, state)) {
     return null;
@@ -110,7 +106,7 @@ export function SchedulePanel({
         {meetings.map((item) => (
           <PanelRow key={item.id} className="rail-schedule-row">
             <span className="t-caption rail-schedule-when">
-              {whenOf(item, locale, zones)}
+              {whenOf(item, locale, zone)}
             </span>
             {/* The stop on the day's line. Decorative: the time beside it is
                   the fact, and the line the dots hang on is the panel's way of
@@ -184,18 +180,18 @@ function CalendarRow({
 function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zones = useActivityZones(viewerZone());
+  const zone = viewerZone();
   const time = activityTimeOfDay(
     next.starts_at,
     next.occurred_precision,
     locale,
-    zones,
+    zone,
   );
   const subject = next.subject || t("contact.meetings.untitled");
   return (
     <PanelRow className="rail-schedule-row">
       <span className="t-caption rail-schedule-when">
-        {nextMeetingDay(next, locale, zones)}
+        {nextMeetingDay(next, locale, zone)}
       </span>
       <span className="rail-schedule-dot" aria-hidden="true" />
       <span className="rail-schedule-what">
@@ -245,14 +241,10 @@ function Title({ item }: Readonly<{ item: WorklistItem }>) {
  * today's schedule has not occurred yet. A row without a start, or with only
  * its day known, draws no time.
  */
-function whenOf(
-  item: WorklistItem,
-  locale: Locale,
-  zones: ActivityZones,
-): string {
+function whenOf(item: WorklistItem, locale: Locale, zone: string): string {
   if (!item.due_at) return "";
   return (
-    activityTimeOfDay(item.due_at, item.occurred_precision, locale, zones) ?? ""
+    activityTimeOfDay(item.due_at, item.occurred_precision, locale, zone) ?? ""
   );
 }
 

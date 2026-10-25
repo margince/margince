@@ -114,6 +114,39 @@ it("names the sender behind a deal-filed thread, and which side wrote last", asy
   expect(touch?.textContent).toContain("Last to this contact Never");
 });
 
+// A message logged with only its date was not sent at any hour, so its last
+// touch names the date and no clock.
+it("names a date-only last touch by its date alone", async () => {
+  stub(
+    day({
+      queue: [
+        row({
+          id: "t9",
+          source: "task",
+          category: "tasks",
+          title: "Answer the paper letter",
+          contact: {
+            id: "01a05500-0000-7000-8000-000000000009",
+            label: "Sonya Beck",
+            touch: {
+              last_inbound_at: "2026-09-03T12:00:00Z",
+              last_inbound_precision: "day",
+              last_outbound_at: null,
+            },
+          },
+        }),
+      ],
+      summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+    }),
+  );
+  renderWorklist();
+
+  await screen.findByText("Answer the paper letter");
+  const touch = document.querySelector(".worklist-row-touch");
+  expect(touch?.textContent).toContain("03/09/2026");
+  expect(touch?.textContent).not.toMatch(/\d{2}:\d{2}/);
+});
+
 // A row whose contact the reader may see but whose activity they may not:
 // the name stands, and no date is claimed either way.
 it("claims no moments when the server withheld them", async () => {

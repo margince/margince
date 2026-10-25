@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ActivityZones, activityDay } from "../../format/activitywhen";
+import { activityDay } from "../../format/activitywhen";
 import { formatDateAbbrev } from "../../format/format";
 import type { Locale } from "../../i18n";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
@@ -70,13 +70,13 @@ export type CalendarDay =
 export function nextMeetingDay(
   next: NextMeeting,
   locale: Locale,
-  zones: ActivityZones,
+  zone: string,
 ): string {
   return activityDay(
     next.starts_at,
     next.occurred_precision,
     locale,
-    zones,
+    zone,
     formatDateAbbrev,
   );
 }

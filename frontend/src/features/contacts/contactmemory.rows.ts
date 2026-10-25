@@ -2,7 +2,11 @@ import type { useInteractionLabel } from "../../components/interactionchrome";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import type { ReadingTone } from "../../design-system/readingtone";
 import { groupChronology } from "../../design-system/timelinegroups";
-import { activityIsAhead } from "../../format/activitywhen";
+import {
+  activityDay,
+  activityHasHappened,
+  type OccurredPrecision,
+} from "../../format/activitywhen";
 import { primaryPhone } from "../../format/contacturi";
 import { formatDayMonth } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
@@ -24,6 +28,7 @@ type Said = Readonly<{
   provider: string | null;
   direction: Entry["direction"] | null | undefined;
   occurredAt: string;
+  occurredPrecision: OccurredPrecision;
   title: string;
   status: Status;
   emailId: string | null;
@@ -50,7 +55,13 @@ export function memoryRows(
     sub: [
       interactionLabel(row.kind, row.provider),
       directionWord(row.kind, row.direction, t),
-      formatDayMonth(row.occurredAt, locale, recordZone),
+      activityDay(
+        row.occurredAt,
+        row.occurredPrecision,
+        locale,
+        recordZone,
+        formatDayMonth,
+      ),
     ]
       .filter(Boolean)
       .join(" · "),
@@ -77,6 +88,8 @@ function fromEntry(entry: Entry): Said {
     provider: entry.channel_provider ?? null,
     direction: entry.direction,
     occurredAt: entry.occurred_at,
+    // The thread projection carries no precision; its times are instants.
+    occurredPrecision: "instant",
     title: entry.title,
     status: entry.status ?? null,
     emailId:
@@ -88,14 +101,7 @@ function folded(view: Contact360, t: Translator, recordZone: string): Said[] {
   // A meeting still to come belongs on the Next bar, not among what was said.
   const now = Date.now();
   const rows = (view.activities?.data ?? []).filter(
-    (row) =>
-      row.kind !== "task" &&
-      !activityIsAhead(
-        row.occurred_at,
-        row.occurred_precision,
-        now,
-        recordZone,
-      ),
+    (row) => row.kind !== "task" && activityHasHappened(row, now, recordZone),
   );
   const byId = new Map(rows.map((row) => [row.id, row]));
   return groupChronology(activityTimeline(rows)).flatMap((group) => {
@@ -108,6 +114,7 @@ function folded(view: Contact360, t: Translator, recordZone: string): Said[] {
       provider: row.channel_provider ?? null,
       direction: row.direction,
       occurredAt: row.occurred_at,
+      occurredPrecision: row.occurred_precision,
       // Withheld is read from the row's own state rather than trusted to have
       // been stripped, so a subject the server forgot to null never prints.
       title:

@@ -45,7 +45,7 @@ export function ContactClaimsReview({
                     claim.occurred_at,
                     claim.occurred_precision,
                     locale,
-                    { record: zone, viewer: zone },
+                    zone,
                   ),
               ]
                 .filter(Boolean)

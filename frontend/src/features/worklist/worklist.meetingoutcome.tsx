@@ -46,11 +46,12 @@ import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import {
-  dayOccurredAt,
+  type ActivityMoment,
+  activityDate,
+  movedActivityStart,
   type OccurredPrecision,
 } from "../../format/activitywhen";
 import { calendarDay } from "../../format/calendarday";
-import { sameWallClockOnDay } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { outgoingBody } from "../../lib/activitybody";
 import { useActivity } from "../../lib/activityread";
@@ -77,8 +78,7 @@ type OutcomeDraft = {
  * words written against the older copy are not stored on the newer one.
  */
 type OutcomeSeed = {
-  occurredAt: string;
-  precision: OccurredPrecision;
+  start: ActivityMoment;
   day: string;
   version: number | undefined;
 };
@@ -103,14 +103,8 @@ function movedStart(
   if (day === seed.day) {
     return undefined;
   }
-  if (seed.precision === "day") {
-    return { occurred_at: dayOccurredAt(day), occurred_precision: "day" };
-  }
-  const moved = sameWallClockOnDay(seed.occurredAt, day, zone);
-  return {
-    occurred_at: Date.parse(moved) > now.getTime() ? now.toISOString() : moved,
-    occurred_precision: "instant",
-  };
+  const { at, precision } = movedActivityStart(seed.start, day, zone, now);
+  return { occurred_at: at, occurred_precision: precision };
 }
 
 /**
@@ -205,7 +199,11 @@ function MeetingOutcomeDialog({
   // effect paints the empty form first, and a reader who types into that frame
   // has their words replaced when the seed lands.
   if (draft === null && meeting.data) {
-    const day = calendarDay(new Date(meeting.data.occurred_at), recordZone);
+    const day = activityDate(
+      meeting.data.occurred_at,
+      meeting.data.occurred_precision,
+      recordZone,
+    );
     setDraft({
       status: "held",
       subject: meeting.data.subject ?? "",
@@ -213,8 +211,10 @@ function MeetingOutcomeDialog({
       day,
     });
     setSeed({
-      occurredAt: meeting.data.occurred_at,
-      precision: meeting.data.occurred_precision,
+      start: {
+        at: meeting.data.occurred_at,
+        precision: meeting.data.occurred_precision,
+      },
       day,
       version: meeting.data.version,
     });

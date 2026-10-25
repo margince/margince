@@ -18,7 +18,6 @@ import {
   type CommunicationContext,
   contextOptions,
 } from "../../lib/compose-context";
-import { useActivityZones } from "../../lib/recordzone";
 import { useRichTextLabels } from "../../lib/richtextlabels";
 import type { CarriageViolation } from "./carriage";
 import type { Activity, VoiceProfile } from "./compose";
@@ -351,7 +350,6 @@ export function EarlierMessages({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zones = useActivityZones(viewerZone());
   const [open, setOpen] = useState(false);
   const readable = messages.filter(
     (message) => message.content_state !== "withheld" && message.body,
@@ -387,7 +385,7 @@ export function EarlierMessages({
                   message.occurred_at,
                   message.occurred_precision,
                   locale,
-                  zones,
+                  viewerZone(),
                 ),
                 who:
                   message.direction === "outbound"

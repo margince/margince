@@ -12,8 +12,7 @@ import {
   MONEY_ABSENT,
 } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
-import { useLocale, useT } from "../i18n";
-import { useRecordZone } from "../lib/recordzone";
+import { type Locale, useLocale, useT } from "../i18n";
 import { Avatar, Badge } from "./atoms";
 import { IconAction } from "./iconaction";
 import type { BoardDeal } from "./pipelineboard";
@@ -233,14 +232,15 @@ export function DealMailChip({
 }: Readonly<{ mail: BoardDealMail; aside?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
-  const record = useRecordZone();
+  const shortDay = (at: string, dayLocale: Locale, zone: string) =>
+    formatDayMonthNearYear(at, dayLocale, zone, new Date(mail.measuredAt));
   // A Chip: one fact about the record, its glyph naming the kind. It is dense
   // to sit at the badges' geometry, like the pill a company's domain is.
   const label = (
     <>
       <span className="sr-only">{t("deal.lastMail")}: </span>
       <Chip icon={mail.direction === "outbound" ? Send : Mail} dense>
-        {activityAgo(mail, mail.measuredAt, t, locale, record)}
+        {activityAgo(mail, mail.measuredAt, t, locale, shortDay)}
       </Chip>
     </>
   );

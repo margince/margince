@@ -214,7 +214,8 @@ function dutyFacts(
       note: noticeRuleHint(item.kind, t),
     });
   }
-  if (item.due_at) {
+  // A notice case's `due_at` is its deadline, never a meeting's start.
+  if (item.source === "notice_case" && item.due_at) {
     facts.push({ key: "due", term: t("notice.due"), value: date(item.due_at) });
   }
   return facts;

@@ -1,19 +1,12 @@
 // The brief's header band: which meeting, prepared for whom, and by which
 // writer.
 //
-// The meeting's own facts arrive as props rather than from the brief, because
-// the wire does not carry them: `MeetingBrief` is the prepared prose, and the
-// subject, the time and the contact are what the page that opened the drawer
-// already holds. A caller that holds none of it — the deal page opens this
-// from an activity id alone — passes none, and the band falls back to the
-// brief's own `header` section rather than inventing a line.
+// The meeting's own facts arrive as props, because the wire does not carry
+// them: `MeetingBrief` is the prepared prose. A caller that holds none passes
+// none, and the band falls back to the brief's own `header` section.
 
 import type { components } from "../../../api/schema";
 import { Avatar } from "../../../design-system/atoms";
-import type {
-  ActivityMoment,
-  ActivityWhenFormatter,
-} from "../../../format/activitywhen";
 import { useT } from "../../../i18n";
 import { WrittenBy } from "../../records/record360";
 
@@ -23,8 +16,6 @@ type MeetingBrief = components["schemas"]["MeetingBrief"];
 // the three callers hold different amounts of it.
 export type MeetingFacts = Readonly<{
   subject?: string | null;
-  // A `day` meeting has a date and no start time.
-  start?: ActivityMoment;
   participants?: readonly { contact_id: string; full_name: string }[];
 }>;
 
@@ -39,19 +30,12 @@ export function BriefHeader({
   brief,
   meeting,
   preparedFor,
-  formatWhen,
 }: Readonly<{
   brief?: MeetingBrief;
   meeting?: MeetingFacts;
   preparedFor?: PreparedFor;
-  // Formatting belongs to the caller: this tier holds no locale and no zone,
-  // exactly as SurfaceState's `staleAsOf` does.
-  formatWhen?: ActivityWhenFormatter;
 }>) {
   const t = useT();
-  const start = meeting?.start;
-  const when =
-    start && formatWhen ? formatWhen(start.at, start.precision) : undefined;
   return (
     <>
       {preparedFor && (
@@ -75,7 +59,6 @@ export function BriefHeader({
           )}
           <div className="mb-meeting-text">
             <strong>{meeting.subject}</strong>
-            {when && <span className="t-sub">{when}</span>}
           </div>
         </div>
       )}

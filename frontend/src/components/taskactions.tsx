@@ -381,7 +381,7 @@ export function TaskDetailDialog({
                     task.occurred_at,
                     task.occurred_precision,
                     locale,
-                    { record: recordZone, viewer: recordZone },
+                    recordZone,
                   )}
                 </span>
                 {task.is_done && (

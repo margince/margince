@@ -1,8 +1,6 @@
 import {
-  type ActivityZones,
   activityTimeOfDay,
   formatActivityWhen,
-  isDeadlineRow,
   type OccurredPrecision,
 } from "../../format/activitywhen";
 import { middayInstant, sameCalendarDay } from "../../format/calendarday";
@@ -244,12 +242,13 @@ export function whenText(
   if (key === null) {
     return null;
   }
-  const zones = { record, viewer: item.source === "task" ? record : viewer };
+  const zone = item.source === "task" ? record : viewer;
   // A meeting's `due_at` is its start, as exact as the meeting is; any other
   // row's is a deadline, which always has its time.
-  const when = isDeadlineRow(item)
-    ? momentText(item.due_at, "instant", locale, zones, now)
-    : momentText(item.due_at, item.occurred_precision, locale, zones, now);
+  const when =
+    item.source === "meeting"
+      ? momentText(item.due_at, item.occurred_precision, locale, zone, now)
+      : momentText(item.due_at, "instant", locale, zone, now);
   return t(key, { when });
 }
 
@@ -283,11 +282,11 @@ function momentText(
   dueAt: string,
   precision: OccurredPrecision,
   locale: Locale,
-  zones: ActivityZones,
+  zone: string,
   now: Date,
 ): string {
-  const clock = sameCalendarDay(new Date(dueAt), now, zones.viewer)
-    ? activityTimeOfDay(dueAt, precision, locale, zones)
+  const clock = sameCalendarDay(new Date(dueAt), now, zone)
+    ? activityTimeOfDay(dueAt, precision, locale, zone)
     : null;
-  return clock ?? formatActivityWhen(dueAt, precision, locale, zones);
+  return clock ?? formatActivityWhen(dueAt, precision, locale, zone);
 }

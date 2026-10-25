@@ -12,7 +12,6 @@ import {
 } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
-import { useActivityZones } from "../../lib/recordzone";
 import { EmailAccessEditor } from "../capture/emailaccesseditor";
 import { ComposeModal } from "./compose";
 import { RelinkModal } from "./composerelink";
@@ -71,9 +70,8 @@ export function OpenEmailDrawer({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zones = useActivityZones(zone);
   const formatWhen: ActivityWhenFormatter = (at, precision) =>
-    formatActivityWhen(at, precision, locale, zones);
+    formatActivityWhen(at, precision, locale, zone);
   // What the reader started from the drawer: a reply or a forward, in the
   // docked composer. The drawer steps aside while it is open, so the page and
   // the composer are both in view, and comes back when it closes.

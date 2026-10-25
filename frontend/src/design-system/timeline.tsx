@@ -2,7 +2,6 @@ import { Lock } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useLocale, useT } from "../i18n";
-import { useActivityZones } from "../lib/recordzone";
 import { Button } from "./atoms";
 import { EmailEntry } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
@@ -105,7 +104,6 @@ function BulkGroupRow({
 }>) {
   const { locale } = useLocale();
   const t = useT();
-  const zones = useActivityZones(zone);
   const [open, setOpen] = useState(false);
   const [newest] = group.entries;
   if (newest === undefined) {
@@ -143,7 +141,7 @@ function BulkGroupRow({
         ) : newest.kind === "email" && newest.emailSummary ? (
           <EmailEntry
             summary={newest.emailSummary}
-            timestamp={entryTimeOfDay(newest, locale, zones)}
+            timestamp={entryTimeOfDay(newest, locale, zone)}
             onOpen={newest.onOpenEmail}
             // Absent on the reply composer, whose rows are the thread being
             // answered rather than a place to act from. Every other surface
@@ -236,7 +234,6 @@ export function TimelineRow({
 }>) {
   const { locale } = useLocale();
   const t = useT();
-  const zones = useActivityZones(zone);
   // A note is the rep's own words about the record, not an exchange with it.
   // The row says so: its body sits on a plate of its own instead of running
   // in the message rhythm around it.
@@ -265,7 +262,7 @@ export function TimelineRow({
               tells two messages on one subject apart. */}
           <EmailEntry
             summary={entry.emailSummary}
-            timestamp={entryTimeOfDay(entry, locale, zones)}
+            timestamp={entryTimeOfDay(entry, locale, zone)}
             onOpen={entry.onOpenEmail}
             // As above: absent on the reply composer and nowhere else.
             whyNotOpenable="noReader"

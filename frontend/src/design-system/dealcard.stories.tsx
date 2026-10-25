@@ -73,6 +73,21 @@ const states: { label: string; deal: BoardDeal }[] = [
     }),
   },
   {
+    // The widest mail chip: a date-only email from another year.
+    label: "Mail dated last year",
+    deal: boardDeal({
+      stalled: true,
+      singleThreaded: true,
+      ageMs: 23 * DAY_MS,
+      lastEmail: {
+        at: "2025-09-14T12:00:00Z",
+        precision: "day",
+        measuredAt: Date.parse("2026-09-15T12:00:00Z"),
+        direction: "outbound",
+      },
+    }),
+  },
+  {
     label: "Unpriced, unmailed",
     deal: boardDeal({ valueMinor: null, currency: null }),
   },

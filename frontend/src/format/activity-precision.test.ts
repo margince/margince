@@ -13,27 +13,32 @@ import {
   programOver,
 } from "../../scripts/lib/source-tree";
 
-// A `day` activity has no time of day, so its time reaches a clock only
-// through activitywhen.ts, which reads the precision.
+// A `day` activity knows its date and no time. Its time reaches a reader in a
+// zone only through activitywhen.ts, which prints its UTC date and no clock.
 //
-// A clock is derived, never listed. In format/ it is a function returning text
-// that sets Intl's `hour`, `minute` or `timeStyle`, builds a RelativeTimeFormat,
-// or puts an hour or minute count into its sentence. Anywhere else it is a
-// Date's toLocaleTimeString or toLocaleString, or the format call of an Intl
-// formatter built there with a clock option. The value is followed through
-// calls, props, fields, bindings, assignments, collections built by `.map`,
-// `new Date`, `Date.parse`, `Math`, arithmetic and template text.
+// A reader in a zone is derived, never listed. It is the format call of an
+// Intl.DateTimeFormat, or a Date's toLocale*String. In format/ it is also a
+// function that puts an hour or minute count into its sentence, or builds a
+// RelativeTimeFormat. The value is followed through calls, props, fields,
+// object literals, bindings, assignments, `.map` callbacks and element reads.
+// It is followed through `new Date`, `Date.parse`, `Math`, arithmetic and
+// template text too. A call returning a boolean hands it nowhere.
 //
-// A precision handed to the owner, or written into a precision field it
-// declares, must trace to `occurred_precision`. A literal passes only where no
-// activity's time is read beside it.
+// A `due_at` is an activity time only on a row that can be a meeting. A
+// condition on the same row's `source` that rules the meeting out ends it.
+//
+// A field `x_at` is an activity time too where its record carries
+// `x_precision`. A precision handed to the owner must trace to a wire
+// precision, or stand in for one the wire left out. Any other literal passes
+// only when the time it is paired with reads no activity time. That is the
+// sibling reaching the same owner call, or else that call's own time.
 //
 // Not followed, each a known blind spot:
 // - a value kept in a Map or pushed into an array, and read back;
-// - an Intl formatter outside format/ that a function returns;
-// - ISO text cut by hand, as in `at.slice(11, 16)`;
-// - a date-only formatter handed the viewer's zone;
-// - a comparison against now, which the owner's predicates answer.
+// - ISO text cut by hand, as in `at.slice(0, 10)`;
+// - a Date's own getters, as in `getDate()`;
+// - a comparison against now or another day, which the owner's predicates answer;
+// - a projection that carries an activity time without its precision.
 
 const here = dirname(fileURLToPath(import.meta.url));
 const srcRoot = join(here, "..");
@@ -46,42 +51,50 @@ const shipped = (path: string) =>
   !/\.(test|stories)\.tsx?$/.test(path) &&
   !path.includes("/src/testing/");
 
-// Intl options and sentence placeholders that put a time of day into text.
-const CLOCK_OPTIONS = new Set(["hour", "minute", "timeStyle"]);
+// Sentence placeholders that put a count of hours or minutes into text.
 const CLOCK_PLACEHOLDERS = new Set(["hours", "minutes", "seconds"]);
+// The Date methods that print it in a zone.
+const LOCALE_PRINTS = new Set([
+  "toLocaleString",
+  "toLocaleDateString",
+  "toLocaleTimeString",
+]);
 const FORMAT_CALLS = new Set([
   "format",
   "formatToParts",
   "formatRange",
   "formatRangeToParts",
 ]);
-// The fields an activity's time is sent in, on a record that carries its
-// precision. A `due_at` is one only on a row that can be a meeting.
-const ACTIVITY_TIMES = new Set(["occurred_at", "starts_at", "due_at"]);
+// The fields an activity's time is sent in, on a record that carries
+// `occurred_precision`.
+const ACTIVITY_TIMES = new Set(["at", "occurred_at", "starts_at", "due_at"]);
 // Calls whose result carries their receiver's instant on.
-const PASS_THROUGH_METHODS = new Set(["getTime", "valueOf", "toISOString"]);
+const PASS_THROUGH_METHODS = new Set([
+  "getTime",
+  "valueOf",
+  "toISOString",
+  "at",
+  "filter",
+  "find",
+  "findLast",
+  "reverse",
+  "slice",
+  "sort",
+  "toSorted",
+]);
+// Calls whose result carries what their callback returns.
+const MAPPERS = new Set(["map", "flatMap"]);
 
 type Site = Readonly<{ file: string; line: number; text: string }>;
 type Census = Readonly<{
   findings: Site[];
   unproven: Site[];
   unjudged: Site[];
-  clocks: Set<string>;
+  readers: Set<string>;
 }>;
 
-// Whether an options literal asks Intl for a time of day.
-function asksForClock(options: ts.Expression | undefined): boolean {
-  if (options === undefined || !ts.isObjectLiteralExpression(options)) {
-    return false;
-  }
-  return options.properties.some(
-    (property) =>
-      property.name !== undefined && CLOCK_OPTIONS.has(property.name.getText()),
-  );
-}
-
-// A function in format/ that prints a clock, judged by its own body.
-function printsClock(fn: ts.Node): boolean {
+// A function in format/ that prints an age, judged by its own body.
+function printsAge(fn: ts.Node): boolean {
   let found = false;
   const visit = (node: ts.Node): void => {
     if (found) return;
@@ -92,8 +105,7 @@ function printsClock(fn: ts.Node): boolean {
         ? node.name.text
         : undefined;
     if (
-      (named !== undefined &&
-        (CLOCK_OPTIONS.has(named) || CLOCK_PLACEHOLDERS.has(named))) ||
+      (named !== undefined && CLOCK_PLACEHOLDERS.has(named)) ||
       (ts.isNewExpression(node) &&
         node.expression.getText() === "Intl.RelativeTimeFormat")
     ) {
@@ -132,6 +144,7 @@ function leaves(node: ts.Expression): ts.Expression[] {
   if (ts.isConditionalExpression(node)) {
     return [...leaves(node.whenTrue), ...leaves(node.whenFalse)];
   }
+  if (ts.isElementAccessExpression(node)) return leaves(node.expression);
   if (ts.isTemplateExpression(node)) {
     return node.templateSpans.flatMap((span) => leaves(span.expression));
   }
@@ -164,8 +177,10 @@ function census(program: ts.Program, files: string[]): Census {
   const reads: { site: Site; targets: ts.Node[] }[] = [];
   const unjudged: Site[] = [];
   const seeds: ts.Node[] = [];
-  const clocks = new Set<string>();
-  const precisionArgs: ts.Expression[] = [];
+  const formatFunctions: { name: string; params: ts.Node[] }[] = [];
+  // Each owner call's time beside the precision it is drawn with. A moment
+  // has no precision of its own: its time carries one.
+  const pairs: { time: ts.Node; precision?: ts.Node }[] = [];
 
   const flow = (from: ts.Node, to: ts.Node) => {
     if (from === to || !inTree(to)) return;
@@ -201,29 +216,29 @@ function census(program: ts.Program, files: string[]): Census {
       );
     });
 
-  // Whether `name` read off `record` is an activity's time; null when the
-  // record has no type to judge.
-  const activityTime = (record: ts.Node, name: string): boolean | null => {
-    if (!ACTIVITY_TIMES.has(name)) return false;
-    const type = checker.getNonNullableType(checker.getTypeAtLocation(record));
-    if (type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) return null;
-    return bearing(type, name === "due_at");
+  // Whether a record carries an activity's precision under `name`.
+  const pairedPrecision = (type: ts.Type, name: string): boolean => {
+    const field = checker.getPropertyOfType(type, name);
+    const kinds =
+      field && checker.getNonNullableType(checker.getTypeOfSymbol(field));
+    return (kinds?.isUnion() ? kinds.types : [kinds]).some(
+      (kind) => kind?.isStringLiteral() && kind.value === "instant",
+    );
   };
-  const readsActivityTime = (scope: ts.Node): boolean => {
-    let found = false;
-    const visit = (node: ts.Node): void => {
-      if (found) return;
-      if (
-        ts.isPropertyAccessExpression(node) &&
-        activityTime(node.expression, node.name.text) === true
-      ) {
-        found = true;
-        return;
-      }
-      ts.forEachChild(node, visit);
-    };
-    visit(scope);
-    return found;
+  // Whether `record`'s `name` is an activity's time; null when the record has
+  // no type to judge. A `due_at` read where `record.source` rules out a
+  // meeting is a deadline.
+  const activityTime = (record: ts.Node, name: string): boolean | null => {
+    const paired = name.match(/^(\w+)_at$/)?.[1];
+    if (!ACTIVITY_TIMES.has(name) && paired === undefined) return false;
+    const type = checker.getNonNullableType(checker.getTypeAtLocation(record));
+    if (type.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) {
+      return ACTIVITY_TIMES.has(name) ? null : false;
+    }
+    if (pairedPrecision(type, `${paired}_precision`)) return true;
+    if (!ACTIVITY_TIMES.has(name)) return false;
+    if (name === "due_at" && meetingRuledOut(record)) return false;
+    return bearing(type, name === "due_at");
   };
 
   const hand = (value: ts.Expression, targets: ts.Node[]) => {
@@ -240,6 +255,11 @@ function census(program: ts.Program, files: string[]): Census {
         for (const to of targets) flow(leaf, to);
         continue;
       }
+      if (ts.isObjectLiteralExpression(leaf)) {
+        handObject(leaf, targets);
+        continue;
+      }
+      if (ts.isCallExpression(leaf)) handMapped(leaf, targets);
       const named =
         ts.isIdentifier(leaf) || ts.isPropertyAccessExpression(leaf);
       const sources = ts.isCallExpression(leaf)
@@ -252,6 +272,33 @@ function census(program: ts.Program, files: string[]): Census {
       }
       if (named) handFunction(leaf, targets);
     }
+  };
+  // An object carries every field it is built from.
+  const handObject = (
+    object: ts.ObjectLiteralExpression,
+    targets: ts.Node[],
+  ) => {
+    for (const property of object.properties) {
+      if (ts.isSpreadAssignment(property)) {
+        hand(property.expression, targets);
+      } else {
+        for (const to of targets) flow(property, to);
+      }
+    }
+  };
+  // A `.map` carries what its callback returns.
+  const handMapped = (call: ts.CallExpression, targets: ts.Node[]) => {
+    const callee = call.expression;
+    const mapper = call.arguments[0];
+    if (
+      !ts.isPropertyAccessExpression(callee) ||
+      !MAPPERS.has(callee.name.text) ||
+      mapper === undefined ||
+      !(ts.isArrowFunction(mapper) || ts.isFunctionExpression(mapper))
+    ) {
+      return;
+    }
+    for (const to of targets) flow(mapper, to);
   };
   // A function handed on by name: a call through the target's type passes its
   // arguments to the function's own parameters.
@@ -298,41 +345,29 @@ function census(program: ts.Program, files: string[]): Census {
       ? declaration
       : undefined;
   };
-
-  // An Intl formatter built with a clock option, here or in a local binding.
-  const clockFormatter = (node: ts.Expression): boolean => {
-    if (ts.isNewExpression(node)) {
-      return (
-        node.expression.getText() === "Intl.DateTimeFormat" &&
-        asksForClock(node.arguments?.[1])
-      );
-    }
-    if (!ts.isIdentifier(node)) return false;
-    return declarations(checker.getSymbolAtLocation(node)).some(
-      (declaration) =>
-        ts.isVariableDeclaration(declaration) &&
-        declaration.initializer !== undefined &&
-        ts.isNewExpression(declaration.initializer) &&
-        clockFormatter(declaration.initializer),
+  // A yes or no carries no instant on to print.
+  const answersYesOrNo = (node: ts.CallExpression | ts.NewExpression) => {
+    const signature = checker.getResolvedSignature(node);
+    return (
+      signature !== undefined &&
+      (checker.getReturnTypeOfSignature(signature).flags &
+        ts.TypeFlags.BooleanLike) !==
+        0
     );
   };
-  const isDate = (node: ts.Expression) =>
-    checker.getTypeAtLocation(node).getSymbol()?.getName() === "Date";
-  // What a call outside format/ prints as a time of day.
-  const printedClock = (node: ts.CallExpression): ts.Expression[] => {
+
+  const typeNamed = (node: ts.Expression, name: string) =>
+    checker.getTypeAtLocation(node).getSymbol()?.getName() === name;
+  // What a call reads in a zone: a Date it prints, or what a DateTimeFormat
+  // formats.
+  const printedInZone = (node: ts.CallExpression): ts.Expression[] => {
     if (!ts.isPropertyAccessExpression(node.expression)) return [];
     const method = node.expression.name.text;
     const receiver = node.expression.expression;
-    if (method === "toLocaleTimeString") return [receiver];
-    if (method === "toLocaleString" && isDate(receiver)) {
-      const options = node.arguments[1];
-      return options === undefined ||
-        !ts.isObjectLiteralExpression(options) ||
-        asksForClock(options)
-        ? [receiver]
-        : [];
+    if (LOCALE_PRINTS.has(method) && typeNamed(receiver, "Date")) {
+      return [receiver];
     }
-    if (FORMAT_CALLS.has(method) && clockFormatter(receiver)) {
+    if (FORMAT_CALLS.has(method) && typeNamed(receiver, "DateTimeFormat")) {
       return [...node.arguments];
     }
     return [];
@@ -340,22 +375,39 @@ function census(program: ts.Program, files: string[]): Census {
 
   const visitCall = (node: ts.CallExpression | ts.NewExpression) => {
     const declared = signatureOf(node);
+    const decides = answersYesOrNo(node);
     node.arguments?.forEach((arg, index) => {
-      hand(arg, parameterAt(declared, index));
+      const params = decides ? [] : parameterAt(declared, index);
+      hand(arg, [arg, ...params]);
+      for (const param of params) flow(arg, param);
     });
     if (declared?.getSourceFile().fileName === owner) {
-      declared.parameters.forEach((param, index) => {
-        const arg = node.arguments?.[index];
-        if (param.name.getText() === "precision" && arg !== undefined) {
-          precisionArgs.push(arg);
-          hand(arg, [arg]);
-        }
-      });
+      pairOwnerCall(node, declared);
     }
-    if (ts.isCallExpression(node) && !inFormat(node)) {
-      const printed = printedClock(node);
+    if (ts.isCallExpression(node)) {
+      const printed = printedInZone(node);
       if (printed.length > 0) seeds.push(node);
       for (const value of printed) hand(value, [node]);
+    }
+  };
+  const pairOwnerCall = (
+    node: ts.CallExpression | ts.NewExpression,
+    declared: ts.SignatureDeclaration,
+  ) => {
+    let time: ts.Node | undefined;
+    let precision: ts.Node | undefined;
+    declared.parameters.forEach((param, index) => {
+      const arg = node.arguments?.[index];
+      const name = param.name.getText();
+      if (arg === undefined) return;
+      if (name === "precision") precision = arg;
+      else if (name === "at" || name === "start") time = arg;
+      else if (checker.getTypeAtLocation(param).getProperty("precision")) {
+        pairs.push({ time: arg });
+      }
+    });
+    if (precision !== undefined) {
+      pairs.push({ time: time ?? precision, precision });
     }
   };
   // A destructured field: an activity's time is read here, and any other
@@ -389,18 +441,32 @@ function census(program: ts.Program, files: string[]): Census {
       }
     });
   };
-  // A format/ function whose own body prints a clock seeds its parameters.
+  // A format/ function whose own body prints an age seeds its parameters.
   const derive = (
     node: ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression,
   ) => {
-    if (!inFormat(node) || !returnsText(node) || !printsClock(node)) return;
-    seeds.push(...node.parameters);
+    if (!inFormat(node)) return;
     const name = ts.isFunctionDeclaration(node)
       ? node.name?.text
       : ts.isVariableDeclaration(node.parent)
         ? node.parent.name.getText()
         : undefined;
-    if (name !== undefined) clocks.add(name);
+    if (name !== undefined) {
+      formatFunctions.push({ name, params: [...node.parameters] });
+    }
+    if (returnsText(node) && printsAge(node)) seeds.push(...node.parameters);
+  };
+  // Writes a value into `node` and into the declared fields it lands in.
+  const handInto = (
+    value: ts.Expression,
+    node:
+      | ts.PropertyAssignment
+      | ts.ShorthandPropertyAssignment
+      | ts.JsxAttribute,
+  ) => {
+    const fields = contextualProperty(node);
+    hand(value, [node, ...fields]);
+    for (const field of fields) flow(node, field);
   };
 
   const visit = (node: ts.Node): void => {
@@ -410,16 +476,16 @@ function census(program: ts.Program, files: string[]): Census {
       const value = ts.isJsxExpression(node.initializer)
         ? node.initializer.expression
         : node.initializer;
-      if (value !== undefined && !ts.isJsxElement(value)) {
-        hand(value, [node, ...contextualProperty(node)]);
-      }
+      if (value !== undefined && !ts.isJsxElement(value)) handInto(value, node);
     } else if (ts.isPropertyAssignment(node)) {
-      hand(node.initializer, [node, ...contextualProperty(node)]);
+      handInto(node.initializer, node);
     } else if (ts.isShorthandPropertyAssignment(node)) {
       const value = checker.getShorthandAssignmentValueSymbol(node);
+      const fields = contextualProperty(node);
       for (const from of declarations(value)) {
-        for (const to of [node, ...contextualProperty(node)]) flow(from, to);
+        for (const to of [node, ...fields]) flow(from, to);
       }
+      for (const field of fields) flow(node, field);
     } else if (ts.isVariableDeclaration(node) && node.initializer) {
       hand(node.initializer, [node]);
     } else if (
@@ -504,11 +570,15 @@ function census(program: ts.Program, files: string[]): Census {
   for (const [from, tos] of flows) {
     for (const to of tos) feeds.set(to, [...(feeds.get(to) ?? []), from]);
   }
-  // Every node whose value reaches one of `start`.
-  const upstream = (start: ts.Node[]): Set<ts.Node> => {
+  // Every node whose value reaches one of `start`, up to the nodes `stops`.
+  const upstream = (
+    start: ts.Node[],
+    stops: (node: ts.Node) => boolean = () => false,
+  ): Set<ts.Node> => {
     const seen = new Set<ts.Node>(start);
     const queue = [...start];
     for (let next = queue.pop(); next !== undefined; next = queue.pop()) {
+      if (stops(next)) continue;
       for (const from of feeds.get(next) ?? []) {
         if (!seen.has(from)) {
           seen.add(from);
@@ -522,48 +592,177 @@ function census(program: ts.Program, files: string[]): Census {
   const findings = reads
     .filter((read) => read.targets.some((target) => clocked.has(target)))
     .map((read) => read.site);
+  const readers = new Set(
+    formatFunctions
+      .filter((fn) => fn.params.some((param) => clocked.has(param)))
+      .map((fn) => fn.name),
+  );
 
-  // A literal precision is proven only where nothing near it reads an
-  // activity's time: the object, call, props or function it is written in.
-  const provenOrigin = (node: ts.Node): boolean => {
-    if (
-      (ts.isPropertySignature(node) || ts.isPropertyDeclaration(node)) &&
-      node.name.getText() === "occurred_precision"
-    ) {
-      return true;
-    }
-    if (!ts.isStringLiteralLike(node)) return false;
-    const scope = ts.findAncestor(
-      node.parent,
-      (parent) =>
-        ts.isObjectLiteralExpression(parent) ||
-        ts.isCallExpression(parent) ||
-        ts.isNewExpression(parent) ||
-        ts.isJsxAttributes(parent) ||
-        ts.isFunctionLike(parent),
-    );
-    return scope !== undefined && !readsActivityTime(scope);
+  const readTargets = new Set(reads.flatMap((read) => read.targets));
+  const readsActivity = (node: ts.Node) =>
+    [...upstream([node])].some((from) => readTargets.has(from));
+  // A literal precision is judged by the time it is paired with. That is the
+  // sibling reaching the same owner call, or else that call's own time.
+  const pairedClean = (literal: ts.Node, time: ts.Node): boolean => {
+    const reaching = upstream([time]);
+    const paired = siblingsOf(literal).filter((node) => reaching.has(node));
+    return paired.length > 0
+      ? !paired.some(readsActivity)
+      : !readsActivity(time);
   };
-  const unprovenOrigins = (sink: ts.Node) =>
-    [...upstream([sink])].filter(
-      (node) => (feeds.get(node) ?? []).length === 0 && !provenOrigin(node),
+  const writesPrecision = (node: ts.Node) =>
+    (ts.isPropertyAssignment(node) || ts.isShorthandPropertyAssignment(node)) &&
+    node.name.getText() === "precision";
+  // The wire's own field: what a fixture writes into it is not this gate's.
+  const wirePrecision = (node: ts.Node) =>
+    (ts.isPropertySignature(node) || ts.isPropertyDeclaration(node)) &&
+    node.name.getText().endsWith("_precision");
+  // A literal standing in for a precision the wire may leave out.
+  const wireDefault = (literal: ts.Node) => {
+    const parent = literal.parent;
+    if (
+      !ts.isBinaryExpression(parent) ||
+      parent.operatorToken.kind !== ts.SyntaxKind.QuestionQuestionToken ||
+      parent.right !== literal ||
+      !ts.isPropertyAccessExpression(parent.left)
+    ) {
+      return false;
+    }
+    const field = checker.getSymbolAtLocation(parent.left);
+    return (
+      parent.left.name.text.endsWith("_precision") &&
+      field !== undefined &&
+      (field.flags & ts.SymbolFlags.Optional) !== 0
     );
-  // A precision field the owner declares is a sink too: every writer of it.
-  const fields: ts.Node[] = [];
+  };
+  const proven = (origin: ts.Node, time: ts.Node) =>
+    wirePrecision(origin) ||
+    (ts.isStringLiteralLike(origin) &&
+      (wireDefault(origin) || pairedClean(origin, time)));
+  // A precision field the owner declares is a sink too, paired with its `at`.
+  const ownerSource = program.getSourceFile(owner);
+  if (ownerSource === undefined) throw new Error("the owner is not read");
   const collect = (node: ts.Node): void => {
-    if (ts.isPropertySignature(node) && node.name.getText() === "precision") {
-      fields.push(node);
+    if (ts.isTypeLiteralNode(node)) {
+      const field = (name: string) =>
+        node.members.find((member) => member.name?.getText() === name);
+      const at = field("at");
+      const precision = field("precision");
+      if (at !== undefined && precision !== undefined) {
+        pairs.push({ time: at, precision });
+      }
     }
     ts.forEachChild(node, collect);
   };
-  const ownerSource = program.getSourceFile(owner);
-  if (ownerSource === undefined) throw new Error("the owner is not read");
   collect(ownerSource);
-  const unproven = [
-    ...precisionArgs.filter((arg) => unprovenOrigins(arg).length > 0),
-    ...fields.flatMap(unprovenOrigins),
-  ].map(siteOf);
-  return { findings, unproven, unjudged, clocks };
+  const unproven = pairs.flatMap(({ time, precision }) => {
+    const sinks =
+      precision === undefined
+        ? [...upstream([time])].filter(writesPrecision)
+        : [precision];
+    return [...upstream(sinks, wirePrecision)]
+      .filter(
+        (node) => wirePrecision(node) || (feeds.get(node) ?? []).length === 0,
+      )
+      .filter((origin) => !proven(origin, time))
+      .map((origin) =>
+        ts.isStringLiteralLike(origin) ? origin : (precision ?? time),
+      );
+  });
+  return {
+    findings,
+    unproven: [...new Set(unproven)].map(siteOf),
+    unjudged,
+    readers,
+  };
+}
+
+// The args, fields or props written beside a literal, at the nearest call,
+// object or element it is written into.
+function siblingsOf(literal: ts.Node): ts.Node[] {
+  let child: ts.Node = literal;
+  for (
+    let parent = literal.parent;
+    parent !== undefined;
+    parent = parent.parent
+  ) {
+    if (ts.isCallExpression(parent) || ts.isNewExpression(parent)) {
+      return (parent.arguments ?? []).filter((arg) => arg !== child);
+    }
+    if (
+      ts.isPropertyAssignment(parent) &&
+      ts.isObjectLiteralExpression(parent.parent)
+    ) {
+      return parent.parent.properties.filter((field) => field !== parent);
+    }
+    if (ts.isJsxAttribute(parent)) {
+      return parent.parent.properties.filter((prop) => prop !== parent);
+    }
+    if (
+      ts.isFunctionLike(parent) ||
+      ts.isReturnStatement(parent) ||
+      ts.isVariableDeclaration(parent) ||
+      ts.isExpressionStatement(parent)
+    ) {
+      return [];
+    }
+    child = parent;
+  }
+  return [];
+}
+
+// Whether a condition on `record.source` around `record` rules out a meeting:
+// the `&&` before it, or the branch of a `?:` or an `if` it sits in.
+function meetingRuledOut(record: ts.Node): boolean {
+  const source = `${record.getText()}.source`;
+  const says = (condition: ts.Expression, holds: boolean): boolean => {
+    let test = condition;
+    while (ts.isParenthesizedExpression(test)) test = test.expression;
+    if (ts.isPrefixUnaryExpression(test)) {
+      return (
+        test.operator === ts.SyntaxKind.ExclamationToken &&
+        says(test.operand, !holds)
+      );
+    }
+    if (!ts.isBinaryExpression(test)) return false;
+    const op = test.operatorToken.kind;
+    if (op === ts.SyntaxKind.AmpersandAmpersandToken) {
+      return holds && (says(test.left, true) || says(test.right, true));
+    }
+    const equal = op === ts.SyntaxKind.EqualsEqualsEqualsToken;
+    if (
+      (!equal && op !== ts.SyntaxKind.ExclamationEqualsEqualsToken) ||
+      test.left.getText() !== source ||
+      !ts.isStringLiteralLike(test.right)
+    ) {
+      return false;
+    }
+    // When the source equals the literal, it is a meeting only if that is it.
+    return (equal === holds) !== (test.right.text === "meeting");
+  };
+  let child: ts.Node = record;
+  for (
+    let parent = record.parent;
+    parent !== undefined && !ts.isFunctionLike(parent);
+    parent = parent.parent
+  ) {
+    if (
+      (ts.isBinaryExpression(parent) &&
+        parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+        child === parent.right &&
+        says(parent.left, true)) ||
+      (ts.isConditionalExpression(parent) &&
+        child !== parent.condition &&
+        says(parent.condition, child === parent.whenTrue)) ||
+      (ts.isIfStatement(parent) &&
+        child !== parent.expression &&
+        says(parent.expression, child === parent.thenStatement))
+    ) {
+      return true;
+    }
+    child = parent;
+  }
+  return false;
 }
 
 // Every shipped module, extension screens included, and the format/ modules
@@ -597,17 +796,20 @@ describe("an activity's time reaches a clock only through its precision", () => 
     expect(files.some((path) => path.includes("/extensions/"))).toBe(true);
   });
 
-  it("derives the formatters that print a clock", () => {
-    expect([...found.clocks]).toEqual(
+  it("derives the formatters that read a time in a zone", () => {
+    expect([...found.readers]).toEqual(
       expect.arrayContaining([
+        "formatDate",
+        "formatDayMonth",
         "formatDateTime",
         "formatTimeOfDay",
         "formatTimeRange",
         "formatRelativeTime",
         "formatElapsed",
+        "calendarDay",
       ]),
     );
-    expect(found.clocks.has("formatDate")).toBe(false);
+    expect(found.readers.has("formatNumber")).toBe(false);
   });
 
   it("judges every activity time it reads", () => {
@@ -636,22 +838,37 @@ describe("an activity's time reaches a clock only through its precision", () => 
       "const clock18 = new Intl.DateTimeFormat('en', { hour: '2-digit' }); clock18.format(new Date(activity.occurred_at));",
       // biome-ignore lint/suspicious/noTemplateCurlyInString: the planted source holds a template literal
       "formatTimeOfDay(`${activity.occurred_at}`, 'en', zone);",
-      "formatActivityWhen(activity.occurred_at, 'instant', 'en', zones);",
-      "formatActivityWhen(activity.occurred_at, activity.occurred_precision ?? 'instant', 'en', zones);",
-      "const row22 = { atIso: activity.occurred_at, atPrecision: 'instant' as const }; formatActivityWhen(row22.atIso, row22.atPrecision, 'en', zones);",
-      "function When23(p: { at: string; precision: OccurredPrecision }) { return formatActivityWhen(p.at, p.precision, 'en', zones); } void (<When23 at={activity.occurred_at} precision='instant' />);",
+      "formatActivityWhen(activity.occurred_at, 'instant', 'en', zone);",
+      "formatActivityWhen(activity.occurred_at, activity.occurred_precision ?? 'instant', 'en', zone);",
+      "const row22 = { atIso: activity.occurred_at, atPrecision: 'instant' as const }; formatActivityWhen(row22.atIso, row22.atPrecision, 'en', zone);",
+      "function When23(p: { at: string; precision: OccurredPrecision }) { return formatActivityWhen(p.at, p.precision, 'en', zone); } void (<When23 at={activity.occurred_at} precision='instant' />);",
       "const when24 = (iso: string) => formatDateTime(iso, 'en', zone); function Card24({ when }: { when: (iso: string) => string }) { return when(activity.occurred_at); } void (<Card24 when={when24} />);",
       "function Inner25({ when }: { when: (iso: string) => string }) { return when(activity.occurred_at); } function Outer25({ when }: { when: (iso: string) => string }) { return <Inner25 when={when} />; } void (<Outer25 when={(iso) => formatTimeOfDay(iso, 'en', zone)} />);",
-      "activityAgo({ at: activity.occurred_at, precision: 'instant' }, Date.now(), t, 'en', zone);",
+      "activityAgo({ at: activity.occurred_at, precision: 'instant' }, Date.now(), t, 'en');",
+      "function instantOf(): OccurredPrecision { return 'instant'; } formatActivityWhen(activity.occurred_at, instantOf(), 'en', zone);",
+      "const KNOWN = { precision: 'instant' } as const; formatActivityWhen(activity.occurred_at, KNOWN.precision, 'en', zone);",
+      "function moment29(at: string) { return { at, precision: 'instant' as const }; } activityAgo(moment29(activity.occurred_at), Date.now(), t, 'en');",
+      "const times30 = [activity].map((a) => a.occurred_at); formatDateTime(times30[0] ?? '', 'en', zone);",
+      "formatDate(activity.occurred_at, 'en', zone);",
+      "new Date(activity.occurred_at).toLocaleString('en', { month: 'long' });",
+      "new Date(activity.occurred_at).toLocaleDateString('en');",
+      "calendarDay(new Date(activity.occurred_at), zone);",
+      "const day35 = new Intl.DateTimeFormat('en', { day: 'numeric' }); day35.format(new Date(activity.occurred_at));",
+      "void (item.source !== 'task' ? formatDate(item.due_at ?? '', 'en', zone) : '');",
+      "formatDateTime(touch.last_inbound_at ?? '', 'en', zone);",
     ];
     const sound = [
-      "formatActivityWhen(activity.occurred_at, activity.occurred_precision, 'en', zones);",
-      "activityAgo({ at: activity.occurred_at, precision: activity.occurred_precision }, Date.now(), t, 'en', zone);",
-      "formatDate(activity.occurred_at, 'en', zone);",
+      "formatActivityWhen(activity.occurred_at, activity.occurred_precision, 'en', zone);",
+      "activityAgo({ at: activity.occurred_at, precision: activity.occurred_precision }, Date.now(), t, 'en');",
+      "activityDay(activity.occurred_at, activity.occurred_precision, 'en', zone, formatDayMonth);",
       "formatDateTime(activity.created_at, 'en', zone);",
       "formatDateTime(activity.due_at ?? '', 'en', zone);",
-      "new Date(activity.occurred_at).toLocaleString('en', { month: 'long' });",
-      "const row29 = { atIso: activity.created_at, atPrecision: 'instant' as const }; formatActivityWhen(row29.atIso, row29.atPrecision, 'en', zones);",
+      "const row42 = { atIso: activity.created_at, atPrecision: 'instant' as const }; formatActivityWhen(row42.atIso, row42.atPrecision, 'en', zone);",
+      "function instantOf43(): OccurredPrecision { return 'instant'; } formatActivityWhen(activity.created_at, instantOf43(), 'en', zone);",
+      "void (item.source === 'task' ? formatDateTime(item.due_at ?? '', 'en', zone) : '');",
+      "void (item.source === 'meeting' ? '' : formatTimeOfDay(item.due_at ?? '', 'en', zone));",
+      "if (item.source === 'weekly_commitment') formatDate(item.due_at ?? '', 'en', zone);",
+      "formatActivityWhen(touch.last_inbound_at ?? '', touch.last_inbound_precision ?? 'instant', 'en', zone);",
     ];
     expect(plant([...defects, ...sound])).toEqual(
       defects.map((_, index) => index + 1),
@@ -673,18 +890,19 @@ function plant(lines: string[]): number[] {
   const fixture = join(srcRoot, "activity-precision-fixture.tsx");
   const preamble = [
     'import type { components } from "./api/schema";',
-    'import { formatDate, formatDateTime, formatTimeOfDay } from "./format/format";',
+    'import { formatDate, formatDateTime, formatDayMonth, formatTimeOfDay } from "./format/format";',
+    'import { calendarDay } from "./format/calendarday";',
     'import { formatRelativeTime } from "./format/relativetime";',
     'import { formatElapsed } from "./format/now";',
-    'import { activityAgo, formatActivityWhen, type OccurredPrecision } from "./format/activitywhen";',
+    'import { activityAgo, activityDay, formatActivityWhen, type OccurredPrecision } from "./format/activitywhen";',
     'import type { Translator } from "./i18n";',
     'type Activity = components["schemas"]["Activity"];',
     "declare const activity: Activity;",
     "declare const zone: string;",
-    "declare const zones: { record: string; viewer: string };",
     "declare const t: Translator;",
     'declare const item: components["schemas"]["WorklistItem"];',
-    "void [formatDate, formatActivityWhen, activityAgo];",
+    "declare const touch: { last_inbound_at?: string; last_inbound_precision?: OccurredPrecision };",
+    "void [formatDate, formatDayMonth, calendarDay, activityDay, formatActivityWhen, activityAgo];",
   ].join(" ");
   const source = [preamble, ...lines].join("\n");
   const program = plantedProgram(fixture, source, frontendRoot);

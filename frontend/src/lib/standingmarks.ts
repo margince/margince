@@ -69,7 +69,7 @@ export function activityMarks(
           row.occurred_at,
           row.occurred_precision,
           locale,
-          { record, viewer: zone },
+          zone,
           formatDayMonth,
         ),
         onOpen,

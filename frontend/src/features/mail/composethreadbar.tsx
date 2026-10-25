@@ -20,7 +20,6 @@ import { Popover } from "../../design-system/popover";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { TimelineRow } from "../../design-system/timeline";
 import {
-  type ActivityZones,
   activityDay,
   formatActivityWhen,
   type OccurredPrecision,
@@ -28,7 +27,6 @@ import {
 import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useActivityZones } from "../../lib/recordzone";
 import type { ComposeThread } from "./composeanchor";
 import type { Conversation, ThreadRead } from "./composethread";
 import "./composethread.css";
@@ -41,9 +39,9 @@ function whenOf(
   iso: string | null | undefined,
   precision: OccurredPrecision,
   locale: Parameters<typeof formatActivityWhen>[2],
-  zones: ActivityZones,
+  zone: string,
 ): string | undefined {
-  return iso ? formatActivityWhen(iso, precision, locale, zones) : undefined;
+  return iso ? formatActivityWhen(iso, precision, locale, zone) : undefined;
 }
 
 /** One thread on offer, and whether the draft answers it. */
@@ -337,7 +335,6 @@ function ThreadRow({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const zones = useActivityZones(zone);
   const others =
     card.selected && !thread.pending && !thread.failed
       ? thread.messages.filter((message) => message.id !== answering)
@@ -347,7 +344,7 @@ function ThreadRow({
       {card.summary ? (
         <EmailEntry
           summary={card.summary}
-          timestamp={whenOf(card.atIso, card.atPrecision, locale, zones)}
+          timestamp={whenOf(card.atIso, card.atPrecision, locale, zone)}
           onSelect={() => onChoose(card.anchorId)}
           selected={card.selected}
           disabled={disabled}
@@ -378,7 +375,7 @@ function ThreadRow({
             {[
               card.counterparts,
               card.atIso &&
-                activityDay(card.atIso, card.atPrecision, locale, zones),
+                activityDay(card.atIso, card.atPrecision, locale, zone),
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -421,7 +418,6 @@ function ThreadMessage({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const zones = useActivityZones(zone);
   const summary = message.email_summary;
   if (!summary) {
     return activityTimeline([message], viewerUserId, undefined, {
@@ -431,8 +427,7 @@ function ThreadMessage({
     }).map((entry) => <TimelineRow key={entry.id} entry={entry} zone={zone} />);
   }
   const timestamp =
-    whenOf(message.occurred_at, message.occurred_precision, locale, zones) ??
-    "";
+    whenOf(message.occurred_at, message.occurred_precision, locale, zone) ?? "";
   const held =
     message.content_state === "withheld" ||
     summary.display_status === "withheld";
