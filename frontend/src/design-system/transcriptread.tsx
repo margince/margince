@@ -259,8 +259,8 @@ function TranscriptReadBody({
       return;
     }
     // The reading wrote tasks and findings onto records this card is not told
-    // about, so every cached timeline and 360 first page is refreshed, plus the
-    // task and worklist reads. Only mounted queries refetch.
+    // about. So every cached timeline, 360 first page, task and worklist read is
+    // refreshed; only mounted queries refetch.
     queryClient.invalidateQueries({ predicate: showsAMessage });
     queryClient.invalidateQueries({ queryKey: TASK_QUEUE_KEY });
     queryClient.invalidateQueries({ queryKey: worklistKey });
