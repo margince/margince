@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 48,
+    "sites": 49,
     "sites_best_current": 32,
     "sites_best_partial": 0,
     "sites_best_stale": 14,
-    "sites_absent": 2,
-    "scenarios": 257,
+    "sites_absent": 3,
+    "scenarios": 259,
     "records": 354,
     "bindings": 18,
     "self_judged_records": 0
@@ -6953,7 +6953,7 @@
     {
       "name": "Gemma",
       "answer": "mostly",
-      "sites_shipped": 48,
+      "sites_shipped": 49,
       "sites_measured": 45,
       "ready": 27,
       "usable_with_care": 15,
@@ -7657,7 +7657,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 48,
+      "sites_shipped": 49,
       "sites_measured": 44,
       "ready": 31,
       "usable_with_care": 10,
@@ -8347,7 +8347,7 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 48,
+      "sites_shipped": 49,
       "sites_measured": 44,
       "ready": 33,
       "usable_with_care": 10,
@@ -9049,7 +9049,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 48,
+      "sites_shipped": 49,
       "sites_measured": 44,
       "ready": 24,
       "usable_with_care": 12,
@@ -9759,7 +9759,7 @@
     {
       "name": "Qwen",
       "answer": "not_yet",
-      "sites_shipped": 48,
+      "sites_shipped": 49,
       "sites_measured": 44,
       "ready": 9,
       "usable_with_care": 8,
@@ -15915,6 +15915,30 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "document_extract",
+      "site": "cards",
+      "key": "document_extract/cards",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "photo_of_two_business_cards",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/cards_two_cards_05.yaml"
+        },
+        {
+          "name": "photo_with_no_business_card",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/cards_no_card_06.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "document_extract",

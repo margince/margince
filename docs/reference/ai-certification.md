@@ -824,7 +824,7 @@ well the others do.
 | Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 9 |
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
-| Quality bar 70 / 50 / 40: 146 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 70 / 50 / 40: 148 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
 | Quality bar 80 / 60 / 50: 15 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
@@ -1209,12 +1209,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 | | |
 |---|---:|
-| Shipped invocation sites | 48 |
+| Shipped invocation sites | 49 |
 | … best state `current` | 32 |
 | … best state `partial` | 0 |
 | … best state `stale` | 14 |
-| … `absent` on every binding | 2 |
-| Scenarios in the corpus | 257 |
+| … `absent` on every binding | 3 |
+| Scenarios in the corpus | 259 |
 | Committed records | 354 |
 | Bindings measured | 18 |
 
@@ -1278,7 +1278,7 @@ today. It says nothing about how well the model did; that is the band.
 <details>
 <summary>Every site, and the best model tested on it</summary>
 
-### Index of sites (48)
+### Index of sites (49)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -1298,6 +1298,7 @@ Which model to run each site on, and what that choice rests on.
 | [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 13 |
 | [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 11 |
 | [`deal_health/deal_status`](#deal_healthdeal_status) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
+| [`document_extract/cards`](#document_extractcards) | - | - | - | `absent` | 2 | 0 |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 4 | 1 |
 | [`draft_reply/account`](#draft_replyaccount) | - | - | - | `stale` | 1 | 13 |
 | [`draft_reply/contact`](#draft_replycontact) | - | - | - | `stale` | 1 | 13 |
@@ -2190,6 +2191,24 @@ Records (13):
 </details>
 
 #### `document_extract`
+
+<details>
+<summary><code>document_extract/cards</code>: 2 scenario(s), 0 record(s), best state absent</summary>
+
+##### `document_extract/cards`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (2):
+
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `photo_of_two_business_cards` | `accepted` | judge | [cards_two_cards_05.yaml](../../backend/internal/compose/aicert/corpus/document_extract/cards_two_cards_05.yaml) |
+| `photo_with_no_business_card` | `accepted` | judge | [cards_no_card_06.yaml](../../backend/internal/compose/aicert/corpus/document_extract/cards_no_card_06.yaml) |
+
+No record: this site has never been certified on any binding.
+
+</details>
 
 <details>
 <summary><code>document_extract/fields</code>: 4 scenario(s), 1 record(s), best state current</summary>
