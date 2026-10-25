@@ -35,16 +35,16 @@ func TestCoversSQLAnswersAsCoversDomain(t *testing.T) {
 		address *string // nil is a row with no address, stored as NULL
 		covered bool
 	}{
-		{"exact", ptr("rep@acme.com"), true},
-		{"subdomain", ptr("rep@mail.acme.com"), true},
-		{"lookalike ending", ptr("rep@notacme.com"), false},
-		{"lookalike parent", ptr("rep@acme.com.evil.example"), false},
-		{"trailing dot", ptr("rep@acme.com."), true},
-		{"mixed-case punycode", ptr("anna@XN--Bcher-KVA.example"), true},
-		{"unicode", ptr("anna@BÜCHER.example"), true},
-		{"plus tag", ptr("rep+news@acme.com"), true},
-		{"IP literal", ptr("rep@192.0.2.1"), false},
-		{"empty", ptr(""), false},
+		{"exact", new("rep@acme.com"), true},
+		{"subdomain", new("rep@mail.acme.com"), true},
+		{"lookalike ending", new("rep@notacme.com"), false},
+		{"lookalike parent", new("rep@acme.com.evil.example"), false},
+		{"trailing dot", new("rep@acme.com."), true},
+		{"mixed-case punycode", new("anna@XN--Bcher-KVA.example"), true},
+		{"unicode", new("anna@BÜCHER.example"), true},
+		{"plus tag", new("rep+news@acme.com"), true},
+		{"IP literal", new("rep@192.0.2.1"), false},
+		{"empty", new(""), false},
 		{"NULL", nil, false},
 	}
 	for _, c := range cases {
@@ -66,5 +66,3 @@ func TestCoversSQLAnswersAsCoversDomain(t *testing.T) {
 		}
 	}
 }
-
-func ptr(s string) *string { return &s }

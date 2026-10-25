@@ -94,14 +94,14 @@ func TestAnEmptySetCoversNobody(t *testing.T) {
 // A domain is compared in one form, so a Unicode address at a domain registered
 // in punycode is covered, and the other way round.
 func TestFoldGivesOneFormForEitherSpelling(t *testing.T) {
-	for in, want := range map[string]string{
-		"Bücher.Example.":       "xn--bcher-kva.example",
-		"xn--bcher-kva.example": "xn--bcher-kva.example",
-		"  ACME.com ":           "acme.com",
-		"":                      "",
+	for _, c := range []struct{ in, want string }{
+		{"Bücher.Example.", "xn--bcher-kva.example"},
+		{"xn--bcher-kva.example", "xn--bcher-kva.example"},
+		{"  ACME.com ", "acme.com"},
+		{"", ""},
 	} {
-		if got := Fold(in); got != want {
-			t.Errorf("Fold(%q) = %q, want %q", in, got, want)
+		if got := Fold(c.in); got != c.want {
+			t.Errorf("Fold(%q) = %q, want %q", c.in, got, c.want)
 		}
 	}
 	if !New([]string{"xn--bcher-kva.example"}).Covers("anna@bücher.example") {
