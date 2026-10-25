@@ -168,8 +168,6 @@ test("a row menu with little room below opens upward at full height", async ({
   expect(shape).toMatchObject({ scrolls: false, inside: true });
 });
 
-const CLEAR_OF_LANES = 4;
-
 // No room for the whole menu on either side: the lines keep their height and
 // the panel scrolls.
 test("a row menu taller than the window scrolls instead of squeezing", async ({
@@ -180,6 +178,7 @@ test("a row menu taller than the window scrolls instead of squeezing", async ({
     .getByRole("dialog")
     .getByRole("button", { name: /Weitere Aktionen für Price list/ });
   await page.setViewportSize({ width: 1280, height: 360 });
+  const CLEAR_OF_LANES = 4;
   // The trigger sits CLEAR_OF_LANES below the sticky lanes, so the click's hit
   // test reaches it and the click does not scroll it elsewhere.
   const placed = await menu.evaluate((trigger, clear) => {
@@ -188,9 +187,13 @@ test("a row menu taller than the window scrolls instead of squeezing", async ({
     if (!body || !lanes) {
       throw new Error("the drawer body or its sticky lanes are missing");
     }
-    const wanted = lanes.getBoundingClientRect().bottom + clear;
-    body.scrollTop += trigger.getBoundingClientRect().top - wanted;
-    return { top: trigger.getBoundingClientRect().top, wanted };
+    body.scrollTop +=
+      trigger.getBoundingClientRect().top -
+      (lanes.getBoundingClientRect().bottom + clear);
+    return {
+      top: trigger.getBoundingClientRect().top,
+      wanted: lanes.getBoundingClientRect().bottom + clear,
+    };
   }, CLEAR_OF_LANES);
   expect(Math.abs(placed.top - placed.wanted)).toBeLessThanOrEqual(1);
   await menu.click();
@@ -206,11 +209,11 @@ test("a row menu taller than the window scrolls instead of squeezing", async ({
   const menuHeight = await page
     .locator(".overflow-menu-items:not([hidden])")
     .evaluate((panel) => panel.scrollHeight);
-  expect(room.above).toBeLessThan(menuHeight);
-  expect(room.below).toBeLessThan(menuHeight);
   const shape = await openPanelShape(page);
   for (const line of shape.lines) {
     expect(line).toBeGreaterThanOrEqual(30);
   }
+  expect(room.above).toBeLessThan(menuHeight);
+  expect(room.below).toBeLessThan(menuHeight);
   expect(shape).toMatchObject({ scrolls: true, inside: true });
 });
