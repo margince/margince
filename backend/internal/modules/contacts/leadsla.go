@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -218,9 +219,9 @@ func isFirstResponseActivity(t leadResponseTouch) bool {
 	return t.hadInbound
 }
 
-// answeredBy is the ground truth the breach scan judges on: the earliest
-// genuine first response linked to this lead that happened at or before the
-// deadline, or nil when there is none.
+// answeredBy is the ground truth the breach scan judges on. It is the earliest
+// first response on this lead that answers by the deadline, or nil when there
+// is none. A day touch answers once its whole date has ended.
 //
 // It reads the ACTIVITIES rather than lead.first_response_at, because that
 // column is a projection an event subscriber writes and the scan's whole
@@ -242,16 +243,16 @@ func answeredBy(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline time
 		if !isFirstResponseActivity(t) {
 			continue
 		}
-		if earliest == nil || t.occurredAt.Before(*earliest) {
-			at := t.occurredAt
+		if earliest == nil || t.respondedAt.Before(*earliest) {
+			at := t.respondedAt
 			earliest = &at
 		}
 	}
 	return earliest, nil
 }
 
-// leadTouchesFor answers this lead's activities up to the deadline in the shape
-// isFirstResponseActivity reads.
+// leadTouchesFor answers this lead's activities that answer by the deadline
+// (occurredday.ProvenSQL) in the shape isFirstResponseActivity reads.
 //
 // The same columns and the same hadInbound sub-select as leadResponseTouches,
 // asked from the other end: that one starts from ONE activity and finds the
@@ -267,10 +268,10 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 		                 AND ai.archived_at IS NULL AND `+auth.ActivityAvailableClause("ai")+`
 		                 AND ai.occurred_at < a.occurred_at -- occurred_at raw: an inbound before the touch, an ordering of rows
 		               ),
-		       a.kind, coalesce(a.meeting_status, ''), a.source
+		       a.kind, coalesce(a.meeting_status, ''), a.source, `+occurredday.ProvenSQL("a")+`
 		FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		WHERE l.lead_id = $1 AND a.archived_at IS NULL
-		  AND a.occurred_at <= $2 -- occurred_at raw: the response deadline is an instant a touch must beat
+		  AND `+occurredday.ProvenSQL("a")+` <= $2
 		  AND `+auth.ActivityAvailableClause("a"), leadID, deadline)
 	if err != nil {
 		return nil, fmt.Errorf("read the lead's activities before its deadline: %w", err)
@@ -280,7 +281,7 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 	for rows.Next() {
 		t := leadResponseTouch{lead: leadID}
 		if err := rows.Scan(&t.direction, &t.capturedBy, &t.occurredAt, &t.hadInbound,
-			&t.kind, &t.meetingStatus, &t.source); err != nil {
+			&t.kind, &t.meetingStatus, &t.source, &t.respondedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, t)

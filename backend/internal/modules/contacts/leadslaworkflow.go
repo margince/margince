@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -63,10 +64,12 @@ func (w leadFirstResponse) Apply(ctx context.Context, ev workflow.Event, eff wor
 	}
 	applied := false
 	for _, t := range touches {
-		if !isFirstResponseActivity(t) {
+		// A day touch dated today is not yet an answer; the breach scan judges it
+		// against the deadline once that passes.
+		if !isFirstResponseActivity(t) || t.respondedAt.After(leadSLAClock()) {
 			continue
 		}
-		set, err := w.store.RecordLeadFirstResponse(ctx, t.lead, t.occurredAt)
+		set, err := w.store.RecordLeadFirstResponse(ctx, t.lead, t.respondedAt)
 		if err != nil {
 			return workflow.RunResult{}, fmt.Errorf("record first response on lead %s: %w", t.lead, err)
 		}
@@ -159,10 +162,13 @@ func ladderStepFor(t leadResponseTouch) (LeadStatus, bool) {
 // decide whether the activity was a genuine response, and what the ladder
 // needs to decide which step it earns.
 type leadResponseTouch struct {
-	lead          ids.LeadID
-	direction     string
-	capturedBy    string
-	occurredAt    time.Time
+	lead       ids.LeadID
+	direction  string
+	capturedBy string
+	occurredAt time.Time
+	// respondedAt is when the touch counts as an answer (occurredday.ProvenSQL):
+	// a day touch once its whole date has ended.
+	respondedAt   time.Time
 	hadInbound    bool
 	kind          string
 	meetingStatus string
@@ -208,7 +214,7 @@ func (s *Store) leadResponseTouches(ctx context.Context, activityID ids.Activity
 			                 AND ai.archived_at IS NULL AND `+auth.ActivityAvailableClause("ai")+`
 			                 AND ai.occurred_at < a.occurred_at -- occurred_at raw: an inbound before the touch, an ordering of rows
 		               ),
-			       a.kind, coalesce(a.meeting_status, ''), a.source
+			       a.kind, coalesce(a.meeting_status, ''), a.source, `+occurredday.ProvenSQL("a")+`
 			FROM activity_link l JOIN activity a ON a.id = l.activity_id
 			WHERE l.activity_id = $1 AND l.lead_id IS NOT NULL AND a.archived_at IS NULL
 			  AND `+auth.ActivityAvailableClause("a"), activityID)
@@ -218,7 +224,7 @@ func (s *Store) leadResponseTouches(ctx context.Context, activityID ids.Activity
 		defer rows.Close()
 		for rows.Next() {
 			var t leadResponseTouch
-			if err := rows.Scan(&t.lead, &t.direction, &t.capturedBy, &t.occurredAt, &t.hadInbound, &t.kind, &t.meetingStatus, &t.source); err != nil {
+			if err := rows.Scan(&t.lead, &t.direction, &t.capturedBy, &t.occurredAt, &t.hadInbound, &t.kind, &t.meetingStatus, &t.source, &t.respondedAt); err != nil {
 				return err
 			}
 			out = append(out, t)
