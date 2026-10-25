@@ -1,0 +1,33 @@
+name: a_promise_without_a_day_is_reported
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - direction: outbound
+    subject: 'Podcast recording'
+    sent: '2026-09-07'
+    body: |
+      Hi Mira,
+
+      thanks for joining the session. I will send you the edited recording
+      once it is ready.
+
+      Best,
+      Lars
+expect:
+  outcome: accepted
+  answer:
+    - kind: commitment_made
+      message: 1
+  rubric: >
+    One message makes one plain promise of ours: "I will send you the edited
+    recording once it is ready". It names the thing owed and who owes it, and
+    "once it is ready" is when, not a hedge, so it is a commitment_made cited on
+    message 1 with no due date. Reporting no event is wrong. Then score the
+    summary as one plain sentence a colleague could act on, and the confidence
+    as a real judgement.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

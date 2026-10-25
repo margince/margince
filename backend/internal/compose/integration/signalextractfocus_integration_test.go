@@ -114,6 +114,9 @@ func TestAPromiseLeftOutOfTheFirstReadingIsReadOnItsOwn(t *testing.T) {
 	if !strings.Contains(line, conv.promise.String()) || !strings.Contains(line, conv.followup.String()) || strings.Contains(line, conv.need.String()) {
 		t.Errorf("the focus must be the two messages no event cited: %s", line)
 	}
+	if strings.Contains(brain.requests[1].Messages[0].Content, conv.need.String()) {
+		t.Error("the second reading still sends the message whose only finding was the new need")
+	}
 }
 
 func TestTwoSendsOfOnePromiseEachBecomeATask(t *testing.T) {

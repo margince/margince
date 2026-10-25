@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -422,5 +423,59 @@ func TestUnjudgedMessagesAreTheOnesThisPassReadsFirstAndNoEventCites(t *testing.
 	thread.ReadTo = &sameInstant
 	if got := unjudgedMessages(thread, nil); len(got) != 1 || got[0] != fresh {
 		t.Errorf("a message at the instant the last read reached is not in the focus: %v", got)
+	}
+}
+
+func TestASecondReadingLeavesOutOnlyTheMessagesWhoseOnlyFindingWasANewNeed(t *testing.T) {
+	promise, need, promised, ended, followup := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	thread := settledThread{Messages: []threadMessage{
+		{ID: promise}, {ID: need}, {ID: promised}, {ID: ended}, {ID: followup},
+	}}
+	cases := map[string]struct {
+		first []extractedEvent
+		sent  []ids.UUID
+	}{
+		"a new need is left out, a promise stays": {
+			[]extractedEvent{
+				{Kind: extractKindOpportunity, MessageID: need.String()},
+				{Kind: extractKindCommitment, MessageID: promised.String()},
+			},
+			[]ids.UUID{promise, promised, ended, followup},
+		},
+		"a message that also ends the agreement stays": {
+			[]extractedEvent{
+				{Kind: extractKindOpportunity, MessageID: ended.String()},
+				{Kind: "contract_ended", MessageID: ended.String()},
+			},
+			[]ids.UUID{promise, need, promised, ended, followup},
+		},
+		"a message a renewal names stays": {
+			[]extractedEvent{
+				{Kind: extractKindOpportunity, MessageID: need.String()},
+				{Kind: extractKindCommitment, MessageID: followup.String(), RestatedMessageID: need.String()},
+			},
+			[]ids.UUID{promise, need, promised, ended, followup},
+		},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			focused, ok := focusedReading(thread, c.first)
+			if !ok {
+				t.Fatal("a first reading with room left must lead to a second one")
+			}
+			sent := make([]ids.UUID, len(focused.Messages))
+			for i, m := range focused.Messages {
+				sent[i] = m.ID
+			}
+			if !slices.Equal(sent, c.sent) {
+				t.Errorf("the second reading sends %v, want %v", sent, c.sent)
+			}
+			if len(thread.Messages) != 5 {
+				t.Errorf("the first reading's conversation was changed: %d messages", len(thread.Messages))
+			}
+			if focused.EventCap != extractMaxEvents-len(c.first) {
+				t.Errorf("the second reading may report %d events, want %d", focused.EventCap, extractMaxEvents-len(c.first))
+			}
+		})
 	}
 }

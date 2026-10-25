@@ -7,7 +7,6 @@ fixture:
   - direction: outbound
     subject: 'Podcast recording'
     sent: '2026-09-07'
-    focus: true
     body: |
       Hi Mira,
 
@@ -19,6 +18,7 @@ fixture:
   - direction: inbound
     subject: 'Re: Podcast recording'
     sent: '2026-09-08'
+    reported: new_opportunity
     body: |
       Thanks Lars. By the way, we would like to join the beta of your new
       product. Who should we talk to about getting access?
@@ -27,7 +27,6 @@ fixture:
   - direction: outbound
     subject: 'Re: Podcast recording'
     sent: '2026-09-09'
-    focus: true
     body: |
       The edited recording is ready, here is the download link:
       https://example.com/recording

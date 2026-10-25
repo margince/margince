@@ -7,7 +7,6 @@ fixture:
   - direction: outbound
     subject: 'Podcast recording'
     sent: '2026-09-07'
-    focus: true
     body: |
       Hi Mira,
 
@@ -19,6 +18,7 @@ fixture:
   - direction: inbound
     subject: 'Re: Podcast recording'
     sent: '2026-09-08'
+    reported: new_opportunity
     body: |
       Thanks Lars. By the way, we would like to join the beta of your new
       product. Who should we talk to about getting access?
@@ -27,7 +27,6 @@ fixture:
   - direction: outbound
     subject: 'Re: Podcast recording'
     sent: '2026-09-08'
-    focus: true
     body: |
       Happy to help: Jana Weber runs the beta, and you can write to her at
       beta@example.com.
@@ -39,12 +38,11 @@ expect:
     - kind: commitment_made
       message: 1
   rubric: >
-    The request names messages 1 and 3 as the only ones to report on; message 2
-    is context whose new_opportunity an earlier reading already filed. The
-    promise to send the edited recording, cited on message 1, is the event.
-    Reporting the new_opportunity on message 2 is outside the focus and
-    refused by the validator. Then score the summary as one plain sentence a
-    colleague could act on, and the confidence as a real judgement.
+    The first reading filed the new_opportunity on message 2, so this second
+    reading sends messages 1 and 3 only, and both are its focus. The promise to
+    send the edited recording, cited on message 1, is the event. Message 3
+    names a contact and promises nothing. Then score the summary as one plain
+    sentence a colleague could act on, and the confidence as a real judgement.
   bands:
     certified_min: 70
     degraded_min: 50

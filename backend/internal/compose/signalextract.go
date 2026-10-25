@@ -179,13 +179,38 @@ func (x *SignalExtractor) readThread(
 func (x *SignalExtractor) askFocusedReading(
 	ctx context.Context, thread settledThread, events []extractedEvent,
 ) ([]extractedEvent, error) {
-	focus := unjudgedMessages(thread, events)
-	if len(events) == 0 || len(events) >= extractMaxEvents || len(focus) == 0 {
+	focused, ok := focusedReading(thread, events)
+	if !ok {
 		return nil, nil
 	}
-	focused := thread
-	focused.Focus, focused.EventCap = focus, extractMaxEvents-len(events)
 	return x.askReading(ctx, focused)
+}
+
+// focusedReading is the conversation the second reading sends, or false when
+// there is none to send. It leaves out each message whose only finding was a
+// new need: a model shown a promise and a later new need reports the need and
+// drops the promise. A message with a promise or an ending stays, because it
+// is what shows a later message keeping, renewing or voiding a promise.
+func focusedReading(thread settledThread, events []extractedEvent) (settledThread, bool) {
+	focus := unjudgedMessages(thread, events)
+	if len(events) == 0 || len(events) >= extractMaxEvents || len(focus) == 0 {
+		return settledThread{}, false
+	}
+	needOnly, kept := map[string]bool{}, map[string]bool{}
+	for _, event := range events {
+		if event.Kind == extractKindOpportunity {
+			needOnly[event.MessageID] = true
+			continue
+		}
+		kept[event.MessageID], kept[event.RestatedMessageID] = true, true
+	}
+	focused := thread
+	focused.Messages = slices.DeleteFunc(slices.Clone(thread.Messages), func(m threadMessage) bool {
+		id := m.ID.String()
+		return needOnly[id] && !kept[id]
+	})
+	focused.Focus, focused.EventCap = focus, extractMaxEvents-len(events)
+	return focused, true
 }
 
 // keepFirstReading commits the first reading when the second was refused. The

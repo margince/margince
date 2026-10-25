@@ -53,9 +53,10 @@ type signalExtractMessage struct {
 	// Sent is the day the message went, YYYY-MM-DD. A relative deadline is
 	// resolved against it, so a scenario that dates a promise names its day.
 	Sent string `json:"sent,omitempty"`
-	// Focus marks a message the second reading of a pass is for. A fixture with
-	// none is the ordinary reading.
-	Focus bool `json:"focus,omitempty"`
+	// Reported is the kind of event the first reading of the pass cited on this
+	// message. A fixture with one is the second reading, built as the extractor
+	// builds it; a fixture with none is the ordinary reading.
+	Reported string `json:"reported,omitempty"`
 }
 
 // certSentDefault dates a message whose scenario does not, so every prompt
@@ -119,6 +120,7 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 	thread := settledThread{Key: "cert-thread", CompanyID: ids.NewV7()}
 	identities := map[string]ids.UUID{}
 	references := make([]map[string]string, len(messages))
+	var firstReading []extractedEvent
 	for i, message := range messages {
 		parties, refs, err := prepareCommitmentParties(message.Participants, identities)
 		if err != nil {
@@ -135,8 +137,8 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 				i+1, sent, err)
 		}
 		id := ids.NewV7()
-		if message.Focus {
-			thread.Focus = append(thread.Focus, id)
+		if message.Reported != "" {
+			firstReading = append(firstReading, extractedEvent{Kind: message.Reported, MessageID: id.String()})
 		}
 		thread.Messages = append(thread.Messages, threadMessage{
 			ID:        id,
@@ -147,16 +149,21 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 			At:        at,
 		})
 	}
-	if len(thread.Focus) > 0 {
-		// A second reading only happens after a first one reported something.
-		thread.EventCap = extractMaxEvents - 1
+	numbered := thread.Messages
+	if len(firstReading) > 0 {
+		focused, ok := focusedReading(thread, firstReading)
+		if !ok {
+			return nil, errors.New(
+				"signal_extract/thread_events: the fixture's first reading leaves nothing for a second one to read")
+		}
+		thread = focused
 	}
 	for i := range want {
 		due := ""
 		if want[i].DueDate != nil {
 			due = *want[i].DueDate
 		}
-		if err := validateExpectedMeaning(want[i].Optional, want[i].Meaning, due, thread.Messages[want[i].Message-1].Body); err != nil {
+		if err := validateExpectedMeaning(want[i].Optional, want[i].Meaning, due, numbered[want[i].Message-1].Body); err != nil {
 			return nil, err
 		}
 		if err := validateExpectedRecipients(want[i].Recipients, references[want[i].Message-1]); err != nil {
@@ -171,7 +178,9 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 			}
 		}
 	}
-	return &signalExtractCase{thread: thread, expected: want, promiserKeys: certPromiserKeys(references...)}, nil
+	return &signalExtractCase{
+		thread: thread, numbered: numbered, expected: want, promiserKeys: certPromiserKeys(references...),
+	}, nil
 }
 
 // refuseUnreadableThread names a conversation the thread read could never have
@@ -234,7 +243,10 @@ func refuseUnreachableEvents(want []signalExtractExpectation, messages int) erro
 type signalExtractCase struct {
 	promiserKeys map[string]string
 	thread       settledThread
-	expected     []signalExtractExpectation
+	// numbered is the fixture's conversation, which the expected events count
+	// in. A second reading sends fewer messages than it holds.
+	numbered []threadMessage
+	expected []signalExtractExpectation
 }
 
 // Run issues the one request this site sends, bare: production wraps the same
@@ -317,8 +329,8 @@ func spanOf(confidences []float64) (low, high float64, ok bool) {
 // author could look up, and the mail's own text has no business being echoed
 // into a record.
 func (c *signalExtractCase) disagreements(payload extractPayload) []string {
-	position := make(map[string]int, len(c.thread.Messages))
-	for i, message := range c.thread.Messages {
+	position := make(map[string]int, len(c.numbered))
+	for i, message := range c.numbered {
 		position[message.ID.String()] = i + 1
 	}
 	reported := map[string]bool{}
