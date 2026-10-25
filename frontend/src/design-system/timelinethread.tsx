@@ -11,6 +11,7 @@ import { type Visibility, VisibilityBadge } from "./visibility";
 import "./composed.css";
 
 import {
+  automaticLabel,
   CommitmentReviewFlag,
   directionClass,
   entryMove,
@@ -94,6 +95,10 @@ function messageLead(
   entry: TimelineEntry,
   t: ReturnType<typeof useT>,
 ): { actor: string; verb?: string } {
+  const automatic = automaticLabel(entry);
+  if (automatic) {
+    return { actor: t(automatic) };
+  }
   const who = otherSideOf(entry);
   if (entry.direction === "inbound") {
     return {

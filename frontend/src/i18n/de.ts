@@ -2934,6 +2934,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Ein Verlauf als ein Ereignis sagt zuerst, WAS er ist.
   "timeline.group.thread_other": "{count} Nachrichten",
   "timeline.group.thread_one": "{count} Nachricht",
+  "timeline.group.sides": "{theirs} von der Gegenseite, {ours} von deinem Team",
+  "timeline.automatic.calendar": "Kalendereinladung",
+  "timeline.automatic.sending_system": "Von einem System gesendet",
+  "timeline.automatic.product": "Von Margince gesendet",
   "timeline.group.bulk_other": "an {count} Personen gesendet",
   "timeline.group.bulk_one": "an {count} Person gesendet",
   "timeline.group.expand": "Öffnen",

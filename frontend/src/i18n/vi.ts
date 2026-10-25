@@ -2847,6 +2847,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // says: the reader is scanning for an event, not a sentence.
   "timeline.group.thread_other": "{count} tin nhắn",
   "timeline.group.thread_one": "{count} tin nhắn",
+  "timeline.group.sides": "{theirs} từ phía họ, {ours} từ nhóm của bạn",
+  "timeline.automatic.calendar": "Lời mời lịch",
+  "timeline.automatic.sending_system": "Do hệ thống gửi",
+  "timeline.automatic.product": "Do Margince gửi",
   "timeline.group.bulk_other": "gửi tới {count} người",
   "timeline.group.bulk_one": "gửi tới {count} người",
   "timeline.group.expand": "Mở",

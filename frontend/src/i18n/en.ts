@@ -2922,6 +2922,10 @@ export const en = {
   // says: the reader is scanning for an event, not a sentence.
   "timeline.group.thread_other": "{count} messages",
   "timeline.group.thread_one": "{count} message",
+  "timeline.group.sides": "{theirs} from them, {ours} from your team",
+  "timeline.automatic.calendar": "Calendar invitation",
+  "timeline.automatic.sending_system": "Sent by a system",
+  "timeline.automatic.product": "Sent by Margince",
   "timeline.group.bulk_other": "sent to {count} people",
   "timeline.group.bulk_one": "sent to {count} person",
   "timeline.group.expand": "Open",
