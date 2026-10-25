@@ -193,6 +193,25 @@ func reachesLikeRenovate(t *testing.T, pattern, file string) bool {
 //
 // The corpus is every `*_IMAGE` line the Makefile carries. A seventh pin
 // fails this by being written rather than by being remembered.
+// assignmentIn names the Makefile variable one regex hit covers. Credit then
+// lands on that pin, not on one whose name merely ends the same way.
+//
+// It reads the hit's `name` group when the manager captures one. Otherwise it
+// falls back to the leading assignment, which keeps a manager written without
+// that group working.
+func assignmentIn(hit []string) string {
+	leading := regexp.MustCompile(`([A-Z_]+_IMAGE)[^\S\r\n]*\?=`)
+	for _, group := range hit[1:] {
+		if leading.MatchString(group + "?=") {
+			return group
+		}
+	}
+	if found := leading.FindStringSubmatch(hit[0]); found != nil {
+		return found[1]
+	}
+	return ""
+}
+
 func TestEveryMakefileImagePinIsOneRenovateCanOffer(t *testing.T) {
 	t.Parallel()
 	const makefile = "Makefile"
@@ -211,12 +230,12 @@ func TestEveryMakefileImagePinIsOneRenovateCanOffer(t *testing.T) {
 			continue
 		}
 		for _, matchString := range manager.MatchStrings {
-			for _, hit := range goPinNamed(t, matchString).FindAllString(string(text), -1) {
-				for _, pin := range pinned {
-					if strings.Contains(hit, pin[1]) {
-						claimed[pin[1]] = true
-					}
-				}
+			for _, hit := range goPinNamed(t, matchString).FindAllStringSubmatch(string(text), -1) {
+				// The assignment the hit covers, read back from the hit itself.
+				// Asking whether a hit contains a pin name credits the wrong
+				// one. A hit on SBOM_PYTHON_IMAGE contains PYTHON_IMAGE, so a
+				// pin by that name would read as covered by it.
+				claimed[assignmentIn(hit)] = true
 			}
 		}
 	}
@@ -224,6 +243,29 @@ func TestEveryMakefileImagePinIsOneRenovateCanOffer(t *testing.T) {
 		if !claimed[pin[1]] {
 			t.Errorf("%s is pinned by digest in the Makefile and no custom manager offers it an "+
 				"update, so it moves only when somebody edits it by hand", pin[1])
+		}
+	}
+}
+
+// TestAnImagePinReadsOnlyItsOwnLine holds the Makefile manager's whitespace to
+// one line. Renovate applies a matchString to the whole file, so a run of `\s`
+// crosses the newline.
+//
+// A pin whose tag comment were removed would then take the next line's comment
+// as its version. Renovate would offer an update against a tag naming
+// something else.
+func TestAnImagePinReadsOnlyItsOwnLine(t *testing.T) {
+	t.Parallel()
+	const stripped = "SBOM_PYTHON_IMAGE ?= python@sha256:abc123\n# Per-format notes\n"
+	for _, manager := range readRenovateConfig(t).CustomManagers {
+		if !anyMatches(t, manager.ManagerFilePatterns, "Makefile") {
+			continue
+		}
+		for _, matchString := range manager.MatchStrings {
+			if hit := goPinNamed(t, matchString).FindString(stripped); hit != "" {
+				t.Errorf("the Makefile manager matched %q across a newline, so a pin "+
+					"missing its tag comment takes the following line as its version", hit)
+			}
 		}
 	}
 }

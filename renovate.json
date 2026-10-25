@@ -30,7 +30,7 @@
       "customType": "regex",
       "managerFilePatterns": ["/^Makefile$/"],
       "matchStrings": [
-        "[A-Z_]+_IMAGE\\s*\\?=\\s*(?<depName>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)\\s*#\\s*(?<currentValue>\\S+)"
+        "(?<name>[A-Z_]+_IMAGE)[^\\S\\r\\n]*\\?=[^\\S\\r\\n]*(?<depName>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)[^\\S\\r\\n]*#[^\\S\\r\\n]*(?<currentValue>[^\\s#]+)"
       ],
       "datasourceTemplate": "docker"
     },
