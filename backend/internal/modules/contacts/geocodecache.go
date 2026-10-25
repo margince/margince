@@ -27,12 +27,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// CachedPlace is a remembered lookup. CountryCode is empty for a place cached
-// before the country was asked for.
+// CachedPlace is a remembered lookup.
 type CachedPlace struct {
-	Lat, Lon    float64
-	Provider    string
-	CountryCode string
+	Lat, Lon float64
+	Provider string
 }
 
 // LookupPlace answers a remembered point for this query, if there is one.
@@ -49,8 +47,8 @@ func (s *Store) LookupPlace(ctx context.Context, query string) (CachedPlace, boo
 	var place CachedPlace
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT lat, lon, provider, coalesce(country_code, '') FROM geocode_cache WHERE query = $1`, key).
-			Scan(&place.Lat, &place.Lon, &place.Provider, &place.CountryCode)
+			`SELECT lat, lon, provider FROM geocode_cache WHERE query = $1`, key).
+			Scan(&place.Lat, &place.Lon, &place.Provider)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return CachedPlace{}, false, nil
@@ -66,8 +64,7 @@ func (s *Store) LookupPlace(ctx context.Context, query string) (CachedPlace, boo
 // A repeat write is a no-op rather than a conflict: two workers resolving the
 // same place concurrently is the normal case, and the second one arriving is
 // not an error to report. The FIRST answer is kept — they are the same place,
-// and rewriting would churn the row for nothing. The one exception is a country
-// code the first answer lacked, which the later answer fills in.
+// and rewriting would churn the row for nothing.
 func (s *Store) RememberPlace(ctx context.Context, query string, place CachedPlace) error {
 	key := normalizePlaceQuery(query)
 	if key == "" {
@@ -75,11 +72,10 @@ func (s *Store) RememberPlace(ctx context.Context, query string, place CachedPla
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO geocode_cache (query, lat, lon, provider, country_code)
-			VALUES ($1, $2, $3, $4, nullif($5, ''))
-			ON CONFLICT (query) DO UPDATE SET country_code = EXCLUDED.country_code
-			 WHERE geocode_cache.country_code IS NULL AND EXCLUDED.country_code IS NOT NULL`,
-			key, place.Lat, place.Lon, place.Provider, place.CountryCode)
+			INSERT INTO geocode_cache (query, lat, lon, provider)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (query) DO NOTHING`,
+			key, place.Lat, place.Lon, place.Provider)
 		return err
 	})
 }

@@ -123,41 +123,29 @@ func (p *addressCountryPass) checkWorkspace(ctx context.Context, ws ids.UUID) er
 	return nil
 }
 
-// checkOne answers one record from the place cache when it can, and from the
+// checkOne answers one record from the country cache when it can, and from the
 // provider while the budget lasts. done is false once the budget is spent.
 func (p *addressCountryPass) checkOne(ctx context.Context, store *contacts.Store, check contacts.AddressCountryCheck) (bool, error) {
 	query := check.Query()
-	cached, hit, err := store.LookupPlace(ctx, query)
+	codes, hit, err := store.LookupPlaceCountries(ctx, query)
 	if err != nil {
 		return false, err
 	}
-	if hit && cached.CountryCode != "" {
-		return true, p.record(ctx, store, check, cached.CountryCode, true)
-	}
-	if p.lookupsLeft == 0 {
-		return false, nil
-	}
-	p.lookupsLeft--
-	point, found, err := p.worker.geocoder.Resolve(ctx, query)
-	if err != nil {
-		return false, fmt.Errorf("asking which country a postal code and city lie in: %w", err)
-	}
-	if found {
-		if err := store.RememberPlace(ctx, query, contacts.CachedPlace{
-			Lat: point.Lat, Lon: point.Lon, Provider: geocodeProvider, CountryCode: point.CountryCode,
-		}); err != nil {
+	if !hit {
+		if p.lookupsLeft == 0 {
+			return false, nil
+		}
+		p.lookupsLeft--
+		if codes, err = p.worker.geocoder.Countries(ctx, query); err != nil {
+			return false, fmt.Errorf("asking which countries a postal code and city lie in: %w", err)
+		}
+		if err := store.RememberPlaceCountries(ctx, query, codes, geocodeProvider); err != nil {
 			return false, err
 		}
 	}
-	return true, p.record(ctx, store, check, point.CountryCode, found)
-}
-
-func (p *addressCountryPass) record(
-	ctx context.Context, store *contacts.Store, check contacts.AddressCountryCheck, code string, found bool,
-) error {
-	written, err := store.RecordAddressCountry(ctx, check, code, found)
+	written, err := store.RecordAddressCountries(ctx, check, codes)
 	if written {
 		p.checked++
 	}
-	return err
+	return true, err
 }

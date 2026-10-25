@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 	"time"
 )
@@ -53,21 +54,36 @@ func TestAResolvedAddressCarriesItsCoordinates(t *testing.T) {
 	}
 }
 
-func TestAResolvedPlaceNamesItsCountryInUpperCase(t *testing.T) {
+func TestACountryQuestionAnswersEveryCountryTheCandidatesLieIn(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Query().Get("addressdetails"); got != "1" {
 			t.Errorf("addressdetails = %q, want 1: without it the answer carries no country", got)
 		}
-		_, _ = w.Write([]byte(`[{"lat":"52.52","lon":"13.40","address":{"country_code":"de"}}]`))
+		if got := r.URL.Query().Get("limit"); got != "5" {
+			t.Errorf("limit = %q, want 5: one candidate picks between two countries by ranking alone", got)
+		}
+		_, _ = w.Write([]byte(`[{"address":{"country_code":"de"}},{"address":{"country_code":"at"}},{"address":{"country_code":"de"}}]`))
 	}))
 	defer srv.Close()
 
-	point, ok, err := unpacedClient(srv.URL).Resolve(context.Background(), "10115 Berlin")
-	if err != nil || !ok {
-		t.Fatalf("resolving 10115 Berlin: ok=%v err=%v", ok, err)
+	codes, err := unpacedClient(srv.URL).Countries(context.Background(), "6991 Riezlern")
+	if err != nil {
+		t.Fatalf("asking for the countries: %v", err)
 	}
-	if point.CountryCode != "DE" {
-		t.Errorf("CountryCode = %q, want DE", point.CountryCode)
+	if !slices.Equal(codes, []string{"DE", "AT"}) {
+		t.Errorf("countries = %v, want [DE AT]: distinct, upper-case, in the provider's order", codes)
+	}
+}
+
+func TestACountryQuestionThatNamesNoPlaceIsNotAnError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	codes, err := unpacedClient(srv.URL).Countries(context.Background(), "00000 Nowhere")
+	if err != nil || len(codes) != 0 {
+		t.Errorf("an empty answer came back as %v, %v; want no countries and no error", codes, err)
 	}
 }
 

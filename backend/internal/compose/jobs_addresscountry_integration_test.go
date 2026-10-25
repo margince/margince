@@ -7,8 +7,11 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -63,14 +66,14 @@ func runAddressCountryPass(t *testing.T, e *integration.Env, geocoder geocode.Cl
 }
 
 type countryCheckState struct {
-	resolved  *string
+	resolved  []string
 	checkedAt *time.Time
 }
 
 func (s countryCheckState) String() string {
 	resolved, checked := "none", "never"
 	if s.resolved != nil {
-		resolved = *s.resolved
+		resolved = strings.Join(s.resolved, "+")
 	}
 	if s.checkedAt != nil {
 		checked = s.checkedAt.Format(time.RFC3339)
@@ -81,11 +84,12 @@ func (s countryCheckState) String() string {
 func readCountryCheck(t *testing.T, e *integration.Env, table string, id ids.UUID) countryCheckState {
 	t.Helper()
 	var state countryCheckState
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT address_country_resolved, address_country_checked_at FROM `+table+` WHERE id = $1`, id).
+			`SELECT countries, checked_at FROM `+table+`_address_country WHERE `+table+`_id = $1`, id).
 			Scan(&state.resolved, &state.checkedAt)
-	}); err != nil {
+	})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		t.Fatalf("reading the country check of %s %s: %v", table, id, err)
 	}
 	return state
@@ -117,7 +121,7 @@ func TestAStoredCountryThatDoesNotFitItsPostalCodeAndCityIsFlagged(t *testing.T)
 	e := integration.Setup(t)
 	austrian := createCompanyAt(t, e, "Wrong Country GmbH", berlinAddress("AT"))
 	german := createCompanyAt(t, e, "Right Country GmbH", berlinAddress("DE"))
-	person := createContactAt(t, e, "Anna Weber", berlinAddress("AT"))
+	member := createContactAt(t, e, "Anna Weber", berlinAddress("AT"))
 	nominatim, asked := nominatimAnswering(t, `[{"lat":"52.53","lon":"13.38","address":{"country_code":"de"}}]`)
 
 	runAddressCountryPass(t, e, nominatim, clocktest.Now(t))
@@ -135,7 +139,7 @@ func TestAStoredCountryThatDoesNotFitItsPostalCodeAndCityIsFlagged(t *testing.T)
 	if company.Address == nil || company.Address.Country == nil || *company.Address.Country != "AT" {
 		t.Errorf("the check changed the stored country to %+v; it must only flag it", company.Address)
 	}
-	contact, err := e.Contacts.GetContact(e.Admin(), person, storekit.LiveOnly)
+	contact, err := e.Contacts.GetContact(e.Admin(), member, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +180,7 @@ func TestEditingPostalCodeCityOrCountryClearsTheCountryCheck(t *testing.T) {
 		})
 		t.Run("contact "+column, func(t *testing.T) {
 			e := integration.Setup(t)
-			id := createContactAt(t, e, "Moving Person", berlinAddress("AT"))
+			id := createContactAt(t, e, "Moving Contact", berlinAddress("AT"))
 			stampCountryCheck(t, e, contacts.CountryCheckedContact, id.UUID)
 			address := berlinAddress("AT")
 			edit(address)
@@ -199,7 +203,7 @@ func TestEditingTheStreetKeepsTheCountryCheck(t *testing.T) {
 	if _, err := e.Contacts.UpdateCompany(e.Admin(), id, contacts.UpdateCompanyInput{Address: address}); err != nil {
 		t.Fatal(err)
 	}
-	if state := readCountryCheck(t, e, "company", id.UUID); state.resolved == nil || *state.resolved != "DE" {
+	if state := readCountryCheck(t, e, "company", id.UUID); !slices.Equal(state.resolved, []string{"DE"}) {
 		t.Errorf("a street edit cleared the check to %v; the postal code and city it answered for did not change", state)
 	}
 }
@@ -216,7 +220,7 @@ func stampCountryCheck(t *testing.T, e *integration.Env, record contacts.Country
 			continue
 		}
 		written, err := e.Contacts.WithClock(func() time.Time { return clocktest.Now(t) }).
-			RecordAddressCountry(e.Admin(), check, "DE", true)
+			RecordAddressCountries(e.Admin(), check, []string{"DE"})
 		if err != nil || !written {
 			t.Fatalf("stamping the country check: written=%v err=%v", written, err)
 		}
@@ -225,24 +229,28 @@ func stampCountryCheck(t *testing.T, e *integration.Env, record contacts.Country
 	t.Fatalf("%s %s is not due a country check", record, id)
 }
 
-// geocoderFunc is a geocode.Client the test drives directly, for cases about
+// countriesFunc is a geocode.Client the test drives directly, for cases about
 // the pass's own budget and races rather than the provider's wire format.
-type geocoderFunc func(ctx context.Context, query string) (geocode.Point, bool, error)
+type countriesFunc func(ctx context.Context, query string) ([]string, error)
 
-func (f geocoderFunc) Resolve(ctx context.Context, query string) (geocode.Point, bool, error) {
+func (f countriesFunc) Resolve(context.Context, string) (geocode.Point, bool, error) {
+	return geocode.Point{}, false, errors.New("the address country check never asks for a point")
+}
+
+func (f countriesFunc) Countries(ctx context.Context, query string) ([]string, error) {
 	return f(ctx, query)
 }
 
 func TestACountryCheckLosesToAnEditMadeWhileItAsked(t *testing.T) {
 	e := integration.Setup(t)
 	id := createCompanyAt(t, e, "Racing GmbH", berlinAddress("AT"))
-	editWhileAsking := geocoderFunc(func(context.Context, string) (geocode.Point, bool, error) {
+	editWhileAsking := countriesFunc(func(context.Context, string) ([]string, error) {
 		address := berlinAddress("AT")
 		address.City = new("Potsdam")
 		if _, err := e.Contacts.UpdateCompany(e.Admin(), id, contacts.UpdateCompanyInput{Address: address}); err != nil {
 			t.Errorf("editing the city while the provider is asked: %v", err)
 		}
-		return geocode.Point{Lat: 52.53, Lon: 13.38, CountryCode: "DE"}, true, nil
+		return []string{"DE"}, nil
 	})
 
 	runAddressCountryPass(t, e, editWhileAsking, clocktest.Now(t))
@@ -261,9 +269,9 @@ func TestOnePassAsksTheProviderAtMostItsBudget(t *testing.T) {
 		})
 	}
 	var asked []string
-	counting := geocoderFunc(func(_ context.Context, query string) (geocode.Point, bool, error) {
+	counting := countriesFunc(func(_ context.Context, query string) ([]string, error) {
 		asked = append(asked, query)
-		return geocode.Point{Lat: 50, Lon: 10, CountryCode: "DE"}, true, nil
+		return []string{"DE"}, nil
 	})
 
 	runAddressCountryPass(t, e, counting, clocktest.Now(t))
@@ -273,5 +281,109 @@ func TestOnePassAsksTheProviderAtMostItsBudget(t *testing.T) {
 	runAddressCountryPass(t, e, counting, clocktest.Now(t))
 	if len(asked) != len(cities) {
 		t.Errorf("two passes asked %d times over %d unchecked companies; the second pass should take the rest and nothing twice", len(asked), len(cities))
+	}
+}
+
+func TestAPostalCodeNamingTwoCountriesFlagsOnlyACountryItNamesNeither(t *testing.T) {
+	e := integration.Setup(t)
+	border := func(country string) *crmcontracts.Address {
+		return &crmcontracts.Address{PostalCode: new("87567"), City: new("Riezlern"), Country: new(country)}
+	}
+	austrian := createCompanyAt(t, e, "Grenzland GmbH", border("AT"))
+	swiss := createCompanyAt(t, e, "Falsch Abgelegt AG", border("CH"))
+	nominatim, asked := nominatimAnswering(t,
+		`[{"lat":"47.35","lon":"10.18","address":{"country_code":"de"}},{"lat":"47.36","lon":"10.18","address":{"country_code":"at"}}]`)
+
+	runAddressCountryPass(t, e, nominatim, clocktest.Now(t))
+
+	if got := asked(); len(got) != 1 {
+		t.Fatalf("the provider was asked %q; want one question, the second company answered from the country cache", got)
+	}
+	kept, err := e.Contacts.GetCompany(e.Admin(), austrian, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kept.AddressCountryMismatch != nil {
+		t.Errorf("AT is one of the two countries 87567 Riezlern names, and it is flagged %+v", kept.AddressCountryMismatch)
+	}
+	flagged, err := e.Contacts.GetCompany(e.Admin(), swiss, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if flagged.AddressCountryMismatch == nil || flagged.AddressCountryMismatch.ResolvedCountry != "DE" {
+		t.Errorf("CH is neither country 87567 Riezlern names, and it reads mismatch %+v; want resolved_country DE", flagged.AddressCountryMismatch)
+	}
+}
+
+type recordStamp struct {
+	version   int64
+	updatedAt time.Time
+}
+
+func readRecordStamp(t *testing.T, e *integration.Env, table string, id ids.UUID) recordStamp {
+	t.Helper()
+	var stamp recordStamp
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT version, updated_at FROM `+table+` WHERE id = $1`, id).Scan(&stamp.version, &stamp.updatedAt)
+	}); err != nil {
+		t.Fatalf("reading the version of %s %s: %v", table, id, err)
+	}
+	return stamp
+}
+
+func TestACountryCheckWriteLeavesTheRecordVersionAlone(t *testing.T) {
+	e := integration.Setup(t)
+	company := createCompanyAt(t, e, "Open Form GmbH", berlinAddress("AT"))
+	member := createContactAt(t, e, "Open Form Contact", berlinAddress("AT"))
+	companyBefore := readRecordStamp(t, e, "company", company.UUID)
+	contactBefore := readRecordStamp(t, e, "contact", member.UUID)
+
+	runAddressCountryPass(t, e, countriesFunc(func(context.Context, string) ([]string, error) {
+		return []string{"DE"}, nil
+	}), clocktest.Now(t))
+
+	if state := readCountryCheck(t, e, "company", company.UUID); state.checkedAt == nil {
+		t.Fatal("the pass did not check the company, so this test proves nothing about its write")
+	}
+	if got := readRecordStamp(t, e, "company", company.UUID); got != companyBefore {
+		t.Errorf("the check moved the company from %+v to %+v; an open edit form would fail its If-Match", companyBefore, got)
+	}
+	if got := readRecordStamp(t, e, "contact", member.UUID); got != contactBefore {
+		t.Errorf("the check moved the contact from %+v to %+v; an open edit form would fail its If-Match", contactBefore, got)
+	}
+	if _, err := e.Contacts.UpdateCompany(e.Admin(), company, contacts.UpdateCompanyInput{
+		Description: new("Edited in a form opened before the check"), IfVersion: &companyBefore.version,
+	}); err != nil {
+		t.Fatalf("a company edit carrying the version read before the check was refused: %v", err)
+	}
+	if _, err := e.Contacts.UpdateContact(e.Admin(), member, contacts.UpdateContactInput{
+		Title: new("Edited in a form opened before the check"), IfVersion: &contactBefore.version,
+	}); err != nil {
+		t.Fatalf("a contact edit carrying the version read before the check was refused: %v", err)
+	}
+	if got := readRecordStamp(t, e, "company", company.UUID); got.version != companyBefore.version+1 {
+		t.Errorf("a real edit left the company at version %d; want %d", got.version, companyBefore.version+1)
+	}
+}
+
+func TestACountryCheckOlderThanTheRefreshAgeIsAskedAgain(t *testing.T) {
+	e := integration.Setup(t)
+	createCompanyAt(t, e, "Old Evidence GmbH", berlinAddress("DE"))
+	var asked int
+	counting := countriesFunc(func(context.Context, string) ([]string, error) {
+		asked++
+		return []string{"DE"}, nil
+	})
+	checkedAt := clocktest.Now(t)
+
+	runAddressCountryPass(t, e, counting, checkedAt)
+	runAddressCountryPass(t, e, counting, checkedAt.Add(contacts.AddressCountryRefreshAge-time.Hour))
+	if asked != 1 {
+		t.Fatalf("the provider was asked %d times before the evidence aged out; want once", asked)
+	}
+	runAddressCountryPass(t, e, counting, checkedAt.Add(contacts.AddressCountryRefreshAge+time.Hour))
+	if asked != 2 {
+		t.Errorf("the provider was asked %d times once the check and its cached answer were past the refresh age; want twice", asked)
 	}
 }

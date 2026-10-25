@@ -25136,9 +25136,9 @@ type Address struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// AddressCountryMismatch The stored address country does not fit the postal code and city. A background check asks the geocoder for the postal code and city alone and compares the country they resolve to with the stored one. The stored country is never changed. Editing the postal code, city or country clears the result until the next check.
+// AddressCountryMismatch The stored address country does not fit the postal code and city. A background check asks the geocoder for the postal code and city alone, reads the countries of up to five places they name, and flags the stored country only when it is none of them. The stored country is never changed. Editing the postal code, city or country clears the result until the next check, and a result older than 180 days is checked again.
 type AddressCountryMismatch struct {
-	// ResolvedCountry ISO-3166 alpha-2 code of the country the postal code and city resolve to.
+	// ResolvedCountry ISO-3166 alpha-2 code of the best-ranked country the postal code and city resolve to.
 	ResolvedCountry string `json:"resolved_country"`
 }
 
@@ -31394,7 +31394,7 @@ type Company struct {
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
-	// AddressCountryMismatch Present only when the stored address country differs from the country the postal code and city resolve to. Absent when they agree, when the address has not been checked yet, or when it carries no postal code, city or two-letter country.
+	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
 	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
 	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
 
@@ -34423,7 +34423,7 @@ type Contact struct {
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
-	// AddressCountryMismatch Present only when the stored address country differs from the country the postal code and city resolve to. Absent when they agree, when the address has not been checked yet, or when it carries no postal code, city or two-letter country.
+	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
 	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
 	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
 

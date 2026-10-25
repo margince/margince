@@ -3,14 +3,19 @@
 
 package contacts
 
-// The check of a stored country against the country its postal code and city
+// The check of a stored country against the countries its postal code and city
 // resolve to. The check only flags a mismatch; it never changes the stored
-// country. A trigger clears the result when the postal code, city or country
-// change. So the flag never speaks for an address the row no longer holds.
+// country. Results live in company_address_country and contact_address_country,
+// so writing one never moves the record's version. A trigger deletes the result
+// when the postal code, city or country change.
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
+	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -33,6 +38,11 @@ const (
 // CountryCheckedRecords lists the records the sweep visits, in the order it visits them.
 var CountryCheckedRecords = []CountryCheckedRecord{CountryCheckedCompany, CountryCheckedContact}
 
+// AddressCountryRefreshAge is how old a check or a cached country answer may
+// grow before it is asked again. Postal codes are reassigned rarely, so half a
+// year keeps the evidence current at little cost to the shared rate.
+const AddressCountryRefreshAge = 180 * 24 * time.Hour
+
 // AddressCountryCheck is one record whose stored country is due a check. The
 // three address values are the ones read, and the write lands only while the
 // row still holds them.
@@ -51,23 +61,34 @@ func (c AddressCountryCheck) Query() string {
 }
 
 // addressCountryMismatch is the one rule for when a stored country contradicts
-// its postal code and city. A stored value that is no assigned code, from a row
-// written before the country rule, has nothing to compare and is not flagged.
-func addressCountryMismatch(stored, resolved *string) *crmcontracts.AddressCountryMismatch {
-	if stored == nil || resolved == nil {
+// its postal code and city: it is none of the countries they can name. A stored
+// value that is no assigned code has nothing to compare and is not flagged.
+func addressCountryMismatch(stored *string, resolved []string) *crmcontracts.AddressCountryMismatch {
+	if stored == nil || len(resolved) == 0 {
 		return nil
 	}
 	code, err := NormalizeCountryCode(*stored)
-	if err != nil || code == *resolved {
+	if err != nil || slices.Contains(resolved, code) {
 		return nil
 	}
-	return &crmcontracts.AddressCountryMismatch{ResolvedCountry: *resolved}
+	return &crmcontracts.AddressCountryMismatch{ResolvedCountry: resolved[0]}
 }
 
+// addressCountriesSQL reads a record's resolved countries beside its columns.
+// table is one of the two literal record tables.
+func addressCountriesSQL(table string) string {
+	return `(SELECT k.countries FROM ` + table + `_address_country k WHERE k.` + table + `_id = ` +
+		table + `.id) AS address_countries_resolved`
+}
+
+// assignedCountryCodes is assignedCountry as a sorted list, so the due read's
+// SQL selects the rows NormalizeCountryCode accepts and no others.
+var assignedCountryCodes = slices.Sorted(maps.Keys(assignedCountry))
+
 // ListAddressCountryChecksDue answers up to limit live records of one kind that
-// are due a check. Each holds a postal code, a city and a two-letter country,
-// unchecked since they last changed. A row with no stored country has nothing
-// to contradict, so it costs no lookup.
+// are due a check, never-checked ones first. Each holds a postal code, a city
+// and an assigned country code. It is due when unchecked since those changed,
+// or checked longer than AddressCountryRefreshAge ago.
 func (s *Store) ListAddressCountryChecksDue(
 	ctx context.Context, record CountryCheckedRecord, limit int,
 ) ([]AddressCountryCheck, error) {
@@ -81,15 +102,16 @@ func (s *Store) ListAddressCountryChecksDue(
 	var due []AddressCountryCheck
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, address_postal_code, address_city, address_country
-			  FROM `+table+`
-			 WHERE archived_at IS NULL
-			   AND address_country_checked_at IS NULL
-			   AND btrim(coalesce(address_postal_code, '')) <> ''
-			   AND btrim(coalesce(address_city, '')) <> ''
-			   AND address_country ~ '^[A-Za-z]{2}$'
-			 ORDER BY created_at, id
-			 LIMIT $1`, limit)
+			SELECT r.id, r.address_postal_code, r.address_city, r.address_country
+			  FROM `+table+` r
+			  LEFT JOIN `+table+`_address_country k ON k.`+table+`_id = r.id
+			 WHERE r.archived_at IS NULL
+			   AND (k.checked_at IS NULL OR k.checked_at < $2)
+			   AND btrim(coalesce(r.address_postal_code, '')) <> ''
+			   AND btrim(coalesce(r.address_city, '')) <> ''
+			   AND upper(btrim(r.address_country)) = ANY($3)
+			 ORDER BY k.checked_at NULLS FIRST, r.created_at, r.id
+			 LIMIT $1`, limit, s.clock().Add(-AddressCountryRefreshAge), assignedCountryCodes)
 		if err != nil {
 			return err
 		}
@@ -109,12 +131,12 @@ func (s *Store) ListAddressCountryChecksDue(
 	return due, nil
 }
 
-// RecordAddressCountry stores what the postal code and city resolved to, or that
-// they resolved to no place when found is false. It writes nothing when an edit
+// RecordAddressCountries stores the countries the postal code and city can name;
+// an empty list records that they named no place. It writes nothing when an edit
 // changed them or the country after the check read them. That edit's trigger
 // already cleared the row, and the next sweep asks again.
-func (s *Store) RecordAddressCountry(
-	ctx context.Context, check AddressCountryCheck, resolvedCode string, found bool,
+func (s *Store) RecordAddressCountries(
+	ctx context.Context, check AddressCountryCheck, resolved []string,
 ) (bool, error) {
 	if err := auth.Require(ctx, string(check.Record), principal.ActionUpdate); err != nil {
 		return false, err
@@ -123,28 +145,83 @@ func (s *Store) RecordAddressCountry(
 	if err != nil {
 		return false, err
 	}
-	var resolved *string
-	if code, err := NormalizeCountryCode(resolvedCode); found && err == nil {
-		resolved = &code
-	}
+	codes := assignedCodesOf(resolved)
 	var written bool
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritable(ctx, tx, string(check.Record), check.ID); err != nil {
 			return err
 		}
+		// FOR SHARE holds an edit back until this commits, and the edit's trigger
+		// then deletes the row. An edit that committed first leaves no row to lock.
 		tag, err := tx.Exec(ctx, `
-			UPDATE `+table+`
-			   SET address_country_resolved = $5, address_country_checked_at = $6
+			INSERT INTO `+table+`_address_country (`+table+`_id, countries, checked_at)
+			SELECT id, $5, $6 FROM `+table+`
 			 WHERE id = $1 AND archived_at IS NULL
-			   AND address_postal_code = $2 AND address_city = $3 AND address_country = $4`,
-			check.ID, check.PostalCode, check.City, check.Country, resolved, s.clock())
+			   AND address_postal_code = $2 AND address_city = $3 AND address_country = $4
+			   FOR SHARE
+			ON CONFLICT (`+table+`_id) DO UPDATE
+			   SET countries = EXCLUDED.countries, checked_at = EXCLUDED.checked_at`,
+			check.ID, check.PostalCode, check.City, check.Country, codes, s.clock())
 		written = tag.RowsAffected() == 1
 		return err
 	})
 	if err != nil {
-		return false, fmt.Errorf("recording the country of a %s address: %w", check.Record, err)
+		return false, fmt.Errorf("recording the countries of a %s address: %w", check.Record, err)
 	}
 	return written, nil
+}
+
+// LookupPlaceCountries answers the remembered countries of a place query, when
+// they were asked within AddressCountryRefreshAge. Keyed like the place cache.
+func (s *Store) LookupPlaceCountries(ctx context.Context, query string) ([]string, bool, error) {
+	key := normalizePlaceQuery(query)
+	if key == "" {
+		return nil, false, nil
+	}
+	var codes []string
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT country_codes FROM geocode_country_cache WHERE query = $1 AND resolved_at >= $2`,
+			key, s.clock().Add(-AddressCountryRefreshAge)).Scan(&codes)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("reading the place country cache: %w", err)
+	}
+	return codes, true, nil
+}
+
+// RememberPlaceCountries records one answer whole: its countries, provider and
+// time replace whatever an older answer said.
+func (s *Store) RememberPlaceCountries(ctx context.Context, query string, codes []string, provider string) error {
+	key := normalizePlaceQuery(query)
+	if key == "" {
+		return nil
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO geocode_country_cache (query, country_codes, provider, resolved_at)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (query) DO UPDATE
+			   SET country_codes = EXCLUDED.country_codes, provider = EXCLUDED.provider,
+			       resolved_at = EXCLUDED.resolved_at`,
+			key, assignedCodesOf(codes), provider, s.clock())
+		return err
+	})
+}
+
+// assignedCodesOf keeps the assigned codes of a provider answer, upper-case and
+// in order. Never nil, because an empty set is an answer.
+func assignedCodesOf(codes []string) []string {
+	out := []string{}
+	for _, raw := range codes {
+		if code, err := NormalizeCountryCode(raw); err == nil && !slices.Contains(out, code) {
+			out = append(out, code)
+		}
+	}
+	return out
 }
 
 // countryCheckedTable maps the closed record set onto its table, so no caller
