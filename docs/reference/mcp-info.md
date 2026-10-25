@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 126.0 KB |
+| Tool catalog | 126.1 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 33161 |
+| Approx. wire tokens | 33169 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 24.7 KB | 19% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 32.4 KB | 25% | Yes, every step |
-| Input schemas | 60.2 KB | 47% | Yes, every step |
+| Input schemas | 60.3 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
 | **Description + input schema** | **92.7 KB** | **73%** | **the recurring cost** |
 
@@ -73,7 +73,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1714 |
+| [`find_records`](#find_records) | Find records | yes |  | 1722 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -3231,6 +3231,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "relationship_type": {
+          "type": "string"
+        },
+        "reminder_due": {
           "type": "string"
         },
         "size_band": {
