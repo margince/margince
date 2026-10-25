@@ -110,7 +110,7 @@ To merge two duplicate contacts in Margince, open the contact you want to remove
 1. Search for the other contact and pick it under **Select record to keep**.
 2. Read the question: "Merge {source} into {target}? This archives {source}."
 3. Choose **Merge**. Margince opens the contact you kept.
-The contact you merged away is archived, not deleted. A lead has no **Merge** of its own. When two leads show as a possible duplicate in the Worklist's **To review** panel, it asks "Which record should be kept?". Press **Keep {name}** on the one to keep, and Margince merges the other into it. Deals have no merge.
+The contact you merged away is archived, not deleted. A lead has no **Merge** of its own. Two leads that may be one show in **To review** in the Worklist. Press **Keep {name}** under "Which record should be kept?", and Margince merges the other lead into it.
 
 Anyone the merged-away contact was shared with can open the contact you kept. Of their two shares, the higher access stays.
 Also called: combine, deduplicate, remove a duplicate.

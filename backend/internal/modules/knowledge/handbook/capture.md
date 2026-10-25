@@ -77,9 +77,9 @@ Create no contact and no company.
 
 **Is it a consumer mail domain?** These are personal mailboxes, and Margince ships with a long
 list of them; the Capture rules screen shows the count. A sender on one never makes a company.
-They become a contact at once only if someone at your company has mailed back and forth with them,
-or had a meeting with them. An older decision that let them in also counts. Otherwise they become a
-contact only once Margince has sorted them.
+They become a contact at once after a meeting, or after mail both ways, with someone at your company.
+An older decision that let them in also counts. If not, they become a contact only once Margince has
+sorted them.
 
 **Nobody knows who this is.** Create nothing yet, and note the open question.
 
@@ -339,7 +339,7 @@ To correct what Margince decided about a sender, open **Settings → Capture act
 1. Open **Settings**, then **Capture activity**, and go down to **Senders**.
 2. Find the address; the **Decision** column shows what was decided. **Contact** opens the contact that holds the address. **Messages** counts your stored mail with it. **Last seen** is when the newest of those arrived or went out.
 3. Open its **…** (**Actions**) menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
-**Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. Margince still receives their later mail, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored. **Withdraw my answer** takes back your answer. Margince's own sorting never writes over a decision you make.
+**Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. Margince still receives their later mail, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored. What Margince sorts by itself never writes over a decision you make.
 Also called: mark as not spam, whitelist a sender.
 
 ## Things you control yourself
