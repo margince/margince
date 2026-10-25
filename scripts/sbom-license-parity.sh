@@ -54,10 +54,14 @@ def norm(value: str) -> str:
     Only a single-operator expression is reordered — mixing OR and AND makes
     the order meaningful, and such a spelling is left exactly as it stands.
     """
-    flat = re.sub(r"\s+", " ", value.replace("(", " ").replace(")", " ")).strip().upper()
+    spaced = re.sub(r"\s+", " ", value).strip().upper()
+    if " OR " in spaced and " AND " in spaced:
+        # Both operators: the parentheses carry the grouping, and dropping them
+        # would make `(A OR B) AND C` compare equal to `A OR (B AND C)`.
+        return re.sub(r"\s*([()])\s*", r"\1", spaced)
+    flat = re.sub(r"\s+", " ", spaced.replace("(", " ").replace(")", " ")).strip()
     for operator in (" OR ", " AND "):
-        other = " AND " if operator == " OR " else " OR "
-        if operator in flat and other not in flat:
+        if operator in flat:
             return operator.join(sorted(part.strip() for part in flat.split(operator)))
     return flat
 
@@ -106,14 +110,33 @@ def license_name(ref: str, depth: int = 0) -> str:
         members = [license_name(m, depth + 1) for m in element.get("expandedlicensing_member", [])]
         return f" {joiner} ".join(sorted(members))
     return element.get("name") or ref.rsplit("/", 1)[-1]
-declared: dict[str, list[str]] = {}
-for e in graph:
-    if e.get("type") == "Relationship" and e.get("relationshipType") == "hasDeclaredLicense":
-        declared.setdefault(e["from"], []).extend(
-            license_name(t) for t in e.get("to", []))
-s30 = {e["software_packageUrl"]: sorted(set(declared.get(e["spdxId"], [])))
-       for e in graph
-       if e.get("type") == "software_Package" and e.get("software_packageUrl")}
+def relationship(kind: str) -> dict[str, list[str]]:
+    found: dict[str, list[str]] = {}
+    for e in graph:
+        if e.get("type") == "Relationship" and e.get("relationshipType") == kind:
+            found.setdefault(e["from"], []).extend(license_name(t) for t in e.get("to", []))
+    return found
+
+
+def packages(kind: str) -> dict[str, list[str]]:
+    found = relationship(kind)
+    return {e["software_packageUrl"]: sorted(set(found.get(e["spdxId"], [])))
+            for e in graph
+            if e.get("type") == "software_Package" and e.get("software_packageUrl")}
+
+
+s30 = packages("hasDeclaredLicense")
+
+# The supplement sets a mapped purl's license as declared AND concluded, so a
+# check that reads one of the two passes while the other names something else.
+concluded = {
+    "SPDX 2.2": {purl: [p["licenseConcluded"]] if p.get("licenseConcluded") else []
+                 for p in load(s22_path).get("packages", [])
+                 for purl in [next((r["referenceLocator"] for r in p.get("externalRefs", []) or []
+                                    if r.get("referenceType") == "purl"), "")]
+                 if purl},
+    "SPDX 3.0": packages("hasConcludedLicense"),
+}
 
 supplement = load(map_path)
 docs = {"CycloneDX": cdx, "SPDX 2.2": s22, "SPDX 3.0": s30}
@@ -134,7 +157,7 @@ for purl in set(cdx) | set(s22) | set(s30):
     want = supplement.get(key(purl))
     if not want:
         continue
-    for name, doc in docs.items():
+    for name, doc in list(docs.items()) + [(f"{k} concluded", v) for k, v in concluded.items()]:
         got = [v for v in doc.get(purl, []) if stated(v)]
         if [norm(v) for v in got] != [norm(want)]:
             problems.append(

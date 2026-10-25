@@ -1049,6 +1049,14 @@ test-sbom-sign:
 test-sbom-census:
 	@./scripts/test-sbom-census.sh
 
+## test-sbom-license-parity — prove the licence comparison inside
+## `sbom-parity` fails on each way the three signed documents can disagree,
+## and passes on the ways they differ harmlessly. Planted documents, and the
+## real script: a comparison nothing tests is one that can quietly compare
+## the intersection and report a pass.
+test-sbom-license-parity:
+	@./scripts/test-sbom-license-parity.sh
+
 ## test-api-entrypoint — prove the container entrypoint writes the bootstrap
 ## credential ONLY onto an unprovisioned installation, retires a spent one, and
 ## refuses to start when it cannot tell which it is. Every failure on that path
