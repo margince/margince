@@ -5,8 +5,8 @@
 import { cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { type Locale, LocaleProvider } from "../i18n";
-import { useHealthReason } from "./companylookups";
+import { type Locale, LocaleProvider, useT } from "../i18n";
+import { formatSizeBand, useHealthReason } from "./companylookups";
 
 afterEach(cleanup);
 
@@ -34,5 +34,21 @@ describe("useHealthReason on a meeting held today", () => {
   it("keeps the counted sentence for a meeting on an earlier day", () => {
     expect(reasonIn("en", 1)).toBe("Last met them 1 day ago.");
     expect(reasonIn("en", 5)).toBe("Last met them 5 days ago.");
+  });
+});
+
+describe("formatSizeBand", () => {
+  it.each([
+    ["en", "51–200 employees"],
+    ["de", "51–200 Mitarbeitende"],
+    ["vi", "51–200 nhân viên"],
+  ] as const)("says what a band counts in %s", (locale, expected) => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <LocaleProvider initial={locale}>{children}</LocaleProvider>
+    );
+    const { result } = renderHook(() => formatSizeBand(useT(), "51-200"), {
+      wrapper,
+    });
+    expect(result.current).toBe(expected);
   });
 });

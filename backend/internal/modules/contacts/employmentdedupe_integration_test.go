@@ -8,6 +8,7 @@ package contacts
 import (
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/filedpairs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -117,5 +118,30 @@ func TestPromotingAnEmploymentToCurrentPrimaryFilesTheTwin(t *testing.T) {
 
 	if pairs := openCandidatePairs(ctx, t, e, "contact", twin.UUID); len(pairs) != 1 {
 		t.Fatalf("got pairs %+v, want the pair with the contact on file", pairs)
+	}
+}
+
+func TestEmploymentEdgeNotesOnlyThePairItFiled(t *testing.T) {
+	e := setupDedupe(t)
+	acme := mustEmployer(t, e, "Acme Robotics GmbH")
+	onFile := mustContact(t, e, "Marlene Wiesinger")
+	employ(t, e, onFile, acme)
+	twin := mustContact(t, e, "Marlene Wiesingr")
+	ctx, sink := filedpairs.Collect(e.as())
+	company := acme
+
+	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
+		Kind: employmentKind, ContactID: &twin, CompanyID: &company, Source: "manual",
+	}); err != nil {
+		t.Fatalf("employ: %v", err)
+	}
+
+	pairs, err := e.store.OpenCandidatesNaming(e.as(), entityContact, twin.UUID, nil)
+	if err != nil {
+		t.Fatalf("reading the queue: %v", err)
+	}
+	noted := sink.IDs()
+	if len(pairs) != 1 || len(noted) != 1 || noted[0] != pairs[0].ID {
+		t.Fatalf("noted %v, queue has %+v, want the one pair the edge filed", noted, pairs)
 	}
 }

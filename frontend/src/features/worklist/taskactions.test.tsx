@@ -19,6 +19,7 @@ import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useMe } from "../../lib/session";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
+import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -40,11 +41,12 @@ afterEach(cleanup);
 
 function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
         kind: "task",
+        writable: true,
         subject: "Create a comparison sheet with two products",
         body: "Lena Fischer committed to this in the meeting transcript (line 6).",
         due_at: "2026-09-11T21:59:59Z",
@@ -121,11 +123,12 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
   // sitting in `data`. Rendering that beside the error is what this holds.
   let refused = false;
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
         kind: "task",
+        writable: true,
         subject: "Create a comparison sheet with two products",
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: false,
@@ -167,11 +170,12 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
 
 test("a source that cannot be read says so instead of disappearing", async () => {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
         kind: "task",
+        writable: true,
         subject: "Create a comparison sheet with two products",
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: false,
@@ -192,11 +196,12 @@ test("a source that cannot be read says so instead of disappearing", async () =>
 // the same presentation endpoint the panel asks.
 function stubEmailRequest(parties: Record<string, unknown> = {}) {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
         kind: "task",
+        writable: true,
         subject: "Report requested",
         source_activity_id: "email-1",
         occurred_at: "2026-09-01T09:00:00Z",
@@ -334,11 +339,12 @@ test("a task a colleague typed carries no AI mark", async () => {
 
 function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
         kind: "task",
+        writable: true,
         subject: "Send the renewal paperwork",
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: false,
@@ -404,11 +410,12 @@ function stubNextSteps({
   routes = {},
 }: NextStepsCase = {}) {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
         kind: "task",
+        writable: true,
         subject: "Call back Alice about the renewal",
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: isDone,
@@ -672,8 +679,13 @@ function openWarm({ isDone = false, readOnly = false } = {}) {
     occurred_at: "2026-09-08T09:00:00Z",
     is_done: isDone,
     source_activity_id: "src-1",
+    writable: true,
     links: [{ entity_type: "contact", entity_id: "c-1" }],
   });
+  client.setQueryData(
+    ["me"],
+    meFixture({ allow: { activity: ["read", "update"] }, seat: "full" }),
+  );
   client.setQueryData(["activity", "src-1"], {
     id: "src-1",
     kind: "call",

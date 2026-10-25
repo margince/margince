@@ -483,6 +483,33 @@ describe("the deals tab", () => {
     ).toBeNull();
   });
 
+  it("words a closed deal's day as when it closed, not as a forecast", async () => {
+    stubWithSession(
+      {
+        "GET /deals/d-1": () =>
+          jsonResponse({
+            ...DEAL_D1,
+            status: "won",
+            closed_at: "2026-08-20T12:00:00Z",
+            expected_close_date: "2026-03-02",
+          } satisfies Deal),
+      },
+      {},
+    );
+    const withCommercial: Contact360 = {
+      ...view,
+      commercial: {
+        deal: { deal_id: "d-1", title: "Fleet renewal 2026" },
+        role: "economic_buyer",
+        committee: [],
+      },
+    };
+    withProviders(<ContactDealsTab view={withCommercial} />);
+    expect(await screen.findByText(/closed 20 Aug/i)).toBeTruthy();
+    expect(screen.queryByText(/closes/i)).toBeNull();
+    expect(screen.queryByText(/2 Mar/)).toBeNull();
+  });
+
   // A seat may record no role — the schema requires one only for
   // billing_contact — so the row shows the name with nothing where the role
   // would be, rather than a word the data does not support.

@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -71,6 +72,14 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 	if err != nil {
 		return nil, false, err
 	}
+	var zone *time.Location
+	if err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
+		var zoneErr error
+		zone, zoneErr = identity.ZoneAppliedTx(ctx, tx)
+		return zoneErr
+	}); err != nil {
+		return nil, false, err
+	}
 	risky := make([]attention.RiskyDeal, 0, len(candidates))
 	for _, deal := range candidates {
 		risky = append(risky, attention.RiskyDeal{
@@ -80,7 +89,7 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 			OwnerID:              deal.OwnerID,
 			AmountMinor:          deal.AmountMinor,
 			Currency:             deal.Currency,
-			QuietDays:            idleDaysOf(deal, now),
+			QuietDays:            idleDaysOf(deal, now, zone),
 			LastTouchedAt:        idlebase.Since(deal.CreatedAt, deal.LastActivityAt),
 			CloseOverdue:         deal.CloseOverdue,
 			ExpectedCloseDate:    deal.ExpectedCloseDate,
@@ -99,12 +108,8 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 // fallback here. A card that computed the base itself would agree with the
 // stalled rule by inspection and then drift the first time either moved, which
 // is what the one-spelling gate exists to stop.
-func idleDaysOf(deal agents.SlippingDeal, now time.Time) int {
-	days := int(now.Sub(idlebase.Since(deal.CreatedAt, deal.LastActivityAt)).Hours() / 24)
-	if days < 0 {
-		return 0
-	}
-	return days
+func idleDaysOf(deal agents.SlippingDeal, now time.Time, zone *time.Location) int {
+	return max(elapsed.Days(idlebase.Since(deal.CreatedAt, deal.LastActivityAt), now, zone), 0)
 }
 
 // decayCandidateCap bounds the candidate set the decay lane derives.

@@ -36,6 +36,7 @@ export const ConfirmOpen: Story = {
     archive: () => Promise.resolve({ id: "p-1" }),
     invalidate: "contacts",
     recordKey: "contact",
+    requires: { object: "contact", action: "delete" },
     onArchived: () => undefined,
   },
   play: async ({ canvasElement }) => {

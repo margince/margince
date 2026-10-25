@@ -24996,7 +24996,10 @@ type Activity struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version              *RowVersion            `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty"`
+
+	// Writable Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -27256,6 +27259,9 @@ type AnalyticsSchema struct {
 
 // AnalyticsScope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 type AnalyticsScope struct {
+	// Assertable Whether this caller may record a forecast call or issue a share about this population. Absent from a server that predates the field; a screen then offers the controls and the write route decides.
+	Assertable *bool `json:"assertable,omitempty"`
+
 	// Id The team or contact measured. Absent for workspace and managed_teams, which name no single subject.
 	Id *openapi_types.UUID `json:"id,omitempty"`
 
@@ -47083,7 +47089,7 @@ type QuickCaptureContactRequest struct {
 	FullName string               `json:"full_name"`
 	Phone    *string              `json:"phone,omitempty"`
 
-	// ProfileUrl The public profile this was read from. Stored, never fetched.
+	// ProfileUrl The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field.
 	ProfileUrl *string `json:"profile_url,omitempty"`
 
 	// Role What they do at that employer, when it differs from `title`.
@@ -64641,6 +64647,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -64935,6 +64949,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
 		}
 	}
 

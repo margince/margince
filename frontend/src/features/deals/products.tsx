@@ -373,6 +373,7 @@ export function ProductsAdmin() {
           )}
           {canArchive && (
             <ArchiveAction
+              requires={{ object: "product", action: "delete" }}
               label={t("product.archive")}
               confirmText={t("product.archiveConfirm")}
               archivedMessage={t("record.archiveDone", { name: p.name })}

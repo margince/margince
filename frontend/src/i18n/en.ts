@@ -2066,7 +2066,7 @@ export const en = {
   "history.field.resolved_category": "Message category",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Score override reason",
-  "history.field.size_band": "Size",
+  "history.field.size_band": "Employees",
   "history.field.social": "Social profiles",
   "history.field.source": "Source",
   "history.field.origin": "Origin",
@@ -2311,6 +2311,8 @@ export const en = {
   "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange":
     "You cannot edit this company. Ask its owner to share it, or an administrator for edit rights.",
+  "record.actionRefused":
+    "Your role does not include this action. Ask an administrator for the right.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
@@ -2384,6 +2386,8 @@ export const en = {
   // The picked record's detail line, so two look-alike names stay apart here too.
   "merge.confirmDetail":
     "Merge {source} into {target} ({detail})? This archives {source}.",
+  "merge.targetReadOnly":
+    "You can only read this record, so it cannot be kept.",
   "merge.submit": "Merge",
 
   "tab.overview": "Overview",
@@ -2737,7 +2741,7 @@ export const en = {
   "list.viewProspects": "Prospects",
   "company.filterLifecycleAll": "Any stage",
   "company.filterRelTypeAll": "Any type",
-  "company.filterSizeBandAll": "Any size",
+  "company.filterSizeBandAll": "Any number of employees",
   "consent.confirmRecipient": "Send to {address}",
   "consent.guardFailed": "Communication permissions could not be loaded.",
   "consent.permissionScope":
@@ -2808,7 +2812,8 @@ export const en = {
   // questions the retired classification answered with one value.
   "company.lifecycle": "Lifecycle",
   "company.relationshipTypes": "Relationship type",
-  "company.sizeBand": "Company size",
+  "company.sizeBand": "Employees",
+  "company.sizeBandValue": "{band} employees",
   "company.lifecycle.unknown": "Unknown",
   "company.lifecycle.target": "Target",
   "company.lifecycle.prospect": "Prospect",
@@ -2893,7 +2898,7 @@ export const en = {
   "co.overview.kind.message": "message",
   "record.details.about": "About",
   "record.details.ownership": "Ownership",
-  "co.aside.size": "Size",
+  "co.aside.size": "Employees",
   "co.aside.wayIn": "Way in",
   "record.details.visibleTo": "Visible to",
   "co.aside.visibleEveryone": "Everyone",
@@ -3896,6 +3901,8 @@ export const en = {
   "activity.detail.none": "This activity",
   "activity.followUps": "Follow-up tasks",
   "activity.noFollowUps": "No follow-up tasks",
+  "activity.notYoursToChange":
+    "You cannot change this activity. Ask the colleague it belongs to, or an administrator, for edit rights.",
   "activity.files.empty": "No files on this activity yet.",
   "activity.files.title": "Files on {subject}",
   "activity.followUpOpen": "Open",
@@ -5658,7 +5665,7 @@ export const en = {
   "create.displayName": "Company name",
   "create.legalName": "Legal name",
   "create.industry": "Industry",
-  "create.sizeBand": "Company size",
+  "create.sizeBand": "Employees",
   "co.address.summary": "Address",
   "co.address.countryMismatch": "Postal code and city are in {country}",
 
@@ -6451,7 +6458,7 @@ export const en = {
   "analytics.field.project": "Project label",
   "analytics.field.project_id": "Project",
   "analytics.field.quiet_since": "Quiet since",
-  "analytics.field.size_band": "Company size",
+  "analytics.field.size_band": "Employees",
   "analytics.field.source": "Source",
   "analytics.field.origin": "Origin",
   "analytics.field.stage_id": "Stage",
@@ -7818,7 +7825,7 @@ export const en = {
   "import.reason.row_key_repeated":
     "The “{column}” value “{value}” is already used by line {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
   "import.reason.size_band_invalid":
-    "Size_band “{value}” is not one of {allowed}.",
+    "Employees “{value}” is not one of {allowed}.",
   "import.reason.tag_created":
     "No tag had this name, so the import created it.",
   "import.reason.tag_name_invalid":
@@ -14607,6 +14614,7 @@ export const en = {
     "You do not have access to this contact’s deals.",
   "contact.commercial.noDeal": "No open deal.",
   "contact.commercial.closes": "closes {date}",
+  "contact.commercial.closed": "closed {date}",
   "contact.commercial.committee": "Buying committee",
   "contact.commercial.openDeal": "Open deal",
 
@@ -15016,7 +15024,7 @@ export const en = {
   "filters.field.classification": "Classification",
   "filters.field.company_industry": "Company industry",
   "filters.field.company_lifecycle": "Company lifecycle",
-  "filters.field.company_size_band": "Company size",
+  "filters.field.company_size_band": "Employees",
   "filters.field.country": "Country code",
   "filters.field.created_at": "Created",
   "filters.field.hosting_provider": "Hosting",

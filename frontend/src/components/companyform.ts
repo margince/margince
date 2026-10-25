@@ -20,10 +20,11 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { industryOptions } from "../format/industry";
-import type { Locale } from "../i18n";
+import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
 import {
+  formatSizeBand,
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
   RELATIONSHIP_TYPE_LABELS,
@@ -53,6 +54,7 @@ export async function searchCompanyTargets(
   return data.data.map((candidate) => ({
     id: candidate.id,
     name: candidate.display_name,
+    writable: candidate.writable,
     detail: candidate.domains?.find((domain) => domain.is_primary)?.domain,
   }));
 }
@@ -238,7 +240,7 @@ export function addressPatch(
 }
 
 export function companyCreateFields(
-  t: (key: MessageKey) => string,
+  t: Translator,
   locale: Locale,
 ): CreateField[] {
   return [
@@ -254,7 +256,10 @@ export function companyCreateFields(
       key: "size_band",
       label: "create.sizeBand",
       type: "select",
-      options: SIZE_BAND_OPTIONS.map((band) => ({ value: band, label: band })),
+      options: SIZE_BAND_OPTIONS.map((band) => ({
+        value: band,
+        label: formatSizeBand(t, band),
+      })),
     },
     {
       key: "domains",
@@ -294,7 +299,7 @@ export const RELATIONSHIP_TYPE_OPTIONS = [
 export function companyEditFields(
   owners: readonly { id: string; display_name: string }[],
   hasOwner: boolean,
-  t: (key: MessageKey) => string,
+  t: Translator,
   locale: Locale,
 ): CreateField[] {
   return [
@@ -310,7 +315,10 @@ export function companyEditFields(
       key: "size_band",
       label: "create.sizeBand",
       type: "select",
-      options: SIZE_BAND_OPTIONS.map((band) => ({ value: band, label: band })),
+      options: SIZE_BAND_OPTIONS.map((band) => ({
+        value: band,
+        label: formatSizeBand(t, band),
+      })),
     },
     // Who is accountable for this account. It defaults to whoever created the
     // record and stays there until someone changes it — which, until now,

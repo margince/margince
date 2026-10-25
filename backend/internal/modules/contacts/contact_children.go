@@ -25,14 +25,15 @@ import (
 
 //nolint:unparam // all four child writers here take (ctx, tx, wsID, contactID, …); dropping wsID from the two that do not spend it would make a reader check which is which at every call site.
 func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, social map[string]any) error {
-	if social == nil {
-		return nil
+	rows, err := contactSocialInputs(social)
+	if social == nil || err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM contact_social WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("clear contact social rows: %w", err)
 	}
-	for _, row := range contactSocialInputs(social) {
+	for _, row := range rows {
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact_social (contact_id, platform, handle) VALUES ($1, $2, $3)`,
 			contactID, row.Platform, row.Handle); err != nil {

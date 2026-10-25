@@ -11,6 +11,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { useT } from "../i18n";
+import { type RequiredGrant, useGrantRefused } from "../lib/capability";
 import { navigate, type Route } from "../lib/router";
 import "../design-system/querystates.css";
 
@@ -32,6 +33,7 @@ export function MergeAction<Survivor extends { id: string }>({
   recordKey,
   survivorRoute,
   disabledReasonId,
+  requires,
 }: Readonly<{
   label: string;
   sourceId: string;
@@ -53,8 +55,11 @@ export function MergeAction<Survivor extends { id: string }>({
   // visible and disabled WITH the reason, because the reason is the
   // information and hiding the control hides a fact the reader needs.
   disabledReasonId?: string;
+  // The grant the merge needs; required for the reason `ArchiveAction` gives.
+  requires: RequiredGrant;
 }>) {
   const t = useT();
+  const refused = useGrantRefused(requires);
   const queryClient = useQueryClient();
   const headingId = useId();
   const [open, setOpen] = useState(false);
@@ -86,6 +91,7 @@ export function MergeAction<Survivor extends { id: string }>({
     <>
       <Button
         reasonId={disabledReasonId}
+        reason={refused ? t("record.actionRefused") : undefined}
         onClick={() => setOpen(true)}
         data-testid="merge-record"
       >
@@ -102,6 +108,13 @@ export function MergeAction<Survivor extends { id: string }>({
             searchTargets={searchOthers}
             onPick={setTarget}
             selected={target}
+            // The server refuses a survivor the caller cannot write.
+            // An omitted flag means not writable, so such a row says so here.
+            unavailableReason={(candidate) =>
+              candidate.writable !== true
+                ? t("merge.targetReadOnly")
+                : undefined
+            }
             disabled={mutation.isPending}
           />
           {target && (

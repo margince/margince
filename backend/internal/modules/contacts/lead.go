@@ -271,7 +271,7 @@ func normalizedCreateLeadInput(in CreateLeadInput) (CreateLeadInput, error) {
 		in.Phone = &normalized
 	}
 	if in.LinkedInURL != nil {
-		normalized, err := NormalizeLinkedInURL(*in.LinkedInURL)
+		normalized, err := NormalizeContactLinkedInURL(*in.LinkedInURL)
 		if err != nil {
 			return CreateLeadInput{}, err
 		}
@@ -328,7 +328,7 @@ func (s *Store) FindLeadByLinkedInURL(ctx context.Context, rawURL string) (*crmc
 	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	normalized, err := NormalizeLinkedInURL(rawURL)
+	normalized, err := NormalizeContactLinkedInURL(rawURL)
 	if err != nil {
 		return nil, err
 	}

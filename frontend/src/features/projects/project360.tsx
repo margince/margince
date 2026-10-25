@@ -472,6 +472,7 @@ function ProjectActions({
       {/* Last, and set apart by the panel's own seam (atoms.css): the one
           verb a reader cannot walk back does not sit in the routine run. */}
       <ArchiveAction
+        requires={{ object: "project", action: "delete" }}
         disabledReasonId={refusedReasonId}
         label={t("project.archive")}
         confirmText={t("project.archiveConfirm")}

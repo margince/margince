@@ -258,6 +258,9 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	if err := WithCommitmentAdmissions(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	if err := StampActivitiesWritable(ctx, tx, one); err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	return one[0], nil
 }
 

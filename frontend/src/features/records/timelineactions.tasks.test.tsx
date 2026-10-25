@@ -29,6 +29,7 @@ const TASK: Activity = {
   offers_email: false,
   id: "task-1",
   kind: "task",
+  writable: true,
   subject: "Send the revised quote",
   occurred_at: "2026-06-01T09:00:00Z",
   created_at: "2026-06-01T09:00:00Z",

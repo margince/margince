@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -97,10 +98,14 @@ func WriteProjectQuietSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Gh
 	if err != nil {
 		return GhostedPass{}, err
 	}
+	loc, err := installationZoneTx(ctx, tx)
+	if err != nil {
+		return GhostedPass{}, err
+	}
 	said := signalSummaryCopyFor(identity.BaseLanguageForRecord(ctx, tx))
 	pass := GhostedPass{Considered: len(found)}
 	for _, project := range found {
-		days := int(now.Sub(project.QuietSince).Hours() / 24)
+		days := max(elapsed.Days(project.QuietSince, now, loc), 0)
 		raised, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 			Kind:        kindProjectGoneQuiet,
 			CompanyID:   project.CompanyID,

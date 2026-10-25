@@ -206,6 +206,7 @@ function ActivityBody({
             <PanelBody>
               <ActivityFiles
                 activityId={activity.id}
+                writable={activity.writable ?? false}
                 archived={Boolean(activity.archived_at)}
               />
             </PanelBody>

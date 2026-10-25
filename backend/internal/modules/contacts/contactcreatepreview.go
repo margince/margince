@@ -65,7 +65,9 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 		if out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields); err != nil {
 			return err
 		}
-		out.Social = contactSocialInputs(in.Social)
+		if out.Social, err = contactSocialInputs(in.Social); err != nil {
+			return err
+		}
 		out.Acquisition = normalizedAcquisition(acquisitionForCreate(in))
 		allowed, err := mayPromoteHeldLeads(creatorCtx)
 		if err != nil || !allowed {

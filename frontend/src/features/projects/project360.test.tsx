@@ -247,6 +247,7 @@ describe("ProjectScreen", () => {
               offers_email: false,
               id: "act-1",
               kind: "email",
+              writable: true,
               subject: "Kickoff agenda",
               occurred_at: "2026-07-01T09:00:00Z",
               is_done: false,
@@ -557,6 +558,7 @@ describe("a commitment's task detail", () => {
   const TASK = {
     id: commitment.activity_id,
     kind: "task" as const,
+    writable: true,
     subject: commitment.subject,
     is_done: false,
     version: 1,
