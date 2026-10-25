@@ -31,6 +31,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -138,11 +139,9 @@ const waitersBehind = `
 
 // waitUntilQueueIs waits until want backends are queued on the pinned row.
 //
-// The sibling probe asks whether anything queues at all, which one parked
-// create satisfies. Here both have to be parked before the row is released.
-//
-// Releasing with one still in flight runs the second against a committed lead.
-// That is the sequential case the suite already covers.
+// Both writers have to be parked before the row is released. Releasing with one
+// still in flight runs the second against a lead already committed, which is a
+// sequential write and not a race.
 func waitUntilQueueIs(t *testing.T, want int, holder uint32, racerReturned <-chan struct{},
 	finishedEarly, missed string,
 ) {
@@ -170,9 +169,7 @@ func waitUntilQueueIs(t *testing.T, want int, holder uint32, racerReturned <-cha
 // race owes them a refusal.
 //
 // What is asserted is the order, not the absence of a deadlock. Racing the two
-// and watching for 40P01 passes on every run where they never interleaved. A
-// suite that only means "they missed each other today" is the census AGENTS.md
-// rule 8 describes.
+// and watching for 40P01 passes on every run where they never interleaved.
 //
 // So the create is parked on a pinned contact row and asked what it holds. It
 // holds nothing on the lead, or it does not take the contact first.
@@ -219,5 +216,55 @@ func TestACreateFromAContactTakesTheContactBeforeTheLead(t *testing.T) {
 	if got := <-refusal; !errors.As(got, &duplicate) {
 		t.Fatalf("the create past the released contact lock answered %v, want the "+
 			"duplicate-contact refusal", got)
+	}
+}
+
+// A create and a demote over one contact, both in flight, end without a cycle.
+//
+// The two take the contact and the lead in the same order, which the tests above
+// and TestTheDemoteTakesTheContactBeforeTheLead each hold for one side. Neither
+// runs the two together, so nothing yet says what happens when they do.
+//
+// Both are parked on the pinned contact row before it is released, so the
+// interleaving is arranged rather than hoped for.
+//
+// What is asserted is that neither comes back with 40P01. A cycle aborts one of
+// them, and its caller reads a 5xx where a serialized race owes them an answer.
+func TestACreateAndADemoteOverOneContactDoNotDeadlock(t *testing.T) {
+	e := Setup(t)
+	lead, contact := promotedPair(t, e, "Ilse Verwaltung", "ilse@kanzlei.test")
+
+	release, holderPID := pinRow(t, holdContactRow, contact.UUID)
+	outcomes := make(chan error, racers)
+	var announceReturn sync.Once
+	firstReturned := make(chan struct{})
+	report := func(err error) {
+		announceReturn.Do(func() { close(firstReturned) })
+		outcomes <- err
+	}
+
+	go func() {
+		_, err := e.Contacts.DemoteLead(e.Admin(), lead, "not a real opportunity")
+		report(err)
+	}()
+	go func() {
+		_, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
+			FullName: new("Ilse Again"), Source: "manual",
+			OwnerID: userIDPtr(&e.Rep1), FromContactID: &contact,
+		})
+		report(err)
+	}()
+
+	waitUntilQueueIs(t, racers, holderPID, firstReturned,
+		"one of the two returned without ever waiting on the contact row, so they were never "+
+			"ordered against each other and a cycle between them stays untested",
+		"the create and the demote never both queued behind the contact lock: one of them "+
+			"reaches its second row without holding the contact, which is the order a cycle needs")
+	release()
+
+	for range racers {
+		if err := <-outcomes; storekit.IsDeadlock(err) {
+			t.Fatalf("a create and a demote over one contact deadlocked: %v", err)
+		}
 	}
 }
