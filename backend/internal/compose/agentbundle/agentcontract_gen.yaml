@@ -15410,12 +15410,15 @@ components:
       readOnly: true
       description: >-
         The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail.
-      required: [activity_id, kind, occurred_at]
+      required: [activity_id, kind, occurred_at, occurred_precision]
       properties:
         activity_id: {type: string, format: uuid, description: The mail to open.}
         kind: {type: string, description: 'The activity kind the file arrived with: email, message.'}
         subject: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time, description: When the mail was sent or received.}
+        occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         sender:
           $ref: '#/components/schemas/EmailParty'
           description: >-

@@ -27974,6 +27974,9 @@ type AttachmentOrigin struct {
 	// OccurredAt When the mail was sent or received.
 	OccurredAt time.Time `json:"occurred_at"`
 
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
 	// Sender One address on a message, resolved to a contact or a seat when it is one.
 	Sender  *EmailParty `json:"sender,omitempty"`
 	Subject *string     `json:"subject,omitempty"`

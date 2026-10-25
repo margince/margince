@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 9 |
 | Tool catalog | 126.5 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 33271 |
+| Approx. wire tokens | 33281 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -3727,6 +3727,9 @@ document register, filtered by category, contract or state. Keep next_cursor to 
                   },
                   "occurred_at": {
                     "format": "date-time",
+                    "type": "string"
+                  },
+                  "occurred_precision": {
                     "type": "string"
                   },
                   "sender_address": {

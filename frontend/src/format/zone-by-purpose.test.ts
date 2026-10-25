@@ -194,6 +194,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Days in a stage are counted in the record zone; the fixture pins UTC so the expected count does not move with the test machine.",
   },
   {
+    file: "features/deals/dealfiles.test.tsx",
+    why: "A file from a mail logged by its day is dated by that day; only a record zone at UTC+14 puts the stored noon on the next local date.",
+  },
+  {
     file: "features/capture/connectors.historybaseline.stories.tsx",
     why: "A mailbox history baseline stores the zone its owner picked the date in; the fixture carries that stored zone.",
   },

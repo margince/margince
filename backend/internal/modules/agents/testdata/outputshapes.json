@@ -840,6 +840,9 @@
                 "type": "string",
                 "format": "date-time"
               },
+              "occurred_precision": {
+                "type": "string"
+              },
               "sender_address": {
                 "type": "string"
               },
@@ -5959,6 +5962,9 @@
                     "occurred_at": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "occurred_precision": {
+                      "type": "string"
                     },
                     "sender_address": {
                       "type": "string"

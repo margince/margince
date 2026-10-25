@@ -34,12 +34,15 @@ type AttachedDocument struct {
 
 // DocumentOrigin names the mail a file came with, as the Documents tab names it.
 type DocumentOrigin struct {
-	ActivityID    ids.UUID  `json:"activity_id"`
-	Kind          string    `json:"kind"`
-	Subject       string    `json:"subject,omitempty"`
-	OccurredAt    time.Time `json:"occurred_at"`
-	SenderName    string    `json:"sender_name,omitempty"`
-	SenderAddress string    `json:"sender_address,omitempty"`
+	ActivityID ids.UUID  `json:"activity_id"`
+	Kind       string    `json:"kind"`
+	Subject    string    `json:"subject,omitempty"`
+	OccurredAt time.Time `json:"occurred_at"`
+	// OccurredPrecision is "day" when only OccurredAt's date is known; absent
+	// on an instant. A day's date is its UTC date, so it is named unconverted.
+	OccurredPrecision string `json:"occurred_precision,omitempty"`
+	SenderName        string `json:"sender_name,omitempty"`
+	SenderAddress     string `json:"sender_address,omitempty"`
 }
 
 // DocumentPage is one page of a record's documents, newest first.

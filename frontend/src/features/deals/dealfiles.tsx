@@ -13,6 +13,7 @@ import {
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { undoAction, useToast } from "../../design-system/toast";
+import { activityDay } from "../../format/activitywhen";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -208,11 +209,15 @@ function FilesTable({
           key: "added",
           header: t("dealfiles.col.added"),
           render: (doc) =>
-            formatDateAbbrev(
-              doc.attachment.origin?.occurred_at ?? doc.attachment.created_at,
-              locale,
-              recordZone,
-            ),
+            doc.attachment.origin
+              ? activityDay(
+                  doc.attachment.origin.occurred_at,
+                  doc.attachment.origin.occurred_precision,
+                  locale,
+                  recordZone,
+                  formatDateAbbrev,
+                )
+              : formatDateAbbrev(doc.attachment.created_at, locale, recordZone),
         },
         ...(mayWrite
           ? [
