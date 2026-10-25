@@ -43,7 +43,7 @@ import (
 //
 // A hand-logged meeting is untouched: nothing captured it, so this function
 // never runs for it and it stays workspace-readable like the note it is.
-func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, decision counterpartyDecision, derivedLinks int) error {
+func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, kind string, decision counterpartyDecision, derivedLinks int) error {
 	if decision.create || len(rec.Links) > 0 || derivedLinks > 0 {
 		return nil
 	}
@@ -67,9 +67,9 @@ func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, re
 	// merely named nobody is held only until something files it. A reader that
 	// tried to tell the two apart afterwards, by kind or by any other proxy,
 	// would be guessing at a distinction only this decision knows.
-	reason := audienceReasonNoRecord
-	if decision.traceReason == traceReasonNoCounterparty {
-		reason = audienceReasonNoCounterparty
+	reason, err := linkLessReason(ctx, tx, rec, kind, decision)
+	if err != nil {
+		return err
 	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE activity SET audience = $2, audience_reason = $3 WHERE id = $1`,
@@ -81,6 +81,26 @@ func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, re
 		return fmt.Errorf("capture: limiting a link-less message to its participants: %d rows, want 1", tag.RowsAffected())
 	}
 	return nil
+}
+
+// linkLessReason names why a link-less message is held. Mail between members
+// names nobody outside, so it carries the members_only reason the birth decision
+// gives it: a later link does not open it, as it does a message that only named
+// nobody.
+func linkLessReason(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, kind string, decision counterpartyDecision) (string, error) {
+	if decision.traceReason != traceReasonNoCounterparty {
+		return audienceReasonNoRecord, nil
+	}
+	if kind == kindEmail {
+		members, err := MemberAddressesTx(ctx, tx)
+		if err != nil {
+			return "", err
+		}
+		if members.CoverEveryParty(rec.Addresses) {
+			return audienceReasonMembersOnly, nil
+		}
+	}
+	return audienceReasonNoCounterparty, nil
 }
 
 // audienceParticipants is the activity audience a link-less captured message

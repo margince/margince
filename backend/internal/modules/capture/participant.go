@@ -89,14 +89,15 @@ func stampCaptureParticipants(
 	// Normalized the same way contact_email is, so the promotion below and the
 	// erasure lookup both match without a runtime case fold.
 	address := strings.ToLower(strings.TrimSpace(counterparty.Email))
-	// Never a seat's own address as the other end. Mail the owner sent from
-	// an alias arrives with that alias as its counterparty. Stamping it would
-	// record a seat as an outside party in the interaction graph's rows.
-	us, err := workspacePartiesTx(ctx, tx, address)
+	// Never the owner's OWN address as the other end. Mail the owner sent from
+	// an alias arrives with that alias as its counterparty, and stamping it
+	// would record the owner at both ends of their own message. A colleague's
+	// address stays: their participant row is how they read held mail.
+	self, err := ownerIdentitiesTx(ctx, tx)
 	if err != nil {
 		return err
 	}
-	if us.Covers(address) {
+	if self.Covers(address) {
 		address = ""
 	}
 	var channelUserID string
