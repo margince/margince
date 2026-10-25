@@ -27,7 +27,7 @@ func (s *Service) Catalog(ctx context.Context) (crmcontracts.ReportingCatalog, e
 	var out crmcontracts.ReportingCatalog
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = s.evaluator.Catalog(ctx, s.statusCopy(ctx, tx).Lang())
+		out, err = s.evaluator.Catalog(ctx, s.readerCopy(ctx, tx).Lang())
 		if err != nil {
 			return err
 		}

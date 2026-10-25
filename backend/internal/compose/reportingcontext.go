@@ -63,7 +63,7 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 	if err != nil {
 		return out, err
 	}
-	language := string(identity.BaseLanguageForRecord(ctx, tx))
+	language := string(identity.ReaderLanguageForRecord(ctx, tx))
 	out.ProseLanguage = &language
 	out.Timezone = calendar.Timezone
 	out.Currency = calendar.Currency
@@ -140,6 +140,7 @@ func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Se
 	db := InstallationDB(pool)
 	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now).
 		WithBaseLanguage(identity.BaseLanguageForRecord).
+		WithReaderLanguage(identity.ReaderLanguageForRecord).
 		WithQuestions(reportingQuestions{floor: analyticsquery.DefaultFloor, names: newAttentionNames(db)})
 }
 

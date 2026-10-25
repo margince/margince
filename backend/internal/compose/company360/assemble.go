@@ -226,7 +226,7 @@ type assembly struct {
 	// them (the 360's query budget is what noticed).
 	baseCurrency     string
 	baseCurrencyRead bool
-	baseLanguage     textlang.Lang
+	readerLanguage   textlang.Lang
 	loc              *time.Location
 
 	contacts      []contacts.ContactStrength
