@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/filedpairs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -239,7 +240,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	if err := rejectUnknownFields(createWriteShapes, args.RecordType, args.Fields); err != nil {
 		return nil, err
 	}
-	before, snapshotOK := t.openPairsBefore(ctx, args.RecordType, args.Fields)
+	ctx, filed := filedpairs.Collect(ctx)
 	ref, err := t.p.Create(ctx, datasource.CreateInput{
 		EntityType: datasource.EntityType(args.RecordType),
 		Fields:     args.Fields,
@@ -254,7 +255,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	return marshalResult(createdRecord{
 		wireRecord:          rec,
-		DuplicateCandidates: t.reportCreateDuplicates(ctx, args.RecordType, args.Fields, ref.ID, before, snapshotOK),
+		DuplicateCandidates: t.reportCreateDuplicates(ctx, args.RecordType, args.Fields, ref.ID, filed.IDs()),
 		TagOffer:            t.offerTag(ctx, args.RecordType, args.OfferTag),
 	}, nil)
 }

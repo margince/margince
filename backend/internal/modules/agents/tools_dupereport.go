@@ -84,11 +84,12 @@ type DuplicateEvidence struct {
 }
 
 // OpenDuplicatesFor answers the open candidates naming one record, or none.
+// A non-nil only keeps just those pair ids.
 //
 // It is a seam rather than a call into the contacts module because agents may not
 // import it (see .go-arch-lint.yml) — and should not: the injected reader is
 // what keeps this surface unable to reach a record table on its own.
-type OpenDuplicatesFor func(ctx context.Context, recordType string, id ids.UUID) ([]DuplicateCandidate, error)
+type OpenDuplicatesFor func(ctx context.Context, recordType string, id ids.UUID, only []ids.UUID) ([]DuplicateCandidate, error)
 
 // CodeDuplicateFiled is the warning a create carries when it filed a pair for
 // review, and CodeDuplicateCheckFailed when it could not find out.
@@ -161,32 +162,11 @@ func employmentEdgeContact(recordType string, fields json.RawMessage) (ids.UUID,
 	return contact, err == nil
 }
 
-// openPairsBefore snapshots the pairs already open on the contact an
-// employment edge is about to be created for. The contact existed before the
-// edge, so its older pairs are not what the edge filed. It returns nil for any
-// other create, whose new record cannot have a pair yet. A failed read is
-// reported with ok false so the later report says the check could not run.
-func (t createRecord) openPairsBefore(ctx context.Context, recordType string, fields json.RawMessage) (before map[string]struct{}, ok bool) {
-	contact, edge := employmentEdgeContact(recordType, fields)
-	if !edge || t.duplicates == nil {
-		return nil, true
-	}
-	open, err := t.duplicates(ctx, "contact", contact)
-	if err != nil {
-		return nil, false
-	}
-	before = make(map[string]struct{}, len(open))
-	for _, d := range open {
-		before[d.CandidateID] = struct{}{}
-	}
-	return before, true
-}
-
 // reportCreateDuplicates is reportDuplicates for any create. An employment edge
-// is reported against its contact. The edge gives the contact its employer,
-// and the pairs it filed name the contact. Pairs in before were open already
-// and are left out.
-func (t createRecord) reportCreateDuplicates(ctx context.Context, recordType string, fields json.RawMessage, id ids.UUID, before map[string]struct{}, snapshotOK bool) []DuplicateCandidate {
+// is reported against its contact, limited to the pairs this create filed.
+// The write itself noted them in filed, so a concurrent writer's pair on the
+// same contact is not claimed.
+func (t createRecord) reportCreateDuplicates(ctx context.Context, recordType string, fields json.RawMessage, id ids.UUID, filed []ids.UUID) []DuplicateCandidate {
 	contact, edge := employmentEdgeContact(recordType, fields)
 	if recordType == string(datasource.EntityRelationship) && !edge {
 		return nil
@@ -194,11 +174,10 @@ func (t createRecord) reportCreateDuplicates(ctx context.Context, recordType str
 	if !edge {
 		return t.reportDuplicates(ctx, recordType, id, nil)
 	}
-	if !snapshotOK {
-		noteWarning(ctx, CodeDuplicateCheckFailed, duplicateCheckFailedMessage)
+	if len(filed) == 0 {
 		return nil
 	}
-	return t.reportDuplicates(ctx, "contact", contact, before)
+	return t.reportDuplicates(ctx, "contact", contact, filed)
 }
 
 // reportDuplicates tells the caller what this create filed for review.
@@ -213,23 +192,14 @@ func (t createRecord) reportCreateDuplicates(ctx context.Context, recordType str
 // asked. "The check could not run" says nothing about whether one exists —
 // folding them together would let a caller report "no duplicate found" for a
 // check that never happened, which is the failure this whole path corrects.
-func (t createRecord) reportDuplicates(ctx context.Context, recordType string, id ids.UUID, skip map[string]struct{}) []DuplicateCandidate {
+func (t createRecord) reportDuplicates(ctx context.Context, recordType string, id ids.UUID, only []ids.UUID) []DuplicateCandidate {
 	if t.duplicates == nil {
 		return nil
 	}
-	found, err := t.duplicates(ctx, recordType, id)
+	found, err := t.duplicates(ctx, recordType, id, only)
 	if err != nil {
 		noteWarning(ctx, CodeDuplicateCheckFailed, duplicateCheckFailedMessage)
 		return nil
-	}
-	if len(skip) > 0 {
-		kept := found[:0:0]
-		for _, d := range found {
-			if _, old := skip[d.CandidateID]; !old {
-				kept = append(kept, d)
-			}
-		}
-		found = kept
 	}
 	if len(found) == 0 {
 		return nil

@@ -80,14 +80,20 @@ func (h Reads) addAccountGroup(
 	return dropped, h.addAccountEdges(ctx, tx, contacts, now, out)
 }
 
-// seatViewer is the user whose typed seat aliases this viewer may see. An
-// agent working on a colleague's passport sees what that colleague sees, so it
-// is asked as the colleague and not as proof-only.
+// seatViewer is the user whose typed seat aliases this viewer may see: the
+// same UserID row scope keys on. An agent holds it only on a passport whose
+// user is the one it acts for. Any other agent, a connector or the system sees
+// proven seat addresses alone.
 func seatViewer(viewer principal.Principal) ids.UUID {
-	if viewer.ActsAsItsUser() {
-		return viewer.OnBehalfOf
+	switch viewer.Type {
+	case principal.PrincipalHuman:
+		return viewer.UserID
+	case principal.PrincipalAgent:
+		if viewer.ActsAsItsUser() && viewer.OnBehalfOf == viewer.UserID {
+			return viewer.UserID
+		}
 	}
-	return viewer.UserID
+	return ids.Nil
 }
 
 // readCompanyContacts finds the other current employees of this contact's

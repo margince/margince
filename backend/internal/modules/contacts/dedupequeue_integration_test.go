@@ -763,7 +763,7 @@ func TestOpenCandidatesNamingHidesAPairOutsideTheCallersRowScope(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stranger, err := e.store.OpenCandidatesNaming(e.asOwnScoped(ids.NewV7()), entityContact, right)
+	stranger, err := e.store.OpenCandidatesNaming(e.asOwnScoped(ids.NewV7()), entityContact, right, nil)
 	if err != nil {
 		t.Fatalf("an out-of-scope read must answer empty, not fail: %v", err)
 	}
@@ -773,7 +773,7 @@ func TestOpenCandidatesNamingHidesAPairOutsideTheCallersRowScope(t *testing.T) {
 
 	// And the owner is still told, or the check above passes for the wrong
 	// reason — a query that answers nobody hides nothing.
-	owner, err := e.store.OpenCandidatesNaming(ctx, entityContact, right)
+	owner, err := e.store.OpenCandidatesNaming(ctx, entityContact, right, nil)
 	if err != nil {
 		t.Fatalf("the owner's read: %v", err)
 	}
@@ -793,7 +793,7 @@ func TestOpenCandidatesNamingHidesAPairOutsideTheCallersRowScope(t *testing.T) {
 func TestOpenCandidatesNamingIsSilentForARecordTypeWithNoQueue(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	rows, err := e.store.OpenCandidatesNaming(ctx, "deal", ids.NewV7())
+	rows, err := e.store.OpenCandidatesNaming(ctx, "deal", ids.NewV7(), nil)
 	if err != nil {
 		t.Fatalf("a record type with no queue must answer empty, not fail: %v", err)
 	}

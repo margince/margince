@@ -32,8 +32,8 @@ import (
 // that is a step the seam can take once instead of every caller taking it.
 func openDuplicatesFor(pool *pgxpool.Pool) agents.OpenDuplicatesFor {
 	store := contacts.NewStore(InstallationDB(pool))
-	return func(ctx context.Context, recordType string, id ids.UUID) ([]agents.DuplicateCandidate, error) {
-		rows, err := store.OpenCandidatesNaming(ctx, recordType, id)
+	return func(ctx context.Context, recordType string, id ids.UUID, only []ids.UUID) ([]agents.DuplicateCandidate, error) {
+		rows, err := store.OpenCandidatesNaming(ctx, recordType, id, only)
 		if err != nil {
 			return nil, err
 		}

@@ -9,7 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/filedpairs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func TestEmploymentRelationshipCreateReportsTheContactsPairs(t *testing.T) {
@@ -37,11 +39,11 @@ func TestEmploymentRelationshipCreateReportsTheContactsPairs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var gotType string
 			var gotID ids.UUID
-			tool := createRecord{duplicates: func(_ context.Context, rt string, id ids.UUID) ([]DuplicateCandidate, error) {
+			tool := createRecord{duplicates: func(_ context.Context, rt string, id ids.UUID, _ []ids.UUID) ([]DuplicateCandidate, error) {
 				gotType, gotID = rt, id
 				return []DuplicateCandidate{{CandidateID: "c", OtherRecordID: ids.NewV7().String()}}, nil
 			}}
-			found := tool.reportCreateDuplicates(context.Background(), tc.recordType, json.RawMessage(tc.fields), edge, nil, true)
+			found := tool.reportCreateDuplicates(context.Background(), tc.recordType, json.RawMessage(tc.fields), edge, []ids.UUID{ids.NewV7()})
 			if gotType != tc.wantType || gotID != tc.wantID {
 				t.Fatalf("asked for %s %s, want %s %s", gotType, gotID, tc.wantType, tc.wantID)
 			}
@@ -61,18 +63,47 @@ func TestCreateRecordCopyTellsAnAgentToAskAboutTheSameEmployerContact(t *testing
 	}
 }
 
-func TestEmploymentRelationshipCreateLeavesOutPairsOpenBeforeIt(t *testing.T) {
-	contact := ids.NewV7()
-	fields := json.RawMessage(`{"kind":"employment","contact_id":"` + contact.String() + `"}`)
-	open := []DuplicateCandidate{{CandidateID: "older"}}
-	tool := createRecord{duplicates: func(context.Context, string, ids.UUID) ([]DuplicateCandidate, error) {
-		return open, nil
-	}}
-	before, ok := tool.openPairsBefore(context.Background(), "relationship", fields)
-	open = append(open, DuplicateCandidate{CandidateID: "filed-by-edge"})
+type edgeCreateProvider struct {
+	stubRecordProvider
+	filedByThisCreate ids.UUID
+	concurrentFiler   func()
+}
 
-	found := tool.reportCreateDuplicates(context.Background(), "relationship", fields, ids.NewV7(), before, ok)
-	if len(found) != 1 || found[0].CandidateID != "filed-by-edge" {
-		t.Fatalf("reported %+v, want only the pair the edge filed", found)
+func (p edgeCreateProvider) Create(ctx context.Context, _ datasource.CreateInput) (datasource.EntityRef, error) {
+	p.concurrentFiler()
+	filedpairs.Note(ctx, p.filedByThisCreate)
+	return datasource.EntityRef{Type: datasource.EntityRelationship, ID: ids.NewV7()}, nil
+}
+
+func TestEmploymentEdgeCreateReportsOnlyThePairsItNotedAsFiled(t *testing.T) {
+	contact, mine, theirs := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	queue := map[ids.UUID]bool{}
+	provider := edgeCreateProvider{
+		stubRecordProvider: stubRecordProvider{rec: stagedRecord(datasource.EntityRelationship, ids.NewV7(), true)},
+		filedByThisCreate:  mine,
+		concurrentFiler:    func() { queue[theirs] = true },
+	}
+	queue[mine] = true
+	tool := createRecord{p: provider, duplicates: func(_ context.Context, _ string, _ ids.UUID, only []ids.UUID) ([]DuplicateCandidate, error) {
+		var out []DuplicateCandidate
+		for _, id := range only {
+			if queue[id] {
+				out = append(out, DuplicateCandidate{CandidateID: id.String()})
+			}
+		}
+		return out, nil
+	}}
+	args := json.RawMessage(`{"record_type":"relationship","fields":{"kind":"employment","contact_id":"` + contact.String() + `"}}`)
+
+	got, err := tool.Handle(context.Background(), args)
+	if err != nil {
+		t.Fatalf("Handle err = %v", err)
+	}
+	var answer createdRecord
+	if err := json.Unmarshal(got, &answer); err != nil {
+		t.Fatalf("decoding the answer: %v", err)
+	}
+	if len(answer.DuplicateCandidates) != 1 || answer.DuplicateCandidates[0].CandidateID != mine.String() {
+		t.Fatalf("reported %+v, want only %s", answer.DuplicateCandidates, mine)
 	}
 }

@@ -18,9 +18,12 @@ func TestSeatViewerAsksAnAgentAsItsUser(t *testing.T) {
 		want ids.UUID
 	}{
 		{"human", principal.Principal{Type: principal.PrincipalHuman, UserID: user}, user},
-		{"agent on a passport without a user id", principal.Principal{Type: principal.PrincipalAgent, PassportID: passport, OnBehalfOf: user}, user},
-		{"agent on a passport", principal.Principal{Type: principal.PrincipalAgent, UserID: other, PassportID: passport, OnBehalfOf: user}, user},
-		{"passportless agent stays proof-only", principal.Principal{Type: principal.PrincipalAgent, OnBehalfOf: user}, ids.Nil},
+		{"agent on a passport", principal.Principal{Type: principal.PrincipalAgent, UserID: user, PassportID: passport, OnBehalfOf: user}, user},
+		{"agent whose user differs from its principal", principal.Principal{Type: principal.PrincipalAgent, UserID: other, PassportID: passport, OnBehalfOf: user}, ids.Nil},
+		{"agent without a user id", principal.Principal{Type: principal.PrincipalAgent, PassportID: passport, OnBehalfOf: user}, ids.Nil},
+		{"passportless agent", principal.Principal{Type: principal.PrincipalAgent, UserID: user, OnBehalfOf: user}, ids.Nil},
+		{"connector", principal.Principal{Type: principal.PrincipalConnector, UserID: user, OnBehalfOf: user}, ids.Nil},
+		{"system", principal.Principal{Type: principal.PrincipalSystem}, ids.Nil},
 	}
 	for _, c := range cases {
 		if got := seatViewer(c.p); got != c.want {
