@@ -176,10 +176,25 @@ test("a row menu taller than the window scrolls instead of squeezing", async ({
   const menu = page
     .getByRole("dialog")
     .getByRole("button", { name: /Weitere Aktionen für Price list/ });
-  await menu.evaluate((trigger) => trigger.scrollIntoView({ block: "center" }));
   await page.setViewportSize({ width: 1280, height: 360 });
-  await menu.evaluate((trigger) => trigger.scrollIntoView({ block: "center" }));
+  // Just below the sticky lanes: a trigger under them makes the click scroll it
+  // to the drawer's foot first, and from there the whole menu fits above.
+  const placed = await menu.evaluate((trigger) => {
+    const body = trigger.closest(".drawer-body");
+    const lanes = body?.querySelector(".worklist-lanes");
+    if (!body || !lanes) {
+      throw new Error("the drawer body or its sticky lanes are missing");
+    }
+    body.scrollTop +=
+      trigger.getBoundingClientRect().top -
+      lanes.getBoundingClientRect().bottom -
+      4;
+    return trigger.getBoundingClientRect().top;
+  });
   await menu.click();
+  expect(await menu.evaluate((t) => t.getBoundingClientRect().top)).toBe(
+    placed,
+  );
   const shape = await openPanelShape(page);
   for (const line of shape.lines) {
     expect(line).toBeGreaterThanOrEqual(30);
