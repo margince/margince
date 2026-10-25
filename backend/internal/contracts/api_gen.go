@@ -15724,6 +15724,30 @@ func (e RelationshipStartedPrecision) Valid() bool {
 	}
 }
 
+// Defines values for RelationshipDirection.
+const (
+	RelationshipDirectionInboundOnly  RelationshipDirection = "inbound_only"
+	RelationshipDirectionNone         RelationshipDirection = "none"
+	RelationshipDirectionOutboundOnly RelationshipDirection = "outbound_only"
+	RelationshipDirectionTwoWay       RelationshipDirection = "two_way"
+)
+
+// Valid indicates whether the value is a known member of the RelationshipDirection enum.
+func (e RelationshipDirection) Valid() bool {
+	switch e {
+	case RelationshipDirectionInboundOnly:
+		return true
+	case RelationshipDirectionNone:
+		return true
+	case RelationshipDirectionOutboundOnly:
+		return true
+	case RelationshipDirectionTwoWay:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RelationshipNudgeStateState.
 const (
 	RelationshipNudgeStateStateFollowing RelationshipNudgeStateState = "following"
@@ -31755,10 +31779,10 @@ type Company360 struct {
 	// LastContact The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws.
 	LastContact *Company360LastContact `json:"last_contact,omitempty"`
 
-	// LastInboundAt When they last wrote to us, over the same three-link walk the timeline uses (the activity's own link, its deal's company, the employer of the contact it is filed against). Null means nothing inbound was ever captured — which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+	// LastInboundAt When one of the account's current contacts last wrote to us: the newest of their own last_inbound_at, over the activities the timeline walks. Mail a colleague sent, and activity filed on the account alone, does not move it. Null means none of them ever wrote, which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
-	// LastOutboundAt When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
+	// LastOutboundAt When we last wrote to one of the account's current contacts. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
 
 	// ListMemberships The Shortlists this company is on that the caller may find. Absent while the installation has not switched lists on.
@@ -31811,6 +31835,9 @@ type Company360 struct {
 
 	// ProjectsPage Whether `projects` was cut short. The list is capped, and a card that counted the rows and said "3 in flight" would state a number the account does not have. Absent exactly when `projects` is.
 	ProjectsPage *PageInfo `json:"projects_page,omitempty"`
+
+	// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a person wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+	RelationshipDirection *RelationshipDirection `json:"relationship_direction,omitempty"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
 	// say "Scoped to KEY · N of M activities" from the server's own count rather than
@@ -34800,6 +34827,9 @@ type Contact360 struct {
 
 	// RelationshipChanges What CHANGED about this relationship, most consequential first — derived at read from the contact's own interactions, never stored. `strength` says what the relationship IS; this says what happened to it, which is what a reader acts on. Empty when nothing crossed a threshold.
 	RelationshipChanges *[]ContactRelationshipChange `json:"relationship_changes,omitempty"`
+
+	// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a person wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+	RelationshipDirection *RelationshipDirection `json:"relationship_direction,omitempty"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
 	// say "Scoped to KEY · N of M activities" from the server's own count rather than
@@ -47878,6 +47908,9 @@ type RelationshipKind string
 
 // RelationshipStartedPrecision defines model for Relationship.StartedPrecision.
 type RelationshipStartedPrecision string
+
+// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a person wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+type RelationshipDirection string
 
 // RelationshipListResponse defines model for RelationshipListResponse.
 type RelationshipListResponse struct {

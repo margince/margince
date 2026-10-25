@@ -274,6 +274,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `deliverysenderonerule_test.go` | H2 | The mail system's own sender names (mailer-daemon, postmaster) are spelled in platform/mailidentity and nowhere else. |
 | `desktopmacosfloor_test.go` | H1 | Every macOS build script pins the bundle's OS floor before it compiles anything. |
 | `detachedwrites_test.go` | H2 | A detached write says what bounds it. |
+| `directionowner_test.go` | H3 | Every reader of exchanges that asks "did they write" or "did we write" asks relstrength.TheyWroteSQL and WeWroteSQL. |
 | `directmailbypass_test.go` | H2 | Who may hand a message straight to the SMTP relay, bypassing comms\_outbound. |
 | `docscodepaths_test.go` | H3 | Every source file a prose page names in backticks still exists. |
 | `docsdescribes_test.go` | H1 | Every explanation and handbook page names the code it describes. |

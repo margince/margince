@@ -336,6 +336,8 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids
 	out.LastOutboundAt = touch.OutboundAt
 	out.LastLiveInboundAt = touch.LiveInboundAt
 	out.LastContactAt = touch.ContactAt
+	direction := crmcontracts.RelationshipDirection(touch.Direction())
+	out.RelationshipDirection = &direction
 	return nil
 }
 

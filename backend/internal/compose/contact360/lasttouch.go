@@ -41,6 +41,11 @@ type LastTouch struct {
 	PrecedingContactAt *time.Time
 }
 
+// Direction is which sides have written, by relstrength's one rule.
+func (t LastTouch) Direction() relstrength.Direction {
+	return relstrength.DirectionOf(t.InboundAt != nil, t.OutboundAt != nil)
+}
+
 // Touches is what the relationship-change derivation needs from this answer.
 func (t LastTouch) Touches() relstrength.Touches {
 	return relstrength.Touches{
@@ -108,20 +113,20 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		fmt.Sprintf(contactReachesActivity, "c.id"), scope, projectScope(opts, arg),
 		auth.AudienceWorkspaceOnly("a"))
 	humanClock := relstrength.LastActivityCountsSQL("a", "now()") + " AND " + relstrength.WrittenByHumanSQL("a")
-	sender := relstrength.SenderSQL("c.id", "a")
-	inbound := fmt.Sprintf(`a.direction = 'inbound' AND %s AND %s`, sender, humanClock)
+	inbound := relstrength.TheyWroteSQL("c.id", "a") + " AND " + humanClock
+	outbound := relstrength.WeWroteSQL("a") + " AND " + humanClock
 	exchange := relstrength.ContactExchangeSQL("a", "c.id", "now()")
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id,
 		       (SELECT max(a.occurred_at) %[1]s AND %[2]s),
-		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'outbound' AND %[5]s),
+		       (SELECT max(a.occurred_at) %[1]s AND %[5]s),
 		       (SELECT max(a.occurred_at) %[1]s AND %[2]s AND NOT %[6]s),
 		       (SELECT max(a.occurred_at) %[1]s AND %[7]s),
 		       (SELECT max(a.occurred_at) %[1]s AND %[7]s
 		           AND a.occurred_at < (SELECT max(a.occurred_at) %[1]s AND %[2]s))
 		FROM contact c
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
-		reached, inbound, wantedPos, visible, humanClock, activities.ImportedHistorySQL, exchange), args...)
+		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange), args...)
 	if err != nil {
 		return nil, err
 	}

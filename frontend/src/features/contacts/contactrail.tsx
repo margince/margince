@@ -9,6 +9,7 @@ import {
 } from "../../design-system/recorddetails";
 import { omitted, type SectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { navigate } from "../../lib/router";
 import { useWriteRefusal } from "./contactactions";
@@ -17,6 +18,7 @@ import { useContactAboutSections } from "./contactdetails";
 
 export type Contact360 = components["schemas"]["Contact360"];
 type Contact = components["schemas"]["Contact"];
+type RelationshipDirection = components["schemas"]["RelationshipDirection"];
 
 // --- what this reader was allowed to read ----------------------------------
 
@@ -185,22 +187,19 @@ export function useContactReadOnlyReason(contact: Contact): string | undefined {
 
 // --- Relationship standing --------------------------------------------
 
-// Which way the relationship runs, as a sentence, from the two directional
-// timestamps: they arrive together or not at all, one grant governs both.
+// Which way the relationship runs, as a sentence. The server decides it by the
+// rule the company roll-up and the colleague graph also use; the page only
+// words it. A server that sent no reading words it as "none".
+const DIRECTION_SENTENCE: Record<RelationshipDirection, MessageKey> = {
+  two_way: "contact.standing.direction.twoWay",
+  inbound_only: "contact.standing.direction.inboundOnly",
+  outbound_only: "contact.standing.direction.outboundOnly",
+  none: "contact.standing.direction.none",
+};
+
 export function directionSentence(
   view: Contact360,
   t: ReturnType<typeof useT>,
 ): string {
-  const inbound = view.last_inbound_at;
-  const outbound = view.last_outbound_at;
-  if (inbound && outbound) {
-    return t("contact.standing.direction.twoWay");
-  }
-  if (inbound) {
-    return t("contact.standing.direction.inboundOnly");
-  }
-  if (outbound) {
-    return t("contact.standing.direction.outboundOnly");
-  }
-  return t("contact.standing.direction.none");
+  return t(DIRECTION_SENTENCE[view.relationship_direction ?? "none"]);
 }

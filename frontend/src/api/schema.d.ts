@@ -26794,6 +26794,11 @@ export interface components {
             since: string;
         };
         /**
+         * @description Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a person wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+         * @enum {string}
+         */
+        RelationshipDirection: "two_way" | "inbound_only" | "outbound_only" | "none";
+        /**
          * @description Deterministic relationship-strength (features/07 §4) — a transparent function over captured
          *     interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
          *     interaction set + fixed clock yields a stable value (P6/P12). The `factors` decompose the score and
@@ -29125,14 +29130,16 @@ export interface components {
             scope?: components["schemas"]["ProjectScope"];
             /**
              * Format: date-time
-             * @description When they last wrote to us, over the same three-link walk the timeline uses (the activity's own link, its deal's company, the employer of the contact it is filed against). Null means nothing inbound was ever captured — which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+             * @description When one of the account's current contacts last wrote to us: the newest of their own last_inbound_at, over the activities the timeline walks. Mail a colleague sent, and activity filed on the account alone, does not move it. Null means none of them ever wrote, which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
              */
             last_inbound_at?: string | null;
             /**
              * Format: date-time
-             * @description When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
+             * @description When we last wrote to one of the account's current contacts. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
              */
             last_outbound_at?: string | null;
+            /** @description Which sides have written, rolled up from the account's current contacts. Absent together with last_inbound_at, named in `sections_omitted` as `last_touch`. */
+            relationship_direction?: components["schemas"]["RelationshipDirection"];
             /** @description The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws. */
             last_contact?: components["schemas"]["Company360LastContact"];
             state_strip?: components["schemas"]["Company360StateStrip"];
@@ -29467,6 +29474,8 @@ export interface components {
              * @description When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
              */
             last_outbound_at?: string | null;
+            /** @description Which sides have written, read off last_inbound_at and last_outbound_at. Absent together with them, named in `sections_omitted` as `last_touch`. */
+            relationship_direction?: components["schemas"]["RelationshipDirection"];
             /**
              * Format: date-time
              * @description When they last wrote to us, leaving out email an import brought in as history. Equal to `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this, because history that arrived by import is not a reply. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
