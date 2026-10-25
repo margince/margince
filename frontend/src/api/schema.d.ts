@@ -27026,6 +27026,14 @@ export interface components {
             reserved_credits: number;
             actual_credits?: number | null;
         };
+        /**
+         * @description What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+         *     contact that existed before the provider was connected, or that no run has covered
+         *     yet; like the other automatic triggers it buys only the categories that cost
+         *     nothing.
+         * @enum {string}
+         */
+        ProviderRunTrigger: "automatic_create" | "automatic_import" | "automatic_backfill" | "scheduled_refresh" | "manual";
         ProviderRun: {
             /** Format: uuid */
             id: string;
@@ -27043,14 +27051,7 @@ export interface components {
              */
             contact_id?: string | null;
             provider: components["schemas"]["Provider"];
-            /**
-             * @description What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
-             *     contact that existed before the provider was connected, or that no run has covered
-             *     yet; like the other automatic triggers it buys only the categories that cost
-             *     nothing.
-             * @enum {string}
-             */
-            trigger: "automatic_create" | "automatic_import" | "automatic_backfill" | "scheduled_refresh" | "manual";
+            trigger: components["schemas"]["ProviderRunTrigger"];
             /** @enum {string} */
             state: "queued" | "submitting" | "in_progress" | "completed" | "no_match" | "skipped" | "submission_unknown" | "failed" | "cancelled";
             /**
@@ -27250,7 +27251,7 @@ export interface components {
              */
             readonly primary_email?: string | null;
             phones?: components["schemas"]["ContactPhone"][];
-            /** @description Which of this contact's values a data provider's purchase put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete bought data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company. */
+            /** @description Which of this contact's values a data provider's run put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete provider data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company. */
             readonly bought_fields?: components["schemas"]["BoughtField"][];
             /**
              * @description Per-channel reachability (design §6.6), derived from `contact_channel_identity`.
@@ -27307,16 +27308,24 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
-        /** @description One value on a contact that a data provider's purchase wrote and still owns. */
+        /** @description One value on a contact that a data provider's run wrote and still owns. */
         BoughtField: {
-            /** @description Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the purchase wrote is bought. */
+            /** @description Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the run wrote is the provider's. */
             target: string;
             provider: components["schemas"]["Provider"];
             /**
              * Format: date-time
-             * @description When the purchase wrote it.
+             * @description When the run wrote it.
              */
             applied_at: string;
+            /** @description True when a person started the run and it spent credits. A value from an automatic run is never paid, because automatic runs take only free categories. */
+            paid: boolean;
+            trigger: components["schemas"]["ProviderRunTrigger"];
+            /**
+             * Format: uuid
+             * @description The seat that started the run. Set only when `trigger` is `manual`.
+             */
+            requested_by?: string | null;
         };
         /** @description The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per contact, so a contact has at most one. */
         ContactEmployer: {

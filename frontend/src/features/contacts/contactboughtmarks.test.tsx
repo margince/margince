@@ -81,10 +81,34 @@ const view: Contact360 = {
       },
     ],
     bought_fields: [
-      { target: "title", provider: "surfe", applied_at: JUNE },
-      { target: "email:e-bought", provider: "surfe", applied_at: JUNE },
-      { target: "phone:ph-bought", provider: "surfe", applied_at: JUNE },
-      { target: "employment:rel-1", provider: "surfe", applied_at: JUNE },
+      {
+        target: "title",
+        provider: "surfe",
+        applied_at: JUNE,
+        paid: true,
+        trigger: "manual",
+      },
+      {
+        target: "email:e-bought",
+        provider: "surfe",
+        applied_at: JUNE,
+        paid: true,
+        trigger: "manual",
+      },
+      {
+        target: "phone:ph-bought",
+        provider: "surfe",
+        applied_at: JUNE,
+        paid: true,
+        trigger: "manual",
+      },
+      {
+        target: "employment:rel-1",
+        provider: "surfe",
+        applied_at: JUNE,
+        paid: true,
+        trigger: "manual",
+      },
     ],
     ...CAPTURED,
   },
@@ -246,5 +270,49 @@ describe("bought values on the contact page", () => {
       const receipt = await screen.findByRole("region", { name: mark(value) });
       expect(receipt.textContent).toContain(at);
     }
+  });
+
+  it("calls a free automatic run's values from the provider and names the sweep", async () => {
+    const sweep = {
+      ...view.contact,
+      bought_fields: (view.contact.bought_fields ?? []).map((f) => ({
+        ...f,
+        paid: false,
+        trigger: "automatic_backfill" as const,
+      })),
+    };
+    render(
+      <StoryProviders>
+        <ContactSubtitle view={{ ...view, contact: sweep }} />
+        <ContactDetails contact={sweep} profiles={view.provider_profiles} />
+      </StoryProviders>,
+    );
+    await screen.findByText("From Surfe");
+    expect(screen.queryByText("Bought from Surfe")).toBeNull();
+    expect(screen.getByText("Added by the catch-up sweep")).toBeTruthy();
+    const freeChip = en["evidence.explainBeside"]
+      .replace("{label}", en["evidence.fromProvider"])
+      .replace("{value}", "Head of Revenue");
+    expect(screen.getByRole("button", { name: freeChip })).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: beside("Head of Revenue") }),
+    ).toBeNull();
+  });
+
+  it("says a person requested a paid run and keeps the bought wording", async () => {
+    const requested = {
+      ...view.contact,
+      bought_fields: (view.contact.bought_fields ?? []).map((f) => ({
+        ...f,
+        requested_by: "u-1",
+      })),
+    };
+    render(
+      <StoryProviders>
+        <ContactDetails contact={requested} profiles={view.provider_profiles} />
+      </StoryProviders>,
+    );
+    await screen.findByText("Bought from Surfe");
+    expect(screen.getByText(/^Requested by/)).toBeTruthy();
   });
 });

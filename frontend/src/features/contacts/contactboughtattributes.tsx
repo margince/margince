@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { OwnerName } from "../../components/entityref";
 import { FieldRow } from "../../design-system/fieldgrid";
 import { providerBrandName } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { BoughtText } from "./boughtmarks";
+import { type BoughtField, BoughtText } from "./boughtmarks";
 
 type Profile = components["schemas"]["ContactProviderProfile"];
 type Attribute = components["schemas"]["ContactProviderAttribute"];
@@ -23,7 +24,11 @@ const KIND_LABEL: Readonly<Record<Attribute["kind"], MessageKey>> = {
  */
 export function BoughtAttributes({
   profiles,
-}: Readonly<{ profiles: readonly Profile[] | undefined }>) {
+  runs,
+}: Readonly<{
+  profiles: readonly Profile[] | undefined;
+  runs?: readonly BoughtField[];
+}>) {
   const t = useT();
   return (
     <>
@@ -33,14 +38,22 @@ export function BoughtAttributes({
           return null;
         }
         const provider = profile.provider ?? "";
+        const fromProvider = (runs ?? []).filter(
+          (f) => f.provider === provider,
+        );
+        const latest = fromProvider[0];
         return (
           <FieldRow
             key={provider}
-            label={t("contact.bought.from", {
-              provider: providerBrandName(provider) ?? provider,
-            })}
+            label={t(
+              fromProvider.some((f) => f.paid)
+                ? "contact.bought.from"
+                : "contact.provider.from",
+              { provider: providerBrandName(provider) ?? provider },
+            )}
           >
             {lines}
+            {latest ? <RunTrigger field={latest} /> : null}
           </FieldRow>
         );
       })}
@@ -79,4 +92,21 @@ function attributeFacts(
       </span>,
     ];
   });
+}
+
+// What started the provider's newest run on this contact; a person's run names
+// the seat, an automatic one names itself.
+function RunTrigger({ field }: Readonly<{ field: BoughtField }>) {
+  const t = useT();
+  return (
+    <span className="t-caption">
+      {t(`contact.provider.trigger.${field.trigger}`)}
+      {field.trigger === "manual" ? (
+        <>
+          {" "}
+          <OwnerName ownerId={field.requested_by} unowned="" />
+        </>
+      ) : null}
+    </span>
+  );
 }

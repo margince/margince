@@ -8,10 +8,11 @@ import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 
-// What a data provider was PAID to put on a contact, marked where it stands on
-// the record. The server decides which values still hold what the purchase
-// wrote (`bought_fields`), so a value a colleague has since corrected carries
-// no mark and a value "Delete bought data" took back is gone with its mark.
+// What a data provider put on a contact, marked where it stands on the record.
+// The server decides which values still hold what the run wrote
+// (`bought_fields`) and whether the run spent credits (`paid`), so a value a
+// colleague has since corrected carries no mark and a value "Delete provider
+// data" took back is gone with its mark.
 
 type Contact = components["schemas"]["Contact"];
 export type BoughtField = components["schemas"]["BoughtField"];
@@ -58,7 +59,7 @@ export function BoughtMark({
   }
   return (
     <EvidenceMark
-      value={t("evidence.bought")}
+      value={t(bought.paid ? "evidence.bought" : "evidence.fromProvider")}
       subject={subject}
       source={source(bought.provider, bought.applied_at)}
     />

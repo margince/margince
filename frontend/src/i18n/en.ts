@@ -5760,6 +5760,7 @@ export const en = {
   "evidence.mark": "read",
 
   "evidence.bought": "bought",
+  "evidence.fromProvider": "from provider",
   "evidence.confirm": "Confirm",
   "evidence.correct": "Correct",
   "evidence.save": "Save",
@@ -14497,6 +14498,12 @@ export const en = {
   "contact.bandBadge.moderate": "Moderate",
   "contact.bandBadge.strong": "Strong",
   "contact.bought.from": "Bought from {provider}",
+  "contact.provider.from": "From {provider}",
+  "contact.provider.trigger.automatic_create": "Added for a new contact",
+  "contact.provider.trigger.automatic_import": "Added for a new contact",
+  "contact.provider.trigger.automatic_backfill": "Added by the catch-up sweep",
+  "contact.provider.trigger.scheduled_refresh": "Refreshed on schedule",
+  "contact.provider.trigger.manual": "Requested by",
   "contact.network.title": "Colleagues who know this contact",
 
   // The contact record page V2 (ADR-0096). The strip, rail and card words are
@@ -14826,7 +14833,7 @@ export const en = {
   "provider.disconnectConfirm.title": "Disconnect this provider?",
   "provider.disconnectConfirm.body":
     "New lookups stop immediately and the key is destroyed. Purchased data stays on your records; disconnecting does not delete it.",
-  "provider.deleteData": "Delete purchased data",
+  "provider.deleteData": "Delete provider data",
   "provider.deleteDataConfirm.title": "Delete all data from this provider?",
   "provider.deleteDataConfirm.impactTitle": "This cannot be undone",
   "provider.deleteDataConfirm.impact.values":
