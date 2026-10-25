@@ -15,16 +15,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// SettledCitations answers, for each cited message this caller may read,
-// whether its thread has settled what it asked or promised as of asOf.
-//
-// Their ask is settled by the Worklist's own rule: a settled verdict or a done
-// request task, or, for an ask nobody confirmed, an answer. A confirmed ask
-// survives a reply, because "thanks, I will check" discharges nothing. Our
-// promise is settled by the follow-up the Worklist offers as "Done?": our later
-// mail on its thread to someone it was made to, one this caller may read.
-// Every other kind is never settled. An id absent from the map is one the
-// caller may not read.
+// SettledCitations answers whether each cited message's thread settled it by
+// asOf, by the Worklist's rules. Their ask: a settled verdict, a done request
+// task, or an answer when nobody confirmed the ask. Our promise: the follow-up
+// the Worklist offers as "Done?". Other kinds never settle. An id the caller
+// may not read is absent.
 func SettledCitations(ctx context.Context, tx pgx.Tx, cited []ids.UUID, asOf time.Time) (map[ids.UUID]bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err

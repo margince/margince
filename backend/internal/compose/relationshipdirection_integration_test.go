@@ -40,8 +40,8 @@ func (f *relationshipFixture) readings(t *testing.T) (contact, company direction
 }
 
 // A company with one contact reads what the contact page reads. A colleague's
-// reply on a thread the contact is copied on is not the contact writing, and
-// activity filed on the account alone moves neither page's direction.
+// reply on a thread the contact is copied on is not the contact writing.
+// Activity filed on the account alone moves neither page's direction.
 func TestOneContactCompanyReadsItsContactsDirection(t *testing.T) {
 	f := newRelationshipFixture(t)
 	f.mail(t, "proposal", f.seatAddr, f.contactAddr, "", 9)

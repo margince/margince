@@ -3,9 +3,9 @@
 
 package companyscan
 
-// A finding that says something is still owed is held to the thread's own
-// verdict (activities.SettledCitations), when it is written and every time it
-// is served. The model's reading of the thread never overrules it.
+// A finding that says something is still owed is held to its thread's verdict
+// (activities.SettledCitations). It is checked when written and when served,
+// and the model's reading of the thread never overrules it.
 
 import (
 	"context"
@@ -70,7 +70,7 @@ func (s *Service) dropSettled(
 }
 
 // owedCitation is the message a model finding claiming something is owed
-// rests on. ground writes exactly one activity citation per finding.
+// rests on. ground writes one activity citation per finding.
 func owedCitation(finding crmcontracts.Company360Suggestion) (ids.UUID, bool) {
 	if finding.WrittenBy == nil || *finding.WrittenBy != crmcontracts.WrittenByModel || !claimsOwed(finding.Kind) {
 		return ids.UUID{}, false

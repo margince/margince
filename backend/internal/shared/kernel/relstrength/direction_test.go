@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestDirectionOfNamesWhichSidesWrote(t *testing.T) {
+func TestSidesNameWhichWayItRuns(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		theyWrote, weWrote bool
@@ -20,8 +20,8 @@ func TestDirectionOfNamesWhichSidesWrote(t *testing.T) {
 		{false, false, DirectionNone},
 	}
 	for _, c := range cases {
-		if got := DirectionOf(c.theyWrote, c.weWrote); got != c.want {
-			t.Errorf("DirectionOf(%v, %v) = %q, want %q", c.theyWrote, c.weWrote, got, c.want)
+		if got := (Sides{TheyWrote: c.theyWrote, WeWrote: c.weWrote}).Direction(); got != c.want {
+			t.Errorf("Sides{%v, %v}.Direction() = %q, want %q", c.theyWrote, c.weWrote, got, c.want)
 		}
 	}
 }

@@ -307,8 +307,8 @@ export function TimelineWhen({
 // kinds can hold one member. A thread can have its other messages on another
 // page, and a sender can attest a single message as a bulk send. The plural
 // forms rendered "1 messages" and "sent to 1 contacts" for it.
-// A thread also says how many messages each side wrote, so four from them and
-// five from the team never read as nine from one contact.
+// A thread also says how many messages each side wrote. Four from them and
+// five from the team then never read as nine from one contact.
 export function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   const count = group.entries.length;
   const base =

@@ -98,13 +98,6 @@ func strengthCitedCountsAt(nowPos int) string {
 	return relstrength.InteractionCountsAtSQL("i", fmt.Sprintf("$%d::timestamptz", nowPos))
 }
 
-// theyWrote and weWrote are relstrength's direction rule, so the 90-day counts
-// and the last-inbound date read the contact as the sender, as the page does.
-var (
-	theyWrote = relstrength.TheyWroteSQL
-	weWrote   = relstrength.WeWroteSQL("a")
-)
-
 // ContactStrength computes the §4 baseline for one contact. The contact
 // read is row-scoped exactly like GetContact: a contact the caller cannot
 // see has no strength to disclose.
@@ -370,13 +363,13 @@ func contactStrengths(
 		SELECT l.contact_id,
 		       max(a.occurred_at),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+theyWrote("l.contact_id", "a")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+weWrote+`),
-		       max(a.occurred_at) FILTER (WHERE `+theyWrote("l.contact_id", "a")+`),
-		       max(a.occurred_at) FILTER (WHERE `+weWrote+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+relstrength.WeWroteSQL("a")+`),
+		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
+		       max(a.occurred_at) FILTER (WHERE `+relstrength.WeWroteSQL("a")+`),
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = l.contact_id
-		         WHERE `+theyWrote("l.contact_id", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
+		         WHERE `+relstrength.TheyWroteSQL("l.contact_id", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
 		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
@@ -440,13 +433,13 @@ func strengthInputs(
 	if err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+theyWrote("$1", "a")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+weWrote+`),
-		       max(a.occurred_at) FILTER (WHERE `+theyWrote("$1", "a")+`),
-		       max(a.occurred_at) FILTER (WHERE `+weWrote+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+relstrength.TheyWroteSQL("$1", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND `+relstrength.WeWroteSQL("a")+`),
+		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("$1", "a")+`),
+		       max(a.occurred_at) FILTER (WHERE `+relstrength.WeWroteSQL("a")+`),
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = $1
-		         WHERE `+theyWrote("$1", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
+		         WHERE `+relstrength.TheyWroteSQL("$1", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
 		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)

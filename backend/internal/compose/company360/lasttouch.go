@@ -151,8 +151,7 @@ func LastTouchFor(
 }
 
 // employeeSQL admits a row when the predicate holds for one current employee
-// of the account, the roster the contacts section and its strengths are read
-// from.
+// of the account. The contacts section and its strengths read that roster.
 func employeeSQL(predicate string) string {
 	return `EXISTS (SELECT 1 FROM relationship emp
 		  WHERE emp.company_id = reach.company_id AND emp.kind = 'employment'

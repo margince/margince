@@ -7,8 +7,8 @@ package gates
 
 // Every reader of exchanges that asks "did they write" or "did we write" asks
 // relstrength.TheyWroteSQL and WeWroteSQL. A reader that filters on
-// activity.direction by itself counts a colleague's reply as the contact's, and
-// the contact page and the company page then disagree about one relationship.
+// activity.direction by itself counts a colleague's reply as the contact's.
+// The contact page and the company page then disagree about one relationship.
 
 import (
 	"go/ast"
@@ -27,7 +27,7 @@ var exchangeReaderRenderers = []string{
 }
 
 // directionRuleRenderers are relstrength's direction rule.
-var directionRuleRenderers = []string{"TheyWroteSQL", "WeWroteSQL", "DirectionOf"}
+var directionRuleRenderers = []string{"TheyWroteSQL", "WeWroteSQL"}
 
 // literalDirection matches SQL that spells a message direction by hand.
 var literalDirection = regexp.MustCompile(`direction\s*(=|<>|IS DISTINCT FROM|IS NOT DISTINCT FROM)\s*'(inbound|outbound)'|direction\s+IN\s*\(`)

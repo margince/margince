@@ -90,9 +90,9 @@ func PromiseFollowUpsTx(ctx context.Context, tx pgx.Tx, promises []PromiseBasis,
 	return found, nil
 }
 
-// promiseFollowUpSQL admits the mail under later as our follow-up on the promise
-// made in src: our attested, non-bulk mail later on src's own thread, by until.
-// The scan's settled citations read the same rule.
+// promiseFollowUpSQL admits the mail under later as our follow-up on the
+// promise made in src. It is our attested, non-bulk mail later on src's thread,
+// sent by until. The scan's settled citations read the same rule.
 func promiseFollowUpSQL(later, src, until string) string {
 	return later + `.thread_key = ` + src + `.thread_key
        AND ` + later + `.kind = ` + src + `.kind AND ` + later + `.kind = 'email'

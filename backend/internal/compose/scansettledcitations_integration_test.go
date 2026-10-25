@@ -74,7 +74,7 @@ func TestAScanCitationSettlesByTheWorklistsRule(t *testing.T) {
 }
 
 // Our promise is kept, for the scan, by our later mail on its thread to the
-// person it was made to. Mail to someone else on the thread keeps nothing.
+// contact it was made to. Mail to someone else on the thread keeps nothing.
 func TestAScanCitationOfOurPromiseSettlesOnOurFollowUp(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -89,6 +89,6 @@ func TestAScanCitationOfOurPromiseSettlesOnOurFollowUp(t *testing.T) {
 	o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Listing details",
 		inReplyTo: o.messageIDOf(t, promise), at: o.now.Add(-4 * time.Hour)})
 	if !o.settled(t, promise) {
-		t.Error("our follow-up to the person promised did not keep the promise")
+		t.Error("our follow-up to the contact promised did not keep the promise")
 	}
 }

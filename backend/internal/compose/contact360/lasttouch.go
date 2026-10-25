@@ -43,7 +43,7 @@ type LastTouch struct {
 
 // Direction is which sides have written, by relstrength's one rule.
 func (t LastTouch) Direction() relstrength.Direction {
-	return relstrength.DirectionOf(t.InboundAt != nil, t.OutboundAt != nil)
+	return relstrength.Sides{TheyWrote: t.InboundAt != nil, WeWrote: t.OutboundAt != nil}.Direction()
 }
 
 // Touches is what the relationship-change derivation needs from this answer.

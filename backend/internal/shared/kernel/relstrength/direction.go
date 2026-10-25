@@ -4,9 +4,9 @@
 package relstrength
 
 // Which way a relationship runs. The contact page, the company roll-up, the
-// strength fold and the colleague graph all ask "did they write" and "did we
-// write" here, so one contact cannot read two-way on one card and outbound
-// only on the next. Each reader composes these with InteractionCountsSQL.
+// strength fold and the colleague graph ask "did they write" here. One contact
+// then cannot read two-way on one card and outbound only on the next. Each
+// reader composes these with InteractionCountsSQL.
 
 // Direction is which sides of a relationship have written.
 type Direction string
@@ -24,15 +24,20 @@ func Directions() []Direction {
 	return []Direction{DirectionTwoWay, DirectionInboundOnly, DirectionOutboundOnly, DirectionNone}
 }
 
-// DirectionOf is the one place the word is decided, from whether each side
-// has a qualifying message in the reader's window.
-func DirectionOf(theyWrote, weWrote bool) Direction {
+// Sides is whether each side has a qualifying message in the reader's window.
+type Sides struct {
+	TheyWrote bool
+	WeWrote   bool
+}
+
+// Direction is the one place the word is decided.
+func (s Sides) Direction() Direction {
 	switch {
-	case theyWrote && weWrote:
+	case s.TheyWrote && s.WeWrote:
 		return DirectionTwoWay
-	case theyWrote:
+	case s.TheyWrote:
 		return DirectionInboundOnly
-	case weWrote:
+	case s.WeWrote:
 		return DirectionOutboundOnly
 	}
 	return DirectionNone
