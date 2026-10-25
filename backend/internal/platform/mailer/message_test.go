@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -62,6 +63,13 @@ func TestAPlainSendMintsAUniqueMessageIDOnTheSendingDomain(t *testing.T) {
 	if !strings.HasPrefix(a, "<") || !strings.HasSuffix(a, "@example.test>") {
 		t.Fatalf("Message-ID %q, want one on the sender's domain example.test", a)
 	}
+	local := strings.TrimSuffix(strings.TrimPrefix(a, "<"), "@example.test>")
+	if len(local) != 32 || local[12] != '7' {
+		t.Fatalf("Message-ID local part %q, want a 32-digit UUIDv7", local)
+	}
+	if _, err := ids.Parse(local[:8] + "-" + local[8:12] + "-" + local[12:16] + "-" + local[16:20] + "-" + local[20:]); err != nil {
+		t.Fatalf("Message-ID local part %q is not a UUID: %v", local, err)
+	}
 	if a == b {
 		t.Fatalf("two messages share the Message-ID %q", a)
 	}
@@ -69,19 +77,23 @@ func TestAPlainSendMintsAUniqueMessageIDOnTheSendingDomain(t *testing.T) {
 
 func TestEveryMessageCarriesADateFromTheClock(t *testing.T) {
 	at := time.Date(2026, time.October, 25, 9, 30, 0, 0, time.UTC)
-	relay := startFakeRelay(t, false)
-	host, port := relay.Address(t)
-	s := SMTP{Host: host, Port: port, FromAddress: "privacy@example.test", Now: func() time.Time { return at }}
-	if err := s.SendAlternative(context.Background(), "ada@example.test", "Hello", "body", "<p>body</p>", ""); err != nil {
-		t.Fatalf("SendAlternative: %v", err)
-	}
-	msg, err := mail.ReadMessage(strings.NewReader(relay.Received()))
-	if err != nil {
-		t.Fatalf("parsing: %v", err)
-	}
-	got, err := msg.Header.Date()
-	if err != nil || !got.Equal(at) {
-		t.Fatalf("Date %v (%v), want %v", got, err, at)
+	for name, htmlBody := range map[string]string{"html alternative": "<p>body</p>", "plain text": ""} {
+		t.Run(name, func(t *testing.T) {
+			relay := startFakeRelay(t, false)
+			host, port := relay.Address(t)
+			s := SMTP{Host: host, Port: port, FromAddress: "privacy@example.test", Now: func() time.Time { return at }}
+			if err := s.SendAlternative(context.Background(), "ada@example.test", "Hello", "body", htmlBody, ""); err != nil {
+				t.Fatalf("SendAlternative: %v", err)
+			}
+			msg, err := mail.ReadMessage(strings.NewReader(relay.Received()))
+			if err != nil {
+				t.Fatalf("parsing: %v", err)
+			}
+			got, err := msg.Header.Date()
+			if err != nil || !got.Equal(at) {
+				t.Fatalf("Date %v (%v), want %v", got, err, at)
+			}
+		})
 	}
 }
 

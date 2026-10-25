@@ -88,3 +88,14 @@ func TestConfirmConsentBodyHasNoForcedLineBreak(t *testing.T) {
 		}
 	}
 }
+
+func TestNoticeBodyBreaksOnlyBetweenSentences(t *testing.T) {
+	for _, lang := range []string{"en", "de", "vi"} {
+		body := For(lang).NoticeBody
+		for i, r := range body {
+			if r == '\n' && (i == 0 || body[i-1] != '.') {
+				t.Errorf("%s: NoticeBody breaks mid-sentence at byte %d: %q", lang, i, body)
+			}
+		}
+	}
+}
