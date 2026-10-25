@@ -12,10 +12,13 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
+import {
+  type HistoryValueCtx,
+  historyValue,
+  precisionOf,
+} from "../../lib/historyvalues";
 import { useRecordZone } from "../../lib/recordzone";
 import { roleLabel } from "../../lib/roles.queries";
-import { precisionOf } from "../records/history.logic";
-import { type HistoryValueCtx, historyValue } from "../records/historyvalues";
 import { humanizeToken } from "./audit";
 import {
   type AuditLogEntry,

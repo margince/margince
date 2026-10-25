@@ -351,7 +351,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Same shape, one level up: the hook takes the reading context whole, and these cases assert which ROWS survive a narrowed read rather than how any date renders. A zone read off the runner would make the fixture differ by machine while proving nothing about the zone.",
   },
   {
-    file: "features/records/historyvalues.test.ts",
+    file: "lib/historyvalues.test.ts",
     why: "The zone IS the input under test: a stored timestamp is asserted to render at the RECORD's zone rather than at UTC, which needs a zone east of UTC to stand in. Read off the runner's own zone the suite would assert a different rendering on every machine.",
   },
   {
@@ -562,6 +562,14 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/contacts/contactmemory.test.tsx",
     why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the card prints the date the entry names.",
+  },
+  {
+    file: "features/companies/company360lasttouch.stories.tsx",
+    why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the tile counts from and names the date the entry holds.",
+  },
+  {
+    file: "features/contacts/contactmeetings.held.stories.tsx",
+    why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the table dates a held meeting by the date it names.",
   },
 ];
 

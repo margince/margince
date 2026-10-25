@@ -1,11 +1,11 @@
 import {
   formatActivityWhen,
   type OccurredPrecision,
-} from "../../format/activitywhen";
-import { formatDateTime, formatMoneyOrAbsent } from "../../format/format";
-import { type Locale, translate } from "../../i18n";
-import { isUuid } from "../../lib/uuid";
+} from "../format/activitywhen";
+import { formatDateTime, formatMoneyOrAbsent } from "../format/format";
+import { type Locale, translate } from "../i18n";
 import { historyValueLabel } from "./historyvaluelabels";
+import { isUuid } from "./uuid";
 
 // A history value read the way the rest of the record page reads it.
 //
@@ -68,6 +68,24 @@ function asJsonArray(value: string): unknown[] | undefined {
     return undefined;
   }
   return Array.isArray(parsed) ? parsed : undefined;
+}
+
+// An activity's time takes the precision stored beside it in the same image.
+// An image that carries no precision holds an instant.
+export function precisionOf(
+  image: Readonly<Record<string, unknown>>,
+  field: string,
+): OccurredPrecision | undefined {
+  if (field !== "occurred_at") {
+    return undefined;
+  }
+  // The image is untyped jsonb, so each spelling is read back by name.
+  switch (image.occurred_precision) {
+    case "day":
+      return "day";
+    default:
+      return "instant";
+  }
 }
 
 // Currency/locale/zone/name-resolution for turning a stored history value

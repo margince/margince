@@ -60,7 +60,7 @@ export const DayOnlyVisit: Story = {
     await userEvent.click(
       await screen.findByRole("button", { name: en["timeline.kind.note"] }),
     );
-    const row = (await screen.findByText("Site visit")).parentElement;
+    const row = (await screen.findByText("Site visit")).closest("li");
     await expect(row?.textContent).toMatch(/13 Aug/);
     await expect(row?.textContent).not.toMatch(/\d{1,2}:\d{2}/);
   },

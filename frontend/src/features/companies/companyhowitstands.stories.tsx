@@ -2,9 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent } from "storybook/test";
+import { expect, screen, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { en } from "../../i18n/en";
 import { company, company360 } from "../../testing/company.fixtures";
 import {
   installFetchStub,
@@ -92,7 +91,7 @@ function render(read: Company360) {
 export const Standing: Story = { render: render(view([wrote])) };
 
 // A visit logged by its day alone, on the day the page was read. It has
-// begun by the morning read, and its mark names the day without a clock.
+// begun by the morning read, and its stop names the day without a clock.
 export const DayOnlyVisit: Story = {
   render: render(
     view([
@@ -108,11 +107,11 @@ export const DayOnlyVisit: Story = {
     ]),
   ),
   play: async () => {
-    await userEvent.click(
-      await screen.findByRole("button", { name: en["timeline.kind.note"] }),
-    );
-    const row = (await screen.findByText("Site visit")).parentElement;
-    await expect(row?.textContent).toMatch(/13 Aug/);
-    await expect(row?.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+    const stops = await screen.findByRole("list", {
+      name: company.display_name,
+    });
+    const stop = within(stops).getByText(/^Site visit/);
+    await expect(stop.textContent).toMatch(/13 Aug/);
+    await expect(stop.textContent).not.toMatch(/\d{1,2}:\d{2}/);
   },
 };

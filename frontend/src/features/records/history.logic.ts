@@ -3,6 +3,7 @@ import { provenanceOf } from "../../design-system/provenanceof";
 import type { Provenance } from "../../design-system/trust";
 import type { OccurredPrecision } from "../../format/activitywhen";
 import { stable } from "../../format/collate";
+import { precisionOf } from "../../lib/historyvalues";
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 type FieldHistoryEntry = components["schemas"]["FieldHistoryEntry"];
@@ -158,24 +159,6 @@ export function entryFieldChanges(
       }),
     )
     .filter((change) => change.oldValue !== change.newValue);
-}
-
-// An activity's time takes the precision stored beside it in the same image.
-// An image that carries no precision holds an instant.
-export function precisionOf(
-  image: Readonly<Record<string, unknown>>,
-  field: string,
-): OccurredPrecision | undefined {
-  if (field !== "occurred_at") {
-    return undefined;
-  }
-  // The image is untyped jsonb, so each spelling is read back by name.
-  switch (image.occurred_precision) {
-    case "day":
-      return "day";
-    default:
-      return "instant";
-  }
 }
 
 // A jsonb value as the diff renders it. Anything that is not already text is

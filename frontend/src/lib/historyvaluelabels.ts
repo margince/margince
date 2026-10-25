@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { OccurredPrecision } from "../../format/activitywhen";
-import { type Locale, translate } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import type { OccurredPrecision } from "../format/activitywhen";
+import { type Locale, translate } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 
 // The words for a closed vocabulary a change row stores by its wire spelling,
 // beside the field names in lib/historyfieldlabels.ts.

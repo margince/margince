@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MONEY_ABSENT } from "../../format/format";
+import { MONEY_ABSENT } from "../format/format";
 import {
   type HistoryValueCtx,
   historyValue,
