@@ -84,13 +84,12 @@ type RelationshipStrength struct {
 	LastInboundActivity *ids.ActivityID
 }
 
-// strengthInteractionUnit is what ONE interaction is, from relstrength's shared
+// strengthInteractionUnit is what one interaction is, from relstrength's shared
 // definition. The folds alias activity as `a`; the cited read uses `i`.
 var strengthInteractionUnit = relstrength.InteractionUnitSQL("a")
 
-// strengthCountsAt and strengthCitedCountsAt are what counts as contact at the
-// instant bound to placeholder $nowPos: an interaction dated later has not
-// happened, so it feeds no recency, count or citation.
+// strengthCountsAt and strengthCitedCountsAt count contact at the instant in $nowPos.
+// A later interaction has not happened, so it feeds no recency, count or citation.
 func strengthCountsAt(nowPos int) string {
 	return relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))
 }
@@ -303,8 +302,7 @@ func StrengthForContactsAsOf(ctx context.Context, tx pgx.Tx, contacts []ids.Cont
 	return strengthForContactsAt(ctx, tx, contacts, asOf)
 }
 
-// strengthForContactsAt is the shared body. now is the instant the reading is
-// made at: nothing dated after it counts, live or as-of.
+// strengthForContactsAt is the shared body; nothing dated after now counts.
 func strengthForContactsAt(ctx context.Context, tx pgx.Tx, contacts []ids.ContactID, now time.Time) ([]ContactStrength, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
