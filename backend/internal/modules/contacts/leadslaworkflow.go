@@ -152,7 +152,7 @@ func ladderStepFor(t leadResponseTouch) (LeadStatus, bool) {
 	switch {
 	case t.direction == "inbound", t.kind == "meeting" && (t.meetingStatus == "booked" || t.meetingStatus == "held"):
 		return LeadStatusEngaged, true
-	case t.direction == "outbound", humanLoggedNote(t):
+	case t.direction == touchOutbound, humanLoggedNote(t):
 		return LeadStatusContacted, true
 	}
 	return "", false
@@ -180,13 +180,31 @@ type leadResponseTouch struct {
 // provenance instead.
 const activitySourceManual = "manual"
 
+// touchOutbound and touchNote are the direction and kind §18.1 compares. Named
+// once so mayAnswerSQL renders the literals the Go rule reads.
+const (
+	touchOutbound = "outbound"
+	touchNote     = "note"
+)
+
+// humanCapturedPrefix is the captured_by namespace of a human author.
+var humanCapturedPrefix = string(principal.PrincipalHuman) + ":"
+
+// mayAnswerSQL holds for every activity under alias that isFirstResponseActivity
+// can accept: an outbound, or a note a rep typed. A sweep reads it to skip the
+// rest, and TestMayAnswerSQLAdmitsEveryAcceptedTouch holds it to the Go rule.
+func mayAnswerSQL(alias string) string {
+	return fmt.Sprintf(`(%[1]s.direction = '%[2]s' OR (%[1]s.kind = '%[3]s' AND %[1]s.source = '%[4]s' AND %[1]s.captured_by LIKE '%[5]s%%'))`,
+		alias, touchOutbound, touchNote, activitySourceManual, humanCapturedPrefix)
+}
+
 // humanLoggedNote is the ONE spelling of "a rep typed this note into the
 // composer" — the ladder's contact arm and the first-response rule
 // (isFirstResponseActivity) both read it, so they cannot drift apart.
 //
 // Held by: TestEachRuleBearingTouchFieldHasOneReader (backend/internal/modules/contacts/responsetouch_test.go)
 func humanLoggedNote(t leadResponseTouch) bool {
-	return t.kind == "note" && t.source == activitySourceManual && humanCaptured(t)
+	return t.kind == touchNote && t.source == activitySourceManual && humanCaptured(t)
 }
 
 // humanCaptured reads the captured_by grammar's human namespace off a touch.
@@ -198,7 +216,7 @@ func humanLoggedNote(t leadResponseTouch) bool {
 // one of the two, and the ladder and the first-response clock would then
 // disagree about whether a contact was involved.
 func humanCaptured(t leadResponseTouch) bool {
-	return strings.HasPrefix(t.capturedBy, string(principal.PrincipalHuman)+":")
+	return strings.HasPrefix(t.capturedBy, humanCapturedPrefix)
 }
 
 // leadResponseTouches answers which leads the activity is linked to, with

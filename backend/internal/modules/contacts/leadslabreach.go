@@ -120,37 +120,57 @@ func markBreaches(ctx context.Context, tx pgx.Tx, policy leadSLAPolicy, now time
 	return breaches, nil
 }
 
-// stampDayAnswers stamps the first response of each lead owing a reply that a
-// day touch has answered by now. The subscriber skips a day touch while its
-// date runs, and this scan runs on the clock whether or not a target is set.
+// stampDayAnswers stamps the first response of each lead that a day touch has
+// answered by now. The subscriber skips a day touch while its date runs, and
+// this scan runs on the clock whether or not a target is set. It reads the
+// candidates a page at a time, so no scan holds them all at once.
 func stampDayAnswers(ctx context.Context, tx pgx.Tx, now time.Time) error {
-	rows, err := tx.Query(ctx, `
-		SELECT lead.id FROM lead
-		 WHERE `+leadOwesAReplySQL+`
-		   AND EXISTS (SELECT 1 FROM activity_link l JOIN activity a ON a.id = l.activity_id
-		                WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.occurred_precision = 'day'
-		                  AND `+occurredday.ProvenSQL("a")+` <= $1
-		                  AND `+auth.ActivityAvailableClause("a")+`)`, now)
-	if err != nil {
-		return fmt.Errorf("select leads a day touch may have answered: %w", err)
-	}
-	leads, err := pgx.CollectRows(rows, pgx.RowTo[ids.LeadID])
-	if err != nil {
-		return err
-	}
-	for _, lead := range leads {
-		answered, err := answeredBy(ctx, tx, lead, now)
+	var after ids.LeadID
+	for {
+		leads, err := dayAnswerCandidates(ctx, tx, now, after)
 		if err != nil {
 			return err
 		}
-		if answered == nil {
-			continue
+		for _, lead := range leads {
+			answered, err := answeredBy(ctx, tx, lead, now)
+			if err != nil {
+				return err
+			}
+			if answered == nil {
+				continue
+			}
+			if _, err := recordFirstResponseTx(ctx, tx, lead, *answered); err != nil {
+				return err
+			}
 		}
-		if _, err := recordFirstResponseTx(ctx, tx, lead, *answered); err != nil {
-			return err
+		if len(leads) < dayAnswerPage {
+			return nil
 		}
+		after = leads[len(leads)-1]
 	}
-	return nil
+}
+
+// dayAnswerPage is how many leads one read of the day-answer sweep returns.
+const dayAnswerPage = 500
+
+// dayAnswerCandidates are the leads after `after`, in id order, holding a day
+// touch that may answer them by now: one mayAnswerSQL admits, whose answer the
+// lead takes (leadTakesFirstResponseSQL), as the subscriber's write asks.
+func dayAnswerCandidates(ctx context.Context, tx pgx.Tx, now time.Time, after ids.LeadID) ([]ids.LeadID, error) {
+	proven := occurredday.ProvenSQL("a")
+	rows, err := tx.Query(ctx, `
+		SELECT lead.id FROM lead
+		 WHERE lead.id > $2
+		   AND EXISTS (SELECT 1 FROM activity_link l JOIN activity a ON a.id = l.activity_id
+		                WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.occurred_precision = 'day'
+		                  AND `+mayAnswerSQL("a")+` AND `+proven+` <= $1
+		                  AND `+leadTakesFirstResponseSQL("lead", proven)+`
+		                  AND `+auth.ActivityAvailableClause("a")+`)
+		 ORDER BY lead.id LIMIT $3`, now, after, dayAnswerPage)
+	if err != nil {
+		return nil, fmt.Errorf("select leads a day touch may have answered: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.LeadID])
 }
 
 func collectBreaches(rows pgx.Rows) ([]SLABreach, error) {

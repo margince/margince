@@ -126,3 +126,34 @@ func TestTheSLAScanStampsADayTouchOnceItsDateEnds(t *testing.T) {
 		})
 	}
 }
+
+// A lead typed in by hand has no enquiry, yet the subscriber stamps its first
+// answer. So the scan stamps a day call on it once the call's date ends.
+func TestTheSLAScanStampsADayCallOnALeadWithNoEnquiry(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	date := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
+	lead := ids.NewV7()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO lead (id, full_name, status, source, captured_by, owner_id, created_at)
+		 VALUES ($1, 'Hand Lead', 'new', 'manual', 'human:x', $2, $3)`, lead, e.Rep1, date.Add(8*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	anchor := occurredday.Anchor(date)
+	if _, _, err := activities.NewStore(e.DB()).LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "call", Subject: new("Called"), Direction: new("outbound"), OccurredAt: &anchor,
+		OccurredPrecision: activities.PrecisionDay, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	scanSLAAt(t, e, date.Add(15*time.Hour))
+	if answered, _ := leadSLAStamps(t, owner, lead); answered != nil {
+		t.Fatalf("the scan stamped %v while the call's date runs", answered)
+	}
+	scanSLAAt(t, e, date.AddDate(0, 0, 1).Add(time.Hour))
+	if answered, _ := leadSLAStamps(t, owner, lead); answered == nil || !answered.Equal(date.AddDate(0, 0, 1)) {
+		t.Errorf("first response %v once the date ended, want its end %v", answered, date.AddDate(0, 0, 1))
+	}
+}

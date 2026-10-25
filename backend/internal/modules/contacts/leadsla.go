@@ -81,6 +81,20 @@ var leadHasInboundSQL = auth.LiveLeadInquiryClause("lead")
 
 var leadOwesAReplySQL = "archived_at IS NULL AND first_response_at IS NULL AND " + leadHasInboundSQL
 
+// firstResponseAtSQL is the stamp a response at `at` earns on the lead under
+// alias, firstResponseStamp in SQL: a predicate over many leads cannot call Go.
+func firstResponseAtSQL(alias, at string) string {
+	return "greatest(CAST(" + at + " AS timestamptz), " + alias + ".created_at)"
+}
+
+// leadTakesFirstResponseSQL is whether the live lead under alias takes a
+// response at `at` as its first: none is stamped, or a later one is. The
+// subscriber's write and the day-answer sweep both ask it.
+func leadTakesFirstResponseSQL(alias, at string) string {
+	return fmt.Sprintf(`(%[1]s.archived_at IS NULL AND (%[1]s.first_response_at IS NULL OR %[1]s.first_response_at > %[2]s))`,
+		alias, firstResponseAtSQL(alias, at))
+}
+
 // slaStateClause renders one sla_state filter as SQL over the lead's own
 // columns, with the same arithmetic leadSLAFields applies in Go: the list
 // and the row must agree about which leads are overdue.
@@ -166,19 +180,18 @@ func recordFirstResponseTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, at
 			return err
 		}
 		var current *time.Time
-		var created time.Time
-		if err := tx.QueryRow(ctx, `SELECT first_response_at, created_at FROM lead WHERE id = $1`, leadID).Scan(&current, &created); err != nil {
+		var takes bool
+		// A backdated activity can predate the lead it answers. The FIRST
+		// response is the earliest one, since the bus is at-least-once and
+		// unordered; a later or equal stamp is a replay and a no-op.
+		if err := tx.QueryRow(ctx, `SELECT first_response_at, `+firstResponseAtSQL("lead", "$2")+`, `+
+			leadTakesFirstResponseSQL("lead", "$2")+` FROM lead WHERE id = $1`, leadID, at).Scan(&current, &at, &takes); err != nil {
 			return err
 		}
-		// A backdated activity can predate the lead it answers.
-		at = firstResponseStamp(at, created)
-		// The FIRST response is the earliest one, not the first one this
-		// subscriber happened to process: the bus is at-least-once and
-		// unordered, so a 09:00 reply may arrive after a 10:00 one. A later
-		// or equal stamp on a lead already answered is a replay and a no-op.
-		if current != nil && !at.Before(*current) {
+		if !takes {
 			return nil
 		}
+		at = at.UTC()
 		p := storekit.NewPatch()
 		p.Set(firstResponseColumn, current, at)
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
@@ -210,7 +223,7 @@ func isFirstResponseActivity(t leadResponseTouch) bool {
 	if humanLoggedNote(t) {
 		return true
 	}
-	if t.direction != "outbound" {
+	if t.direction != touchOutbound {
 		return false
 	}
 	if humanCaptured(t) {
