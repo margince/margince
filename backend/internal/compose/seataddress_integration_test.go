@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -80,6 +81,26 @@ func TestAWithdrawnMailboxLabelDecidesNothingNewAndKeepsItsHistory(t *testing.T)
 	}
 }
 
+// A mailbox waiting for reauth is not withdrawn: its label stays the seat's
+// own address, as a typed one is, and history keeps it.
+func TestAMailboxAwaitingReauthKeepsItsLabelAsTheSeatsOwn(t *testing.T) {
+	e := integration.Setup(t)
+	const address = "rep2.paused@mailbox.example"
+	connectSeatMailbox(t, e, e.Rep2, address, "shared")
+	e.WsExec(t, `UPDATE capture_connection SET status = 'reauth_required' WHERE user_id = $1`, e.Rep2)
+
+	seats, history := seatAddressesNow(t, e)
+	if !seats.Covers(address, e.Rep2) {
+		t.Error("a mailbox awaiting reauth lost its label as the seat's own address")
+	}
+	if seats.Covers(address, ids.Nil) {
+		t.Error("a mailbox awaiting reauth still proves its label to every seat")
+	}
+	if len(history[e.Rep2.String()]) == 0 {
+		t.Error("the history reader lost the label of a mailbox awaiting reauth")
+	}
+}
+
 // The review-queue accept of a seat's address keeps the ledger `real` with the
 // seat reason, creates nothing, and releases none of the held mail.
 func TestAcceptingASeatAddressInTheReviewQueueCreatesNothingAndReleasesNothing(t *testing.T) {
@@ -120,11 +141,23 @@ func TestAcceptingASeatAddressInTheReviewQueueCreatesNothingAndReleasesNothing(t
 // that address must wait for it and then refuse. Without the shared lock the
 // check mints the contact first.
 func TestACounterpartyCheckWaitsForAnAliasClaimInFlight(t *testing.T) {
+	for name, spelling := range map[string]struct{ claimed, checked string }{
+		"one spelling":          {"rep1.second@home.example", "rep1.second@home.example"},
+		"another case":          {"Rep1.Second@Home.Example", "rep1.second@home.example"},
+		"ascii against unicode": {"rep1@xn--bcher-kva.example", "rep1@bücher.example"},
+	} {
+		t.Run(name, func(t *testing.T) { raceAliasClaimAndCheck(t, spelling.claimed, spelling.checked) })
+	}
+}
+
+func raceAliasClaimAndCheck(t *testing.T, claimed, checked string) {
 	e := integration.Setup(t)
 	ctx := context.Background()
-	const alias = "rep1.second@home.example"
-	mail := seedCapturedMail(t, e, alias, "hello")
-
+	stored, err := capture.ValidExclusionValue(capture.IdentityKindAddress, claimed)
+	if err != nil {
+		t.Fatalf("the claimed spelling %q is no address: %v", claimed, err)
+	}
+	mail := seedCapturedMail(t, e, checked, "hello")
 	owner := integration.OwnerConn(t)
 	gate, err := owner.Begin(ctx)
 	if err != nil {
@@ -139,14 +172,14 @@ func TestACounterpartyCheckWaitsForAnAliasClaimInFlight(t *testing.T) {
 	// waits on this row's unique key.
 	if _, err := gate.Exec(ctx, `
 		INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
-		VALUES ($1, 'address', $2, 'user', 'human:holder')`, e.Rep1, alias); err != nil {
+		VALUES ($1, 'address', $2, 'user', 'human:holder')`, e.Rep1, stored); err != nil {
 		t.Fatalf("holding the claim: %v", err)
 	}
 
 	claimErr, claimDone := make(chan error, 1), make(chan struct{})
 	go func() {
 		_, err := capture.NewOwnerIdentityStore(e.DB()).Add(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
-			capture.IdentityKindAddress, alias)
+			capture.IdentityKindAddress, claimed)
 		claimErr <- err
 		close(claimDone)
 	}()
@@ -155,7 +188,7 @@ func TestACounterpartyCheckWaitsForAnAliasClaimInFlight(t *testing.T) {
 	ensureErr, ensureDone := make(chan error, 1), make(chan struct{})
 	go func() {
 		_, err := e.Contacts.EnsureCounterparty(e.ConnectorOwnerCtx(e.Rep1, "gmail"), contacts.EnsureCounterpartyInput{
-			Email: alias, DisplayName: "Rep One", Domain: "home.example", OwnerID: e.Rep1,
+			Email: checked, DisplayName: "Rep One", Domain: checked[strings.LastIndex(checked, "@")+1:], OwnerID: e.Rep1,
 			ActivityID: ids.From[ids.ActivityKind](mail), Source: "gmail:" + mail.String(), CapturedBy: "connector:gmail",
 		})
 		ensureErr <- err
@@ -175,7 +208,7 @@ func TestACounterpartyCheckWaitsForAnAliasClaimInFlight(t *testing.T) {
 	if err := <-ensureErr; !errors.Is(err, contacts.ErrCounterpartyIsSeat) {
 		t.Fatalf("the check after the claim committed = %v, want ErrCounterpartyIsSeat", err)
 	}
-	if n := contactsAt(t, e, alias); n != 0 {
+	if n := contactsAt(t, e, checked); n != 0 {
 		t.Fatalf("%d contacts for the alias claimed in flight, want 0", n)
 	}
 }

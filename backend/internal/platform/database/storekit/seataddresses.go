@@ -36,7 +36,7 @@ func WorkspaceSeatAddresses(ctx context.Context, tx pgx.Tx) (SeatAddresses, erro
 	}
 	set := SeatAddresses{proven: map[string]struct{}{}, declared: map[string]map[ids.UUID]struct{}{}}
 	for _, record := range records {
-		address := mailidentity.ReaderAddress(record.label, record.source)
+		address := mailidentity.SeatAddressKey(record.label, record.source)
 		if address == "" || !record.decidesNew() {
 			continue
 		}
@@ -68,7 +68,7 @@ func provenSeatSource(source string) bool {
 // asking: proven for any seat, or declared by asking itself. ids.Nil asks for
 // proof alone, which is the answer for every other seat's records.
 func (s SeatAddresses) Covers(address string, asking ids.UUID) bool {
-	folded := mailidentity.ReaderAddress(address, "")
+	folded := mailidentity.SeatAddressKey(address, "")
 	if _, ok := s.proven[folded]; ok {
 		return true
 	}
@@ -102,7 +102,7 @@ func (s SeatAddresses) declaredBy(address string, asking ids.UUID) bool {
 func SeatAddressesFor(ctx context.Context, tx pgx.Tx, addresses ...string) (SeatAddresses, error) {
 	keys := make([]string, 0, len(addresses))
 	for _, address := range addresses {
-		if folded := mailidentity.ReaderAddress(address, ""); folded != "" {
+		if folded := mailidentity.SeatAddressKey(address, ""); folded != "" {
 			keys = append(keys, folded)
 		}
 	}
@@ -121,11 +121,11 @@ func SeatAddressesFor(ctx context.Context, tx pgx.Tx, addresses ...string) (Seat
 // it before any row lock, and wait on no contact row under it.
 func LockSeatAddressClaim(ctx context.Context, tx pgx.Tx, address string) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(`+seatAddressLockKey+`)`,
-		mailidentity.ReaderAddress(address, "")); err != nil {
+		mailidentity.SeatAddressKey(address, "")); err != nil {
 		return fmt.Errorf("locking who holds a seat address: %w", err)
 	}
 	return nil
 }
 
-// seatAddressLockKey keys both lock modes on the address as Covers folds it.
+// seatAddressLockKey keys both lock modes on SeatAddressKey, the fold Covers compares.
 const seatAddressLockKey = `hashtext('margince:own-address:' || $1)::bigint`

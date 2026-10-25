@@ -123,7 +123,8 @@ const (
 type mailSeatIdentity struct{ seat, label, source string }
 
 // decidesNew is the lifecycle of a withdrawn mailbox: its label is no evidence
-// for a decision made now. UnambiguousMailSeatIdentities claims no such source,
+// for a decision made now. Only a disconnect withdraws; a mailbox in error or
+// awaiting reauth keeps its label as the seat's own. UnambiguousMailSeatIdentities claims no such source,
 // and MailSeatIdentities reads it for stored history.
 func (r mailSeatIdentity) decidesNew() bool { return r.source != withdrawnMailboxSource }
 
@@ -132,7 +133,7 @@ func readMailSeatIdentities(ctx context.Context, tx pgx.Tx) ([]mailSeatIdentity,
  UNION SELECT i.user_id::text, i.value, i.source FROM capture_owner_identity i
  JOIN app_user u ON u.id = i.user_id WHERE i.kind = 'address' AND `+workforce.LiveMemberSQL("u")+`
  UNION SELECT c.user_id::text, c.account_label, CASE WHEN `+provedMailboxClause("c")+` THEN '`+provedMailboxSource+`'
-   WHEN c.status <> 'connected' THEN '`+withdrawnMailboxSource+`' ELSE '' END FROM capture_connection c
+   WHEN c.status = 'disconnected' THEN '`+withdrawnMailboxSource+`' ELSE '' END FROM capture_connection c
  JOIN app_user u ON u.id = c.user_id WHERE c.archived_at IS NULL AND `+workforce.LiveMemberSQL("u")+` AND coalesce(c.account_label, '') <> ''`)
 	if err != nil {
 		return nil, fmt.Errorf("reading mail identities: %w", err)
