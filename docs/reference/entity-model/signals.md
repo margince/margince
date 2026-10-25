@@ -89,7 +89,7 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 **Triggers**
 
 - `trg_signal_entity_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_signal_entity_keys()`
-- `trg_signal_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
+- `trg_signal_updated`: `BEFORE UPDATE FOR EACH ROW WHEN (((NOT (((((old.entity_unkeyed IS DISTINCT FROM new.entity_unkeyed) OR (old.entity_deal_id IS DISTINCT FROM new.entity_deal_id)) OR (old.entity_company_id IS DISTINCT FROM new.entity_company_id)) OR (old.entity_contact_id IS DISTINCT FROM new.entity_contact_id)) OR (old.entity_project_id IS DISTINCT FROM new.entity_project_id))) OR ((to_jsonb(old.*) - ARRAY['entity_unkeyed', 'entity_deal_id', 'entity_company_id', 'entity_contact_id', 'entity_project_id']) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['entity_unkeyed', 'entity_deal_id', 'entity_company_id', 'entity_contact_id', 'entity_project_id'])))) EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## signal_resolution
 

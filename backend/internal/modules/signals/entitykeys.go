@@ -44,8 +44,8 @@ const keyEntitiesSQL = `
 
 // KeyEntitiesTx keys one page of the signals written before the entity keys,
 // after the given id. It returns the page's ids, each of which it changed.
-// The touch trigger bumps each keyed row's version once, so a client holding
-// the old version is asked to read the signal again.
+// The touch trigger skips an update that changes only the keys and the marker,
+// so a version a lifecycle approval pinned stays current.
 func KeyEntitiesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err

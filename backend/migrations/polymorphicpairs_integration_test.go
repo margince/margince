@@ -90,6 +90,28 @@ func TestEveryPolymorphicPairAnswersForItsRecord(t *testing.T) {
 	judgePairs(t, found, pairResolution)
 }
 
+// shapedPairsKnown are the pairs that carry a SHAPE today. An answered pair
+// leaves the corpus without a trace, so a query narrowed past one would pass.
+// Each must still be a candidate before shapeAnswers excuses it.
+var shapedPairsKnown = []polymorphicPair{
+	{table: "analytics_share", id: "scope_id", discriminator: "scope_kind"},
+	{table: "assurance_task_item", id: "subject_id", discriminator: "subject_kind"},
+	{table: "record_grant", id: "record_id", discriminator: "record_type"},
+	{table: "signal", id: "entity_id", discriminator: "entity_type"},
+	{table: "user_record_view", id: "entity_id", discriminator: "entity_type"},
+	{table: "weekly_plan_commitment", id: "linked_record_id", discriminator: "linked_record_type"},
+}
+
+func requireShapedPairsInCensus(t *testing.T, candidates []polymorphicPair) {
+	t.Helper()
+	for _, pair := range shapedPairsKnown {
+		if !slices.Contains(candidates, pair) {
+			t.Errorf("the census no longer reads %s.%s (%s), a pair that carries a SHAPE; the query was "+
+				"narrowed, and every pair it now misses passes unasked", pair.table, pair.id, pair.discriminator)
+		}
+	}
+}
+
 // unansweredPairs lists the polymorphic pairs in the catalog that no SHAPE
 // answers, spelled as the register keys it.
 func unansweredPairs(ctx context.Context, t *testing.T, conn *pgx.Conn) []string {
@@ -106,6 +128,7 @@ func unansweredPairs(ctx context.Context, t *testing.T, conn *pgx.Conn) []string
 	if err != nil {
 		t.Fatalf("reading the polymorphic pairs: %v", err)
 	}
+	requireShapedPairsInCensus(t, candidates)
 	var found []string
 	for _, pair := range candidates {
 		if !shapeAnswers(readShapeFacts(ctx, t, conn, pair)) {

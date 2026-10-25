@@ -50,11 +50,6 @@ ALTER TABLE signal
 		CHECK (entity_unkeyed OR entity_id IS NULL OR num_nonnulls(
 			entity_deal_id, entity_company_id, entity_contact_id, entity_project_id) = 1) NOT VALID;
 
-CREATE INDEX idx_signal_entity_deal    ON signal (entity_deal_id)    WHERE entity_deal_id IS NOT NULL;
-CREATE INDEX idx_signal_entity_company ON signal (entity_company_id) WHERE entity_company_id IS NOT NULL;
-CREATE INDEX idx_signal_entity_contact ON signal (entity_contact_id) WHERE entity_contact_id IS NOT NULL;
-CREATE INDEX idx_signal_entity_project ON signal (entity_project_id) WHERE entity_project_id IS NOT NULL;
-
 -- The trigger, not the writer, decides whether a row is keyed: an insert is
 -- always keyed, and an update keeps the marker or clears it.
 CREATE FUNCTION trg_signal_entity_keys() RETURNS trigger
@@ -77,3 +72,4 @@ END $$;
 CREATE TRIGGER trg_signal_entity_keys
 	BEFORE INSERT OR UPDATE ON signal
 	FOR EACH ROW EXECUTE FUNCTION trg_signal_entity_keys();
+

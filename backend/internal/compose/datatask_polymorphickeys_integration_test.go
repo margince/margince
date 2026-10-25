@@ -7,17 +7,22 @@ package compose
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // keyedTables are the tables the task keys, each with its trigger and marker.
@@ -71,6 +76,9 @@ func TestThePolymorphicKeysTaskKeysLiveRowsAndEndsTheRest(t *testing.T) {
 			       ('risk', 'deal', $2, 'Orphan', 'test', 'human:seed')`, contact, gone); err != nil {
 			return err
 		}
+		if err := seedContractEndedSignal(ctx, tx, company); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `
 			WITH plan AS (
 			  INSERT INTO weekly_plan (owner_id, local_week_start, captured_by)
@@ -87,6 +95,16 @@ func TestThePolymorphicKeysTaskKeysLiveRowsAndEndsTheRest(t *testing.T) {
 		_, err := company360.RecordVisit(ctx, tx, ids.From[ids.UserKind](e.AdminUser), "contact", gone, now)
 		return err
 	})
+
+	stamp := func() string {
+		return e.WsScalar(t, `SELECT concat_ws(',', version, updated_at) FROM signal WHERE entity_id = $1`, contact)
+	}
+	stampBefore := stamp()
+	shown := readLifecycleFinding(ctx, t, e, company)
+	if !lifecyclereview.Actionable(shown) {
+		t.Fatalf("the seeded account-ending signal is not actionable (%s), so the pin check below proves nothing",
+			lifecyclereview.BlockingReason(shown))
+	}
 
 	task := polymorphicKeysDataTask()
 	for i := range task.Steps {
@@ -116,6 +134,13 @@ func TestThePolymorphicKeysTaskKeysLiveRowsAndEndsTheRest(t *testing.T) {
 		}
 	}
 
+	if got := stamp(); got != stampBefore {
+		t.Errorf("keying moved the signal's version and updated_at from %q to %q", stampBefore, got)
+	}
+	if current := readLifecycleFinding(ctx, t, e, company); !lifecyclereview.Matches(current, &shown) {
+		t.Errorf("keying made a pinned lifecycle approval stale: shown %+v, now %+v", shown, current)
+	}
+
 	for _, step := range task.Steps {
 		var replay datatask.BatchOut
 		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -143,6 +168,46 @@ func TestThePolymorphicKeysTaskKeysLiveRowsAndEndsTheRest(t *testing.T) {
 	if left := e.WsCount(t, `SELECT count(*) FROM user_record_view WHERE entity_id = $1`, company); left != 0 {
 		t.Errorf("%d mark(s) still name the deleted company", left)
 	}
+}
+
+// seedContractEndedSignal writes an account-ending signal on the company whose
+// evidence quotes an activity, the shape a lifecycle approval pins.
+func seedContractEndedSignal(ctx context.Context, tx pgx.Tx, company ids.UUID) error {
+	const body = "We will not renew the contract after March."
+	var activity ids.UUID
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by)
+		VALUES ('note', 'Renewal', $1, now(), 'manual', 'test') RETURNING id`, body).Scan(&activity); err != nil {
+		return err
+	}
+	digest := sha256.Sum256([]byte(values.CollapseSpace(body)))
+	evidence := fmt.Sprintf(`[{"snippet": %q, "source_type": "activity", "source_id": %q, "lifecycle_scope": "company",
+		"source_quote": {"start": 0, "end": %d, "sha256": %q}}]`, body, activity.String(), len(body), hex.EncodeToString(digest[:]))
+	_, err := tx.Exec(ctx, `
+		INSERT INTO signal (kind, entity_type, entity_id, resolved_company_id, summary, evidence, source, captured_by)
+		VALUES ('contract_ended', 'company', $1, $1, 'Contract ends', $2::jsonb, 'test', 'human:seed')`,
+		company, evidence)
+	return err
+}
+
+// readLifecycleFinding is what a lifecycle review reads and pins of the
+// company's account-ending signal.
+func readLifecycleFinding(ctx context.Context, t *testing.T, e *integration.Env, company ids.UUID) lifecyclereview.Finding {
+	t.Helper()
+	var finding lifecyclereview.Finding
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		var signal ids.UUID
+		if err := tx.QueryRow(ctx, `SELECT id FROM signal WHERE kind = 'contract_ended' AND entity_id = $1`,
+			company).Scan(&signal); err != nil {
+			return err
+		}
+		var err error
+		finding, err = lifecyclereview.Read(ctx, tx, ids.From[ids.CompanyKind](company), signal)
+		return err
+	}); err != nil {
+		t.Fatalf("reading the lifecycle finding: %v", err)
+	}
+	return finding
 }
 
 // RecordVisit keys the mark it writes, so a delete reaches a mark made today.

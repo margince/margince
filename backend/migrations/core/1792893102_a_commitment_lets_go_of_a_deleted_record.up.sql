@@ -54,12 +54,6 @@ ALTER TABLE weekly_plan_commitment
 		CHECK (linked_record_unkeyed OR linked_record_id IS NULL OR num_nonnulls(
 			linked_deal_id, linked_lead_id, linked_contact_id, linked_company_id, linked_project_id) = 1) NOT VALID;
 
-CREATE INDEX idx_weekly_plan_commitment_linked_deal    ON weekly_plan_commitment (linked_deal_id)    WHERE linked_deal_id IS NOT NULL;
-CREATE INDEX idx_weekly_plan_commitment_linked_lead    ON weekly_plan_commitment (linked_lead_id)    WHERE linked_lead_id IS NOT NULL;
-CREATE INDEX idx_weekly_plan_commitment_linked_contact ON weekly_plan_commitment (linked_contact_id) WHERE linked_contact_id IS NOT NULL;
-CREATE INDEX idx_weekly_plan_commitment_linked_company ON weekly_plan_commitment (linked_company_id) WHERE linked_company_id IS NOT NULL;
-CREATE INDEX idx_weekly_plan_commitment_linked_project ON weekly_plan_commitment (linked_project_id) WHERE linked_project_id IS NOT NULL;
-
 CREATE FUNCTION trg_weekly_plan_commitment_linked_keys() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN

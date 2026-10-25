@@ -30,9 +30,6 @@ ALTER TABLE user_record_view
 	ADD CONSTRAINT user_record_view_entity_shape
 		CHECK (entity_unkeyed OR num_nonnulls(entity_company_id, entity_contact_id) = 1) NOT VALID;
 
-CREATE INDEX idx_user_record_view_entity_company ON user_record_view (entity_company_id) WHERE entity_company_id IS NOT NULL;
-CREATE INDEX idx_user_record_view_entity_contact ON user_record_view (entity_contact_id) WHERE entity_contact_id IS NOT NULL;
-
 CREATE FUNCTION trg_user_record_view_entity_keys() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN

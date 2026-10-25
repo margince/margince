@@ -182,14 +182,16 @@ func boundKeys(f shapeFacts, guarded []string) ([]branchKey, bool) {
 	return keys, true
 }
 
-// clearsPair says whether an update trigger sets both halves of the pair to
-// NULL. That is how a row lets go of a record its SET NULL key cleared.
+// clearsPair says whether a `BEFORE UPDATE` trigger sets both halves of the
+// pair to NULL. That is how a row lets go of a record its SET NULL key cleared.
+// A `WHEN` clause or an `UPDATE OF` list could let the action's update past it.
 func clearsPair(f shapeFacts) bool {
 	disc, id := regexp.QuoteMeta(f.pair.discriminator), regexp.QuoteMeta(f.pair.id)
 	clearsDisc := regexp.MustCompile(`\bNEW\.` + disc + ` := NULL;`)
 	clearsID := regexp.MustCompile(`\bNEW\.` + id + ` := NULL;`)
 	return slices.ContainsFunc(f.triggers, func(trigger rowTrigger) bool {
-		return trigger.onUpdate && (trigger.enabled == "O" || trigger.enabled == "A") &&
+		return trigger.onUpdate && !trigger.qualified && !trigger.columns &&
+			(trigger.enabled == "O" || trigger.enabled == "A") &&
 			clearsDisc.MatchString(trigger.source) && clearsID.MatchString(trigger.source)
 	})
 }
@@ -429,6 +431,15 @@ func TestATriggerFilledShapeIsAnsweredOnlyWhenTheMarkerIsGuarded(t *testing.T) {
 	}
 }
 
+// commitmentShapeWithoutClearing is commitmentShape with no trigger that
+// clears the pair.
+func commitmentShapeWithoutClearing() shapeFacts {
+	f := commitmentShape()
+	moveClearingToItsOwnTrigger(&f)
+	f.triggers = f.triggers[:1]
+	return f
+}
+
 // commitmentShape is the shape weekly_plan_commitment ships. Its pair may name
 // no record, its keys let go of a deleted record, and an update may clear its
 // marker.
@@ -467,9 +478,27 @@ END `}},
 	return f
 }
 
+// moveClearingToItsOwnTrigger moves the pair's clearing out of the marker
+// trigger into a second one, and returns it for a case to bend.
+func moveClearingToItsOwnTrigger(f *shapeFacts) *rowTrigger {
+	const clearing = "NEW.linked_record_type := NULL;\n\t\tNEW.linked_record_id := NULL;"
+	f.triggers[0].source = strings.Replace(f.triggers[0].source, clearing, "NULL;", 1)
+	f.triggers = append(f.triggers, rowTrigger{
+		onInsert: true, onUpdate: true, enabled: "O",
+		source: "\nBEGIN\n\t" + clearing + "\n\tRETURN NEW;\nEND",
+	})
+	return &f.triggers[len(f.triggers)-1]
+}
+
 func TestAShapeOverANullablePairWithAClearableMarkerIsAnswered(t *testing.T) {
 	if !shapeAnswers(commitmentShape()) {
 		t.Fatal("the shape weekly_plan_commitment ships was not recognised; every case below would pass vacuously")
+	}
+	split := commitmentShape()
+	moveClearingToItsOwnTrigger(&split)
+	if !shapeAnswers(split) || clearsPair(commitmentShapeWithoutClearing()) {
+		t.Fatal("moving the clearing to its own unqualified trigger changed the answer; the WHEN and " +
+			"UPDATE OF cases below would pass vacuously")
 	}
 
 	reset := "NEW.linked_record_unkeyed := OLD.linked_record_unkeyed AND NEW.linked_record_unkeyed;"
@@ -488,6 +517,12 @@ func TestAShapeOverANullablePairWithAClearableMarkerIsAnswered(t *testing.T) {
 		},
 		"no trigger clears the pair a SET NULL key let go of": func(f *shapeFacts) {
 			f.triggers[0].source = strings.Replace(f.triggers[0].source, "NEW.linked_record_id := NULL;", "", 1)
+		},
+		"the trigger that clears the pair has a WHEN clause": func(f *shapeFacts) {
+			moveClearingToItsOwnTrigger(f).qualified = true
+		},
+		"the trigger that clears the pair has an UPDATE OF list": func(f *shapeFacts) {
+			moveClearingToItsOwnTrigger(f).columns = true
 		},
 		"the vocabulary is excused by another column": func(f *shapeFacts) {
 			f.checks[0] = strings.Replace(f.checks[0], "(linked_record_type IS NULL)", "(label IS NULL)", 1)
