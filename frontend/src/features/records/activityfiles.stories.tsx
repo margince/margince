@@ -51,6 +51,7 @@ const FILES: Attachment[] = [
 ];
 
 const KICKOFF = {
+  writable: true,
   id: "act-kickoff",
   kind: "meeting",
   subject: "Kickoff with Brandt IT",
@@ -77,12 +78,22 @@ function Files({
   data,
   allow,
   archived,
-}: Readonly<{ data: Attachment[]; allow?: GrantSpec; archived?: boolean }>) {
+  writable = true,
+}: Readonly<{
+  data: Attachment[];
+  allow?: GrantSpec;
+  archived?: boolean;
+  writable?: boolean;
+}>) {
   stub(data, allow);
   return (
     <StoryProviders>
       <div style={{ maxWidth: 560 }}>
-        <ActivityFiles activityId="act-kickoff" archived={archived} />
+        <ActivityFiles
+          activityId="act-kickoff"
+          writable={writable}
+          archived={archived}
+        />
       </div>
     </StoryProviders>
   );

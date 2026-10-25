@@ -198,6 +198,25 @@ describe("TimelineActions", () => {
     offers_email: true,
   };
 
+  it("withholds Relink and the audience control on an activity the server says is not the reader's to change", async () => {
+    stubRoutes();
+    render(
+      <TimelineActions
+        activity={{ ...note, writable: false }}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Relink" }).hasAttribute("disabled"),
+      ).toBe(true),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Change visibility" }),
+    ).toBeNull();
+  });
+
   it("offers Reply on an email row and Relink alongside it", () => {
     stubRoutes();
     render(
@@ -472,7 +491,7 @@ describe("TimelineActions", () => {
   // `manual` is a HUMAN's own answer, not the system's, so it stays theirs to
   // change. Without this the fix above would read as "any reason at all hides
   // the control", which withholds it from every row somebody has already set.
-  it("keeps the audience control on a row a human set the audience of", () => {
+  it("keeps the audience control on a row a human set the audience of", async () => {
     stubRoutes();
     render(
       <TimelineActions
@@ -487,13 +506,13 @@ describe("TimelineActions", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: "Change visibility" }),
+      await screen.findByRole("button", { name: "Change visibility" }),
     ).toBeTruthy();
   });
 
   // A note, a call or a meeting derives no audience, so the row keeps the
   // control for every kind but email.
-  it("keeps the audience control on a row that is not an email", () => {
+  it("keeps the audience control on a row that is not an email", async () => {
     stubRoutes();
     render(
       <TimelineActions
@@ -503,7 +522,7 @@ describe("TimelineActions", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: "Change visibility" }),
+      await screen.findByRole("button", { name: "Change visibility" }),
     ).toBeTruthy();
   });
 
@@ -557,7 +576,7 @@ describe("TimelineActions", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Change visibility" }),
+      await screen.findByRole("button", { name: "Change visibility" }),
     );
     await userEvent.click(screen.getByLabelText(/Named people/));
 
@@ -630,7 +649,7 @@ describe("TimelineActions", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Change visibility" }),
+      await screen.findByRole("button", { name: "Change visibility" }),
     );
     await userEvent.click(screen.getByLabelText(/Named people/));
     await screen.findByLabelText(/Lena Fischer/);

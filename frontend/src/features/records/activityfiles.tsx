@@ -16,7 +16,7 @@ import {
 import { formatBytes } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { activityFilesKey } from "../../lib/activitykeys";
-import { useCanWrite } from "../../lib/capability";
+import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
@@ -38,16 +38,19 @@ const PAGE_LIMIT = 20;
  */
 export function ActivityFiles({
   activityId,
+  writable,
   archived = false,
 }: Readonly<{
   activityId: string;
+  // The server's per-row answer from the activity read; absent reads as no.
+  writable: boolean;
   // An archived activity takes no new file; the server refuses one.
   archived?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const [adding, setAdding] = useState(false);
-  const permitted = useCanWrite("activity", "update");
+  const permitted = useCanWriteRecord("activity", { writable });
   const answered = useMe().data?.authorization !== undefined;
   const query = useInfiniteQuery({
     queryKey: activityFilesKey(activityId),
@@ -165,6 +168,7 @@ export function ActivityFilesAction({
         {open && (
           <ActivityFiles
             activityId={activity.id}
+            writable={activity.writable ?? false}
             archived={Boolean(activity.archived_at)}
           />
         )}

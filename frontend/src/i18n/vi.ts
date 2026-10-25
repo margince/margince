@@ -3782,6 +3782,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "activity.detail.none": "Hoạt động này",
   "activity.followUps": "Công việc tiếp theo",
   "activity.noFollowUps": "Chưa có công việc tiếp theo",
+  "activity.notYoursToChange":
+    "Bạn không có quyền sửa hoạt động này. Hãy nhờ đồng nghiệp sở hữu nó hoặc quản trị viên cấp quyền sửa.",
   "activity.files.empty": "Hoạt động này chưa có tệp nào.",
   "activity.files.title": "Tệp của {subject}",
   "activity.followUpOpen": "Chưa hoàn thành",

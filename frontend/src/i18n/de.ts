@@ -3894,6 +3894,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.detail.none": "Diese Aktivität",
   "activity.followUps": "Folgeaufgaben",
   "activity.noFollowUps": "Keine Folgeaufgaben",
+  "activity.notYoursToChange":
+    "Du kannst diese Aktivität nicht ändern. Bitte die Kollegin oder den Kollegen, zu der oder dem sie gehört, oder einen Admin um Bearbeitungsrechte.",
   "activity.files.empty": "Noch keine Dateien an dieser Aktivität.",
   "activity.files.title": "Dateien zu {subject}",
   "activity.followUpOpen": "Offen",

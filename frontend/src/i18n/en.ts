@@ -3897,6 +3897,8 @@ export const en = {
   "activity.detail.none": "This activity",
   "activity.followUps": "Follow-up tasks",
   "activity.noFollowUps": "No follow-up tasks",
+  "activity.notYoursToChange":
+    "You cannot change this activity. Ask the colleague it belongs to, or an administrator, for edit rights.",
   "activity.files.empty": "No files on this activity yet.",
   "activity.files.title": "Files on {subject}",
   "activity.followUpOpen": "Open",
