@@ -134,7 +134,9 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			`Use "" when the message names no day, and for every other kind. `+
 			`"confidence" is a number from 0 to 1 for how firmly the text says it: a plain "I will" `+
 			`with a thing and a day is 0.9 or more, while "I'll try" or "at some point" names no `+
-			`real commitment, so report no "commitment_made" for it at all.`, thread.eventCap())
+			`real commitment, so report no "commitment_made" for it at all. `+
+			`A plain "I will" with a thing but no day, or only loose timing such as "once it is ready", `+
+			`is still an open commitment_made with due_date "" and deadline_precision "none": timing says when, not whether.`, thread.eventCap())
 
 	prompt.WriteString("\n" + commitmentMeaningInstruction + "\n" + commitmentOfferInstruction)
 	return model.Request{
