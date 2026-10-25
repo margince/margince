@@ -472,3 +472,38 @@ func TestBulkAssignEnforcesItsOwnSizeCap(t *testing.T) {
 		t.Error("a bulk assign naming 501 leads was accepted, want a refusal")
 	}
 }
+
+func TestAssigningALeadToItsCurrentOwnerWritesNothing(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	id := seedOwnerlessLead(t, e, "Already Theirs")
+	if err := assignLead(admin, e, id, e.Rep1); err != nil {
+		t.Fatalf("first assignment: %v", err)
+	}
+	before, err := e.Contacts.GetLead(admin, id, 0)
+	if err != nil {
+		t.Fatalf("reading the lead: %v", err)
+	}
+
+	got, err := e.Contacts.AssignLeads(admin, contacts.AssignLeadsInput{
+		OwnerID: ids.From[ids.UserKind](e.Rep1),
+		Leads:   []contacts.AssignLeadItem{{ID: id, IfVersion: before.Version}},
+	})
+	if err != nil {
+		t.Fatalf("bulk assignment to the current owner: %v", err)
+	}
+
+	if len(got) != 1 || got[0].Outcome != crmcontracts.AssignLeadOutcomeKindAssigned {
+		t.Fatalf("outcomes = %+v, want one assigned", got)
+	}
+	if got[0].Version == nil || *got[0].Version != *before.Version {
+		t.Errorf("version after a no-op assignment = %v, want the unchanged %d", got[0].Version, *before.Version)
+	}
+	after, err := e.Contacts.GetLead(admin, id, 0)
+	if err != nil {
+		t.Fatalf("re-reading the lead: %v", err)
+	}
+	if *after.Version != *before.Version {
+		t.Errorf("lead version moved from %d to %d on an assignment that changes nothing", *before.Version, *after.Version)
+	}
+}

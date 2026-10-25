@@ -143,12 +143,8 @@ func createRoomTx(ctx context.Context, tx pgx.Tx, in CreateRoomInput, by string)
 // this function's own doc rejects.
 func resolveSteward(ctx context.Context, tx pgx.Tx, in CreateRoomInput) (ids.UserID, bool, error) {
 	if in.StewardUserID != nil {
-		eligible, err := stewardIsEligible(ctx, tx, *in.StewardUserID)
-		if err != nil {
+		if err := requireEligibleSteward(ctx, tx, *in.StewardUserID); err != nil {
 			return ids.UserID{}, false, err
-		}
-		if !eligible {
-			return ids.UserID{}, false, errStewardUnknown
 		}
 		return *in.StewardUserID, true, nil
 	}
@@ -172,6 +168,19 @@ func resolveSteward(ctx context.Context, tx pgx.Tx, in CreateRoomInput) (ids.Use
 		return ids.UserID{}, false, nil
 	}
 	return ownerID, true, nil
+}
+
+// requireEligibleSteward refuses a steward the caller named who cannot be
+// pointed a buyer at. Create and edit both ask it, so the two cannot disagree.
+func requireEligibleSteward(ctx context.Context, tx pgx.Tx, user ids.UserID) error {
+	eligible, err := stewardIsEligible(ctx, tx, user)
+	if err != nil {
+		return err
+	}
+	if !eligible {
+		return errStewardUnknown
+	}
+	return nil
 }
 
 // stewardIsEligible reports whether a seat can actually be pointed a buyer at.
@@ -224,6 +233,11 @@ func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoom
 		if !acceptsContent(string(current.State)) {
 			return notEditable(string(current.State))
 		}
+		if next := namedSteward(current, in); next != nil {
+			if err := requireEligibleSteward(ctx, tx, *next); err != nil {
+				return err
+			}
+		}
 		p := buildRoomPatch(current, in)
 		if p.Empty() {
 			if err := storekit.EnsureIfMatch(ctx, tx, roomObject, id.UUID, in.IfVersion); err != nil {
@@ -250,6 +264,20 @@ func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoom
 		return err
 	})
 	return out, err
+}
+
+// namedSteward returns the steward an edit sets to somebody other than the
+// standing one, or nil. Repeating the standing steward is not checked, so
+// saving a title is not refused because that steward has left since.
+func namedSteward(current crmcontracts.DealRoom, in UpdateRoomInput) *ids.UserID {
+	if in.StewardUserID == nil || *in.StewardUserID == nil {
+		return nil
+	}
+	next := *in.StewardUserID
+	if current.StewardUserId != nil && current.StewardUserId.String() == next.UUID.String() {
+		return nil
+	}
+	return next
 }
 
 func buildRoomPatch(current crmcontracts.DealRoom, in UpdateRoomInput) *storekit.Patch {
