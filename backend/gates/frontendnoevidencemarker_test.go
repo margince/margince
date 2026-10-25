@@ -6,7 +6,7 @@
 package gates
 
 // The server stores one sentence for a manual signal whose evidence was taken
-// away, and the browser matches that exact sentence to show a translated label.
+// away. The browser matches that exact sentence to show a translated label.
 // If the two spellings drift, the lead screen shows the raw English sentence in
 // every language and nothing else fails.
 
