@@ -136,7 +136,7 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	}
 	// Only the addresses this contact does not already hold are inserted: a held
 	// address would collide with its own live row on the unique index.
-	return insertContactEmails(ctx, tx, wsID, contactID, source, by, fresh)
+	return insertContactEmails(ctx, tx, wsID, contactID, source, by, fresh, storekit.RefuseErased)
 }
 
 // liveContactEmails answers the addresses a contact currently holds, lowercased
@@ -204,14 +204,20 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 }
 
 //nolint:unparam // the same shape as its siblings; see replaceContactSocial.
-func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput) error {
+func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput, erasure storekit.ErasureAdmission) error {
 	// Every address a contact gains is written here, so every create and
 	// update door meets the erasure list without asking for it.
 	addresses := make([]string, 0, len(emails))
 	for _, e := range emails {
 		addresses = append(addresses, e.Email)
 	}
-	if err := storekit.RefuseErasedEmails(ctx, tx, "emails", addresses); err != nil {
+	// The public booking page's admission skips the refusal; storekit's
+	// AdmitSelfBooking says why. It still takes the lock an erasure orders by.
+	if erasure == storekit.AdmitSelfBooking {
+		if err := storekit.LockSubjectKeys(ctx, tx, nil, addresses); err != nil {
+			return err
+		}
+	} else if err := storekit.RefuseErasedEmails(ctx, tx, "emails", addresses); err != nil {
 		return err
 	}
 	for _, e := range emails {

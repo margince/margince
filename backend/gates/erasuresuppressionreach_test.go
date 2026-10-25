@@ -150,3 +150,46 @@ func callsName(fn *ast.FuncDecl, name string) bool {
 	})
 	return found
 }
+
+// selfBookingAdmissionSites are the only files that may name the one exemption
+// from the erasure check. Storekit declares it, the contact address writer
+// honours it, and the public booking page passes it. A refusal there would
+// tell an anonymous caller that an address was erased.
+var selfBookingAdmissionSites = map[string]int{
+	"internal/platform/database/storekit/suppression.go": 1,
+	"internal/modules/contacts/contact_children.go":      1,
+	"internal/modules/activities/scheduling_public.go":   1,
+}
+
+func TestOnlyThePublicBookingPagePassesTheSelfBookingAdmission(t *testing.T) {
+	t.Parallel()
+	found := map[string]int{}
+	for _, path := range handWrittenGoSources(t) {
+		where := filepath.ToSlash(path)
+		if strings.HasSuffix(where, "_test.go") || isIntegrationTagged(path) {
+			continue
+		}
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", where, err)
+		}
+		ast.Inspect(file, func(n ast.Node) bool {
+			if ident, ok := n.(*ast.Ident); ok && ident.Name == "AdmitSelfBooking" {
+				found[where]++
+			}
+			return true
+		})
+	}
+	for where, n := range found {
+		if want, ok := selfBookingAdmissionSites[where]; !ok || n != want {
+			t.Errorf("%s names storekit.AdmitSelfBooking %d time(s). Only the public booking page may "+
+				"pass it, and only the contact address writer may honour it.", where, n)
+		}
+	}
+	for where, want := range selfBookingAdmissionSites {
+		if found[where] != want {
+			t.Errorf("%s names storekit.AdmitSelfBooking %d time(s), want %d: the census has lost a site it knows",
+				where, found[where], want)
+		}
+	}
+}

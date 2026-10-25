@@ -133,6 +133,8 @@ type ContactSpec struct {
 	// Active is the custom-field catalog for `contact`; nil on the capture
 	// paths, which carry no request body to source extra columns from.
 	Active []fieldcatalog.Column
+
+	erasure storekit.ErasureAdmission
 }
 
 // createContact is the one INSERT INTO contact.
@@ -174,7 +176,7 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 	if err := replaceContactSocial(ctx, tx, wsID, id, spec.Social); err != nil {
 		return ids.ContactID{}, err
 	}
-	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails); err != nil {
+	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails, spec.erasure); err != nil {
 		return ids.ContactID{}, err
 	}
 	if err := insertContactPhones(ctx, tx, id, spec.Source, spec.CapturedBy, spec.Phones); err != nil {

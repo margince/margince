@@ -86,6 +86,20 @@ func (e *ErasedIdentifierError) FieldFault() (field, code, message string) {
 		"The person with this address asked to be erased and not to be stored again. Leave the address out."
 }
 
+// ErasureAdmission says whether a contact write may store an address the
+// erasure list names. Every write refuses one, except the person's own booking.
+type ErasureAdmission int
+
+const (
+	// RefuseErased is every write but one.
+	RefuseErased ErasureAdmission = iota
+	// AdmitSelfBooking is the public booking page alone. A refusal there would
+	// tell an anonymous caller that the address was erased. The person booking
+	// a meeting themselves, with consent, is the admission, and the host sees
+	// a real meeting. The erasure list keeps the address.
+	AdmitSelfBooking
+)
+
 // RefuseErasedEmail is RefuseErasedEmails for one address.
 func RefuseErasedEmail(ctx context.Context, tx pgx.Tx, field, email string) error {
 	return RefuseErasedEmails(ctx, tx, field, []string{email})

@@ -83,7 +83,7 @@ func SeedBookingPageTx(ctx context.Context, tx pgx.Tx, hostUserID ids.UserID) (s
 // ContactEnsurer is the contacts seam of the public capture path (compose
 // injects it — activities never imports a sibling).
 type ContactEnsurer interface {
-	EnsureContactByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error)
+	EnsureContactByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, error)
 }
 
 // BookingConsent is the CaptureConsent passthrough: the purpose and the
@@ -372,18 +372,10 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 
 // ensureBooker is the contact the booking lands on, or the refusal written.
 func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, req crmcontracts.BookPublicMeetingJSONRequestBody) (ids.UUID, bool) {
-	contactID, err := h.publicContacts.EnsureContactByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking")
+	contactID, err := h.publicContacts.EnsureContactByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking", storekit.AdmitSelfBooking)
 	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
 		// The contacts store names its own field; this form's address is booker.email.
 		httperr.Write(w, r, httperr.Validation("booker.email", badValue.Code, badValue.Message))
-		return ids.Nil, false
-	}
-	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
-		// This door is anonymous. An answer only an erased address gets would
-		// tell a stranger who asked to be erased, so it answers as a taken slot.
-		// A faked success cannot hide it: that answer carries a meeting id and
-		// reserves the slot.
-		writeStoreErr(w, r, &SlotTakenError{Start: req.Start})
 		return ids.Nil, false
 	}
 	if err != nil {
