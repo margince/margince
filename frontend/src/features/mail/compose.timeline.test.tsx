@@ -184,6 +184,16 @@ describe("ComposeModal — channel reply", () => {
   });
 });
 
+// Relink is disabled until /me answers. Once it is enabled the grants have
+// settled, so an absent control is a decision and not a pending read.
+async function relinkSettled() {
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Relink" }).hasAttribute("disabled"),
+    ).toBe(false),
+  );
+}
+
 describe("TimelineActions", () => {
   const email: Activity = {
     ...activity202,
@@ -398,7 +408,7 @@ describe("TimelineActions", () => {
   // Both shapes are asserted, because that inference would tell them apart.
   // A captured row and a hand-typed one get the same answer: no audience
   // control on the row at all.
-  it("offers no audience control on an email row, whoever captured it", () => {
+  it("offers no audience control on an email row, whoever captured it", async () => {
     stubRoutes();
     const captured: Activity = {
       ...activity202,
@@ -410,6 +420,7 @@ describe("TimelineActions", () => {
       <TimelineActions activity={captured} entityType="deal" entityId="d1" />,
     );
     expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
+    await relinkSettled();
     expect(
       screen.queryByRole("button", { name: "Change visibility" }),
     ).toBeNull();
@@ -438,7 +449,7 @@ describe("TimelineActions", () => {
   // would open, take an answer, and refuse it with `audience_is_derived`. That
   // names a thread-level control the page does not have. A control that cannot
   // work is worse than none: someone keeping a conversation private presses it.
-  it("offers no audience control on a captured message whose audience is derived", () => {
+  it("offers no audience control on a captured message whose audience is derived", async () => {
     stubRoutes();
     render(
       <TimelineActions
@@ -454,6 +465,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
+    await relinkSettled();
     expect(
       screen.queryByRole("button", { name: "Change visibility" }),
     ).toBeNull();
@@ -664,7 +676,7 @@ describe("TimelineActions", () => {
   // A withheld row offers nothing: somebody outside the audience has no
   // standing to change who else is in it. The kind that still draws the
   // control is the one that has to prove this.
-  it("offers no audience control on a withheld row", () => {
+  it("offers no audience control on a withheld row", async () => {
     stubRoutes();
     render(
       <TimelineActions
@@ -678,6 +690,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
+    await relinkSettled();
     expect(
       screen.queryByRole("button", { name: "Change visibility" }),
     ).toBeNull();

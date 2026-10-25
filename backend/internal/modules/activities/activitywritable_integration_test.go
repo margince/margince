@@ -23,6 +23,7 @@ func (e *promiseEnv) asEditor() context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
+		SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
@@ -32,6 +33,12 @@ func (e *promiseEnv) asEditor() context.Context {
 			RowScope: principal.RowScopeOwn,
 		},
 	})
+}
+
+func (e *promiseEnv) asReadSeat() context.Context {
+	p, _ := principal.Actor(e.asEditor())
+	p.SeatType = principal.SeatRead
+	return principal.WithActor(e.asEditor(), p)
 }
 
 func (e *promiseEnv) seedLinkedNote(t *testing.T, contactOwner ids.UUID) (activityID ids.UUID) {
@@ -98,5 +105,20 @@ func TestActivityReadsAreReadOnlyWithoutTheUpdateGrant(t *testing.T) {
 	}
 	if got.Writable == nil || *got.Writable {
 		t.Errorf("writable = %v for a read-only grant, want false", got.Writable)
+	}
+}
+
+// A read seat holding the update grant on its own activity is still told
+// read-only, the answer the mutation admission gives.
+func TestActivityReadsAreReadOnlyOnAReadSeat(t *testing.T) {
+	e := setupPromises(t)
+	mine := e.seedLinkedNote(t, e.rep)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	got, err := store.GetActivity(e.asReadSeat(), ids.From[ids.ActivityKind](mine), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Writable == nil || *got.Writable {
+		t.Errorf("writable = %v on a read seat, want false", got.Writable)
 	}
 }

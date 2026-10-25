@@ -558,6 +558,7 @@ describe("a commitment's task detail", () => {
   const TASK = {
     id: commitment.activity_id,
     kind: "task" as const,
+    writable: true,
     subject: commitment.subject,
     is_done: false,
     version: 1,

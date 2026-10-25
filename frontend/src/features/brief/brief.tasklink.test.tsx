@@ -11,6 +11,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { readingsDay, taskRow } from "../../testing/brief.fixtures";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { BriefScreen } from "./brief";
 
 afterEach(() => {
@@ -22,6 +23,7 @@ afterEach(() => {
 const TASK = {
   id: "reminded-task",
   kind: "task",
+  writable: true,
   subject: "Call back about the renewal",
   body: "They asked for a call after the board meeting.",
   occurred_at: "2026-09-01T10:00:00Z",
@@ -48,6 +50,8 @@ it("opens the task the address names, read-only while no row offers to finish it
 it("lets the reader finish the named task when their own row offers it", async () => {
   window.location.hash = "#/home?task=reminded-task";
   stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { activity: ["read", "update"] } })),
     "GET /worklist": () =>
       jsonResponse(readingsDay({}, [taskRow("reminded-task", TASK.subject)])),
     "GET /activities/reminded-task": () => jsonResponse(TASK),
