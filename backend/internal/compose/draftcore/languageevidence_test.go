@@ -89,3 +89,23 @@ func TestLanguageEvidencePrefersTheAddresseesMailOverAnotherParticipants(t *test
 		t.Errorf("with no addressee the newest inbound leads, got %q", first)
 	}
 }
+
+func TestAddresseeEvidenceIsOnlyTheAddresseesOwnTextNewestFirst(t *testing.T) {
+	t.Parallel()
+	in, out := string(crmcontracts.ActivityDirectionInbound), string(crmcontracts.ActivityDirectionOutbound)
+	turns := []draftcore.Turn{
+		{Direction: in, SenderID: "addressee", At: turnsNow.Add(-72 * time.Hour), Subject: "Pricing", Text: "addressee oldest"},
+		{Direction: in, SenderID: "cc-colleague", At: turnsNow, Text: "colleague newest"},
+		{Direction: out, SenderID: "addressee", At: turnsNow, Text: "our mail"},
+		{Direction: in, SenderID: "addressee", At: turnsNow.Add(-time.Hour), Text: "addressee newest"},
+		{Direction: in, SenderID: "addressee", At: turnsNow.Add(-2 * time.Hour), Subject: "subject only"},
+	}
+	got := draftcore.AddresseeEvidence(turns, "addressee")
+	want := []string{"addressee newest", "addressee oldest"}
+	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+		t.Errorf("addressee evidence = %q, want %q with no subject", got, want)
+	}
+	if none := draftcore.AddresseeEvidence(turns, ""); len(none) != 0 {
+		t.Errorf("with no addressee there is no addressee evidence, got %q", none)
+	}
+}

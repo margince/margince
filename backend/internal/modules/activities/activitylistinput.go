@@ -47,7 +47,10 @@ type ListActivitiesInput struct {
 	// account that has no long thread.
 	SourceActivityID *ids.ActivityID
 	ThreadKey        *string
-	IncludeArchived  bool
+	// SentBy narrows to messages this contact is the From participant of, so a
+	// reply can read the addressee's mail a long thread's page cut off.
+	SentBy          *ids.UUID
+	IncludeArchived bool
 	// AssigneeID is the work queue's narrowing: the OPEN tasks one contact
 	// holds, which is what the contract declares the parameter to mean and
 	// what the partial index behind it is built on. Done-ness is part of

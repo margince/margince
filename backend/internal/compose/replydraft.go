@@ -139,12 +139,12 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
-	thread, err := d.replyConversation(ctx, activity)
+	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
+	thread, err := d.replyConversation(ctx, activity, addressee.ContactID)
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
 	turns := thread.prompt
-	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
 	topic := stringValue(activity.Subject)
 	body := stringValue(activity.Body)
 	threaded := activities.IsMailThread(activity.Kind, activity.Direction)
@@ -154,17 +154,16 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	// something from eight months ago are different messages, and only the
 	// timestamp tells them apart.
 	state := d.conversationState(activity)
-	// The thread's own language decides the reply's. The stored label is
-	// preferred where capture recorded one: it was read from the message when
-	// it arrived, where detection now reads a body that has grown a quoted
-	// chain in whatever languages the exchange has since used.
+	// The addressee's own text decides first; the stored label comes next,
+	// above a body that may carry a quoted chain in other languages.
 	envelope := d.envelope.Resolve(ctx, draftfloor.Written{
-		Stored:  activityLanguage(activity),
-		Body:    body,
-		Subject: topic,
-		Thread:  draftcore.LanguageEvidence(thread.evidence, addressee.ContactID),
-		Rewrite: steering.RewriteOf,
-		Purpose: steering.Intent,
+		Addressee: thread.addresseeEvidence(addressee.ContactID),
+		Stored:    activityLanguage(activity),
+		Body:      body,
+		Subject:   topic,
+		Thread:    draftcore.LanguageEvidence(thread.evidence, addressee.ContactID),
+		Rewrite:   steering.RewriteOf,
+		Purpose:   steering.Intent,
 	}, state)
 	recipient, surname := addressee.GreetingNames()
 
