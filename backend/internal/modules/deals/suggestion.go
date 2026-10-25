@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // suggestionEntity names a suggestion in its audit rows and events.
@@ -52,6 +53,17 @@ type SuggestionEvidence struct {
 	SignalID     *ids.UUID
 	AttachmentID *ids.UUID
 	OccurredAt   time.Time
+	// DateOnly says OccurredAt is a day entry's anchor: only its date is known.
+	DateOnly bool
+}
+
+// placed is when the item counts as having happened against the floor: a day
+// entry when its date begins in zone, as occurredday.StartSQL places it.
+func (e SuggestionEvidence) placed(zone *time.Location) time.Time {
+	if e.DateOnly {
+		return occurredday.Begins(e.OccurredAt, zone)
+	}
+	return e.OccurredAt
 }
 
 // ref is the item's own id, whichever column carries it.
@@ -176,12 +188,16 @@ func suggestionFloorTx(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (*tim
 // or an open suggestion, when this exact evidence already raised one, when an
 // open, dismissed or accepted suggestion on a company in DuplicateOf already
 // cites any of it, or when any item is not newer than the company's floor.
-func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool, error) {
+// zone is the installation's, where a day entry's date begins.
+func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft, zone *time.Location) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
 	}
 	if err := validDraft(d); err != nil {
 		return false, err
+	}
+	if zone == nil {
+		return false, errors.New("deals: recording a suggestion needs the installation zone")
 	}
 	current, err := suggestionSourceTimes(ctx, tx, d.Evidence)
 	if err != nil || !current {
@@ -197,7 +213,7 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 	}
 	through := d.Evidence[0].OccurredAt
 	for _, e := range d.Evidence {
-		if floor != nil && !e.OccurredAt.After(*floor) {
+		if floor != nil && !e.placed(zone).After(*floor) {
 			return false, nil
 		}
 		if e.OccurredAt.After(through) {

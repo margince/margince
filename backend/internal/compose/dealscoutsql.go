@@ -49,7 +49,7 @@ func dealScoutSQL(since, now time.Time, companyCap int) (string, []any) {
 	      OR ev.ref IN (SELECT p.opportunity FROM pairs p WHERE p.company_id = ev.company_id
 	                    UNION SELECT p.commitment FROM pairs p WHERE p.company_id = ev.company_id)
 	)
-	SELECT cited.company_id, cited.kind, cited.ref, cited.occurred_at, reading.amount, reading.currency
+	SELECT cited.company_id, cited.kind, cited.ref, cited.occurred_at, cited.date_only, reading.amount, reading.currency
 	  FROM cited
 	  LEFT JOIN LATERAL (
 	    SELECT (SELECT f->>'Value' FROM jsonb_array_elements(x.fields) f
@@ -69,13 +69,14 @@ func dealScoutSQL(since, now time.Time, companyCap int) (string, []any) {
 func scoutEvidenceSQL(in func(string) string, document string) string {
 	placed := occurredday.StartSQL("a")
 	return `
-	  SELECT mc.company_id, 'meeting' AS kind, a.id AS ref, a.occurred_at, NULL::text AS signal_kind, a.id::text AS source_identity, NULL::text AS matter
+	  SELECT mc.company_id, 'meeting' AS kind, a.id AS ref, a.occurred_at, a.occurred_precision = 'day' AS date_only,
+	         NULL::text AS signal_kind, a.id::text AS source_identity, NULL::text AS matter
 	    FROM (` + activities.HeldMeetingCounterparties() + `) mc
 	    JOIN activity a ON a.id = mc.activity_id
 	   WHERE ` + workspaceEvidence("a") + ` AND ` + in(placed) + `
 	     AND ` + scoutCandidate("mc.company_id", placed) + `
 	  UNION ALL
-	  SELECT s.resolved_company_id, 'signal', s.id, source.occurred_at, s.kind, s.id::text, source.matter
+	  SELECT s.resolved_company_id, 'signal', s.id, source.occurred_at, false, s.kind, s.id::text, source.matter
 	    FROM signal s
 	    CROSS JOIN LATERAL (SELECT ` + storekit.CitedActivityTime("s.evidence") + ` AS occurred_at,
          (SELECT CASE WHEN count(DISTINCT coalesce(nullif(m.thread_key, ''), m.id::text)) = 1
@@ -92,7 +93,8 @@ func scoutEvidenceSQL(in func(string) string, document string) string {
 	             WHERE ca.id = ` + storekit.CitedActivityID("cite") + ` AND ` + workspaceEvidence("ca") + `))
 	     AND ` + scoutCandidate("s.resolved_company_id", "source.occurred_at" /* occurred_at raw: the time a signal cites carries no precision */) + `
 	  UNION ALL
-	  SELECT filed.company_id, 'attachment', at.id, a.occurred_at, NULL, coalesce(nullif(at.checksum, ''), at.id::text), NULL::text
+	  SELECT filed.company_id, 'attachment', at.id, a.occurred_at, a.occurred_precision = 'day', NULL,
+	         coalesce(nullif(at.checksum, ''), at.id::text), NULL::text
 	    FROM attachment at
 	    JOIN activity a ON a.id = at.activity_id
 	    JOIN (` + activities.CompanyReachSet() + `) filed ON filed.activity_id = a.id

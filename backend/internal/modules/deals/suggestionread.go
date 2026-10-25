@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -358,6 +359,7 @@ func attachEvidence(ctx context.Context, tx pgx.Tx, list []Suggestion) error {
 			&item.OccurredAt, &item.Title, &item.carrier, &item.Precision); err != nil {
 			return fmt.Errorf("deals: scanning suggestion evidence: %w", err)
 		}
+		item.DateOnly = occurredday.IsStatedDay(item.Precision)
 		list[index[owner]].Evidence = append(list[index[owner]].Evidence, item)
 	}
 	return rows.Err()

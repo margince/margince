@@ -35,7 +35,7 @@ func (e *scoutEnv) record(ctx context.Context, t *testing.T, draft deals.Suggest
 	var raised bool
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		raised, err = deals.RecordSuggestionTx(ctx, tx, draft)
+		raised, err = deals.RecordSuggestionTx(ctx, tx, draft, time.UTC)
 		return err
 	})
 	return raised, err
@@ -396,7 +396,7 @@ func TestTwinsRecordedAtOnceRaiseOneSuggestion(t *testing.T) {
 	t.Cleanup(releaseFirst)
 	go func() {
 		firstDone <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-			if _, err := deals.RecordSuggestionTx(ctx, tx, namedDraft); err != nil {
+			if _, err := deals.RecordSuggestionTx(ctx, tx, namedDraft, time.UTC); err != nil {
 				return err
 			}
 			var pid int

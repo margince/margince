@@ -6,11 +6,15 @@
 package compose
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 func TestScoutUsesTheSourceDateInsteadOfDetection(t *testing.T) {
@@ -52,5 +56,50 @@ func TestSuggestionWriterRefusesDetectionTimeAsEvidenceTime(t *testing.T) {
 	})
 	if err != nil || raised {
 		t.Fatalf("record with processing date = %v, %v; want refusal without write", raised, err)
+	}
+}
+
+// dayMeeting logs a held meeting known only by its date, with the contact.
+func (e *scoutEnv) dayMeeting(t *testing.T, contact ids.UUID, date time.Time) deals.SuggestionEvidence {
+	t.Helper()
+	held, subject, anchor := "held", "Scoping day", occurredday.Anchor(date)
+	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: &subject, OccurredAt: &anchor, OccurredPrecision: activities.PrecisionDay,
+		MeetingStatus: &held, Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+	})
+	if err != nil {
+		t.Fatalf("logging the day meeting: %v", err)
+	}
+	id := ids.UUID(logged.Id)
+	return deals.SuggestionEvidence{Kind: deals.EvidenceMeeting, ActivityID: &id, OccurredAt: anchor, DateOnly: true}
+}
+
+// A day meeting falls past a dismissal by its date, as the scout's SQL places
+// it: one dated the dismissal's own date began before it and is refused.
+func TestTheWriterPlacesADayMeetingByItsDateAgainstTheFloor(t *testing.T) {
+	e := setupScout(t)
+	acme := e.SeedCompany(t, "Acme GmbH", nil)
+	dana := e.employee(t, "Dana Buyer", acme)
+	e.buyerPair(t, acme, e.daysAgo(6))
+	e.pass(t)
+	dismissed := e.onlySuggestion(e.signalReader(), t, acme).ID
+	if _, err := e.decider().DismissSuggestion(e.signalReader(), dismissed); err != nil {
+		t.Fatalf("dismissing: %v", err)
+	}
+	date := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`UPDATE deal_suggestion SET decided_at = $2 WHERE id = $1`, dismissed, date.Add(10*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	draft := func(evidence deals.SuggestionEvidence) deals.SuggestionDraft {
+		return deals.SuggestionDraft{CompanyID: acme, NameHint: deals.HintMeetingHeld, Confidence: 0.6,
+			Evidence: []deals.SuggestionEvidence{evidence}}
+	}
+
+	if raised, err := e.record(e.system(), t, draft(e.dayMeeting(t, dana, date))); err != nil || raised {
+		t.Fatalf("a day meeting dated the dismissal's date = %v, %v; want nothing written", raised, err)
+	}
+	if raised, err := e.record(e.system(), t, draft(e.dayMeeting(t, dana, date.AddDate(0, 0, 1)))); err != nil || !raised {
+		t.Fatalf("a day meeting dated the day after = %v, %v; want it raised", raised, err)
 	}
 }
