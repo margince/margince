@@ -65,6 +65,7 @@ export type LoggedActivity = {
   version: number;
   created_at: string;
   updated_at: string;
+  writable: boolean;
 };
 
 export type CaptureSender = components["schemas"]["CaptureSenderDecision"];
