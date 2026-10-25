@@ -15,6 +15,7 @@ package deals
 // table — which is what makes the seller-authored case testable at all.
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/owndomain"
@@ -125,11 +126,16 @@ func authorOf(participants []Participant) (Participant, bool) {
 	return Participant{}, false
 }
 
-// addressIsOurs reports whether an address sits on a domain this installation
-// writes from. It asks owndomain.Set.Covers, which folds and covers subdomains:
-// the rule capture uses to decide which mail is internal.
+// addressIsOurs reports whether an address is at one of our own domains itself,
+// not a subdomain, with both sides folded by owndomain.Fold.
+//
+// Exact, where capture covers subdomains. Authorship settles a contract
+// milestone, so it needs proof the sender is ours. A workspace may own
+// example.com and delegate customer.example.com to a customer, whose buyer
+// must not read as seller side. Capture only decides what mail is internal.
 func addressIsOurs(address string, ownDomains []string) bool {
-	return owndomain.New(ownDomains).Covers(address)
+	domain := owndomain.OfAddress(address)
+	return domain != "" && slices.Contains(owndomain.New(ownDomains).Domains(), domain)
 }
 
 // TranscriptSourceSystem is the activity.source_system value that marks a body
