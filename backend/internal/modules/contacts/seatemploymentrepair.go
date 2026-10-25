@@ -28,7 +28,7 @@ type SeatEmploymentPage struct {
 //
 // Inferred means the create audit names capture or a provider as its origin.
 // Every audit row on the edge must also be by a system or connector principal.
-// An archived edge keeps its row and audit trail; a person records it again.
+// An archived edge keeps its row and audit trail; a human records it again.
 func RetireSeatEmploymentEdgesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, runID string) (SeatEmploymentPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return SeatEmploymentPage{}, err

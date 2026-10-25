@@ -193,7 +193,7 @@ func InboundFromSendingSystem(kind, direction, from string) bool {
 	return kind == "email" && direction == "inbound" && IsMachineAddress(from)
 }
 
-// SeatAddressKey is the one spelling seat-address checks, their set and their
+// SeatAddressKey is the spelling seat-address checks, their set and their
 // locks compare: ReaderAddress, then FoldAddress.
 func SeatAddressKey(label, source string) string {
 	return FoldAddress(ReaderAddress(label, source))

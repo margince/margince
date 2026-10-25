@@ -16,9 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A purchase a person ran planted this employer, so the seat repair keeps it
+// A purchase a human ran planted this employer, so the seat repair keeps it
 // even when the contact's address is a colleague's login.
-func TestTheSeatRepairKeepsAProviderEmployerAPersonBought(t *testing.T) {
+func TestTheSeatRepairKeepsAProviderEmployerAHumanBought(t *testing.T) {
 	e := Setup(t)
 	subject, _ := boughtSubject(t, e)
 	login := e.WsScalar(t, `SELECT email FROM app_user WHERE id = $1`, e.Rep2)
@@ -39,6 +39,6 @@ func TestTheSeatRepairKeepsAProviderEmployerAPersonBought(t *testing.T) {
 		t.Fatalf("running the seat repair: %v", err)
 	}
 	if page.Retired != 0 || e.WsCount(t, live, subject) != 1 {
-		t.Fatalf("the repair retired %d edge(s): a person's purchase was treated as machine inference", page.Retired)
+		t.Fatalf("the repair retired %d edge(s): a human's purchase was treated as machine inference", page.Retired)
 	}
 }

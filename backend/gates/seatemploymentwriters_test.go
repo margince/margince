@@ -27,9 +27,9 @@ import (
 // its lock (contacts/seatguard.go).
 var seatEmploymentGuards = []string{"contactIsSeatTx", "seatContactsTx"}
 
-// humanAssertedEmployment are the inserts a person or an agent asks for by name.
+// humanAssertedEmployment are the inserts a human or an agent asks for by name.
 var humanAssertedEmployment = gatekit.Waive(map[string]string{
-	"internal/modules/contacts/relationshipinsertsql.go:insertRelationshipRow": "the generic relationship create stores what a person or an agent asserted about a contact; refusing a seat there would overrule a human's own record",
+	"internal/modules/contacts/relationshipinsertsql.go:insertRelationshipRow": "the generic relationship create stores what a human or an agent asserted about a contact; refusing a seat there would overrule a human's own record",
 })
 
 var (

@@ -16,7 +16,7 @@ import (
 
 // seatEmploymentDataTask archives the employment edges capture or a provider
 // inferred for a contact that holds a proven seat address. A colleague's
-// employer is the workspace; an edge a person made or edited stays.
+// employer is the workspace; an edge a human made or edited stays.
 func seatEmploymentDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792894995_seat_employment_edges", Version: 1,
