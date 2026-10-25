@@ -6,6 +6,10 @@
 // its UTC date and no zone setting moves it. A zone answers only which date
 // is today.
 //
+// A day meeting has taken place once its date is over in the installation zone,
+// as the outcome lane and meeting prep read it. An instant meeting has once it
+// starts. Every other day entry has happened from the start of its date.
+//
 // In kernel because the writers and readers sit in sibling modules (activities,
 // capture, search, deals) and in compose, and no module imports a sibling.
 package occurredday
@@ -19,6 +23,9 @@ import (
 
 // day is the stored and wire precision of an entry that names only a date.
 const day = "day"
+
+// meetingKind is the activity kind whose day entries last their whole date.
+const meetingKind = "meeting"
 
 // Moment is an activity's stored time and whether it names only a date.
 type Moment struct {
@@ -98,6 +105,26 @@ func Begun(m Moment, asOf time.Time, zone *time.Location) bool {
 	return !m.At.After(asOf)
 }
 
+// MeetingTookPlace reports whether a meeting has taken place at asOf. An
+// instant meeting has once it starts. A day meeting has once its date is over in
+// zone (Ended), as the outcome lane and meeting prep read it.
+func MeetingTookPlace(m Moment, asOf time.Time, zone *time.Location) bool {
+	if m.DateOnly {
+		return Ended(m.At, asOf, zone)
+	}
+	return !m.At.After(asOf)
+}
+
+// Happened reports whether an activity of kind has happened at asOf: a meeting
+// once it took place (MeetingTookPlace), any other kind once it has begun
+// (Begun). HappenedSQL is the same rule in SQL.
+func Happened(kind string, m Moment, asOf time.Time, zone *time.Location) bool {
+	if kind == meetingKind {
+		return MeetingTookPlace(m, asOf, zone)
+	}
+	return Begun(m, asOf, zone)
+}
+
 // DaysSince counts the calendar days from the date an activity names to
 // today's date in zone. A day entry dated today is zero days old.
 func DaysSince(m Moment, asOf time.Time, zone *time.Location) int {
@@ -121,6 +148,20 @@ func DaysBetween(from, to Moment, zone *time.Location) int {
 func BegunSQL(alias, asOf string) string {
 	return fmt.Sprintf(`(%[1]s.occurred_at <= greatest(%[2]s, %[3]s) AND (%[1]s.occurred_precision = 'day' OR %[1]s.occurred_at <= %[2]s))`,
 		alias, asOf, todayAnchorSQL(asOf))
+}
+
+// MeetingTookPlaceSQL is MeetingTookPlace for the meeting under alias at asOf,
+// both SQL the caller renders; AheadSQL is its negation. A day row's
+// occurred_at is an anchor, so "its date is over" is an anchor before today's.
+func MeetingTookPlaceSQL(alias, asOf string) string {
+	return fmt.Sprintf(`(%[1]s.occurred_at <= greatest(%[2]s, %[3]s) AND (%[1]s.occurred_precision = 'day' AND %[1]s.occurred_at < %[3]s OR %[1]s.occurred_precision = 'instant' AND %[1]s.occurred_at <= %[2]s))`,
+		alias, asOf, todayAnchorSQL(asOf))
+}
+
+// HappenedSQL is Happened for the activity under alias at asOf.
+func HappenedSQL(alias, asOf string) string {
+	return fmt.Sprintf(`((%[1]s.kind = '%[2]s' AND %[3]s) OR (%[1]s.kind <> '%[2]s' AND %[4]s))`,
+		alias, meetingKind, MeetingTookPlaceSQL(alias, asOf), BegunSQL(alias, asOf))
 }
 
 // todayAnchorSQL is AnchorIn(asOf, installation zone) in SQL.
@@ -147,10 +188,10 @@ func StartSQL(alias string) string {
 		ELSE %[1]s.occurred_at END)`, alias)
 }
 
-// AheadSQL is "the activity under alias has not happened yet" at now. That is
-// an instant that starts later, or a day entry whose date has not ended
-// (Ended). A date ends less than 25 hours after its anchor, a bound that keeps
-// a range scan.
+// AheadSQL is "the meeting under alias is still to come" at now, the negation
+// of MeetingTookPlaceSQL. That is an instant that starts later, or a day entry
+// whose date has not ended (Ended). A date ends less than 25 hours after its
+// anchor, a bound that keeps a range scan.
 func AheadSQL(alias, now string) string {
 	return fmt.Sprintf(`((%[1]s.occurred_precision = 'instant' AND %[1]s.occurred_at > %[2]s)
 		OR (%[1]s.occurred_precision = 'day' AND %[1]s.occurred_at > CAST(%[2]s AS timestamptz) - interval '25 hours'

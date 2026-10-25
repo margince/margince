@@ -100,7 +100,7 @@ func LastTouchFor(
 		touched += " AND " + scope
 	}
 	touched += opts.projectScope(arg)
-	touched += " AND " + occurredday.BegunSQL("a", fmt.Sprintf("$%d", arg(now)))
+	touched += " AND " + occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
 	// Both direction clocks skip a called-off meeting and automatic mail, as
 	// the last contact does through InteractionCountsSQL. DirectionClockSQL
 	// rather than InteractionCountsSQL: a direction clock answers when a

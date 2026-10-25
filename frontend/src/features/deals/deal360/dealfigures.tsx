@@ -11,7 +11,7 @@ import { StatCard } from "../../../design-system/statcard";
 import { StatStrip } from "../../../design-system/statstrip";
 import {
   activityDay,
-  activityHasBegun,
+  activityHasHappened,
   activityIsAhead,
 } from "../../../format/activitywhen";
 import {
@@ -244,7 +244,7 @@ export function timelineEvents(
     .filter(
       (row) =>
         isConversation(row) &&
-        activityHasBegun(row.occurred_at, row.occurred_precision, now, zone),
+        activityHasHappened(row, now, zone),
     )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
     .slice(0, DONE_EVENTS)

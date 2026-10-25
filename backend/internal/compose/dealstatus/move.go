@@ -381,7 +381,7 @@ func lastContact(f facts) (crmcontracts.Activity, bool) {
 		if a.AutomaticKind != nil {
 			automatic = relstrength.AutomaticKind(*a.AutomaticKind)
 		}
-		if occurredday.Begun(activitywhen.MomentOf(a), f.now, f.loc) &&
+		if occurredday.Happened(string(a.Kind), activitywhen.MomentOf(a), f.now, f.loc) &&
 			relstrength.InteractionCounts(string(a.Kind), status, automatic) {
 			return a, true
 		}

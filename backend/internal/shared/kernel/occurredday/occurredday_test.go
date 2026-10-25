@@ -4,6 +4,8 @@
 package occurredday
 
 import (
+	"encoding/json"
+	"os"
 	"testing"
 	"time"
 )
@@ -179,5 +181,38 @@ func TestDaysBetweenCountsTheDatesEachActivityNames(t *testing.T) {
 	}
 	if got := DaysBetween(Moment{At: evening.AddDate(0, 0, -3)}, Moment{At: day, DateOnly: true}, kiritimati); got != 1 {
 		t.Errorf("an instant on the 8th local to a day entry on the 9th is %d days, want 1", got)
+	}
+}
+
+// happenedCase is one row of testdata/happened.json, which the frontend's
+// activityHasHappened reads too, so the two sides answer the same cases.
+type happenedCase struct {
+	Name      string    `json:"name"`
+	Kind      string    `json:"kind"`
+	At        time.Time `json:"at"`
+	Precision string    `json:"precision"`
+	Now       time.Time `json:"now"`
+	Zone      string    `json:"zone"`
+	Happened  bool      `json:"happened"`
+}
+
+func TestHappenedAnswersTheCasesTheFrontendShares(t *testing.T) {
+	t.Parallel()
+	raw, err := os.ReadFile("testdata/happened.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []happenedCase
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) < 8 {
+		t.Fatalf("read %d cases, want the whole table", len(cases))
+	}
+	for _, c := range cases {
+		at := Moment{At: c.At, DateOnly: IsDay(c.Precision)}
+		if got := Happened(c.Kind, at, c.Now, zone(t, c.Zone)); got != c.Happened {
+			t.Errorf("%s: Happened = %v, want %v", c.Name, got, c.Happened)
+		}
 	}
 }

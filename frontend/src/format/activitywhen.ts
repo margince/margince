@@ -170,14 +170,13 @@ export function activityHasBegun(
 }
 
 /**
- * Whether an activity has taken place by `now`: it has begun, and is not a
- * booked meeting still ahead. A `day` note dated today has; a `day` meeting
- * booked for today is still to come.
+ * Whether an activity has taken place by `now`, the mirror of
+ * occurredday.Happened. A meeting has once it is not ahead; any other kind once
+ * it has begun. A `day` note dated today has; a `day` meeting waits for its date to end.
  */
 export function activityHasHappened(
   row: Readonly<{
     kind: string;
-    meeting_status?: string | null;
     occurred_at: string;
     occurred_precision: OccurredPrecision;
   }>,
@@ -185,11 +184,9 @@ export function activityHasHappened(
   record: string,
 ): boolean {
   const { occurred_at: at, occurred_precision: precision } = row;
-  const bookedAhead =
-    row.kind === "meeting" &&
-    row.meeting_status === "booked" &&
-    activityIsAhead(at, precision, now, record);
-  return activityHasBegun(at, precision, now, record) && !bookedAhead;
+  return row.kind === "meeting"
+    ? !activityIsAhead(at, precision, now, record)
+    : activityHasBegun(at, precision, now, record);
 }
 
 /**

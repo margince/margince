@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import happenedCases from "../../../backend/internal/shared/kernel/occurredday/testdata/happened.json";
 import {
   activityAgo,
   activityDate,
@@ -15,6 +16,7 @@ import {
   dayOccurredAt,
   formatActivityWhen,
   movedActivityStart,
+  type OccurredPrecision,
 } from "./activitywhen";
 import { formatDayMonth } from "./format.dates";
 
@@ -142,22 +144,22 @@ describe("how many dates lie between today and an activity", () => {
   });
 });
 
-describe("whether an activity has taken place", () => {
-  const now = Date.parse("2026-09-15T15:00:00Z");
-  const today = dayOccurredAt("2026-09-15");
+function precisionOf(wire: string): OccurredPrecision {
+  if (wire !== "day" && wire !== "instant") throw new Error(`bad case ${wire}`);
+  return wire;
+}
 
-  it("counts a day note dated today, but not a day meeting booked for today", () => {
-    const note = {
-      kind: "note",
-      occurred_at: today,
-      occurred_precision: "day",
-    } as const;
-    const booked = { ...note, kind: "meeting", meeting_status: "booked" };
-    expect(activityHasHappened(note, now, "UTC")).toBe(true);
-    expect(activityHasHappened(booked, now, "UTC")).toBe(false);
-    expect(
-      activityHasHappened({ ...booked, meeting_status: "held" }, now, "UTC"),
-    ).toBe(true);
+describe("whether an activity has taken place", () => {
+  // The cases occurredday.Happened is held to, so the two sides cannot drift.
+  it.each(happenedCases)("$name", (c) => {
+    const row = {
+      kind: c.kind,
+      occurred_at: c.at,
+      occurred_precision: precisionOf(c.precision),
+    };
+    expect(activityHasHappened(row, Date.parse(c.now), c.zone)).toBe(
+      c.happened,
+    );
   });
 });
 

@@ -45,10 +45,10 @@ func InteractionCounts(kind, meetingStatus string, automatic AutomaticKind) bool
 }
 
 // MeetingTookPlaceSQL is a meeting that counts as contact we had: not called
-// off, and already started (occurredday.BegunSQL). A `booked` row stays booked
-// after it happens, because few users ever mark a meeting held.
+// off, and taken place (occurredday.MeetingTookPlaceSQL). A `booked` row stays
+// booked after it happens, because few users ever mark a meeting held.
 func MeetingTookPlaceSQL(alias, now string) string {
-	return "(" + MeetingCountsSQL(alias) + " AND " + occurredday.BegunSQL(alias, now) + ")"
+	return "(" + MeetingCountsSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, now) + ")"
 }
 
 // MeetingAheadSQL is a meeting still to come (occurredday.AheadSQL) that nobody
@@ -82,11 +82,11 @@ func LastActivityKindSQL(alias string) string {
 
 // LastActivityCountsSQL admits an activity row to a record's last-activity
 // clock: a kind that moves it, not a called-off meeting, and already happened
-// at now (occurredday.BegunSQL). The last_activity_of_* functions carry its
+// at now (occurredday.HappenedSQL). The last_activity_of_* functions carry its
 // text rendered with now().
 func LastActivityCountsSQL(alias, now string) string {
 	return "(" + LastActivityKindSQL(alias) + " AND " + NotCalledOffSQL(alias) + " AND " +
-		occurredday.BegunSQL(alias, now) + ")"
+		occurredday.HappenedSQL(alias, now) + ")"
 }
 
 // InteractionCountsSQL is the whole test for an activity row that counts as an
@@ -124,6 +124,11 @@ func begun(m *occurredday.Moment, now time.Time, loc *time.Location) bool {
 	return m != nil && occurredday.Begun(*m, now, loc)
 }
 
+// tookPlace is begun for a meeting (occurredday.MeetingTookPlace).
+func tookPlace(m *occurredday.Moment, now time.Time, loc *time.Location) bool {
+	return m != nil && occurredday.MeetingTookPlace(*m, now, loc)
+}
+
 // InTouch is one account's contact reading. Days counts from the latest of
 // their last message and our last meeting, and is zero when there was none.
 type InTouch struct {
@@ -138,22 +143,23 @@ func (r InTouch) Current() bool {
 }
 
 // ReadInTouch folds the three dates every in-touch question rests on. A
-// message or meeting that has not happened (occurredday.Begun) never counts as
-// contact we had; a meeting ahead counts only as nextMeeting. Days are counted
+// message that has not begun or a meeting that has not taken place
+// (occurredday.MeetingTookPlace) never counts as contact we had; a meeting
+// ahead counts only as nextMeeting. Days are counted
 // by the calendar of loc, the zone the reader sees the dates in.
 func ReadInTouch(lastInbound, lastMeeting, nextMeeting *occurredday.Moment, now time.Time, loc *time.Location) InTouch {
 	latest, basis := lastInbound, InTouchWrote
 	if !begun(latest, now, loc) {
 		latest = nil
 	}
-	if begun(lastMeeting, now, loc) && (latest == nil || lastMeeting.At.After(latest.At)) {
+	if tookPlace(lastMeeting, now, loc) && (latest == nil || lastMeeting.At.After(latest.At)) {
 		latest, basis = lastMeeting, InTouchMet
 	}
 	var reading InTouch
 	if latest != nil {
 		reading.Days = occurredday.DaysSince(*latest, now, loc)
 	}
-	if nextMeeting != nil && nextMeeting.At.After(now) {
+	if nextMeeting != nil && !tookPlace(nextMeeting, now, loc) {
 		reading.BookedAt = nextMeeting
 	}
 	switch {

@@ -130,7 +130,7 @@ func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
 	conversations := 0
 	var newest *ActIn
 	for i := range in.Recent {
-		if act := in.Recent[i]; act.At.After(since.At) && occurredday.Begun(occurredday.Moment{At: act.At, DateOnly: act.DateOnly}, in.Now, in.Zone) {
+		if act := in.Recent[i]; act.At.After(since.At) && occurredday.Happened(act.Kind, occurredday.Moment{At: act.At, DateOnly: act.DateOnly}, in.Now, in.Zone) {
 			conversations++
 			if newest == nil {
 				newest = &in.Recent[i]

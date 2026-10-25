@@ -11,7 +11,7 @@ import {
   type ActivityMoment,
   activityDay,
   activityDaysAway,
-  activityHasBegun,
+  activityHasHappened,
 } from "../../format/activitywhen";
 import {
   formatDayMonth,
@@ -47,7 +47,7 @@ function newestExchange(
         EXCHANGE_KINDS.has(row.kind) &&
         row.meeting_status !== "canceled" &&
         row.meeting_status !== "no_show" &&
-        activityHasBegun(row.occurred_at, row.occurred_precision, asOf, record),
+        activityHasHappened(row, asOf, record),
     )
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))[0];
 }

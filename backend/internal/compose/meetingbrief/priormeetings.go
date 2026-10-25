@@ -105,7 +105,8 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 			arg(project.UUID))
 	}
 
-	rows, err := tx.Query(ctx, fmt.Sprintf(priorMeetingsQuery, scope, within, roomPos, startsPos, nowPos, attendeePos, priorMeetingCap, occurredday.EndSQL("m")), args...)
+	rows, err := tx.Query(ctx, fmt.Sprintf(priorMeetingsQuery, scope, within, roomPos, startsPos,
+		occurredday.MeetingTookPlaceSQL("m", fmt.Sprintf("$%d", nowPos)), attendeePos, priorMeetingCap), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the earlier meetings: %w", err)
 	}
@@ -131,14 +132,14 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 // with it. DISTINCT because a meeting with three of the same attendees is one
 // meeting, not three.
 //
-// A meeting has been held once it has ended, so a day entry dated today is not
-// yet (occurredday.EndSQL).
+// A meeting has been held once it took place, so a day entry dated today is not
+// yet (occurredday.MeetingTookPlaceSQL).
 const priorMeetingsQuery = `
 	SELECT DISTINCT m.id, m.subject, m.occurred_at, m.occurred_precision = 'day'
 	FROM activity m
 	JOIN activity_participant mp ON mp.activity_id = m.id
 	WHERE m.kind = 'meeting' AND m.archived_at IS NULL
-	  AND m.id <> $%[3]d AND m.occurred_at < $%[4]d AND %[8]s <= $%[5]d
+	  AND m.id <> $%[3]d AND m.occurred_at < $%[4]d AND %[5]s
 	  AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
 	  AND mp.contact_id = ANY($%[6]d)
 	  AND %[1]s

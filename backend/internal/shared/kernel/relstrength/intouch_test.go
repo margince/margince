@@ -84,6 +84,25 @@ func TestAMessageDatedTodayIsContactBeforeItsStoredNoon(t *testing.T) {
 	}
 }
 
+// A day meeting dated today is still ahead until its date ends, so it is booked
+// rather than met; once the date is over it is a meeting we had.
+func TestADayMeetingDatedTodayIsBookedUntilItsDateEnds(t *testing.T) {
+	t.Parallel()
+	auckland, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatal(err)
+	}
+	meeting := &occurredday.Moment{At: time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC), DateOnly: true}
+	evening := time.Date(2026, 3, 10, 23, 0, 0, 0, auckland)
+	if got := ReadInTouch(nil, meeting, meeting, evening, auckland); got.Basis != InTouchBooked || got.BookedAt != meeting {
+		t.Errorf("on its date the reading is %s, want %s by that meeting", got.Basis, InTouchBooked)
+	}
+	nextMorning := time.Date(2026, 3, 11, 0, 30, 0, 0, auckland)
+	if got := ReadInTouch(nil, meeting, meeting, nextMorning, auckland); got.Basis != InTouchMet || got.BookedAt != nil {
+		t.Errorf("after its date the reading is %s booked %v, want %s and nothing booked", got.Basis, got.BookedAt, InTouchMet)
+	}
+}
+
 // The SQL rule and the meeting statuses: canceled and no-show meetings are
 // not contact, held, booked and untracked ones are.
 func TestTheCountingRuleRefusesMeetingsThatDidNotHappen(t *testing.T) {
@@ -140,14 +159,14 @@ func optionalDaysAhead(n int) *time.Time {
 	return daysAgo(-n)
 }
 
-// Took place and ahead split a meeting by the clock: a booking that started
+// Took place and ahead split a meeting by the clock: a booking that took place
 // counts as contact we had whether or not anybody marked it held, and only an
 // untracked or booked meeting still to come counts as one ahead.
 func TestTookPlaceAndAheadSplitByTheClock(t *testing.T) {
 	t.Parallel()
 	past := MeetingTookPlaceSQL("m", "$9")
-	if !strings.Contains(past, MeetingCountsSQL("m")) || !strings.Contains(past, occurredday.BegunSQL("m", "$9")) {
-		t.Errorf("took place = %q, want a meeting nobody called off that already started", past)
+	if !strings.Contains(past, MeetingCountsSQL("m")) || !strings.Contains(past, occurredday.MeetingTookPlaceSQL("m", "$9")) {
+		t.Errorf("took place = %q, want a meeting nobody called off that already took place", past)
 	}
 	ahead := MeetingAheadSQL("m", "$9")
 	if !strings.Contains(ahead, occurredday.AheadSQL("m", "$9")) || strings.Contains(ahead, "held") {

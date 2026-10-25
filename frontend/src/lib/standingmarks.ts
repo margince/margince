@@ -3,7 +3,7 @@
 
 import type { components } from "../api/schema";
 import type { TimelineMark } from "../design-system/standingtimeline";
-import { activityDay, activityHasBegun } from "../format/activitywhen";
+import { activityDay, activityHasHappened } from "../format/activitywhen";
 import { formatDayMonth } from "../format/format.dates";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -52,7 +52,7 @@ export function activityMarks(
         row.kind !== "task" &&
         !row.archived_at &&
         !NOT_HELD.has(row.meeting_status ?? "") &&
-        activityHasBegun(row.occurred_at, row.occurred_precision, asOf, record),
+        activityHasHappened(row, asOf, record),
     )
     .map((row): TimelineMark => {
       const what = t(KIND_WORD[row.kind]);

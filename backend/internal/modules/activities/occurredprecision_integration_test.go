@@ -9,8 +9,10 @@ package activities
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -353,6 +355,42 @@ func TestADayEntryEndsWithItsDateInSQLAsInGo(t *testing.T) {
 			if want := occurredday.Ended(meeting.OccurredAt, asOf, zone); ended != want {
 				t.Errorf("%s at %v: SQL says ended = %v, Go says %v", name, asOf, ended, want)
 			}
+		}
+	}
+}
+
+// occurredday.HappenedSQL answers the cases occurredday.Happened and the
+// frontend's activityHasHappened share, so the clocks and the screens agree.
+func TestHappenedSQLAnswersTheSharedCases(t *testing.T) {
+	e := setupSend(t)
+	raw, err := os.ReadFile("../../shared/kernel/occurredday/testdata/happened.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		Name, Kind, Precision, Zone string
+		At, Now                     time.Time
+		Happened                    bool
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) == 0 {
+		t.Fatal("read no cases")
+	}
+	for _, c := range cases {
+		if _, err := e.owner.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ('installation.timezone', to_jsonb($1::text))
+			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, c.Zone); err != nil {
+			t.Fatal(err)
+		}
+		var happened bool
+		if err := e.owner.QueryRow(context.Background(), fmt.Sprintf(
+			`SELECT %s FROM (VALUES ($2::text, $3::timestamptz, $4::text)) AS a(kind, occurred_at, occurred_precision)`,
+			occurredday.HappenedSQL("a", "$1")), c.Now, c.Kind, c.At, c.Precision).Scan(&happened); err != nil {
+			t.Fatalf("%s: %v", c.Name, err)
+		}
+		if happened != c.Happened {
+			t.Errorf("%s: SQL says happened = %v, want %v", c.Name, happened, c.Happened)
 		}
 	}
 }
