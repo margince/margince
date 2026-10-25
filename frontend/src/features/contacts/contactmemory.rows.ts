@@ -84,8 +84,9 @@ function fromEntry(entry: Entry): Said {
     row: null,
     occurredAt: entry.occurred_at,
     title: entry.title,
-    // An entry carries no author or page role, so it states no duty either.
-    status: null,
+    // An entry carries no author or page role, so nothing here overrides the
+    // duty the server stated for it.
+    status: entry.status ?? null,
     emailId:
       entry.channel === "email" ? (entry.first_activity_id ?? null) : null,
   };

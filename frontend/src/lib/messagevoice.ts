@@ -58,8 +58,12 @@ export function messageFromOutside(row: Activity): boolean {
   );
 }
 
-/** The page's contact is owed or owes a move on this row. */
+/**
+ * The page's contact may owe or be owed a move on this row. Only a stated part
+ * other than author or addressee rules it out; a row that states no part keeps
+ * whatever duty it carries.
+ */
 export function owesOrIsOwed(row: Activity): boolean {
   const role = contactRole(row);
-  return role === "author" || role === "addressee";
+  return role === undefined || role === "author" || role === "addressee";
 }

@@ -233,6 +233,21 @@ describe("the What was said card", () => {
     expect(screen.queryByText("Unanswered")).toBeNull();
   });
 
+  it("keeps the owed reply on a chat message whose part nothing states", () => {
+    renderCard(
+      viewWith([
+        emailRow({
+          kind: "message",
+          channel_provider: "zalo_oa",
+          email_summary: null,
+          voice: { author: copiedOnly.voice?.author ?? null },
+        }),
+      ]),
+    );
+
+    expect(screen.getByText("Unanswered")).toBeTruthy();
+  });
+
   it("opens the page's drawer on the email the row is about", async () => {
     const user = userEvent.setup();
     const onOpenEmail = vi.fn();
@@ -306,12 +321,12 @@ describe("the What was said card", () => {
     expect(screen.getByText("Site visit")).toBeTruthy();
     expect(screen.getByText("Meeting · 20 Aug")).toBeTruthy();
     expect(screen.queryByText(/both sides/)).toBeNull();
-    // An entry names no author or page role, so it claims no duty either.
-    expect(screen.queryByText("Waiting on them")).toBeNull();
+    // An entry states no author or page role, so the duty it carries stands.
+    expect(screen.getByText("Waiting on them")).toBeTruthy();
     expect(screen.queryByText("Re: the renewal quote")).toBeNull();
   });
 
-  it("names nobody and owes nothing on a thread entry with no author", () => {
+  it("names nobody but keeps the owed reply of a thread entry with no author", () => {
     const entry: Entry = {
       key: "thread-2",
       channel: "email",
@@ -325,11 +340,11 @@ describe("the What was said card", () => {
     renderCard(viewWith([emailRow()], { conversation_memory: [entry] }));
 
     expect(screen.getByText("Email · 20 Aug")).toBeTruthy();
-    expect(screen.queryByText("Unanswered")).toBeNull();
+    expect(screen.getByText("Unanswered")).toBeTruthy();
   });
 
   it.each(["call", "meeting", "message"] as const)(
-    "keeps an unvoiced %s entry neutral across server versions",
+    "names nobody on an unvoiced %s entry and keeps its stated duty",
     (channel) => {
       const entry: Entry = {
         key: "legacy-conversation",
@@ -349,7 +364,7 @@ describe("the What was said card", () => {
           /they wrote|you wrote|they called|you called|both sides/,
         ),
       ).toBeNull();
-      expect(screen.queryByText("Waiting on them")).toBeNull();
+      expect(screen.getByText("Waiting on them")).toBeTruthy();
     },
   );
 
