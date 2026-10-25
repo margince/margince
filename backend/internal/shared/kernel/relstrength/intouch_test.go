@@ -85,7 +85,7 @@ func TestAMessageDatedTodayIsContactBeforeItsStoredNoon(t *testing.T) {
 }
 
 // A day meeting dated today is still ahead until its date ends, so it is booked
-// rather than met; once the date is over it is a meeting we had.
+// rather than met. Once the date is over it is a meeting we had.
 func TestADayMeetingDatedTodayIsBookedUntilItsDateEnds(t *testing.T) {
 	t.Parallel()
 	auckland, err := time.LoadLocation("Pacific/Auckland")
@@ -159,8 +159,8 @@ func optionalDaysAhead(n int) *time.Time {
 	return daysAgo(-n)
 }
 
-// Took place and ahead split a meeting by the clock: a booking that took place
-// counts as contact we had whether or not anybody marked it held, and only an
+// Took place and ahead split a meeting by the clock. A booking that took place
+// counts as contact we had whether or not anybody marked it held. Only an
 // untracked or booked meeting still to come counts as one ahead.
 func TestTookPlaceAndAheadSplitByTheClock(t *testing.T) {
 	t.Parallel()

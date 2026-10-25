@@ -10,8 +10,8 @@ package gates
 // Over means ENDED: start plus duration for an hour, the end of its date in the
 // installation zone for a day. A copy of the end once called a day meeting over
 // at its stored noon. So a statement outside the owner that adds a duration to
-// a start is a finding, unless that line of SQL says why only an instant can
-// reach it: `-- meeting end: <reason>`.
+// a start is a finding. A line of SQL that only an instant can reach says why,
+// as `-- meeting end: <reason>`.
 
 import (
 	"go/ast"

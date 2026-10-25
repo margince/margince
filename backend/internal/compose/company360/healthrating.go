@@ -61,8 +61,8 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 			crmcontracts.HealthDimensionReasonParams{Days: &touch.Days},
 			fmt.Sprintf("No reply and no meeting for %d days.", touch.Days))
 	case touch.Basis == relstrength.InTouchBooked:
-		// The stored time and its precision: the client names an instant's day
-		// in the record's zone, which this read does not hold, and a day's own date.
+		// The stored time and its precision. The client names an instant's day in
+		// the record's zone, which this read does not hold. A day names its date.
 		booked := crmcontracts.HealthDimensionReasonParams{At: &touch.BookedAt.At, AtPrecision: activitywhen.PrecisionOf(*touch.BookedAt)}
 		return dimension(crmcontracts.HealthDimensionRatingGood, crmcontracts.HealthDimensionReasonCodeMeetingBooked,
 			booked, "A meeting with them is booked.")

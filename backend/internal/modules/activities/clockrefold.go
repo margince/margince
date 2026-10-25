@@ -134,12 +134,11 @@ type DayRefoldTargets struct {
 }
 
 // DayActivitiesComeTx reads the day entries the (occurred_at, id) walk cannot
-// time, because a day's moment is its date in zone, not its stored noon.
-// Another kind is begun from its date's start, which east of UTC is before the
-// noon the walk waits for; the arm reads it once, the run its date begins. A
-// meeting takes place when its date ends, which west of UTC is after the noon
-// the walk passed; the arm reads the meetings whose date ended since the mark.
-// Each arm reads at most a date or two, which bounds it.
+// time: a day's moment is its date in zone, not its stored noon. Another kind
+// has begun from its date's start. East of UTC that is before the noon the walk
+// waits for, so the run its date begins reads it. A meeting takes place when its
+// date ends. West of UTC that is after the noon the walk passed, so the arm
+// reads the meetings whose date ended since the mark. Each arm reads a date or two.
 func DayActivitiesComeTx(ctx context.Context, tx pgx.Tx, mark ClockRefoldMark, asOf time.Time, zone *time.Location) (DayRefoldTargets, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return DayRefoldTargets{}, err

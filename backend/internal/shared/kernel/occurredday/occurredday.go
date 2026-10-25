@@ -115,8 +115,8 @@ func MeetingTookPlace(m Moment, asOf time.Time, zone *time.Location) bool {
 	return !m.At.After(asOf)
 }
 
-// Happened reports whether an activity of kind has happened at asOf: a meeting
-// once it took place (MeetingTookPlace), any other kind once it has begun
+// Happened reports whether an activity of kind has happened at asOf. A meeting
+// has once it took place (MeetingTookPlace), any other kind once it has begun
 // (Begun). HappenedSQL is the same rule in SQL.
 func Happened(kind string, m Moment, asOf time.Time, zone *time.Location) bool {
 	if kind == meetingKind {

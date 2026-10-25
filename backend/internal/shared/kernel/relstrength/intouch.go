@@ -143,9 +143,9 @@ func (r InTouch) Current() bool {
 }
 
 // ReadInTouch folds the three dates every in-touch question rests on. A
-// message that has not begun or a meeting that has not taken place
-// (occurredday.MeetingTookPlace) never counts as contact we had; a meeting
-// ahead counts only as nextMeeting. Days are counted
+// message that has not begun never counts as contact we had. Nor does a meeting
+// that has not taken place (occurredday.MeetingTookPlace); a meeting ahead
+// counts only as nextMeeting. Days are counted
 // by the calendar of loc, the zone the reader sees the dates in.
 func ReadInTouch(lastInbound, lastMeeting, nextMeeting *occurredday.Moment, now time.Time, loc *time.Location) InTouch {
 	latest, basis := lastInbound, InTouchWrote

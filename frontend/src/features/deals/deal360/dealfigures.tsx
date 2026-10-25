@@ -241,11 +241,7 @@ export function timelineEvents(
     );
   const titleOf = (row: Activity) => row.subject || t(KIND_LABEL[row.kind]);
   const held = activities
-    .filter(
-      (row) =>
-        isConversation(row) &&
-        activityHasHappened(row, now, zone),
-    )
+    .filter((row) => isConversation(row) && activityHasHappened(row, now, zone))
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
     .slice(0, DONE_EVENTS)
     .map(

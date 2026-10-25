@@ -7,9 +7,9 @@ package gates
 
 // Whether an activity has happened by a moment is asked of occurredday.
 //
-// A day entry is stored at noon UTC of its date, so `occurred_at <= now()`
-// calls a day entry dated today ahead until that noon, and a day meeting held
-// once the noon passes. occurredday.BegunSQL, MeetingTookPlaceSQL, HappenedSQL
+// A day entry is stored at noon UTC of its date. So `occurred_at <= now()`
+// calls a day entry dated today ahead until that noon. It calls a day meeting
+// held once the noon passes. occurredday.BegunSQL, MeetingTookPlaceSQL, HappenedSQL
 // and AheadSQL read the date in the installation zone. So an activity row's
 // occurred_at compared raw with now(), or bounded by a time as `<= $N` or
 // `> $N`, is a finding.
@@ -50,7 +50,7 @@ var (
 	rawOccurredAtCompare = regexp.MustCompile(`(?i)` +
 		columnRef + `\s*(?:(?:<=|>)\s*(?:` + boundTime + `|` + clockNow + `)|(?:<|>=)\s*` + clockNow + `)` +
 		`|(?:` + boundTime + `\s*(?:>=|<)|` + clockNow + `\s*(?:<=|>=|<|>))\s*` + columnRef)
-	// tableAlias binds an alias to the table a FROM, JOIN or UPDATE names.
+	// tableAlias binds an alias to the table a `FROM`, `JOIN` or `UPDATE` names.
 	tableAlias = regexp.MustCompile(`(?i)\b(?:FROM|JOIN|UPDATE)\s+([a-z_]\w*)(?:\s+(?:AS\s+)?([a-z_]\w*))?`)
 	// rawOccurredAtWaiver is the marker and the reason it must carry.
 	rawOccurredAtWaiver = regexp.MustCompile(`--\s*occurred_at raw:\s*(\S.*)$`)

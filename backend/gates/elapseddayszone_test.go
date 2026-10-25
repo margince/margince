@@ -8,7 +8,7 @@ package gates
 // A day count is reckoned in the zone the sentence is drawn in.
 //
 // elapsed.Days takes the zone as its third argument so a caller cannot forget
-// it, and occurredday's date readers and the brief's day counts take it last.
+// it. occurredday's date readers and the brief's day counts take it last.
 // This gate fails the two ways a caller can still count in UTC. One is passing
 // time.UTC, time.Local or nil as the zone. The other is flooring to a UTC day
 // by hand with Truncate(24 * time.Hour) in a file that counts days.
