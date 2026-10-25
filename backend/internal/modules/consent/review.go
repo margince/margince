@@ -225,7 +225,11 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 		if err != nil {
 			return fmt.Errorf("consent: reading the review: %w", err)
 		}
-		return json.Unmarshal(payload, &out.Refusals)
+		if err := json.Unmarshal(payload, &out.Refusals); err != nil {
+			return err
+		}
+		out.State = openStateFor(out.State, out.Refusals)
+		return nil
 	})
 	return out, err
 }
@@ -273,6 +277,16 @@ func stateFor(refusals []RefusedRecipient) string {
 		}
 	}
 	return ReviewNeedsContext
+}
+
+// openStateFor derives an open review's state from its refusals on every read.
+// A row stored before the answerable list narrowed may still say needs_context
+// for a refusal RecordContext now refuses. Closed states are returned as stored.
+func openStateFor(stored string, refusals []RefusedRecipient) string {
+	if (stored != ReviewNeedsContext && stored != ReviewNeedsRepair) || len(refusals) == 0 {
+		return stored
+	}
+	return stateFor(refusals)
 }
 
 // answerableByContext reports whether evidence could still make this send
@@ -433,7 +447,11 @@ func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, er
 			return fmt.Errorf("consent: reading the review: %w", err)
 		}
 		out.InitiatedBy = seat
-		return json.Unmarshal(payload, &out.Refusals)
+		if err := json.Unmarshal(payload, &out.Refusals); err != nil {
+			return err
+		}
+		out.State = openStateFor(out.State, out.Refusals)
+		return nil
 	})
 	return out, err
 }

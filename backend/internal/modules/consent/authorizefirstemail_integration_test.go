@@ -431,3 +431,50 @@ func TestASendTheCcRuleAllowedIsAskedAgainAtTransmit(t *testing.T) {
 		t.Fatal("a send went out after the evidence for the Cc rule was gone")
 	}
 }
+
+// A relink repoints a participant row to another contact and leaves the
+// captured address, so the new contact earns no Cc standing at staging or
+// at transmit.
+func TestARelinkedCopiedParticipantTransfersNoStanding(t *testing.T) {
+	e := setupResolve(t)
+	e.capturedMail(t, "thread-relink", "cc", true)
+	other := ids.New[ids.ContactKind]()
+	ctx := context.Background()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Bob Other', 'manual', 'human:x')`, other); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, 'bob@other.test', true, 'manual', 'human:x')`, other); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		UPDATE activity_participant SET contact_id = $1
+		 WHERE contact_id = $2 AND role = 'cc'`, other, e.contact); err != nil {
+		t.Fatalf("relinking the copied participant: %v", err)
+	}
+	relinked := *e
+	relinked.contact, relinked.address = other, "bob@other.test"
+
+	if d := relinked.decide(t, commsauthz.Request{ThreadKey: "thread-relink"}); d.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("staging decision = %+v, want no allow for a relinked contact", d)
+	}
+	delivery := relinked.plantDelivery(t)
+	if _, err := e.owner.Exec(ctx, `
+		UPDATE activity SET thread_key = 'thread-relink'
+		 WHERE id = (SELECT activity_id FROM comms_outbound WHERE id = $1)`, delivery); err != nil {
+		t.Fatal(err)
+	}
+	ticket, err := relinked.gate.AuthorizeTransmit(relinked.ctx, commsauthz.TransmitRequest{
+		DeliveryID: delivery, Attempt: 1, Recipients: []connector.Recipient{{Email: relinked.address}},
+		Subject: "Re: s", Body: "b",
+	})
+	if err != nil {
+		t.Fatalf("authorizing the transmit: %v", err)
+	}
+	if ticket.Allowed {
+		t.Fatal("a relinked contact was allowed at transmit on the old contact's Cc standing")
+	}
+}
