@@ -46,9 +46,10 @@ const (
 var (
 	// occurredAtOwner is the one package allowed to compare occurred_at raw.
 	occurredAtOwner = filepath.Join("internal", "shared", "kernel", "occurredday")
-	// rawOccurredAtCompare is the as-of spellings, the column on either side.
+	// rawOccurredAtCompare is the as-of spellings, the column on either side. A
+	// line ending at `<=` takes its bound from Go, so it counts too.
 	rawOccurredAtCompare = regexp.MustCompile(`(?i)` +
-		columnRef + `\s*(?:(?:<=|>)\s*(?:` + boundTime + `|` + clockNow + `)|(?:<|>=)\s*` + clockNow + `)` +
+		columnRef + `\s*(?:(?:<=|>)\s*(?:` + boundTime + `|` + clockNow + `)|<=\s*$|(?:<|>=)\s*` + clockNow + `)` +
 		`|(?:` + boundTime + `\s*(?:>=|<)|` + clockNow + `\s*(?:<=|>=|<|>))\s*` + columnRef)
 	// tableAlias binds an alias to the table a `FROM`, `JOIN` or `UPDATE` names.
 	tableAlias = regexp.MustCompile(`(?i)\b(?:FROM|JOIN|UPDATE)\s+([a-z_]\w*)(?:\s+(?:AS\s+)?([a-z_]\w*))?`)
@@ -129,28 +130,32 @@ func (into *tables) read(sql string) {
 	}
 }
 
-// comparesActivity says whether a comparison's alias names an activity row. A
-// literal that names tables answers for itself, and a fragment that names
-// none reads its declaration's. An alias bound to no table counts.
-func comparesActivity(alias string, local, decl tables) bool {
-	scope := decl
-	if local.namesAny {
-		scope = local
+// comparesActivity says whether a comparison's alias names an activity row.
+// The nearest SQL that names tables answers: the literal, its declaration, then
+// its file. An alias bound to no table counts.
+func comparesActivity(alias string, scopes ...tables) bool {
+	for _, scope := range scopes {
+		if !scope.namesAny {
+			continue
+		}
+		if alias == "" {
+			return scope.namesActivity
+		}
+		if table, bound := scope.aliases[strings.ToLower(alias)]; bound {
+			return table == "activity"
+		}
 	}
-	if alias == "" {
-		return scope.namesActivity || !scope.namesAny
-	}
-	table, bound := scope.aliases[strings.ToLower(alias)]
-	if !bound && local.namesAny {
-		table, bound = decl.aliases[strings.ToLower(alias)]
-	}
-	return !bound || table == "activity"
+	return true
 }
 
 // rawOccurredAtCompares finds each raw as-of comparison of an activity row's
 // occurred_at in file's string literals.
 func rawOccurredAtCompares(path string, file *ast.File) []rawCompare {
 	var out []rawCompare
+	whole := tables{aliases: map[string]string{}}
+	for _, statement := range gatekit.SQLStatementsOf(file) {
+		whole.read(statement)
+	}
 	for _, decl := range file.Decls {
 		declared := tables{aliases: map[string]string{}}
 		for _, statement := range gatekit.SQLStatementsOf(decl) {
@@ -170,7 +175,7 @@ func rawOccurredAtCompares(path string, file *ast.File) []rawCompare {
 			lines := strings.Split(text, "\n")
 			for i, line := range lines {
 				for _, match := range rawOccurredAtCompare.FindAllStringSubmatch(line, -1) {
-					if !comparesActivity(match[1]+match[2], local, declared) {
+					if !comparesActivity(match[1]+match[2], local, declared, whole) {
 						continue
 					}
 					found := rawCompare{where: path + ": " + strings.TrimSpace(match[0])}
@@ -197,6 +202,7 @@ func TestTheOccurredAtCensusSeesEachRawComparison(t *testing.T) {
 		"bound on the left":    "SELECT 1 FROM activity m WHERE $4::timestamptz >= m.occurred_at",
 		"bare column":          "SELECT 1 FROM activity WHERE occurred_at < now()",
 		"fragment of no table": "AND x.occurred_at <= $%d",
+		"bound joined from Go": "SELECT 1 FROM activity a WHERE a.occurred_at <= ",
 	} {
 		if got := rawOccurredAtCompares("seeded.go", parseSeed(t, sql)); len(got) != 1 || got[0].waived {
 			t.Errorf("%s: the census found %+v in %q, want one unwaived comparison", name, got, sql)
@@ -210,6 +216,14 @@ func TestTheOccurredAtCensusSeesEachRawComparison(t *testing.T) {
 		if got := rawOccurredAtCompares("seeded.go", parseSeed(t, sql)); len(got) != 0 {
 			t.Errorf("%s: the census flagged %+v in %q", name, got, sql)
 		}
+	}
+	fragment := "package p\nconst q = `SELECT 1 FROM audit_log a WHERE `\nfunc f() string { return \" AND a.occurred_at <= \" }\n"
+	file, err := parser.ParseFile(token.NewFileSet(), "seeded.go", fragment, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := rawOccurredAtCompares("seeded.go", file); len(got) != 0 {
+		t.Errorf("a fragment whose file binds its alias to audit_log was flagged: %+v", got)
 	}
 	waived := "SELECT 1 FROM activity a\n WHERE a.occurred_at > $1 -- occurred_at raw: the window's lower edge\n AND a.occurred_at <= now()"
 	got := rawOccurredAtCompares("seeded.go", parseSeed(t, waived))

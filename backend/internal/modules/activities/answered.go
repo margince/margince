@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -59,7 +60,7 @@ func answerArms(inbound, until string) []answerArm {
 // row and no later than until.
 func answerLater(row, inbound, until string) string {
 	return row + `.archived_at IS NULL
-	    AND ` + row + `.occurred_at <= ` + until + `
+	    AND ` + occurredday.BegunSQL(row, until) + `
 	    AND ` + row + `.occurred_at > ` + inbound + `.occurred_at`
 }
 
@@ -282,7 +283,7 @@ func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOw
 	           AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	           AND newer.direction = 'inbound'
 	           AND newer.archived_at IS NULL
-	           AND newer.occurred_at <= ` + asOf + `
+	           AND ` + occurredday.BegunSQL("newer", asOf) + `
 	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
 	       AND NOT ` + answeredSQL("a", asOf) + `)))`
 }

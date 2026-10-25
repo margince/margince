@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -28,7 +29,7 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
  AND NOT EXISTS (SELECT 1 FROM activity successor WHERE successor.source_system = ` + alias + `.source_system
  AND successor.source_activity_id = ` + alias + `.source_activity_id AND successor.id <> ` + alias + `.id
  AND ` + HeldTaskClause("successor") + `)
- AND request_source.occurred_at <= ` + instant + `
+ AND ` + occurredday.BegunSQL("request_source", instant) + `
  AND request_source.occurred_at >= ` + instant + ` - make_interval(days => ` + horizon + `) AND ` + DirectMailRecipientSQL("request_source", MailSeatAddressesSQL(identities, pinner)) + `)`
 	question := CurrentSourceMailClause(alias+".source_activity_id", asOf, arg)
 	return fmt.Sprintf(`(`+humanOrImportedTaskSQL(alias)+` OR `+HumanWroteActivityClause(alias)+`
@@ -116,6 +117,6 @@ func taskSourcesOf(currency taskCurrency) []string {
 func CurrentSourceMailClause(source string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	return `EXISTS (SELECT 1 FROM activity current_source WHERE current_source.id = ` + source + `
- AND current_source.archived_at IS NULL AND current_source.occurred_at <= ` + instant + `
+ AND current_source.archived_at IS NULL AND ` + occurredday.BegunSQL("current_source", instant) + `
  AND current_source.occurred_at >= ` + instant + ` - make_interval(days => ` + WaitingHorizonSQL(asOf, arg) + `))`
 }
