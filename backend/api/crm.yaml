@@ -38146,6 +38146,15 @@ components:
         reserved_credits: { type: integer, minimum: 0 }
         actual_credits: { type: [integer, 'null'], minimum: 0 }
 
+    ProviderRunTrigger:
+      type: string
+      enum: [automatic_create, automatic_import, automatic_backfill, scheduled_refresh, manual]
+      description: |
+        What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+        contact that existed before the provider was connected, or that no run has covered
+        yet; like the other automatic triggers it buys only the categories that cost
+        nothing.
+
     ProviderRun:
       type: object
       required: [id, subject_kind, provider, trigger, state, claims_unwritten, connection_version, configuration_snapshot, requested_categories, reservations, created_at, updated_at]
@@ -38165,14 +38174,7 @@ components:
             subject kind has its own typed id field; the pairing is enforced by the shape check on
             `provider_run` (PI-DDL-2), not by this schema.
         provider: { $ref: '#/components/schemas/Provider' }
-        trigger:
-          type: string
-          enum: [automatic_create, automatic_import, automatic_backfill, scheduled_refresh, manual]
-          description: |
-            What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
-            contact that existed before the provider was connected, or that no run has covered
-            yet; like the other automatic triggers it buys only the categories that cost
-            nothing.
+        trigger: { $ref: '#/components/schemas/ProviderRunTrigger' }
         state: { type: string, enum: [queued, submitting, in_progress, completed, no_match, skipped, submission_unknown, failed, cancelled] }
         skip_reason:
           type: [string, 'null']
@@ -38471,9 +38473,9 @@ components:
           type: array
           readOnly: true
           description: >-
-            Which of this contact's values a data provider's purchase put there and which
+            Which of this contact's values a data provider's run put there and which
             still hold what it wrote. A value a colleague has since edited, replaced or
-            archived is not listed, and neither is one "Delete bought data" took back. Sent
+            archived is not listed, and neither is one "Delete provider data" took back. Sent
             on the single-contact read (and so on the 360), never on a list. An employment
             is listed only when the caller may see that employment edge and its company.
           items: { $ref: '#/components/schemas/BoughtField' }
@@ -38553,8 +38555,8 @@ components:
 
     BoughtField:
       type: object
-      description: One value on a contact that a data provider's purchase wrote and still owns.
-      required: [target, provider, applied_at]
+      description: One value on a contact that a data provider's run wrote and still owns.
+      required: [target, provider, applied_at, paid, trigger]
       properties:
         target:
           type: string
@@ -38562,9 +38564,19 @@ components:
             Which value: `title`, `linkedin`, `email:<contact email id>`,
             `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id
             for the repeatable values, because a contact may hold several and only the row
-            the purchase wrote is bought.
+            the run wrote is the provider's.
         provider: { $ref: '#/components/schemas/Provider' }
-        applied_at: { type: string, format: date-time, description: When the purchase wrote it. }
+        applied_at: { type: string, format: date-time, description: When the run wrote it. }
+        paid:
+          type: boolean
+          description: >-
+            True when a seat started the run and it spent credits. A value from an
+            automatic run is never paid, because automatic runs take only free categories.
+        trigger: { $ref: '#/components/schemas/ProviderRunTrigger' }
+        requested_by:
+          type: [string, 'null']
+          format: uuid
+          description: The seat that started the run. Set only when `trigger` is `manual`.
 
     ContactEmployer:
       type: object

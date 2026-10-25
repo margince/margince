@@ -3,13 +3,11 @@
 
 package contacts
 
-// Which values on a contact a purchase put there and still owns.
+// Which values on a contact a provider run put there and still owns.
 //
-// Two readers ask it: the contact read, which marks those values as bought, and
-// the revert behind "Delete bought data", which takes them back. Both read the
-// same per-table predicate below, so the page cannot mark a value the revert
-// would leave standing because it no longer counts as the purchase's. The
-// revert adds its own conditions on top (deletability); it never loosens these.
+// The contact read marks those values, and "Delete provider data" takes them
+// back. Both read the per-table predicate below, so the page marks no value the
+// revert would leave standing. The revert adds conditions; it never loosens these.
 //
 // Every predicate relates a target row `t` to its provider_applied_field row `f`.
 
@@ -19,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -51,11 +50,18 @@ var boughtPredicates = map[string]string{
 }
 
 // boughtFieldsSQL lists one contact's ledger rows whose target still holds the
-// bought value, newest first, formatted with the contact's placeholder and the employment
-// visibility clause.
+// provider value, newest first, with the run that wrote it. It is formatted with
+// the contact's placeholder and the employment visibility clause. Automatic runs
+// take only free categories, so a run is paid only when a seat started it and it
+// spent credits.
 const boughtFieldsSQL = `
-	SELECT f.target_table, f.target_field, f.target_row_id, f.provider, f.applied_at
+	SELECT f.target_table, f.target_field, f.target_row_id, f.provider, f.applied_at,
+	       run.trigger, CASE WHEN run.trigger = 'manual' THEN run.requested_by END,
+	       run.trigger = 'manual' AND ` + storekit.ProviderRunCharges + ` AND EXISTS (
+	         SELECT 1 FROM provider_run_reservation r
+	          WHERE r.run_id = run.id AND ` + storekit.ProviderChargedCredits + ` > 0)
 	  FROM provider_applied_field f
+	  JOIN provider_run run ON run.id = f.run_id
 	 WHERE f.contact_id = $%d
 	   AND ((f.target_table = 'contact'
 	         AND EXISTS (SELECT 1 FROM contact t WHERE ` + boughtTitleSQL + `))
@@ -71,7 +77,7 @@ const boughtFieldsSQL = `
 	                      WHERE ` + boughtEmploymentSQL + ` AND %s)))
 	 ORDER BY f.applied_at DESC, f.id`
 
-// attachBoughtFields stamps which of the contact's values a purchase still owns.
+// attachBoughtFields stamps which of the contact's values a provider run still owns.
 //
 // Contact-read authority covers every target but the employment: an edge names
 // a company as a pair, so it is listed only under the same edge and company
@@ -96,10 +102,11 @@ func attachBoughtFields(ctx context.Context, tx pgx.Tx, c *crmcontracts.Contact)
 	bought := []crmcontracts.BoughtField{}
 	seen := map[string]bool{}
 	for rows.Next() {
-		var table, field, provider string
-		var rowID *ids.UUID
+		var table, field, provider, trigger string
+		var rowID, requestedBy *ids.UUID
 		var at time.Time
-		if err := rows.Scan(&table, &field, &rowID, &provider, &at); err != nil {
+		var paid bool
+		if err := rows.Scan(&table, &field, &rowID, &provider, &at, &trigger, &requestedBy, &paid); err != nil {
 			return fmt.Errorf("contacts: reading which values were bought: %w", err)
 		}
 		target := boughtTarget(table, field, rowID)
@@ -107,9 +114,15 @@ func attachBoughtFields(ctx context.Context, tx pgx.Tx, c *crmcontracts.Contact)
 			continue
 		}
 		seen[target] = true
-		bought = append(bought, crmcontracts.BoughtField{
+		entry := crmcontracts.BoughtField{
 			Target: target, Provider: crmcontracts.Provider(provider), AppliedAt: at,
-		})
+			Paid: paid, Trigger: crmcontracts.ProviderRunTrigger(trigger),
+		}
+		if requestedBy != nil {
+			seat := openapi_types.UUID(*requestedBy)
+			entry.RequestedBy = &seat
+		}
+		bought = append(bought, entry)
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("contacts: reading which values were bought: %w", err)

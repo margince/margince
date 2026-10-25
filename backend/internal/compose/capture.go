@@ -316,6 +316,9 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// name it completes is read off the participant rows this same
 		// transaction has just written.
 		WithParticipantNamer(contacts.FillParticipantNamesTx).
+		// The opening score and its history point, from the module that owns
+		// `lead`, so a captured lead scores as a hand-created one does.
+		WithLeadScorer(contacts.ScoreCapturedLead).
 		// Closing a meeting the calendar says is off — called off by its
 		// organizer, or declined by the seat whose calendar it is. From the
 		// module that owns `activity` and its status history, for the reason

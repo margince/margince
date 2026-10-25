@@ -6,7 +6,7 @@
 package integration
 
 // Which values the contact read marks as bought, driven through the real
-// applier, and how that list agrees with what "Delete bought data" removes.
+// applier, and how that list agrees with what "Delete provider data" removes.
 
 import (
 	"context"
@@ -64,10 +64,24 @@ func boughtSubject(t *testing.T, e *Env) (ids.UUID, *contacts.Store) {
 // applyPurchase runs one completed purchase through the applier.
 func applyPurchase(t *testing.T, e *Env, subject ids.UUID, vendor string, claims []provider.Claim) {
 	t.Helper()
+	applyRun(t, e, subject, vendor, "manual", 0, claims)
+}
+
+// applyRun applies one completed run started by trigger, which reserved credits.
+func applyRun(t *testing.T, e *Env, subject ids.UUID, vendor, trigger string, credits int, claims []provider.Claim) {
+	t.Helper()
 	run := seedRun(t, e, subject, "completed", ids.NewV7().String(), false)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(e.Admin(), `UPDATE provider_run SET provider = $2 WHERE id = $1`, run, vendor); err != nil {
+		if _, err := tx.Exec(e.Admin(), `UPDATE provider_run SET provider = $2, trigger = $3,
+			requested_by = CASE WHEN $3 = 'manual' THEN (SELECT id FROM app_user LIMIT 1) END
+			WHERE id = $1`, run, vendor, trigger); err != nil {
 			return err
+		}
+		if credits > 0 {
+			if _, err := tx.Exec(e.Admin(), `INSERT INTO provider_run_reservation (run_id, pool, reserved_credits)
+				VALUES ($1, 'email', $2)`, run, credits); err != nil {
+				return err
+			}
 		}
 		if err := contacts.WriteProviderClaims(e.Admin(), tx, run, subject.String(), vendor, claims,
 			time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)); err != nil {

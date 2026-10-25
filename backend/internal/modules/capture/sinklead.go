@@ -119,18 +119,28 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 	if fields.Unowned {
 		owner = nil
 	}
+	score, recordScore := 0, func(context.Context, pgx.Tx, ids.LeadID) error { return nil }
+	if s.scoreLead != nil {
+		var err error
+		if score, recordScore, err = s.scoreLead(ctx, tx, fields.Title, fields.Origin); err != nil {
+			return ids.LeadID{}, false, fmt.Errorf("capture: score new lead: %w", err)
+		}
+	}
 	err := tx.QueryRow(ctx, `
 		INSERT INTO lead (full_name, email, company_name, title, source_system, source_id, source, captured_by, owner_id,
-		                  origin, origin_detail)
+		                  origin, origin_detail, score)
 		VALUES (NULLIF($1, ''), NULLIF(lower($2), ''), NULLIF($3, ''), NULLIF($4, ''), $5, $6, $7, $8, $9,
-		        (SELECT key FROM lead_origin WHERE key = $10 AND active), NULLIF($11, ''))
+		        (SELECT key FROM lead_origin WHERE key = $10 AND active), NULLIF($11, ''), $12)
 		ON CONFLICT (source_system, source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL
 		DO NOTHING
 		RETURNING id`,
 		fields.FullName, fields.Email, fields.CompanyName, fields.Title,
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), rec.CapturedBy,
-		owner, fields.Origin, textcut.Runes(fields.OriginDetail, values.MaxLeadOriginDetailRunes)).Scan(&id)
+		owner, fields.Origin, textcut.Runes(fields.OriginDetail, values.MaxLeadOriginDetailRunes), score).Scan(&id)
 	if err == nil {
+		if err := recordScore(ctx, tx, id); err != nil {
+			return ids.LeadID{}, false, fmt.Errorf("capture: score history for new lead: %w", err)
+		}
 		var stamps []storekit.FieldStamp
 		for _, f := range []struct{ field, value string }{
 			{"full_name", fields.FullName},

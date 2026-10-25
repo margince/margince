@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -156,4 +157,49 @@ func TestAutomaticMailPastTheCapLeavesTheHumanMessageInTheBriefs(t *testing.T) {
 	if !citesActivity(brief.Sentences, later) {
 		t.Errorf("the contact brief does not move to the newer human reply: %+v", brief.Sentences)
 	}
+}
+
+// Notes dated ahead, more than the page's timeline holds, cannot push the
+// human message out of the contact draft's rows. The page keeps them all.
+func TestPostDatedNotesPastTheCapLeaveTheHumanMessageInTheContactDraft(t *testing.T) {
+	f := newRelationshipFixture(t)
+	human := f.mail(t, "their-real-question", f.contactAddr, f.seatAddr, "", 30)
+	store := activities.NewStore(f.e.DB())
+	for i := range 26 {
+		ahead, text := f.now.AddDate(0, 0, 2+i), "Planned for later "+strconv.Itoa(i)
+		_, _, err := store.LogActivity(f.e.Admin(), activities.LogActivityInput{
+			Kind: "note", Body: &text, OccurredAt: &ahead, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: f.contact}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	contactID := ids.ContactID{UUID: f.contact}
+
+	page, err := f.contactPages().Assemble(f.e.Admin(), contactID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range page.Activities.Data {
+		if ids.UUID(row.Id) == human {
+			t.Fatal("the post-dated notes do not fill the page's timeline; the cap is not exercised")
+		}
+	}
+	draftView, err := f.contactPages().AssembleScoped(f.e.Admin(), contactID, contact360.AssembleOptions{WrittenByHumanOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !citesRow(draftView.Activities.Data, human) {
+		t.Errorf("the contact draft's rows lack the human message behind the post-dated notes: %d rows", len(draftView.Activities.Data))
+	}
+}
+
+func citesRow(rows []crmcontracts.Activity, id ids.UUID) bool {
+	for _, row := range rows {
+		if ids.UUID(row.Id) == id {
+			return true
+		}
+	}
+	return false
 }

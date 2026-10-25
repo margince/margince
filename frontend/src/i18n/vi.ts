@@ -5550,6 +5550,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "evidence.mark": "đã đọc",
 
   "evidence.bought": "đã mua",
+  "evidence.fromProvider": "từ nhà cung cấp",
   "evidence.confirm": "Xác nhận",
   "evidence.correct": "Sửa",
   "evidence.save": "Lưu",
@@ -14161,6 +14162,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.bandBadge.moderate": "Trung bình",
   "contact.bandBadge.strong": "Mạnh",
   "contact.bought.from": "Đã mua từ {provider}",
+  "contact.provider.from": "Từ {provider}",
+  "contact.provider.trigger.automatic_create": "Được bổ sung cho liên hệ mới",
+  "contact.provider.trigger.automatic_import": "Được bổ sung cho liên hệ mới",
+  "contact.provider.trigger.automatic_backfill": "Được bổ sung bởi lượt rà soát bù",
+  "contact.provider.trigger.scheduled_refresh": "Làm mới theo lịch",
+  "contact.provider.trigger.manual": "Yêu cầu bởi",
   "contact.network.title": "Đồng nghiệp quen liên hệ này",
 
   "contact.page.loading": "Đang tải…",
@@ -14469,7 +14476,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "provider.disconnectConfirm.title": "Ngắt kết nối nhà cung cấp này?",
   "provider.disconnectConfirm.body":
     "Các lượt tra cứu mới sẽ dừng ngay và khóa sẽ bị hủy. Dữ liệu đã mua vẫn nằm trong hồ sơ; ngắt kết nối không xóa dữ liệu đó.",
-  "provider.deleteData": "Xóa dữ liệu đã mua",
+  "provider.deleteData": "Xóa dữ liệu của nhà cung cấp",
   "provider.deleteDataConfirm.title": "Xóa mọi dữ liệu từ nhà cung cấp này?",
   "provider.deleteDataConfirm.impactTitle": "Không thể hoàn tác",
   "provider.deleteDataConfirm.impact.values":
