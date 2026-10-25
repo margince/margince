@@ -24009,7 +24009,10 @@ export interface components {
             /** @description How many files came with it. Zero when withheld, like every other count. */
             attachment_count: number;
             /**
-             * @description Whose move it is, derived from what this reader can see of the thread. `none` when
+             * @description Whose move it is, derived from what this reader can see of the thread.
+             *     `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+             *     that is still the last word with them. A calendar invitation, update, cancellation
+             *     or answer is `none` unless someone confirmed it asks us something. `none` also when
              *     the question cannot be answered honestly — an unanswerable move is not a claim.
              * @enum {string}
              */

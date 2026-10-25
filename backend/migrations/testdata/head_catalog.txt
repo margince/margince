@@ -127,15 +127,18 @@ public.activity_audience_member.subject_type text NOT NULL gen=- def=-
 public.activity_audience_member_pkey CREATE UNIQUE INDEX activity_audience_member_pkey ON public.activity_audience_member USING btree (activity_id, subject_type, subject_id)
 public.activity_calendar_method_backfill acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_calendar_method_backfill.activity_calendar_method_backfill_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_calendar_method_backfill.activity_calendar_method_backfill_direction_check CHECK ((direction = ANY (ARRAY['inbound'::text, 'outbound'::text])))
 public.activity_calendar_method_backfill.activity_calendar_method_backfill_outcome_check CHECK ((outcome = ANY (ARRAY['set'::text, 'none'::text, 'unreadable'::text])))
 public.activity_calendar_method_backfill.activity_calendar_method_backfill_pkey PRIMARY KEY (activity_id)
 public.activity_calendar_method_backfill.activity_created_at timestamp with time zone NOT NULL gen=- def=-
 public.activity_calendar_method_backfill.activity_id uuid NOT NULL gen=- def=-
 public.activity_calendar_method_backfill.checked_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_calendar_method_backfill.direction text NOT NULL gen=- def='inbound'::text
 public.activity_calendar_method_backfill.outcome text NOT NULL gen=- def=-
 public.activity_calendar_method_backfill_pkey CREATE UNIQUE INDEX activity_calendar_method_backfill_pkey ON public.activity_calendar_method_backfill USING btree (activity_id)
-public.activity_calendar_method_backfill_resume CREATE INDEX activity_calendar_method_backfill_resume ON public.activity_calendar_method_backfill USING btree (activity_created_at, activity_id)
+public.activity_calendar_method_backfill_resume CREATE INDEX activity_calendar_method_backfill_resume ON public.activity_calendar_method_backfill USING btree (direction, activity_created_at, activity_id)
 public.activity_calendar_method_unread CREATE INDEX activity_calendar_method_unread ON public.activity USING btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email'::text) AND (direction = 'inbound'::text))
+public.activity_calendar_method_unread_outbound CREATE INDEX activity_calendar_method_unread_outbound ON public.activity USING btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email'::text) AND (direction = 'outbound'::text))
 public.activity_class_needs_evidence() secdef=false cfg=- acl=- 
 BEGIN
   IF EXISTS (SELECT 1 FROM activity a
