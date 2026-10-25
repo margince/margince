@@ -126,21 +126,16 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	if err != nil {
 		return nil, err
 	}
-	meetingmap.CountListed(connectorName, len(events))
-
 	edge := c.now().Add(captureForwards)
-	for _, raw := range events {
+	if err := meetingmap.SettleEach(connectorName, events, func(raw []byte) error {
 		// Past the horizon the event is not captured, but a meeting captured
 		// while it was nearer and moved out since still moves with it.
 		if beyondHorizon(raw, owner, edge) {
-			if err := meetingmap.MoveOne(ctx, raw, sink, owner, connectorName, decodeEvent); err != nil {
-				return nil, err
-			}
-			continue
+			return meetingmap.MoveOne(ctx, raw, sink, owner, connectorName, decodeEvent)
 		}
-		if err := meetingmap.CaptureOne(ctx, raw, sink, owner, connectorName, decodeEvent); err != nil {
-			return nil, err
-		}
+		return meetingmap.CaptureOne(ctx, raw, sink, owner, connectorName, decodeEvent)
+	}); err != nil {
+		return nil, err
 	}
 
 	// selectEvents (through listPages) guarantees a non-empty syncToken on a

@@ -163,7 +163,7 @@ func selectMeetingRSVPCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]r
 // one such meeting must not stop the pass reaching the rest.
 //
 // SettleDrop is `still_on` here, and the distinction matters. Drop means "this
-// event was never worth capturing" — a solo block, or one with no id — which
+// event was never worth capturing" (a solo block, or one with no id), which
 // says nothing about whether it is off. The row exists, so it WAS captured under
 // whatever rule applied then, and this pass has no cancellation to write.
 func backfillOneMeetingRSVP(ctx context.Context, tx pgx.Tx, c rsvpCandidate, payload []byte) (string, error) {

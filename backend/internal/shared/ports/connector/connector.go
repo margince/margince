@@ -264,7 +264,6 @@ type NormalizedRecord struct {
 	Raw        []byte // re-parseable original → raw jsonb, off the hot path
 
 	// StoredOriginal names the raw_capture row this record was read from.
-	//
 	// A connector that persisted the original ITSELF — a poll that has to
 	// store the update before it can queue the work — fills it, and hands over
 	// no Raw. Every other lane leaves it zero and the sink fills it from the
@@ -290,6 +289,7 @@ type NormalizedRecord struct {
 	// and a connector may not import it.
 	CrossDoorIdentity CrossDoorIdentity
 	OwnerDomainOnly   string // the calendar owner's domain when every party is on it; the sink judges it
+	PartiesIncomplete bool   // the provider may have left parties out of Addresses, so they cannot prove it internal
 
 	// The address the RECEIVING infrastructure recorded delivery to, empty when
 	// no such claim could be trusted. It is how a forwarding alias is

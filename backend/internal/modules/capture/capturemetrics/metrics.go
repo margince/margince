@@ -193,13 +193,17 @@ func ObserveCalendarListed(provider string, events int) {
 // Unlike the backfill families it counts every pull, because a calendar has no
 // backfill run to carry.
 func ObserveCalendarEvent(provider, outcome string) {
-	shared.observeCalendarEvent(provider, outcome)
+	ObserveCalendarEvents(provider, outcome, 1)
 }
 
-func (c *collector) observeCalendarEvent(provider, outcome string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.calendar[pair{provider: provider, value: outcome}]++
+// ObserveCalendarEvents records that n calendar events ended on one outcome.
+func ObserveCalendarEvents(provider, outcome string, n int) {
+	if n <= 0 {
+		return
+	}
+	shared.mu.Lock()
+	defer shared.mu.Unlock()
+	shared.calendar[pair{provider: provider, value: outcome}] += uint64(n)
 }
 
 func (c *collector) observeStage(provider, stage string, elapsed time.Duration) {

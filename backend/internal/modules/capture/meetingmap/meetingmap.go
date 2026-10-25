@@ -82,6 +82,8 @@ type Event struct {
 	AllDay    bool
 	Organizer Actor
 	Attendees []Actor
+	// PartiesHidden: the provider withheld guests from this copy of the event.
+	PartiesHidden bool
 }
 
 // Actor is one organizer or attendee. The address is all the rules need to
@@ -118,6 +120,7 @@ type Meeting struct {
 	cancelled       bool
 	ownerDeclined   bool
 	hasExternal     bool // any party outside the OWNER's own domain; the sink judges the rest
+	partiesHidden   bool
 	ownerDomain     string
 	addresses       []string
 	participants    connector.Parties
@@ -150,10 +153,11 @@ func Classify(ev Event, owner string) Meeting {
 		// the same rule classifyAttendees applies below: unknown is not
 		// internal. Reading it as internal instead would drop a real
 		// multi-party meeting on the strength of a malformed address.
-		hasExternal:  external > 0 || organizerIsExternal(ev.Organizer.Email, organizerDom, ownerDom),
-		ownerDomain:  ownerDom,
-		addresses:    eventAddresses(ev, owner),
-		participants: meetingParties(ev),
+		hasExternal:   external > 0 || organizerIsExternal(ev.Organizer.Email, organizerDom, ownerDom),
+		partiesHidden: ev.PartiesHidden,
+		ownerDomain:   ownerDom,
+		addresses:     eventAddresses(ev, owner),
+		participants:  meetingParties(ev),
 	}
 }
 
@@ -245,12 +249,13 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		WithheldParties:   m.participants.Withheld,
 		Addresses:         m.addresses,
 		OwnerDomainOnly:   m.ownerDomainOnly(),
+		PartiesIncomplete: m.partiesHidden,
 	}.WithProviderAttestedParticipants(true)
 }
 
 // ownerDomainOnly is the owner's domain when no party is outside it, else "".
 func (m Meeting) ownerDomainOnly() string {
-	if m.hasExternal {
+	if m.hasExternal || m.partiesHidden {
 		return ""
 	}
 	return m.ownerDomain
@@ -445,7 +450,7 @@ func cancelCaptured(ctx context.Context, sink connector.Sink, m Meeting, connect
 
 // NormalizeOne maps ONE raw event to its meeting activity, reporting a
 // deliberate drop as an ErrSkip-wrapped refusal. Pure — the test-guarded
-// surface a connector's Normalize composes.
+// surface a connector's Normalize composes. The sink, not this, judges internal.
 func NormalizeOne(raw []byte, owner, connectorName string, decode Decode) ([]connector.NormalizedRecord, error) {
 	ev, err := decode(raw, owner)
 	if err != nil {

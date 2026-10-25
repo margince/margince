@@ -44,7 +44,7 @@ func (s *Sink) internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.Norm
 	if _, ok := rec.Fields.(ActivityFields); !ok {
 		return false, nil
 	}
-	if len(rec.Addresses) == 0 {
+	if len(rec.Addresses) == 0 || rec.PartiesIncomplete {
 		return false, nil
 	}
 	own, err := TrustedOwnDomainsTx(ctx, tx)

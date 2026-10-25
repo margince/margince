@@ -218,12 +218,10 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	if err != nil {
 		return nil, err
 	}
-	meetingmap.CountListed(connectorName, len(events))
-
-	for _, raw := range events {
-		if err := meetingmap.CaptureOne(ctx, raw, sink, owner, connectorName, decodeEvent); err != nil {
-			return nil, err
-		}
+	if err := meetingmap.SettleEach(connectorName, events, func(raw []byte) error {
+		return meetingmap.CaptureOne(ctx, raw, sink, owner, connectorName, decodeEvent)
+	}); err != nil {
+		return nil, err
 	}
 
 	// selectEvents (through walk) guarantees a non-empty deltaLink on a

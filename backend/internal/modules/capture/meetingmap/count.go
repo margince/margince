@@ -24,12 +24,21 @@ const (
 	OutcomeBeyondHorizon     = "beyond_horizon"
 	OutcomeCancelUnsupported = "cancel_unsupported"
 	OutcomeMoveUnsupported   = "move_unsupported"
+	OutcomeNotAttempted      = "not_attempted"
 )
 
-// CountListed counts each provider batch before processing. The gap to attempted
-// outcomes includes in-flight work and items left after a failed write.
-func CountListed(connectorName string, events int) {
-	capturemetrics.ObserveCalendarListed(connectorName, events)
+// SettleEach counts one provider batch as listed and settles its events in
+// order. A write fault stops the batch, and every event after it counts as
+// not_attempted, so a finished batch has one outcome per listed event.
+func SettleEach(connectorName string, events [][]byte, settle func(raw []byte) error) error {
+	capturemetrics.ObserveCalendarListed(connectorName, len(events))
+	for i, raw := range events {
+		if err := settle(raw); err != nil {
+			capturemetrics.ObserveCalendarEvents(connectorName, OutcomeNotAttempted, len(events)-i-1)
+			return err
+		}
+	}
+	return nil
 }
 
 // settleWrite counts what one write to the sink came to. A skip lets the pull

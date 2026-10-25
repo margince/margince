@@ -946,7 +946,7 @@ serves both families on its `--observe-addr`:
 
 - `margince_capture_calendar_events_listed_total` (`provider`): the events each provider list handed
   to a pull, counted before any is written.
-- `margince_capture_calendar_events_total` (`provider`, `outcome`): the one outcome each attempted
+- `margince_capture_calendar_events_total` (`provider`, `outcome`): the one outcome each listed
   event ended on.
 
 `outcome` is one of these:
@@ -959,13 +959,14 @@ serves both families on its `--observe-addr`:
   domains. The writer leaves its own trace row that says why.
 - `failed`: the write failed. The pull stops there and saves no progress, so the next pull lists
   the same events again.
+- `not_attempted`: the event came after a failed write in the same list, so the pull never reached
+  it.
 - `unreadable`: the event could not be read.
 - `beyond_horizon` (Google only): the event starts more than a year from now, and its new start was
   handed to the writer.
 - `cancel_unsupported` or `move_unsupported`: the writer offers no way to cancel or move.
 
-The gap between listed events and attempted outcomes includes events in pulls still running and
-events a failed write left for the next pull. Use the `failed` outcome to check for write failures.
+Once a pull ends, it has counted one outcome for each listed event; a gap is a pull still running.
 With debug logging on, the `calendar event settled` line names the event id of each attempted event. An
 event that could not be read has no id. The families add up all connections of one process. They do not say which connection listed an
 event, and a missing line does not prove that a provider never listed it.

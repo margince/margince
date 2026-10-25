@@ -27,10 +27,10 @@ func (s *faultingSink) Upsert(context.Context, connector.NormalizedRecord) (data
 	return datasource.EntityRef{}, nil
 }
 
-// A write fault on the first of two listed events counts both as listed and the
-// first as failed. The second is never attempted, so it has no outcome. The pull
+// A write fault on the first of two listed events counts both as listed, the
+// first as failed and the second as not attempted. The pull
 // stops with the fault and advances no cursor.
-func TestAFailedWriteLeavesTheRestOfTheListUnattempted(t *testing.T) {
+func TestAFailedWriteCountsTheRestOfTheListAsNotAttempted(t *testing.T) {
 	first := eventJSON(t, "evt-1", "Kickoff", "2026-07-16T09:00:00.0000000", "UTC", owner, "client@acme.com")
 	second := eventJSON(t, "evt-2", "Review", "2026-07-16T10:00:00.0000000", "UTC", owner, "client@acme.com")
 	api := &fakeAPI{email: owner, initEvents: [][]byte{first, second}, initDelta: "https://graph/delta?$1"}
@@ -47,8 +47,12 @@ func TestAFailedWriteLeavesTheRestOfTheListUnattempted(t *testing.T) {
 	if listed-listedBefore != 2 {
 		t.Errorf("listed moved by %d, want 2", listed-listedBefore)
 	}
-	if moved := capturemetricstest.Moved(before, after); !maps.Equal(moved, map[string]int{"failed": 1}) {
-		t.Errorf("outcomes moved %v, want failed by 1 and the second event unattempted", moved)
+	moved := capturemetricstest.Moved(before, after)
+	if !maps.Equal(moved, map[string]int{"failed": 1, "not_attempted": 1}) {
+		t.Errorf("outcomes moved %v, want failed by 1 and not_attempted by 1", moved)
+	}
+	if settled := capturemetricstest.Total(moved); settled != listed-listedBefore {
+		t.Errorf("%d outcomes for %d listed events, want one each", settled, listed-listedBefore)
 	}
 }
 

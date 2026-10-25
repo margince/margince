@@ -57,6 +57,8 @@ var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 		"The core fills it only from what a connector read out of the provider's own payload. A unit's record carries none, binds to nothing, and lands under its own natural key — which is what every record did before cross-door identity existed, so the absence costs a unit nothing it had",
 	"OwnerDomainOnly": "a calendar connector's statement that every party of a meeting is on the calendar owner's domain, which the sink may read as internal and drop. " +
 		"A unit imports no calendar meetings, and a unit able to state it could ask the sink to drop a record. The zero value claims nothing, so the record is judged on its addresses alone",
+	"PartiesIncomplete": "a calendar connector's statement that the provider withheld parties, which stops the sink from ever judging the record internal. " +
+		"A unit able to state it could have internal correspondence captured. The zero value claims nothing",
 	"SenderAuthentication": "a receiving server's verdict read from the raw message, which a unit does not hand over. " +
 		"A unit able to state it could vouch for a From it never saw authenticated, and capture would read a forged colleague's mail as ours. " +
 		"The zero value authenticates nobody, which is the safe answer",

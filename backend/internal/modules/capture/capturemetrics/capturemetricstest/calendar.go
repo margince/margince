@@ -50,6 +50,15 @@ func Moved(before, after map[string]int) map[string]int {
 	return moved
 }
 
+// Total is the number of events the outcomes in moved add up to.
+func Total(moved map[string]int) int {
+	total := 0
+	for _, n := range moved {
+		total += n
+	}
+	return total
+}
+
 func count(t testing.TB, line, value string) int {
 	t.Helper()
 	n, err := strconv.Atoi(value)

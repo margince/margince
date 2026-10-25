@@ -38,10 +38,10 @@ func twoMeetings(t *testing.T) *fakeAPI {
 	}
 }
 
-// A write fault on the first of two listed events counts both as listed and the
-// first as failed. The second is never attempted, so it has no outcome. The pull
+// A write fault on the first of two listed events counts both as listed, the
+// first as failed and the second as not attempted. The pull
 // stops with the fault and advances no cursor, so the next pull retries both.
-func TestAFailedWriteLeavesTheRestOfTheListUnattempted(t *testing.T) {
+func TestAFailedWriteCountsTheRestOfTheListAsNotAttempted(t *testing.T) {
 	listedBefore, before := capturemetricstest.CalendarCounts(t, connectorName)
 	sink := &faultingSink{}
 	cursor, err := New(fakeOAuth{access: "access-1"}, twoMeetings(t)).Sync(context.Background(), authBytes(t), nil, sink)
@@ -55,8 +55,12 @@ func TestAFailedWriteLeavesTheRestOfTheListUnattempted(t *testing.T) {
 	if listed-listedBefore != 2 {
 		t.Errorf("listed moved by %d, want 2", listed-listedBefore)
 	}
-	if moved := capturemetricstest.Moved(before, after); !maps.Equal(moved, map[string]int{"failed": 1}) {
-		t.Errorf("outcomes moved %v, want failed by 1 and the second event unattempted", moved)
+	moved := capturemetricstest.Moved(before, after)
+	if !maps.Equal(moved, map[string]int{"failed": 1, "not_attempted": 1}) {
+		t.Errorf("outcomes moved %v, want failed by 1 and not_attempted by 1", moved)
+	}
+	if settled := capturemetricstest.Total(moved); settled != listed-listedBefore {
+		t.Errorf("%d outcomes for %d listed events, want one each", settled, listed-listedBefore)
 	}
 }
 
