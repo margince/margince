@@ -187,9 +187,9 @@ func requireEligibleSteward(ctx context.Context, tx pgx.Tx, user ids.UserID) err
 //
 // Both halves, and neither implies the other: `archived_at` retires the record,
 // `status` retires the contact's access. A seat deactivated but not archived is
-// the ordinary shape of somebody who has left, and it is exactly the one the
-// old existence check admitted. A steward is a named human, so an agent seat is
-// refused too. FOR SHARE holds a concurrent deactivation until this write commits.
+// the ordinary shape of somebody who has left. A steward is a named human, so an
+// agent seat is refused too. FOR SHARE holds a concurrent deactivation until this
+// write commits.
 func stewardIsEligible(ctx context.Context, tx pgx.Tx, user ids.UserID) (bool, error) {
 	var eligible bool
 	err := tx.QueryRow(ctx,
