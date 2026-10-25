@@ -26794,7 +26794,7 @@ export interface components {
             since: string;
         };
         /**
-         * @description Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a person wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+         * @description Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a human wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
          * @enum {string}
          */
         RelationshipDirection: "two_way" | "inbound_only" | "outbound_only" | "none";

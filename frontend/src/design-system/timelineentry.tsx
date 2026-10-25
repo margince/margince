@@ -131,7 +131,7 @@ export type TimelineEntry = {
    */
   bulkAttested?: boolean;
   /**
-   * What sent a message no person wrote, as the server judged it: a calendar
+   * What sent a message no human wrote, as the server judged it: a calendar
    * invitation, a sending system or the product. Such a row counts on neither
    * side of a conversation.
    */
@@ -329,7 +329,7 @@ export function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   })}`;
 }
 
-// threadSides counts the messages a person wrote on each side.
+// threadSides counts the messages a human wrote on each side.
 export function threadSides(entries: readonly TimelineEntry[]): {
   theirs: number;
   ours: number;
@@ -359,7 +359,7 @@ export function automaticLabel(entry: TimelineEntry): MessageKey | undefined {
   return entry.automaticKind ? AUTOMATIC_LABEL[entry.automaticKind] : undefined;
 }
 
-// AutomaticFlag says a row is not a person's message, so it is not read as
+// AutomaticFlag says a row is not a human's message, so it is not read as
 // the contact writing.
 export function AutomaticFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   const t = useT();

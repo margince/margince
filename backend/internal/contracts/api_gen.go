@@ -31836,7 +31836,7 @@ type Company360 struct {
 	// ProjectsPage Whether `projects` was cut short. The list is capped, and a card that counted the rows and said "3 in flight" would state a number the account does not have. Absent exactly when `projects` is.
 	ProjectsPage *PageInfo `json:"projects_page,omitempty"`
 
-	// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a person wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+	// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a human wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
 	RelationshipDirection *RelationshipDirection `json:"relationship_direction,omitempty"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
@@ -34828,7 +34828,7 @@ type Contact360 struct {
 	// RelationshipChanges What CHANGED about this relationship, most consequential first — derived at read from the contact's own interactions, never stored. `strength` says what the relationship IS; this says what happened to it, which is what a reader acts on. Empty when nothing crossed a threshold.
 	RelationshipChanges *[]ContactRelationshipChange `json:"relationship_changes,omitempty"`
 
-	// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a person wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+	// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a human wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
 	RelationshipDirection *RelationshipDirection `json:"relationship_direction,omitempty"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
@@ -47909,7 +47909,7 @@ type RelationshipKind string
 // RelationshipStartedPrecision defines model for Relationship.StartedPrecision.
 type RelationshipStartedPrecision string
 
-// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a person wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a human wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
 type RelationshipDirection string
 
 // RelationshipListResponse defines model for RelationshipListResponse.

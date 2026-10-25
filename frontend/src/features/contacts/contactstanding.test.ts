@@ -148,7 +148,7 @@ describe("contactVerdict", () => {
 
 describe("directionSentence", () => {
   it("words the server's direction, not the two dates", () => {
-    // Both dates set, but the server read only our side as written by a person.
+    // Both dates set, but the server read only our side as written by a human.
     const view: Contact360 = {
       ...VIEW,
       last_inbound_at: "2026-08-10T09:00:00Z",

@@ -34,7 +34,7 @@ function thread(entries: TimelineEntry[]): TimelineGroup {
 }
 
 describe("a thread's card", () => {
-  it("counts each side's messages and leaves out the ones no person wrote", () => {
+  it("counts each side's messages and leaves out the ones no human wrote", () => {
     const theirs = [1, 2, 3, 4].map((n) =>
       entry({ id: `in${n}`, direction: "inbound", counterparts: "Ida Keller" }),
     );
