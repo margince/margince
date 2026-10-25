@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The closed set the column's CHECK admits, spelled here because the store is
@@ -47,6 +48,9 @@ const (
 	settlementDueCol       = "due_at"
 	settlementConfidence   = "confidence"
 	settlementDecidedByCol = "decided_by"
+	settlementEvidenceCol  = "judged_evidence"
+	// settlementRevalidationCol is set by the reviewed repair (requestsettlementrepair.go).
+	settlementRevalidationCol = "revalidation_requested_at"
 )
 
 // OwedVerdictCapturedBy is what the owed pass stamps on a reminder it filed.
@@ -83,6 +87,14 @@ type RepliedRequest struct {
 	// the two statements run under read-committed, and a value that moved in
 	// between would widen the window the selection had already narrowed.
 	CounterpartyEmail string
+	// AsOf is the instant the selection read its answers at.
+	AsOf time.Time
+	// Evidence is the request and answers as read (settlementEvidenceSQL).
+	Evidence string
+	// DoneTaskID is a reminder this pass completed earlier and nobody touched
+	// since, which a later still-owed verdict may reopen.
+	DoneTaskID      *ids.UUID
+	DoneTaskVersion int64
 }
 
 // repliedRequestsSQL selects requests the workspace has answered since.
@@ -103,16 +115,35 @@ type RepliedRequest struct {
 // attestation, plus the workspace audience, since their text reaches the model.
 //
 // The watermark arm is what makes the pass idempotent and re-armable at once. A
-// request already judged through its newest answer is skipped; one answered
-// again since comes back, because the newest answer is no longer the one the
-// row names.
-var repliedRequestsSQL = outstandingRequestSQL + `
+// verdict that recorded its evidence is skipped while that evidence is
+// unchanged, so an edit, a narrowing or a backdated answer brings it back. An
+// older verdict without it is skipped while its answer is still the newest.
+var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `))
  AND a.audience = 'workspace'
  AND a.counterparty_email IS NOT NULL
  AND EXISTS (` + settlementAnswersSQL() + `)
+ AND ` + settlementEvidenceCompleteSQL + `
  AND NOT EXISTS (SELECT 1 FROM activity_request_settlement judged
    WHERE judged.request_activity_id = a.id
-     AND judged.judged_through_activity_id = (` + newestAnswerSince + `))`
+     AND judged.revalidation_requested_at IS NULL
+     AND ((judged.judged_evidence IS NULL AND judged.judged_through_activity_id = (` + newestAnswerSince + `))
+       OR judged.judged_evidence = (` + settlementEvidenceSQL() + `)))`
+
+// settlementEvidenceCompleteSQL keeps a request off the candidate list when its
+// evidence holds a body that was not read in full. The settlement pass would
+// refuse to judge it. A refused request left on the list comes back first on
+// every pass, so a few of them would starve every other request. It covers at
+// least what the pass reads. That is the request, its later thread messages
+// with the same correspondent, and the answers off its thread.
+var settlementEvidenceCompleteSQL = provenance.MailBodyCompleteSQL("a") + `
+ AND NOT EXISTS (SELECT 1 FROM activity later
+   WHERE later.thread_key = a.thread_key AND later.kind = a.kind
+     AND later.counterparty_email = a.counterparty_email AND later.archived_at IS NULL
+     AND later.occurred_at <= $1 AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
+     AND NOT ` + provenance.MailBodyCompleteSQL("later") + `)
+ AND NOT EXISTS (SELECT 1 FROM (` + offThreadAnswersSQL("a", "$1") + `) off
+   JOIN activity answer ON answer.id = off.id
+   WHERE NOT ` + provenance.MailBodyCompleteSQL("answer") + `)`
 
 // settlementAnswersSQL selects, as (id, occurred_at), every answer to request a
 // as of the pass's own instant ($1): our attested reply in the conversation and
@@ -182,15 +213,19 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			       -- had just typed.
 			       coalesce(task.captured_by = $2 AND task.due_at IS NULL
 			                AND task.subject IS NOT DISTINCT FROM a.subject, false),
-                   `+humanReopenedTaskSQL("task")+`
+                   `+humanReopenedTaskSQL("task")+`,
+			       (%[1]s), done.id, coalesce(done.version, 0)
 			  FROM activity a
-			  CROSS JOIN LATERAL (%s) latest
+			  CROSS JOIN LATERAL (%[2]s) latest
+			  LEFT JOIN LATERAL (SELECT reminder.id, reminder.version FROM activity reminder
+			    WHERE reminder.source_system = '%[3]s' AND reminder.source_activity_id = a.id
+			      AND %[4]s LIMIT 1) done ON true
 			  LEFT JOIN activity task
-			    ON task.source_system = '%s' AND task.source_activity_id = a.id
+			    ON task.source_system = '%[3]s' AND task.source_activity_id = a.id
 			   AND task.archived_at IS NULL AND task.is_done = false
-			 WHERE %s
+			 WHERE %[5]s
 			 ORDER BY latest.occurred_at DESC, latest.id DESC, a.id DESC
-			 LIMIT $3`, newestAnswerRow, EmailRequestTaskSource, repliedRequestsSQL),
+			 LIMIT $3`, settlementEvidenceSQL(), newestAnswerRow, EmailRequestTaskSource, settlementCompletedTaskSQL("reminder"), repliedRequestsSQL),
 			asOf, OwedVerdictCapturedBy, limit)
 		if err != nil {
 			return fmt.Errorf("activities: reading answered requests: %w", err)
@@ -199,9 +234,11 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 		for rows.Next() {
 			var r RepliedRequest
 			if err := rows.Scan(&r.RequestID, &r.CounterpartyEmail, &r.NewestAnswerID,
-				&r.TaskID, &r.TaskVersion, &r.TaskMachineMinted, &r.TaskHumanReopened); err != nil {
+				&r.TaskID, &r.TaskVersion, &r.TaskMachineMinted, &r.TaskHumanReopened,
+				&r.Evidence, &r.DoneTaskID, &r.DoneTaskVersion); err != nil {
 				return err
 			}
+			r.AsOf = asOf
 			out = append(out, r)
 		}
 		return rows.Err()
@@ -250,50 +287,40 @@ func (s *Store) SettleRequest(ctx context.Context, in RequestSettlementInput) er
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return err
 	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		still, err := requestStillWritable(ctx, tx, in.Request.RequestID)
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		still, err := holdSettlementEvidenceTx(ctx, tx, in.Request)
 		if err != nil {
 			return err
 		}
+		if still {
+			still, err = s.judgedThroughNewest(ctx, tx, in.Request)
+			if err != nil {
+				return err
+			}
+		}
+		if still {
+			still, err = evidenceUnchanged(ctx, tx, in.Request)
+			if err != nil {
+				return err
+			}
+		}
 		if !still {
-			// Narrowed, archived, held or erased since the candidate read. The
-			// pass reads a batch, spends a model call per conversation and
-			// writes the answers back, so a human or a privacy verdict can move
-			// the row inside that window — and `remaining` is model prose about
-			// a customer, which must not land on a message the workspace may no
-			// longer open. Not an error: the judgement is simply dropped, and
-			// the next pass reads whatever the row says then.
+			// The request or its evidence moved since the candidate read. The
+			// judgement is dropped, and the next pass reads the row again.
 			return nil
 		}
 		if err := recordSettlement(ctx, tx, in); err != nil {
 			return err
 		}
+		if err := reopenSettledReminder(ctx, tx, in, in.Request.AsOf); err != nil {
+			return err
+		}
 		return applySettlement(ctx, tx, in)
 	})
-}
-
-// requestStillWritable re-tests, at WRITE time, that the request is one this
-// pass may still record a judgement about.
-//
-// The same re-test SetOwedVerdict carries in its own UPDATE's WHERE clause, and
-// for the same reason — except that this write lands in a different table, so
-// there is no row of the request's own to attach the condition to and it has to
-// be asked outright. Without it a settlement that finished after an erasure
-// would reinsert a sentence about a subject nobody may now assert anything
-// about, into a table the cascade has already swept.
-func requestStillWritable(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (bool, error) {
-	var live bool
-	err := tx.QueryRow(ctx, `
-		SELECT true FROM activity
-		 WHERE id = $1 AND archived_at IS NULL
-		   AND audience = 'workspace' AND restricted_at IS NULL`, requestID).Scan(&live)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
+	if errors.Is(err, errSettlementBusy) {
+		return nil
 	}
-	if err != nil {
-		return false, fmt.Errorf("activities: re-reading the request before settling it: %w", err)
-	}
-	return live, nil
+	return err
 }
 
 // recordSettlement writes the verdict, replacing any earlier one.
@@ -316,18 +343,20 @@ func recordSettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput)
 		settlementDueCol:       dueAt,
 		settlementConfidence:   in.Confidence,
 		settlementDecidedByCol: in.DecidedBy,
+		settlementEvidenceCol:  in.Request.Evidence,
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_request_settlement (request_activity_id,
-		       judged_through_activity_id, verdict, remaining, due_at, confidence, decided_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		       judged_through_activity_id, verdict, remaining, due_at, confidence, decided_by, judged_evidence)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (request_activity_id) DO UPDATE SET
 		       judged_through_activity_id = EXCLUDED.judged_through_activity_id,
 		       verdict = EXCLUDED.verdict, remaining = EXCLUDED.remaining,
 		       due_at = EXCLUDED.due_at, confidence = EXCLUDED.confidence,
-		       decided_by = EXCLUDED.decided_by, decided_at = now()`,
+		       decided_by = EXCLUDED.decided_by, decided_at = now(),
+		       judged_evidence = EXCLUDED.judged_evidence, revalidation_requested_at = NULL`,
 		in.Request.RequestID, in.Request.NewestAnswerID, in.Verdict,
-		remaining, dueAt, in.Confidence, in.DecidedBy); err != nil {
+		remaining, dueAt, in.Confidence, in.DecidedBy, in.Request.Evidence); err != nil {
 		return fmt.Errorf("activities: recording the request settlement: %w", err)
 	}
 	// TWO call sites with LITERAL verbs rather than one with a variable, and
@@ -373,14 +402,14 @@ func settlementProse(in RequestSettlementInput) (remaining *string, dueAt *time.
 //nolint:nilnil // an absent before-image IS the answer for a first judgement; see above.
 func settlementImage(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (map[string]any, error) {
 	var verdict, decidedBy string
-	var remaining *string
+	var remaining, evidence *string
 	var judgedThrough ids.UUID
 	var dueAt *time.Time
 	var confidence float64
 	err := tx.QueryRow(ctx, `
-		SELECT verdict, judged_through_activity_id, remaining, due_at, confidence, decided_by
+		SELECT verdict, judged_through_activity_id, remaining, due_at, confidence, decided_by, judged_evidence
 		  FROM activity_request_settlement WHERE request_activity_id = $1`,
-		requestID).Scan(&verdict, &judgedThrough, &remaining, &dueAt, &confidence, &decidedBy)
+		requestID).Scan(&verdict, &judgedThrough, &remaining, &dueAt, &confidence, &decidedBy, &evidence)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -394,6 +423,7 @@ func settlementImage(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (map[st
 		settlementDueCol:       dueAt,
 		settlementConfidence:   confidence,
 		settlementDecidedByCol: decidedBy,
+		settlementEvidenceCol:  evidence,
 	}, nil
 }
 

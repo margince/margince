@@ -183,12 +183,7 @@ func (said teamCopy) figureCoverage(since *time.Time, start, end time.Time, noun
 func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID, asOf time.Time) (figureStarts, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	captured := make([]string, 0, len(owners))
-	for _, owner := range owners {
-		captured = append(captured, "human:"+owner.String())
-	}
 	owned := fmt.Sprintf("ANY($%d)", arg(owners))
-	capturedBy := fmt.Sprintf("ANY($%d)", arg(captured))
 	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
 	if err != nil {
 		return figureStarts{}, err
@@ -225,8 +220,8 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID, asOf ti
 		  (SELECT min(LEAST(m.created_at, m.occurred_at)) FROM activity m
 		    WHERE m.kind = 'meeting' AND m.archived_at IS NULL AND %[4]s AND (%[5]s)),
 		  (SELECT min(COALESCE(l.routed_at, l.created_at)) FROM lead l
-		    WHERE l.owner_id = %[1]s AND l.archived_at IS NULL AND `+nonImportedLeadSQL+` AND (%[6]s))`,
-		owned, orUnbounded(dealScope), taskScope, meetingIsTheirsSQL(owned, capturedBy), meetingScope,
+		    WHERE l.owner_id = %[1]s AND l.archived_at IS NULL AND `+NonImportedLeadSQL+` AND (%[6]s))`,
+		owned, orUnbounded(dealScope), taskScope, meetingIsTheirsSQL(owned), meetingScope,
 		leadScope, current), args...).
 		Scan(&s.deals, &s.tasks, &s.meetings, &s.leads)
 	if err != nil {

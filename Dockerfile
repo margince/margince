@@ -276,12 +276,8 @@ RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
 # none of the installation's units.
 ENV MARGINCE_COMPOSITION_FRONTEND=/app/build/composition/frontend
 WORKDIR /app/frontend
-# `tsc -b` dominates this step (~40s of ~51s locally; vite itself is ~6s). Both
-# composite projects write their .tsbuildinfo into node_modules/.tmp, which is
-# discarded with this stage, so every build type-checks the whole tree from
-# scratch. Persisting just that directory makes tsc incremental across builds;
-# it keys off recorded file content hashes, so changed files are still re-checked
-# and the type gate over the freshly generated schema.d.ts is unchanged.
+# `pnpm build:composed` type-checks incrementally, and the cache mount below keeps
+# its .tsbuildinfo across builds. Content hashes still re-check a changed file.
 # The same revision the api target is built with, written into each MCP App view
 # document so the api can report skew between the two tiers. See the api-build
 # stage for why an absent value disables the comparison rather than alarming.

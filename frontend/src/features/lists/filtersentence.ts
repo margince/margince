@@ -12,6 +12,7 @@ import {
   formatMoney,
   formatNumber,
 } from "../../format/format";
+import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
@@ -28,9 +29,11 @@ import { fieldLabel, type VocabularyField } from "../../lib/filterdata";
 import {
   type FilterOp,
   isGroup,
+  isRadiusOperand,
   isRelativeDate,
   type Leaf,
   type Node,
+  type RadiusOperand,
 } from "../../lib/segmentpredicate";
 import { useTagCatalog } from "./tagadmin.queries";
 
@@ -51,6 +54,7 @@ const OPERATOR_KEY: Record<FilterOp, MessageKey> = {
   in: "filters.op.in",
   contains: "filters.op.contains",
   exists: "filters.op.exists",
+  within_radius: "filters.op.withinRadius",
 };
 
 /** The four whose reading changes on a quantity. */
@@ -96,6 +100,8 @@ export type SentenceWords = Readonly<{
   locale: Locale;
   zone: string;
   retiredTags?: ReadonlySet<string>;
+  /** Tag names by id, so a tag clause names its tags instead of counting them. */
+  tagNames?: ReadonlyMap<string, string>;
 }>;
 
 export function useSentenceWords(): SentenceWords {
@@ -110,7 +116,10 @@ export function useSentenceWords(): SentenceWords {
       .filter((tag) => tag.archived_at != null)
       .map((tag) => tag.id),
   );
-  return { t, plural, locale, zone: viewerZone(), retiredTags };
+  const tagNames = new Map(
+    (catalog.data?.data ?? []).map((tag) => [tag.id, tag.name]),
+  );
+  return { t, plural, locale, zone: viewerZone(), retiredTags, tagNames };
 }
 
 /** One clause as a filter states it: a stored leaf, or a verdict's clause. */
@@ -242,6 +251,20 @@ function relativeDateWords(
   return undefined;
 }
 
+/** A radius as "50 km of Stuttgart", or of its coordinates when no place was named. */
+export function radiusText(
+  operand: RadiusOperand,
+  t: Translator,
+  locale: Locale,
+): string {
+  return t("filters.sentence.radiusOf", {
+    km: formatNumber(operand.radius_km, locale),
+    place:
+      operand.label ??
+      `${formatNumber(operand.lat, locale)}, ${formatNumber(operand.lon, locale)}`,
+  });
+}
+
 /** A clause's operand as the filter states it, or "" where it states none yet. */
 function operandText(
   operand: unknown,
@@ -257,6 +280,9 @@ function operandText(
   }
   if (Array.isArray(operand)) {
     return operand.map((one) => scalarText(one, field, words)).join(", ");
+  }
+  if (isRadiusOperand(operand)) {
+    return radiusText(operand, words.t, words.locale);
   }
   if (isRelativeDate(operand)) {
     return words.plural("lists.why.daysAgo", operand.days_ago, {
@@ -287,7 +313,10 @@ function scalarText(
   const day =
     CALENDAR_DAY.test(operand) &&
     (field === undefined || field.type === "date");
-  return day ? formatDateAbbrev(operand, locale, zone) : operand;
+  if (day) {
+    return formatDateAbbrev(operand, locale, zone);
+  }
+  return field?.name === INDUSTRY_FIELD ? industryWords(t, operand) : operand;
 }
 
 /**
@@ -309,6 +338,10 @@ function typedOperandText(
   if (!field.references || operand === "") {
     return undefined;
   }
+  const named = tagNamesText(operand, field, words);
+  if (named !== undefined) {
+    return named;
+  }
   const ids = Array.isArray(operand) ? operand.length : 1;
   const count = { count: formatNumber(ids, locale) };
   const retired = retiredTagCount(operand, field, words);
@@ -322,6 +355,34 @@ function typedOperandText(
         tags: counted,
         retired: formatNumber(retired, locale),
       });
+}
+
+/**
+ * The names of a tag clause's tags, or undefined when any tag has no name.
+ * The catalog may be withheld from this seat, or lack the tag. The caller then
+ * counts the tags instead. That never names one tag and miscounts another.
+ */
+function tagNamesText(
+  operand: unknown,
+  field: VocabularyField,
+  words: SentenceWords,
+): string | undefined {
+  const { tagNames } = words;
+  // A retired tag keeps its own wording, which says no record carries one.
+  if (
+    field.references !== "tag" ||
+    tagNames === undefined ||
+    retiredTagCount(operand, field, words) > 0
+  ) {
+    return undefined;
+  }
+  const tagIds: unknown[] = Array.isArray(operand) ? operand : [operand];
+  const names = tagIds.map((id) =>
+    typeof id === "string" ? tagNames.get(id) : undefined,
+  );
+  return names.every((name) => name !== undefined)
+    ? names.map((name) => `"${name}"`).join(", ")
+    : undefined;
 }
 
 /**

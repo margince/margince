@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -254,6 +255,11 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// still paging and a row crossing the page boundary is served twice or
 		// not at all.
 		WithWalks(worklistsnap.New(pool, now)).
+		// The done lane's own window, so the worklist's receipts and Home's
+		// lane start at the same instant.
+		WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {
+			return magic.ResolveWindow(ctx, magicBriefCutoff{engine: briefs.NewBriefEngine(pool, nil), now: now}, nil, asOf)
+		}).
 		// The whole page as ONE unit of work. Every lane reader below opens its
 		// own transaction by default, which cost this surface ~40 of them and
 		// as many instants per assembled day; bound, they join one read-only
@@ -366,6 +372,7 @@ func (a attentionDomainQuestions) OpenDomainQuestions(ctx context.Context) ([]at
 			ReasonCode: row.ReasonCode,
 			AskedAt:    row.AskedAt,
 			EvidenceAt: row.EvidenceAt,
+			Note:       row.Note,
 		})
 	}
 	return out, nil

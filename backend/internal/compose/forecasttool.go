@@ -82,6 +82,13 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			// The RESOLVED scope, so an agent is told which population the
 			// number covers rather than the blank it asked with.
 			out = forecastToolResult(period, resolved, readings, baseCurrency, at, limited)
+			mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, resolved)
+			if err != nil {
+				return err
+			}
+			if !mayAssert {
+				return nil
+			}
 			refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved, baseCurrency)
 			if err != nil {
 				return err

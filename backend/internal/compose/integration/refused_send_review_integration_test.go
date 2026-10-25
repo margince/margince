@@ -460,7 +460,7 @@ func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
 		t.Fatalf("opening the erasure case → %d", status)
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+opened.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased on request",
+		"status": "fulfilled", "resolution": "erased on request", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfilling the erasure → %d", status)
 	}
@@ -520,7 +520,7 @@ func TestErasingASubjectEmptiesAndCancelsTheirHeldMessage(t *testing.T) {
 		t.Fatalf("opening the erasure case → %d", status)
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+opened.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased on request",
+		"status": "fulfilled", "resolution": "erased on request", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfilling the erasure → %d — an erasure that cannot complete because of a "+
 			"held message is this slice breaking Art. 17", status)
@@ -588,7 +588,7 @@ func TestErasingASubjectReachesAMessageAddressedInAnotherCase(t *testing.T) {
 		t.Fatalf("opening the erasure case → %d", status)
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+opened.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased on request",
+		"status": "fulfilled", "resolution": "erased on request", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfilling the erasure → %d", status)
 	}

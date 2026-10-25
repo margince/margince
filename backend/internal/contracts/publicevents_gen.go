@@ -555,6 +555,7 @@ const (
 	IntroRequestCompleted                 SubscribableEventType = "intro_request.completed"
 	IntroRequestCreated                   SubscribableEventType = "intro_request.created"
 	IntroRequestDecided                   SubscribableEventType = "intro_request.decided"
+	IntroRequestRecorded                  SubscribableEventType = "intro_request.recorded"
 	IntroRequestReplied                   SubscribableEventType = "intro_request.replied"
 	LeadCreated                           SubscribableEventType = "lead.created"
 	LeadDemoted                           SubscribableEventType = "lead.demoted"
@@ -765,6 +766,8 @@ func (e SubscribableEventType) Valid() bool {
 	case IntroRequestCreated:
 		return true
 	case IntroRequestDecided:
+		return true
+	case IntroRequestRecorded:
 		return true
 	case IntroRequestReplied:
 		return true
@@ -1877,6 +1880,14 @@ type PublicEventIntroRequestDecided struct {
 // PublicEventIntroRequestDecidedDecision defines model for PublicEventIntroRequestDecided.Decision.
 type PublicEventIntroRequestDecidedDecision string
 
+// PublicEventIntroRequestRecorded Payload for intro_request.recorded, a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed. That event means an ask was marked done, and its consumers must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
+type PublicEventIntroRequestRecorded struct {
+	ContactId        openapi_types.UUID `json:"contact_id"`
+	IntroRequestId   openapi_types.UUID `json:"intro_request_id"`
+	IntroducedUserId openapi_types.UUID `json:"introduced_user_id"`
+	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
+}
+
 // PublicEventIntroRequestReplied Payload for intro_request.replied — the contact answered, observed from captured activity rather than asserted by a contact. `source_activity_id` is the evidence, so a reader can open the message the claim rests on.
 type PublicEventIntroRequestReplied struct {
 	ContactId        openapi_types.UUID  `json:"contact_id"`
@@ -1953,7 +1964,7 @@ type PublicEventLeadSlaBreached struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 }
 
-// PublicEventLeadSourceChanged Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
+// PublicEventLeadSourceChanged Deprecated: the lead source list no longer feeds the score, and a separate breaking change retires it. Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
 type PublicEventLeadSourceChanged struct {
 	Change PublicEventLeadSourceChangedChange `json:"change"`
 
@@ -2271,8 +2282,11 @@ type PublicEventRelationshipNudgeDecided struct {
 	Action    PublicEventRelationshipNudgeDecidedAction `json:"action"`
 	ContactId openapi_types.UUID                        `json:"contact_id"`
 
-	// DismissedUntil When the contact comes back to the lane. Present on `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. It is never absent on a dismissal: a dismissal with no end is the shape this feature refuses to have.
+	// DismissedUntil When the contact comes back to the lane. Present on a dated `dismissed` and absent on `restored`, which carries no moment because a restore takes effect now. Absent on a permanent stop, which `permanent` says.
 	DismissedUntil *time.Time `json:"dismissed_until,omitempty"`
+
+	// Permanent True when the reader stopped following the contact with no end date. Only on `dismissed`; the reader resumes it with `restored`.
+	Permanent *bool `json:"permanent,omitempty"`
 }
 
 // PublicEventRelationshipNudgeDecidedAction What was decided. The undo, `restored`, is carried rather than inferred from a row going quiet. A decision withdrawn is itself a decision. A consumer counting how often reps put relationships down has to see it happen.
@@ -2977,6 +2991,10 @@ func (PublicEventIntroRequestDecided) EventType() string { return "intro_request
 
 func (PublicEventIntroRequestDecided) EntityType() string { return "contact" }
 
+func (PublicEventIntroRequestRecorded) EventType() string { return "intro_request.recorded" }
+
+func (PublicEventIntroRequestRecorded) EntityType() string { return "contact" }
+
 func (PublicEventIntroRequestReplied) EventType() string { return "intro_request.replied" }
 
 func (PublicEventIntroRequestReplied) EntityType() string { return "contact" }
@@ -3321,6 +3339,7 @@ var PublicEventVersions = map[string]int{
 	"intro_request.completed":                   1,
 	"intro_request.created":                     1,
 	"intro_request.decided":                     1,
+	"intro_request.recorded":                    1,
 	"intro_request.replied":                     1,
 	"lead.created":                              1,
 	"lead.demoted":                              1,
@@ -3462,6 +3481,7 @@ var PublicEventSamples = map[string]string{
 	"intro_request.completed":                   "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"outcome\":\"introduced\"}",
 	"intro_request.created":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"requester_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"intro_request.decided":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"decision\":\"accepted\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"intro_request.recorded":                    "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introduced_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"intro_request.replied":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead.created":                              "{\"source_system\":\"Sample source system\"}",
 	"lead.demoted":                              "{\"from_contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"unwind\":\"Sample unwind\"}",
@@ -3499,7 +3519,7 @@ var PublicEventSamples = map[string]string{
 	"project.created":                           "{\"company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"key\":\"Sample key\",\"name\":\"Sample name\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"phase\":\"Sample phase\"}",
 	"project.phase_changed":                     "{\"from_phase\":\"Sample from phase\",\"reason\":\"Sample reason\",\"to_phase\":\"Sample to phase\"}",
 	"project.updated":                           "{\"changed_fields\":{}}",
-	"relationship_nudge.decided":                "{\"action\":\"dismissed\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"dismissed_until\":\"2026-10-14T09:12:00Z\"}",
+	"relationship_nudge.decided":                "{\"action\":\"dismissed\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"dismissed_until\":\"2026-10-14T09:12:00Z\",\"permanent\":true}",
 	"retention.applied":                         "{\"action\":\"archive\",\"policy\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\"}",
 	"retention.restricted":                      "{\"action\":\"restrict\",\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"restricted_until\":\"2026-10-14T09:12:00Z\",\"retention_class\":\"Sample retention class\"}",
 	"role.changed":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_role\":\"Sample from role\",\"to_role\":\"Sample to role\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",

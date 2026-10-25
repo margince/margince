@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -96,7 +97,11 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
-	where = append(where, timelineNarrowings(in, arg)...)
+	reminders, err := dueRemindersArm(ctx, in, arg)
+	if err != nil {
+		return nil, "", nil, nil, err
+	}
+	where = append(where, timelineNarrowings(in, reminders, arg)...)
 	if in.EntityType != nil && in.EntityID != nil {
 		entityWhere, entityErr := entityLinkFilter(in, arg)
 		if entityErr != nil {
@@ -106,6 +111,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	}
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
+	}
+	if in.WrittenByHuman {
+		where = append(where, relstrength.WrittenByHumanSQL("a"))
 	}
 	if where, err = appendWaitingReplyClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
@@ -140,8 +148,11 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 // Together rather than inline, because each is one clause with no bearing on
 // the next: the builder above composes the row scope, the record narrowing and
 // the page, and reading it should not mean reading past nine of these first.
-func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
+func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) int) []string {
 	var where []string
+	if in.RemindersDue {
+		where = append(where, reminders)
+	}
 	if !in.IncludeArchived {
 		where = append(where, activityLive)
 	}
@@ -164,15 +175,33 @@ func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
 		where = append(where, clause)
 	}
 	if in.MeetingHost != nil {
-		where = append(where, sprintf("a.kind = 'meeting' AND a.host_user_id = $%d", arg(*in.MeetingHost)))
+		where = append(where, "a.kind = 'meeting' AND "+storekit.MeetingResponsibilitySQL("a", sprintf("$%d", arg(*in.MeetingHost))))
 	}
 	if in.UnhostedMeetings {
-		where = append(where, "a.kind = 'meeting' AND a.host_user_id IS NULL")
+		where = append(where, "a.kind = 'meeting' AND "+storekit.UnclaimedMeetingSQL("a"))
 	}
 	if clause := openTaskAssigneeClause(in.AssigneeID, in.TaskAsOf, in.mailIdentities, arg); clause != "" {
 		where = append(where, clause)
 	}
-	return append(where, openTaskWindowClauses(in, arg)...)
+	return append(where, openTaskWindowClauses(in, reminders, arg)...)
+}
+
+// dueRemindersArm is the caller's due reminders as one clause, or empty when
+// the read asks for none. The widening arm carries the content gate itself,
+// because the rest of the Worklist read is discover-gated.
+func dueRemindersArm(ctx context.Context, in ListActivitiesInput, arg func(any) int) (string, error) {
+	if !in.RemindersDue && !in.OrRemindersDue {
+		return "", nil
+	}
+	reminders := dueReminderClause("a", sprintf("$%d", arg(ReminderReader(ctx))), reminderClockOf(in), arg)
+	if !in.OrRemindersDue {
+		return reminders, nil
+	}
+	readable, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil || readable == "" {
+		return reminders, err
+	}
+	return "(" + reminders + " AND " + readable + ")", nil
 }
 
 // timelineKeyset continues a page, or answers empty for a first one.
@@ -238,5 +267,5 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
 		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly || in.SourceActivityID != nil ||
-		len(in.CustomFilters) > 0
+		in.RemindersDue || len(in.CustomFilters) > 0
 }

@@ -92,6 +92,7 @@ function activity(
   row: Pick<Activity, "id" | "kind" | "occurred_at"> & Partial<Activity>,
 ): Activity {
   return {
+    offers_email: false,
     is_done: false,
     source: "manual",
     captured_by: "human:u1",

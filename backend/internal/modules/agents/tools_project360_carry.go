@@ -42,12 +42,11 @@ func project360History(h crmcontracts.Project360PhaseHistory) *Project360PhaseHi
 	}
 	for _, t := range h.Data {
 		out.Transitions = append(out.Transitions, Project360Transition{
-			FromPhase:     orBlank(t.FromPhase),
-			ToPhase:       t.ToPhase,
-			Reason:        orBlank(t.Reason),
-			ChangedAt:     t.ChangedAt,
-			ChangedBy:     t.ChangedBy.Id,
-			ChangedByName: orBlank(t.ChangedBy.DisplayName),
+			FromPhase: orBlank(t.FromPhase),
+			ToPhase:   t.ToPhase,
+			Reason:    orBlank(t.Reason),
+			ChangedAt: t.ChangedAt,
+			ChangedBy: project360Attribution(t.ChangedBy),
 		})
 	}
 	for _, d := range h.PhaseDurations {
@@ -56,6 +55,19 @@ func project360History(h crmcontracts.Project360PhaseHistory) *Project360PhaseHi
 		})
 	}
 	return out
+}
+
+func project360Attribution(a *crmcontracts.PrincipalAttribution) *Project360Attribution {
+	if a == nil {
+		return nil
+	}
+	return &Project360Attribution{
+		ActorType:      string(a.ActorType),
+		ActorID:        a.ActorId,
+		ActorName:      orBlank(a.ActorName),
+		OnBehalfOfName: orBlank(a.OnBehalfOfName),
+		AgentClient:    orBlank(a.AgentClient),
+	}
 }
 
 func project360Deals(rows []crmcontracts.Deal) []HandoffDeal {
@@ -160,12 +172,10 @@ func project360Rollups(r crmcontracts.Project360Rollups) *Project360Rollups {
 		LastActivityAt:  r.LastActivityAt,
 		ActivityCount:   r.ActivityCount,
 	}
-	if r.OpenDealValue.AmountMinor != nil {
-		out.OpenDealValueMinor = *r.OpenDealValue.AmountMinor
-	}
-	if r.WonDealValue.AmountMinor != nil {
-		out.WonDealValueMinor = *r.WonDealValue.AmountMinor
-	}
+	out.OpenDealValueMinor = r.OpenDealValue.AmountMinor
+	out.WonDealValueMinor = r.WonDealValue.AmountMinor
+	out.OpenDealsUnpriced = r.OpenDealsUnpriced
+	out.WonDealsUnpriced = r.WonDealsUnpriced
 	return out
 }
 

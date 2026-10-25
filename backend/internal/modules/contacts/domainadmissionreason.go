@@ -54,7 +54,7 @@ func bulkSenderKind(reason string) (crmcontracts.BlockedDomainSenderKind, bool) 
 func reasonCodeOf(e BlockedDomain) (crmcontracts.BlockedDomainReasonCode, *string, *crmcontracts.BlockedDomainSenderKind) {
 	if e.Admission == DomainUndecided {
 		switch e.Source {
-		case PendingUnevidenced, PendingStaleEvidence, PendingNearDuplicate, PendingForwardedIdentity, PendingReservedDomain:
+		case PendingUnevidenced, PendingStaleEvidence, PendingNearDuplicate, PendingForwardedIdentity, PendingVendorVerdict, PendingReservedDomain:
 			return crmcontracts.BlockedDomainReasonCode(e.Source), nil, nil
 		}
 		return crmcontracts.BlockedDomainReasonCodeUnknown, nil, nil

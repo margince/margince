@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
+/** @vitest-environment happy-dom */
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { renderWithQueryClient } from "../../testing/queryrender";
+import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import {
+  AddRelationshipAction,
   counterpartyRef,
   edgeOptions,
   endpointBody,
@@ -164,5 +170,65 @@ describe("counterpartyRef — the other end of an existing edge, typed for Entit
     expect(
       counterpartyRef(baseRel({ contact_id: "p-1" }), contactScope),
     ).toBeNull();
+  });
+});
+
+describe("adding a relationship", () => {
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("sends the start day picked on the calendar", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, advanceTimeDelta: 5 });
+    vi.setSystemTime(new Date("2026-03-10T09:00:00Z"));
+    const posted: unknown[] = [];
+    stubWithSession(
+      {
+        "GET /companies": () =>
+          jsonResponse({
+            data: [{ id: "o-9", display_name: "Acme Corp" }],
+            page: { next_cursor: null },
+          }),
+        "POST /relationships": (body) => {
+          posted.push(body);
+          return jsonResponse({ ...baseRel({}), id: "rel-new" }, 201);
+        },
+      },
+      { relationship: ["read", "create"] },
+    );
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWithQueryClient(
+      <AddRelationshipAction
+        scope={contactScope}
+        only={{ kind: "employment", label: "rel.add" }}
+      />,
+    );
+
+    await user.click(screen.getByTestId("add-relationship"));
+    const dialog = within(screen.getByRole("dialog"));
+    await user.type(dialog.getByPlaceholderText("Search…"), "acme");
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+    await user.click(await dialog.findByRole("button", { name: "Acme Corp" }));
+    await user.click(dialog.getByRole("button", { name: /^Choose date/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "Monday, 2 March 2026" }),
+    );
+    expect(dialog.getByRole("textbox", { name: "Started" })).toHaveProperty(
+      "value",
+      "02/03/2026",
+    );
+    await user.click(screen.getByTestId("add-relationship-submit"));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({
+      kind: "employment",
+      contact_id: "p-1",
+      company_id: "o-9",
+      started_at: "2026-03-02",
+    });
   });
 });

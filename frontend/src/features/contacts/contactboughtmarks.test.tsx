@@ -43,6 +43,7 @@ const view: Contact360 = {
     writable: true,
     version: 1,
     social: { linkedin: "https://www.linkedin.com/in/dana" },
+    primary_email: "dana@bought.example",
     emails: [
       {
         id: "e-bought",

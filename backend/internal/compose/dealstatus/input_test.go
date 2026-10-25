@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -55,7 +56,7 @@ func TestTheHealthFactorsCarryNoProseToQuote(t *testing.T) {
 	// there is nothing to paste.
 	health := deals.DealHealth{AtRisk: true}
 	in := project(
-		facts{deal: openDeal(), now: testNow, health: &health},
+		facts{deal: openDeal(), now: testNow, loc: time.UTC, health: &health},
 		crmcontracts.DealStatusCardMove{Action: ActionNone},
 	)
 	if len(in.Health) == 0 {
@@ -85,7 +86,7 @@ func TestEveryCitableIDResolvesWhenTheCardIsAssembled(t *testing.T) {
 	// from the facts rather than listed, so a new citable kind fails here
 	// until the card can render it.
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		timeline: []crmcontracts.Activity{
 			act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -2)),
 			act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, 3)),
@@ -109,7 +110,7 @@ func TestACitedTaskCarriesASubjectTheReaderCanRead(t *testing.T) {
 	// with no subject would cite it by kind — "task" — which tells the reader
 	// nothing about which promise the sentence rests on.
 	task := activities.OpenTask{ID: ids.NewV7(), Subject: "Send the revised terms"}
-	f := facts{deal: openDeal(), now: testNow, openTasks: []activities.OpenTask{task}}
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, openTasks: []activities.OpenTask{task}}
 	got, ok := citedRecord(f, task.ID.String())
 	if !ok {
 		t.Fatal("an open task in the facts could not be cited")

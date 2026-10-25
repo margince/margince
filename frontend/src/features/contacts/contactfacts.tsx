@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { rosterOwnerName } from "../../components/entityref";
 import { ContactLink } from "../../design-system/contactlink";
 import { OffsiteLink } from "../../design-system/offsitelink";
@@ -10,6 +11,7 @@ import { Popover } from "../../design-system/popover";
 import { provenanceOf } from "../../design-system/provenanceof";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { ProvenanceTag } from "../../design-system/trust";
+import { primaryPhone } from "../../format/contacturi";
 import { formatDateAbbrev } from "../../format/format";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
@@ -46,8 +48,8 @@ export function ContactFacts({
   const { locale } = useLocale();
   const zone = useRecordZone();
   const ownerName = useMemberName(contact.owner_id);
-  const email = contact.emails?.[0]?.email;
-  const phone = contact.phones?.[0]?.phone;
+  const email = contact.primary_email;
+  const phone = primaryPhone(contact.phones)?.phone;
   return (
     <RecordFacts>
       {email && (
@@ -65,13 +67,28 @@ export function ContactFacts({
       )}
       {phone && (
         <Fact label={t("create.phone")}>
-          <ContactLink kind="phone" value={phone} className="pe-meta-link">
+          <ContactLink
+            kind="phone"
+            value={phone}
+            record={{ entityType: "contact", entityId: contact.id }}
+            className="pe-meta-link"
+          >
             {phone}
           </ContactLink>
         </Fact>
       )}
       {contact.address?.city && (
-        <Fact label={t("create.city")}>{contact.address.city}</Fact>
+        <Fact label={t("create.city")}>
+          {contact.address.city}
+          {contact.address_country_mismatch && (
+            <>
+              {" "}
+              <AddressCountryMismatchBadge
+                mismatch={contact.address_country_mismatch}
+              />
+            </>
+          )}
+        </Fact>
       )}
       {typeof contact.social?.linkedin === "string" && (
         <Fact label={t("contact.page.linkedin")}>

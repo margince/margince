@@ -51,7 +51,9 @@ type CommitmentTaskProposal struct {
 	PromiserUnresolved bool `json:"promiser_unresolved,omitempty"`
 	// DueDate is a day, YYYY-MM-DD, or empty. Text rather than an instant, so a
 	// reviewer edits a day and acceptance decides when that day ends.
-	DueDate  string                         `json:"due_date,omitempty"`
+	DueDate string `json:"due_date,omitempty"`
+	// DueZone is the zone the day ends in; empty is the installation's.
+	DueZone  string                         `json:"due_zone,omitempty"`
 	Links    []activities.ActivityLinkInput `json:"links"`
 	Quote    string                         `json:"quote"`
 	Locator  string                         `json:"locator"`
@@ -72,6 +74,7 @@ type commitmentTask struct {
 	SourceActivityID ids.UUID
 	Links            []activities.ActivityLinkInput
 	DueDate          string
+	DueZone          string
 	// DueAt is a deadline already stated as an instant; DueDate is used when nil.
 	DueAt     *time.Time
 	Assignee  ids.UUID
@@ -119,7 +122,7 @@ func writeCommitmentTask(
 		in.VisibleOnlyTo(slices.Compact([]ids.UUID{t.Assignee, *t.PrivateTo})...)
 	}
 	if t.DueAt == nil && t.DueDate != "" {
-		due, err := commitmentDueInstant(ctx, tx, t.DueDate)
+		due, err := commitmentDueInstant(ctx, tx, t.DueDate, t.DueZone)
 		if err != nil {
 			return ids.UUID{}, err
 		}
@@ -151,14 +154,16 @@ func writeCommitmentTask(
 // A day that will not parse is an error rather than a silent skip: a reviewer
 // edited the payload into something acceptance cannot read, and an undated
 // task would hide that from them.
-func commitmentDueInstant(ctx context.Context, tx pgx.Tx, day string) (time.Time, error) {
-	zone, err := identity.TimezoneOf(ctx, tx)
-	if err != nil {
-		return time.Time{}, err
+func commitmentDueInstant(ctx context.Context, tx pgx.Tx, day, zone string) (time.Time, error) {
+	if zone == "" {
+		var err error
+		if zone, err = identity.TimezoneOf(ctx, tx); err != nil {
+			return time.Time{}, err
+		}
 	}
 	loc, err := time.LoadLocation(zone)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("compose: installation timezone %q: %w", zone, err)
+		return time.Time{}, fmt.Errorf("compose: commitment due-date timezone %q: %w", zone, err)
 	}
 	parsed, err := time.ParseInLocation(time.DateOnly, day, loc)
 	if err != nil {
@@ -208,7 +213,7 @@ func commitmentTaskEffect(
 				Locator: proposal.Locator,
 				Summary: proposal.Summary, Body: proposal.Body,
 				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
-				DueDate: proposal.DueDate, Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
+				DueDate: proposal.DueDate, DueZone: proposal.DueZone, Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
 				PrivateTo: privateTo, Origin: activities.OriginAgent,
 			}
 			if heldByAnotherThanOwner(privateTo, assignee) {

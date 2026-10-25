@@ -184,7 +184,16 @@
 }
 .record-split-verbs
   > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
-  ~ :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)::before {
+  ~ :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)::before,
+.record-split-verbs
+  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
+  ~ *
+  > .btn-with-reason:has(> .t-caption)
+  > .btn::before,
+.record-split-verbs
+  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
+  ~ .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
+  > .btn::before {
   content: "";
   position: absolute;
   inset-inline-start: 0;
@@ -238,6 +247,28 @@
   position: absolute;
   inset-inline: var(--space-2);
   inset-block-end: var(--space-1);
+}
+/* A positioned tile would hold the sentence to its own width. So the tile that
+   states one stays static, and its button fills it and draws the hairline. */
+.record-split-verbs > :has(> .btn-with-reason > .t-caption),
+.record-split-verbs
+  > .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary)) {
+  position: static;
+}
+.record-split-verbs
+  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
+  ~ :is(
+    :has(> .btn-with-reason > .t-caption),
+    .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
+  )::before {
+  content: none;
+}
+.record-split-verbs > * > .btn-with-reason:has(> .t-caption) > .btn,
+.record-split-verbs
+  > .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
+  > .btn {
+  position: relative;
+  align-self: stretch;
 }
 .record-split-verbs > p {
   flex-basis: 100%;

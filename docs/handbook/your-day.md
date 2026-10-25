@@ -40,8 +40,7 @@ To snooze a Worklist item in Margince, press **More actions** at the end of its 
    reply**.
 4. The note that follows offers **Undo**.
 
-A snooze changes your list only. A reply that came in before you snoozed does not end it. Also
-called: remind me later, postpone, hide for now.
+A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?
 To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to
@@ -50,9 +49,12 @@ the top of your Worklist.
 2. Press **More actions** at the end of the row and choose **Pin**. Choose **Unpin** there to put
    it back in its ranked place.
 
-A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is
-stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails:
-"Item was not pinned. Retry." Also called: star, flag, keep on top.
+A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails: "Item was not pinned. Retry." Also called: star, flag, keep on top.
+
+### Why is a task at the top of my worklist?
+A task leads your Worklist and the **First** card on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With browser notifications allowed, the browser also shows the task once while Margince is open in a tab. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed.
+
+Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
 
 ### How do I hand a task on to a colleague?
 To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
@@ -89,10 +91,7 @@ Captured mail needs a reply only when Margince finds a request or you keep it as
 To undo a Worklist snooze or removal in Margince, press **Undo** in the note that appears right
 after you picked it.
 
-The undo reaches as far as the choice did. Undoing your own snooze never brings back a thread a
-colleague marked **Not a customer** for the whole company. If the undo fails, the item stays off
-your list ("Undo failed. The message is still off your list."). Snoozed items also come back on
-their own when the snooze ends. Also called: restore, bring back, unsnooze.
+The undo reaches as far as the choice did. Undoing your own snooze never brings back a thread a colleague marked **Not a customer** for the whole company. If the undo fails, the item stays off your list ("Undo failed. The message is still off your list."). Snoozed items also come back on their own when the snooze ends. Also called: restore, bring back, unsnooze.
 
 ### How do I see all my tasks?
 To see all your open tasks in Margince, open **Home**, press **Show Worklist**, and choose the
@@ -101,7 +100,7 @@ Tasks are in groups by when they are due. Late ones and today's come first, then
 **Due this week** and **Later**. There is no separate "Due today" heading.
 
 A task more than 30 days late leaves the Worklist and its counts. A pin keeps it there while the pin
-is one of your 50 newest. The task stays open, keeps its due date, and still shows on its record.
+is one of your 50 newest, and so does a reminder of yours that is due. The task stays open, keeps its due date, and still shows on its record.
 A company also has a **Tasks** tab with its own tasks; a contact has no Tasks tab.
 Also called: my to-dos, tasks due today, open tasks, task list.
 
@@ -115,6 +114,9 @@ list of next steps.
 
 **Snooze 1 day** adds a day to the task's own due date, so a task with no date does not show it. If
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
+
+### What can I do from a task?
+A task linked to one contact offers **Email** and **Open contact**. It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The **First** card on **Home** offers **Call** and **Email** the same way, with no **Open contact**.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
@@ -213,20 +215,19 @@ by who made it.
 
 When Margince reads old mail, it checks newer messages before it creates work. Work already done and offers to help create no new task. Neither does work that depends on something which has not happened yet.
 A request alone does not mean someone agreed to do it. **Commitment review** on the source shows why no task was made.
-Words such as "next week" stay in the source without setting a due day.
+Words such as "next week" set no due day; "this week" sets the last day the promiser works that week.
 
-An old promise without a current deadline stays in the source, rather than becoming a new overdue task.
 A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task.
 
-Open the source and open **Commitment review** to see why a reading created no task.
 Check the quoted words and any later replies before adding a follow-up from the linked record.
 A reply alone does not show that a promise was kept. Tasks you edited, reopened or pinned remain yours.
+When you later write to that contact on the promise's thread, the card asks **You may have done this** with **Done** and **Not yet**.
 
 Also called: action items, follow-ups from a meeting, commitments in an email.
 
 ### What happens to a request in an email?
-When a customer email asks you for something and nobody answered, Margince files a task for you with
-**No due date**.
+When a customer email asks you for something and nobody answered, Margince files a task for you.
+It is due on a day the email names, such as "Deadline: 27 October", and has **No due date** if it names none.
 - It needs a clear request. A note that only tells you something, or one Margince cannot judge,
   stays in review and does not claim to be urgent.
 - The task takes the place of the email in your Worklist, and its source opens the email. If you can
@@ -290,13 +291,9 @@ keep their order without a sentence comparing each item with the one below it.
 
 ### Pinning
 
-A pin moves a Worklist row to the top of your Worklist and keeps it there. It is yours alone:
-pinning changes the order of what you can already read, and changes nothing for anyone else. How
-urgent it is stays the same. The audit log still records the pin.
+A pin moves a Worklist row to the top of your Worklist and keeps it there. It is yours alone: pinning changes the order of what you can already read, and changes nothing for anyone else. How urgent it is stays the same. The audit log still records the pin.
 
-**A pin never runs out.** It lasts longer than the row it names, and nothing takes one off for you.
-The one exception: only your 50 newest pins count, so pinning one more makes your oldest stop
-counting.
+**A pin never runs out.** It lasts longer than the row it names, and nothing takes one off for you. The one exception: only your 50 newest pins count, so pinning one more makes your oldest stop counting.
 
 ### Taking something off the list
 
@@ -325,8 +322,6 @@ already judged.
 Each says what it did ("Back on your list tomorrow.", "Back on your list when they reply.") and each
 offers **Undo**. The undo reaches as far as the choice did. Clearing your own snooze never lets back
 in a thread a colleague ruled out for the whole company.
-
-A reply that came in *before* you snoozed does not end the snooze.
 
 ### "List changed"
 

@@ -40,19 +40,6 @@ const DraftInputActivities = 6
 // it picks is no longer the newest.
 const draftInputClaims = 6
 
-// draftInputSnippetRunes bounds how much of the newest inbound message the
-// draft reads.
-//
-// Enough for the opening of a real business email — a greeting, the reason for
-// writing, and the ask. Past that an email is detail, which a reply asks about
-// rather than repeats, and every rune of it is prompt cost on every draft.
-const draftInputSnippetRunes = 400
-
-// draftInputRecordRunes bounds the text of one logged note or meeting. Longer
-// than a snippet: a note is written for the rep, and the slots or the ask it
-// records sit anywhere in it rather than in an opening.
-const draftInputRecordRunes = 800
-
 // Input is the contact, narrowed to what an outbound message can honestly stand
 // on. It is a projection of the caller's own 360 — nothing here re-queries, so
 // anything absent is absent because that caller may not see it.
@@ -250,6 +237,10 @@ type ActIn struct {
 	// in its first lines and spends the rest on detail, and the detail is what
 	// a reply should ask about rather than repeat back.
 	Snippet string `json:"snippet,omitempty"`
+	// Said is the opening of a message our side sent, bounded like every turn
+	// (draftcore.TurnText). A follow-up has to know what we already said and
+	// asked, or it invents a new pitch on top of the old one.
+	Said string `json:"said,omitempty"`
 	// Record is what the rep logged on a note or meeting: our side's own
 	// account of contact that happened outside the mailbox, such as where they
 	// met and the slots offered. Fenced with the rest of the input.

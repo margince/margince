@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -274,7 +275,11 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	}
 	for _, name := range sortedKeys(spec.measures) {
 		plan.columns = append(plan.columns, name)
-		plan.selects = append(plan.selects, spec.measures[name]+" AS "+name)
+		expression := spec.measures[name]
+		if coverage, ok := spec.sumCoverage[name]; ok {
+			expression = deals.FinalizeBaseTotalSQL(expression, coverage)
+		}
+		plan.selects = append(plan.selects, expression+" AS "+name)
 	}
 	for _, agg := range plan.aggregates {
 		name, sel, err := aggregateSelect(spec, agg)

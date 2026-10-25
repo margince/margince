@@ -497,7 +497,7 @@ function findingsIn(
 const pinnedLocales: { file: string; why: string }[] = [
   {
     file: "format/format.dates.ts",
-    why: "assertIanaZone builds a formatter only to make Intl reject an unknown zone, and hourInZone reads an hour back as a number. Neither output is shown, so the pinned tag fixes the parsing and not the wording.",
+    why: "hourInZone reads an hour back as a number. The output is never shown, so the pinned tag fixes the parsing and not the wording.",
   },
   {
     file: "format/calendarday.ts",
@@ -505,7 +505,7 @@ const pinnedLocales: { file: string; why: string }[] = [
   },
   {
     file: "format/timezone.ts",
-    why: "zoneOffsetMs formats in en-US with hourCycle h23 to READ an instant's wall clock back as numbers and derive a zone offset from it. The output is parsed, never shown, so a locale that varied would change the arithmetic rather than the wording.",
+    why: "zoneOffsetMs formats in en-US with hourCycle h23 to READ an instant's wall clock back as numbers and derive a zone offset from it. The output is parsed, never shown, so a locale that varied would change the arithmetic rather than the wording. assertIanaZone builds a formatter only to make Intl reject an unknown zone, and shows nothing.",
   },
   {
     file: "features/sign-in/fiscalyear.test.ts",

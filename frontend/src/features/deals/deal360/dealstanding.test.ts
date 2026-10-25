@@ -27,6 +27,7 @@ const AS_OF = "2026-08-13T12:00:00Z";
 
 function activity(over: Partial<Activity>): Activity {
   return {
+    offers_email: false,
     id: "a",
     kind: "email",
     occurred_at: "2026-08-01T09:00:00Z",
@@ -200,7 +201,13 @@ describe("time in each stage", () => {
       deal({ created_at: "2026-06-01T00:00:00Z" }),
       true,
     );
-    const times = stageTimes({ stages, currentId: "s2", entries, asOf: AS_OF });
+    const times = stageTimes({
+      stages,
+      currentId: "s2",
+      entries,
+      asOf: AS_OF,
+      zone: "UTC",
+    });
     expect(times.get("s1")).toEqual({ days: 12, current: false });
     expect(times.get("s2")).toEqual({ days: 61, current: true });
     expect(times.has("s3")).toBe(false);
@@ -247,6 +254,7 @@ describe("time in each stage", () => {
       currentId: "s2",
       entries: new Map(),
       asOf: AS_OF,
+      zone: "UTC",
     });
     expect(times.size).toBe(0);
   });
@@ -330,4 +338,27 @@ it("finds the buyer's newest message, never one of ours", () => {
     }),
   ]);
   expect(newest?.id).toBe("in2");
+});
+
+it("passes over an inbound row the server says no human wrote", () => {
+  const newest = lastInbound([
+    activity({
+      id: "human",
+      direction: "inbound",
+      occurred_at: "2026-07-01T00:00:00Z",
+    }),
+    activity({
+      id: "accepted",
+      direction: "inbound",
+      occurred_at: "2026-08-01T00:00:00Z",
+      automatic_kind: "calendar",
+    }),
+    activity({
+      id: "bounce",
+      direction: "inbound",
+      occurred_at: "2026-08-02T00:00:00Z",
+      automatic_kind: "sending_system",
+    }),
+  ]);
+  expect(newest?.id).toBe("human");
 });

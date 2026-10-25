@@ -31,7 +31,11 @@ export function deliveringProject360(
           to_phase: "initiative",
           reason: null,
           changed_at: "2026-03-01T09:00:00Z",
-          changed_by: { id: "u-me", display_name: "Lena Fischer" },
+          changed_by: {
+            actor_type: "human",
+            actor_id: "human:u-me",
+            actor_name: "Lena Fischer",
+          },
         },
         {
           id: "ph-2",
@@ -39,7 +43,11 @@ export function deliveringProject360(
           to_phase: "delivering",
           reason: "Contract signed",
           changed_at: "2026-04-01T09:00:00Z",
-          changed_by: { id: "u-me", display_name: "Lena Fischer" },
+          changed_by: {
+            actor_type: "human",
+            actor_id: "human:u-me",
+            actor_name: "Lena Fischer",
+          },
         },
       ],
       phase_durations: [

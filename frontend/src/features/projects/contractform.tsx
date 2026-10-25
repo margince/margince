@@ -10,6 +10,7 @@ import {
   DrawerHead,
 } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
 import { uploadAttachment } from "../../lib/attachmentupload";
@@ -246,6 +247,9 @@ export function ContractForm({
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
+            if (refuseUnreadableField(event.currentTarget)) {
+              return;
+            }
             if (invalid === null) {
               save.mutate({ draft: pricedIn(draft, baseCurrency), file });
             }

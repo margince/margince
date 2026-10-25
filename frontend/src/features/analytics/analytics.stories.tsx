@@ -16,6 +16,7 @@ import { forecastEvaluation } from "./reporting.scenarios";
 import {
   reportingStoryEvaluation,
   reportingStoryRoutes,
+  routeSeatEvaluation,
 } from "./reporting.story-fixtures";
 
 // The Reports screen for the fe-uat render gate. All three report segments draw
@@ -266,6 +267,23 @@ const clickButton =
     }
   };
 
+// Every Pipeline card carries its own explain verb. The stage card's is the one
+// whose derivation these stories stub, so the press is scoped to that card.
+async function explainStageCard({
+  canvasElement,
+}: {
+  canvasElement: HTMLElement;
+}) {
+  await clickButton("Pipeline")({ canvasElement });
+  const card = await within(canvasElement.ownerDocument.body).findByRole(
+    "region",
+    { name: "Open deals by stage" },
+  );
+  await userEvent.click(
+    await within(card).findByRole("button", { name: "Explain this number" }),
+  );
+}
+
 const meta: Meta = { title: "Records/Reports/Page" };
 export default meta;
 
@@ -334,9 +352,14 @@ export const Performance: Story = {
   play: clickButton("Performance"),
 };
 
-// The seat's own outcomes: pipeline and meetings under an owner lens.
+// The seat's own outcomes: targets, pipeline and meetings under an owner lens.
 const ownLensRoutes: RouteMap = {
   ...routes,
+  "GET /me": meRoute({
+    report_definition: ["read"],
+    reporting_framework: ["read"],
+    sales_target: ["read"],
+  }),
   "GET /analytics/context": () =>
     jsonResponse({
       default_scope: { kind: "owner", id: "u-rep-1", label: "Riley Rep" },
@@ -436,6 +459,11 @@ export const DataCoverage: Story = {
 export const MyOutcomes: Story = {
   render: () => {
     installFetchStub(ownLensRoutes);
+    // A quarter target on meetings, a month target on sales, none on the rest.
+    routeSeatEvaluation({
+      meetings_held: { actual: 10, targets: { fiscal_quarter: 15 } },
+      bookings_won: { actual: 21_600_000, targets: { month: 30_000_000 } },
+    });
     return (
       <StoryProviders>
         <AnalyticsScreen />
@@ -455,6 +483,7 @@ export const MyOutcomesEmpty: Story = {
       ...ownLensRoutes,
       "POST /reports/pipeline-current": () => run("pipeline-current", []),
     });
+    routeSeatEvaluation({});
     return (
       <StoryProviders>
         <AnalyticsScreen />
@@ -470,7 +499,7 @@ export const Explain: Story = {
   render: screenStory,
   // Pipeline first: the explain verb belongs to a report card's head, and
   // the Forecast section the screen opens on draws no report cards at all.
-  play: clickButton("Pipeline", "Explain this number"),
+  play: explainStageCard,
 };
 
 // One stage's figure explained in a drawer, over the table it came from.
@@ -498,7 +527,7 @@ export const ExplainLoading: Story = {
     );
   },
   play: async (context) => {
-    await clickButton("Pipeline", "Explain this number")(context);
+    await explainStageCard(context);
     await within(context.canvasElement).findByText("How this number is built");
   },
 };

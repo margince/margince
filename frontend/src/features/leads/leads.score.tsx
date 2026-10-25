@@ -12,6 +12,7 @@ import {
 import { formatNumber, formatSignedNumber } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { originLabelFor, useLeadOrigins } from "../../lib/leadorigins";
 import { scoreFactorLabel } from "./leadpresentation";
 import type { Lead, LeadWriter } from "./leads";
 import { useLeadScore } from "./leadscore.queries";
@@ -34,13 +35,6 @@ const SIGNAL_KIND: Record<
 const DECISION_MAKER_TITLE =
   /(chief|vp|head|director|founder|owner|c[a-z]o)\b/i;
 
-const HIGH_INTENT_SOURCES = new Set(["inbound", "webform", "referral"]);
-
-// The server takes five points off for these sources, in leadscore.go, rather
-// than granting nothing. Calling that "no buying intent on its own" would turn
-// a subtraction into a neutral, a kinder claim than the model made.
-const LOW_INTENT_SOURCES = new Set(["import", "crawl"]);
-
 // What a lead is missing, in the model's own terms. It shows when no retained
 // breakdown exists yet.
 //
@@ -50,20 +44,30 @@ const LOW_INTENT_SOURCES = new Set(["import", "crawl"]);
 // derivable, so the page states them rather than our own storage history.
 function ScoreShortfall({ lead }: Readonly<{ lead: Lead }>) {
   const t = useT();
+  const origins = useLeadOrigins();
   const missing: string[] = [];
   if (!lead.title) {
     missing.push(t("lead.shortfall.noTitle"));
   } else if (!DECISION_MAKER_TITLE.test(lead.title)) {
     missing.push(t("lead.shortfall.titleNotSenior", { title: lead.title }));
   }
-  if (!lead.source) {
+  const origin = origins.data?.find((o) => o.key === lead.origin);
+  if (!lead.origin) {
     // Split as the title pair above is: interpolating an absent value
     // would print "Came in as undefined" at a rep.
-    missing.push(t("lead.shortfall.noSource"));
-  } else if (LOW_INTENT_SOURCES.has(lead.source)) {
-    missing.push(t("lead.shortfall.sourcePenalised", { source: lead.source }));
-  } else if (!HIGH_INTENT_SOURCES.has(lead.source)) {
-    missing.push(t("lead.shortfall.sourceNoIntent", { source: lead.source }));
+    missing.push(t("lead.shortfall.noOrigin"));
+  } else if (origin?.intent === "low") {
+    missing.push(
+      t("lead.shortfall.originPenalised", {
+        origin: originLabelFor(lead, origins.data) ?? lead.origin,
+      }),
+    );
+  } else if (origin?.intent !== "high") {
+    missing.push(
+      t("lead.shortfall.originNoIntent", {
+        origin: originLabelFor(lead, origins.data) ?? lead.origin,
+      }),
+    );
   }
   // This is not a claim that no reply or meeting exists. Engagement lives in
   // linked activities the client never reads. A decayed reply can round to

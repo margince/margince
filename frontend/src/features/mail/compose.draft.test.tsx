@@ -85,6 +85,8 @@ function draftsInTurn(...drafts: object[]) {
   };
 }
 
+const KEPT_NOTICE = "Your edits were kept. Draft again when ready.";
+
 // Once a draft stands, the ask is folded behind its own control on the line.
 async function askAgain() {
   await userEvent.click(screen.getByRole("button", { name: "Change the ask" }));
@@ -163,6 +165,79 @@ describe("ComposeModal draft binding", () => {
           ?.body,
       ).toMatchObject({ intent: "Offer Tuesday instead" }),
     );
+  });
+
+  it("puts the second reply draft on screen and sends the first as rewrite_of", async () => {
+    const sent = stubRoutes({
+      "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
+      "POST /activities/act-1/draft-email": draftsInTurn(
+        voiceDraft("vd-a", "Re: Q3", "Draft A body."),
+        voiceDraft("vd-b", "Re: Q3", "Draft B body."),
+      ),
+      "PUT /mail-drafts": () => emptyResponse(204),
+    });
+    renderComposer();
+    await screen.findByRole("combobox", { name: WHY_ASK });
+
+    await userEvent.click(draftButton());
+    await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
+    await askAgain();
+
+    await waitFor(() => expect(messageText("Body")).toBe("Draft B body."));
+    const calls = sent.filter(
+      (r) => r.key === "POST /activities/act-1/draft-email",
+    );
+    expect(calls[0]?.body).toEqual({});
+    expect(calls[1]?.body).toMatchObject({ rewrite_of: "Draft A body." });
+    expect(screen.queryByText(KEPT_NOTICE)).toBeNull();
+  });
+
+  it("keeps the rep's edit on a reply, sends no rewrite_of and says so", async () => {
+    const sent = stubRoutes({
+      "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
+      "POST /activities/act-1/draft-email": draftsInTurn(
+        voiceDraft("vd-a", "Re: Q3", "Draft A body."),
+        voiceDraft("vd-b", "Re: Q3", "Draft B body."),
+      ),
+      "PUT /mail-drafts": () => emptyResponse(204),
+    });
+    renderComposer();
+    await screen.findByRole("combobox", { name: WHY_ASK });
+
+    await userEvent.click(draftButton());
+    await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
+    writeMessage("Body", "Draft A body. And my own line.");
+    await askAgain();
+
+    expect(await screen.findByText(KEPT_NOTICE)).toBeTruthy();
+    expect(messageText("Body")).toBe("Draft A body. And my own line.");
+    const calls = sent.filter(
+      (r) => r.key === "POST /activities/act-1/draft-email",
+    );
+    expect(calls[1]?.body).not.toHaveProperty("rewrite_of");
+  });
+
+  it("replaces the body on a reply when the rep presses a rewrite verb", async () => {
+    const sent = stubRoutes({
+      "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
+      "POST /activities/act-1/draft-email": draftsInTurn(
+        voiceDraft("vd-a", "Re: Q3", "Draft A body."),
+        voiceDraft("vd-b", "Re: Q3", "Short."),
+      ),
+      "PUT /mail-drafts": () => emptyResponse(204),
+    });
+    renderComposer();
+    await screen.findByRole("combobox", { name: WHY_ASK });
+
+    await userEvent.click(draftButton());
+    await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
+    await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
+
+    await waitFor(() => expect(messageText("Body")).toBe("Short."));
+    const calls = sent.filter(
+      (r) => r.key === "POST /activities/act-1/draft-email",
+    );
+    expect(calls[1]?.body).toMatchObject({ rewrite_of: "Draft A body." });
   });
 
   it("keeps the earlier reference when a re-draft leaves the typed body alone", async () => {
@@ -479,6 +554,24 @@ describe("ComposeModal draft binding", () => {
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": () =>
         jsonResponse(voiceDraft("vd-a", "Re: Q3", "Draft A body.")),
+      // Closing keeps the words as a saved draft, and the window shuts once
+      // the server has kept them.
+      "PUT /mail-drafts": () =>
+        jsonResponse({
+          id: "md-1",
+          anchor_type: "activity",
+          anchor_id: "act-1",
+          to: [],
+          cc: [],
+          bcc: [],
+          subject: "Re: Q3",
+          body: "Draft A body.",
+          html_body: null,
+          version: 1,
+          agent_drafted: true,
+          created_at: "2026-08-01T00:00:00Z",
+          updated_at: "2026-08-01T00:00:00Z",
+        }),
     });
     const onClose = renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });

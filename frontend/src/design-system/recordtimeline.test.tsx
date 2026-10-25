@@ -47,7 +47,13 @@ const CAPTURED = {
 function activity(
   row: Pick<Activity, "id" | "subject" | "occurred_at"> & Partial<Activity>,
 ): Activity {
-  return { kind: "email", is_done: false, ...CAPTURED, ...row };
+  return {
+    offers_email: false,
+    kind: "email",
+    is_done: false,
+    ...CAPTURED,
+    ...row,
+  };
 }
 
 const NEWEST = activity({
@@ -385,6 +391,7 @@ describe("a record timeline you can work in", () => {
 
     await user.type(screen.getByLabelText("From"), "2026-03-03");
     await user.type(screen.getByLabelText("To"), "2026-03-05");
+    await user.tab();
     await waitFor(() =>
       expect(feed.last().searchParams.get("occurred_before")).not.toBeNull(),
     );

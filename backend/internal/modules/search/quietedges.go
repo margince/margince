@@ -12,93 +12,91 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
-// QuietEdgesForUser answers "which of MY relationships have gone silent",
-// oldest silence first.
-//
-// It is the CANDIDATE half of the decay lane and deliberately not the verdict.
-// The projection stores when a pair last spoke, so the reader's own quiet
-// relationships are one indexed range over idx_graph_edge_user — but whether a
-// silence is worth reporting is a §4 derivation over the contact's own
-// interactions, and that stays where it already lives. Answering it here would
-// be a second quiet rule, and the two would disagree in front of a rep.
-//
-// `quietBefore` is the caller's, derived from relstrength.QuietDays: the
-// threshold belongs to the derivation, and this read applies it rather than
-// holding an opinion about how long is too long. Inclusive on both sides,
-// because the derivation admits at `days >= QuietDays`: a strict `<` here would
-// drop a contact at exactly the threshold that their own page calls quiet, and
-// the two surfaces would disagree for one day about one relationship.
-//
-// The pair's own silence is not enough to admit a candidate — a contact a
-// colleague spoke to last week has been handed over, not lost, and the
-// derivation would reject them anyway. The NOT EXISTS spells the derivation's
-// contact-wide ground here so those rows do not consume LIMIT slots ahead of
-// genuine lapses.
-//
-// That suppression counts only LIVE colleagues, which is why it applies the
-// live-member rule under its own alias, through laterMemberJoin. A handover to
-// somebody who has since left is not a handover: nobody is holding that
-// relationship now, and suppressing it would hide the exact lapse this lane
-// exists to surface.
-//
-// The contact row scope is applied AT SOURCE, not left to the caller: this read
-// originates the candidate set, an edge row disclosing that a withheld contact
-// exists is exactly what capture privacy forbids, and a LIMIT over unscoped
-// rows would let unreadable contacts evict readable lapses from the budget.
-//
-// Established relationships only: a pair with no interaction on record has not
-// gone quiet, they were never loud, and admitting them turns every dormant
-// contact into an alert. What actually enforces that today is the derivation's
-// own nil check on the last interaction — both writers of this projection count
-// over rows that must exist, so `count_total > 0` refuses nothing they produce.
-// It stays as the predicate a candidate read owes its own table rather than
-// borrowing from the verdict, and it is the line to check first if a future
-// writer ever inserts a pair before its evidence.
-//
-// The colleague filter is the live-member join every other read of this table
-// carries — a departed colleague's silences are not the reader's work.
 // ExcludeEdges renders a predicate that removes candidates before the LIMIT,
 // over the alias `e` this projection gives the edge row.
 //
 // A HOLE rather than a join, because the rows that decide it belong to another
 // module and this one never imports a sibling. The caller supplies the SQL and
 // the arguments through the same `arg` counter, so the fragment is numbered
-// against this statement's own list.
-//
-// It runs before the cut, which is the whole reason it exists here rather than
-// over the returned rows. This read originates the candidate set and takes the
-// oldest silences up to a bound; a contact filtered afterwards has already
-// spent a slot, so a rep who set several aside would lose real lapses off the
-// bottom of their lane and nothing would say so.
+// against this statement's own list. It runs before the cut: a contact
+// filtered afterwards has already spent a slot.
 type ExcludeEdges func(arg func(any) int) (string, error)
 
-func QuietEdgesForUser(
-	ctx context.Context,
-	tx pgx.Tx,
-	quietBefore time.Time,
-	limit int,
-	exclude ExcludeEdges,
-) ([]InteractionEdge, error) {
+// QuietRead is one ask of the quiet-relationship candidates.
+//
+// The contact's OWNER answers for a quiet relationship; an edge only proves the
+// relationship existed. Being copied on a colleague's mail, or having written
+// it, makes nobody responsible for chasing the contact months later.
+type QuietRead struct {
+	// Owner narrows to contacts this live seat owns. Zero with Unowned false
+	// reads every contact the caller may see, owned or not.
+	Owner ids.UUID
+	// Unowned narrows to contacts with no live owner: none, or one who left.
+	Unowned bool
+	// QuietBefore is the lower bound of the silence, from relstrength.QuietDays.
+	QuietBefore time.Time
+	// TouchedAfter is the silence ceiling: the newest live touch must be later.
+	TouchedAfter time.Time
+	Limit        int
+	// Offset skips candidates an earlier page of the same read already gave.
+	Offset  int
+	Exclude ExcludeEdges
+}
+
+// QuietContact is one candidate: the live colleague's edge that carries the
+// most exchanges, and the contact's live owner (zero when there is none).
+type QuietContact struct {
+	Edge    InteractionEdge
+	OwnerID ids.UUID
+}
+
+// liveExchangeClock selects the newest exchange any live colleague has with the
+// candidate contact. It reads the activities, not the edge's last_at. A
+// colleague's message on a thread the contact only belongs to then cannot hide
+// a quiet relationship, and the same colleague's older exchange still counts.
+func liveExchangeClock() string {
+	return fmt.Sprintf(`SELECT max(a.occurred_at) AS touched
+		      FROM activity_participant cp
+		      JOIN activity a ON a.id = cp.activity_id AND a.archived_at IS NULL%s
+		       AND %s
+		      JOIN activity_participant up ON up.activity_id = a.id AND up.role IN %s
+		      JOIN app_user lu ON lu.id = up.user_id AND %s
+		     WHERE cp.contact_id = e.contact_id AND cp.role IN %s`,
+		audienceWorkspaceOnly, relstrength.ContactExchangeSQL("a", "e.contact_id", "now()"),
+		interactionRoles, workforce.LiveMemberSQL("lu"), interactionRoles)
+}
+
+// QuietContacts answers "which relationships have gone silent", most exchanged
+// first. It is the candidate half of the decay lane. Whether a silence is
+// worth reporting stays with the relationship-change derivation in contacts.
+//
+// A relationship is silent when no live colleague has an exchange with the
+// contact newer than QuietBefore. It is still current when some live colleague
+// has one newer than TouchedAfter. An exchange follows the contact's last-touch
+// rule, so a colleague's message on a thread the contact only belongs to is not
+// one. The silence and its ceiling belong to the contact, not to one colleague.
+// A pair with fewer than two interactions is a cold contact, not a lapsed
+// relationship.
+//
+// The contact row scope applies at source, before the LIMIT, so an unreadable
+// contact neither leaks through an edge row nor evicts a readable lapse.
+func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietContact, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	// The reader is taken from the context, never from a parameter. This read
-	// answers "which of MY relationships lapsed" and returns who a colleague
-	// talks to and when they last did — so a user id off a call site would let
-	// any future caller ask that question about somebody else, and the contact
-	// row scope below would not refuse it: their contacts can be perfectly
-	// readable while their private relationship history is not the asker's.
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
+	if actor, ok := principal.Actor(ctx); !ok || actor.UserID.IsZero() {
 		return nil, apperrors.ErrPermissionDenied
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	userPos := arg(actor.UserID)
-	beforePos := arg(quietBefore)
+	beforePos := arg(read.QuietBefore)
+	afterPos := arg(read.TouchedAfter)
 	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
 	if err != nil {
 		return nil, err
@@ -106,11 +104,9 @@ func QuietEdgesForUser(
 	if scope == "" {
 		scope = "TRUE"
 	}
-	// Nothing excluded is the honest default: a caller with no rows to filter
-	// on passes nil and gets every candidate.
 	excluded := "TRUE"
-	if exclude != nil {
-		got, err := exclude(arg)
+	if read.Exclude != nil {
+		got, err := read.Exclude(arg)
 		if err != nil {
 			return nil, err
 		}
@@ -118,48 +114,66 @@ func QuietEdgesForUser(
 			excluded = got
 		}
 	}
-	// How much exchange makes a relationship. Two is the smallest number that
-	// is not a single touch, and the bar is deliberately low: this filter is
-	// about excluding the one-off, and the ranking below decides what matters.
+	owned := quietOwnerClause(read, arg)
 	exchangedPos := arg(2)
-	limitPos := arg(limit)
+	limitPos := arg(read.Limit)
+	offsetPos := arg(read.Offset)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
-		       e.count_90d, e.in_count_90d, e.out_count_90d, e.count_total
-		  FROM graph_interaction_edge e
-		  %s
-		  JOIN contact p ON p.id = e.contact_id AND p.archived_at IS NULL
-		 WHERE e.user_id = $%d AND e.last_at <= $%d
-		   -- A relationship, not a single contact. A bare count of one admits an
-		   -- address exchanged with once — the cold mail nobody answered, the
-		   -- newsletter reply — and there is nothing there to revive.
-		   --
-		   -- Counted rather than tested for BOTH DIRECTIONS, which is what this
-		   -- asked first and would have been wrong: the directional aggregates
-		   -- filter on activity.direction, and a meeting carries none. A
-		   -- customer with an open deal and a year of meetings has NULL on both
-		   -- sides, so the strict reading dropped exactly the relationships this
-		   -- lane exists for.
-		   AND e.count_total >= $%d
-		   AND NOT EXISTS (SELECT 1 FROM graph_interaction_edge later
-		                     %s
-		                    WHERE later.contact_id = e.contact_id AND later.last_at >= $%d)
-		   AND (%s)
-		   -- Before the cap, like every rule above it.
-		   AND (%s)
-		 -- Most exchanged first, oldest silence to break the tie.
-		 --
-		 -- Ordered BEFORE the cap because the cap is what the caller sees: taking
-		 -- the forty oldest silences and ranking those by value could not reach a
-		 -- relationship worth reviving that happened to be the forty-first, and
-		 -- the oldest silences are exactly where a one-off exchange from years
-		 -- ago sits.
-		 ORDER BY e.count_total DESC, e.last_at ASC, e.contact_id
-		 LIMIT $%d`, liveMemberJoin, userPos, beforePos,
-		exchangedPos, laterMemberJoin, beforePos, scope, excluded, limitPos), args...)
+		SELECT q.user_id, q.contact_id, q.touched_at, q.last_inbound_at, q.last_outbound_at,
+		       q.count_90d, q.in_count_90d, q.out_count_90d, q.count_total, q.live_owner
+		  FROM (
+		    SELECT DISTINCT ON (e.contact_id) e.user_id, e.contact_id, x.touched AS touched_at,
+		           e.last_inbound_at, e.last_outbound_at, e.count_90d, e.in_count_90d,
+		           e.out_count_90d, e.count_total, o.id AS live_owner
+		      FROM graph_interaction_edge e
+		      %s
+		      JOIN LATERAL (%s) x ON x.touched <= $%d AND x.touched > $%d
+		      JOIN contact p ON p.id = e.contact_id AND p.archived_at IS NULL
+		      LEFT JOIN app_user o ON o.id = p.owner_id AND %s
+		     WHERE e.count_total >= $%d
+		       AND (%s)
+		       AND (%s)
+		       AND (%s)
+		     ORDER BY e.contact_id, e.count_total DESC, x.touched DESC, e.user_id
+		  ) q
+		 ORDER BY q.count_total DESC, q.touched_at ASC, q.contact_id
+		 LIMIT $%d OFFSET $%d`, liveMemberJoin, liveExchangeClock(), beforePos, afterPos, workforce.LiveMemberSQL("o"),
+		exchangedPos,
+		owned, scope, excluded, limitPos, offsetPos), args...)
 	if err != nil {
-		return nil, fmt.Errorf("search: reading a rep's own quiet relationships: %w", err)
+		return nil, fmt.Errorf("search: reading quiet relationships: %w", err)
 	}
 	defer rows.Close()
-	return scanEdges(rows)
+	return scanQuietContacts(rows)
+}
+
+// quietOwnerClause narrows the candidates to one live owner, to contacts with
+// none, or to neither; `o` is the contact's live owner join.
+func quietOwnerClause(read QuietRead, arg func(any) int) string {
+	switch {
+	case !read.Owner.IsZero():
+		return fmt.Sprintf("o.id = $%d", arg(read.Owner))
+	case read.Unowned:
+		return "o.id IS NULL"
+	default:
+		return "TRUE"
+	}
+}
+
+func scanQuietContacts(rows pgx.Rows) ([]QuietContact, error) {
+	var out []QuietContact
+	for rows.Next() {
+		var c QuietContact
+		var owner *ids.UUID
+		e := &c.Edge
+		if err := rows.Scan(&e.UserID, &e.ContactID, &e.LastAt, &e.LastInboundAt, &e.LastOutbound,
+			&e.Count90d, &e.InCount90d, &e.OutCount90d, &e.CountTotal, &owner); err != nil {
+			return nil, err
+		}
+		if owner != nil {
+			c.OwnerID = *owner
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }

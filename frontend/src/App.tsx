@@ -17,6 +17,7 @@ import {
   usePaletteHotkey,
 } from "./app/palette";
 import { Shell, useRoute } from "./app/shell";
+import { CallLogHost } from "./components/calllog.host";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import {
   ReleaseSkewScreen,
@@ -39,6 +40,7 @@ import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
 import { SPA_RELEASE } from "./lib/release";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
+import { useTaskReminderNotifications } from "./lib/taskreminders";
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).
@@ -224,6 +226,7 @@ function AuthedApp({
   const [paletteOpen, setPaletteOpen] = useState(false);
   const commands = useBuiltinCommands();
   usePaletteHotkey(paletteOpen, setPaletteOpen);
+  useTaskReminderNotifications(authed);
 
   if (me.isPending && refusal === null) {
     return (
@@ -300,9 +303,11 @@ function AuthedApp({
         {/* An address pressed on any screen writes from here: the composer is
           the product's, not the reader's mail client's. */}
         <WriteToHost>
-          <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-            <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
-          </AuthedShell>
+          <CallLogHost>
+            <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+              <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
+            </AuthedShell>
+          </CallLogHost>
         </WriteToHost>
         <CommandPalette
           open={paletteOpen}

@@ -70,11 +70,12 @@ func (s *Service) teamExceptionsIn(ctx context.Context) (crmcontracts.TeamExcept
 	if err != nil {
 		return crmcontracts.TeamExceptions{}, err
 	}
-	found := exceptionsFor(rowsForRoster(classifyDay(day, day.AsOf, money), roster, former...), day.AsOf)
+	admitted, refused := admitBySource(ctx, classifyDay(day, day.AsOf, money))
+	found := exceptionsFor(rowsForRoster(admitted, roster, former...), day.AsOf)
 	out := crmcontracts.TeamExceptions{
 		AsOf:       day.AsOf,
 		Exceptions: found,
-		Truncated:  rosterCut || len(found) > exceptionsBound,
+		Truncated:  rosterCut || len(refused) > 0 || len(found) > exceptionsBound,
 	}
 	if len(found) > exceptionsBound {
 		out.Exceptions = found[:exceptionsBound]

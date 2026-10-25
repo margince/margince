@@ -185,7 +185,7 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// Unconditional for the same reason, and a sharper one: addressing a
 		// reply must skip a co-worker who has no seat, and a deployment that
 		// forgot to wire this would compose replies to its own staff.
-		WithColleagues(colleagueDomains{store: capture.NewOwnDomainStore(InstallationDB(pool))}).
+		WithColleagues(ColleagueDomainsFor(pool)).
 		WithSendAuthority(send.SendAuthority).
 		WithDraftOutcome(send.DraftOutcome)
 	decisions := s.approvalsHandlers
@@ -335,13 +335,20 @@ func newCommsAdapter(
 	}
 }
 
-// colleagueDomains adapts the own-domain store to the seam the activities
+// ColleagueDomains adapts the own-domain store to the seam the activities
 // handlers take. The module may not import capture, and the reply-address
 // question needs to know who is ours by DOMAIN rather than by seat — a
 // co-worker with no login is still not somebody to compose a reply to.
-type colleagueDomains struct{ store *capture.OwnDomainStore }
+type ColleagueDomains struct{ store *capture.OwnDomainStore }
 
-func (c colleagueDomains) Covers(ctx context.Context) (func(address string) bool, error) {
+// ColleagueDomainsFor is the own-domain reader the activities handlers address
+// a reply past.
+func ColleagueDomainsFor(pool *pgxpool.Pool) ColleagueDomains {
+	return ColleagueDomains{store: capture.NewOwnDomainStore(InstallationDB(pool))}
+}
+
+// Covers answers whether an address is at one of our vouched-for own domains.
+func (c ColleagueDomains) Covers(ctx context.Context) (func(address string) bool, error) {
 	own, err := c.store.Colleagues(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading who counts as a colleague: %w", err)

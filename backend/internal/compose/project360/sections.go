@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -59,6 +60,16 @@ func (a *assembly) readPhaseHistory() error {
 	if err != nil {
 		return err
 	}
+	linked := make([]ids.UUID, 0, len(history))
+	for _, t := range history {
+		if t.AuditLogID != nil {
+			linked = append(linked, *t.AuditLogID)
+		}
+	}
+	who, err := privacy.AuditAttributionsTx(a.ctx, a.tx, "project", a.projectID.UUID, linked)
+	if err != nil {
+		return err
+	}
 	data := make([]crmcontracts.Project360PhaseTransition, 0, len(history))
 	for _, t := range history {
 		row := crmcontracts.Project360PhaseTransition{
@@ -68,8 +79,13 @@ func (a *assembly) readPhaseHistory() error {
 			Reason:    t.Reason,
 			ChangedAt: t.OccurredAt,
 		}
-		row.ChangedBy.Id = t.ChangedBy
-		row.ChangedBy.DisplayName = t.ChangedByName
+		// No link, or an audit row that no longer resolves, leaves ChangedBy
+		// unset: the move reads as unknown, never as the system.
+		if t.AuditLogID != nil {
+			if attribution, found := who[*t.AuditLogID]; found {
+				row.ChangedBy = principalAttribution(attribution)
+			}
+		}
 		data = append(data, row)
 	}
 	durations := projects.FoldPhaseDurations(history, a.now)
@@ -165,4 +181,24 @@ func (a *assembly) readHealth() error {
 	}
 	a.out.Health = &crmcontracts.Project360Health{Current: current}
 	return nil
+}
+
+// principalAttribution carries one resolved audit attribution onto the wire.
+func principalAttribution(a privacy.AuditAttribution) *crmcontracts.PrincipalAttribution {
+	out := &crmcontracts.PrincipalAttribution{
+		ActorType:      crmcontracts.PrincipalAttributionActorType(a.ActorType),
+		ActorId:        a.ActorID,
+		ActorName:      a.ActorName,
+		OnBehalfOfName: a.OnBehalfOfName,
+		AgentClient:    a.AgentClient,
+	}
+	if a.OnBehalfOf != nil {
+		id := openapi_types.UUID(*a.OnBehalfOf)
+		out.OnBehalfOf = &id
+	}
+	if a.PassportID != nil {
+		id := openapi_types.UUID(*a.PassportID)
+		out.PassportId = &id
+	}
+	return out
 }

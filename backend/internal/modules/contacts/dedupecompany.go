@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -34,6 +35,10 @@ type CompanyCandidate struct {
 	// must be filtered by the caller before it reaches here — this
 	// resolver matches domains, it does not judge them.
 	Domains []string
+	// Address and Phones are what a company not stored yet can share with a
+	// similar-named one (keepCorroborated). A stored subject is read instead.
+	Address *crmcontracts.Address
+	Phones  []string
 	// ExcludeID drops one company from both tiers. The rename re-check
 	// scores an EXISTING row against its neighbours: without this it matches
 	// itself on every key it holds and masks every real rival behind a
@@ -94,11 +99,14 @@ type CompanyCandidateScore struct {
 	// different legal entities in the world; telling those apart is a human's
 	// call, which is the fuzzy tier's own rule.
 	ExactName bool
+	// SameBrand says the names are one once legal forms and filler words are
+	// removed. Only such a pair files on its name alone (keepCorroborated).
+	SameBrand bool
 }
 
 // DedupeCompany is PO-F-2 — the company half of the one dedupe
-// implementation. Domain is the exact key; name similarity alone is the
-// fuzzy tier, because without a domain there is nothing to anchor on.
+// implementation. Domain is the exact key; name similarity is the fuzzy tier,
+// and a similar name files only with the second fact keepCorroborated asks for.
 func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMatch, error) {
 	hits, err := exactCompanyByDomain(ctx, tx, c.Domains, c.ExcludeID)
 	if err != nil {
@@ -111,8 +119,12 @@ func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyM
 		}
 		return match, nil
 	}
+	subdomains, err := subdomainClaimants(ctx, tx, c.Domains, c.ExcludeID)
+	if err != nil {
+		return CompanyMatch{}, err
+	}
 	if NormalizeCompanyName(c.DisplayName) == "" && NormalizeCompanyName(c.LegalName) == "" {
-		return CompanyMatch{Decision: DecisionNoMatch}, nil
+		return keepNewRivals(ctx, tx, c, rankNameDomainClaimantFirst(CompanyMatch{Decision: DecisionNoMatch}, subdomains))
 	}
 	claimants, err := nameDomainClaimant(ctx, tx, c)
 	if err != nil {
@@ -122,7 +134,7 @@ func DedupeCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyM
 	if err != nil {
 		return CompanyMatch{}, err
 	}
-	return rankNameDomainClaimantFirst(match, claimants), nil
+	return keepNewRivals(ctx, tx, c, rankNameDomainClaimantFirst(match, append(claimants, subdomains...)))
 }
 
 // DedupeCompanyForCreate is PO-F-2 for a path that is about to MINT a
@@ -226,6 +238,12 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 	if len(arms) == 0 {
 		return CompanyMatch{Decision: DecisionNoMatch}, nil
 	}
+	ordering := c.DisplayName
+	if NormalizeCompanyName(ordering) == "" {
+		ordering = c.LegalName
+	}
+	args = append(args, ordering, dedupeCandidateRows)
+	order := "f_fold_apostrophes(lower($" + strconv.Itoa(len(args)-1) + "))"
 	// Tier 1 (exactCompanyByDomain, above) keeps the anchor deliberately: a domain
 	// hit landing a colleague on the own company is the employer inference that
 	// path exists for. This tier is name similarity, where the own company's
@@ -238,7 +256,13 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 		   -- workspace's identity (ADR-0082/A127).
 		   AND NOT is_anchor
 		   AND ($1::uuid IS NULL OR id <> $1)
-		   AND (`+strings.Join(arms, " OR ")+`)`, args...)
+		   AND (`+strings.Join(arms, " OR ")+`)
+		 ORDER BY greatest(
+		   similarity(f_fold_apostrophes(lower(display_name)), `+order+`),
+		   word_similarity(`+order+`, f_fold_apostrophes(lower(display_name))),
+		   similarity(f_fold_apostrophes(lower(legal_name)), `+order+`),
+		   word_similarity(`+order+`, f_fold_apostrophes(lower(legal_name)))) DESC, id
+		 LIMIT $`+strconv.Itoa(len(args)), args...)
 	if err != nil {
 		return CompanyMatch{}, fmt.Errorf("dedupe company candidate set: %w", err)
 	}
@@ -260,6 +284,9 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 	}
 	if err := rows.Err(); err != nil {
 		return CompanyMatch{}, fmt.Errorf("drain company candidates: %w", err)
+	}
+	if ranked, err = keepCorroborated(ctx, tx, c, ranked); err != nil {
+		return CompanyMatch{}, err
 	}
 	if len(ranked) == 0 {
 		return CompanyMatch{Decision: DecisionNoMatch}, nil
@@ -431,7 +458,7 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 	}{{rowDisplay, fieldDisplayName}, {rowLegal, fieldLegalName}}
 
 	var best CompanyCandidateScore
-	var exact bool
+	var exact, sameBrand bool
 	for _, left := range []string{candidateDisplay, candidateLegal} {
 		for _, right := range sides {
 			normalizedLeft, normalizedRight := companyNameForMatching(left), companyNameForMatching(right.value)
@@ -451,6 +478,9 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 			if companyNamesAreTheSame(left, right.value) {
 				exact = true
 			}
+			if squashed := squashedCompanyName(left); squashed != "" && squashed == squashedCompanyName(right.value) {
+				sameBrand = true
+			}
 			score := nameSimilarity(normalizedLeft, normalizedRight)
 			if score > best.Confidence {
 				best = CompanyCandidateScore{
@@ -462,21 +492,6 @@ func bestCompanyNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLeg
 			}
 		}
 	}
-	best.ExactName = exact
+	best.ExactName, best.SameBrand = exact, sameBrand
 	return best
 }
-
-// companyNamesAreTheSame answers whether two names are one name.
-//
-// Strict on purpose: case, accents and spacing are noise in a name, and
-// everything else is signal. A legal suffix is NOT folded away — see
-// CompanyCandidateScore.ExactName for why that distinction is the whole point.
-func companyNamesAreTheSame(left, right string) bool {
-	l, r := foldedNameKey(left), foldedNameKey(right)
-	return l != "" && l == r
-}
-
-// collapseSpaces reduces every run of whitespace to one space. A name read off
-// a web page carries the spacing of its markup, and "Baqend  GmbH" is not a
-// different company from "Baqend GmbH".
-func collapseSpaces(s string) string { return strings.Join(strings.Fields(s), " ") }

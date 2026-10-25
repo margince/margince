@@ -41,6 +41,10 @@
 .reporting-toolbar > * {
   min-width: 8rem;
 }
+/* A date field holds its box and picker: 8rem would let them spill past it. */
+.reporting-toolbar > .field:has(.date-input) {
+  min-width: min-content;
+}
 /* A toolbar whose verbs the reader may not use renders nothing, and its margin
    would still open a gap in the page. */
 .reporting-toolbar:empty {

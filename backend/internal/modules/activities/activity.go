@@ -302,10 +302,7 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 // store-opened (LogActivity) and caller-opened (LogActivityTx) entry
 // points.
 func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
-	if err := prepareFollowUpSource(ctx, tx, &in); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	if err := validateActivityDuration(in.DurationSeconds); err != nil {
+	if err := prepareLoggedActivity(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -358,7 +355,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, in.OccurredAt, in.Direction, in.MeetingStatus,
 		in.DueAt, in.RemindAt, assignee, host, in.ClaimsHostSlot, in.SourceSystem, in.SourceID, in.Source, by,
 		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
-		in.SourceActivityID, in.Raw, in.DurationSeconds,
+		in.SourceActivityID, in.Raw, in.DurationSeconds, loggedSenderIsMachine(in),
 	})
 	cfCols, cfHolders, args, err := storekit.InsertFragments(in.customColumns, in.CustomFields, args)
 	if err != nil {
@@ -371,9 +368,9 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
-		                       source_activity_id, raw, duration_seconds`+authorCols+cfCols+`)
+		                       source_activity_id, raw, duration_seconds, sender_is_machine`+authorCols+cfCols+`)
 		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, now()), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24`+authorHolders+cfHolders+`) RETURNING occurred_at`,
+		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25`+authorHolders+cfHolders+`) RETURNING occurred_at`,
 		args...).Scan(&occurredAt)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {

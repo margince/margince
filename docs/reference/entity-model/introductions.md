@@ -6,7 +6,7 @@ The 1 table owned by `introductions`, as the migrations build them. [Back to the
 
 ## intro_request
 
-29 columns · primary key `(id)` · referenced by 0 foreign keys
+31 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -15,19 +15,21 @@ The 1 table owned by `introductions`, as the migrations build them. [Back to the
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `decided_at` | `timestamp with time zone` |  |  |
 | `decision_reason` | `text` |  | The colleague's words when they declined or suggested somebody else. |
-| `due_at` | `timestamp with time zone` | yes | When an unanswered ask goes stale. |
+| `due_at` | `timestamp with time zone` |  | When an unanswered ask goes stale. |
 | `fallback_policy` | `text`, default `'none'::text` | yes | One of `name_drop`, `next_route`, `none`. |
 | `forwardable_note` | `text`, default `''::text` | yes | The prospect-facing copy the colleague can paste. |
-| `internal_reason` | `text` | yes | Why the requester is asking. |
+| `internal_reason` | `text` |  | Why the requester is asking. |
 | `introduced_at` | `timestamp with time zone` |  |  |
 | `introducer_user_id` | `uuid` | yes | The colleague being asked. |
 | `name_drop_allowed` | `boolean`, default `false` | yes | Whether the requester asked for permission to mention the colleague's name. |
 | `name_dropped_at` | `timestamp with time zone` |  |  |
 | `note_ai_generated` | `boolean`, default `false` | yes | Whether a model wrote any of the note. |
 | `note_generated_by` | `text`, default `'human'::text` | yes | One of `human`, `model`, `deterministic`. |
+| `origin` | `text`, default `'asked'::text` | yes | One of `asked`, `recorded`. |
+| `recorded_channel` | `text` |  | One of `in_person`, `email`, `call`, `other`. |
 | `replied_at` | `timestamp with time zone` |  |  |
 | `requested_at` | `timestamp with time zone`, default `now()` | yes |  |
-| `requester_user_id` | `uuid` | yes | Points at `app_user.id`. |
+| `requester_user_id` | `uuid` | yes | The colleague who asked, or for a recorded introduction the colleague who was introduced. |
 | `route_type` | `text` | yes | One of `direct`, `through_contact`. |
 | `source_activity_id` | `uuid` |  | The message the ask's current claim rests on (the introduction, the name-drop, or the reply), where there is one. |
 | `status` | `text`, default `'requested'::text` | yes | One of `requested`, `accepted`, `name_drop_approved`, `suggest_other`, `declined`, `introduced` and 4 more. |
@@ -53,10 +55,15 @@ The 1 table owned by `introductions`, as the migrations build them. [Back to the
 
 **Rules**
 
+- `intro_request_asked_has_due`: `CHECK (((origin <> 'asked') OR (due_at IS NOT NULL)))`
+- `intro_request_channel_iff_recorded`: `CHECK (((origin = 'recorded') = (recorded_channel IS NOT NULL)))`
 - `intro_request_distinct_seats`: `CHECK ((requester_user_id <> introducer_user_id))`
 - `intro_request_fallback`: `CHECK ((fallback_policy = ANY (ARRAY['name_drop', 'next_route', 'none'])))`
 - `intro_request_note_origin`: `CHECK ((note_generated_by = ANY (ARRAY['human', 'model', 'deterministic'])))`
-- `intro_request_reason_present`: `CHECK ((internal_reason <> ''))`
+- `intro_request_origin_known`: `CHECK ((origin = ANY (ARRAY['asked', 'recorded'])))`
+- `intro_request_reason_by_origin`: `CHECK ((((origin = 'asked') AND (internal_reason IS NOT NULL) AND (internal_reason <> '')) OR ((origin = 'recorded') AND (internal_reason IS NULL))))`
+- `intro_request_recorded_channel_known`: `CHECK (((recorded_channel IS NULL) OR (recorded_channel = ANY (ARRAY['in_person', 'email', 'call', 'other']))))`
+- `intro_request_recorded_is_introduced`: `CHECK (((origin <> 'recorded') OR ((status = 'introduced') AND (introduced_at IS NOT NULL) AND (through_contact_id IS NULL) AND (decision_reason IS NULL) AND (suggested_user_id IS NULL) AND (decided_at IS NULL) AND (name_dropped_at IS NULL) AND (replied_at IS NULL) AND (source_activity_id IS NULL) AND (closed_at IS NULL))))`
 - `intro_request_route_shape`: `CHECK (((route_type = 'through_contact') = (through_contact_id IS NOT NULL)))`
 - `intro_request_route_type`: `CHECK ((route_type = ANY (ARRAY['direct', 'through_contact'])))`
 - `intro_request_status`: `CHECK ((status = ANY (ARRAY['requested', 'accepted', 'name_drop_approved', 'suggest_other', 'declined', 'introduced', 'name_dropped', 'replied', 'expired', 'cancelled'])))`
@@ -69,3 +76,4 @@ The 1 table owned by `introductions`, as the migrations build them. [Back to the
 - `intro_request_for_contact`: `btree (contact_id, requested_at DESC)`
 - `intro_request_open_route`: `unique, btree (contact_id, introducer_user_id, through_contact_id) NULLS NOT DISTINCT WHERE ((status = ANY (ARRAY['requested', 'accepted', 'name_drop_approved'])) AND (archived_at IS NULL))`
 - `intro_request_pkey`: `unique, btree (id)`
+- `intro_request_recorded_pair`: `unique, btree (contact_id, introducer_user_id, requester_user_id) WHERE ((origin = 'recorded') AND (archived_at IS NULL))`

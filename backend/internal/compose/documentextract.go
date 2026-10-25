@@ -390,7 +390,7 @@ func coerceDocumentValue(name, raw string) (string, bool) {
 		return raw, true
 	case documentFieldCurrency:
 		code := strings.ToUpper(raw)
-		if _, err := values.NewMoney(0, code); err != nil {
+		if err := values.RequireAssignableCurrency(code); err != nil {
 			return "", false
 		}
 		return code, true

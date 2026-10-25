@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -53,21 +54,36 @@ func StampSeatsPastTheCap(
 		roles = append(roles, p.Role)
 		names = append(names, strings.TrimSpace(p.DisplayName))
 	}
-	// One row per seat: a colleague listed twice, or a calendar owner capture
-	// already stamped, is still one colleague in the room. The uniqueness index
-	// keys on role and address, so it cannot say that itself.
+	// One attendance row per seat: a colleague listed twice is one colleague in
+	// the room. The owner's directional row from capture records whose calendar
+	// it is, not attendance, so it does not stand in for this one.
+	args := []any{activityID, addresses, roles, names, storedDomainsOf(addresses)}
+	seatMatch, err := calendarSeatMatch(ctx, tx, kind, partyListIsAttested, &args)
+	if err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, address, role, display_name)
-		SELECT DISTINCT ON (u.id) $1, u.id, inp.address, inp.role, inp.display_name
-		  FROM unnest($2::text[], $3::text[], $4::text[]) WITH ORDINALITY AS inp(address, role, display_name, ord)
-		  JOIN app_user u ON lower(u.email) = inp.address
+		INSERT INTO activity_participant (activity_id, user_id, address, role, display_name, address_domain_folded)
+		SELECT DISTINCT ON (u.id) $1, u.id, inp.address, inp.role, inp.display_name, inp.domain_folded
+		  FROM unnest($2::text[], $3::text[], $4::text[], $5::text[]) WITH ORDINALITY AS inp(address, role, display_name, domain_folded, ord)
+		  JOIN app_user u ON `+seatMatch+`
 		 WHERE NOT EXISTS (
 		       SELECT 1 FROM activity_participant ap
-		        WHERE ap.activity_id = $1 AND ap.user_id = u.id)
+		        WHERE ap.activity_id = $1 AND ap.user_id = u.id AND ap.role IN ('organizer', 'attendee'))
 		 ORDER BY u.id, inp.ord
 		ON CONFLICT DO NOTHING`,
-		activityID, addresses, roles, names); err != nil {
+		args...); err != nil {
 		return fmt.Errorf("capture: binding the colleagues on a meeting past the party cap: %w", err)
 	}
 	return nil
+}
+
+// storedDomainsOf is owndomain.StoredOfAddress for each address, in order, for
+// a set-based INSERT that writes the folded domain beside each address.
+func storedDomainsOf(addresses []string) []*string {
+	domains := make([]*string, len(addresses))
+	for at, address := range addresses {
+		domains[at] = owndomain.StoredOfAddress(address)
+	}
+	return domains
 }

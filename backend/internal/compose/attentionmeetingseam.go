@@ -9,7 +9,6 @@ package compose
 
 import (
 	"context"
-	"sort"
 	"strings"
 	"time"
 
@@ -21,19 +20,16 @@ import (
 )
 
 // attentionMeetings reads today's remaining meetings through the activities
-// store — the same gated list every other activity surface reads.
+// store, the same gated list every other activity surface reads.
 //
-// The WINDOW is applied in SQL, not here. An earlier cut read ten times the
-// lane and narrowed the time range in Go, which is lossy in the one direction
-// that hides itself: a day with more than the scan's worth of later activity
-// pushes a real meeting off the page, and the lane draws a free afternoon over
-// a booked one. ListActivitiesInput carries OccurredAfter/OccurredBefore and
-// the store applies both as predicates, so the bound is the day rather than a
-// guess about how busy the day might be.
-//
-// The STATUS filter stays in Go: the store has no dial for it, and the set it
-// removes is bounded by the window the database already applied.
+// Window, status and order are all SQL predicates, so the limit cuts a list
+// that is already the lane: soonest open meeting first. Filtering or sorting
+// after the limit let canceled rows or later meetings fill the page and hide
+// the next one the rep has to prepare.
 type attentionMeetings struct{ store *activities.Store }
+
+// soonestFirst is the store's ascending order on the meeting's start.
+var soonestFirst = "occurred_at"
 
 func (m attentionMeetings) Today(
 	ctx context.Context, from, until time.Time, limit int,
@@ -42,7 +38,7 @@ func (m attentionMeetings) Today(
 	kind := string(crmcontracts.ActivityKindMeeting)
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until, Limit: &limit,
-		ReadableOnly: true,
+		AwaitingOutcome: true, Sort: &soonestFirst, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
@@ -53,10 +49,7 @@ func (m attentionMeetings) Today(
 	}
 	ahead := make([]attention.Meeting, 0, len(rows))
 	for _, row := range rows {
-		if !meetingStillWorthPreparing(row) {
-			continue
-		}
-		if !meetingReadable(row) {
+		if !meetingStillWorthPreparing(row) || !meetingReadable(row) {
 			continue
 		}
 		needsPrep, known := meetingPrep(row)
@@ -72,9 +65,6 @@ func (m attentionMeetings) Today(
 	for i := range ahead {
 		ahead[i].ContactID = with[ahead[i].ID]
 	}
-	// Soonest first: the lane is a countdown, and the store returns activities
-	// newest-first, which is the opposite order for a day still ahead.
-	sort.SliceStable(ahead, func(i, j int) bool { return ahead[i].StartsAt.Before(ahead[j].StartsAt) })
 	return ahead, nil
 }
 
@@ -199,47 +189,20 @@ func meetingIDs[M any](meetings []M, id func(M) ids.UUID) []ids.UUID {
 // attentionMeetingsAwaitingOutcome reads the meetings that already started and
 // whose result nobody has recorded, through the same gated list.
 //
-// The STATUS FILTER IS IN SQL here, unlike the forward lane above, and the
-// difference is the direction. That lane's window is the rest of today, so the
-// non-booked rows it drops in Go come out of a set the database already made
-// small. This window reaches back a fortnight, where almost every meeting is
-// settled: filtering after the read would spend the page on rows to discard and
-// push the genuinely unreported meeting off the end, so the lane would draw
-// "nothing to report" over real work. `AwaitingOutcome` asks the database
-// instead.
-//
-// AND IT READS DEEPER THAN IT RENDERS, which the forward lane has no need to.
-// The store orders `occurred_at DESC` (activityread.orderClause) and applies
-// the limit in SQL, so asking it for the lane's cap returns the NEWEST rows in
-// the window — while this lane shows the OLDEST first, because the meeting
-// waiting longest is the one whose record has been wrong longest. Asked for
-// exactly the cap, a fortnight holding more unanswered meetings than fit would
-// hand back the freshest dozen and sort those, dropping the very rows the
-// ordering exists to surface. So it reads a deeper page, sorts, and trims to
-// the cap at the end.
+// Oldest first in SQL, at the lane's limit. The meeting waiting longest has
+// had a wrong record longest, and an ascending read keeps it on the page
+// however deep the backlog is. A full page is the lane's cap, which
+// boundedSources reports as more to come.
 type attentionMeetingsAwaitingOutcome struct{ store *activities.Store }
-
-// unansweredReadDepth is how many rows the read above asks for per lane card.
-//
-// The multiple is what makes the oldest-first ordering true rather than
-// approximately true: it is the number of unanswered meetings a fortnight may
-// hold before the newest-first page stops containing the whole set. Deep enough
-// that an ordinary backlog sorts correctly, bounded so a pathological one costs
-// a page rather than a scan. A window holding more than this still renders its
-// cap and still reports itself cut — the reader is told there is more, which is
-// the honest answer — but the dozen it shows are no longer guaranteed to be the
-// dozen oldest.
-const unansweredReadDepth = 8
 
 func (m attentionMeetingsAwaitingOutcome) Since(
 	ctx context.Context, from, until time.Time, limit int,
 	scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.MeetingAwaitingOutcome, error) {
 	kind := string(crmcontracts.ActivityKindMeeting)
-	deep := limit * unansweredReadDepth
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until,
-		AwaitingOutcome: true, CustomerMeetingsOnly: true, Limit: &deep, ReadableOnly: true,
+		AwaitingOutcome: true, CustomerMeetingsOnly: true, Limit: &limit, Sort: &soonestFirst, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
@@ -257,17 +220,6 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartedAt: row.OccurredAt,
 			Version: row.Version, HostUserID: hostOfMeeting(row),
 		})
-	}
-	// Longest unanswered first: the store returns activities newest-first, and
-	// the meeting that ended last week has been waiting longer than the one that
-	// ended ten minutes ago. A reader clearing the top of this lane is clearing
-	// the oldest debt rather than the freshest.
-	sort.SliceStable(over, func(i, j int) bool { return over[i].StartedAt.Before(over[j].StartedAt) })
-	// Trimmed AFTER the sort, so what the cap keeps is the oldest rather than
-	// whichever rows the database happened to return first. The caller bounds
-	// the lane by what it renders, and the truncation flag counts this slice.
-	if len(over) > limit {
-		over = over[:limit]
 	}
 	with, err := m.store.MeetingCounterparties(ctx, meetingIDs(over, func(meeting attention.MeetingAwaitingOutcome) ids.UUID { return meeting.ID }))
 	if err != nil {

@@ -471,3 +471,93 @@ describe("reopening the drawer after access was withdrawn", () => {
     expect(screen.queryByText("The signed contract")).toBeNull();
   });
 });
+
+// A mail whose text the server could not decode still has a body: the From and
+// To lines. The drawer says the rest is missing, so the mail does not read as
+// complete.
+describe("a mail whose text could not be read", () => {
+  it("says so above the body", async () => {
+    stubRead(
+      presentation({
+        body: "From: dana@acme.test\nTo: me@ours.test",
+        body_completeness: "unreadable",
+      }),
+    );
+    draw(open());
+
+    expect(
+      await screen.findByText("The text of this mail could not be read."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Open it in your mail program to see it."),
+    ).toBeTruthy();
+  });
+
+  it("says when only part of the text was read", async () => {
+    stubRead(presentation({ body_completeness: "partial" }));
+    draw(open());
+
+    expect(
+      await screen.findByText(
+        "Part of the text of this mail could not be read.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Attached, as agreed.")).toBeTruthy();
+  });
+
+  it("says when the text is a forwarded original's", async () => {
+    stubRead(presentation({ body_completeness: "forwarded" }));
+    draw(open());
+
+    expect(
+      await screen.findByText(
+        "The text below is the forwarded mail, not words the sender wrote.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says when the text has not been checked yet", async () => {
+    stubRead(
+      presentation({
+        body: "From: dana@acme.test\nTo: me@ours.test",
+        body_completeness: "unassessed",
+      }),
+    );
+    draw(open());
+
+    expect(
+      await screen.findByText(
+        "Margince has not yet checked whether it read all of this mail’s text.",
+      ),
+    ).toBeTruthy();
+  });
+
+  // A hostile fixture: the server sends no completeness on a withheld mail,
+  // so the drawer's own check is what must refuse it.
+  it("says nothing of a withheld mail's text", async () => {
+    stubRead(
+      presentation({
+        body_completeness: "unassessed",
+        access: {
+          ...presentation().access,
+          content_state: "withheld",
+          display_status: "withheld",
+        },
+      }),
+    );
+    draw(open());
+
+    await waitFor(() =>
+      expect(screen.getByText("Not shared with you")).toBeTruthy(),
+    );
+    expect(document.body.textContent).not.toContain("not yet checked");
+  });
+
+  it("says nothing for a mail that was read", async () => {
+    stubRead(presentation({ body_completeness: "complete" }));
+    draw(open());
+
+    await screen.findByText("Attached, as agreed.");
+    expect(screen.queryByText(/could not be read/)).toBeNull();
+  });
+});

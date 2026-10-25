@@ -246,7 +246,6 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 	readerBound := map[crmcontracts.WorklistItemSource]string{
 		"failed_approval":      "ListWire with FailedForDecider carries the decider",
 		"introduction_request": "AwaitingMyAnswer is the reader's own asks",
-		"relationship_decay":   "QuietEdgesForUser binds the edges to the actor",
 		"bounce":               "HardBouncesFor is the comms store's per-user read",
 		"undelivered":          "the same per-user read as the bounce beside it",
 		"notice":               "a notice is addressed to one contact",

@@ -55,6 +55,10 @@
   margin: -2px -4px;
   width: calc(100% + 8px);
 }
+/* Hears focus leave the day and its calendar, and draws no box of its own. */
+.inlinetext-date {
+  display: contents;
+}
 /* A refused field gives back its block-end overlap: the error line under it
    moves the row anyway, and the field gap then clears the box as elsewhere. */
 .inlinetext-edit .input[aria-invalid="true"] {

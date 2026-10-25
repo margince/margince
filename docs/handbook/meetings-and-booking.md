@@ -33,6 +33,16 @@ To move a Margince meeting, open it from its line on the timeline and choose **R
 Your current time stays held until the calendar accepts the change. The meeting moves in Margince only once the calendar provider takes the new time. A meeting you move keeps the video call it already has.
 Also called: reschedule, change the time, postpone a meeting.
 
+### How do I record what came of a meeting?
+To record what came of a meeting, press **Update** on its Worklist row.
+1. Pick **Held** or **No-show** and write what was said.
+2. Change **Date** only if the meeting was on another day.
+3. Press **Log**.
+The meeting keeps its start time. A meeting moved to another day keeps its time of day there. One
+moved to today at an hour still to come is filed at the moment you save. Press **Canceled** on the
+row for a meeting that did not happen. Also called: mark a meeting held, meeting outcome, no-show,
+meeting happened.
+
 ### How do I cancel a meeting?
 To cancel a Margince meeting, open it from its line on the timeline and choose **Cancel meeting**. Confirm "Cancel this meeting and notify the attendee?".
 The time becomes free once your calendar accepts the cancellation, or confirms the event is already gone. A meeting you move or cancel in your own calendar is copied back to Margince within about 15 minutes.

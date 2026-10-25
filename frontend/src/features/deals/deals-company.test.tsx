@@ -143,6 +143,8 @@ function stubBackend(opts: {
     if (method === "POST" && url.includes("/reports/")) {
       return jsonResponse({
         report: "deals-by-stage",
+        base_currency: "EUR",
+        as_of: "2026-10-01",
         plan: {},
         columns: [],
         rows: [],

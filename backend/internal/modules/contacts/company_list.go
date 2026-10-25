@@ -219,6 +219,11 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 			// was never one the contract accepts. Validated HERE, inside the
 			// store, so it lands after listPage's auth.Require rather than
 			// before it.
+			//
+			// The query-enum middleware refuses these over HTTP. This arm
+			// answers the caller that does not go through it. The datasource
+			// provider builds the same input from a saved filter set rather
+			// than a generated query type.
 			if in.Lifecycle != nil {
 				if !crmcontracts.ListCompaniesParamsLifecycle(*in.Lifecycle).Valid() {
 					return nil, httperr.Validation("lifecycle", "not_a_known_value",
@@ -227,8 +232,10 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 				where = append(where, storekit.SQLf("lifecycle = $%d", arg(*in.Lifecycle)))
 			}
 			if in.Industry != nil {
-				// Free text on the record, so matched as written rather than
-				// against a vocabulary the column does not have.
+				if !crmcontracts.ListCompaniesParamsIndustry(*in.Industry).Valid() {
+					return nil, httperr.Validation("industry", "not_a_known_value",
+						"filter by one of the industries the contract defines, or leave the parameter off")
+				}
 				where = append(where, storekit.SQLf("industry = $%d", arg(*in.Industry)))
 			}
 			if in.SizeBand != nil {

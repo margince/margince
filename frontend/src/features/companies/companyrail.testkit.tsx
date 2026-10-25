@@ -4,10 +4,10 @@ import type { ComponentProps, ReactNode } from "react";
 import { vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import type { CompanyTab } from "../../lib/companytab";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyOverviewCards } from "./companyoverviewcards";
 import { CompanyRail } from "./companyrail";
-import type { CompanyTab } from "./companytab";
 
 export type Company360 = components["schemas"]["Company360"];
 
@@ -25,7 +25,7 @@ export const company = {
   legal_name: "Brandt Automotive GmbH",
   lifecycle: "customer" as const,
   owner_id: "u-1",
-  industry: "Automotive",
+  industry: "automotive" as const,
   size_band: "51-200" as const,
   linkedin_url: "https://linkedin.com/company/brandt",
   address: { city: "Munich", country: "DE" },

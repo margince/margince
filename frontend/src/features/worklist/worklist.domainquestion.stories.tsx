@@ -151,6 +151,45 @@ export const TheCompanyCouldNotBeCreated: Story = {
   play: pressKeep,
 };
 
+const VENDOR: WorklistItem = {
+  ...UNDECIDED,
+  id: "company-a.example",
+  title: "company-a.example",
+  domain_reason_code: "vendor_verdict",
+  domain_note: "Classified as a mail or hosting vendor: sells managed hosting.",
+  actions: ["keep", "keep_as_vendor", "discard"],
+};
+
+/**
+ * A site that reads as a mail or hosting vendor. The reader creates the
+ * company for the staff writing from it, or keeps the vendor verdict. There is
+ * no re-read, which would ask the same front page again.
+ */
+export const AVendorQuestionOffersCreateOrKeepAsVendor: Story = {
+  render: line(VENDOR, () =>
+    installFetchStub({
+      [`POST /capture/domain-questions/${VENDOR.id}/keep`]: () =>
+        jsonResponse(null, 202),
+      [`POST /capture/domain-questions/${VENDOR.id}/keep-vendor`]: () =>
+        new Response(null, { status: 204 }),
+      [`POST /capture/domain-questions/${VENDOR.id}/discard`]: () =>
+        jsonResponse(null, 202),
+    }),
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("button", { name: "Keep as vendor" }),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Create company" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Domain review" }),
+    ).not.toBeInTheDocument();
+  },
+};
+
 export const ForwardedDomainOpensReviewBeforeCreation: Story = {
   render: line(
     {

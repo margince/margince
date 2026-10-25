@@ -121,8 +121,9 @@ function minutesOf(draft: LinkDraft): number {
 
 /**
  * What a save sends, against the profile the drawer opened on. The video pair
- * is written only when the tile changed or the own address was edited. A title
- * edit then never clears an address a legacy profile kept beside its video.
+ * is written when the tile changed or the own address was edited. It is also
+ * written when a video app is saved over a stored address. Otherwise the booking
+ * would send that address beside the generated link.
  */
 export function linkChanges(
   original: Profile,
@@ -137,7 +138,8 @@ export function linkChanges(
   const location = draft.location.trim();
   if (
     draft.video !== before ||
-    (draft.video === "own" && location !== original.location)
+    (draft.video === "own" && location !== original.location) ||
+    (draft.video === "app" && original.location.trim() !== "")
   ) {
     changes.video_call = draft.video === "app";
     changes.location = draft.video === "own" ? location : "";
@@ -380,10 +382,6 @@ function VideoChoice({
       mark: <ProviderMark providerKey={copy.vendor} />,
     };
   };
-  const savedAddress =
-    videoOf(profile) !== "own" && profile.location.trim() !== ""
-      ? ` ${t("scheduling.video.ownSaved", { location: profile.location })}`
-      : "";
   const value: VideoTile | "" =
     draft.video === "app" ? (eventApp ?? "") : draft.video;
   return (
@@ -397,7 +395,7 @@ function VideoChoice({
           {
             value: "own",
             label: t("scheduling.video.own"),
-            description: `${t("scheduling.video.ownHelp")}${savedAddress}`,
+            description: t("scheduling.video.ownHelp"),
           },
           {
             value: "none",

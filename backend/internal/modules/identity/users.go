@@ -194,6 +194,7 @@ func actorCtx(ctx context.Context, id Identity) context.Context {
 		UserID:      id.UserID.UUID,
 		TeamIDs:     rawTeamIDs(id.Teams),
 		SeatType:    principal.SeatType(id.SeatType),
+		Locale:      id.Locale,
 		Permissions: id.Permissions,
 	})
 }

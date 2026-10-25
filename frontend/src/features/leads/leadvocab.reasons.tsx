@@ -22,12 +22,12 @@ import {
   useT,
 } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
   LEAD_DISQUALIFY_REASONS_KEY,
   type LeadDisqualifyReason,
   useLeadDisqualifyReasons,
-} from "../../lib/leadsources";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+} from "./leadhandling";
 import {
   leadsColumn,
   useRemovalFocus,

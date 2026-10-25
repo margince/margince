@@ -56,6 +56,10 @@ type SignatureField struct {
 	// module that owns the ledger can compute one. Empty means the caller
 	// cannot see the ledger, and the apply then runs on plain recency.
 	ClaimKey string
+	// Display is the full name as the signature prints it, set on the first_name
+	// and last_name entries. When both land, it replaces a display name that
+	// capture only guessed.
+	Display string
 }
 
 // SignatureApplyResult counts what one apply did — honest numbers for the
@@ -70,7 +74,29 @@ type SignatureApplyResult struct {
 // holds, and every one that lands writes its evidence row and provenance stamp.
 // A field is counted skipped when the record already carries something stated
 // later, or when a human's correction stands against it.
-func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactID, sourceActivity ids.UUID, fields []SignatureField) (SignatureApplyResult, error) {
+func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactID, sourceActivity ids.UUID, fields []SignatureField, defaultEnabled bool) (SignatureApplyResult, error) {
+	return s.applySignature(ctx, contactID, sourceActivity, fields, anyTitle, defaultEnabled)
+}
+
+// FillSignatureTitle lands a title read from one of the contact's OLDER mails,
+// and only while the record shows no title. An older statement never replaces
+// what is there: a title somebody typed, or one read from newer mail, stands.
+// The blank test runs under the subject lock, so a title typed while the model
+// ran is not overwritten.
+func (s *Store) FillSignatureTitle(ctx context.Context, contactID ids.ContactID, sourceActivity ids.UUID, title SignatureField, defaultEnabled bool) (SignatureApplyResult, error) {
+	if title.Name != fieldTitle {
+		return SignatureApplyResult{}, fmt.Errorf("contacts: an older mail fills only the title, not %q", title.Name)
+	}
+	return s.applySignature(ctx, contactID, sourceActivity, []SignatureField{title}, olderMailMayFillTitleTx, defaultEnabled)
+}
+
+// titleGuard answers, under the subject lock, whether the statement may land.
+type titleGuard func(context.Context, pgx.Tx, ids.ContactID) (bool, error)
+
+// anyTitle admits the newest mail's statement whatever title the record shows.
+func anyTitle(context.Context, pgx.Tx, ids.ContactID) (bool, error) { return true, nil }
+
+func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sourceActivity ids.UUID, fields []SignatureField, mayLand titleGuard, defaultEnabled bool) (SignatureApplyResult, error) {
 	var res SignatureApplyResult
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return res, err
@@ -99,6 +125,10 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 		// must be the first row this transaction holds or the two deadlock and
 		// an erasure fails when it loses.
 		if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
+			return err
+		}
+		if ok, err := mayLand(ctx, tx, contactID); err != nil || !ok {
+			res.Skipped += len(fields)
 			return err
 		}
 		// The SOURCE has the same window as the subject, and for the same
@@ -143,26 +173,9 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 		// contact's own mail that SignatureCandidates had just offered, skip
 		// all its fields, and still let the caller mark the message read: the
 		// mail consumed, nothing written, and never reconsidered.
-		var sourceLimited bool
-		var observedAt time.Time
-		if err := tx.QueryRow(ctx, `
-			SELECT NOT `+SignatureSourceEligible("p", "a")+`
-			       OR a.restricted_at IS NOT NULL
-			       OR a.archived_at IS NOT NULL,
-			       a.occurred_at
-			  FROM activity a, contact p
-			 WHERE a.id = $1 AND p.id = $2 FOR SHARE OF a`,
-			sourceActivity, contactID).Scan(&sourceLimited, &observedAt); err != nil {
-			if !errors.Is(err, pgx.ErrNoRows) {
-				return fmt.Errorf("contacts: reading the signature's source message: %w", err)
-			}
-			// No source row: nothing lands. The fields being applied were read
-			// OUT of that message, so a source that is gone — erased since the
-			// candidate was selected — means writing erased content onto a
-			// contact every seat reads, into fields the audience rescope does
-			// not retract and an audit trail that is append-only. Absence is
-			// the one answer that cannot be checked, so it fails closed.
-			sourceLimited = true
+		sourceLimited, observedAt, err := signatureSourceLimitedTx(ctx, tx, contactID, sourceActivity, defaultEnabled)
+		if err != nil {
+			return err
 		}
 		if sourceLimited {
 			res.Skipped += len(fields)
@@ -216,6 +229,54 @@ func (s *Store) ApplySignatureFields(ctx context.Context, contactID ids.ContactI
 	return res, nil
 }
 
+// Hold the source and its mailbox while applying fields, so withdrawn access
+// cannot race the write.
+func signatureSourceLimitedTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceActivity ids.UUID, defaultEnabled bool) (limited bool, observedAt time.Time, err error) {
+	if _, err := tx.Exec(ctx, `
+		SELECT 1 FROM capture_connection cc, activity a
+		 WHERE a.id = $1 AND `+capturingMailboxSQL("a")+` FOR SHARE OF cc`, sourceActivity); err != nil {
+		return false, observedAt, fmt.Errorf("contacts: holding the signature's mailbox: %w", err)
+	}
+	if err := tx.QueryRow(ctx, `
+		SELECT NOT EXISTS (SELECT 1 FROM activity_link al
+		                    WHERE al.activity_id = a.id AND `+signatureSourceSQL("$3")+`),
+		       a.occurred_at
+		  FROM activity a, contact p
+		 WHERE a.id = $1 AND p.id = $2 FOR SHARE OF a`,
+		sourceActivity, contactID, defaultEnabled).Scan(&limited, &observedAt); err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return false, observedAt, fmt.Errorf("contacts: reading the signature's source message: %w", err)
+		}
+		// A removed source cannot justify copying its erased content onto a
+		// contact or into an append-only audit trail.
+		return true, observedAt, nil
+	}
+	return limited, observedAt, nil
+}
+
+// olderMailMayFillTitleSQL says whether an older mail may fill the contact's
+// title: it is blank, and no colleague has decided it. A colleague who edited or
+// cleared the title wrote an update audit row whose after image names title.
+// Clearing it is a decision an older signature must not undo.
+func olderMailMayFillTitleSQL(contact string) string {
+	return `(coalesce(btrim(` + contact + `.title), '') = ''
+	   AND NOT EXISTS (SELECT 1 FROM audit_log decided
+	                    WHERE decided.entity_type = 'contact' AND decided.entity_id = ` + contact + `.id
+	                      AND decided.action = 'update' AND decided.after ? 'title'
+	                      AND (decided.actor_type = 'human' OR decided.on_behalf_of IS NOT NULL)))`
+}
+
+// olderMailMayFillTitleTx asks olderMailMayFillTitleSQL under the caller's
+// subject lock.
+func olderMailMayFillTitleTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (bool, error) {
+	var open bool
+	if err := tx.QueryRow(ctx, `SELECT `+olderMailMayFillTitleSQL("p")+` FROM contact p WHERE p.id = $1`,
+		contactID).Scan(&open); err != nil {
+		return false, fmt.Errorf("contacts: reading the title an older signature may fill: %w", err)
+	}
+	return open, nil
+}
+
 // applySignatureStatement lands every field of one signature that no human has
 // ruled on, and returns the names of those that landed.
 func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time, fields []SignatureField, corrected map[string]bool, res *SignatureApplyResult) ([]string, []string, error) {
@@ -248,6 +309,9 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 		if outcome == observedConfirmed {
 			confirmed = append(confirmed, f.Name)
 		}
+	}
+	if err := followSignatureDisplay(ctx, tx, contactID, fields, appliedFields); err != nil {
+		return nil, nil, err
 	}
 	landed, err := applySignatureNumbers(ctx, tx, contactID, sourceRef, observedAt, numbers)
 	if err != nil {
@@ -329,6 +393,10 @@ func applySignatureNumbers(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	if len(fields) == 0 {
 		return 0, nil
 	}
+	fields, err := withoutMemberNumbers(ctx, tx, contactID, fields)
+	if err != nil {
+		return 0, err
+	}
 	numbers := make([]observedNumber, 0, len(fields))
 	for _, f := range fields {
 		confidence := f.Confidence
@@ -377,21 +445,25 @@ func revokeSignatureEvidence(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 // transaction too: losing the watermark after a successful apply costs one
 // repeated read whose evidence rows are all first-verdict-wins inserts, so the
 // repeat changes nothing.
-func (s *Store) MarkSignatureRead(ctx context.Context, contactID ids.ContactID, activityID ids.UUID) error {
+//
+// historyDepth is how many of the contact's newest readable mails the pass may
+// read per new mail. The legacy repair reopens only watermarks without one.
+func (s *Store) MarkSignatureRead(ctx context.Context, contactID ids.ContactID, activityID ids.UUID, historyDepth int) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// occurred_at is read from the activity rather than taken from the
 		// caller: the watermark and the candidate query must compare the same
 		// number, and only one of them can be the row itself.
 		tag, err := tx.Exec(ctx, `
-			INSERT INTO contact_signature_enrich_state (contact_id, activity_id, last_activity_at)
-			SELECT $1, a.id, a.occurred_at FROM activity a
+			INSERT INTO contact_signature_enrich_state (contact_id, activity_id, last_activity_at, history_depth)
+			SELECT $1, a.id, a.occurred_at, $3 FROM activity a
 			 WHERE a.id = $2 AND a.restricted_at IS NULL
 			ON CONFLICT (contact_id) DO UPDATE
 			SET activity_id = EXCLUDED.activity_id,
 			    last_activity_at = GREATEST(contact_signature_enrich_state.last_activity_at,
 			                                EXCLUDED.last_activity_at),
+			    history_depth = EXCLUDED.history_depth,
 			    attempted_at = now()`,
-			contactID, activityID)
+			contactID, activityID, historyDepth)
 		if err != nil {
 			return err
 		}
@@ -412,30 +484,12 @@ func (s *Store) MarkSignatureRead(ctx context.Context, contactID ids.ContactID, 
 // SignatureCandidate is one contact the enrich pass should look at, and the
 // mail to read their signature from.
 type SignatureCandidate struct {
-	ContactID  ids.ContactID
-	FullName   string
-	Email      string
-	ActivityID ids.UUID
-	Body       string // the latest inbound email's stored body
+	ContactID ids.ContactID
+	FullName  string
+	Email     string
+	// OlderMailMayFillTitle is olderMailMayFillTitleSQL when the candidate was
+	// listed. Only then does the pass read their older mail.
+	OlderMailMayFillTitle bool
+	ActivityID            ids.UUID
+	Body                  string // the newest readable inbound email's stored body
 }
-
-// SignatureCandidates lists the contacts whose latest inbound mail this pass has
-// not read yet, each with that message — bounded for one pass.
-//
-// Candidacy is arrival, not absence. A contact whose title and phone are already
-// on the record is still a candidate when new mail comes in, because a contact
-// who changed jobs or numbers says so in a signature and the record is stale
-// until somebody reads it. This is what the fill-only-empty predicate that used
-// to sit here could not express: it asked "is anything missing", which stops
-// being true after the first answer and never becomes true again.
-//
-// Asking is bounded by contact_signature_enrich_state: the pass watermarks the
-// mail it read, and a contact returns only when mail NEWER than the watermark
-// arrives. That is what keeps the cost proportional to correspondence rather
-// than to the size of the address book — one model call per contact per new
-// message, however often the pass runs. The comparison is on occurred_at, not on the activity id — an
-// identity check would reopen the contact the moment the mail it names is
-// archived, and the query would then pay to re-read an OLDER signature.
-// defaultEnabled is the workspace answer for a mailbox that never made its own
-// choice, and the caller reads it from the capture settings rather than this
-// package — contacts owns neither the setting nor the connection.

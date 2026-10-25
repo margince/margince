@@ -27,6 +27,9 @@ const SETTINGS: InstallationSettings = {
   date_format: "dmy",
   time_format: "24h",
   base_currency_locked: true,
+  call_whatsapp: true,
+  call_telegram: true,
+  call_zalo: true,
   base_currency_locked_reason:
     "3 rate(s) in the sheet convert into EUR and cannot be restated against another base; clear the rate sheet first",
   base_currency_lock: { reason: "rate_sheet", count: 3, base_currency: "EUR" },

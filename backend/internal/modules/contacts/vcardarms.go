@@ -14,10 +14,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -31,9 +34,10 @@ import (
 // hold the subject before it holds anything else or the two deadlock and an
 // Art. 17 fulfilment fails on a path an ordinary seat can drive.
 func (s *Store) updateMatchedByCard(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
+	ctx context.Context, tx pgx.Tx, match ContactResolution,
 	entry VCardEntry, source ids.UUID, result *VCardResult,
 ) error {
+	contactID := match.ContactID
 	// The card names somebody who exists, so the caller's authority over THAT
 	// ROW decides whether this card may touch it — the contact:create grant that
 	// let them start the import says nothing about a record they cannot see.
@@ -42,6 +46,13 @@ func (s *Store) updateMatchedByCard(
 	// leaves one card out is an import nobody can audit, and the reader can act
 	// on "you may not write this one".
 	if err := auth.HoldWritableLive(ctx, tx, entityContact, contactID.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) && match.MatchedLane == LaneEmail && len(entry.Emails) > 0 {
+			// A colleague's contact the importer cannot see holds the address:
+			// the held refusal, which fails this card's transaction.
+			if refusal := claimedEmailRefusal(ctx, tx, entry.Emails[0].Value, contactID); !isDuplicateEmail(refusal) {
+				return refusal
+			}
+		}
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 			// Deliberately says nothing about WHAT was matched. The two refusals
 			// are one sentence because telling them apart would confirm that the
@@ -64,7 +75,10 @@ func (s *Store) updateMatchedByCard(
 	}
 	result.Outcome = VCardUpdated
 	result.ContactID = &contactID
-	return s.fillFromVCard(ctx, tx, contactID, entry)
+	if err := s.fillFromVCard(ctx, tx, contactID, entry); err != nil {
+		return err
+	}
+	return fillAddressFromCard(ctx, tx, contactID, entry)
 }
 
 // createFromCard turns a card nobody matched into a contact.
@@ -116,3 +130,128 @@ func (s *Store) createFromCard(
 // transaction. The caller recognises this one error and reports the card's own
 // outcome, which the arm has already filled in.
 var errCardSourceNarrowed = errors.New("contacts: the message this card arrived on is no longer readable here")
+
+// vcardRecordAddress is the card's address in the record's parts. A card
+// staged before the parts were read carries only the one line, which goes
+// through the splitter every other line-1 writer uses.
+func vcardRecordAddress(entry VCardEntry) *crmcontracts.Address {
+	if parts := addressOrNil(entry.PostalAddress); parts != nil {
+		return parts
+	}
+	line := strings.TrimSpace(entry.Address)
+	if line == "" {
+		return nil
+	}
+	if split, ok := SplitAddressText(line); ok {
+		return &split
+	}
+	return &crmcontracts.Address{Line1: &line}
+}
+
+// skipHeldCard answers a card whose address a colleague's contact holds. The
+// colleague is asked to share it, and the card is skipped with the refusal's
+// own words. Any other error passes through.
+func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name string) (VCardResult, error) {
+	err = s.AskHolderToShare(ctx, err)
+	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
+		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: held.Error()}, nil
+	}
+	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: vcardErasedAddress}, nil
+	}
+	return VCardResult{}, err
+}
+
+// vcardExistsReason is what a model-read card gets when its address already
+// belongs to a contact. A reading of a photo is a guess about the print, and a
+// guess must not overwrite a record.
+const vcardExistsReason = "this contact already exists; a card read from a photo never changes an existing contact"
+
+// skipModelReadMatch reports a model-read card whose address matches a contact.
+// The contact is named only when the caller may read it, as in the near-match
+// arm of importOneVCard.
+func skipModelReadMatch(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, result *VCardResult) error {
+	result.Outcome = VCardSkipped
+	result.Reason = vcardExistsReason
+	visible, err := auth.VisibleTo(ctx, tx, entityContact, contactID.UUID)
+	if err != nil {
+		return fmt.Errorf("contacts: probing a matched contact's visibility: %w", err)
+	}
+	if visible {
+		result.ContactID = &contactID
+	}
+	return nil
+}
+
+// proposeModelReadCard reports a model-read card nobody matched. Nothing is
+// written: the staging call that follows turns it into an approval, and the
+// contact exists only once a human accepts that.
+func proposeModelReadCard(ctx context.Context, tx pgx.Tx, source ids.UUID, result *VCardResult) error {
+	narrowed, err := sourceIsNarrowed(ctx, tx, source)
+	if err != nil {
+		return err
+	}
+	if narrowed {
+		result.Outcome = VCardSkipped
+		result.Reason = vcardSourceNarrowed
+		return nil
+	}
+	result.Outcome = VCardProposed
+	return nil
+}
+
+// attachVCardEmployer creates the company the card names and the employment
+// edge to it. A card with no COMPANY leaves the contact unemployed, which is a
+// contact.
+func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) error {
+	name := strings.TrimSpace(entry.Company)
+	if name == "" {
+		return nil
+	}
+	companyID, err := s.employerByName(ctx, tx, name)
+	if err != nil {
+		return err
+	}
+	role := strings.TrimSpace(entry.Title)
+	edge := CreateRelationshipInput{
+		Kind:      employmentKind,
+		ContactID: &contactID,
+		CompanyID: companyID,
+		Source:    vcardSource,
+	}
+	if role != "" {
+		edge.Role = &role
+	}
+	_, err = s.CreateRelationshipTx(ctx, tx, edge)
+	return err
+}
+
+// employerByName finds the company the card names, or creates it.
+//
+// Without the lookup, two cards from one company create two companies.
+// Every employee of Acme arrives with `ORG:Acme`. A create-only path turns a
+// ten-card export into ten Acmes that a human then has to merge.
+func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*ids.CompanyID, error) {
+	var existing ids.CompanyID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM company
+		 WHERE lower(display_name) = lower($1) AND archived_at IS NULL AND merged_into_id IS NULL
+		 ORDER BY created_at
+		 LIMIT 1`, name).Scan(&existing)
+	switch {
+	case err == nil:
+		return &existing, nil
+	case errors.Is(err, pgx.ErrNoRows):
+		company, createErr := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
+			DisplayName: name,
+			Source:      vcardSource,
+		}, CustomColumns{})
+		if createErr != nil {
+			return nil, createErr
+		}
+		made := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+		return &made, nil
+	default:
+		return nil, fmt.Errorf("looking for the card's employer: %w", err)
+	}
+}

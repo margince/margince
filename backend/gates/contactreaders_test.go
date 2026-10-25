@@ -29,7 +29,10 @@ package gates
 
 import (
 	"go/ast"
+	"maps"
+	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -65,6 +68,8 @@ var contactGate = objectGate{
 // grants do not cover â so a read projecting r.contact_id with the contact
 // joined for liveness and row scope has taken the grant its payload sits behind.
 var predicateContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/capture/privatesenderclause.go:PrivateSenderClause":             "the reconnect lane's exclusion: `contact` appears only inside NOT EXISTS, to ask whether the row carries a relationship mark. Nothing is selected, and removing the condition could only show more rows in a lane the caller is already gated on",
+	"internal/shared/kernel/relationshipmark/relationshipmark.go:ContactNotMarkedSQL": "whether the contact an id names carries a relationship mark: the contact appears only inside EXISTS. Nothing is selected, and removing the condition could only show more rows to a reader already gated on the surface it filters",
 	"internal/modules/capture/strangermail.go:senderWasStrangerTx":                    "whether a mail's sender was already a live contact when it arrived, asked by the connector sink to stamp one boolean on the activity. The contact appears only inside EXISTS; nothing about the contact is selected, and the boolean only lowers the mail's rank",
 	"internal/modules/activities/messageidentity.go:copyEchoLinks":                    "holds the contacts an absorbed echo is filed under FOR SHARE and skips an archived one; it selects a constant and returns no contact column, and removing the condition could only copy more links",
 	"internal/modules/collections/tagsuggestion.go:tagSuggestionStandsClause":         "whether a tag suggestion still stands: the contact appears only inside EXISTS, to ask that it is live and not yet tagged. Nothing is selected; composed into the system-only superseding pass and into the gated visible-suggestions read, where removing it could only show more suggestions",
@@ -81,8 +86,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 	"internal/compose/network/companycoverage.go:visibleAccountStakeholders":          "the stakeholder ids and roles behind that same coverage, under auth.EdgeReadScope and the contact ROW scope. Reading an edge discloses its endpoints AS A PAIR, which is what relationship.read governs; no contact column beyond the id the edge already carries is selected",
 	"internal/compose/signalextractrule.go":                                           "the visibility roll-up inside the conversation fold the thread extraction reads: a contact's visibility and owner_id decide whether a thread counts as shared or as one owner's. No contact column is selected and the statement produces a thread key",
 	"internal/modules/activities/relinkparticipants.go:participantRelinkQuery":        "the shared relink plan uses contact rows only to scope existing activity participants; it selects no contact columns. The write changes participant edges, never contacts. The preview returns those same edges after the activity content gate and withholds blind-copy participants from anyone except the sender",
-	"internal/modules/activities/emailparties.go:readEmailParties":                    "the parties on one email, `LEFT JOIN contact` so a party with no contact record still appears. The projection is the activity's own participant rows under the activity grant; the join adds liveness, not a column",
-	"internal/modules/activities/followupcomplete.go:completeOpenSystemTasksLinkedBy": "`a.created_at <= (SELECT p.created_at FROM contact p WHERE p.id = $n)` — the cut-off that stops a follow-up task older than the contact being completed by it. A timestamp inside the completing write's own predicate",
+	"internal/modules/activities/followupcomplete.go:completeOpenSystemTasksLinkedBy": "`a.created_at <= (SELECT p.created_at FROM contact p WHERE p.id = $n)` — the cut-off that stops a follow-up task older than the contact being completed by it. A timestamp inside the completing write's own predicate, on the workflow pass off the outbox; nothing of the contact is selected. The grant it reaches through UpdateActivity guards a later read, not this one",
 	"internal/modules/activities/lasttouch.go:lastTouchEligibility":                   "the contact arm of the cold-queue selector, the twin of the company, deal and lead arms the other censuses file the same way: the contact's liveness and age decide which QUEUE ENTRIES surface, and no contact column reaches the caller",
 	"internal/modules/activities/waitingsql.go":                                       "the contact arm of the waiting-thread worklist, off the gated link join. What reaches the caller is the thread their own activity scope already admits",
 	"internal/modules/consent/confirmcard.go:confirmCardFor":                          "the card a data subject is shown of THEIR OWN record, behind a confirm link, so they can see what the installation holds before confirming it. The caller is the subject holding a bearer token that proves their mailbox and no CRM grant at all, so a contact grant is not a question that can be asked of them; what bounds the read is that it resolves from the token's own contact",
@@ -122,6 +126,10 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/dedupecompanyevidence.go:readCompanyEvidence":    "the second-fact check of the company dedupe name lane joins contact only to count one employed at both companies that every seat can see (auth.EverySeatVisible), so it discloses no private employment. Nothing of the contact is selected: one boolean per rival decides whether a review pair is filed or kept, under the callers of fuzzyCompany and the system-only nightly re-check",
+	"internal/compose/company360/viewbaseline.go":                               "the backfill of the per-type record keys asks only whether the contact its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no contact column leaves the statement",
+	"internal/modules/signals/entitykeys.go":                                    "the backfill of the per-type record keys asks only whether the contact its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no contact column leaves the statement",
+	"internal/modules/weeklyplan/linkedkeys.go":                                 "the backfill of the per-type record keys asks only whether the contact its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no contact column leaves the statement",
 	"internal/modules/contacts/deduperecheck.go:readContactSide":                "the nightly duplicate re-check reads both contacts of an open pair, under the system principal behind auth.RequireSystem, to re-score it. Its only effect is whether the pair stays on the review queue; no contact column reaches any caller",
 	"internal/modules/privacy/purge.go:anonymiseOneContact":                     "the purge's scrub locks the one contact it is about to anonymise, FOR UPDATE, so the recheck and the scrub see the same row. It selects a constant and nothing of the contact; the caller already holds the contact/delete grant AnonymiseContacts requires",
 	"internal/modules/privacy/reportingquestions.go:leadTwinOf":                 "Subject access and erasure follow a rights-case subject to the leads they were before promotion, merge or conversion, the same leads erasure wipes; the ids stay inside that export or erasure.",
@@ -131,16 +139,16 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/activities/meetingcounterparty.go:HeldMeetingCounterparties": "the held-meeting walk Deal Scout reads as the system principal: a participant's contact is joined only for liveness on the way to their employer, and no contact column is selected — what leaves is an (activity, company) pair",
 
 	"internal/modules/capture/replyevidence.go:AnsweredContactsTx":                  "the verdict worker's reconciling pass, under the system principal: ids, owners and addresses of owner-scoped contacts whose owner has been answered, handed straight to the promotion that re-checks them. Work to do rather than a contact anyone is shown",
+	"internal/modules/capture/correspondenceevidence.go:MarkedContactsWithMailTx":   "the verdict worker's mark-lifting pass, under the system principal: ids and addresses of contacts carrying a mark the sender check set, handed straight to the clearing that re-checks each. Work to do rather than a contact anyone is shown",
 	"internal/compose/noticecaseopen.go:openFor":                                    "the notice consumer's own pass under the system principal: it locks the contact and reads only whether it is archived, so a withdrawn record is not given a duty. Nothing about the contact leaves",
 	"internal/compose/captureofflinedemo.go:fillParties":                            "the offline capture demo's fixture parties, read to seed a mailbox that has something to capture against. Demo seeding rather than a product read path",
 	"internal/modules/capture/digestcounts.go:readDigestCounts":                     "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
-	"internal/modules/capture/sinkpersonalparts.go:senderIsPersonalTx":              "whether a personal verdict may strip a captured message's files: `contact` appears only in a NOT EXISTS that keeps a correspondence contact's files, mirroring the noise-mail scope. A boolean on the capture pass; nothing of the contact is selected",
+	"internal/modules/capture/sinkpersonalparts.go:senderIsPersonalForTx":           "whether a personal verdict may strip a captured message's files: `contact` appears only in a NOT EXISTS that keeps a correspondence contact's files, mirroring the noise-mail scope. A boolean on the capture pass; nothing of the contact is selected",
 	"internal/modules/capture/noisemailscope.go":                                    "the noise-mail scope fragment: which captured mail counts as noise, reaching the contact for liveness. A clause on the capture pass, never a projection",
 	"internal/modules/capture/purgeselect.go:SelectPurgeableContactsTx":             "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
 	"internal/modules/contacts/captureorigin.go:CaptureMintedForSeatTx":             "`SELECT p.id` — which of the candidates a seat's own mailbox purge already found are contacts capture made for that seat and nobody worked on since. It runs inside that purge, after its own permission check, and its only effect is to REMOVE contacts from what the purge anonymises. Ids only, never a column of the contact",
 	"internal/modules/capture/sinkensure.go:priorDispositionTx":                     "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
-	"internal/modules/capture/sinkmaillinks.go:mailParticipantsWithContacts":        "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
-	"internal/modules/capture/sinkmeetinglinks.go:meetingParticipantsWithContacts":  "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
+	"internal/modules/capture/participantfiling.go":                                 "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
 	"internal/modules/capture/sinkpersonal.go:ContactsOrphanedByPrivacyTx":          "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
 	"internal/modules/capture/sinkreply.go:channelReplyContact":                     "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
 	"internal/modules/capture/sinkreply.go:mailReplyContact":                        "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
@@ -156,9 +164,11 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/contactattachlock.go:lockContactForAttach":           "takes the contact's row lock before an employment edge is attached, so two importers cannot plant conflicting edges. Inside each attaching write",
 	"internal/modules/contacts/contactprivate.go:CaptureOnlyHoldersOfAddressTx":     "which capture-only contacts hold an address, so a privacy retraction knows what to withdraw. Reached from the confidentiality retraction pass under its own principal",
 	"internal/modules/contacts/contactprivate.go:RetractCaptureOnlyContactTx":       "the retraction itself, in that same pass",
-	"internal/modules/contacts/creatededupe.go:recordIfReview":                      "the near-match scan a contact write owes its review queue. Its callers are writes, and what it produces is a review row inside the caller's transaction",
-	"internal/modules/contacts/ensurerecords.go:fileReviewPair":                     "the same review row on the CAPTURE path, inside the ensure's own transaction and reached only after that ensure has created the contact. The one column it reads is the incumbent's full_name, and it is read to be WRITTEN into the pair's evidence as the detection-time snapshot a reviewer compares against — never returned to a caller and never rendered to whoever's mail triggered the capture. The queue that later shows it carries its own gate",
+	"internal/modules/contacts/creatededupe.go:record":                              "the near-match scan a contact write owes its review queue. Its callers are writes, and what it produces is a review row inside the caller's transaction",
+	"internal/modules/contacts/ensurerecords.go:fileCaptureReview":                  "the same review row on the CAPTURE path, inside the ensure's own transaction and reached only after that ensure has created the contact. The one column it reads is the incumbent's full_name, and it is read to be WRITTEN into the pair's evidence as the detection-time snapshot a reviewer compares against — never returned to a caller and never rendered to whoever's mail triggered the capture. The queue that later shows it carries its own gate",
 	"internal/modules/contacts/dedupe.go:fuzzyContact":                              "the fuzzy arm of that same scan, behind Resolve on the capture path",
+	"internal/modules/contacts/dedupeaddressvariant.go:addressVariantContacts":      "the address-variant arm of that same scan: the contact holding an address that differs only by a plus tag. Reached only from callers that create and opt into review lanes, and its id becomes a review row or a possible-duplicate answer whose own visibility check names it",
+	"internal/modules/contacts/signaturedisplay.go:followSignatureDisplay":          "reads the name columns and display of the contact a signature was just applied to, inside the write that applied it, only to decide whether the display follows the printed name; applySignature asked auth.Require first and nothing is returned to a caller",
 	"internal/modules/contacts/displaynamerefresh.go:RefreshDisplayNameTx":          "recomputes a contact's display name after its parts change, inside the write that changed them",
 	"internal/modules/contacts/domaintriage.go:OnDomain":                            "the contacts a domain triage decision applies to, inside the resolving write",
 	"internal/modules/contacts/domaintriageresolve.go:domainEmploymentCandidates":   "which contacts a resolved domain owes an employment edge, inside that same write and the backlog sweep",
@@ -168,7 +178,7 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/enrichment.go:EnrichmentFence":                       "the fence that stops two enrichments running on one subject, inside the holding write",
 	"internal/modules/contacts/enrichment.go:SubjectNameOnly":                       "the subject's name for an enrichment request, on that same path",
 	"internal/modules/contacts/ensurenamefill.go:completeContactName":               "fills a contact's missing name from a captured participant, inside the capture write",
-	"internal/modules/contacts/displaynameorigin.go:captureGuessedDisplayNamesTx":   "`SELECT p.id` — which contacts still show the display name capture guessed: the guard that stops the name fill and the display-name repair overwriting a name somebody chose, and the repair's own selector. Ids only, never a column of the contact",
+	"internal/modules/contacts/displaynameorigin.go:captureGuessedDisplayNamesTx":   "`SELECT p.id` — which contacts still show the display name capture guessed: the guard that stops the name fill and the display-name repair overwriting a name somebody chose, and the repair's own selector, including the initials task's. Ids only, never a column of the contact",
 	"internal/modules/contacts/meetingcohort.go:linkAttendedMeetings":               "links the meetings a repaired cohort attended, inside the repair's transaction",
 	"internal/modules/contacts/participantname.go:FillParticipantNamesTx":           "fills participant names across a captured thread, on the capture path",
 	"internal/modules/privacy/erasure.go:anonymizeSubjectRows":                      "runs as the system principal on a request or sweep a human already authorised, and the rows it reaches are bounded to the subject the erasure, retention rule or export is about. Respecting a caller's grants here would under-delete or under-export, which is the defect the pass exists to prevent",
@@ -196,19 +206,24 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 // where a reviewer checks it â this census resolves gates FORWARD and cannot
 // resolve them caller-ward, because the call graph is by NAME.
 var calleeGatedContactReads = gatekit.Waive(map[string]string{
-	"internal/modules/contacts/unarchive.go":                                            "the un-archive shapes: the contact's label and state under FOR UPDATE, and contact liveness inside a relationship restore. Read only through RestoreContactTx and RestoreCompanyTx, which ask auth.Require for the delete grant and auth.EnsureWritable on the row first (ensureRestorable); the label goes back only to the caller who may restore the record",
-	"internal/modules/privacy/suppressionreapply.go:contactsMatchingSuppression":        "every live address in the installation, hashed against the erasure-suppression list to find subjects a restore or a re-import brought back, and never returned — the ids go straight into EraseContact. Its one caller is ReapplySuppressions, which asks auth.Require(ctx, \"contact\", delete) before reaching it, and EraseContact asks the same gate again per subject under its own lock. It is deliberately installation-wide and unscoped by row: the suppression list has no tenant predicate and nothing for one to key on (storekit/suppression.go on ADR-0091 and ADR-0061), and a pass that only looked at the rows one seat may see would leave a resurrected subject standing wherever that seat cannot reach — which is most of the installation, and exactly where nobody would notice",
-	"internal/compose/magic/undoversion.go":                                             "the version an undo on the magic receipt is sent with, for the restore route's If-Match; no other column. Reached only from magic.Service.Read and LineRecords, and only for a record their done lane already placed through doneForType, which asks auth.Require for the object grant and renders auth.ScopeClauseFor on the same row; the restore write re-asks everything under its own lock",
-	"internal/modules/contacts/contactrenamerecheck.go:recheckContactNameForDuplicates": "the renamed contact's own name and addresses, read to score it against the rest of the workspace for the duplicate queue and never returned. Reached only from UpdateContact through recheckIfRenamed; UpdateContact asks auth.Require(ctx, \"contact\", update) and auth.EnsureChangeable on the row first",
-	"internal/modules/contacts/contactvisibility.go:patchNarrowingByHand":               "the prior narrowing reason, read only to write its audit before-image. Reached from UpdateContact through guardVisibilityWrite; UpdateContact asks auth.Require(ctx, \"contact\", update) and auth.EnsureWritable on the row first",
-	"internal/modules/contacts/narrowing.go:recordNarrowingTx":                          "the prior narrowing reason of the row an ensure just resolved, read to decide whether a decision may overwrite it and never returned. Its one caller is ensureContact, which asks auth.Require(ctx, \"contact\", create) first",
-	"internal/compose/contact360/commercial.go:committeeFor":                            "the buying committee on a contact page: names, roles and photos of the other seats on the deal. commercialSection asks requireRead(ctx, \"contact\") — the package-local wrapper over auth.Require — before reaching it",
-	"internal/compose/introseams.go:accountContacts":                                    "the contacts offered as an introduction route. Its caller asks the contact object gate before composing the seam",
-	"internal/compose/meetingbrief/meeting.go":                                          "the pre-meeting brief's room statement. scopeFor asks auth.ReadGranted for each object it scopes, so a caller with no contact grant gets that join matched away; the census cannot see it because the object arrives as a PARAMETER",
-	"internal/compose/network/contactgraphcompany.go:readCompanyContacts":               "the colleagues band of the contact graph, behind the graph assembly's own contact gate",
-	"internal/modules/contacts/linkedinmatch.go:emailMatchCandidates":                   "the address arm of the LinkedIn match. Its one caller chain is matchInTx ← runLinkedInMatch, which asks auth.Require(ctx, \"contact\", read) before either tier runs; the row scope and the per-contact write clause travel inside the SELECT itself",
-	"internal/modules/search/graphactivitysubjects.go:employerSubjects":                 "the employer band beside it, which walks contacts to reach the companies they work for and asks auth.ReadGranted for the company half itself",
-	"internal/modules/search/graphactivitysubjects.go:participantSubjects":              "the participant band of a record's context — contact ids and names. Its enclosing read asks the contact object gate before assembling the bands",
+	"internal/modules/contacts/initialsrepair.go:mailsLinkedAtCreateTx":          "the mails linked to each contact of one page in its create transaction, read only to judge the initials guess. Its one caller is InitialsNamePageTx, which asks auth.RequireSystem and auth.Require(ctx, \"contact\", read) first",
+	"internal/modules/contacts/heldcontact.go:lockHolder":                        "the owner of the contact already holding a refused address, read only to address the share request and never returned: the refusal names no contact and no owner. Reached only from AskHolderToShare after a create, replace, promotion or card import refused under its own auth.Require(ctx, \"contact\", create) or auth.EnsureWritable",
+	"internal/modules/contacts/enrichsignature.go:olderMailMayFillTitleTx":       "whether an older mail may fill the contact's title: it is blank and no colleague edited or cleared it; no contact column is returned. Its one caller is applySignature, which asks auth.Require(ctx, \"contact\", update) and holds the subject with auth.HoldWritableLive first",
+	"internal/modules/contacts/signatureretraction.go:restoreSignatureDisplayTx": "the display name a signature's name replaced, read to put it back and never returned. Its one caller is takeBackSignatureFieldsTx, which asks auth.Require(ctx, \"contact\", update) and holds the contact first",
+	"internal/modules/contacts/unarchive.go":                                     "the un-archive shapes: the contact's label and state under FOR UPDATE, and contact liveness inside a relationship restore. Read only through RestoreContactTx and RestoreCompanyTx, which ask auth.Require for the delete grant and auth.EnsureWritable on the row first (ensureRestorable); the label goes back only to the caller who may restore the record",
+	"internal/modules/privacy/suppressionreapply.go:contactsMatchingSuppression": "every live address in the installation, hashed against the erasure-suppression list to find subjects a restore or a re-import brought back, and never returned — the ids go straight into EraseContact. Its one caller is ReapplySuppressions, which asks auth.Require(ctx, \"contact\", delete) before reaching it, and EraseContact asks the same gate again per subject under its own lock. It is deliberately installation-wide and unscoped by row: the suppression list has no tenant predicate and nothing for one to key on (storekit/suppression.go on ADR-0091 and ADR-0061), and a pass that only looked at the rows one seat may see would leave a resurrected subject standing wherever that seat cannot reach — which is most of the installation, and exactly where nobody would notice",
+	"internal/compose/magic/undoversion.go":                                      "the version an undo on the magic receipt is sent with, for the restore route's If-Match; no other column. Reached only from magic.Service.Read and LineRecords, and only for a record their done lane already placed through doneForType, which asks auth.Require for the object grant and renders auth.ScopeClauseFor on the same row; the restore write re-asks everything under its own lock",
+	"internal/modules/contacts/contactrenamerecheck.go:readContactSubject":       "the contact's own name and addresses, read to score it against the rest of the workspace for the duplicate queue and never returned. Reached from UpdateContact through recheckIfEdited, which asks auth.Require(ctx, \"contact\", update) and auth.EnsureChangeable on the row first, from ApplyProviderClaims after a bought address lands, which holds the subject with auth.HoldWritableLive first, and from the duplicate scan, which runs under the system principal and asks the contact read grant first (newDedupeScanner)",
+	"internal/modules/contacts/contactvisibility.go:patchNarrowingByHand":        "the prior narrowing reason, read only to write its audit before-image. Reached from UpdateContact through guardVisibilityWrite; UpdateContact asks auth.Require(ctx, \"contact\", update) and auth.EnsureWritable on the row first",
+	"internal/modules/contacts/narrowing.go:recordNarrowingTx":                   "the prior narrowing reason of the row an ensure just resolved, read to decide whether a decision may overwrite it and never returned. Its one caller is ensureContact, which asks auth.Require(ctx, \"contact\", create) first",
+	"internal/compose/contact360/commercial.go:committeeFor":                     "the buying committee on a contact page: names, roles and photos of the other seats on the deal. commercialSection asks requireRead(ctx, \"contact\") — the package-local wrapper over auth.Require — before reaching it",
+	"internal/compose/introseams.go:accountContacts":                             "the contacts offered as an introduction route. Its caller asks the contact object gate before composing the seam",
+	"internal/compose/meetingbrief/meeting.go":                                   "the pre-meeting brief's room statement. scopeFor asks auth.ReadGranted for each object it scopes, so a caller with no contact grant gets that join matched away; the census cannot see it because the object arrives as a PARAMETER",
+	"internal/compose/network/contactgraphcompany.go:readCompanyContacts":        "the colleagues band of the contact graph, behind the graph assembly's own contact gate",
+	"internal/modules/contacts/linkedinmatch.go:nameEmployerCandidatesSQL":       "the name arm of the LinkedIn match, run by nameMatchCandidates. Its one caller chain is matchInTx ← runLinkedInMatch, which asks auth.Require(ctx, \"contact\", read) before either tier runs",
+	"internal/modules/contacts/linkedinmatch.go:emailMatchCandidates":            "the address arm of the LinkedIn match. Its one caller chain is matchInTx ← runLinkedInMatch, which asks auth.Require(ctx, \"contact\", read) before either tier runs; the row scope and the per-contact write clause travel inside the SELECT itself",
+	"internal/modules/search/graphactivitysubjects.go:employerSubjects":          "the employer band beside it, which walks contacts to reach the companies they work for and asks auth.ReadGranted for the company half itself",
+	"internal/modules/search/graphactivitysubjects.go:participantSubjects":       "the participant band of a record's context — contact ids and names. Its enclosing read asks the contact object gate before assembling the bands",
 })
 
 // ruledContactReads: a DISCLOSING read the product has ruled needs no contact grant.
@@ -260,21 +275,15 @@ func readsContactTable(filePath string, file *ast.File) bool {
 func TestEveryReaderOfTheContactTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 	t.Parallel()
 	files := contactReaderScope.Files(t)
-	gated := contactGate.gatedFunctionsByPackage(t, files)
+	walk := contactGate.walkPackages(t, files)
 	consts := constantTable{}
 
 	var satisfied int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
 		for _, site := range contactGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := parsed.Path
-			if site.function != "" {
-				subject += ":" + site.function
-			}
-			carriesGate := site.holdsGate || callsAGatedHelper(site.calls, gated[pkg])
-			if site.function == "" {
-				carriesGate = site.holdsGate || contactGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
-			}
+			subject := site.subject(parsed.Path)
+			carriesGate := walk.carries(t, contactGate, parsed, site, consts.of(t, pkg))
 			verdict := verdictIn(t, subject, contactVerdicts)
 
 			switch {
@@ -312,4 +321,133 @@ func TestEveryReaderOfTheContactTableCarriesTheObjectGateOrAVerdict(t *testing.T
 	notTheContactTable.AssertAllMatched(t)
 	ruledContactReads.AssertAllMatched(t)
 	deferredContactReads.AssertAllMatched(t)
+}
+
+// spentGateFixture holds readers that gate only themselves: a contact read
+// whose call chain reaches one, and a read handed a statement the walk cannot see.
+const spentGateFixture = `package fixture
+
+func selfGated(ctx context.Context, tx pgx.Tx) {
+	if !auth.ReadGranted(ctx, "contact") {
+		return
+	}
+	tx.Query(ctx, offeredSQL)
+}
+
+const offeredSQL = "SELECT p.full_name FROM contact p"
+
+func wrapper(ctx context.Context, tx pgx.Tx) { selfGated(ctx, tx) }
+
+func cutOff(ctx context.Context, tx pgx.Tx) {
+	tx.QueryRow(ctx, "SELECT p.created_at FROM contact p WHERE p.id = $1")
+	wrapper(ctx, tx)
+}
+
+func visibleClause(ctx context.Context) string {
+	if !auth.ReadGranted(ctx, "contact") {
+		return "false"
+	}
+	return "p.archived_at IS NULL"
+}
+
+func scoped(ctx context.Context, tx pgx.Tx) {
+	tx.Query(ctx, "SELECT p.full_name FROM contact p WHERE "+visibleClause(ctx))
+}
+
+func runsGiven(ctx context.Context, tx pgx.Tx, statement string) {
+	if !auth.ReadGranted(ctx, "contact") {
+		return
+	}
+	tx.Query(ctx, statement)
+}
+
+func readsThenRunsGiven(ctx context.Context, tx pgx.Tx) {
+	tx.QueryRow(ctx, "SELECT p.title FROM contact p WHERE p.id = $1")
+	runsGiven(ctx, tx, "")
+}
+
+func runsStray(ctx context.Context, tx pgx.Tx) { tx.Query(ctx, straySQL) }
+
+func flushedClause(ctx context.Context, pipe redis.Pipeliner) string {
+	pipe.Exec(ctx)
+	if !auth.ReadGranted(ctx, "contact") {
+		return "false"
+	}
+	return "true"
+}
+
+func scopedAfterFlush(ctx context.Context, tx pgx.Tx, pipe redis.Pipeliner) {
+	tx.Query(ctx, "SELECT p.phone FROM contact p WHERE "+flushedClause(ctx, pipe))
+}
+
+func runsBare(ctx context.Context, db *sql.DB, statement string) {
+	if !auth.ReadGranted(ctx, "contact") {
+		return
+	}
+	db.Query(statement)
+}
+
+func readsThenRunsBare(ctx context.Context, tx pgx.Tx, db *sql.DB) {
+	tx.QueryRow(ctx, "SELECT p.city FROM contact p WHERE p.id = $1")
+	runsBare(ctx, db, "")
+}
+`
+
+// strayFragmentFixture holds a fragment beside gated-looking functions that
+// never name it. Its one runner, in the other file, is ungated.
+const strayFragmentFixture = `package fixture
+
+const straySQL = "SELECT p.full_name FROM contact p"
+
+func strayClause(ctx context.Context) string {
+	if !auth.ReadGranted(ctx, "contact") {
+		return "false"
+	}
+	return "true"
+}
+
+func scopedTitle(ctx context.Context, tx pgx.Tx) {
+	tx.Query(ctx, "SELECT p.title FROM contact p WHERE "+visibleClause(ctx))
+}
+
+func selfGatedEmail(ctx context.Context, tx pgx.Tx) {
+	if !auth.ReadGranted(ctx, "contact") {
+		return
+	}
+	tx.Query(ctx, "SELECT p.email FROM contact p")
+}
+`
+
+func TestAReaderGatingOnlyItselfVouchesForNoCaller(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	var files []gatekit.ParsedFile
+	for name, source := range map[string]string{"spent.go": spentGateFixture, "stray.go": strayFragmentFixture} {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+			t.Fatalf("writing the fixture: %v", err)
+		}
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatalf("parsing the fixture: %v", err)
+		}
+		files = append(files, gatekit.ParsedFile{Path: filepath.ToSlash(path), File: file})
+	}
+	walk := contactGate.walkPackages(t, files)
+	want := map[string]bool{
+		"spent.go:offeredSQL": true, "spent.go:cutOff": false, "spent.go:scoped": true,
+		"spent.go:readsThenRunsGiven": false, "spent.go:scopedAfterFlush": true,
+		"spent.go:readsThenRunsBare": false, "stray.go:straySQL": false,
+		"stray.go:scopedTitle": true, "stray.go:selfGatedEmail": true,
+	}
+	got := map[string]bool{}
+	for _, parsed := range files {
+		for _, read := range contactGate.readSites(parsed, map[string]string{}) {
+			got[filepath.Base(read.subject(parsed.Path))] = walk.carries(t, contactGate, parsed, read, map[string]string{})
+		}
+	}
+	if !maps.Equal(got, want) {
+		t.Errorf("gated reads = %v, want %v: a callee's gate covers a caller only when the callee runs no "+
+			"read of its own, and a fragment only through a function that names it", got, want)
+	}
 }

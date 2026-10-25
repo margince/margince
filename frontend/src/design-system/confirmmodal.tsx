@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { Children, useId } from "react";
 import { useT } from "../i18n";
 import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
+import { refuseUnreadableField } from "./formvalidity";
 import { Heading } from "./heading";
 import type { ModalIntent } from "./modal";
 import { AutonomyDot } from "./trust";
@@ -90,6 +91,9 @@ export function ConfirmModal({
   const close = () => {
     if (!pending) onClose();
   };
+  const confirm = (event: MouseEvent<HTMLButtonElement>) => {
+    if (!refuseUnreadableField(event.currentTarget)) onConfirm();
+  };
   return (
     <Modal
       open={open}
@@ -135,7 +139,7 @@ export function ConfirmModal({
             <span className="actions-split">
               <Button
                 variant={confirmVariant}
-                onClick={onConfirm}
+                onClick={confirm}
                 pending={pending}
                 disabled={confirmDisabled}
                 reason={confirmReason}
@@ -147,7 +151,7 @@ export function ConfirmModal({
           ) : (
             <Button
               variant={confirmVariant}
-              onClick={onConfirm}
+              onClick={confirm}
               pending={pending}
               disabled={confirmDisabled}
               reason={confirmReason}

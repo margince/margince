@@ -15,6 +15,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -27,23 +29,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// leadManualFactorBands is the §24 catalog: the factors a human may supply
-// and the bands each accepts, with the points a band contributes. Closed by
-// construction — a factor outside it is a 422, not a new column.
-var leadManualFactorBands = map[string]map[string]int{
-	"web_traffic": {"low": 0, "medium": 4, "high": 8},
-	"employees":   {"1-10": 0, "11-50": 4, "51-200": 8, "201+": 10},
-	"budget_hint": {"none": -4, "unknown": 0, "some": 4, "confirmed": 10},
-}
-
 // The audit and problem-field keys this surface spells more than once.
 // Named so the audit trail and the 422 body cannot drift apart from the
 // wire field they both describe.
 // Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
 const (
-	auditKeyManualSignal = "manual_signal"
-	fieldKeyFactor       = "factor"
-	fieldKeyReason       = "reason"
+	auditKeyManualSignal  = "manual_signal"
+	auditKeyManualSignals = "manual_signals"
+	fieldKeyFactor        = "factor"
+	fieldKeyReason        = "reason"
 )
 
 // SetLeadManualSignalInput is one human-supplied factor.
@@ -60,13 +54,19 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return crmcontracts.LeadManualSignal{}, err
 	}
-	bands, known := leadManualFactorBands[in.Factor]
+	points, known, valid := leadSignalPoints(in.Factor, in.Band)
 	if !known {
 		return crmcontracts.LeadManualSignal{}, &UnknownLeadFactorError{Factor: in.Factor}
 	}
-	points, valid := bands[in.Band]
 	if !valid {
 		return crmcontracts.LeadManualSignal{}, &InvalidLeadBandError{Factor: in.Factor, Band: in.Band}
+	}
+	// The store owns the evidence rule so every caller, HTTP or not, meets it.
+	// The marker and the retired stock sentences are refused too, so a cached
+	// older form cannot recreate evidence-less rows after the repair ran.
+	in.Reason = strings.TrimSpace(in.Reason)
+	if in.Reason == "" || in.Reason == ManualSignalNoEvidence || slices.Contains(stockManualSignalReasons, in.Reason) {
+		return crmcontracts.LeadManualSignal{}, &ReasonRequiredError{}
 	}
 	// set_by is stamped from the authenticated principal, never a request
 	// field: the whole value of a manual factor is knowing whose judgement
@@ -222,7 +222,7 @@ func (s *Store) ClearLeadManualSignal(ctx context.Context, leadID ids.LeadID, fa
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return err
 	}
-	if _, known := leadManualFactorBands[factor]; !known {
+	if _, known, _ := leadSignalPoints(factor, ""); !known {
 		return &UnknownLeadFactorError{Factor: factor}
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {

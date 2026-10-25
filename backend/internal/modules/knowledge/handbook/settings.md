@@ -48,7 +48,7 @@ Things for the whole company in Margince each have one settings page.
 ### Which settings page do I need for sales and data?
 Sales and data settings in Margince each have one page.
 - Change deal stages: **Pipelines**.
-- Lead sources, reasons to drop a lead, and the first-reply target: **Lead handling**.
+- Lead origins, reasons to drop a lead, and the first-reply target: **Lead handling**.
 - Where a deal came from: **Acquisition sources**.
 - Won and lost questions: **Outcome reviews**.
 - Add a custom field: **Fields**. Rename a tag on every record: **Tags**.
@@ -113,7 +113,7 @@ The rest of Margince settings is six groups after **You**. Which pages you see, 
 
 The Company profile page in Settings (group **Company**) holds your own company's name, currency and business facts. It is an administrator's page: Admin and Ops reach it, and a sales seat does not. Sign-in and the Google and Microsoft apps have their own **Sign-in and apps** page in the same group.
 
-The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the time zone and base currency, which Admin and Ops change.
+The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the time zone and base currency, which Admin and Ops change. On the **Installation** card, three **Calling** switches (**WhatsApp chat**, **Telegram chat** and **Zalo chat**) show or hide the chat links beside phone numbers. All three are on by default, and only Admin and Ops can change them. See [How do I call a contact?](records.md#how-do-i-call-a-contact).
 
 **Date format** and **Time format** sit on the **Installation** card too, and set the notation for formatted dates and times across the interface. For dates the choices are **Use interface language**, **DD.MM.YYYY · 23.09.2026**, **MM/DD/YYYY · 09/23/2026** and **YYYY-MM-DD · 2026-09-23**. For times they are **Use interface language**, **24-hour · 17:30** and **12-hour · 05:30 pm**. Native date fields use the browser's own date picker and date format. Stored dates and time zones stay the same.
 
@@ -128,7 +128,7 @@ Seeing the rates needs the permission to read exchange rates. The Admin and Ops 
 
 **Legal entities** lists the companies you work under. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default.
 
-To add another, an Admin chooses **New legal entity** and types its name, its legal name and a two-letter code such as AT. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. Nothing else in Margince uses the second one yet: offers, booking pages and signatures still show the default.
+To add another, an Admin chooses **New legal entity** and types its name, its legal name and a two-letter code such as AT. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. Offers, booking pages and signatures still show the default.
 
 ## Sign-in and apps
 
@@ -200,10 +200,10 @@ The Sales group in Settings has one page per subject. There are the fields a rec
 - **Stage automation**: the record of how each stage move has gone, before
   Margince moves deals by itself. See
   [The pipeline](the-pipeline.md#stage-automation-the-evidence-before-trusting-a-move).
-- **Lead handling**: lead sources, reasons to drop a lead, and the first-reply
-  target, which is off by default.
+- **Lead handling**: lead origins, reasons to drop a lead, and the first-reply
+  target, which is off by default. Origins add or take away score points.
 - **Acquisition sources**: the business channels a deal can come from. Lead
-  sources, which record how a record came into Margince, are separate.
+  origins, which record where a lead came from, are separate.
 - **Outcome reviews**: questions a seller answers when a deal is won or lost.
   There is one set for won and one for lost.
 - **Responsibility roles**: what a colleague or team looks after on a
@@ -339,8 +339,8 @@ System health and Reset data sit in the **Governance** group, and Data import in
 
 ### Review automatic Home work
 
-In **Data updates**, choose tasks, approval proposals, deal suggestions or message review, then open
-**Preview items**. Each item shows its name, proposed action and reason. **Inspect** opens the
+In **Data updates**, choose tasks, approval proposals, deal suggestions, message review or answered requests, then open **Preview items**.
+Answered requests that Margince closed before it recorded what it read are judged again; a reminder it closed reopens only if work is still owed. Each item shows its name, proposed action and reason. **Inspect** opens the
 evidence you can read. Only work you can currently read is included. Use **Review next page** to continue.
 
 **Apply reviewed changes** starts the reviewed page. The button names how many changes it will

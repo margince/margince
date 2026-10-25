@@ -177,7 +177,7 @@ function TaskStanding({
   if (!step.due_at) {
     return <Badge>{t("co.next.undated")}</Badge>;
   }
-  const late = daysLate(step, asOf);
+  const late = daysLate(step, asOf, zone);
   if (step.overdue) {
     return (
       <Badge tone="danger">

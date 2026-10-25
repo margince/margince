@@ -1,11 +1,10 @@
-import {
-  type QueryClient,
-  useInfiniteQuery,
-  useQuery,
-} from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { unwrap } from "../../lib/problem";
+import { reloadReportingFigures } from "../../lib/reportingfigures";
+
+export { reloadReportingFigures };
 
 export function useReportingPipelines() {
   return useQuery({
@@ -20,17 +19,15 @@ export function useReportingPipelines() {
   });
 }
 
-const EVALUATED_FIGURES = [
-  "reporting-evaluation",
-  "reporting-live",
-  "reporting-forecast",
-];
-
-// A stale evaluation reloads every figure the page draws, so the next read
-// asks against one reading rather than a mix of old and new.
-export function reloadReportingFigures(client: QueryClient) {
-  return client.invalidateQueries({
-    predicate: (query) => EVALUATED_FIGURES.includes(String(query.queryKey[0])),
+// The metric catalog this seat may read, under one query key so every surface
+// that reads it shares one answer.
+export function useReportingCatalog(enabled = true) {
+  return useQuery({
+    queryKey: ["reporting-catalog"],
+    enabled,
+    queryFn: async () => {
+      return unwrap(await api.GET("/analytics/metrics"));
+    },
   });
 }
 

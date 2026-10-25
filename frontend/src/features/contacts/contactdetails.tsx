@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { ADDRESS_FIELDS, addressFrom } from "../../components/companyform";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
@@ -24,7 +25,9 @@ import {
   EMAIL_TYPE_LABEL,
   PHONE_TYPE_LABEL,
 } from "../../format/contactchannels";
+import { primaryPhone } from "../../format/contacturi";
 import { formatDateAbbrev } from "../../format/format";
+import { industryWords } from "../../format/industry";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
@@ -55,8 +58,9 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
   const linkedin =
     typeof contact.social?.linkedin === "string" ? contact.social.linkedin : "";
   const linkedinHref = linkedinUrl(linkedin);
-  const email = primaryOf(contact.emails, (row) => row.email);
-  const phone = primaryOf(contact.phones, (row) => row.phone);
+  const email = contact.primary_email;
+  const emailRow = contact.emails?.find((row) => row.email === email);
+  const phone = primaryPhone(contact.phones);
   const address = [contact.address?.city, contact.address?.country]
     .filter(Boolean)
     .join(", ");
@@ -92,12 +96,12 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
             <>
               <ContactLink
                 kind="email"
-                value={email.email}
+                value={email}
                 record={{ entityType: "contact", entityId: contact.id }}
               />
               <BoughtMark
-                bought={bought.get(`email:${email.id}`)}
-                subject={email.email}
+                bought={emailRow && bought.get(`email:${emailRow.id}`)}
+                subject={email}
               />
             </>
           ),
@@ -107,13 +111,17 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           "phone",
           t("create.phone"),
           phone && (
-            <>
-              <ContactLink kind="phone" value={phone.phone} />
+            <span className="fieldgrid-handle">
+              <ContactLink
+                kind="phone"
+                value={phone.phone}
+                record={{ entityType: "contact", entityId: contact.id }}
+              />
               <BoughtMark
                 bought={bought.get(`phone:${phone.id}`)}
                 subject={phone.phone}
               />
-            </>
+            </span>
           ),
           Boolean(phone),
         ),
@@ -143,7 +151,22 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           </>,
           Boolean(contact.title),
         ),
-        field("address", t("co.address.summary"), address, address !== ""),
+        field(
+          "address",
+          t("co.address.summary"),
+          <>
+            {address}
+            {contact.address_country_mismatch && (
+              <>
+                {" "}
+                <AddressCountryMismatchBadge
+                  mismatch={contact.address_country_mismatch}
+                />
+              </>
+            )}
+          </>,
+          address !== "",
+        ),
       ],
     },
     {
@@ -169,15 +192,6 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
   ];
 }
 
-// The address a rep reaches first: the one marked primary, else the first.
-function primaryOf<Row extends { is_primary?: boolean }>(
-  rows: readonly Row[] | undefined,
-  value: (row: Row) => string,
-): Row | undefined {
-  const live = (rows ?? []).filter((row) => value(row) !== "");
-  return live.find((row) => row.is_primary) ?? live[0];
-}
-
 /**
  * Where they work now, as the catalog's record card. The company's mark and
  * name are the way in, "Current" sits at its end, and what the account is to
@@ -193,7 +207,7 @@ function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
         company.lifecycle && company.lifecycle !== "unknown"
           ? t(`company.lifecycle.${company.lifecycle}`)
           : null,
-        company.industry,
+        company.industry ? industryWords(t, company.industry) : null,
         company.address?.city,
       ]
         .filter(Boolean)
@@ -260,7 +274,11 @@ export function ContactDetails({
           phones: contact.phones?.length
             ? contact.phones.map((phone) => (
                 <span key={phone.phone} className="fieldgrid-handle">
-                  <ContactLink kind="phone" value={phone.phone} />
+                  <ContactLink
+                    kind="phone"
+                    value={phone.phone}
+                    record={{ entityType: "contact", entityId: contact.id }}
+                  />
                   <span className="t-caption">
                     {t(PHONE_TYPE_LABEL[phone.phone_type ?? "work"])}
                   </span>

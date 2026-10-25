@@ -12,3 +12,16 @@
 1792679518_a_colleague_can_take_over_a_promise_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1792734530_an_approval_names_the_conversation_that_staged_it_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1792738779_the_slim_outcome_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792745038_a_reader_can_stop_following_a_contact.down.sql | relationship_nudge_dismissal | only permanent stops are rewritten, at most one row per reader and contact, each chosen by hand, so the set is small
+1792776166_a_mail_says_how_much_of_its_text_was_read_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792779054_a_vendor_verdict_waits_for_a_colleague.up.sql | company_domain_disposition | only domains a site read settled as a mail or hosting vendor are moved, one row each; a workspace corresponds with few such vendors, so the set is a handful of rows
+1792779054_a_vendor_verdict_waits_for_a_colleague.down.sql | company_domain_disposition | only the open vendor questions this migration created are moved back, the same handful of rows
+1792779055_a_vendor_verdict_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792781565_a_settlement_names_the_evidence_it_read.up.sql | * | the procedural bodies are trigger functions that take advisory locks and write no row; the migration adds two empty columns and changes no existing row
+1792842045_an_introduction_can_be_recorded_after_the_fact.down.sql | intro_request | only recorded introductions are deleted, each typed by hand by a colleague, so the set is a handful of rows per contact
+1792842046_a_recorded_introduction_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792863000_every_sender_may_direct_a_send.up.sql | role | updates only the fixed set of system roles, at most three rows per workspace
+1792863000_every_sender_may_direct_a_send.down.sql | role | updates only the fixed set of system roles, at most three rows per workspace
+1792887435_the_sender_kind_check_knows_vendor_pitch.down.sql | capture_pending_counterparty | runs only on a rollback and rewrites only rows judged vendor_pitch since the upgrade, one per sender address
+1792889569_a_stored_country_is_checked_against_its_postal_code.up.sql | * | the procedural bodies are trigger functions that delete the one check row of the record being updated, in tables this migration creates empty; the migration changes no existing row
+1792896282_a_document_link_is_a_row.down.sql | attachment | a rollback deletes only the link rows this release adds, written since the release by live capture and the bounded repair task, at most 25 per captured mail

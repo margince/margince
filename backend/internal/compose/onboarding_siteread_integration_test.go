@@ -60,7 +60,7 @@ func finishOnboardingDraft(t *testing.T, e *integration.Env, read contacts.SiteR
 		{Field: "display_name", Value: "Acme", EvidenceSnippet: "Acme builds onboarding software.", SourceURL: seedURL, Confidence: 0.96},
 		{Field: "offer_summary", Value: "Employee onboarding software", EvidenceSnippet: "Employee onboarding software for growing teams.", SourceURL: seedURL, Confidence: 0.91},
 		{Field: "icp", Value: "Growing RevOps teams", EvidenceSnippet: "Built for growing RevOps teams.", SourceURL: seedURL, Confidence: 0.88},
-		{Field: "registered_address", Value: "Website Road 2", EvidenceSnippet: "Visit us at Website Road 2.", SourceURL: seedURL, Confidence: 0.93},
+		{Field: "registered_address", Value: "Website Road 2, 12345 Example City, Germany", EvidenceSnippet: "Visit us at Website Road 2, 12345 Example City, Germany.", SourceURL: seedURL, Confidence: 0.93},
 	}
 	facts := []contacts.DeepReadFact{
 		{Category: "offering", Field: "service", Value: "Implementation — guided CRM rollout", ValueKey: "implementation", EvidenceSnippet: "Guided CRM rollout", SourceURL: seedURL, Confidence: 0.9},
@@ -528,7 +528,7 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 		t.Fatalf("human conflicts = %v, want offer_summary, icp, and registered_address", conflicts)
 	}
 
-	proposedOffer, proposedICP, proposedAddress := "Employee onboarding software", "Growing RevOps teams", "Website Road 2"
+	proposedOffer, proposedICP, proposedAddress := "Employee onboarding software", "Growing RevOps teams", "Website Road 2, 12345 Example City, Germany"
 	base := contacts.ConfirmCompanySiteReadInput{
 		ReadID: ready.ID, DraftVersion: ready.DraftVersion, ProposalHash: ready.ProposalHash,
 		DisplayName: "Acme",
@@ -560,9 +560,14 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 		{Key: "icp", Action: "accept_proposal"},
 		{Key: "registered_address", Action: "accept_proposal"},
 	}
+	queued := 0
+	e.Contacts.WithGeocodeEnqueue(func(context.Context, pgx.Tx, ids.CompanyID) error { queued++; return nil })
 	confirmed, _, err := e.Contacts.ConfirmCompanySiteRead(human, base, engine.stageOnboardingContacts)
 	if err != nil {
 		t.Fatalf("confirm resolved refresh: %v", err)
+	}
+	if queued != 1 {
+		t.Fatalf("the confirmation queued %d geocode lookups, want 1 for the address it accepted", queued)
 	}
 	sources := map[string]string{}
 	for _, field := range confirmed.ProfileFields {
@@ -580,15 +585,15 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 		t.Fatalf("accepted address = %q/%q, want proposed site_read value",
 			confirmed.Fields["registered_address"], sources["registered_address"])
 	}
-	var storedAddress string
+	var stored [4]string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT address_line1 FROM company WHERE id = $1`,
-			confirmed.CompanyID).Scan(&storedAddress)
+		return tx.QueryRow(context.Background(), `SELECT address_line1, address_postal_code, address_city, address_country
+			FROM company WHERE id = $1`, confirmed.CompanyID).Scan(&stored[0], &stored[1], &stored[2], &stored[3])
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if storedAddress != proposedAddress {
-		t.Fatalf("anchor address_line1 = %q, want %q", storedAddress, proposedAddress)
+	if want := [4]string{"Website Road 2", "12345", "Example City", "DE"}; stored != want {
+		t.Fatalf("anchor address columns = %q, want the accepted address split into %q", stored, want)
 	}
 }
 

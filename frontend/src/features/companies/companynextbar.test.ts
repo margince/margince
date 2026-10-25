@@ -79,11 +79,11 @@ describe("the Next bar's task", () => {
 
 describe("daysLate", () => {
   it("counts whole days past the due date at as_of", () => {
-    expect(daysLate(PROMISE, "2026-08-13T09:00:00Z")).toBe(19);
+    expect(daysLate(PROMISE, "2026-08-13T09:00:00Z", "UTC")).toBe(19);
   });
 
   it("says nothing for a task that is not overdue", () => {
-    expect(daysLate(OTHER, "2026-08-13T09:00:00Z")).toBeUndefined();
+    expect(daysLate(OTHER, "2026-08-13T09:00:00Z", "UTC")).toBeUndefined();
   });
 });
 

@@ -253,6 +253,10 @@ func onlyOne(list []ids.UUID) (ids.UUID, bool) {
 func fullyReadMessages(messages []threadMessage) []ids.UUID {
 	read := make([]ids.UUID, 0, len(messages))
 	for _, message := range messages {
+		// A body the parser did not read in full is never read in full here.
+		if message.Incomplete {
+			continue
+		}
 		if message.UnreadRunes == 0 || (message.QuotedRemainder && textlang.CurrentMessage(message.Body) != strings.TrimSpace(message.Body)) {
 			read = append(read, message.ID)
 		}

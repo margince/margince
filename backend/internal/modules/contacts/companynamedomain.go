@@ -15,6 +15,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -33,26 +34,32 @@ func displayNameDomain(name string) (string, bool) {
 	return domain.String(), true
 }
 
-// rankNameDomainClaimantFirst puts the domain's claimant at the head of the
-// ladder's answer. The match stays a review: every caller that files a fuzzy
-// pair files this one, and none routes a record onto it.
+// rankNameDomainClaimantFirst puts every domain claimant at the head of the
+// ladder's answer, in the order given. A candidate on subdomains of two held
+// domains lists both. The match stays a review: every caller that files a
+// fuzzy pair files this one, and none routes a record onto it.
 func rankNameDomainClaimantFirst(match CompanyMatch, claimants []CompanyCandidateScore) CompanyMatch {
 	if len(claimants) == 0 {
 		return match
 	}
-	claimant := claimants[0]
-	ranked := []CompanyCandidateScore{claimant}
+	var ranked []CompanyCandidateScore
+	for _, claimant := range claimants {
+		if !slices.ContainsFunc(ranked, func(s CompanyCandidateScore) bool { return s.CompanyID == claimant.CompanyID }) {
+			ranked = append(ranked, claimant)
+		}
+	}
 	for _, scored := range match.Ranked {
-		if scored.CompanyID == claimant.CompanyID {
-			ranked[0].ExactName = scored.ExactName
+		at := slices.IndexFunc(ranked, func(s CompanyCandidateScore) bool { return s.CompanyID == scored.CompanyID })
+		if at >= 0 {
+			ranked[at].ExactName = scored.ExactName
 			continue
 		}
 		ranked = append(ranked, scored)
 	}
 	return CompanyMatch{
 		Decision:   DecisionFuzzyReview,
-		CompanyID:  claimant.CompanyID,
-		Confidence: claimant.Confidence,
+		CompanyID:  ranked[0].CompanyID,
+		Confidence: ranked[0].Confidence,
 		Ranked:     ranked,
 	}
 }
@@ -92,7 +99,7 @@ func fileNameDomainTwins(ctx context.Context, tx pgx.Tx, claimant ids.CompanyID,
 		if named, ok := displayNameDomain(candidate.name); !ok || named != domain {
 			continue
 		}
-		if err := recordNearMatch(ctx, tx, entityCompany, claimant.UUID, candidate.id.UUID,
+		if _, err := recordNearMatch(ctx, tx, entityCompany, claimant.UUID, candidate.id.UUID,
 			identityConflictConfidence,
 			nearMatchEvidence(laneDomain, domain, candidate.name, identityConflictConfidence),
 			source, by); err != nil {

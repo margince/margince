@@ -8,6 +8,7 @@ import {
 } from "../../src/testing/reporting.fixtures";
 import * as ai from "./ai";
 import * as booking from "./booking";
+import * as calls from "./calls";
 import * as capture from "./capture";
 import * as dataTasks from "./datatasks";
 import {
@@ -133,6 +134,15 @@ export const routes: readonly MockRoute[] = [
   { path: "/leads/l-new", handle: reply(records.createdLead) },
   { method: "POST", path: "/deals", handle: records.createDeal },
   { path: "/contacts/p-anna", handle: reply(anna) },
+  {
+    path: `/contacts/${calls.CALLED_CONTACT}`,
+    handle: reply(calls.calledContact),
+  },
+  {
+    method: "GET",
+    path: `/contacts/${calls.CALLED_CONTACT}/360`,
+    handle: reply(calls.calledContact360),
+  },
   { path: "/contacts/p-imported", handle: reply(records.importedContact) },
   {
     method: "GET",
@@ -243,6 +253,12 @@ export const routes: readonly MockRoute[] = [
     handle: work.markBriefItem,
   },
   { path: "/approvals", handle: reply(page([approval])) },
+  {
+    method: "GET",
+    path: "/worklist",
+    when: (state) => state.options.callTasks === true,
+    handle: reply(calls.callTasksWorklist),
+  },
   { method: "GET", path: "/worklist", handle: reply(work.worklist) },
   { method: "GET", path: work.isOneApproval, handle: reply(approval) },
   {
@@ -254,6 +270,11 @@ export const routes: readonly MockRoute[] = [
     method: "GET",
     path: "/activities/a-quarterly",
     handle: reply(insight.quarterlyReview),
+  },
+  {
+    method: "GET",
+    path: /^\/activities\/([^/]+)$/,
+    handle: calls.activityById,
   },
   { method: "POST", path: "/activities", handle: work.logActivity },
   {

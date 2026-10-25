@@ -24,6 +24,7 @@ import { entityTimelineKeys } from "../../lib/activitykeys";
 import { proposalEmailBody } from "../../lib/booking-proposal-message";
 import { unwrap } from "../../lib/problem";
 import { ComposeModal } from "../mail/compose";
+import { contactFirstName } from "./contactfirstname";
 
 type Proposal = components["schemas"]["MeetingProposal"];
 type Contact = components["schemas"]["Contact360"]["contact"];
@@ -118,10 +119,9 @@ export function WaitingSection({
   const rows = proposals.data ?? [];
   const state = proposals.isError ? "failed" : "ready";
   if (state === "ready" && rows.length === 0) return null;
-  const firstName = contact.first_name?.trim();
-  const title = firstName
-    ? t("contact.meetings.waitingOn", { name: firstName })
-    : t("contact.meetings.waitingOnReply");
+  const title = t("contact.meetings.waitingOn", {
+    name: contactFirstName(contact),
+  });
   return (
     <Panel
       title={title}

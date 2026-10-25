@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -35,7 +36,9 @@ import (
 // rather than left reading `real`. Erasure outranks a verdict, and a ledger (or
 // a SAR built from it) that reports `real` for someone with no record would be
 // describing a contact who does not exist.
-func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty) (string, error) {
+func (e *CounterpartyVerdictEngine) createCounterparty(
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, mark relationshipmark.Mark,
+) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, e.contacts, e.tagFiler, counterpartyCreation{
 		DispositionID: row.ID,
 		Email:         row.Email,
@@ -45,6 +48,7 @@ func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx p
 		ActivityID:    row.ActivityID,
 		Source:        verdictReason,
 		CapturedBy:    verdictActor,
+		Mark:          mark,
 	})
 	if err != nil {
 		return "", err
@@ -53,9 +57,7 @@ func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx p
 		// The verdict was already written by apply(), and writing it spent the
 		// claim — so this corrects the status it just set rather than trying to
 		// resolve the row a second time.
-		return "", e.pending.CorrectResolution(ctx, tx, row.ID,
-			capture.PendingStatusReal, capture.PendingStatusSuppressed,
-			"the address was erased before the verdict landed")
+		return "", e.correctRefusedVerdict(ctx, tx, row.ID, created)
 	}
 	return created.TriageDomain, nil
 }
@@ -70,6 +72,7 @@ func (e *CounterpartyVerdictEngine) createCounterparty(ctx context.Context, tx p
 // drift apart between them.
 func (e *CounterpartyVerdictEngine) createOwnerScopedCounterparty(
 	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, reason contacts.NarrowingReason,
+	mark relationshipmark.Mark,
 ) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, e.contacts, e.tagFiler, counterpartyCreation{
 		DispositionID:   row.ID,
@@ -81,14 +84,13 @@ func (e *CounterpartyVerdictEngine) createOwnerScopedCounterparty(
 		Source:          verdictReason,
 		CapturedBy:      verdictActor,
 		NarrowedBecause: reason,
+		Mark:            mark,
 	})
 	if err != nil {
 		return "", err
 	}
 	if created.Suppressed {
-		return "", e.pending.CorrectResolution(ctx, tx, row.ID,
-			capture.PendingStatusReal, capture.PendingStatusSuppressed,
-			"the address was erased before the verdict landed")
+		return "", e.correctRefusedVerdict(ctx, tx, row.ID, created)
 	}
 	return created.TriageDomain, nil
 }
@@ -118,6 +120,9 @@ type counterpartyCreation struct {
 	// SkipLeadPromotion leaves a lead holding the address where it is, for a
 	// human accept whose decider may not promote one.
 	SkipLeadPromotion bool
+	// Mark is the relationship mark a contact this creation makes is born with;
+	// it is stamped as set by CapturedBy. Empty marks nothing.
+	Mark relationshipmark.Mark
 }
 
 // counterpartyCreated reports what a `real` answer produced that its caller has
@@ -125,9 +130,12 @@ type counterpartyCreation struct {
 // whose company question is still open, which somebody has to queue a
 // triage read for.
 type counterpartyCreated struct {
-	// Suppressed marks an address erased between capture and the answer. Nothing
+	// Suppressed marks an address erased, or a seat's own. Nothing
 	// was created: erasure outranks a verdict.
 	Suppressed bool
+	// SeatAddress narrows Suppressed to a seat's address, which is a fact
+	// about the seats today and not a decision about the sender.
+	SeatAddress bool
 	// TriageDomain names the domain still owed a company verdict, empty
 	// when there is none.
 	TriageDomain string
@@ -156,7 +164,11 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 		OwnerScoped:       in.NarrowedBecause != "",
 		NarrowedBecause:   in.NarrowedBecause,
 		SkipLeadPromotion: in.SkipLeadPromotion,
+		RelationshipMark:  in.Mark,
 	})
+	if errors.Is(err, contacts.ErrCounterpartyIsSeat) {
+		return counterpartyCreated{Suppressed: true, SeatAddress: true}, nil
+	}
 	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		return counterpartyCreated{Suppressed: true}, nil
 	}
@@ -213,7 +225,7 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 // Both keep the record — the owner corresponded with somebody real — and both
 // keep it owner-scoped. Anything else is the ordinary shared contact.
 func (e *CounterpartyVerdictEngine) createContactForVerdict(
-	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty,
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, mark relationshipmark.Mark,
 ) (string, error) {
 	reason, err := e.contactStaysTheOwners(ctx, tx, row)
 	if err != nil {
@@ -231,9 +243,9 @@ func (e *CounterpartyVerdictEngine) createContactForVerdict(
 		if err := capture.MarkWithheldFromWorkspaceTx(ctx, tx, row.ID); err != nil {
 			return "", err
 		}
-		return e.createOwnerScopedCounterparty(ctx, tx, row, reason)
+		return e.createOwnerScopedCounterparty(ctx, tx, row, reason, mark)
 	}
-	triageDomain, err := e.createCounterparty(ctx, tx, row)
+	triageDomain, err := e.createCounterparty(ctx, tx, row, mark)
 	if err != nil {
 		return "", err
 	}
@@ -273,8 +285,53 @@ func (e *CounterpartyVerdictEngine) contactStaysTheOwners(
 	// direction rather than inferred: a row written before the direction was
 	// recorded says nothing, and treating an unknown direction as outbound
 	// would narrow every historical contact at once.
-	if row.Direction == connector.DirectionOutbound && !row.WroteBack {
-		return contacts.NarrowedOutboundNoAnswer, nil
+	if row.Direction != connector.DirectionOutbound {
+		return "", nil
 	}
-	return "", nil
+	// The same evidence the reply hook publishes on, so a reply counts the
+	// same whether it lands before this verdict or after it.
+	answered, err := capture.AddressAnsweredTx(ctx, tx, row.Email)
+	if err != nil || answered {
+		return "", err
+	}
+	return contacts.NarrowedOutboundNoAnswer, nil
+}
+
+// seatAddressReason explains a `real` row with no contact behind it.
+const seatAddressReason = "the address belongs to a workspace seat, so no contact was made"
+
+// correctRefusedVerdict settles a verdict that created nothing. Erasure is
+// permanent, so it records `suppressed`. A seat's address keeps `real`: the
+// sender is a human, every later capture asks the seat check again, and a
+// `noise` row would hide the colleague's mail.
+func (e *CounterpartyVerdictEngine) correctRefusedVerdict(ctx context.Context, tx pgx.Tx, id ids.UUID, created counterpartyCreated) error {
+	if created.SeatAddress {
+		return e.pending.CorrectResolution(ctx, tx, id,
+			capture.PendingStatusReal, capture.PendingStatusReal, seatAddressReason)
+	}
+	return e.pending.CorrectResolution(ctx, tx, id,
+		capture.PendingStatusReal, capture.PendingStatusSuppressed,
+		"the address was erased before the verdict landed")
+}
+
+// createVendorPitchContact is the `vendor_pitch` effect. The sender becomes a
+// contact carrying the vendor_marketing mark. The mail stays attached to
+// somebody, and the lists and briefs that read relationships skip them.
+//
+// The model's answer alone never marks. It answers the direction of the offer.
+// "Nobody here answered" is a fact the ledger holds. A prospect who wrote first
+// and was answered is a vendor to nobody. If the address wrote back on a thread
+// the workspace started, the ordinary `contact` effect runs with no mark. It
+// runs the same way when the workspace has provably written to the address.
+func (e *CounterpartyVerdictEngine) createVendorPitchContact(
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty,
+) (string, error) {
+	corresponds, err := capture.WorkspaceCorrespondsTx(ctx, tx, row.Email)
+	if err != nil {
+		return "", err
+	}
+	if row.WroteBack || corresponds {
+		return e.createContactForVerdict(ctx, tx, row, "")
+	}
+	return e.createContactForVerdict(ctx, tx, row, relationshipmark.VendorMarketing)
 }

@@ -91,6 +91,7 @@ type Service struct {
 	tagSuggestions TagSuggestions
 	tasks          Tasks
 	receipts       Receipts
+	handledWindow  HandledWindow
 	briefing       Briefing
 	// commitments is OPTIONAL: nil means no commitments lane, and Assemble
 	// leaves the field unset rather than sending an empty array.

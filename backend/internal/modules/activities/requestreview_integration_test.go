@@ -171,7 +171,7 @@ func TestDifferentRequestsInOneConversationNeedSeparateResolution(t *testing.T) 
 	subject, direction := "Re: rollout", "inbound"
 	requests := []ids.UUID{}
 	for _, body := range []string{"Please send meeting slots.", "Please also send the signed DPA."} {
-		source, _, err := store.LogActivity(reader, LogActivityInput{Kind: "email", Subject: &subject, Body: &body, Direction: &direction, ThreadKey: "two-requests", OccurredAt: &requestInstant, Source: "test", Links: []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}})
+		source, _, err := store.LogActivity(reader, LogActivityInput{Kind: "email", Subject: &subject, Body: &body, Direction: &direction, ThreadKey: "two-requests", OccurredAt: &requestInstant, Source: "test", EmailTo: []string{seatAddress(e.rep)}, Links: []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}})
 		if err != nil {
 			t.Fatal(err)
 		}

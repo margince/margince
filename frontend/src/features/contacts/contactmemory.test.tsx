@@ -9,6 +9,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { telUri } from "../../format/contacturi";
 import { LocaleProvider } from "../../i18n";
 import { ContactMemory } from "./contactmemory";
 
@@ -61,6 +62,7 @@ function emailSummary(over: Partial<EmailSummary> = {}): EmailSummary {
 
 function emailRow(over: Partial<Activity> = {}): Activity {
   return {
+    offers_email: false,
     id: EMAIL_ID,
     kind: "email",
     occurred_at: "2026-08-29T09:15:00Z",
@@ -80,6 +82,7 @@ function emailRow(over: Partial<Activity> = {}): Activity {
 }
 
 const noteRow: Activity = {
+  offers_email: false,
   id: NOTE_ID,
   kind: "note",
   occurred_at: "2026-08-28T11:00:00Z",
@@ -279,4 +282,91 @@ it("groups replies by conversation without clearing another request from the sam
   expect(screen.getAllByText("Competitor question")).toHaveLength(1);
   expect(screen.getByText("Please send the report")).toBeTruthy();
   expect(screen.getByText("Unanswered")).toBeTruthy();
+});
+
+type ContactPhone = components["schemas"]["ContactPhone"];
+
+const OFFICE = "+49 30 1234567";
+const MOBILE = "+49 151 7654321";
+
+function phone(id: string, number: string, isPrimary: boolean): ContactPhone {
+  return {
+    id,
+    phone: number,
+    phone_type: "work",
+    is_primary: isPrimary,
+    position: 0,
+    source: "manual",
+    captured_by: "human:u-1",
+  };
+}
+
+// The primary number comes second, so a card that dialled the first number
+// listed would fail here.
+const reachable = {
+  ...contact,
+  phones: [phone("ph-0", OFFICE, false), phone("ph-1", MOBILE, true)],
+};
+
+const callRow: Activity = {
+  ...noteRow,
+  id: "01a05500-0000-7000-8000-00000000ee03",
+  kind: "call",
+  subject: "Called about the renewal",
+  direction: "outbound",
+};
+
+const callEntry: Entry = {
+  key: "thread-call",
+  channel: "call",
+  direction: "outbound",
+  title: "Called about the renewal",
+  summary: "Walked through the quote.",
+  occurred_at: "2026-08-28T11:00:00Z",
+  activity_count: 1,
+};
+
+describe("Call on a logged call", () => {
+  it("dials the primary number from a thread projection call", () => {
+    renderCard(
+      viewWith([], { contact: reachable, conversation_memory: [callEntry] }),
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Call" }).getAttribute("href"),
+    ).toBe(telUri(MOBILE));
+  });
+
+  it("dials the primary number from a timeline call", () => {
+    renderCard(viewWith([callRow], { contact: reachable }));
+
+    expect(
+      screen.getByRole("link", { name: "Call" }).getAttribute("href"),
+    ).toBe(telUri(MOBILE));
+  });
+
+  it("offers no Call on a note", () => {
+    renderCard(viewWith([noteRow], { contact: reachable }));
+
+    expect(screen.getByText("Call prep")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+  });
+
+  it("offers no Call when the contact has no phone", () => {
+    renderCard(viewWith([callRow]));
+
+    expect(screen.getByText("Called about the renewal")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+  });
+
+  it("offers no Call on an archived contact", () => {
+    renderCard(
+      viewWith([callRow], {
+        contact: { ...reachable, archived_at: "2026-08-29T09:00:00Z" },
+      }),
+    );
+
+    expect(screen.getByText("Called about the renewal")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+  });
 });

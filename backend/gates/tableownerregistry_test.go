@@ -80,6 +80,7 @@ var tableOwners = map[string]string{
 	"lead_score_history":     "internal/modules/contacts",
 	"lead_manual_signal":     "internal/modules/contacts",
 	"lead_source":            "internal/modules/contacts",
+	"lead_origin":            "internal/modules/contacts",
 	"lead_disqualify_reason": "internal/modules/contacts",
 	// A prospect passed from an SDR to an account executive: the row carrying
 	// its current state, the append-only transitions behind it, and the
@@ -99,8 +100,12 @@ var tableOwners = map[string]string{
 	// every night.
 	"contact_signature_enrich_state": "internal/modules/contacts",
 	"company_fact":                   "internal/modules/contacts",
+	"company_fact_revision":          "internal/modules/contacts",
 	"company_geocode_state":          "internal/modules/contacts",
 	"geocode_cache":                  "internal/modules/contacts",
+	"geocode_country_cache":          "internal/modules/contacts",
+	"company_address_country":        "internal/modules/contacts",
+	"contact_address_country":        "internal/modules/contacts",
 	// What a technical lookup last read for one company, per public source,
 	// and what those sources answered. The cache is installation-global for
 	// the same reason geocode_cache is — a domain's DNS records are the same
@@ -115,7 +120,8 @@ var tableOwners = map[string]string{
 	"company_domain_question_reader": "internal/modules/contacts",
 	"site_read":                      "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
-	"dedupe_candidate": "internal/modules/contacts",
+	"dedupe_candidate":  "internal/modules/contacts",
+	"dedupe_scan_state": "internal/modules/contacts",
 	// deals (incl. the E03 offer engine: rate-card + versioned offers)
 	"commission_entry":          "internal/modules/commissions",
 	"contract":                  "internal/modules/contracts",
@@ -144,7 +150,6 @@ var tableOwners = map[string]string{
 	"deal_room_engagement":  "internal/modules/dealrooms",
 	// Kept apart from deal_stage_history rather than folded into it: readers
 	// outside this module count that table's rows as stage movements.
-	"deal_forecast_history": "internal/modules/deals",
 	// The nightly close-date pass and the eligible set it froze at the start of
 	// one. Deals-owned rather than folded into assurance's run tables: a module
 	// never writes a sibling's, and the two sweeps answer to different rules.
@@ -282,6 +287,7 @@ var tableOwners = map[string]string{
 	"communication_suppression":    "internal/modules/consent",
 	"consent_qualifying_event":     "internal/modules/consent",
 	"data_subject_request":         "internal/modules/consent",
+	"privacy_request_proof":        "internal/modules/consent",
 	"preference_token":             "internal/modules/consent",
 	// The emailed link that shows a contact their own record and carries their
 	// marketing answer back, and what comes back through it. Consent's, because
@@ -323,7 +329,8 @@ var tableOwners = map[string]string{
 	"capture_test_mailbox_sent": "internal/modules/capture",
 	// One receipt per repair pass per workspace turn — bookkeeping about a
 	// pass rather than a record fact, not audited; pruned to a history.
-	"capture_sweep_run": "internal/modules/capture",
+	"capture_sweep_run":             "internal/modules/capture",
+	"capture_answered_sweep_cursor": "internal/modules/capture",
 	// What the pipeline decided about each message, for 24 hours. Written by
 	// the sink alone; compose reads it and sweeps it, and the verdict engine
 	// writes nothing here — its answers live in the disposition ledger and are

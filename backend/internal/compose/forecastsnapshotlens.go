@@ -32,15 +32,14 @@ func newForecastStoreFor(pool *pgxpool.Pool) *forecasting.Store {
 // forecastSnapshotLens holds a frozen snapshot to what the live forecast would
 // show this caller, since its rows carry the same per-deal figures.
 //
-// The population must be one the caller may measure (the same resolution
-// GetForecast applies), or the snapshot is not found: whether somebody else's
-// forecast was frozen is itself the disclosure. Deals the caller cannot read are
-// dropped, and an amount a field mask withholds is nulled exactly as the live
-// reading nulls it, so a movement cannot print a figure the forecast hid.
+// The caller must be allowed to assert about the population, or the snapshot
+// is not found, because whether it was frozen is itself the disclosure. Deals
+// the caller cannot read are dropped. A masked amount is nulled as the live
+// reading nulls it, so a movement prints no figure the forecast hid.
 func forecastSnapshotLens(
 	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, pipelineID *ids.UUID, rows []forecasting.Contribution,
 ) ([]forecasting.Contribution, error) {
-	if _, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(scope)); err != nil {
+	if _, err := ResolveAssertionScope(ctx, tx, requestedFromForecastScope(scope)); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil, apperrors.ErrNotFound
 		}

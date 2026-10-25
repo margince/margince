@@ -41,8 +41,8 @@ var changedWords = struct {
 	Said:      langcopy.Phrase{En: "Since then %s said: %s", De: "Seitdem hat %s gesagt: %s", Vi: "Kể từ đó, %s đã nói: %s"},
 }
 
-func (said briefCopy) lastDealtLine(now, at time.Time) string {
-	days := elapsed.Days(at, now)
+func (said briefCopy) lastDealtLine(now, at time.Time, loc *time.Location) string {
+	days := elapsed.Days(at, now, loc)
 	switch {
 	case days <= 0:
 		return said.Say(changedWords.Today)

@@ -129,6 +129,7 @@ describe("what the axis marks", () => {
     zone: UTC_ZONE,
   };
   const row = (over: Partial<Activity>): Activity => ({
+    offers_email: false,
     id: "row",
     kind: "meeting",
     occurred_at: AS_OF,

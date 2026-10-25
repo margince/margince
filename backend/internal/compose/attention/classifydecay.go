@@ -32,7 +32,7 @@ func classifyDecay(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	if decayMatters(item.Relationship) {
 		level = levelAgreed
 	}
-	row := base(item, level, "system", "data_drifts")
+	row := base(item, level, categoryRelationships, "data_drifts")
 	quiet := quietDaysOf(item)
 	if quiet > 0 {
 		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))
@@ -65,7 +65,7 @@ func classifyDecay(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		// A relationship going quiet, raised for the reader whose contacts they
 		// are. The lane is bound to them, and the dismissal beside it is
 		// per-reader for the same reason.
-		ownerRef:    ownedByWhoeverIsReading(),
+		ownerRef:    decayOwner(item.Relationship),
 		waitingDays: quiet,
 		waitingRank: orderingAge(quiet),
 		occurredAt:  occurredOf(item, asOf),
@@ -181,4 +181,18 @@ func hasReason(item crmcontracts.WorklistItem, kind crmcontracts.WorklistReasonK
 		}
 	}
 	return false
+}
+
+// categoryRelationships files quiet-relationship suggestions under their own
+// badge and filter, apart from the product's reports about itself.
+const categoryRelationships crmcontracts.WorklistItemCategory = "relationships"
+
+// decayOwner is the live owner the lane read for the record: the only seat
+// a quiet-relationship suggestion is for. No owner is unassigned, never the
+// reader, so a colleague copied on the mail is not handed the follow-up.
+func decayOwner(facts *crmcontracts.AttentionRelationshipFacts) ownerRef {
+	if facts == nil {
+		return unassigned()
+	}
+	return ownerFromAssignee(facts.OwnerId)
 }

@@ -143,7 +143,8 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		BaseCurrency: req.BaseCurrency,
 		// The entry refuses a code no compiled-in pack answers; the store runs
 		// the floor carry in the same transaction.
-		Country: req.Country,
+		Country:      req.Country,
+		CallWhatsApp: req.CallWhatsapp, CallTelegram: req.CallTelegram, CallZalo: req.CallZalo,
 	}
 	if req.DateFormat != nil {
 		value := string(*req.DateFormat)
@@ -259,6 +260,9 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 			s.ForecastForwardMeasure),
 		OauthAccessTokenTtlMinutes: s.OAuthAccessTokenTTLMinutes,
 		BaseCurrencyLocked:         s.BaseCurrencyLocked,
+		CallWhatsapp:               s.CallWhatsApp,
+		CallTelegram:               s.CallTelegram,
+		CallZalo:                   s.CallZalo,
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),

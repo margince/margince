@@ -3,8 +3,10 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { mapCompanyUpdate } from "../../components/companyform";
 import {
+  formatSizeBand,
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
@@ -17,7 +19,8 @@ import {
   type DetailSection,
   RecordDetails,
 } from "../../design-system/recorddetails";
-import { useT } from "../../i18n";
+import { INDUSTRY_CODES, industryOptions } from "../../format/industry";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
@@ -163,7 +166,7 @@ export function useRowBuilders(company: Company, edit: Edit) {
     ),
   });
   const choice = (
-    key: "size_band" | "lifecycle",
+    key: "size_band" | "lifecycle" | "industry",
     label: MessageKey,
     options: readonly { value: string; label: string }[],
   ): DetailRow => ({
@@ -186,26 +189,44 @@ export function useRowBuilders(company: Company, edit: Edit) {
       />
     ),
   });
+  // `flag` sits beside the value rather than inside it, so the edit button's
+  // label does not swallow what the flag says.
   const compound = (
     which: CompoundField,
     label: string,
     reading: ReactNode | undefined,
+    flag?: ReactNode,
   ): DetailRow => ({
     key: which,
     term: label,
     empty: !reading,
     value: (
-      <CompoundFieldValue
-        company={company}
-        which={which}
-        label={label}
-        reading={reading}
-        canEdit={edit.canEdit}
-        readOnlyReason={edit.reason}
-      />
+      <>
+        <CompoundFieldValue
+          company={company}
+          which={which}
+          label={label}
+          reading={reading}
+          canEdit={edit.canEdit}
+          readOnlyReason={edit.reason}
+        />
+        {flag && <> {flag}</>}
+      </>
     ),
   });
   return { text, choice, compound };
+}
+
+// The fixed list in the reader's order. A value that is no code, from a row not
+// yet repaired, is offered as it is stored so the row never reads as unset.
+function useIndustryOptions(company: Company) {
+  const t = useT();
+  const { locale } = useLocale();
+  const options = industryOptions(t, locale);
+  const stored = company.industry;
+  return stored && !INDUSTRY_CODES.some((code) => code === stored)
+    ? [{ value: stored, label: stored }, ...options]
+    : options;
 }
 
 // The rows the design reads under About: each set one shows, each empty one
@@ -218,19 +239,20 @@ function useAboutRows(
   edit: Edit,
 ): DetailRow[] {
   const t = useT();
-  const { text, choice, compound } = useRowBuilders(company, edit);
+  const { choice, compound } = useRowBuilders(company, edit);
+  const industryOptions = useIndustryOptions(company);
   const website = companyWebsite(company);
   const wayIn = useWayIn(company, view, loading);
   return [
     // The head already links the site; here the value opens the domains form.
     compound("domains", t("field.domain"), website && displayHost(website)),
-    text("industry", "create.industry"),
+    choice("industry", "create.industry", industryOptions),
     choice(
       "size_band",
       "co.aside.size",
       SIZE_BAND_OPTIONS.map((band) => ({
         value: band,
-        label: band.replace("-", "–"),
+        label: formatSizeBand(t, band),
       })),
     ),
     choice(
@@ -241,7 +263,16 @@ function useAboutRows(
         label: t(LIFECYCLE_LABELS[value]),
       })),
     ),
-    compound("address", t("co.address.summary"), addressLine(company)),
+    compound(
+      "address",
+      t("co.address.summary"),
+      addressLine(company),
+      company.address_country_mismatch && (
+        <AddressCountryMismatchBadge
+          mismatch={company.address_country_mismatch}
+        />
+      ),
+    ),
     ...(wayIn
       ? [
           {

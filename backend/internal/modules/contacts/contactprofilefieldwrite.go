@@ -276,7 +276,7 @@ func fillEmptyLinkedinSlot(ctx context.Context, tx pgx.Tx, contactID ids.Contact
 	}
 	// The slot is compared verbatim elsewhere, so it stores the dedupe key's
 	// spelling. The evidence row keeps the verbatim claim either way.
-	normalized, err := NormalizeLinkedInURL(value)
+	normalized, err := NormalizeContactLinkedInURL(value)
 	if err != nil {
 		//nolint:nilerr // a value the normalizer refuses is a skipped fill, not a fault
 		return nil

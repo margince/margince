@@ -289,6 +289,7 @@ function meeting(
   row: Pick<Activity, "id" | "occurred_at"> & Partial<Activity>,
 ) {
   return {
+    offers_email: false,
     kind: "meeting",
     subject: "Weekly call",
     duration_seconds: 1800,

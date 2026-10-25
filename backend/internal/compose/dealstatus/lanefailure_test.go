@@ -62,6 +62,7 @@ func cardFacts(t *testing.T) facts {
 			OccurredAt: cardClock().Add(-48 * time.Hour),
 		}},
 		now:  cardClock(),
+		loc:  time.UTC,
 		lang: "de",
 	}
 }

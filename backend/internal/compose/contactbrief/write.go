@@ -79,11 +79,13 @@ SCHEDULING IS TRANSPORT TOO. Finding a slot, confirming a date, accepting an inv
 If every recent message is scheduling, say so plainly and take the finding from the older material in the summary — "The recent exchange is only logistics; the last substantive topic was the Vietnam trip." A brief that has nothing but logistics to report says that, rather than dressing a calendar entry as a relationship.
 A recent message may carry a "speaker": "them" means the contact wrote it, "you" means the READER wrote it. Attribute every quoted or paraphrased line to its speaker and never to the other one. A view, a complaint or an assessment in a message whose speaker is "you" is the READER'S OWN and must never be reported as the contact's. Where a message carries NO speaker, the record does not say who wrote it: quote it if you must, attributed to nobody, and never guess. Answer state is the point too: distinguish an unanswered message from one already answered. The summary says which.
 Name a date, an amount, a stage or a span only when the summary supplies it. Never compute one, never round one, and never estimate how long ago something was.
+A claim with a due_at names its deadline: state that date, never the relative words its quote used ("this week", "shortly").
 Keep every qualification. A message that accepts one thing and reserves another says both, and reporting only the acceptance drops the part somebody still has to act on.
 Never invent a fact. If the summary does not say it, you may still ASSESS it — but then it is an assessment and must be labelled one.
 If the summary is thin, say what is MISSING and stop. Four honest sentences beat six padded ones, and a brief that pads is one a reader learns to skip.
 Cite the ids the summary gave you. A sentence about the contact themselves cites the contact; one drawn from a claim cites the claim's source_id as an activity.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
+If the summary says "relationship": "vendor_marketing", this contact is a vendor selling to the reader and nobody here has answered them. State that once, as a fact, and say what they offer. Give NO recommendation: nothing they ask for (a demo, a call, a reply) is a move the reader owes them.
 Write one claim per sentence, plainly, addressing the reader as "you" where natural. Name the contact once; after that they are "they".`
 
 // briefSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.

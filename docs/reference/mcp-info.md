@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 123.8 KB |
+| Tool catalog | 126.4 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32583 |
+| Approx. wire tokens | 33247 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 24.6 KB | 19% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 31.6 KB | 25% | Yes, every step |
-| Input schemas | 58.9 KB | 47% | Yes, every step |
-| _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
-| **Description + input schema** | **90.5 KB** | **73%** | **the recurring cost** |
+| Output schemas | 25.0 KB | 19% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 32.4 KB | 25% | Yes, every step |
+| Input schemas | 60.3 KB | 47% | Yes, every step |
+| _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
+| **Description + input schema** | **92.7 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -61,23 +61,23 @@ descriptions and input schemas are what each step pays for.
 |---|---|:-:|---|---:|
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 809 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1361 |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 808 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1386 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
-| [`change_state`](#change_state) | Move a lead, deal or project on |  |  | 866 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1117 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 553 |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 643 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 748 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1697 |
+| [`find_records`](#find_records) | Find records | yes |  | 1722 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 998 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1045 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes |  | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
@@ -87,14 +87,14 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1812 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1891 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 989 |
+| [`read_view`](#read_view) | Read a view | yes |  | 993 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 488 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
-| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 474 |
+| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
-| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 585 |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 620 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
 ## Resources
@@ -733,7 +733,7 @@ passport scope "write".)
           "type": "string"
         },
         "due_at": {
-          "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+          "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
           "format": "date-time",
           "type": "string"
         },
@@ -1149,7 +1149,7 @@ arguments for relink, relink_many; requires passport scope "write".)
       "type": "string"
     },
     "due_at": {
-      "description": "log, task only: RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -1185,6 +1185,7 @@ arguments for relink, relink_many; requires passport scope "write".)
           "type": "string"
         },
         "due_at": {
+          "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
           "format": "date-time",
           "type": "string"
         },
@@ -1243,7 +1244,7 @@ arguments for relink, relink_many; requires passport scope "write".)
       "type": "array"
     },
     "occurred_at": {
-      "description": "log only: RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "log only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -1793,23 +1794,27 @@ record's own fields, and create_record with record_type offer to make an offer w
 
 ### change_state
 
-**Move a lead, deal or project on**
+**Move a lead, deal, project or partner**
 
 ```text
-Move a lead, deal or project on. qualify fills what a lead's own data already implies, today the
-company name from its email domain, and names the fields still empty. promote turns a lead who has
-genuinely engaged into a contact. disqualify closes out a lead going nowhere. demote reverses a
-promotion. move_deal moves a deal to a stage, with a note. move_project moves a project to a phase;
-closed closes it. promote needs a trigger naming the engagement; cold outreach nobody answered never
-promotes. demote needs a reason and is refused once the contact owns a deal. move_deal to a won or
-lost stage waits for a human; to an open stage it runs at once. move_project to closed needs a
-reason and leaves the project's tasks open. When the user asked for the close, report what is still
-open and close: an open task is news for them, not a reason to hold back. read_workspace topic
-pipelines gives the stage ids. Use update_record for a record's other fields, and enrich to learn
-about a company from its website. A promotion answers with the new contact's id. A staged answer's
-approval id is what the retry carries; do not report the change until the retry has answered.
-(Governance: runs immediately for demote, disqualify, move_project, promote, qualify; decided per
-call from its arguments for move_deal; requires passport scope "write".)
+Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own
+data already implies, today the company name from its email domain, and names the fields still
+empty. promote turns a lead who has genuinely engaged into a contact. disqualify closes out a lead
+going nowhere. demote reverses a promotion. move_deal moves a deal to a stage, with a note.
+move_project moves a project to a phase; closed closes it. set_up_partner starts a partner program
+on a company, with company_id, partner_role and optionally relationship_stage, next_step and
+next_step_due_at. promote needs a trigger naming the engagement; cold outreach nobody answered never
+promotes. demote needs a reason and is refused once the contact owns a deal. set_up_partner always
+waits for a human, takes no margin tier (a human sets that on the company's Partner tab) and is
+refused for a company that already is a partner. move_deal to a won or lost stage waits for a human;
+to an open stage it runs at once. move_project to closed needs a reason and leaves the project's
+tasks open. When the user asked for the close, report what is still open and close: an open task is
+news for them, not a reason to hold back. read_workspace topic pipelines gives the stage ids. Use
+update_record for a record's other fields, and enrich to learn about a company from its website. A
+promotion answers with the new contact's id. A staged answer's approval id is what the retry
+carries; do not report the change until the retry has answered. (Governance: runs immediately for
+demote, disqualify, move_project, promote, qualify; a human approves first for set_up_partner;
+decided per call from its arguments for move_deal; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1824,12 +1829,18 @@ call from its arguments for move_deal; requires passport scope "write".)
         "move_deal",
         "move_project",
         "promote",
-        "qualify"
+        "qualify",
+        "set_up_partner"
       ],
       "type": "string"
     },
     "approval_id": {
-      "description": "demote, disqualify, move_deal, move_project, promote only: Set on approved retry",
+      "description": "demote, disqualify, move_deal, move_project, promote, set_up_partner only: Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
+    "company_id": {
+      "description": "set_up_partner: the company",
       "format": "uuid",
       "type": "string"
     },
@@ -1860,8 +1871,26 @@ call from its arguments for move_deal; requires passport scope "write".)
       "description": "move_deal only: Required when the target stage closes the deal as lost",
       "type": "string"
     },
+    "next_step": {
+      "description": "set_up_partner only",
+      "type": "string"
+    },
+    "next_step_due_at": {
+      "description": "set_up_partner only",
+      "format": "date",
+      "type": "string"
+    },
     "note": {
       "description": "move_deal only: Logged as a note on the deal's timeline after the move",
+      "type": "string"
+    },
+    "partner_role": {
+      "description": "set_up_partner, required: hosting, consulting or strategic",
+      "enum": [
+        "hosting",
+        "consulting",
+        "strategic"
+      ],
       "type": "string"
     },
     "project_id": {
@@ -1872,6 +1901,22 @@ call from its arguments for move_deal; requires passport scope "write".)
     "reason": {
       "description": "demote, required: why the promotion is reversed. move_project: required when to_phase is closed. Recorded in the audit trail",
       "minLength": 1,
+      "type": "string"
+    },
+    "relationship_stage": {
+      "description": "set_up_partner only",
+      "enum": [
+        "research",
+        "identified",
+        "contacted",
+        "in_conversation",
+        "fit_confirmed",
+        "agreement_pending",
+        "active",
+        "active_referring",
+        "dormant",
+        "no_fit"
+      ],
       "type": "string"
     },
     "to_phase": {
@@ -2063,7 +2108,7 @@ Availability is checked again when reserving the time.
       "type": "integer"
     },
     "from": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -2078,7 +2123,7 @@ Availability is checked again when reserving the time.
       "type": "boolean"
     },
     "to": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
     }
@@ -2387,16 +2432,20 @@ Create a contact, company, deal, lead, project, activity or relationship that do
 Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline list is what
 yields them for a deal that does not exist yet. Only the fields the chosen record_type actually
 stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A
-CONTACT created here is visible to everyone in the workspace, the same as one a human types in.
-Search first when the record might already exist — a second copy of a contact or company is a
-problem that then needs resolve_duplicates to undo. A record that shares only a name, with a
-different email, phone or employer, is not proof of a duplicate: create it — the create files the
-pair for review, and you report the pair as filed, unresolved until the reviewer decides. Several
-contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which
-checks every row and writes nothing; creating them one by one skips that check. The new record's id
-comes back in the result; keep it for anything that links to it. When the user says where they met
-the contact, pass that word as offer_tag: it only offers the tag, and change_tags still needs their
-yes. (Runs immediately; requires passport scope "write".)
+CONTACT created here is visible to everyone in the workspace, the same as one a human types in. No
+occurred_at means now; for a past day with no time, ask. Search first when the record might already
+exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to
+undo. A record that shares only a name, with a different email, phone or employer, is not proof of a
+duplicate. When the search finds a contact with the same name at the same employer, ask the human
+whether it is the same contact before you link anything to it; two colleagues can share a name.
+Giving a contact its employer by creating an employment relationship files any same-name contact at
+that employer for review: the result carries it as duplicate_candidates, and you report the pair as
+filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a
+pasted list, a CSV — go through preview_import, which checks every row and writes nothing;
+creating them one by one skips that check. The new record's id comes back in the result; keep it for
+anything that links to it. When the user says where they met the contact, pass that word as
+offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately;
+requires passport scope "write".)
 ```
 
 Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.
@@ -2413,7 +2462,7 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
       "type": "string"
     },
     "fields": {
-      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. An rfc3339 value carries Z or the offset the user gave. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "idempotency_key": {
@@ -3142,6 +3191,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "occurred_before": {
           "type": "string"
         },
+        "origin": {
+          "type": "string"
+        },
         "owner_id": {
           "type": "string"
         },
@@ -3175,7 +3227,13 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "project_id": {
           "type": "string"
         },
+        "relationship_mark": {
+          "type": "string"
+        },
         "relationship_type": {
+          "type": "string"
+        },
+        "reminder_due": {
           "type": "string"
         },
         "size_band": {
@@ -3624,6 +3682,9 @@ document register, filtered by category, contract or state. Keep next_cursor to 
               "captured_by": {
                 "type": "string"
               },
+              "category": {
+                "type": "string"
+              },
               "checksum": {
                 "type": "string"
               },
@@ -3646,6 +3707,39 @@ document register, filtered by category, contract or state. Keep next_cursor to 
                 "type": "string"
               },
               "filename": {
+                "type": "string"
+              },
+              "origin": {
+                "properties": {
+                  "activity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "occurred_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "sender_address": {
+                    "type": "string"
+                  },
+                  "sender_name": {
+                    "type": "string"
+                  },
+                  "subject": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "activity_id",
+                  "kind",
+                  "occurred_at"
+                ],
+                "type": "object"
+              },
+              "url": {
                 "type": "string"
               }
             },
@@ -4419,10 +4513,12 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                         "interval": {
                           "properties": {
                             "end_at": {
+                              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
                               "format": "date-time",
                               "type": "string"
                             },
                             "start_at": {
+                              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
                               "format": "date-time",
                               "type": "string"
                             }
@@ -5789,7 +5885,7 @@ search its evidence, and quote coverage with each number.
       "type": "string"
     },
     "evaluated_at": {
-      "description": "standard only",
+      "description": "standard only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -5866,6 +5962,7 @@ search its evidence, and quote coverage with each number.
           "type": "string"
         },
         "through": {
+          "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
           "format": "date-time",
           "type": "string"
         }
@@ -5877,7 +5974,7 @@ search its evidence, and quote coverage with each number.
       "type": "object"
     },
     "report": {
-      "description": "run only: The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by company_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by read_workspace with topic=report_vocabulary; a name outside them is refused with the accepted list. A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.",
+      "description": "run only: The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by company_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments), sum(open_commitments) grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor), sum(won_deal_value_minor), sum(open_deal_unpriced), sum(won_deal_unpriced) grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by read_workspace with topic=report_vocabulary; a name outside them is refused with the accepted list. A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",
@@ -5944,10 +6041,12 @@ search its evidence, and quote coverage with each number.
         "interval": {
           "properties": {
             "end_at": {
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
               "format": "date-time",
               "type": "string"
             },
             "start_at": {
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
               "format": "date-time",
               "type": "string"
             }
@@ -6395,6 +6494,7 @@ view refuses an argument it does not take and names the ones it does.
         "latest_technical_enrich",
         "latest_transcript_read",
         "lead_disqualify_reasons",
+        "lead_origins",
         "lead_settings",
         "lead_sources",
         "list_members",
@@ -6715,7 +6815,7 @@ passport scope "send".)
       "type": "string"
     },
     "end": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -6764,7 +6864,7 @@ passport scope "send".)
       "type": "string"
     },
     "start": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -6925,7 +7025,7 @@ scope "send".)
       "type": "string"
     },
     "scheduled_at": {
-      "description": "email_new, email_reply only: RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "email_new, email_reply only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -6968,11 +7068,11 @@ contact's email addresses are not among them). A field a HUMAN last set is not o
 part is staged for a human and named in the result, and that part of the write has not happened. It
 names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral —
 ownership decides visibility, so reassigning moves the record onto someone else's book and can take
-it off the owner's. Use change_state with action=move_deal to move a deal between stages, and
-change_activities with action=relink to change what an activity is about; neither is a field edit.
-Send if_version with the version you read, and keep the staged approval id from the result if you
-intend to retry the same change once a human has released it. (Runs immediately; requires passport
-scope "write".)
+it off the owner's. An activity moved to another day keeps its time of day unless the user names
+one. Use change_state with action=move_deal to move a deal between stages, and change_activities
+with action=relink to change what an activity is about; neither is a field edit. Send if_version
+with the version you read, and keep the staged approval id from the result if you intend to retry
+the same change once a human has released it. (Runs immediately; requires passport scope "write".)
 ```
 
 Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view), visible to `model`, `app`.
@@ -6989,7 +7089,7 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
       "type": "string"
     },
     "fields": {
-      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. An rfc3339 value carries Z or the offset the user gave. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "id": {

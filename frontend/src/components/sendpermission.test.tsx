@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { LocaleProvider } from "../i18n";
+import { LocaleProvider, translate } from "../i18n";
 import { decidingRecipient, SendPermission } from "./sendpermission";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
@@ -39,6 +39,7 @@ function draw(
   ui: Preview | undefined,
   onOverride?: () => void,
   unanswered = false,
+  picksReason = false,
 ) {
   return render(
     <LocaleProvider initial="en">
@@ -46,6 +47,7 @@ function draw(
         preview={ui}
         onOverride={onOverride}
         unanswered={unanswered}
+        picksReason={picksReason}
       />
     </LocaleProvider>,
   );
@@ -193,7 +195,9 @@ describe("what a rep is shown", () => {
       ),
     );
     expect(screen.getByText(/objected to marketing/i)).toBeInTheDocument();
-    expect(screen.getByText(/including an administrator/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/only an administrator can still send past this/i),
+    ).toBeInTheDocument();
   });
 
   // The rule that matters most: a control nobody may press teaches a rep the
@@ -247,6 +251,140 @@ describe("what a rep is shown", () => {
     expect(screen.queryByText(/frequency_cap_reached/)).toBeNull();
     expect(screen.getByText(/clears automatically/i)).toBeInTheDocument();
   });
+
+  // The rep can fix this one in the same dialog, so the generic refusal would
+  // send them looking for a cause that is not there.
+  it("says the picked reason contradicts the thread, and how to fix it", () => {
+    draw(
+      preview(
+        answer({
+          reason_code: "claim_contradicts_resolution",
+          decided_by: "machine",
+          would_refuse: true,
+          can_be_overruled: false,
+        }),
+      ),
+      undefined,
+      false,
+      true,
+    );
+    expect(
+      screen.getByText(
+        translate("en", "sendPermission.reason.claimContradicts"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/does not match this thread/)).toBeVisible();
+    expect(
+      screen.queryByText(translate("en", "sendPermission.reason.other")),
+    ).toBeNull();
+  });
+});
+
+// Each code in the state the preview really sends it in: the three a recorded
+// reason can lift arrive overrulable, the other two do not.
+describe("every refusal says what is wrong and what to do", () => {
+  it.each([
+    ["no_compatible_evidence", true, "sendPermission.unprovenHint"],
+    ["no_marketing_consent", true, "sendPermission.reason.noMarketingConsent"],
+    [
+      "legacy_transactional_unevidenced",
+      true,
+      "sendPermission.reason.legacyPurpose",
+    ],
+    ["unknown_purpose", false, "sendPermission.reason.unknownPurpose"],
+    [
+      "claim_contradicts_resolution",
+      false,
+      "sendPermission.reason.claimContradicts",
+    ],
+  ] as const)("%s", (code, overrulable, key) => {
+    draw(
+      preview(
+        answer({
+          reason_code: code,
+          decided_by: "machine",
+          would_refuse: true,
+          can_be_overruled: overrulable,
+        }),
+      ),
+      () => {},
+      false,
+      true,
+    );
+    expect(screen.getByText(translate("en", key))).toBeInTheDocument();
+    expect(
+      screen.queryByText(translate("en", "sendPermission.reason.other")),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /record reason for contact/i }) !==
+        null,
+    ).toBe(overrulable);
+  });
+});
+
+// A scheduled send or an approval row has no picker, so nothing asks for one.
+describe("a read-only surface states the fact without the instruction", () => {
+  it.each([
+    [
+      "no_marketing_consent",
+      "sendPermission.reason.noMarketingConsentFact",
+      "sendPermission.reason.noMarketingConsent",
+    ],
+    [
+      "legacy_transactional_unevidenced",
+      "sendPermission.reason.legacyPurposeFact",
+      "sendPermission.reason.legacyPurpose",
+    ],
+    [
+      "unknown_purpose",
+      "sendPermission.reason.unknownPurposeFact",
+      "sendPermission.reason.unknownPurpose",
+    ],
+    [
+      "claim_contradicts_resolution",
+      "sendPermission.reason.claimContradictsFact",
+      "sendPermission.reason.claimContradicts",
+    ],
+  ] as const)("%s", (code, fact, instruction) => {
+    draw(
+      preview(
+        answer({
+          reason_code: code,
+          decided_by: "machine",
+          would_refuse: true,
+          can_be_overruled:
+            code !== "unknown_purpose" &&
+            code !== "claim_contradicts_resolution",
+        }),
+      ),
+    );
+    expect(screen.getByText(translate("en", fact))).toBeInTheDocument();
+    expect(screen.queryByText(translate("en", instruction))).toBeNull();
+    expect(screen.queryByText(/pick/i)).toBeNull();
+  });
+});
+
+// A composer whose address matches no contact draws no reason to record. Its own
+// reason pick is still there, so the sentence still asks for it.
+it("asks for the reason pick where there is no reason to record", () => {
+  draw(
+    preview(
+      answer({
+        reason_code: "no_marketing_consent",
+        decided_by: "machine",
+        would_refuse: true,
+        can_be_overruled: true,
+      }),
+    ),
+    undefined,
+    false,
+    true,
+  );
+  expect(
+    screen.getByText(
+      translate("en", "sendPermission.reason.noMarketingConsent"),
+    ),
+  ).toBeInTheDocument();
 });
 
 describe("what the hint tells a rep to do", () => {

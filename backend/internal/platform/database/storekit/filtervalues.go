@@ -28,6 +28,8 @@ type FieldValue struct {
 	// Label is the name of the record a reference value names, when the
 	// reader may open it.
 	Label *string
+	// Linked is what a link field holds on the record; Value is nil then.
+	Linked []LinkedValue
 }
 
 // Leaves is the comparison leaves of a filter tree, in the order the tree
@@ -62,6 +64,8 @@ func FieldsNamed(p Predicate) []string {
 type valueColumn struct {
 	name       string
 	references string
+	reference  Reference
+	linked     bool
 }
 
 // SelectedValues reads, for each of recordIDs the filter selects for this
@@ -75,21 +79,26 @@ func (q Query) SelectedValues(ctx context.Context, tx pgx.Tx, p Predicate, recor
 	var shown []valueColumn
 	var hidden []string
 	selects := []string{"t.id"}
+	arg := func(v any) int { args = append(args, v); return len(args) }
 	for _, name := range FieldsNamed(p) {
 		field := q.Fields[name]
-		masked := field.Withheld || field.Link != ""
-		var expr string
-		if !masked {
-			if expr, masked, err = q.shownValue(ctx, name, field); err != nil {
-				return nil, err
-			}
+		reading, err := q.readField(ctx, name, field, arg)
+		if err != nil {
+			return nil, err
 		}
-		if masked {
+		if reading.valueless {
+			continue
+		}
+		if reading.hidden {
 			hidden = append(hidden, name)
 			continue
 		}
-		shown = append(shown, valueColumn{name: name, references: referencedTables[field.References]})
-		selects = append(selects, "("+expr+")::text")
+		shown = append(shown, valueColumn{name: name, references: referencedTables[field.References], linked: reading.linked, reference: field.References})
+		if reading.linked {
+			selects = append(selects, reading.expr)
+		} else {
+			selects = append(selects, "("+reading.expr+")::text")
+		}
 	}
 	args = append(args, recordIDs)
 	sql := fmt.Sprintf("SELECT %s FROM %s t WHERE %s AND t.id = ANY($%d)",
@@ -111,9 +120,14 @@ func scanValues(ctx context.Context, tx pgx.Tx, sql string, args []any, shown []
 	for rows.Next() {
 		var id ids.UUID
 		texts := make([]*string, len(shown))
+		lists := make([][]string, len(shown))
 		targets := []any{&id}
-		for i := range texts {
-			targets = append(targets, &texts[i])
+		for i, column := range shown {
+			if column.linked {
+				targets = append(targets, &lists[i])
+			} else {
+				targets = append(targets, &texts[i])
+			}
 		}
 		if err := rows.Scan(targets...); err != nil {
 			return nil, err
@@ -123,6 +137,10 @@ func scanValues(ctx context.Context, tx pgx.Tx, sql string, args []any, shown []
 			values[name] = FieldValue{Hidden: true}
 		}
 		for i, column := range shown {
+			if column.linked {
+				values[column.name] = FieldValue{Linked: rawLinked(lists[i])}
+				continue
+			}
 			values[column.name] = FieldValue{Value: texts[i]}
 		}
 		out[id] = values
@@ -130,11 +148,27 @@ func scanValues(ctx context.Context, tx pgx.Tx, sql string, args []any, shown []
 	return out, rows.Err()
 }
 
+// rawLinked holds a link field's values as read, before the reader's view of
+// each is decided.
+func rawLinked(values []string) []LinkedValue {
+	out := make([]LinkedValue, len(values))
+	for i, v := range values {
+		out[i] = LinkedValue{Value: v}
+	}
+	return out
+}
+
 // withholdUnseenValues hides each shown value naming a row the reader may not
 // open, and names each one they may, as withholdUnseenReferences does for one
 // explained record.
 func withholdUnseenValues(ctx context.Context, tx pgx.Tx, values map[ids.UUID]map[string]FieldValue, shown []valueColumn) error {
 	for _, column := range shown {
+		if column.linked {
+			if err := resolveLinkedColumn(ctx, tx, values, column); err != nil {
+				return err
+			}
+			continue
+		}
 		if column.references == "" {
 			continue
 		}
@@ -164,6 +198,30 @@ func withholdUnseenValues(ctx context.Context, tx pgx.Tx, values map[ids.UUID]ma
 	return nil
 }
 
+// resolveLinkedColumn replaces one link column's raw values on every record
+// with what this reader may see, through the lookup Explain uses.
+func resolveLinkedColumn(ctx context.Context, tx pgx.Tx, values map[ids.UUID]map[string]FieldValue, column valueColumn) error {
+	var named []string
+	for _, record := range values {
+		for _, v := range record[column.name].Linked {
+			named = append(named, v.Value)
+		}
+	}
+	found, err := linkedLookup(ctx, tx, column.reference, named)
+	if err != nil {
+		return err
+	}
+	for _, record := range values {
+		raw := record[column.name].Linked
+		keys := make([]string, len(raw))
+		for i, v := range raw {
+			keys[i] = v.Value
+		}
+		record[column.name] = FieldValue{Linked: resolveLinked(found, keys)}
+	}
+	return nil
+}
+
 // referenceNames is the column naming a row of each referenced table.
 var referenceNames = map[string]string{"company": "display_name", "project": "name"}
 
@@ -174,15 +232,9 @@ func seenReferences(ctx context.Context, tx pgx.Tx, table string, values []strin
 	if len(values) == 0 {
 		return map[string]*string{}, nil
 	}
-	parsed := make(map[string]ids.UUID, len(values))
-	rowIDs := make([]ids.UUID, 0, len(values))
-	for _, value := range values {
-		id, err := ids.Parse(value)
-		if err != nil {
-			return nil, fmt.Errorf("a %s reference is not an id: %w", table, err)
-		}
-		parsed[value] = id
-		rowIDs = append(rowIDs, id)
+	rowIDs, parsed, err := parseReferenceIDs(table, values)
+	if err != nil {
+		return nil, err
 	}
 	visible, err := auth.VisibleSubset(ctx, tx, table, rowIDs)
 	if err != nil {
@@ -247,4 +299,20 @@ func (q Query) SelectsEach(ctx context.Context, tx pgx.Tx, filters []Predicate, 
 		return nil, fmt.Errorf("filters for one record on %s: %w", q.Table, err)
 	}
 	return out, nil
+}
+
+// parseReferenceIDs parses each value as the id of a row of table, keeping the
+// text each came from.
+func parseReferenceIDs(table string, values []string) ([]ids.UUID, map[string]ids.UUID, error) {
+	parsed := make(map[string]ids.UUID, len(values))
+	rowIDs := make([]ids.UUID, 0, len(values))
+	for _, value := range values {
+		id, err := ids.Parse(value)
+		if err != nil {
+			return nil, nil, fmt.Errorf("a %s reference is not an id: %w", table, err)
+		}
+		parsed[value] = id
+		rowIDs = append(rowIDs, id)
+	}
+	return rowIDs, parsed, nil
 }

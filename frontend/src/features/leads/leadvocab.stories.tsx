@@ -11,9 +11,9 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { LeadHandlingCard } from "./leadvocab";
+import { LeadOriginsCard } from "./leadvocab.origins";
 import { LeadDisqualifyReasonsCard } from "./leadvocab.reasons";
 import { VocabRowMenu } from "./leadvocab.rows";
-import { LeadSourcesCard } from "./leadvocab.sources";
 
 // Settings › Data model: where leads come from, why they get dropped, and
 // whether the first-response target is tracked. Every role reads the lists;
@@ -41,24 +41,20 @@ function source(
   };
 }
 
-const SOURCES = {
+const ORIGINS = {
   data: [
-    source("manual", "Created manually", "neutral", {
-      system: true,
-      lead_count: 12,
-    }),
-    source("inbound", "Inbound", "high", { system: true, lead_count: 31 }),
-    source("webform", "Web form", "high", { system: true, lead_count: 4 }),
+    source("event", "Event", "neutral", { system: true, lead_count: 12 }),
+    source("linkedin", "LinkedIn", "neutral", { system: true, lead_count: 31 }),
     source("referral", "Referral", "high", { system: true, lead_count: 9 }),
-    source("import", "Import", "low", {
+    source("partner", "Partner", "high", { system: true, lead_count: 4 }),
+    source("website", "Website", "high", { system: true, lead_count: 6 }),
+    source("cold_outreach", "Cold outreach", "low", {
       system: true,
       lead_count: 140,
       active: false,
     }),
-    source("crawl", "Web research", "low", { system: true, lead_count: 2 }),
     source("trade_show", "Trade show", "high", { lead_count: 3 }),
   ],
-  discovered: [{ key: "connector:apollo", lead_count: 27 }],
 };
 
 const REASONS = {
@@ -109,11 +105,11 @@ function story(
         "POST /lead-disqualify-reasons": () => jsonResponse(DUPLICATE, 409),
       }),
       ...(refuseWrites && {
-        "PATCH /lead-sources/src-trade_show": permissionDenied,
+        "PATCH /lead-origins/src-trade_show": permissionDenied,
         "PATCH /lead-disqualify-reasons/r2": permissionDenied,
         "PATCH /leads/settings": permissionDenied,
       }),
-      "GET /lead-sources": () => jsonResponse(SOURCES),
+      "GET /lead-origins": () => jsonResponse(ORIGINS),
       "GET /lead-disqualify-reasons": () => jsonResponse(REASONS),
       "GET /leads/settings": () =>
         jsonResponse({
@@ -123,7 +119,7 @@ function story(
     });
     return (
       <StoryProviders>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
         <LeadDisqualifyReasonsCard />
         <LeadHandlingCard />
       </StoryProviders>
@@ -133,8 +129,8 @@ function story(
 
 const meta = {
   title: "Settings/Sales/Lead handling/Lead vocabularies",
-  component: LeadSourcesCard,
-} satisfies Meta<typeof LeadSourcesCard>;
+  component: LeadOriginsCard,
+} satisfies Meta<typeof LeadOriginsCard>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -182,12 +178,12 @@ export const AdminDark: Story = {
 };
 
 // A label and a weight, so its form is a dialog behind the header verb.
-export const AddingSource: Story = {
+export const AddingOrigin: Story = {
   render: story(ADMIN, false),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "New source" }),
+      await canvas.findByRole("button", { name: "New origin" }),
     );
   },
 };
@@ -218,14 +214,14 @@ export const RemoveRefused: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Actions for Inbound" }),
+      await canvas.findByRole("button", { name: "Actions for Referral" }),
     );
     const page = within(canvasElement.ownerDocument.body);
     await expect(page.getByRole("button", { name: "Remove" })).toBeDisabled();
   },
 };
 
-export const RenamingSource: Story = {
+export const RenamingOrigin: Story = {
   render: story(ADMIN, false),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -268,7 +264,7 @@ export const RowMenu: Story = {
       <VocabRowMenu
         label="Webinar"
         verbs={{ canEdit: true, canRemove: true }}
-        refusal="2 leads use this source. Deactivate it instead."
+        refusal="2 leads use this origin. Deactivate it instead."
         onRename={() => undefined}
         onRemove={() => undefined}
       />

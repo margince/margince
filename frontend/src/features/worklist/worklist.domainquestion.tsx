@@ -80,6 +80,32 @@ export function useDomainQuestionDiscard(invalidateKeys: readonly QueryKey[]) {
   });
 }
 
+/**
+ * Keeping a vendor verdict: the domain stays a mail or hosting vendor and no
+ * company is created. Only a vendor question offers it.
+ */
+export function useDomainQuestionKeepVendor(
+  invalidateKeys: readonly QueryKey[],
+) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (domain: string) => {
+      return unwrap(
+        await api.POST("/capture/domain-questions/{domain}/keep-vendor", {
+          params: { path: { domain } },
+        }),
+        t,
+      );
+    },
+    onSuccess: () => {
+      for (const queryKey of invalidateKeys) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+    },
+  });
+}
+
 // TWO VERBS OF EQUAL WEIGHT, so neither is the row's primary. The machine could
 // not tell whether this domain is a company, and two colleagues sharing an
 // installation may answer it opposite ways — so drawing one of them as the
@@ -101,7 +127,8 @@ export function DomainQuestionAnswer({
   const toast = useToast();
   const keep = useDomainQuestionKeep([worklistKey]);
   const discard = useDomainQuestionDiscard([worklistKey]);
-  const busy = keep.isPending || discard.isPending;
+  const keepVendor = useDomainQuestionKeepVendor([worklistKey]);
+  const busy = keep.isPending || discard.isPending || keepVendor.isPending;
   const domain = item.id;
   const { actions } = item;
   return (
@@ -128,6 +155,24 @@ export function DomainQuestionAnswer({
           }
         >
           {t("worklist.verb.keep")}
+        </Button>
+      ) : null}
+      {actions.includes("keep_as_vendor") ? (
+        <Button
+          pending={keepVendor.isPending}
+          disabled={busy}
+          onClick={() =>
+            keepVendor.mutate(domain, {
+              onSuccess: () =>
+                toast.show(t("worklist.verb.domainKeptAsVendor")),
+              onError: () =>
+                toast.show(t("worklist.verb.domainKeepAsVendorFailed"), {
+                  tone: "danger",
+                }),
+            })
+          }
+        >
+          {t("worklist.verb.keepAsVendor")}
         </Button>
       ) : null}
       {actions.includes("discard") ? (

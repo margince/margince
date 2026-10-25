@@ -1,19 +1,26 @@
 <!-- prose:plain -->
 # Cut a release
 
-## Plan it with a milestone
+## Plan the work by month
 
-Each planned version has a milestone named like its tag, such as `v1.1.0`. To put an issue in a
-release, set its milestone. An issue holds one milestone, so it cannot be planned for two versions.
-A version that moves the first or second number, such as `v1.1.0` or `v2.0.0`, gets its milestone
-ahead of time. A patch such as `v1.0.1` gets one only when someone plans it, because a patch holds
-whatever was fixed since the last release. Agreed work that no version holds yet keeps
-`status: deferred` ([issue-labels.md](../reference/issue-labels.md#status)).
+Each milestone is a month, named `YYYY-MM` and due on its last day, such as `2026-11`. To plan an
+issue, set the milestone of the month the work should land in. A milestone names no release: a
+release is what `main` holds on the day it is tagged. At the end of a month, move its open issues to
+the next one, then close it. Agreed work that is not for this month goes in the next month's
+milestone. No label parks work for later.
 
-`release-tag.yml` refuses a plain tag while its milestone has an open issue or pull request. Close
-the item or move it to the next milestone, then run all jobs of the run again; the tag can stay. A tag
-with an added part, such as `v1.1.0-rc.1`, passes with work still open. Once a plain release is published,
-the lane closes its milestone. A tag with no milestone of its name passes.
+## Clear the blockers
+
+An issue the next release cannot ship without carries `release: blocker`
+([issue-labels.md](../reference/issue-labels.md#release)). List what is left:
+
+```sh
+gh issue list --label "release: blocker"
+```
+
+`release-tag.yml` refuses a plain tag while that list is not empty. Close each issue, or take the label
+off one the release can ship without. Then run all jobs of the run again; the tag can stay. A tag with
+an added part, such as `v1.1.0-rc.1`, passes with blockers still open.
 
 ## Write the notes
 
@@ -62,7 +69,7 @@ git tag -a v1.0.0 -m "First stable release"
 git push origin v1.0.0
 ```
 
-`release-tag.yml` then checks the tag, the draft and the milestone, and refuses a commit that
+`release-tag.yml` then checks the tag, the draft and the blockers, and refuses a commit that
 `merge-attest` judged bad. It builds the macOS and Windows bundles, and creates the release with both
 bundles on it.
 

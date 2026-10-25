@@ -276,6 +276,7 @@ var catalog = map[string]struct {
 	"intro_request.created":   {contactStreamEntity, 1},
 	"intro_request.decided":   {contactStreamEntity, 1},
 	"intro_request.completed": {contactStreamEntity, 1},
+	"intro_request.recorded":  {contactStreamEntity, 1},
 	"intro_request.replied":   {contactStreamEntity, 1},
 	"intro_request.closed":    {contactStreamEntity, 1},
 

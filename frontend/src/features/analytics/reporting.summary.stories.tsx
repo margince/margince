@@ -1,6 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryProviders } from "../../testing/story-utils";
-import { reportingStoryEvaluation } from "./reporting.story-fixtures";
+import {
+  reportingLeadsEvaluation,
+  reportingPartnersEvaluation,
+  reportingStoryEvaluation,
+} from "./reporting.story-fixtures";
 import { ResultsSummary } from "./reporting.summary";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Outcome summary" };
@@ -45,4 +49,28 @@ export const NoSalesThisPeriod: Story = {
 export const NoSalesThisPeriodDark: Story = {
   ...NoSalesThisPeriod,
   globals: { theme: "dark" },
+};
+
+// Lead readings: a share out of its total and a time in hours.
+export const Leads: Story = {
+  render: () => (
+    <StoryProviders>
+      <ResultsSummary
+        evaluation={reportingLeadsEvaluation}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>
+  ),
+};
+
+// Partner readings, one of them as things stand rather than over a period.
+export const Partners: Story = {
+  render: () => (
+    <StoryProviders>
+      <ResultsSummary
+        evaluation={reportingPartnersEvaluation}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>
+  ),
 };

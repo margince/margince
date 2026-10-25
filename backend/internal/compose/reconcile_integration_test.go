@@ -164,8 +164,20 @@ func (e *reconcileEnv) seedInteraction(t *testing.T, dealID ids.UUID, kind, subj
 // status is written as given, and "" writes NULL — which is what a captured
 // calendar entry nobody has marked actually carries, and the case a NOT IN
 // predicate silently drops.
+//
+// The meeting is a colleague's (Rep2 hosts it, the deals are Rep1's). A
+// meeting anyone here hosts is the account's next step.
 func (e *reconcileEnv) seedMeeting(
 	t *testing.T, dealID ids.UUID, subject string, occurredHoursAgo, durationSeconds int, status string,
+) {
+	t.Helper()
+	e.seedMeetingHostedBy(t, dealID, subject, occurredHoursAgo, durationSeconds, status, &e.Rep2)
+}
+
+// seedMeetingHostedBy is seedMeeting with the host named; nil is an imported
+// row no seat here hosts or attends.
+func (e *reconcileEnv) seedMeetingHostedBy(
+	t *testing.T, dealID ids.UUID, subject string, occurredHoursAgo, durationSeconds int, status string, host *ids.UUID,
 ) {
 	t.Helper()
 	id := ids.NewV7()
@@ -174,9 +186,9 @@ func (e *reconcileEnv) seedMeeting(
 		meetingStatus = &status
 	}
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO activity (id, kind, subject, occurred_at, duration_seconds, meeting_status, source, captured_by)
-		 VALUES ($1, 'meeting', $2, now() - make_interval(hours => $3), $4, $5, 'manual', 'human:x')`,
-		id, subject, occurredHoursAgo, durationSeconds, meetingStatus); err != nil {
+		`INSERT INTO activity (id, kind, subject, occurred_at, duration_seconds, meeting_status, source, captured_by, host_user_id)
+		 VALUES ($1, 'meeting', $2, now() - make_interval(hours => $3), $4, $5, 'manual', 'human:x', $6)`,
+		id, subject, occurredHoursAgo, durationSeconds, meetingStatus, host); err != nil {
 		t.Fatalf("seed meeting: %v", err)
 	}
 	e.linkActivity(t, id, dealID)
@@ -363,6 +375,22 @@ func TestAMeetingBookedForTomorrowIsNotEvidenceOfAMissedNextStep(t *testing.T) {
 		_, proposal := e.followUpApproval(t, deal)
 		t.Logf("staged proposal named evidence of kind %q at %s",
 			proposal.EvidenceKind, proposal.EvidenceOccurredAt)
+	}
+}
+
+// An imported meeting nobody here hosts or attends is history, not a plan: it
+// does not stand in for the account's next step.
+func TestAnImportedMeetingNobodyTakesPartInIsNotANextStep(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Call then an imported meeting", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "call", "Discovery call", 3)
+	e.seedMeetingHostedBy(t, deal, "Imported session", -48, 1800, "booked", nil)
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 1 {
+		t.Errorf("a deal whose only meeting nobody here takes part in staged %d proposals, want 1", got)
 	}
 }
 

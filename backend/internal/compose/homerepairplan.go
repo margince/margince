@@ -24,13 +24,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-var homeRepairVersion = "2:" + activities.CommitmentAdmissionVersion + ":" + deals.SuggestionRepairVersion + ":" + lifecyclereview.RuleVersion + ":" + owedverdict.Ruleset
+var homeRepairVersion = "2:" + activities.SettlementRepairVersion + ":" + activities.CommitmentAdmissionVersion + ":" + deals.SuggestionRepairVersion + ":" + lifecyclereview.RuleVersion + ":" + owedverdict.Ruleset
 
 const (
 	repairSourceTask       = "task"
 	repairSourceApproval   = "approval"
 	repairSourceSuggestion = "suggestion"
 	repairSourceVerdict    = "verdict"
+	repairSourceSettlement = "settlement"
 	repairCurrentWork      = "current_work"
 	repairRecordID         = "record_id"
 )
@@ -60,6 +61,9 @@ func previewHomeRepairSourceTx(ctx context.Context, tx pgx.Tx, source string, af
 	}
 	if source == repairSourceSuggestion {
 		return previewHomeRepairSuggestionsTx(ctx, tx, after, limit, asOf)
+	}
+	if source == repairSourceSettlement {
+		return previewHomeRepairSettlementsTx(ctx, tx, after, limit, asOf)
 	}
 	scope := homeRepairScope{Tasks: make([]homeRepairTaskRef, 0, limit)}
 	if source == repairSourceApproval {
@@ -155,6 +159,9 @@ func validateHomeRepairItemTx(ctx context.Context, tx pgx.Tx, expected homeRepai
 	}
 	if expected.Source == repairSourceSuggestion {
 		return validateHomeRepairSuggestionTx(ctx, tx, expected, review.AsOf)
+	}
+	if expected.Source == repairSourceSettlement {
+		return validateHomeRepairSettlementTx(ctx, tx, expected, review.AsOf)
 	}
 	if expected.Source == repairSourceApproval {
 		return validateHomeRepairProposalTx(ctx, tx, expected, review.AsOf, false)

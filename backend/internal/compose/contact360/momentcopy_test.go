@@ -154,9 +154,9 @@ func TestUndatedTaskUsesTheRecordDayInEveryLanguage(t *testing.T) {
 
 func TestContactEvidenceFallbackCaptionsFollowLanguage(t *testing.T) {
 	for _, tc := range []struct{ lang, inbound, outbound, meeting string }{
-		{"en", "Their last message", "Your last message", "Meeting"},
-		{"de", "Letzte Nachricht des Kontakts", "Ihre letzte Nachricht", "die Besprechung"},
-		{"vi", "Tin nhắn gần nhất của họ", "Tin nhắn gần nhất của bạn", "Cuộc họp"},
+		{"en", "Their last message", "Last message to them", "Meeting"},
+		{"de", "Letzte Nachricht des Kontakts", "Letzte Nachricht an den Kontakt", "die Besprechung"},
+		{"vi", "Tin nhắn gần nhất của họ", "Tin nhắn gần nhất gửi cho họ", "Cuộc họp"},
 	} {
 		said := momentCopyFor(tc.lang)
 		if got := said.inboundEvidence(&contracts.Contact360{}, now).Label; got != tc.inbound {
@@ -168,6 +168,24 @@ func TestContactEvidenceFallbackCaptionsFollowLanguage(t *testing.T) {
 		meeting, ok := said.meetingPrepMoment(readerCtx(), now, &contracts.Contact360{NextMeeting: &contracts.Contact360NextMeeting{StartsAt: ahead(24)}})
 		if !ok || meeting.Evidence[0].Label != tc.meeting {
 			t.Fatalf("%s meeting fallback: %+v", tc.lang, meeting)
+		}
+	}
+}
+
+// Every colleague who opens the contact reads the gone-quiet copy. Most of
+// them sent nothing, so it never says the reader wrote the last message.
+func TestTheGoneQuietCopyNeverClaimsTheReaderSentTheLastMessage(t *testing.T) {
+	for _, language := range []string{"en", "de", "vi"} {
+		said := momentCopyFor(language)
+		outbound := now.AddDate(0, 0, -40)
+		moment, ok := said.goneQuietMoment(readerCtx(), now, &contracts.Contact360{LastOutboundAt: &outbound})
+		if !ok {
+			t.Fatalf("%s: no gone-quiet moment for a 40-day silence", language)
+		}
+		for _, claim := range []string{"Your last", "Ihre letzte", "của bạn"} {
+			if strings.Contains(moment.WhyNow, claim) || strings.Contains(moment.Evidence[0].Label, claim) {
+				t.Errorf("%s: %q / %q says the reader sent it", language, moment.WhyNow, moment.Evidence[0].Label)
+			}
 		}
 	}
 }

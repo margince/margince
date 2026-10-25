@@ -43,7 +43,7 @@ import (
 // of them.
 //
 // It covers ONLY the floor. The model prompt versions itself below.
-const floorVersion = "contact-brief-floor-v3"
+const floorVersion = "contact-brief-floor-v4"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so editing that wording bumps it whether or not anybody remembers
@@ -106,6 +106,10 @@ type Input struct {
 	Strength     int    `json:"strength"`
 	LastInbound  string `json:"last_inbound,omitempty"`
 	LastOutbound string `json:"last_outbound,omitempty"`
+	// Relationship is the contact's relationship mark, empty for an ordinary
+	// contact. It rides the fingerprint, so a brief cached before the mark was
+	// set is rewritten.
+	Relationship string `json:"relationship,omitempty"`
 
 	OpenDeal *DealIn    `json:"open_deal,omitempty"`
 	Moment   *MomentIn  `json:"moment,omitempty"`
@@ -274,7 +278,25 @@ func FromView(view crmcontracts.Contact360) Input {
 	foldChanges(&in, view)
 	foldClaims(&in, view)
 	foldRecent(&in, view)
+	if view.Contact.RelationshipMark != nil {
+		in.Relationship = string(*view.Contact.RelationshipMark)
+		withholdWhatTheySeekFrom(&in)
+	}
 	return in
+}
+
+// withholdWhatTheySeekFrom removes everything that would phrase a marked
+// contact's own ask as the reader's next step. A vendor's request for a demo is
+// stored as an open claim, a moment and a message waiting for a reply. Each of
+// those reaches the brief as something due. Dropping them leaves the floor
+// nothing to say it from, and the model nothing to quote.
+func withholdWhatTheySeekFrom(in *Input) {
+	in.Moment = nil
+	in.Changes = nil
+	in.Claims = nil
+	for i := range in.Recent {
+		in.Recent[i].Move = ""
+	}
 }
 
 // omittedNames renders the withheld sections as the plain strings the
@@ -315,55 +337,6 @@ func foldCommercial(in *Input, view crmcontracts.Contact360) {
 		folded.CloseDate = deal.CloseDate.String()
 	}
 	in.OpenDeal = &folded
-}
-
-func foldClaims(in *Input, view crmcontracts.Contact360) {
-	if view.Claims == nil {
-		return
-	}
-	for _, claim := range *view.Claims {
-		if len(in.Claims) == briefInputClaims {
-			break
-		}
-		if claim.Status == crmcontracts.ConversationClaimStatusDismissed {
-			// A dismissed claim is one a human said was never true. Writing a
-			// brief from it would resurrect it in prose.
-			continue
-		}
-		folded := ClaimIn{
-			Kind:     string(claim.Kind),
-			Body:     claim.Body,
-			Status:   string(claim.Status),
-			Quote:    claim.SourceQuote,
-			SourceID: claim.SourceActivityId.String(),
-		}
-		if claim.DueAt != nil {
-			folded.DueAt = stampAt(*claim.DueAt)
-		}
-		in.Claims = append(in.Claims, folded)
-	}
-}
-
-func foldChanges(in *Input, view crmcontracts.Contact360) {
-	if view.RelationshipChanges == nil {
-		return
-	}
-	for _, change := range *view.RelationshipChanges {
-		if len(in.Changes) == briefInputChanges {
-			break
-		}
-		folded := ChangeIn{Kind: string(change.Kind), At: stampAt(change.At)}
-		if change.Days != nil {
-			folded.Days = *change.Days
-		}
-		if change.FromBucket != nil {
-			folded.From = string(*change.FromBucket)
-		}
-		if change.ToBucket != nil {
-			folded.To = string(*change.ToBucket)
-		}
-		in.Changes = append(in.Changes, folded)
-	}
 }
 
 // foldMoment carries the ladder's selected moment and the activities behind it.

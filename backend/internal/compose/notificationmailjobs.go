@@ -246,6 +246,9 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 	if attempt.ApprovalID != nil {
 		sent = append(sent, w.approvalBurst(ctx, seatCtx, attempt)...)
 	}
+	if sent = w.reserveApprovalMail(ctx, seatCtx, sent, words); len(sent) == 0 {
+		return
+	}
 
 	// Bounded like the two digests' sends are: the wall clock the kind declares
 	// covers the whole job, and one unreachable relay must not spend all of it

@@ -56,6 +56,7 @@ const contact: components["schemas"]["Contact"] = {
 
 function inboundEmail(): Activity {
   return {
+    offers_email: false,
     id: "a-1",
     kind: "email",
     direction: "inbound",
@@ -747,6 +748,7 @@ describe("the consent rail's transport row", () => {
     ...granted,
     contact: {
       ...contact,
+      primary_email: "dana@brandt.example",
       emails: [
         {
           id: "pe-1",

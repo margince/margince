@@ -2,6 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
+import { FileOrigin } from "../../components/fileorigin";
 import { Badge, Button } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { FilterPills } from "../../design-system/filterpills";
@@ -14,6 +15,7 @@ import {
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { attachmentAnchor } from "../../lib/attachmentlink";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
@@ -45,6 +47,7 @@ const CATEGORY_LABELS: Record<Category, MessageKey> = {
   email_attachment: "docs.category.email",
   message_attachment: "docs.category.message",
   other: "docs.category.other",
+  link: "docs.category.link",
 };
 
 // The cuts always offered, and the two a contact's files seldom carry, which
@@ -55,7 +58,11 @@ const STEADY_CUTS: readonly Category[] = [
   "email_attachment",
   "other",
 ];
-const RARE_CUTS: readonly Category[] = ["message_attachment", "contract"];
+const RARE_CUTS: readonly Category[] = [
+  "message_attachment",
+  "contract",
+  "link",
+];
 
 const STATE_LABELS: Record<DocState, MessageKey> = {
   draft: "docs.state.draft",
@@ -112,8 +119,11 @@ function filesState(
 export function ContactFilesTab({
   contactId,
   refusedReasonId,
+  onOpenEmail,
 }: Readonly<{
   contactId: string;
+  /** Opens a mail in the page's drawer, from the line naming a file's mail. */
+  onOpenEmail?: (activityId: string) => void;
   // The id of the page's sentence about why this contact takes no changes,
   // while it does not. The upload hangs a file on the contact through the
   // contact's own write gate. The same fact refuses it as every other write
@@ -159,7 +169,9 @@ export function ContactFilesTab({
           />
         </PanelBody>
       )}
-      {shown.length > 0 && <FilesTable files={shown} />}
+      {shown.length > 0 && (
+        <FilesTable files={shown} onOpenEmail={onOpenEmail} />
+      )}
       {state !== "ready" || shown.length === 0 ? (
         <PanelBody>
           <SurfaceState
@@ -223,7 +235,13 @@ function FileCuts({
 // One row per file. The NAME is the download, as it is on the account's own
 // list: the title if somebody gave it one, else the filename. The state shows
 // only where a human or the source asserted one; nothing here infers it.
-function FilesTable({ files }: Readonly<{ files: readonly Attachment[] }>) {
+function FilesTable({
+  files,
+  onOpenEmail,
+}: Readonly<{
+  files: readonly Attachment[];
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -234,13 +252,12 @@ function FilesTable({ files }: Readonly<{ files: readonly Attachment[] }>) {
       grow: true,
       fold: "title",
       render: (file) => (
-        <a
-          className="link-button"
-          href={`/v1/attachments/${file.id}`}
-          download={file.filename}
-        >
-          {file.title || file.filename}
-        </a>
+        <span className="contact-file">
+          <a className="link-button" {...attachmentAnchor(file)}>
+            {file.title || file.filename}
+          </a>
+          <FileOrigin origin={file.origin} onOpenEmail={onOpenEmail} />
+        </span>
       ),
     },
     {

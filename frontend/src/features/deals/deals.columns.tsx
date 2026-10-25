@@ -36,18 +36,18 @@ export function buildColumns(
         // No totals row yet: the report is still in flight, or this stage was
         // not in it. Either way the figure is unknown rather than zero, and the
         // column draws it as absent while still stating the count below.
-        rawMinor: stageTotals?.rawMinor ?? null,
-        weightedMinor: stageTotals?.weightedMinor ?? null,
+        rawMinor: stageTotals?.baseMinor ?? null,
+        weightedMinor: stageTotals?.weightedBaseMinor ?? null,
         currency: stageTotals?.currency ?? null,
         deals: stageDeals.map((deal) => toBoardDeal(deal, naming, owners)),
         // The true count, not the loaded page's. It falls back to the page
         // count while totals are still loading, so the column shows some
         // number rather than a misleading 0.
         count: stageTotals?.count ?? stageDeals.length,
-        // Withheld totals hide the sum for their own reason, which is not the
-        // mixed-currency one the column says by default.
-        sumHidden:
-          totalsWithheld !== undefined || (stageTotals?.sumHidden ?? false),
+        asOf: stageTotals?.asOf ?? null,
+        timezone: stageTotals?.timezone ?? null,
+        unpricedCount: stageTotals?.unpricedCount ?? null,
+        sumHidden: totalsWithheld !== undefined,
         sumHiddenReason: totalsWithheld,
       };
     });

@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/filedpairs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -36,67 +37,56 @@ type reviewPair struct {
 	by      string
 }
 
-// fileReviewPair puts the new contact and the incumbent it resembles in front of
-// a human, for the two decisions that mean "created anyway, but somebody should
-// look". Capture never blocks on a reviewer, so both arms have already created
-// the record; what differs is only what the queue is told.
-//
-// One function rather than two arms inline, because the two lanes disagree about
-// exactly one thing — what the evidence says — and spelling the record-and-report
-// half twice is how the two drift into describing the same queue differently.
+// fileReviewPair puts the new contact and each incumbent the review lanes named
+// in front of a human. Capture never blocks on a reviewer, so the record is
+// already created; what differs per lane is only what the queue is told.
 func fileReviewPair(ctx context.Context, tx pgx.Tx, match ContactResolution,
 	pair reviewPair, res *EnsureCounterpartyResult,
 ) error {
-	var evidence []map[string]any
-	switch match.Decision {
-	case DecisionNameCollisionReview:
-		// The name is the whole evidence, so the pair carries it alone. An exact
-		// spelling is not a probability: rendering a score beside it would invite
-		// a reviewer to read 1.0 as a confidence the lane never computed, and the
-		// stored confidence stays 0 for the same reason.
-		evidence = []map[string]any{
-			{
-				evidenceFieldKey: fieldFullName, evidenceLeftKey: pair.name, evidenceRightKey: pair.name,
+	for _, review := range match.Reviews {
+		recorded, err := fileCaptureReview(ctx, tx, review, pair)
+		if err != nil {
+			return err
+		}
+		res.DedupeRecorded = res.DedupeRecorded || recorded
+	}
+	return nil
+}
+
+// fileCaptureReview files one review pair for a captured contact.
+func fileCaptureReview(ctx context.Context, tx pgx.Tx, review ReviewMatch, pair reviewPair) (bool, error) {
+	if review.Decision == DecisionAddressVariantReview {
+		// The lane compared two addresses and scored nothing, so it stores 0.
+		return recordDedupeCandidate(ctx, tx, entityContact, pair.created.UUID, review.ContactID.UUID, 0,
+			addressVariantEvidence(review.CandidateEmail, review.IncumbentEmail), pair.source, pair.by)
+	}
+	// The detection-time snapshot the queue renders (DH-N-8): the incumbent as
+	// it looked when the lane named it, never re-derived later.
+	var incumbentName string
+	if err := tx.QueryRow(ctx,
+		`SELECT full_name FROM contact WHERE id = $1`, review.ContactID).Scan(&incumbentName); err != nil {
+		return false, fmt.Errorf("contacts: reading dedupe incumbent: %w", err)
+	}
+	if review.Decision == DecisionNameCollisionReview {
+		// The name is the whole evidence. An exact spelling is not a
+		// probability, so the pair carries no score and stores 0.
+		return recordDedupeCandidate(ctx, tx, entityContact, pair.created.UUID, review.ContactID.UUID, 0,
+			[]map[string]any{{
+				evidenceFieldKey: fieldFullName, evidenceLeftKey: pair.name, evidenceRightKey: incumbentName,
 				evidenceSignalKey: evidenceSignalCollide,
-			},
-		}
-	case DecisionFuzzyReview:
-		// The detection-time snapshot the queue renders (DH-N-8): captured NOW,
-		// against the incumbent as it looked when the score was computed — never
-		// re-derived later.
-		var incumbentName string
-		if err := tx.QueryRow(ctx,
-			`SELECT full_name FROM contact WHERE id = $1`, match.ContactID).Scan(&incumbentName); err != nil {
-			return fmt.Errorf("contacts: reading dedupe incumbent: %w", err)
-		}
-		evidence = []map[string]any{
+			}}, pair.source, pair.by)
+	}
+	return recordDedupeCandidate(ctx, tx, entityContact, pair.created.UUID, review.ContactID.UUID, review.Confidence,
+		[]map[string]any{
 			{
 				evidenceFieldKey: fieldFullName, evidenceLeftKey: pair.name, evidenceRightKey: incumbentName,
-				evidenceSignalKey: evidenceSignalCollide, evidenceScoreKey: match.Confidence,
+				evidenceSignalKey: evidenceSignalCollide, evidenceScoreKey: review.Confidence,
 			},
 			{
 				evidenceFieldKey: fieldEmail, evidenceLeftKey: pair.email, evidenceRightKey: nil,
 				evidenceSignalKey: evidenceSignalOneSided,
 			},
-		}
-	default:
-		return nil
-	}
-	// The name lane stores NO score. Its resolution carries the name-similarity
-	// term the fuzzy tier computed, but that number decided nothing here — the
-	// lane fired on an exact spelling — and showing it to a reviewer beside two
-	// identical names offers a confidence nobody measured.
-	confidence := match.Confidence
-	if match.Decision == DecisionNameCollisionReview {
-		confidence = 0
-	}
-	recorded, err := recordDedupeCandidate(ctx, tx, entityContact,
-		pair.created.UUID, match.ContactID.UUID, confidence, evidence, pair.source, pair.by)
-	if err != nil {
-		return err
-	}
-	res.DedupeRecorded = recorded
-	return nil
+		}, pair.source, pair.by)
 }
 
 // recordDedupeCandidate stores the pair canonically (lower id left,
@@ -145,6 +135,7 @@ func recordDedupeCandidate(ctx context.Context, tx pgx.Tx, entityType string, a,
 	}); err != nil {
 		return false, fmt.Errorf("contacts: audit the dedupe candidate: %w", err)
 	}
+	filedpairs.Note(ctx, candidateID)
 	return true, nil
 }
 

@@ -7,6 +7,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -31,6 +32,7 @@ type Contract = components["schemas"]["Contract"];
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const PREDECESSOR: Contract = {
@@ -47,6 +49,17 @@ const PREDECESSOR: Contract = {
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-01T00:00:00Z",
 };
+
+async function pickOnCalendar(
+  user: ReturnType<typeof userEvent.setup>,
+  label: RegExp,
+  day: string,
+) {
+  const field = screen.getByLabelText(label).parentElement;
+  if (!field) throw new Error("expected the date box inside its field");
+  await user.click(within(field).getByRole("button", { name: /^Choose date/ }));
+  await user.click(await screen.findByRole("button", { name: day }));
+}
 
 function show(ui: ReactNode) {
   const client = new QueryClient({
@@ -165,6 +178,30 @@ describe("ContractRenewModal", () => {
       auto_renew: false,
     });
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it("sends the term's days as typed or picked", async () => {
+    let posted: { body: Record<string, unknown> } | null = null;
+    stubRenewalFetch(async (request) => {
+      posted = { body: await request.json() };
+      return new Response(
+        JSON.stringify({ ...PREDECESSOR, id: "c-2", version: 1 }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      );
+    });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-01-10T09:00:00Z"));
+    const user = userEvent.setup();
+    show(<ContractRenewModal contract={PREDECESSOR} open onClose={vi.fn()} />);
+
+    await user.type(await screen.findByLabelText(/^Starts/), "01/01/2026");
+    await pickOnCalendar(user, /^Ends/, "Saturday, 31 January 2026");
+    await user.click(screen.getByRole("button", { name: "Renew" }));
+
+    await waitFor(() => expect(posted).not.toBeNull());
+    expect(
+      (posted as unknown as { body: Record<string, unknown> }).body,
+    ).toMatchObject({ starts_on: "2026-01-01", ends_on: "2026-01-31" });
   });
 
   // margince#3286 (re-measured): a renewal made through the API could always
@@ -366,14 +403,17 @@ describe("ContractCancelModal", () => {
         return new Response("not found", { status: 404 });
       }),
     );
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-10T09:00:00Z"));
     const user = userEvent.setup();
     const onClose = vi.fn();
     show(<ContractCancelModal contract={PREDECESSOR} open onClose={onClose} />);
 
-    const notice = await screen.findByLabelText(/^Notice given/);
-    await user.type(notice, "2026-06-01");
-    const effective = screen.getByLabelText(/^Takes effect/);
-    await user.type(effective, "2026-09-01");
+    await user.type(
+      await screen.findByLabelText(/^Notice given/),
+      "01/06/2026",
+    );
+    await pickOnCalendar(user, /^Takes effect/, "Tuesday, 1 September 2026");
     await user.click(
       screen.getByRole("button", { name: "Record cancellation" }),
     );
@@ -413,9 +453,9 @@ describe("ContractCancelModal", () => {
 
     await user.type(
       await screen.findByLabelText(/^Notice given/),
-      "2026-06-01",
+      "01/06/2026",
     );
-    await user.type(screen.getByLabelText(/^Takes effect/), "2026-09-01");
+    await user.type(screen.getByLabelText(/^Takes effect/), "01/09/2026");
     await user.click(
       screen.getByRole("button", { name: "Record cancellation" }),
     );
@@ -445,7 +485,7 @@ describe("ContractCancelModal", () => {
     const user = userEvent.setup();
     await user.type(
       await screen.findByLabelText(/^Notice given/),
-      "2026-06-01",
+      "01/06/2026",
     );
 
     // The SAME row, refetched: a new object, same id, a version bump — the
@@ -459,6 +499,6 @@ describe("ContractCancelModal", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByLabelText(/^Notice given/)).toHaveValue("2026-06-01");
+    expect(screen.getByLabelText(/^Notice given/)).toHaveValue("01/06/2026");
   });
 });

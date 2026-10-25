@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -48,10 +49,10 @@ func signatureEnrichRequest(cand contacts.SignatureCandidate, lines string) mode
 	// already holds. The pass reads a signature to find out whether what it
 	// holds is still true, so naming the empty fields would ask the narrower
 	// question and miss the number that changed.
-	prompt.WriteString("Fields to extract when stated: [\"title\",\"phone\",\"linkedin\",\"company_name\",\"address\",\"website\",\"first_name\",\"last_name\"]\n")
+	prompt.WriteString("Fields to extract when stated: " + signatureFieldList + "\n")
 	prompt.WriteString("Signature block (untrusted; the trailing lines of their last email):\n")
 	prompt.WriteString(fence.WrapAttr("source_id", cand.ActivityID.String(), lines) + "\n")
-	prompt.WriteString(`Return JSON: { "fields": [ { "field", "value", "evidence_snippet", "confidence" } ] }`)
+	prompt.WriteString(`Return JSON: { "fields": [ { "field", "value", "evidence_snippet", "confidence" } ], "name": { "family_name", "given_names", "middle", "order", "evidence_snippet", "confidence" } }`)
 
 	return model.Request{
 		System:         signatureEnrichSystemFor(fence),
@@ -62,24 +63,14 @@ func signatureEnrichRequest(cand contacts.SignatureCandidate, lines string) mode
 	}
 }
 
-// signatureBlock returns the trailing signatureLineCount non-quoted,
-// non-empty-tail lines of a stored email body — the §2.9 source window.
-// Quoted history (">"-prefixed) is not identity evidence and is excluded.
+// signatureBlock returns the last signatureLineCount lines the sender of this
+// mail typed (textlang.SenderLines). A quoted reply or a forward carries
+// somebody else's signature. The stored envelope names the contact. Neither may
+// reach the window.
 func signatureBlock(body string) string {
-	lines := strings.Split(body, "\n")
-	var kept []string
-	for _, l := range lines {
-		if strings.HasPrefix(strings.TrimSpace(l), ">") {
-			continue
-		}
-		kept = append(kept, l)
+	lines := textlang.SenderLines(body)
+	if len(lines) > signatureLineCount {
+		lines = lines[len(lines)-signatureLineCount:]
 	}
-	// Trim trailing blank lines so the window holds content, not padding.
-	for len(kept) > 0 && strings.TrimSpace(kept[len(kept)-1]) == "" {
-		kept = kept[:len(kept)-1]
-	}
-	if len(kept) > signatureLineCount {
-		kept = kept[len(kept)-signatureLineCount:]
-	}
-	return strings.TrimSpace(strings.Join(kept, "\n"))
+	return strings.TrimSpace(strings.Join(lines, "\n"))
 }

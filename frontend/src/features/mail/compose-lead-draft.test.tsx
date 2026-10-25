@@ -9,6 +9,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  messageText,
+  writeMessage,
+} from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
 import { draftButton } from "../../testing/composedraft.testkit";
 import {
@@ -169,6 +173,47 @@ describe("drafting to a lead", () => {
     // The intent, and no recipient among them: naming one would be this client
     // deciding who a lead's message goes to, which is the record's own field.
     expect(call?.body).toEqual({ intent: "shorter" });
+  });
+
+  it("rewrites the lead draft on screen, and keeps a rep's edit when asked again", async () => {
+    const first = { ...LEAD_DRAFT, body: "Hi Dung, what 40 seats cost." };
+    const second = { ...LEAD_DRAFT, body: "Hi Dung, short." };
+    let call = 0;
+    const sent = stubRoutes({
+      "POST /leads/l-1/draft-email": () =>
+        jsonResponse(call++ === 0 ? first : second),
+      "PUT /mail-drafts": () => new Response(null, { status: 204 }),
+    });
+    render(
+      <ComposeModal
+        intent="Follow up on our discussion"
+        entityType="lead"
+        entityId="l-1"
+        recordAddress="dung.ly@newsky.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(draftButton());
+    await waitFor(() => expect(messageText("Body")).toBe(first.body));
+    await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
+    await waitFor(() => expect(messageText("Body")).toBe(second.body));
+
+    const calls = sent.filter((c) => c.key === "POST /leads/l-1/draft-email");
+    expect(calls[1]?.body).toMatchObject({ rewrite_of: first.body });
+
+    writeMessage("Body", "Hi Dung, short. My own line.");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Change the ask" }),
+    );
+    await userEvent.click(draftButton());
+    expect(
+      await screen.findByText("Your edits were kept. Draft again when ready."),
+    ).toBeTruthy();
+    expect(messageText("Body")).toBe("Hi Dung, short. My own line.");
+    const again = sent.filter((c) => c.key === "POST /leads/l-1/draft-email");
+    expect(again[2]?.body).not.toHaveProperty("rewrite_of");
   });
 
   it("discloses a model-written draft", async () => {

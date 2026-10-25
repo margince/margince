@@ -18,13 +18,13 @@ import {
   throwProblem,
 } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
-import type { Command } from "./palette";
 import {
   groupSearchHits,
   SEARCH_GROUP_KEY,
   searchHitDestination,
   searchHitHasCard,
-} from "./searchkinds";
+} from "../lib/searchkinds";
+import type { Command } from "./palette";
 
 type SearchResult = components["schemas"]["SearchResult"];
 

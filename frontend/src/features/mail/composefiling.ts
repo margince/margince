@@ -81,15 +81,83 @@ function useAnchorProject(
 /**
  * Which project this message files under, and the subject tag that follows it.
  *
- * The rep chooses and the composer suggests: the thread's project when the
- * conversation is filed, otherwise the anchor's. A suggestion is adopted once,
- * so a rep who picks None is not overruled later.
+ * The rep chooses and the composer suggests. A thread filed on the deal the
+ * rep writes from keeps its own project. A thread filed elsewhere can belong
+ * to another deal of the same customer, so the deal's own project wins over
+ * it. A suggestion is adopted once, so a rep who picks None is not overruled
+ * later.
  *
- * The tag stays in the subject while a project is chosen, and returns whenever
- * a draft or a retype replaces the subject. The picker removes it.
+ * The tag stays in the subject while a project is chosen and the switch is on.
+ * It returns whenever a draft or a retype replaces the subject. The switch
+ * turned off keeps it out the same way; picking None removes it.
  */
+// The rep's switch, or a restored subject. `under` is the project it came back
+// under, pinned once the rep picks another.
+type TagChoice = boolean | { saved: string; under?: string };
+
+/**
+ * Whether the project's key goes in the subject. Off holds for one message and
+ * is never stored, because the tag files the client's answer.
+ *
+ * A restored subject is read against the key of the project it came back
+ * under, so a foreign key stays the rep's text. A pick keeps that answer.
+ */
+function useTagSwitch({
+  filingKey,
+  projectId,
+  settled,
+  open,
+}: Readonly<{
+  filingKey: string;
+  projectId: string;
+  /** Whether the project the message files under is decided. */
+  settled: boolean;
+  open: boolean;
+}>) {
+  const [choices, setChoices] = useState<Record<string, TagChoice>>({});
+  const choice = choices[filingKey];
+  const restored = typeof choice === "object" ? choice : undefined;
+  const restoredUnder = restored ? (restored.under ?? projectId) : "";
+  // The same query the filing reads while the project has not moved.
+  const restoredRecord = useProjectRecord(restoredUnder || undefined, open);
+  const restoredTag = subjectTag(restoredRecord.project);
+  const readable = settled && (restoredUnder === "" || restoredRecord.settled);
+  const restoredAnswer =
+    restored !== undefined &&
+    readable &&
+    (restoredTag === "" || restored.saved.startsWith(restoredTag));
+  // Stable, because the composer's restore callback lists it as a dependency.
+  const choose = useCallback(
+    (next: TagChoice) => {
+      setChoices((current) => ({ ...current, [filingKey]: next }));
+    },
+    [filingKey],
+  );
+  const setTagged = useCallback((next: boolean) => choose(next), [choose]);
+  const adoptSavedSubject = useCallback(
+    (saved: string) => choose({ saved }),
+    [choose],
+  );
+  return {
+    tagged: restored ? restoredAnswer : choice !== false,
+    // Left as it stands until the restored project's key is known.
+    awaiting: restored !== undefined && !readable,
+    // The key a restored subject still carries, for the filing to replace.
+    carried: restoredAnswer ? restoredTag : undefined,
+    setTagged,
+    adoptSavedSubject,
+    pinRestored: () => {
+      if (restored && restored.under === undefined) {
+        choose({ ...restored, under: projectId });
+      }
+    },
+  };
+}
+
 function useProjectFiling(input: {
   activityId?: string;
+  /** The deal the message is written from, when it is one. */
+  anchorDealId?: string;
   anchorProjectId?: string | null;
   anchorSettled: boolean;
   projects: readonly PickableProject[];
@@ -97,7 +165,7 @@ function useProjectFiling(input: {
   setSubject: (next: string) => void;
   /** Whether the composer is showing; a shut one reads nothing. */
   open: boolean;
-}): { projectId: string; setProjectId: (next: string) => void } {
+}) {
   const thread = useThreadProject(input.activityId, input.open);
   // An empty string is a real answer ("None"), so unanswered is undefined.
   const filingKey = input.activityId ?? "";
@@ -110,8 +178,14 @@ function useProjectFiling(input: {
     [filingKey],
   );
   const settled = thread.settled && input.anchorSettled;
+  const threadOnAnchor = (thread.activity?.links ?? []).some(
+    (link) =>
+      link.entity_type === "deal" && link.entity_id === input.anchorDealId,
+  );
   const suggested = settled
-    ? (thread.projectId ?? input.anchorProjectId ?? "")
+    ? threadOnAnchor
+      ? (thread.projectId ?? input.anchorProjectId ?? "")
+      : (input.anchorProjectId ?? thread.projectId ?? "")
     : "";
   // Each message owns its filing choice, including an explicit No project.
   useEffect(() => {
@@ -128,24 +202,55 @@ function useProjectFiling(input: {
     input.projects.some((project) => project.project_id === chosen);
   const projectId = offered ? chosen : "";
   const { project } = useProjectRecord(projectId || undefined, input.open);
-  const tag = subjectTag(project);
-  const setSubject = input.setSubject;
+  const ownTag = subjectTag(project);
+  const switchState = useTagSwitch({
+    filingKey,
+    projectId,
+    settled,
+    open: input.open,
+  });
+  const { tagged, setTagged, adoptSavedSubject, pinRestored } = switchState;
+  const chooseProject = (next: string) => {
+    pinRestored();
+    setPicked(next);
+  };
+  const { awaiting, carried } = switchState;
+  const tag = tagged ? ownTag : "";
   const subject = input.subject;
+  const setSubject = input.setSubject;
   const open = input.open;
   const previousTag = useRef("");
+  // A restored key is the one in the subject once, when the restore is read.
+  // After that the key last applied is what a change strips.
+  const seededFrom = useRef<string | undefined>(undefined);
   useEffect(() => {
     // A shut composer reads no project, so this rule would strip the tag off
     // a draft nobody is looking at.
-    if (!open) return;
+    if (!open || awaiting) return;
+    const restoreSeed = carried && `${filingKey} ${carried}`;
+    if (restoreSeed && seededFrom.current !== restoreSeed) {
+      seededFrom.current = restoreSeed;
+      previousTag.current = carried;
+    }
     const priorTag = previousTag.current;
     previousTag.current = tag;
     const withoutOld = priorTag ? stripSubjectTag(subject, priorTag) : subject;
-    const wanted = tag ? withSubjectTag(withoutOld, tag) : withoutOld;
+    const wanted = tag
+      ? withSubjectTag(withoutOld, tag)
+      : stripSubjectTag(withoutOld, ownTag);
     if (wanted !== subject) {
       setSubject(wanted);
     }
-  }, [open, tag, subject, setSubject]);
-  return { projectId, setProjectId: setPicked };
+  }, [open, awaiting, carried, filingKey, tag, ownTag, subject, setSubject]);
+  return {
+    projectId,
+    setProjectId: chooseProject,
+    /** Empty when the chosen project has no tag to offer. */
+    ownTag,
+    tagged,
+    setTagged,
+    adoptSavedSubject,
+  };
 }
 
 /**
@@ -247,6 +352,7 @@ export function useComposeRecords({
   });
   const projectFiling = useProjectFiling({
     activityId: answering,
+    anchorDealId: entityType === "deal" ? entityId : undefined,
     anchorProjectId: anchorProject.projectId,
     anchorSettled: anchorProject.settled,
     projects: reachableProjects,

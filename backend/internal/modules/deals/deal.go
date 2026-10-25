@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ensureOpenBirthStage guards create: deals are born open — AdvanceDeal
@@ -114,10 +115,10 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		p.Set(dealNameColumn, current.Name, name)
 	}
 	// The forecast fields are assigned only where the request actually moves
-	// them. Every other column may be re-set freely — the audit diff records a
-	// no-op edit and nothing reads it as an event — but these three are what
-	// deal_forecast_history is keyed on, and a row saying the forecast moved on a
-	// day it did not is a move a reconstruction has to explain.
+	// them. Every other column may be re-set freely, since nothing reads a
+	// no-op edit as an event. These three are what a forecast is read from. An
+	// audit entry saying one moved on a day it did not is a move a
+	// reconstruction has to explain.
 	if moved(current.AmountMinor, in.AmountMinor) {
 		p.Set(amountField, current.AmountMinor, *in.AmountMinor)
 	}
@@ -317,6 +318,11 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	}
 	if err := moneyPairError(resultingAmount, resultingArr, resultingCurrency); err != nil {
 		return err
+	}
+	if _, currencySet := after[currencyField]; currencySet && resultingCurrency != nil {
+		if err := values.RequireAssignableCurrency(*resultingCurrency); err != nil {
+			return err
+		}
 	}
 	if _, amountSet := after[amountField]; amountSet {
 		if err := amountSetError(resultingAmount); err != nil {

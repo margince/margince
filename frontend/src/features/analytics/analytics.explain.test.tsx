@@ -51,14 +51,16 @@ async function openPipeline(user: User) {
   await user.click(await screen.findByRole("button", { name: "Pipeline" }));
 }
 
-// Every card on the Deals tab carries its own panel toggle, so the first one
-// is the stage table's: the card the rows below belong to.
+// Every card on the Deals tab carries its own panel toggle. The stage table's
+// card is the one the rows below belong to.
 async function openPanel(user: User) {
   await openPipeline(user);
-  const toggles = await screen.findAllByRole("button", {
-    name: en["explain.open"],
+  const card = await screen.findByRole("region", {
+    name: en["analytics.reportDeals"],
   });
-  await user.click(toggles[0]);
+  await user.click(
+    await within(card).findByRole("button", { name: en["explain.open"] }),
+  );
 }
 
 async function openRowDrawer(user: User) {
@@ -121,6 +123,23 @@ describe("the result's explain panel", () => {
 });
 
 describe("a row's explain drawer", () => {
+  it("states the zone of the pinned instant as a name and offset, not the IANA id", async () => {
+    const user = userEvent.setup({ delay: null });
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        stageRows: [stageRow({ derivation_url: ROW_HANDLE })],
+        derivation: derivation({ as_of: "2026-09-05T10:30:00Z" }),
+      }),
+    );
+    render(<AnalyticsScreen />);
+    const drawer = within(await openRowDrawer(user));
+    expect(
+      await drawer.findByText(/12:30.*Central European Summer Time · UTC\+2/),
+    ).toBeTruthy();
+    expect(drawer.queryByText(/Europe\/Berlin/)).toBeNull();
+  });
+
   it("requests the row's own handle, not the result's", async () => {
     const user = userEvent.setup({ delay: null });
     const derivationUrls: string[] = [];

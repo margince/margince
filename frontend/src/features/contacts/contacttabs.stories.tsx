@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
@@ -36,7 +36,7 @@ function activity(
   row: Pick<SectionActivity, "id" | "kind" | "occurred_at"> &
     Partial<SectionActivity>,
 ): SectionActivity {
-  return { is_done: false, ...CAPTURED, ...row };
+  return { offers_email: false, is_done: false, ...CAPTURED, ...row };
 }
 
 // The tab reads the page's own activities section rather than fetching, so the
@@ -100,6 +100,117 @@ type Story = StoryObj<typeof ContactTimelineTab>;
  * head with the narrowing row beneath them, and the exchanges under both.
  */
 export const Chronology: Story = { render: tab(view) };
+
+const reachable: Contact360["contact"] = {
+  ...view.contact,
+  phones: [
+    {
+      id: "ph-1",
+      phone: "+49 151 7654321",
+      phone_type: "mobile",
+      is_primary: true,
+      position: 0,
+      ...CAPTURED,
+    },
+  ],
+};
+
+const call = activity({
+  id: "a-3",
+  kind: "call",
+  subject: "Asked whether the retrofit slot can move to October",
+  direction: "inbound",
+  occurred_at: "2026-08-12T15:30:00Z",
+});
+
+/** A logged call on a contact with a phone offers Call on its row. */
+export const WithCall: Story = {
+  render: tab({
+    ...view,
+    contact: reachable,
+    activities: {
+      data: [call, ...(view.activities?.data ?? [])],
+      page: { has_more: false },
+    },
+  }),
+};
+
+const LONG_SUBJECT =
+  "Re: Retrofit schedule for the Hamburg depot, the October slot and the second workshop bay";
+
+const LONG_WORD =
+  "Flottenerneuerungsrahmenvertragsverhandlungsprotokollzusammenfassungsentwurfsüberarbeitungsfrist";
+const LONG_FILENAME =
+  "Rahmenvertrag_Flottenerneuerung_Hamburg_Depot_Werkstatt_2026_final_v3_unterschrieben_gegengezeichnet.pdf";
+
+/**
+ * Long words beside the verbs: an email subject, a call subject with no break
+ * in it and a note named for a file. Each row's verbs stay inside the row.
+ */
+export const LongEmailBesideVerbs: Story = {
+  render: tab({
+    ...view,
+    contact: reachable,
+    activities: {
+      data: [
+        activity({
+          id: "a-4",
+          kind: "email",
+          subject: LONG_SUBJECT,
+          direction: "inbound",
+          occurred_at: "2026-08-12T16:00:00Z",
+          email_summary: {
+            activity_id: "a-4",
+            occurred_at: "2026-08-12T16:00:00Z",
+            version: 1,
+            subject: LONG_SUBJECT,
+            preview:
+              "We can take the October slot if the second bay is free by the twentieth, otherwise it moves to November.",
+            counterparty: "Dana Buyer",
+            direction: "inbound",
+            display_status: "team",
+            move: "needs_reply",
+            attachment_count: 0,
+          },
+        }),
+        call,
+        activity({
+          id: "a-6",
+          kind: "call",
+          subject: LONG_WORD,
+          direction: "outbound",
+          occurred_at: "2026-08-12T14:00:00Z",
+        }),
+        activity({
+          id: "a-7",
+          kind: "note",
+          subject: LONG_FILENAME,
+          occurred_at: "2026-08-12T13:00:00Z",
+        }),
+        activity({
+          id: "a-5",
+          kind: "task",
+          subject: "Send the revised retrofit quote",
+          occurred_at: "2026-08-12T09:00:00Z",
+        }),
+        ...(view.activities?.data ?? []),
+      ],
+      page: { has_more: false },
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await page.findByText(LONG_SUBJECT);
+    for (const body of canvasElement.querySelectorAll(".tl-body")) {
+      const edge = body.getBoundingClientRect().right;
+      for (const verb of body.querySelectorAll(":scope > .tl-actions > *")) {
+        await expect(verb.getBoundingClientRect().right).toBeLessThanOrEqual(
+          edge + 0.5,
+        );
+      }
+    }
+  },
+};
 
 /**
  * The Conversations cut: the same chronicle, narrowed to the exchanges

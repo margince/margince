@@ -10,7 +10,6 @@ package companydossier
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
@@ -69,21 +68,21 @@ func TestEveryModelFailureDegradesToTheFloorAndSaysSo(t *testing.T) {
 	in := sevenOfSeven()
 	for name, tc := range map[string]struct {
 		lane       Completer
-		wantStep   string
+		wantStep   crmcontracts.GrowthFitNextStep
 		laneFailed bool
 	}{
-		"no lane configured":   {nil, "ask an administrator", false},
-		"lane over budget":     {failingLane{}, "try again", true},
-		"lane answering prose": {proseLane{}, "try again", true},
+		"no lane configured":   {nil, crmcontracts.GrowthFitNextStepConfigureModel, false},
+		"lane over budget":     {failingLane{}, crmcontracts.GrowthFitNextStepRetryLater, true},
+		"lane answering prose": {proseLane{}, crmcontracts.GrowthFitNextStepRetryLater, true},
 		"lane citing nothing": {
-			scriptedLane{reply: `{"band":"strong","positive_factors":[]}`}, "try again", true,
+			scriptedLane{reply: `{"band":"strong","positive_factors":[]}`}, crmcontracts.GrowthFitNextStepRetryLater, true,
 		},
 		"lane naming no band": {
-			scriptedLane{reply: `{"band":"excellent","positive_factors":[]}`}, "try again", true,
+			scriptedLane{reply: `{"band":"excellent","positive_factors":[]}`}, crmcontracts.GrowthFitNextStepRetryLater, true,
 		},
-		"lane abstaining itself": {scriptedLane{reply: citing("unknown", in)}, "try again", true},
+		"lane abstaining itself": {scriptedLane{reply: citing("unknown", in)}, crmcontracts.GrowthFitNextStepRetryLater, true},
 		"lane citing a stranger": {
-			scriptedLane{reply: citing("strong", fourOfSeven())}, "try again", true,
+			scriptedLane{reply: citing("strong", fourOfSeven())}, crmcontracts.GrowthFitNextStepRetryLater, true,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -95,8 +94,8 @@ func TestEveryModelFailureDegradesToTheFloorAndSaysSo(t *testing.T) {
 			if got.Band != crmcontracts.GrowthFitBandUnknown {
 				t.Errorf("band = %q, want unknown — the floor abstains", got.Band)
 			}
-			if !strings.Contains(got.NextStep, tc.wantStep) {
-				t.Errorf("next step = %q, want it to say %q", got.NextStep, tc.wantStep)
+			if got.NextStep != tc.wantStep {
+				t.Errorf("next step = %q, want %q", got.NextStep, tc.wantStep)
 			}
 			if laneFailed != tc.laneFailed {
 				t.Errorf("laneFailed = %v, want %v — the caller uses this to decide whether "+
@@ -169,7 +168,7 @@ func TestBelowTheCompletenessFloorTheModelIsNotAsked(t *testing.T) {
 			if laneFailed {
 				t.Error("an abstention the floor decided reported a failed lane, so it is never cached")
 			}
-			if !strings.HasPrefix(got.NextStep, "find out ") {
+			if got.NextStep != crmcontracts.GrowthFitNextStepGatherInputs {
 				t.Errorf("next step = %q, want the gap to close", got.NextStep)
 			}
 		})

@@ -5,6 +5,7 @@ package network
 
 import (
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -31,7 +32,7 @@ func TestTheRecommendationIsTheHeadOfTheList(t *testing.T) {
 			},
 		})
 
-	routes := chooseRoutes(graph, graphNow)
+	routes := chooseRoutes(graph, graphNow, time.UTC)
 	route := chooseRoute(routes)
 	if len(routes) != 2 {
 		t.Fatalf("two askable routes produced %d candidates", len(routes))
@@ -69,7 +70,7 @@ func TestAContactToContactEdgeIsNeverARoute(t *testing.T) {
 			},
 		})
 
-	routes := chooseRoutes(graph, graphNow)
+	routes := chooseRoutes(graph, graphNow, time.UTC)
 	if len(routes) != 1 {
 		t.Fatalf("expected only the colleague's route, got %d", len(routes))
 	}
@@ -103,7 +104,7 @@ func TestARouteIdSaysWhichKindItIs(t *testing.T) {
 			},
 		})
 
-	routes := chooseRoutes(graph, graphNow)
+	routes := chooseRoutes(graph, graphNow, time.UTC)
 	if len(routes) != 2 {
 		t.Fatalf("expected both routes, got %d", len(routes))
 	}
@@ -148,7 +149,7 @@ func TestOnlyADirectRouteCarriesReceipts(t *testing.T) {
 			},
 		})
 
-	routes := chooseRoutes(graph, graphNow)
+	routes := chooseRoutes(graph, graphNow, time.UTC)
 	if routes[0].Receipts == nil || len(*routes[0].Receipts) != 1 {
 		t.Error("the direct route dropped the proof behind it")
 	}
@@ -170,7 +171,7 @@ func TestEvidenceCrossesTheWireAsFactsNotProse(t *testing.T) {
 			Interactions90d: 6, Inbound90d: new(3), Outbound90d: new(3), LastAt: daysBefore(2),
 		}})
 
-	routes := chooseRoutes(graph, graphNow)
+	routes := chooseRoutes(graph, graphNow, time.UTC)
 	ev := routes[0].Evidence
 	if !ev.TwoWay {
 		t.Error("three in and three out did not read as two-way")
@@ -203,7 +204,7 @@ func TestAnExchangeOutranksAOneSidedRelationshipInTheList(t *testing.T) {
 			},
 		})
 
-	routes := chooseRoutes(graph, graphNow)
+	routes := chooseRoutes(graph, graphNow, time.UTC)
 	if routes[0].ViaDisplayName != "Actually converses" {
 		t.Errorf("the list leads with %q; thirty unanswered sends are not a relationship",
 			routes[0].ViaDisplayName)
@@ -224,7 +225,7 @@ func TestEveryRouteIsOfferableBeforeAnythingHasBeenAsked(t *testing.T) {
 			Interactions90d: 6, Inbound90d: new(3), Outbound90d: new(3), LastAt: daysBefore(2),
 		}})
 
-	routes := chooseRoutes(graph, graphNow)
+	routes := chooseRoutes(graph, graphNow, time.UTC)
 	if routes[0].Availability != crmcontracts.ContactGraphRouteAvailabilityAvailable {
 		t.Errorf("a route nobody has asked about reads as %q", routes[0].Availability)
 	}
@@ -244,7 +245,7 @@ func TestTheListStopsAtTheCap(t *testing.T) {
 		})
 	}
 
-	if got := len(chooseRoutes(graphWith(nodes, edges), graphNow)); got != routeCandidateCap {
+	if got := len(chooseRoutes(graphWith(nodes, edges), graphNow, time.UTC)); got != routeCandidateCap {
 		t.Errorf("the list offered %d routes; the cap is %d", got, routeCandidateCap)
 	}
 }

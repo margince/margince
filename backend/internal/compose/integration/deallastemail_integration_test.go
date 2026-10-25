@@ -129,3 +129,55 @@ func listDealsByID(t *testing.T, e *Env) map[ids.UUID]crmcontracts.Deal {
 	}
 	return out
 }
+
+// Mail no human wrote is not the deal's last email. A notice and the product's
+// own mail leave the card on the human exchange; the next reply moves it.
+func TestDealLastEmailPassesOverMailNoHumanWrote(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Deal with notices", AmountMinor: new(int64(100)), Currency: new("EUR"),
+		PipelineID: pipeline, StageID: open, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dealID := ids.From[ids.DealKind](ids.UUID(deal.Id))
+	link := activities.ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(deal.Id)}
+	inbound := "inbound"
+	logMail := func(from, origin string, when time.Time) {
+		t.Helper()
+		subject := "about the deal"
+		in := activities.LogActivityInput{
+			Kind: "email", Subject: &subject, OccurredAt: &when, Source: "manual", Direction: &inbound,
+			EmailFrom: from, EmailTo: []string{"rep@ws.example"}, Origin: origin,
+			Links: []activities.ActivityLinkInput{link},
+		}
+		if _, _, err := e.Activities.LogActivity(e.Admin(), in); err != nil {
+			t.Fatalf("logging mail from %s: %v", from, err)
+		}
+	}
+	human := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
+	logMail("pat@buyer.example", "", human)
+	logMail("drive-shares-dm-noreply@google.com", "", human.Add(24*time.Hour))
+	logMail("mailer-daemon@googlemail.com", "", human.Add(48*time.Hour))
+	logMail("pat@buyer.example", activities.OriginSystemNotice, human.Add(72*time.Hour))
+
+	read := func(where string, want time.Time) {
+		t.Helper()
+		listed := listDealsByID(t, e)[ids.UUID(deal.Id)].LastEmail
+		single, err := e.Deals.GetDeal(e.Admin(), dealID, storekit.LiveOnly)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for name, got := range map[string]*crmcontracts.DealLastEmail{"list": listed, "single read": single.LastEmail} {
+			if got == nil || !got.OccurredAt.Equal(want) {
+				t.Errorf("%s, %s: last_email = %+v, want the human mail at %v", where, name, got, want)
+			}
+		}
+	}
+	read("after the notices", human)
+	reply := human.Add(96 * time.Hour)
+	logMail("pat@buyer.example", "", reply)
+	read("after their reply", reply)
+}

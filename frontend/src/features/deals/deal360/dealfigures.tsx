@@ -28,6 +28,7 @@ import {
 import type { MessageKey } from "../../../i18n/en";
 import { useRecordZone } from "../../../lib/recordzone";
 import { activityMarks } from "../../../lib/standingmarks";
+import { closeDayOf } from "../closeday";
 import { useStageTimes } from "./dealstagehistory";
 import type { DealStandingInputs } from "./dealstanding";
 import { lastInbound, nextStepOf, standingOffer } from "./dealstanding";
@@ -196,13 +197,13 @@ export function DealTimeline({
 
 function timelineGap(
   { card, activities, asOf }: DealStandingInputs,
-  { t, plural, locale }: Words,
+  { t, plural, locale, zone }: Words,
 ): TimelineGap | undefined {
   const waiting = card ? waitingSince(card, activities) : null;
   if (!waiting) {
     return undefined;
   }
-  const days = calendarDaysBetween(new Date(waiting.at), new Date(asOf));
+  const days = calendarDaysBetween(new Date(waiting.at), new Date(asOf), zone);
   return {
     from: waiting.at,
     title: plural("standing.days", days, {
@@ -309,22 +310,23 @@ function lastWord(
   ];
 }
 
-// A closed deal's date is when it closed, so only an open deal's close is
-// drawn as the horizon ahead.
+// The close is the day the deal closed once it is won or lost, and the horizon
+// ahead while it is open.
 function closeEvent(
   deal: DealStandingInputs["deal"],
   day: (iso: string) => string,
   t: Translator,
 ): TimelineEvent[] {
-  if (deal.status !== "open" || !deal.expected_close_date) {
+  const closeDay = closeDayOf(deal);
+  if (!closeDay) {
     return [];
   }
   return [
     {
       key: "close",
-      at: deal.expected_close_date,
+      at: closeDay,
       title: t("deals.close"),
-      sub: day(deal.expected_close_date),
+      sub: day(closeDay),
       kind: "end",
     },
   ];

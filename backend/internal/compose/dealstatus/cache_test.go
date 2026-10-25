@@ -18,12 +18,12 @@ import (
 func TestTheFingerprintMovesWhenTheFactsDo(t *testing.T) {
 	reader := ids.NewV7()
 	in := inputWithTimeline()
-	before, err := Fingerprint(in, reader, "routing-1", testNow, string(textlang.English))
+	before, err := Fingerprint(in, reader, "routing-1", testNow, time.UTC, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
 	in.Timeline = append(in.Timeline, ActIn{ID: "act-3", Kind: "email", At: "2026-08-22"})
-	after, err := Fingerprint(in, reader, "routing-1", testNow, string(textlang.English))
+	after, err := Fingerprint(in, reader, "routing-1", testNow, time.UTC, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -34,11 +34,11 @@ func TestTheFingerprintMovesWhenTheFactsDo(t *testing.T) {
 
 func TestTheSameFactsFingerprintTheSame(t *testing.T) {
 	reader := ids.NewV7()
-	first, err := Fingerprint(inputWithTimeline(), reader, "routing-1", testNow, string(textlang.English))
+	first, err := Fingerprint(inputWithTimeline(), reader, "routing-1", testNow, time.UTC, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	second, err := Fingerprint(inputWithTimeline(), reader, "routing-1", testNow, string(textlang.English))
+	second, err := Fingerprint(inputWithTimeline(), reader, "routing-1", testNow, time.UTC, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -53,11 +53,11 @@ func TestTheCardGoesStaleWhenTheDayTurns(t *testing.T) {
 	// card written on Monday still says "4 days ago" on Friday.
 	reader := ids.NewV7()
 	in := inputWithTimeline()
-	monday, err := Fingerprint(in, reader, "routing-1", testNow, string(textlang.English))
+	monday, err := Fingerprint(in, reader, "routing-1", testNow, time.UTC, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	friday, err := Fingerprint(in, reader, "routing-1", testNow.AddDate(0, 0, 4), string(textlang.English))
+	friday, err := Fingerprint(in, reader, "routing-1", testNow.AddDate(0, 0, 4), time.UTC, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -71,11 +71,11 @@ func TestTheSameDayDoesNotRewriteAQuietDeal(t *testing.T) {
 	// would rewrite a deal nobody touched, for prose that reads identically.
 	reader := ids.NewV7()
 	in := inputWithTimeline()
-	morning, err := Fingerprint(in, reader, "routing-1", testNow, string(textlang.English))
+	morning, err := Fingerprint(in, reader, "routing-1", testNow, time.UTC, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	evening, err := Fingerprint(in, reader, "routing-1", testNow.Add(7*time.Hour), string(textlang.English))
+	evening, err := Fingerprint(in, reader, "routing-1", testNow.Add(7*time.Hour), time.UTC, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -87,11 +87,11 @@ func TestTheSameDayDoesNotRewriteAQuietDeal(t *testing.T) {
 func TestANewRoutingVersionRewritesTheCard(t *testing.T) {
 	reader := ids.NewV7()
 	in := inputWithTimeline()
-	old, err := Fingerprint(in, reader, "routing-1", testNow, string(textlang.English))
+	old, err := Fingerprint(in, reader, "routing-1", testNow, time.UTC, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
-	fresh, err := Fingerprint(in, reader, "routing-2", testNow, string(textlang.English))
+	fresh, err := Fingerprint(in, reader, "routing-2", testNow, time.UTC, string(textlang.English))
 	if err != nil {
 		t.Fatalf("fingerprint: %v", err)
 	}
@@ -116,18 +116,57 @@ func TestTheWordingChangesOnlyWhenTheCacheKeyDoes(t *testing.T) {
 	// nothing able to notice.
 	contact := time.Date(2026, 8, 20, 14, 0, 0, 0, time.UTC)
 	sameDay := time.Date(2026, 8, 20, 23, 30, 0, 0, time.UTC)
-	if got := statusCopyFor("en").since(sameDay, contact); got != "today" {
+	if got := statusCopyFor("en").since(sameDay, contact, time.UTC); got != "today" {
 		t.Fatalf("late on the same day = %q, want today", got)
 	}
 	// 24 hours have NOT elapsed, but the calendar day has turned — and so has
 	// the cache key, so the wording must turn with it.
 	justAfterMidnight := time.Date(2026, 8, 21, 0, 30, 0, 0, time.UTC)
-	if got := statusCopyFor("en").since(justAfterMidnight, contact); got != "yesterday" {
+	if got := statusCopyFor("en").since(justAfterMidnight, contact, time.UTC); got != "yesterday" {
 		t.Fatalf("just after midnight = %q, want yesterday", got)
 	}
 	// The reverse: 24 hours HAVE elapsed but the day has not turned again.
 	sameDayNextAfternoon := time.Date(2026, 8, 21, 15, 0, 0, 0, time.UTC)
-	if got := statusCopyFor("en").since(sameDayNextAfternoon, contact); got != "yesterday" {
+	if got := statusCopyFor("en").since(sameDayNextAfternoon, contact, time.UTC); got != "yesterday" {
 		t.Fatalf("a day later in the afternoon = %q, want yesterday — the key has not moved again", got)
+	}
+}
+
+// The key turns over at the installation's midnight, not UTC's: 18:00 UTC and
+// 18:00 UTC the next hour straddle local midnight in UTC+7 but not UTC.
+func TestTheKeyTurnsOverAtTheInstallationMidnight(t *testing.T) {
+	reader := ids.NewV7()
+	in := inputWithTimeline()
+	bangkok := time.FixedZone("UTC+7", 7*3600)
+	before := time.Date(2026, 10, 6, 16, 30, 0, 0, time.UTC)
+	after := time.Date(2026, 10, 6, 17, 30, 0, 0, time.UTC)
+	key := func(at time.Time, loc *time.Location) string {
+		got, err := Fingerprint(in, reader, "routing-1", at, loc, string(textlang.English))
+		if err != nil {
+			t.Fatalf("fingerprint: %v", err)
+		}
+		return got
+	}
+	if key(before, bangkok) == key(after, bangkok) {
+		t.Error("local midnight passed in UTC+7 and the key did not move, so the card keeps yesterday's count")
+	}
+	if key(before, time.UTC) != key(after, time.UTC) {
+		t.Error("UTC midnight has not passed and the key moved")
+	}
+}
+
+func TestTheKeyChangesWhenTheInstallationZoneChangesOnTheSameDate(t *testing.T) {
+	in := inputWithTimeline()
+	at := time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC)
+	reader := ids.NewV7()
+	key := func(loc *time.Location) string {
+		got, err := Fingerprint(in, reader, "routing-1", at, loc, string(textlang.English))
+		if err != nil {
+			t.Fatalf("fingerprint: %v", err)
+		}
+		return got
+	}
+	if key(time.UTC) == key(time.FixedZone("UTC+1", 3600)) {
+		t.Error("zone changed with the same local date and the key did not move")
 	}
 }

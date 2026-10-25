@@ -15,7 +15,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -57,10 +56,16 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 		}
 		return ids.UUID(contact.Id), nil
 	})
-	if _, ok := errors.AsType[*contacts.DuplicateEmailError](err); ok {
+	// The row's own transaction has ended, so a colleague holding the address
+	// is asked to share it, as on every other create door.
+	err = w.contacts.AskHolderToShare(ctx, err)
+	if contacts.IsClaimedEmail(err) {
 		// The same sentence the preview used, so an approval decided on
 		// "skipped, the address is held" is not answered by different words.
 		return skippedFor(contactEmailClaimedWhy), nil
+	}
+	if refusedAsErased(err) {
+		return skippedFor(addressErasedWhy), nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err
@@ -71,12 +76,14 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 // applyContact writes a contact's changed fields. It merges the file's address,
 // email, phone and LinkedIn handle onto what the contact holds, because the
 // store replaces each of those wholesale.
-func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.UpdateContactInput, current []byte, source string) error {
+func (w *csvWriters) applyContact(
+	ctx context.Context, id ids.UUID, in contacts.UpdateContactInput, changed map[string]string, current []byte, source string,
+) error {
 	in.IfVersion = w.reviewedVersion(id)
 	// Emails and phones added by an update carry the provenance the create
 	// path stamps; without it their source lands empty.
 	in.Source = source
-	merged, given, err := addressMergedOnto(current, in.Address)
+	merged, given, err := addressMergedOnto(current, in.Address, changed)
 	if err != nil {
 		return err
 	}

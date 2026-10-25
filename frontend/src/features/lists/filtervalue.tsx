@@ -5,9 +5,10 @@
 
 import { useId } from "react";
 import { SegmentedControl, TextInput } from "../../design-system/atoms";
-import { DateInput } from "../../design-system/dateinput";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { Select } from "../../design-system/select";
 import { TokenInput } from "../../design-system/tokeninput";
+import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { useT } from "../../i18n";
 import "./filterbuilder.css";
 import { RosterPartialNote } from "../../components/entityref";
@@ -45,6 +46,7 @@ export function ValueControl({
   onChange,
   label,
   currency,
+  field,
 }: Readonly<{
   type: VocabularyField["type"];
   /** What an id field's values point at, when the vocabulary named one. */
@@ -57,6 +59,8 @@ export function ValueControl({
   value: LeafValue;
   onChange: (next: LeafValue) => void;
   label?: string;
+  /** The vocabulary field being compared, so a coded set can be worded. */
+  field?: string;
 }>) {
   const t = useT();
   const name = label ?? t("filters.value");
@@ -119,12 +123,14 @@ export function ValueControl({
     // surface exists to prevent: a value outside the set compiles, matches
     // nothing, and reads as a settled answer rather than as a mistake.
     //
-    // The label IS the value. These are the wire words a workspace admin chose,
-    // or a contract enum; inventing display copy here would be a second
-    // vocabulary for a reader to reconcile against what the record page shows.
+    // The label is the value, except for the industry codes, which the record
+    // page words through format/industry.ts and so does this picker.
     return (
       <Select
-        options={options.map((option) => ({ value: option, label: option }))}
+        options={options.map((option) => ({
+          value: option,
+          label: field === INDUSTRY_FIELD ? industryWords(t, option) : option,
+        }))}
         value={typeof value === "string" ? value : ""}
         onChange={onChange}
         placeholder={t("filters.pickValue")}
@@ -417,11 +423,7 @@ function DateValue({
         />
       ) : (
         <DateInput
-          value={
-            (typeof value === "string" ? value : "") as
-              | ""
-              | `${number}-${number}-${number}`
-          }
+          value={typeof value === "string" ? isoOrBlank(value) : ""}
           onChange={(event) => onChange(event.target.value)}
           aria-label={label}
         />

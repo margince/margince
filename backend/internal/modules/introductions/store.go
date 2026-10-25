@@ -53,7 +53,9 @@ type Request struct {
 	IntroducerUser   ids.UUID
 	RouteType        string
 	ThroughContactID *ids.UUID
-	InternalReason   string
+	InternalReason   *string
+	Origin           Origin
+	RecordedChannel  *string
 	ValueForTarget   string
 	ForwardableNote  string
 	NoteGeneratedBy  string
@@ -64,7 +66,7 @@ type Request struct {
 	DecisionReason   *string
 	SuggestedUserID  *ids.UUID
 	SourceActivityID *ids.UUID
-	DueAt            time.Time
+	DueAt            *time.Time
 	RequestedAt      time.Time
 	DecidedAt        *time.Time
 	IntroducedAt     *time.Time
@@ -162,9 +164,9 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 		}
 		auditID, err := storekit.AuditEvent(ctx, tx, "create", "intro_request", id,
 			map[string]any{
-				"contact_id":         req.ContactID.String(),
-				"introducer_user_id": req.IntroducerUser.String(),
-				"route_type":         req.RouteType,
+				"contact_id":          req.ContactID.String(),
+				fieldIntroducerUserID: req.IntroducerUser.String(),
+				"route_type":          req.RouteType,
 			})
 		if err != nil {
 			return err

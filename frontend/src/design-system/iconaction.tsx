@@ -1,53 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId } from "react";
+import { type MouseEvent, type ReactNode, useId } from "react";
 import { Button } from "./atoms";
 import { useTooltip } from "./tooltip";
 import "./iconaction.css";
 
-/**
- * A verb whose glyph is its whole label: square, named, and named again on
- * hover.
- *
- * `Button iconOnly` already draws the square and already documents that the
- * caller owes it an accessible name. What it cannot do is give a SIGHTED reader
- * that name — and a row of unlabelled glyphs is a row of guesses, which is the
- * reason icon-only buttons get talked out of. This pairs the two halves so they
- * cannot come apart: one `label`, spoken through `aria-label` and shown through
- * `useTooltip`, so the name a screen reader hears and the name a pointer reveals
- * are the same string and there is no second prop for them to disagree in.
- *
- * WHEN to reach for it, and it is not "whenever there is an icon": only for a
- * verb a reader already knows from the glyph — mail, phone, calendar, pencil,
- * link, the overflow ellipsis. A verb whose consequence a reader must read
- * before pressing (convert, merge, archive, disqualify) keeps its words, and a
- * verb that is rare enough to need explaining belongs in an overflow menu where
- * it can have a whole line. Squaring those saves a few pixels and costs the
- * reader the one thing they needed.
- *
- * The handlers ride a wrapping span rather than the button: focus and pointer
- * events reach it from the control inside, and the alternative is merging a
- * caller's ref and pointer handlers into `Button`'s own prop contract, which is
- * guarded on purpose against exactly that kind of arrival.
- */
-export function IconAction({
-  label,
-  hint,
-  icon,
-  variant,
-  reason,
-  reasonId,
-  disabled,
-  pending,
-  pressed,
-  disclosure,
-  opensDialog,
-  inline,
-  onClick,
-  testId,
-  word,
-}: Readonly<{
+type IconActionFace = {
   /** The verb, translated. Spoken as the name and shown as the tip. */
   label: string;
   /**
@@ -71,6 +30,14 @@ export function IconAction({
   /** The glyph, `aria-hidden` — the label is what names this control. */
   icon: ReactNode;
   variant?: "primary" | "ghost" | "danger";
+  /** A glyph inside a line of text: the square keeps its target and takes one line box. */
+  inline?: boolean;
+  /** Passed through, for a control a test already reaches by its own handle. */
+  testId?: string;
+};
+
+type IconActionPress = {
+  href?: undefined;
   /** Why this verb is unavailable; refuses the press, as on `Button`. */
   reason?: string;
   /**
@@ -106,49 +73,77 @@ export function IconAction({
   disclosure?: Readonly<{ expanded: boolean; controls: string }>;
   /** For a glyph whose press opens a dialog, so a reader hears that first. */
   opensDialog?: boolean;
-  /**
-   * For a glyph that sits IN a line of text (a table cell, a reading's label
-   * row) rather than in a row of verbs: the square keeps its whole target but
-   * takes one line box of its host, so the line it joins keeps its height.
-   */
-  inline?: boolean;
   onClick?: () => void;
-  /** Passed through, for a control a test already reaches by its own handle. */
-  testId?: string;
-}>) {
+};
+
+// A refused link is no link, so a refusal is drawn by the press form instead.
+type IconActionLink = {
+  /** Where the glyph goes (a `tel:`), drawn as a link with the same square. */
+  href: string;
+  /** Runs beside the navigation, never instead of it. */
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+} & { [Key in Exclude<keyof IconActionPress, "href" | "onClick">]?: never };
+
+/**
+ * A verb whose glyph is its whole label: one `label` is its `aria-label` and its tooltip.
+ * The handlers sit on a wrapping span, so a caller's ref and pointer events stay out of `Button`'s props.
+ */
+export function IconAction(
+  props: Readonly<IconActionFace & (IconActionPress | IconActionLink)>,
+) {
+  const { label, hint, icon, inline, word } = props;
   const hintId = useId();
   const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(
     hint === undefined ? label : `${label}. ${hint}`,
   );
+  const face = (
+    <>
+      {icon}
+      {word && (
+        <span className="verb-word" aria-hidden="true">
+          {word}
+        </span>
+      )}
+    </>
+  );
+  const describedBy = hint === undefined ? undefined : hintId;
   return (
     <span
       className={inline ? "icon-action icon-action-inline" : "icon-action"}
       ref={ref}
       {...trigger}
     >
-      <Button
-        iconOnly
-        variant={variant}
-        reason={reason}
-        reasonId={reasonId}
-        disabled={disabled}
-        pending={pending}
-        aria-label={label}
-        aria-describedby={hint === undefined ? undefined : hintId}
-        aria-pressed={pressed}
-        aria-expanded={disclosure?.expanded}
-        aria-controls={disclosure?.controls}
-        aria-haspopup={opensDialog ? "dialog" : undefined}
-        data-testid={testId}
-        onClick={onClick}
-      >
-        {icon}
-        {word && (
-          <span className="verb-word" aria-hidden="true">
-            {word}
-          </span>
-        )}
-      </Button>
+      {props.href === undefined ? (
+        <Button
+          iconOnly
+          variant={props.variant}
+          reason={props.reason}
+          reasonId={props.reasonId}
+          disabled={props.disabled}
+          pending={props.pending}
+          aria-label={label}
+          aria-describedby={describedBy}
+          aria-pressed={props.pressed}
+          aria-expanded={props.disclosure?.expanded}
+          aria-controls={props.disclosure?.controls}
+          aria-haspopup={props.opensDialog ? "dialog" : undefined}
+          data-testid={props.testId}
+          onClick={props.onClick}
+        >
+          {face}
+        </Button>
+      ) : (
+        <a
+          className={`btn btn-${props.variant ?? "ghost"} btn-icon`}
+          href={props.href}
+          onClick={props.onClick}
+          aria-label={label}
+          aria-describedby={describedBy}
+          data-testid={props.testId}
+        >
+          {face}
+        </a>
+      )}
       {tip}
       {/* The description a screen reader reads AFTER the name, and the one a
           pointer gets from the tip above. Visually hidden because the row has

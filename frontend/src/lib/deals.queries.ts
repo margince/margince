@@ -126,8 +126,7 @@ export function useDeals(f: DealFilters) {
 // dealsByStageReportFilters translates the board's own filter dials into the
 // deals-by-stage report's filter shape. They are the same dials dealsQueryParams
 // sends to /deals, so a stage total and its cards agree on which deals are in
-// scope. stage_id is absent: the report is grouped by stage_id, which already
-// answers "per stage".
+// scope. Unsupported population dials withhold totals before this runs.
 function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
   const { filters } = f;
   const out: Record<string, unknown> = {};
@@ -136,6 +135,8 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
   if (filters.company_id) out.company_id = filters.company_id;
   const status = dealStatusFilter(filters.status);
   if (status) out.status = status;
+  const forecast = forecastCategoryFilter(filters.forecast_category);
+  if (forecast) out.forecast_category = forecast;
   if (filters.partner_company_id)
     out.partner_company_id = filters.partner_company_id;
   if (filters.stalled === "true") out.stalled = true;
@@ -154,11 +155,11 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
 // errored also settles to idle-and-not-successful. Reading status would tell a
 // reader whose report answered 422 to press a filter, not show the failure.
 //
-// A tag, a search, a team and the unassigned queue have no filter field on the
-// report, and sending one is a 422. The totals would count deals the board is
-// not showing. The report takes every other dial, and it measures every deal
-// the reader may see, which is the set `GET /deals` draws as cards.
+// Unsupported filters and archived-inclusive lists have a different population
+// from the live report. Their counts and money must stay limited to loaded cards.
 export function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
+  if (f.includeArchived) return "deals.totalsNoArchived";
+  if (f.filters.stage_id) return "deals.totalsNoStageFilter";
   if (parseTagIDs(f.filters.tag_id).length > 0) {
     return "deals.totalsNoTagFilter";
   }
@@ -180,17 +181,14 @@ export function totalsRefusedBecause(
 
 // useStageTotals reads the board's per-column totals from the deals-by-stage
 // report: a full aggregate over every matching deal, not the capped page
-// useDeals fetches. Grouped by [stage_id, currency], so a mixed-currency stage
-// arrives as more than one row, which buildStageTotals reads as "hide the sum".
-// Like every report it never includes archived deals. So the totals reflect the
-// live pipeline whatever the board's "show archived" toggle says.
+// useDeals fetches. The server converts each deal before grouping by stage.
+// Reports exclude archived deals, so that broader board population withholds
+// its totals through the same rule as every other unsupported filter.
 export function useStageTotals(f: DealFilters) {
   return useQuery({
     // Under ["deals"], so the one invalidation every deal mutation fires
     // refreshes the column headers along with the cards. Keyed apart, a moved
     // card would sit under a header still counting it in the stage it left.
-    // A foreign-currency deal arriving in a single-currency stage would leave
-    // the old sum standing, and the mixed-currency refusal would not happen.
     queryKey: ["deals", "by-stage-totals", f],
     // Asked only when the report would count the deals the board is drawing.
     // totalsWithheldBecause owns that decision and the words for it both, so
@@ -200,15 +198,16 @@ export function useStageTotals(f: DealFilters) {
       const { data, error, response } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },
         body: {
-          group_by: ["stage_id", "currency"],
+          group_by: ["stage_id"],
           aggregates: [
             { fn: "count", as: "deals" },
-            { fn: "sum", field: "amount_minor", as: "raw_minor" },
+            { fn: "sum", field: "amount_base_minor", as: "base_minor" },
             {
               fn: "sum",
-              field: "weighted_amount_minor",
-              as: "weighted_minor",
+              field: "weighted_base_minor",
+              as: "weighted_base_minor",
             },
+            { fn: "count", field: "amount_base_minor", as: "priced_deals" },
           ],
           filters: dealsByStageReportFilters(f),
         },
@@ -219,75 +218,57 @@ export function useStageTotals(f: DealFilters) {
         }
         throwProblem(error);
       }
-      return buildStageTotals(data.rows);
+      return buildStageTotals(
+        data.rows,
+        data.base_currency ?? null,
+        data.as_of ?? null,
+        data.timezone ?? null,
+      );
     },
   });
 }
 
-// StageTotals is one stage's count/raw/weighted total, sourced from the
-// deals-by-stage report rather than the board's own (capped) card fetch. A
-// pipeline with more deals than that cap would otherwise show a wrong sum.
+// Stage totals carry the server's reporting currency and valuation date.
 export type StageTotals = {
   count: number;
-  // Null where the report stated no figure. A stage can hold a real count of
-  // deals nobody has priced, and its `SUM` then arrives as null with no
-  // currency beside it. That is not the zero a naive read makes of it.
-  rawMinor: number | null;
-  weightedMinor: number | null;
+  baseMinor: number | null;
+  weightedBaseMinor: number | null;
   currency: string | null;
-  sumHidden: boolean;
+  asOf: string | null;
+  timezone: string | null;
+  unpricedCount: number | null;
 };
 
-// A report cell as a figure, or nothing. An absent or non-numeric cell is the
-// report declining to state an amount, and `Number(null)` turns that into a 0
-// the server never sent.
 function reportMinor(value: unknown): number | null {
-  if (value == null || value === "") {
-    return null;
-  }
+  if (value == null || value === "") return null;
   const amount = Number(value);
   return Number.isFinite(amount) ? amount : null;
 }
 
-// buildStageTotals shapes a deals-by-stage report grouped by
-// `["stage_id","currency"]` into one entry per stage. More than one currency
-// row for a stage means the sum is cross-currency. That is decided from the
-// report's full row set, not from whichever cards happened to load.
 export function buildStageTotals(
   rows: Record<string, unknown>[],
+  currency: string | null = null,
+  asOf: string | null = null,
+  timezone: string | null = null,
 ): Map<string, StageTotals> {
-  const byStage = new Map<string, Record<string, unknown>[]>();
-  for (const row of rows) {
-    const stageId = String(row.stage_id ?? "");
-    const forStage = byStage.get(stageId) ?? [];
-    forStage.push(row);
-    byStage.set(stageId, forStage);
-  }
-  const totals = new Map<string, StageTotals>();
-  for (const [stageId, stageRows] of byStage) {
-    const count = stageRows.reduce(
-      (sum, row) => sum + Number(row.deals ?? 0),
-      0,
-    );
-    const mixed = stageRows.length > 1;
-    const [single] = stageRows;
-    if (single === undefined) continue;
-    // One row is not the same fact as one currency. A stage whose deals are all
-    // unpriced groups into a single row whose `currency` is null. The
-    // cross-currency test says nothing about it, and its figures belong to no
-    // currency at all. Naming EUR there is indistinguishable from a real EUR
-    // total, which is the reading a rep would act on.
-    const currency =
-      !mixed && typeof single.currency === "string" && single.currency !== ""
-        ? single.currency
-        : null;
-    totals.set(stageId, {
-      count,
-      rawMinor: currency ? reportMinor(single.raw_minor) : null,
-      weightedMinor: currency ? reportMinor(single.weighted_minor) : null,
-      currency,
-      sumHidden: mixed,
-    });
-  }
-  return totals;
+  return new Map(
+    rows.map((row) => {
+      const count = reportMinor(row.deals) ?? 0;
+      const priced = reportMinor(row.priced_deals);
+      return [
+        String(row.stage_id ?? ""),
+        {
+          count,
+          baseMinor: currency ? reportMinor(row.base_minor) : null,
+          weightedBaseMinor: currency
+            ? reportMinor(row.weighted_base_minor)
+            : null,
+          currency,
+          asOf,
+          timezone,
+          unpricedCount: priced == null ? null : Math.max(0, count - priced),
+        },
+      ];
+    }),
+  );
 }

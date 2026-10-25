@@ -268,6 +268,11 @@ func describeType(t reflect.Type) (*jsonSchema, error) {
 		return &jsonSchema{Type: schemaArray, Items: items}, nil
 	case reflect.Map:
 		// A map's keys are the caller's, so only the value shape can be stated.
+		// A map of `any` says no more than that any member is allowed.
+		if t.Elem().Kind() == reflect.Interface {
+			open := true
+			return &jsonSchema{Type: schemaObject, AdditionalProperties: &additionalProperties{Closed: &open}}, nil
+		}
 		values, err := describeType(t.Elem())
 		if err != nil {
 			return nil, err

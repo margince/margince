@@ -17,21 +17,27 @@ import (
 
 // Fact retains contribution provenance so frozen values can be safely projected later.
 type Fact struct {
-	StagePosition int                               `json:"stage_position,omitempty"`
-	Scope         *crmcontracts.ReportingScope      `json:"scope,omitempty"`
-	StageID       string                            `json:"stage_id,omitempty"`
-	StageLabel    string                            `json:"stage_label,omitempty"`
-	OwnerLabel    string                            `json:"owner_label,omitempty"`
-	Outcome       string                            `json:"outcome,omitempty"`
-	Money         *int64                            `json:"money,omitempty"`
-	Provenance    string                            `json:"provenance,omitempty"`
-	Metric        crmcontracts.ReportingMetricID    `json:"metric"`
-	ContextID     string                            `json:"context_id"`
-	GroupKey      string                            `json:"group_key"`
-	Row           crmcontracts.ReportingEvidenceRow `json:"row"`
-	SourceID      ids.UUID                          `json:"source_id"`
-	SourceType    string                            `json:"source_type"`
-	OwnerID       ids.UUID                          `json:"owner_id"`
+	StagePosition int                            `json:"stage_position,omitempty"`
+	Scope         *crmcontracts.ReportingScope   `json:"scope,omitempty"`
+	StageID       string                         `json:"stage_id,omitempty"`
+	StageLabel    string                         `json:"stage_label,omitempty"`
+	OwnerLabel    string                         `json:"owner_label,omitempty"`
+	Outcome       string                         `json:"outcome,omitempty"`
+	Money         *int64                         `json:"money,omitempty"`
+	Provenance    string                         `json:"provenance,omitempty"`
+	Metric        crmcontracts.ReportingMetricID `json:"metric"`
+	ContextID     string                         `json:"context_id"`
+	GroupKey      string                         `json:"group_key"`
+	// GroupLabel names GroupKey's group for a reader, in the base language.
+	GroupLabel string                            `json:"group_label,omitempty"`
+	Row        crmcontracts.ReportingEvidenceRow `json:"row"`
+	SourceID   ids.UUID                          `json:"source_id"`
+	SourceType string                            `json:"source_type"`
+	OwnerID    ids.UUID                          `json:"owner_id"`
+	// OwnerWithheld marks a fact whose owner the reader may not measure one by
+	// one. It still counts in totals; per-owner outputs skip it. Absent on
+	// stored contributions, which decode as false.
+	OwnerWithheld bool `json:"owner_withheld,omitempty"`
 }
 
 // Evaluation keeps calculated values and supporting facts in one result.
@@ -55,6 +61,10 @@ type Authority interface {
 	Members(context.Context, pgx.Tx) ([]ids.UUID, error)
 	ValidateFramework(context.Context, pgx.Tx, crmcontracts.ReportingFrameworkInput) error
 	Scope(context.Context, pgx.Tx, crmcontracts.ReportingScope, bool) (crmcontracts.ReportingScope, error)
+	// AssertedScope resolves the scope a report revision records. A revision is
+	// published about its population, so it needs the strict tier rule that a
+	// read of the totals does not.
+	AssertedScope(context.Context, pgx.Tx, crmcontracts.ReportingScope) (crmcontracts.ReportingScope, error)
 	Visible(context.Context, pgx.Tx, []Fact) ([]Fact, bool, error)
 }
 
@@ -71,6 +81,7 @@ type CalendarSource func(context.Context, pgx.Tx) (Calendar, error)
 // Service coordinates saved reporting over injected calculation and authority seams.
 type Service struct {
 	language  func(context.Context, pgx.Tx) textlang.Lang
+	reader    func(context.Context, pgx.Tx) textlang.Lang
 	store     *store
 	evaluator Evaluator
 	authority Authority

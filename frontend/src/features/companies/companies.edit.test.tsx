@@ -28,7 +28,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
         patchBody = JSON.parse(await request.text());
         return jsonResponse({
           ...company,
-          industry: "Manufacturing",
+          industry: "manufacturing",
           version: 2,
         });
       }
@@ -42,13 +42,13 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Industry" }),
     );
-    const industry = await screen.findByLabelText("Industry");
-    await userEvent.clear(industry);
-    await userEvent.type(industry, "Manufacturing{Enter}");
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Manufacturing" }),
+    );
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchHeader).toBe("1");
-    expect(patchBody).toMatchObject({ industry: "Manufacturing" });
+    expect(patchBody).toMatchObject({ industry: "manufacturing" });
     // The company fixture carries no domains, so an edit that doesn't touch them
     // omits the field (untouched) rather than clearing the stored set.
     expect(patchBody).not.toHaveProperty("domains");
@@ -69,7 +69,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
         patchBody = JSON.parse(await request.text());
         return jsonResponse({
           ...partner,
-          industry: "Manufacturing",
+          industry: "manufacturing",
           version: 2,
         });
       }
@@ -83,13 +83,13 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Industry" }),
     );
-    const industry = await screen.findByLabelText("Industry");
-    await userEvent.clear(industry);
-    await userEvent.type(industry, "Manufacturing{Enter}");
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Manufacturing" }),
+    );
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({
-      industry: "Manufacturing",
+      industry: "manufacturing",
     });
     expect(patchBody).not.toHaveProperty("relationship_types");
   });
@@ -432,6 +432,7 @@ describe("companyEditFields — the owner select never offers what it cannot sav
       // The identity translator: this suite is about the owner select's
       // required-ness, and a key reads as well as a word for that.
       (key) => key,
+      "en",
     ).find((field) => field.key === "owner_id");
 
   it("is required while the account has an owner, so no blank option renders", () => {

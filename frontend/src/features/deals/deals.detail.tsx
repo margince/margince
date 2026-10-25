@@ -370,7 +370,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               {shownTab === "room" && (
                 <DealRoomTab dealId={deal.id} dealName={deal.name} />
               )}
-              {shownTab === "files" && <DealFiles deal={deal} />}
+              {shownTab === "files" && (
+                <DealFiles deal={deal} onOpenEmail={setOpenEmail} />
+              )}
               {shownTab === "legal" && <DealLegalTab deal={deal} />}
               {shownTab === "history" && (
                 <DealHistoryTab deal={deal} onOpenEmail={setOpenEmail} />

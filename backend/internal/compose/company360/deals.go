@@ -35,9 +35,8 @@ func openDealsWhere(companyPos int, dealScope string) string {
 }
 
 // dealsSection reads the account's open deals plus the two lifetime
-// figures the header shows. won_lifetime sums amount_minor_base — each
-// deal's amount at its FROZEN close-time rate — so the figure never moves
-// when today's FX does.
+// figures the header shows. Closed values use the shared valuation rule,
+// preserving frozen amounts and pricing legacy rows that have no freeze.
 func dealsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time,
 	baseCurrency string,
 ) (crmcontracts.Company360Deals, error) {
@@ -113,7 +112,7 @@ func dealsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now t
 	}
 	open, page := truncate(open)
 
-	lifetime, lost, err := closedTotals(ctx, tx, companyID, baseCurrency)
+	lifetime, lost, err := closedTotals(ctx, tx, companyID, now, baseCurrency)
 	if err != nil {
 		return crmcontracts.Company360Deals{}, err
 	}
@@ -128,7 +127,7 @@ func dealsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now t
 // closedTotals sums won money and counts lost deals over the same row
 // scope the open list uses — a total that included deals the caller cannot
 // open would disclose their existence through arithmetic.
-func closedTotals(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
+func closedTotals(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, asOf time.Time,
 	baseCurrency string,
 ) (crmcontracts.Money, int, error) {
 	var args []any
@@ -143,25 +142,26 @@ func closedTotals(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	// one place a withheld number reappears whole. A masked row contributes
 	// NULL, which SUM skips, and it still counts toward the LOST count beside
 	// it — that one is about the deal's existence rather than its size.
-	amount, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor_base", arg)
+	amount, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
+		deals.BaseValueSQL(fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d"), arg)
 	if err != nil {
 		return crmcontracts.Money{}, 0, err
 	}
-	var wonMinor int64
+	nativeAmount, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d", "d.amount_minor", arg)
+	if err != nil {
+		return crmcontracts.Money{}, 0, err
+	}
+	wonValue := deals.FinalizeBaseTotalSQL("sum("+amount+") FILTER (WHERE d.status = 'won')", deals.UnpricedValueCountSQL(amount, nativeAmount, "d.status = 'won'"))
+	var wonMinor *int64
 	var lost int
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT coalesce(sum(%[3]s) FILTER (WHERE d.status = 'won'), 0)::bigint,
+		SELECT %[3]s,
 		       count(*) FILTER (WHERE d.status = 'lost')
 		FROM deal d
 		WHERE d.company_id = $%[1]d AND d.archived_at IS NULL
-		  AND d.status IN ('won','lost') AND (%[2]s)`, companyPos, dealScope, amount), args...).Scan(&wonMinor, &lost)
-	// No GROUP BY, so no empty result to handle: an ungrouped aggregate returns
-	// exactly one row whatever it counted, and the coalesce above makes that row
-	// an honest zero in the installation's own currency for an account with no
-	// closed deal. The clause used to group by the tenant, which produced no row
-	// at all in that case.
+		  AND d.status IN ('won','lost') AND (%[2]s)`, companyPos, dealScope, wonValue), args...).Scan(&wonMinor, &lost)
 	if err != nil {
 		return crmcontracts.Money{}, 0, err
 	}
-	return crmcontracts.Money{AmountMinor: &wonMinor, Currency: &baseCurrency}, lost, nil
+	return crmcontracts.Money{AmountMinor: wonMinor, Currency: &baseCurrency}, lost, nil
 }

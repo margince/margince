@@ -41,7 +41,7 @@ func TestTheRecencySentenceCountsTheWayTheCacheKeyDoes(t *testing.T) {
 			// "2 days ago", so a contains-check passes on an answer that is off
 			// by ten days — which is the class of error this test is about.
 			want := "Last activity " + probe.want + "."
-			if got := recencyReason(&last, false, probe.now, langcopy.For("en")); got != want {
+			if got := recencyReason(&last, false, probe.now, time.UTC, langcopy.For("en")); got != want {
 				t.Errorf("at %s the card says %q, want %q — a sentence a reader can check "+
 					"against a timestamp must not move between cache writes",
 					probe.now.Format(time.RFC3339), got, want)
@@ -56,7 +56,7 @@ func TestTheRecencySentenceCountsTheWayTheCacheKeyDoes(t *testing.T) {
 func TestARecordAheadOfTheClockReadsAsToday(t *testing.T) {
 	last := time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC)
 	const want = "Last activity today."
-	if got := recencyReason(&last, false, time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC), langcopy.For("en")); got != want {
+	if got := recencyReason(&last, false, time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC), time.UTC, langcopy.For("en")); got != want {
 		t.Errorf("an activity dated ahead of now reads %q, want %q", got, want)
 	}
 }
@@ -66,7 +66,21 @@ func TestARecordAheadOfTheClockReadsAsToday(t *testing.T) {
 func TestAStalledDealSaysSoInTheSameSentence(t *testing.T) {
 	last := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
 	const want = "Last activity 21 days ago — the deal counts as stalled."
-	if got := recencyReason(&last, true, time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC), langcopy.For("en")); got != want {
+	if got := recencyReason(&last, true, time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC), time.UTC, langcopy.For("en")); got != want {
 		t.Errorf("a stalled deal's recency reads %q, want %q", got, want)
+	}
+}
+
+// The recency sentence counts in the installation zone: 15:00 local the day
+// before, read at 01:00 local in UTC+7, is yesterday there and today in UTC.
+func TestRecencyReasonCountsInTheInstallationZone(t *testing.T) {
+	bangkok := time.FixedZone("UTC+7", 7*3600)
+	last := time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC)
+	now := time.Date(2026, 10, 6, 18, 0, 0, 0, time.UTC)
+	if got, want := recencyReason(&last, false, now, bangkok, langcopy.For("en")), "Last activity yesterday."; got != want {
+		t.Errorf("in UTC+7 the card says %q, want %q", got, want)
+	}
+	if got, want := recencyReason(&last, false, now, time.UTC, langcopy.For("en")), "Last activity today."; got != want {
+		t.Errorf("in UTC the card says %q, want %q", got, want)
 	}
 }

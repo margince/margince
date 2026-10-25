@@ -225,3 +225,38 @@ func TestBothDoorsRefuseAGroupedPageWithACursor(t *testing.T) {
 		t.Errorf("the tool refused with %q, want it to name per_type", text)
 	}
 }
+
+func TestBothDoorsOfferTheSameNearMatchesWhenNothingMatches(t *testing.T) {
+	d := newTwoDoors(t, "search-near-doors", "read")
+	anna := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Anna Kowalczyk"})
+
+	var route struct {
+		Data        []any `json:"data"`
+		NearMatches []struct {
+			ID string `json:"id"`
+		} `json:"near_matches"`
+	}
+	if err := json.Unmarshal(d.rest(t, "GET", "/v1/search?q=anna+kowalcyk", nil), &route); err != nil {
+		t.Fatal(err)
+	}
+	tool := decodedAs[struct {
+		Records     []any `json:"records"`
+		NearMatches []struct {
+			ID string `json:"id"`
+		} `json:"near_matches"`
+		Notes []struct {
+			Code string `json:"code"`
+		} `json:"notes"`
+	}](t, d.tool(t, "search_records", map[string]any{"q": "anna kowalcyk"}))
+
+	if len(route.Data) != 0 || len(tool.Records) != 0 {
+		t.Fatalf("a misspelt name matched: route %v, tool %v", route.Data, tool.Records)
+	}
+	if len(route.NearMatches) != 1 || route.NearMatches[0].ID != anna ||
+		len(tool.NearMatches) != 1 || tool.NearMatches[0].ID != anna {
+		t.Errorf("route near matches %v, tool near matches %v, want only %s on both", route.NearMatches, tool.NearMatches, anna)
+	}
+	if len(tool.Notes) != 1 || tool.Notes[0].Code != "near_matches_only" {
+		t.Errorf("the tool notes are %v, want near_matches_only", tool.Notes)
+	}
+}

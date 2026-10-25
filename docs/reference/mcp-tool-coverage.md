@@ -96,7 +96,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 0 |
 | … **no case requires** | 8 |
 | … of those, permitted somewhere but never required | 4 |
-| Prompt tokens spent on tools no case requires | 3415 |
+| Prompt tokens spent on tools no case requires | 3419 |
 | Use cases | 35 |
 | Acceptance criteria the cases declare, each with a statement | 83 |
 
@@ -329,13 +329,13 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `find_records` | 1.00 | 6 | `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company` |
 | `change_activities` | 1.00 | 12 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case48_that_whole_thread_is_filed_wrong`, `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract`, `case9_filed_in_the_wrong_place` |
+| `read_analytics` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `send_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
-| `read_analytics` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
-| `change_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
+| `change_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_workspace` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
@@ -359,9 +359,9 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `find_records` | 1.00 | 6 | `case4_use_the_moment`, `case5_before_the_meeting`, `case6_ask_the_company` |
+| `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `send_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
-| `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
@@ -399,8 +399,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `change_state` | 0.89 | 8/9 | - | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list` |
 | `read_forecast` | 0.86 | 6/7 | - | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
-| `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `create_record` | 0.89 | 8/9 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `decide_approvals` | 0.86 | 6/7 | - | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
 
@@ -449,7 +449,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_view` | 989 | - | - | - |
+| `read_view` | 993 | - | - | - |
 | `change_record_parts` | 567 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
 | `enrich` | 395 | `enrich` | - | - |

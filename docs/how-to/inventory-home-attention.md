@@ -14,18 +14,18 @@ share what it prints with the user who decides the repair.
 Against the database of an installation, as a role that can read its tables:
 
 ```
-psql "$DATABASE_URL" -v horizon_days=90 -f scripts/home-attention-inventory.sql
+psql "$DATABASE_URL" -v horizon_days=30 -f scripts/home-attention-inventory.sql
 ```
 
 Against your own dev stack, with the host port of the Postgres of your stack:
 
 ```
-bash scripts/dev-psql.sh 15432 margince -v horizon_days=90 < scripts/home-attention-inventory.sql
+bash scripts/dev-psql.sh 15432 margince -v horizon_days=30 < scripts/home-attention-inventory.sql
 ```
 
-`horizon_days` is the waiting horizon to count against, and it is 90 by default. The
+`horizon_days` is the waiting horizon to count against, and it is 30 by default. The
 product measures its own horizon for each installation, from how long its replies
-take, between 14 and 365 days. It uses 90 only when the history is short
+take, between 14 and 30 days. It uses 30 when the history is short
 (`backend/internal/modules/activities/waitinghorizon.go`). The script cannot
 measure it, so count 2 is close but not exact. It matches the Worklist only when
 `horizon_days` is the same as the measured value.

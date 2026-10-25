@@ -47,7 +47,7 @@ jobs:
       # own scope, and naming any scope sets the rest to none, so contents
       # has to be spelled out alongside it.
       checks: read
-      # The open issues of this release's milestone.
+      # The open issues that carry release: blocker.
       issues: read
     outputs:
       version: ${{ steps.v.outputs.version }}
@@ -103,7 +103,7 @@ jobs:
           tag_date="$(git for-each-ref --format='%(taggerdate:short)' "refs/tags/$TAG")"
           bash scripts/release-license-stamped.sh "$TAG" "$tag_date" LICENSE
 
-      - name: The milestone of this release has no open work
+      - name: No open issue blocks a release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -111,24 +111,22 @@ jobs:
           PRERELEASE: ${{ steps.v.outputs.prerelease }}
         run: |
           set -euo pipefail
-          # The milestone named like the plain tag is the release's scope. A
-          # plain tag with open work in it ships a release its milestone says is
-          # unfinished; a candidate ships part of it on purpose. No milestone is
-          # normal for a patch, which nobody plans ahead. state=all, so closing
-          # the milestone over open work does not hide that work; --paginate
-          # because the list truncates at its page size instead of erroring.
-          title="${TAG%%-*}"
-          open="$(gh api --paginate "repos/$GH_REPO/milestones?state=all&per_page=100" \
-            --jq ".[] | select(.title == \"$title\") | .open_issues")"
-          if [ -z "$open" ]; then
-            echo "release-tag: no milestone named $title — nothing to check."
-          elif [ "$open" -gt 0 ] && [ "$PRERELEASE" != true ]; then
-            echo "release-tag: milestone $title still has $open open issue(s) or pull request(s)." >&2
-            echo "  Finish them, or move them to the next milestone, then re-run ALL" >&2
-            echo "  jobs of this run: docs/how-to/cut-a-release.md." >&2
-            exit 1
+          # Milestones are months and name no release, so what a plain tag
+          # waits for is this label. A candidate ships before its blockers on
+          # purpose, so it only reports them.
+          blockers="$(gh issue list --repo "$GH_REPO" --state open --label "release: blocker" \
+            --limit 1000 --json number,title --jq '.[] | "#\(.number) \(.title)"')"
+          if [ -z "$blockers" ]; then
+            echo "release-tag: no open issue carries release: blocker."
+          elif [ "$PRERELEASE" = true ]; then
+            echo "release-tag: $TAG is a pre-release; these still block the release:"
+            echo "$blockers"
           else
-            echo "release-tag: milestone $title has $open open item(s)."
+            echo "release-tag: $TAG is blocked by:" >&2
+            echo "$blockers" >&2
+            echo "  Close them, or take the label off one the release can ship without," >&2
+            echo "  then re-run ALL jobs of this run: docs/how-to/cut-a-release.md." >&2
+            exit 1
           fi
 
       - name: The tagged commit has no adverse verdict
@@ -258,10 +256,8 @@ jobs:
     timeout-minutes: 30
     permissions:
       # The only job here that writes to this repository, and it writes exactly
-      # two things: the release, and the state of its milestone. Every other job
-      # is read-only.
+      # one thing: the release. Every other job is read-only.
       contents: write
-      issues: write
     steps:
       # A re-run of ONLY the failed jobs does not re-execute `version`, and
       # GitHub drops the outputs of a job that did not run. Every use of
@@ -428,25 +424,3 @@ jobs:
 
           echo "release-tag: published $VERSION" >> "$GITHUB_STEP_SUMMARY"
           gh release view "$VERSION" --json assets -q '.assets[].name' >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Close the milestone this release ships
-        if: needs.version.outputs.prerelease != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          VERSION: ${{ needs.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          # Work added to the milestone while the bundles built stays visible:
-          # closing over it would file it under a release that did not ship it.
-          found="$(gh api --paginate "repos/$GH_REPO/milestones?state=open&per_page=100" \
-            --jq ".[] | select(.title == \"$VERSION\") | \"\\(.number) \\(.open_issues)\"")"
-          read -r number open <<<"$found"
-          if [ -z "$number" ]; then
-            echo "release-tag: no open milestone named $VERSION to close." >> "$GITHUB_STEP_SUMMARY"
-          elif [ "$open" -gt 0 ]; then
-            echo "::warning::milestone $VERSION gained $open open item(s) during the run; it stays open. Move them, then close it."
-          else
-            gh api -X PATCH "repos/$GH_REPO/milestones/$number" -f state=closed >/dev/null
-            echo "release-tag: closed milestone $VERSION" >> "$GITHUB_STEP_SUMMARY"
-          fi

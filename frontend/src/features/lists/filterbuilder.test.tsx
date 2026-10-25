@@ -918,16 +918,24 @@ describe("the value control follows the operator, then the type", () => {
     expect(screen.getByRole("textbox", { name: "Values" })).toBeTruthy();
   });
 
-  it("takes a date box for a date field", () => {
+  it("takes a date box for a date field, with a calendar to pick the day from", async () => {
     resetIDsForTest();
+    const user = userEvent.setup();
     render(
       <Harness
         start={newGroup("and", [newLeaf("created_at", "gte", "2026-07-18")])}
       />,
     );
 
-    const value = screen.getByLabelText("Value");
-    expect(value.getAttribute("type")).toBe("date");
+    expect(
+      screen.getByRole<HTMLInputElement>("textbox", { name: "Value" }).value,
+    ).toBe("18/07/2026");
+    await user.click(screen.getByRole("button", { name: /^Choose date/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "Monday, 20 July 2026" }),
+    );
+
+    expect(screen.getByTestId("wire").textContent).toContain('"2026-07-20"');
   });
 
   it("asks present-or-empty for `exists` rather than a typed value", async () => {

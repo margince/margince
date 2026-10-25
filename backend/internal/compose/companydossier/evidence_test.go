@@ -263,7 +263,12 @@ func (s stubFacts) ListCompanyFacts(
 func (s stubFacts) GetCompany(
 	context.Context, ids.CompanyID, storekit.ArchivedFilter,
 ) (crmcontracts.Company, error) {
-	return crmcontracts.Company{DisplayName: s.in.Name}, nil
+	company := crmcontracts.Company{DisplayName: s.in.Name}
+	if s.in.Industry != "" {
+		industry := crmcontracts.CompanyIndustry(s.in.Industry)
+		company.Industry = &industry
+	}
+	return company, nil
 }
 
 // A receipt must not both NAME a field as missing and render it blank. The

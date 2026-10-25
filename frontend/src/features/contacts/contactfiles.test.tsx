@@ -170,6 +170,43 @@ describe("the contact's files tab", () => {
     expect(signed.getAttribute("download")).toBe("signed.pdf");
   });
 
+  it("opens a document link in a new tab instead of downloading it", async () => {
+    stub({
+      data: [
+        attachment({
+          id: "l-1",
+          entity_id: "a-1",
+          filename: "Q4 plan",
+          category: "link",
+          url: "https://docs.google.com/presentation/d/abc/edit",
+          bytes_withheld: true,
+        }),
+        attachment({
+          id: "l-2",
+          entity_id: "a-1",
+          filename: "tricky",
+          category: "link",
+          url: "javascript:alert(1)",
+          bytes_withheld: true,
+        }),
+      ],
+      page: { has_more: false },
+    });
+    show(<ContactFilesTab contactId="p-1" />);
+
+    const link = await screen.findByRole("link", { name: "Q4 plan" });
+    expect(link.getAttribute("href")).toBe(
+      "https://docs.google.com/presentation/d/abc/edit",
+    );
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.hasAttribute("download")).toBe(false);
+    expect(screen.getByRole("button", { name: /Links sent/ })).toBeTruthy();
+
+    const tricky = screen.getByRole("link", { name: "tricky" });
+    expect(tricky.getAttribute("href")).toBe("/v1/attachments/l-2");
+  });
+
   it("prefers the title a human gave over the filename that arrived", async () => {
     stub({
       data: [
@@ -483,5 +520,58 @@ describe("the contact's files tab", () => {
     const url = new URL(lastRequest.url);
     expect(url.searchParams.get("entity_type")).toBe("contact");
     expect(url.searchParams.get("entity_id")).toBe("p-42");
+  });
+});
+
+describe("a file a mail carried, on the contact's files tab", () => {
+  const MAIL_FILE = attachment({
+    id: "f-mail",
+    entity_type: "activity",
+    entity_id: "m-1",
+    filename: "order.pdf",
+    source: "imap",
+    category: "email_attachment",
+  });
+  const ORIGIN = {
+    activity_id: "m-1",
+    kind: "email",
+    subject: "Signed order",
+    occurred_at: "2026-08-01T08:00:00Z",
+    sender: { address: "bea@buyer.example", display_name: "Bea Buyer" },
+  };
+
+  it("names the mail it came with and opens that mail", async () => {
+    stub({
+      data: [{ ...MAIL_FILE, origin: ORIGIN }],
+      page: { has_more: false },
+    });
+    const onOpenEmail = vi.fn();
+    show(<ContactFilesTab contactId="p-1" onOpenEmail={onOpenEmail} />);
+
+    const origin = await screen.findByRole("button", {
+      name: "From Bea Buyer · Signed order",
+    });
+    await userEvent.setup().click(origin);
+    expect(onOpenEmail).toHaveBeenCalledWith("m-1");
+  });
+
+  it("names nothing about a mail the server sent no origin for", async () => {
+    stub({ data: [MAIL_FILE], page: { has_more: false } });
+    show(<ContactFilesTab contactId="p-1" onOpenEmail={vi.fn()} />);
+
+    await screen.findByRole("link", { name: "order.pdf" });
+    expect(screen.queryByText(/^From /)).toBeNull();
+    expect(screen.queryByText(/Signed order/)).toBeNull();
+  });
+
+  it("leaves an upload's row with its name alone", async () => {
+    stub({
+      data: [attachment({ id: "f-1", entity_id: "p-1", filename: "cv.pdf" })],
+      page: { has_more: false },
+    });
+    show(<ContactFilesTab contactId="p-1" onOpenEmail={vi.fn()} />);
+
+    const name = await screen.findByRole("link", { name: "cv.pdf" });
+    expect(name.closest(".contact-file")?.textContent).toBe("cv.pdf");
   });
 });

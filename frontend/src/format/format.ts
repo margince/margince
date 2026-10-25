@@ -17,6 +17,7 @@ export {
   formatDateTime,
   formatDayLong,
   formatDayMonth,
+  formatDayMonthNearYear,
   formatDayRange,
   formatTimeOfDay,
   fullDayName,
@@ -137,10 +138,18 @@ export function formatMoneyCompact(
   if (!abbreviated && !Number.isInteger(major)) {
     return formatMoney(amountMinor, currency, locale);
   }
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const vietnameseCompact = locale === "vi" && abbreviated;
+  const scale =
+    Math.abs(major) >= 1_000_000_000
+      ? 1_000_000_000
+      : Math.abs(major) >= 1_000_000
+        ? 1_000_000
+        : 1_000;
+  const unit = scale === 1_000 ? "K" : scale === 1_000_000 ? " triệu" : " tỷ";
+  const formatter = new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "currency",
     currency,
-    notation: abbreviated ? "compact" : "standard",
+    notation: abbreviated && !vietnameseCompact ? "compact" : "standard",
     // Spelled out: the currency style starts the minimum at the currency's own
     // digits, so a maximum of 1 alone always prints one digit ("€420.0k").
     minimumFractionDigits: 0,
@@ -148,7 +157,17 @@ export function formatMoneyCompact(
     // Half-up turns CHF 999,999.99 into "CHF 1M", a figure the record does
     // not reach; truncating drops digits but never adds any.
     roundingMode: "trunc",
-  }).format(major);
+  });
+  if (!vietnameseCompact) return formatter.format(major);
+  const parts = formatter.formatToParts(major / scale);
+  const lastDigit = parts.reduce(
+    (last, part, index) =>
+      part.type === "integer" || part.type === "fraction" ? index : last,
+    -1,
+  );
+  return parts
+    .map((part, index) => part.value + (index === lastDigit ? unit : ""))
+    .join("");
 }
 
 /**
@@ -216,6 +235,17 @@ export function formatFinePercent(fraction: number, locale: Locale): string {
 
 export function formatNumber(value: number, locale: Locale): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale]).format(value);
+}
+
+// A measured span in hours, to one decimal and in the reader's unit word: a
+// median first response of 3.5 hours reads "3.5 hr", "3,5 Std." or "3,5 giờ".
+export function formatHours(hours: number, locale: Locale): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "unit",
+    unit: "hour",
+    unitDisplay: "short",
+    maximumFractionDigits: 1,
+  }).format(hours);
 }
 
 /**
@@ -385,12 +415,13 @@ export function relativeDays(
   at: string | null | undefined,
   t: Translator,
   locale: Locale,
+  zone: string,
   now: Date = new Date(),
 ): string {
   if (!at) {
     return t("contact.strip.never");
   }
-  const days = calendarDaysBetween(new Date(at), now);
+  const days = calendarDaysBetween(new Date(at), now, zone);
   if (days <= 0) {
     return t("contact.strip.today");
   }

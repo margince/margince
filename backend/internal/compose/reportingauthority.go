@@ -39,7 +39,18 @@ func reportingRequested(scope crmcontracts.ReportingScope) RequestedScope {
 }
 
 func (a reportingAuthority) Scope(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope, write bool) (crmcontracts.ReportingScope, error) {
-	resolved, err := ResolveAnalyticsScope(ctx, tx, reportingRequested(scope))
+	return reportingScopeUnder(ctx, tx, scope, ResolveAnalyticsScope, write)
+}
+
+func (a reportingAuthority) AssertedScope(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) (crmcontracts.ReportingScope, error) {
+	return reportingScopeUnder(ctx, tx, scope, ResolveAssertionScope, false)
+}
+
+func reportingScopeUnder(
+	ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope,
+	resolve func(context.Context, pgx.Tx, RequestedScope) (ResolvedScope, error), write bool,
+) (crmcontracts.ReportingScope, error) {
+	resolved, err := resolve(ctx, tx, reportingRequested(scope))
 	if err != nil {
 		return crmcontracts.ReportingScope{}, err
 	}

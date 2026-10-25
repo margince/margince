@@ -10,6 +10,7 @@ import {
   type Translator,
   translatePlural,
 } from "../../i18n";
+import { bucketLabel } from "../../lib/bucketlabel";
 import { omitted } from "./contact360";
 import { directionSentence } from "./contactrail";
 import { changeSentence } from "./relationshipchange";
@@ -67,10 +68,10 @@ export function contactVerdict(
       : null;
   }
   if (strength.bucket === "none") {
-    return { word: t("standing.ring.noInteractions"), tone: "neutral" };
+    return { word: bucketLabel(strength.bucket, t), tone: "neutral" };
   }
   return {
-    word: t(`contact.bandBadge.${strength.bucket}`),
+    word: bucketLabel(strength.bucket, t),
     sentence: bandSentence(view, t),
     tone: bandTone(strength.bucket),
   };

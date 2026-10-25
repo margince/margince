@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
+import { telUri } from "../../format/contacturi";
 import { LocaleProvider } from "../../i18n";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { ContactDealsTab } from "./contactdeals";
@@ -43,7 +44,7 @@ function activity(
   row: Pick<SectionActivity, "id" | "kind" | "occurred_at"> &
     Partial<SectionActivity>,
 ): SectionActivity {
-  return { is_done: false, ...CAPTURED, ...row };
+  return { offers_email: false, is_done: false, ...CAPTURED, ...row };
 }
 
 // The six tabs beside Overview were placeholders for a release, and the thing
@@ -317,6 +318,114 @@ describe("the timeline tab", () => {
   });
 });
 
+const OFFICE = "+49 30 1234567";
+const MOBILE = "+49 151 7654321";
+
+function phone(id: string, number: string, isPrimary: boolean) {
+  return {
+    id,
+    phone: number,
+    phone_type: "work" as const,
+    is_primary: isPrimary,
+    position: 0,
+    ...CAPTURED,
+  };
+}
+
+// The primary number comes second, so a tab that dialled the first number
+// listed would fail here.
+function withCall(
+  kind: SectionActivity["kind"],
+  contact: Partial<Contact360["contact"]> = {},
+): Contact360 {
+  return {
+    ...view,
+    contact: {
+      ...view.contact,
+      phones: [phone("ph-0", OFFICE, false), phone("ph-1", MOBILE, true)],
+      ...contact,
+    },
+    activities: {
+      data: [
+        activity({
+          id: "c-1",
+          kind,
+          subject: "Called about the renewal",
+          direction: "outbound",
+          occurred_at: "2026-08-11T12:00:00Z",
+        }),
+      ],
+      page: { has_more: false },
+    },
+  };
+}
+
+describe("Call on the timeline tab", () => {
+  it("dials the primary number from a logged call", () => {
+    withProviders(
+      <ContactTimelineTab contactId="p-1" view={withCall("call")} />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Call" }).getAttribute("href"),
+    ).toBe(telUri(MOBILE));
+  });
+
+  it("offers no Call on a note", () => {
+    withProviders(
+      <ContactTimelineTab contactId="p-1" view={withCall("note")} />,
+    );
+
+    expect(screen.getByText("Called about the renewal")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+  });
+
+  it("offers no Call when the contact has no phone", () => {
+    withProviders(
+      <ContactTimelineTab
+        contactId="p-1"
+        view={withCall("call", { phones: [] })}
+      />,
+    );
+
+    expect(screen.getByText("Called about the renewal")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+  });
+
+  it("offers no Call on an archived contact", () => {
+    withProviders(
+      <ContactTimelineTab
+        contactId="p-1"
+        view={withCall("call", { archived_at: "2026-08-12T09:00:00Z" })}
+      />,
+    );
+
+    expect(screen.getByText("Called about the renewal")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+  });
+
+  // With no 360 the tab draws rows only from a narrowed read of the list.
+  it("offers no Call when the tab has no 360 to read a number from", async () => {
+    const user = userEvent.setup();
+    stubWithSession(
+      {
+        "GET /activities": () =>
+          jsonResponse({
+            data: withCall("call").activities?.data,
+            page: { has_more: false },
+          }),
+      },
+      {},
+    );
+    withProviders(<ContactTimelineTab contactId="p-1" />);
+
+    await pickOption(user, screen.getByLabelText("Activity kind"), "Calls");
+
+    expect(await screen.findByText("Called about the renewal")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+  });
+});
+
 describe("the deals tab", () => {
   it("names every deal the contact is recorded on, with their seat", () => {
     withProviders(<ContactDealsTab view={view} />);
@@ -482,6 +591,7 @@ describe("the deals tab", () => {
     ...view,
     contact: {
       ...view.contact,
+      primary_email: "dana@buyer.example",
       emails: [
         {
           id: "e-1",

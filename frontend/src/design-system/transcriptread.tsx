@@ -4,14 +4,16 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { showsAMessage, TASK_QUEUE_KEY } from "../lib/activitykeys";
 import { throwProblem, unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
+import { worklistKey } from "../lib/workkeys";
 import { Badge, Button, Card, EmptyState, Skeleton } from "./atoms";
 import { Callout } from "./callout";
 import { ErrorLine } from "./errorline";
@@ -199,9 +201,6 @@ function TranscriptReadPanel({
   activityId,
   readId,
 }: Readonly<{ activityId: string; readId: string }>) {
-  const plural = usePlural();
-  const t = useT();
-  const { locale } = useLocale();
   const reportQuery = useQuery({
     queryKey: ["transcript-read", activityId, readId],
     queryFn: async () => {
@@ -226,6 +225,47 @@ function TranscriptReadPanel({
 
   const report = reportQuery.data;
   const terminal = report.status === "done" || report.status === "failed";
+  return (
+    <TranscriptReadBody
+      report={report}
+      terminal={terminal}
+      activityId={activityId}
+    />
+  );
+}
+
+// Split from the polling component so the refresh below can sit in an effect
+// that runs only once the data exists.
+function TranscriptReadBody({
+  report,
+  terminal,
+  activityId,
+}: Readonly<{
+  report: TranscriptReadReport;
+  terminal: boolean;
+  activityId: string;
+}>) {
+  const plural = usePlural();
+  const t = useT();
+  const { locale } = useLocale();
+  const queryClient = useQueryClient();
+  const status = report.status;
+  const previous = useRef(status);
+  useEffect(() => {
+    const wasWorking =
+      previous.current === "queued" || previous.current === "running";
+    previous.current = status;
+    if (!(wasWorking && status === "done")) {
+      return;
+    }
+    // The reading wrote tasks and findings onto records this card is not told
+    // about. So every cached timeline, 360 first page, task and worklist read is
+    // refreshed; only mounted queries refetch.
+    queryClient.invalidateQueries({ predicate: showsAMessage });
+    queryClient.invalidateQueries({ queryKey: TASK_QUEUE_KEY });
+    queryClient.invalidateQueries({ queryKey: worklistKey });
+    queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
+  }, [status, queryClient, activityId]);
 
   return (
     <div className="transcript-reading">

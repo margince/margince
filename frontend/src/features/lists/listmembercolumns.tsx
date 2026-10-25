@@ -19,7 +19,7 @@ import {
 } from "../../lib/filterdata";
 import type { List } from "../../lib/lists.queries";
 import { decode, fieldsNamed } from "../../lib/segmentpredicate";
-import { useFieldValueText, vocabularyField } from "./listexplain";
+import { linkedText, useFieldValueText, vocabularyField } from "./listexplain";
 import { type MemberRow, memberName } from "./listmembers";
 
 /** How many filter fields are drawn at first; the rest wait in the Display menu. */
@@ -74,6 +74,9 @@ function useFilterColumns(list: List): ListColumn<MemberRow>[] {
         const held = row.listing?.values?.[field];
         if (held?.hidden) {
           return <span className="t-caption">{t("lists.members.hidden")}</span>;
+        }
+        if (held?.linked !== undefined) {
+          return linkedText(held.linked, t);
         }
         if (held?.value == null) {
           return "—";

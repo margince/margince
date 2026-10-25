@@ -126,7 +126,7 @@ func NewService(pool *pgxpool.Pool, view Assembler, profile ProfileReader, lane 
 func (s *Service) assemble(
 	ctx context.Context, companyID ids.CompanyID, withProfile bool, projectID *ids.ProjectID,
 ) (Input, *crmcontracts.ProjectScope, error) {
-	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: projectID})
+	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: projectID, WrittenByHumanOnly: true})
 	if err != nil {
 		return Input{}, nil, err
 	}
@@ -174,6 +174,7 @@ func (s *Service) GetScoped(
 		return crmcontracts.CompanyBrief{}, err
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	in = in.WordedIn(lang)
 	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
 	if err != nil {
 		return crmcontracts.CompanyBrief{}, err
@@ -246,8 +247,8 @@ func (s *Service) AskScoped(
 	if err != nil {
 		return crmcontracts.CompanyAnswer{}, err
 	}
-	sentences, by, err := Answer(ai.WithSubject(ctx, companyID.Ref(), in.Name), s.lane, question, companyID.String(), in,
-		identity.BaseLanguageForPrompt(ctx, s.pool))
+	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	sentences, by, err := Answer(ai.WithSubject(ctx, companyID.Ref(), in.Name), s.lane, question, companyID.String(), in.WordedIn(lang), lang)
 	if err != nil {
 		return crmcontracts.CompanyAnswer{}, err
 	}

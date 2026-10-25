@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -76,6 +77,11 @@ func (s *Store) CreateContract(ctx context.Context, in CreateContractInput) (crm
 }
 
 func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by string, asOf time.Time, active []fieldcatalog.Column, fromRequest bool) (crmcontracts.Contract, error) {
+	if in.Currency != nil {
+		if err := values.RequireAssignableCurrency(*in.Currency); err != nil {
+			return crmcontracts.Contract{}, err
+		}
+	}
 	// Naming the counterparty is a read of it, and naming a deal is a read of
 	// that deal — both are client-supplied references to row-scoped records, so
 	// a caller may not hang an agreement off something it cannot see.
@@ -183,6 +189,11 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		if err := ensureLinksShareCompany(ctx, tx, anchor,
 			uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
 			return err
+		}
+		if in.Currency != nil && (existing.Currency == nil || *existing.Currency != *in.Currency) {
+			if err := values.RequireAssignableCurrency(*in.Currency); err != nil {
+				return err
+			}
 		}
 		if err := refuseARedenominatedDraft(existing, in); err != nil {
 			return err

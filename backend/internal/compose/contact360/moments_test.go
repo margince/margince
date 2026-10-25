@@ -815,7 +815,7 @@ func TestDismissingOnePromiseShowsTheNext(t *testing.T) {
 	// The reader puts that one away. The second promise is untouched.
 	next := momentCopyFor("en").deriveMomentPast(readerCtx(), now, page, func(m crmcontracts.ContactMoment) bool {
 		return m.ClaimKey == first.ClaimKey
-	})
+	}, asAssembled)
 	if next.Rule == crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Fatal("dismissing one promise reported the contact as needing nothing, " +
 			"while a second promise is still open")
@@ -842,7 +842,7 @@ func TestDismissingEveryPromiseReachesTheQuietState(t *testing.T) {
 			OccurredAt:       &said,
 		}},
 	}
-	got := momentCopyFor("en").deriveMomentPast(readerCtx(), now, page, func(crmcontracts.ContactMoment) bool { return true })
+	got := momentCopyFor("en").deriveMomentPast(readerCtx(), now, page, func(crmcontracts.ContactMoment) bool { return true }, asAssembled)
 	if got.Rule != crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Errorf("rule = %q, want nothing_needed once every card is dismissed", got.Rule)
 	}

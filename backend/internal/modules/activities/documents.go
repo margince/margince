@@ -13,8 +13,9 @@ package activities
 // viewer something about them, which is the disclosure the parent gate exists to
 // prevent (DOC-AC-2).
 //
-// `company_id` on the row is a READ PATH, not a second parent. It makes the
-// roll-up affordable at a hundred documents; it never decides who may see one.
+// `company_id` on the row is a read path for uploads, not a second parent; it
+// never decides who may see one. A mail's file carries no stamp: it is read
+// through the links of its mail as they are now (documentMembership).
 
 import (
 	"context"
@@ -74,39 +75,11 @@ func (s *Store) ListCompanyDocuments(
 		if err := auth.EnsureVisibleExisting(ctx, tx, "company", companyID); err != nil {
 			return err
 		}
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		where := []string{
-			fmt.Sprintf("at.company_id = $%d", arg(companyID)),
-			"at.archived_at IS NULL",
-		}
-		// Keyset, not offset: the library is ordered pinned-then-newest and a
-		// page boundary has to survive a pin being added between two reads.
-		if in.Cursor != nil && *in.Cursor != "" {
-			sort, err := documentSort(ctx)
-			if err != nil {
-				return err
-			}
-			clause, err := sort.KeysetClause(*in.Cursor, arg)
-			if err != nil {
-				return err
-			}
-			// KeysetClause names the columns bare; this SELECT aliases the table.
-			where = append(where, strings.ReplaceAll(clause, `"pinned"`, "at.pinned"))
-		}
-		where = append(where, filterClauses(in, arg)...)
-		visible, err := visibleParentClause(ctx, arg)
+		statement, args, err := companyDocumentsQuery(ctx, companyID, in, lim)
 		if err != nil {
 			return err
 		}
-		where = append(where, visible)
-
-		rows, err := tx.Query(ctx, fmt.Sprintf(`
-			SELECT %s FROM attachment at
-			 WHERE %s
-			 ORDER BY at.pinned DESC, at.created_at DESC, at.id DESC
-			 LIMIT %d`,
-			attachmentColumns, strings.Join(where, " AND "), lim+1), args...)
+		rows, err := tx.Query(ctx, statement, args...)
 		if err != nil {
 			return fmt.Errorf("activities: listing the account's documents: %w", err)
 		}
@@ -129,7 +102,7 @@ func (s *Store) ListCompanyDocuments(
 			}
 			page = p
 		}
-		return nil
+		return withMailOrigins(ctx, tx, out)
 	})
 	if out == nil {
 		out = []crmcontracts.Attachment{}
@@ -137,14 +110,40 @@ func (s *Store) ListCompanyDocuments(
 	return out, page, err
 }
 
-// documentSort is the library's FIXED ordering — pinned first, then newest —
-// expressed through the house sort machinery rather than hand-rolled, because
-// the hand-rolled version got the cursor wrong: it ordered on three columns and
-// continued the page on two, so a page boundary landing inside the pinned group
-// excluded every newer unpinned document from every later page, permanently.
-//
-// It is not a client choice. The reader never picks this order, so the spec is
-// fixed here and ParseListSort is only the constructor.
+// companyDocumentsQuery is the account library's statement for this caller.
+// It holds the membership, the page, the filters and each row's parent gate.
+func companyDocumentsQuery(ctx context.Context, companyID ids.UUID, in DocumentFilters, lim int) (string, []any, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	where := []string{documentMembership(holderCompany, arg(companyID))}
+	// Keyset, not offset: the library is ordered pinned-then-newest and a
+	// page boundary has to survive a pin being added between two reads.
+	if in.Cursor != nil && *in.Cursor != "" {
+		sort, err := documentSort(ctx)
+		if err != nil {
+			return "", nil, err
+		}
+		clause, err := sort.KeysetClause(*in.Cursor, arg)
+		if err != nil {
+			return "", nil, err
+		}
+		// KeysetClause names the columns bare; this SELECT aliases the table.
+		where = append(where, strings.ReplaceAll(clause, `"pinned"`, "at.pinned"))
+	}
+	where = append(where, filterClauses(in, arg)...)
+	visible, err := visibleParentClause(ctx, arg)
+	if err != nil {
+		return "", nil, err
+	}
+	where = append(where, visible)
+	return fmt.Sprintf(`
+		SELECT %s FROM attachment at
+		 WHERE %s
+		 ORDER BY at.pinned DESC, at.created_at DESC, at.id DESC
+		 LIMIT %d`,
+		attachmentColumns, strings.Join(where, " AND "), lim+1), args, nil
+}
+
 // documentSort is the library's FIXED ordering — pinned first, then newest —
 // expressed through the house sort machinery rather than hand-rolled, because
 // the hand-rolled version got the cursor wrong: it ordered on three columns and
@@ -425,14 +424,23 @@ var provenanceCategories = map[string]struct{}{
 // caller asserting arrival on a file that never arrived: `source` is the writer
 // that made the row, and `upload` is the one that means a human handed it over.
 func refuseAssertedProvenance(before crmcontracts.Attachment, in DocumentMetadata) error {
-	if in.Category == nil || before.Source != attachmentSource {
+	if in.Category == nil {
+		return nil
+	}
+	if before.Category != nil && *before.Category == categoryLink {
+		return &values.ParseError{
+			Field: fieldCategory, Code: "category_not_assertable",
+			Message: "a document link stays a link; archive it if it should not be listed",
+		}
+	}
+	if before.Source != attachmentSource {
 		return nil
 	}
 	if _, provenance := provenanceCategories[*in.Category]; !provenance {
 		return nil
 	}
 	return &values.ParseError{
-		Field: "category", Code: "category_not_assertable",
+		Field: fieldCategory, Code: "category_not_assertable",
 		Message: "that category records how a file arrived and is derived from the message " +
 			"that carried it; an uploaded file has no arrival to claim — file it by what it is",
 	}
@@ -445,7 +453,7 @@ func refuseAssertedProvenance(before crmcontracts.Attachment, in DocumentMetadat
 func documentMetadataPatch(before crmcontracts.Attachment, in DocumentMetadata) *storekit.Patch {
 	p := storekit.NewPatch()
 	if in.Category != nil {
-		p.Set("category", before.Category, *in.Category)
+		p.Set(fieldCategory, before.Category, *in.Category)
 	}
 	if in.Title != nil || in.ClearTitle {
 		p.Set("title", before.Title, in.Title)

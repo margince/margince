@@ -24,7 +24,7 @@ describe("calendarDaysBetween", () => {
     // The case the millisecond spelling gets wrong: it answers 0.
     const late = new Date("2026-05-20T23:00:00Z");
     const early = new Date("2026-05-21T01:00:00Z");
-    expect(calendarDaysBetween(late, early)).toBe(1);
+    expect(calendarDaysBetween(late, early, "UTC")).toBe(1);
   });
 
   it("counts a full day inside one date as zero, though 23 hours passed", () => {
@@ -33,7 +33,7 @@ describe("calendarDaysBetween", () => {
     // apart. A reader looking at two dates can.
     const morning = new Date("2026-05-20T00:30:00Z");
     const night = new Date("2026-05-20T23:30:00Z");
-    expect(calendarDaysBetween(morning, night)).toBe(0);
+    expect(calendarDaysBetween(morning, night, "UTC")).toBe(0);
   });
 
   it("counts whole days across a longer span", () => {
@@ -41,6 +41,7 @@ describe("calendarDaysBetween", () => {
       calendarDaysBetween(
         new Date("2026-05-20T12:00:00Z"),
         new Date("2026-08-24T12:00:00Z"),
+        "UTC",
       ),
     ).toBe(96);
   });
@@ -50,8 +51,54 @@ describe("calendarDaysBetween", () => {
       calendarDaysBetween(
         new Date("2026-05-23T12:00:00Z"),
         new Date("2026-05-20T12:00:00Z"),
+        "UTC",
       ),
     ).toBe(-3);
+  });
+});
+
+describe("calendarDaysBetween in a reader zone", () => {
+  // Fixed instants, no real clock. The same pair is a different number of
+  // calendar days in each zone.
+  it("counts 15:00 yesterday to 01:00 as one day in UTC+7 and zero in UTC", () => {
+    const met = new Date("2026-10-06T08:00:00Z");
+    const now = new Date("2026-10-06T18:00:00Z");
+    expect(calendarDaysBetween(met, now, "Asia/Bangkok")).toBe(1);
+    expect(calendarDaysBetween(met, now, "UTC")).toBe(0);
+  });
+
+  it("counts an evening in UTC-5 as today although UTC has turned", () => {
+    const met = new Date("2026-12-05T23:00:00Z");
+    const now = new Date("2026-12-06T01:00:00Z");
+    expect(calendarDaysBetween(met, now, "America/New_York")).toBe(0);
+    expect(calendarDaysBetween(met, now, "UTC")).toBe(1);
+  });
+
+  it("stays whole across a DST change", () => {
+    expect(
+      calendarDaysBetween(
+        new Date("2026-03-07T12:00:00Z"),
+        new Date("2026-03-09T12:00:00Z"),
+        "America/New_York",
+      ),
+    ).toBe(2);
+    expect(
+      calendarDaysBetween(
+        new Date("2026-03-28T23:30:00Z"),
+        new Date("2026-03-29T22:30:00Z"),
+        "Europe/Berlin",
+      ),
+    ).toBe(1);
+  });
+
+  it("follows a half-hour offset", () => {
+    expect(
+      calendarDaysBetween(
+        new Date("2026-10-06T17:30:00Z"),
+        new Date("2026-10-06T18:45:00Z"),
+        "Asia/Kolkata",
+      ),
+    ).toBe(1);
   });
 });
 
@@ -59,30 +106,32 @@ describe("relativeDays", () => {
   const now = new Date("2026-08-24T12:00:00Z");
 
   it("says never for an absent timestamp", () => {
-    expect(relativeDays(null, t, "en", now)).toBe("contact.strip.never");
-    expect(relativeDays(undefined, t, "en", now)).toBe("contact.strip.never");
+    expect(relativeDays(null, t, "en", "UTC", now)).toBe("contact.strip.never");
+    expect(relativeDays(undefined, t, "en", "UTC", now)).toBe(
+      "contact.strip.never",
+    );
   });
 
   it("says today for the same calendar day", () => {
-    expect(relativeDays("2026-08-24T01:00:00Z", t, "en", now)).toBe(
+    expect(relativeDays("2026-08-24T01:00:00Z", t, "en", "UTC", now)).toBe(
       "contact.strip.today",
     );
   });
 
   it("says today for a future timestamp rather than a negative count", () => {
-    expect(relativeDays("2026-09-01T00:00:00Z", t, "en", now)).toBe(
+    expect(relativeDays("2026-09-01T00:00:00Z", t, "en", "UTC", now)).toBe(
       "contact.strip.today",
     );
   });
 
   it("says yesterday for the previous calendar day", () => {
-    expect(relativeDays("2026-08-23T22:00:00Z", t, "en", now)).toBe(
+    expect(relativeDays("2026-08-23T22:00:00Z", t, "en", "UTC", now)).toBe(
       "contact.strip.yesterday",
     );
   });
 
   it("counts the days for anything older", () => {
-    expect(relativeDays("2026-05-20T09:00:00Z", t, "en", now)).toBe(
+    expect(relativeDays("2026-05-20T09:00:00Z", t, "en", "UTC", now)).toBe(
       'contact.strip.days:{"count":"96"}',
     );
   });
@@ -91,18 +140,28 @@ describe("relativeDays", () => {
     // A four-figure count is where the two notations part: a German reader
     // reads "1.200" and an English one "1,200", and a raw number would have
     // reached the sentence as "1200" for both.
-    expect(relativeDays("2023-05-12T09:00:00Z", t, "en", now)).toBe(
+    expect(relativeDays("2023-05-12T09:00:00Z", t, "en", "UTC", now)).toBe(
       'contact.strip.days:{"count":"1,200"}',
     );
-    expect(relativeDays("2023-05-12T09:00:00Z", t, "de", now)).toBe(
+    expect(relativeDays("2023-05-12T09:00:00Z", t, "de", "UTC", now)).toBe(
       'contact.strip.days:{"count":"1.200"}',
+    );
+  });
+
+  it("reads the day in the zone it is drawn in", () => {
+    const soon = new Date("2026-10-06T18:00:00Z");
+    expect(
+      relativeDays("2026-10-06T08:00:00Z", t, "en", "Asia/Bangkok", soon),
+    ).toBe("contact.strip.yesterday");
+    expect(relativeDays("2026-10-06T08:00:00Z", t, "en", "UTC", soon)).toBe(
+      "contact.strip.today",
     );
   });
 
   it("reads a late-evening timestamp as yesterday, not today", () => {
     // The boundary the millisecond spelling gets wrong: 13 hours earlier but a
     // different date, which a reader calls yesterday and a duration calls today.
-    expect(relativeDays("2026-08-23T23:00:00Z", t, "en", now)).toBe(
+    expect(relativeDays("2026-08-23T23:00:00Z", t, "en", "UTC", now)).toBe(
       "contact.strip.yesterday",
     );
   });

@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
@@ -146,6 +147,9 @@ func (s *PendingStore) ResolveReviewed(ctx context.Context, tx pgx.Tx, id ids.UU
 // ResolveReviewedAs is ResolveReviewed that also records the sender kind the
 // human's decision implies. An empty kind leaves whatever the model recorded.
 func (s *PendingStore) ResolveReviewedAs(ctx context.Context, tx pgx.Tx, id ids.UUID, status, kind, reason string) error {
+	if err := lockPendingChecksTx(ctx, tx, id); err != nil {
+		return err
+	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE capture_pending_counterparty
 		   SET status = $2, disposition_reason = NULLIF($3, ''),
@@ -185,4 +189,35 @@ func declinedReview(ctx context.Context, tx pgx.Tx, id ids.UUID, wanted string) 
 		return fmt.Errorf("%w: capture disposition %s was already reviewed as %q, not %q",
 			apperrors.ErrConflict, id, stored, wanted)
 	}
+}
+
+// Retire ends a claimed row at `unsure`: the model never cleared the floor in
+// its allowed attempts, so the question passes to a human. It stamps the
+// attempt count and the stop time, so the row says why it ended. measured is
+// the last answer, which is the evidence the human now judges.
+func (s *PendingStore) Retire(
+	ctx context.Context, p PendingCounterparty, reason string, measured VerdictMeasurement,
+) error {
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := storekit.LockSeatAddressChecks(ctx, tx, p.Email); err != nil {
+			return err
+		}
+		tag, err := tx.Exec(ctx, `
+			UPDATE capture_pending_counterparty
+			   SET status = 'unsure', disposition_reason = NULLIF($2, ''),
+			       attempts = $4, resolved_at = now(),
+			       confidence = $5, served_model = NULLIF($6, ''),
+			       next_attempt_at = NULL, claimed_until = NULL, claimed_by = NULL,
+			       updated_at = now()
+			 WHERE id = $1 AND status = 'pending' AND claimed_by = $3`,
+			p.ID, reason, p.Claim, PendingMaxAttempts, measured.confidence(), measured.Model)
+		if err == nil && tag.RowsAffected() == 0 {
+			return declinedRetire(ctx, tx, p.ID, p.Claim)
+		}
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("capture: retiring disposition %s: %w", p.ID, err)
+	}
+	return nil
 }

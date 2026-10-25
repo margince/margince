@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { formatMoney } from "../../format/format";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import { DealsScreen } from "./deals";
@@ -46,7 +47,7 @@ describe("DealsScreen", () => {
       stubBackend([deal({ expected_close_date: "2099-10-14" })]),
     );
     render(<DealsScreen />);
-    expect(await screen.findByText("closes 14 Oct")).toBeTruthy();
+    expect(await screen.findByText("closes 14 Oct 2099")).toBeTruthy();
   });
 
   it("board↔table swaps views over the same fetched set without a reload", async () => {
@@ -354,8 +355,8 @@ describe("DealsScreen", () => {
             stage_id: "s1",
             currency: "EUR",
             deals: 250,
-            raw_minor: 9_999_999,
-            weighted_minor: 1_234_567,
+            base_minor: 9_999_999,
+            weighted_base_minor: 1_234_567,
           },
         ],
       }),
@@ -363,7 +364,7 @@ describe("DealsScreen", () => {
     render(<DealsScreen />);
     await waitFor(() =>
       expect(
-        screen.getByText(formatMoney(9_999_999, "EUR", "en")),
+        screen.getByText(`≈ ${formatMoney(9_999_999, "EUR", "en")}`),
       ).toBeTruthy(),
     );
     expect(
@@ -371,6 +372,36 @@ describe("DealsScreen", () => {
     ).toBeTruthy();
     // The true stage count (250), not "1" (the single loaded card's count).
     expect(screen.getByText("250 deals")).toBeTruthy();
+  });
+
+  it.each([
+    { name: "the report frame", timezone: UTC_ZONE, day: "01/10/2026" },
+    {
+      name: "the record clock for older responses",
+      timezone: undefined,
+      day: "02/10/2026",
+    },
+  ])("reads the valuation date on $name", async ({ timezone, day }) => {
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ stage_id: "s1" })], {
+        stageTotalsAsOf: "2026-10-01T23:30:00Z",
+        stageTotalsTimezone: timezone,
+        stageTotalsRows: [
+          {
+            stage_id: "s1",
+            deals: 1,
+            base_minor: 10000,
+            weighted_base_minor: 4000,
+            priced_deals: 1,
+          },
+        ],
+      }),
+    );
+    render(<DealsScreen />);
+    expect(
+      await screen.findByText(`Converted · rates as of ${day}`),
+    ).toBeTruthy();
   });
 
   // The report measures every deal the reader may see, which is the set the
@@ -431,7 +462,48 @@ describe("DealsScreen", () => {
     ).toBe(1);
   });
 
+  it.each([
+    {
+      name: "archived deals are included",
+      query: "include_archived=true",
+      reason:
+        "Loaded deals only. Totals are unavailable while archived deals are included.",
+    },
+    {
+      name: "one stage filters the board's cards",
+      query: "stage_id=s1",
+      reason: "Loaded deals only. Totals are unavailable with a stage filter.",
+    },
+  ])("withholds report totals when $name", async ({ query, reason }) => {
+    window.location.hash = `#/deals?${query}`;
+    const dealUrls: string[] = [];
+    let totalsAsked = false;
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], {
+        onDealsUrl: (url) => dealUrls.push(url),
+        onStageTotalsBody: () => {
+          totalsAsked = true;
+        },
+        stageTotalsRows: [
+          { stage_id: "s1", deals: 250, base_minor: 9_999_999 },
+          { stage_id: "s2", deals: 250, base_minor: 9_999_999 },
+        ],
+      }),
+    );
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    expect(dealUrls.some((url) => url.includes(query))).toBe(true);
+    expect(totalsAsked).toBe(false);
+    expect(screen.getByText(reason)).toBeTruthy();
+    expect(screen.queryByText("250 deals")).toBeNull();
+    expect(
+      screen.queryByText(`≈ ${formatMoney(9_999_999, "EUR", "en")}`),
+    ).toBeNull();
+  });
+
   it("sends the board's active filters to the deals-by-stage totals request", async () => {
+    window.location.hash = "#/deals?forecast_category=commit";
     let sentBody: unknown;
     vi.stubGlobal(
       "fetch",
@@ -446,7 +518,14 @@ describe("DealsScreen", () => {
       expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
     expect(sentBody).toMatchObject({
-      group_by: ["stage_id", "currency"],
+      filters: { forecast_category: "commit" },
+      group_by: ["stage_id"],
+      aggregates: [
+        { fn: "count", as: "deals" },
+        { fn: "sum", field: "amount_base_minor", as: "base_minor" },
+        { fn: "sum", field: "weighted_base_minor", as: "weighted_base_minor" },
+        { fn: "count", field: "amount_base_minor", as: "priced_deals" },
+      ],
     });
   });
 

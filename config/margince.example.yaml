@@ -98,8 +98,8 @@ bootstrap_admin:
 # connector_state_key: ${file:/run/secrets/connector_state_key}
 # # Postgres DSN of the runtime app role; migrate falls back to it when MARGINCE_OWNER_DSN is unset.
 # dsn: ${file:/run/secrets/dsn}
-# # Nominatim base URL, or public; set it on the api and the worker together, or a lookup is never
-# # queued.
+# # Nominatim base URL; unset or public uses the public service, off stops the lookup of map points;
+# # give the api and the worker the same value, or a lookup is never queued.
 # geocode_base_url:
 # # Google OAuth client id of the Gmail capture connector.
 # gmail_client_id:
@@ -419,6 +419,15 @@ bootstrap_admin:
 #   # The language AI writes the shared record in: en, de or vi.
 #   # default: en
 #   base_language: en
+#   # Show a Telegram chat link next to a contact's phone number that starts with a country code.
+#   # default: true
+#   call_telegram: true
+#   # Show a WhatsApp chat link next to a contact's phone number that starts with a country code.
+#   # default: true
+#   call_whatsapp: true
+#   # Show a Zalo chat link next to a contact's phone number that starts with a country code.
+#   # default: true
+#   call_zalo: true
 #   # Seconds between the close-date sweeps.
 #   # default: 86400
 #   close_date_sweep_interval_seconds: 86400

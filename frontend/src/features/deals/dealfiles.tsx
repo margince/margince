@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { FileOrigin } from "../../components/fileorigin";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable } from "../../design-system/datatable";
@@ -15,6 +16,7 @@ import { undoAction, useToast } from "../../design-system/toast";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { attachmentAnchor } from "../../lib/attachmentlink";
 import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -43,6 +45,7 @@ const CATEGORY_LABELS: Record<Category, MessageKey> = {
   email_attachment: "docs.category.email",
   message_attachment: "docs.category.message",
   other: "docs.category.other",
+  link: "docs.category.link",
 };
 
 // Enough for a working set; the area is not a library somebody pages through.
@@ -70,7 +73,14 @@ export function useDealDocuments(dealId: string, includeHidden = false) {
   });
 }
 
-export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
+export function DealFiles({
+  deal,
+  onOpenEmail,
+}: Readonly<{
+  deal: Deal;
+  /** Opens a mail in the page's drawer, from the line naming a file's mail. */
+  onOpenEmail?: (activityId: string) => void;
+}>) {
   const t = useT();
   const dealId = deal.id;
   // useCanWriteRecord, not useCanWrite: every write here — the upload, a
@@ -132,6 +142,7 @@ export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
               files={files}
               mayWrite={mayWrite}
               focusLanding={focusLanding}
+              onOpenEmail={onOpenEmail}
             />
           </SurfaceState>
         </div>
@@ -145,11 +156,13 @@ function FilesTable({
   files,
   mayWrite,
   focusLanding,
+  onOpenEmail,
 }: Readonly<{
   dealId: string;
   files: readonly DealDocument[];
   mayWrite: boolean;
   focusLanding: () => HTMLElement | null;
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -178,22 +191,25 @@ function FilesTable({
         {
           key: "origin",
           header: t("dealfiles.col.origin"),
-          // A captured file names the party whose message carried it; an
-          // upload has no sender, only the deal it was put on.
+          // A mail's file names who sent the mail, as the contact and company
+          // lists do. A meeting's or a task's file names nothing; an upload
+          // says it was put on the deal.
           render: (doc) =>
-            doc.origin
-              ? t("dealfiles.origin.from", {
-                  who:
-                    doc.origin.counterparty_email ?? t("files.originUnknown"),
-                })
-              : t("dealfiles.origin.upload"),
+            doc.attachment.origin ? (
+              <FileOrigin
+                origin={doc.attachment.origin}
+                onOpenEmail={onOpenEmail}
+              />
+            ) : doc.attachment.entity_type === "activity" ? null : (
+              t("dealfiles.origin.upload")
+            ),
         },
         {
           key: "added",
           header: t("dealfiles.col.added"),
           render: (doc) =>
             formatDateAbbrev(
-              doc.origin?.occurred_at ?? doc.attachment.created_at,
+              doc.attachment.origin?.occurred_at ?? doc.attachment.created_at,
               locale,
               recordZone,
             ),
@@ -225,11 +241,7 @@ function FileName({ doc }: Readonly<{ doc: DealDocument }>) {
   const file = doc.attachment;
   return (
     <span className={doc.hidden ? "deal-file deal-file-hidden" : "deal-file"}>
-      <a
-        className="cell-link"
-        href={`/v1/attachments/${file.id}`}
-        download={file.filename}
-      >
+      <a className="cell-link" {...attachmentAnchor(file)}>
         {file.title || file.filename}
       </a>
       {doc.hidden ? <Badge>{t("files.hiddenBadge")}</Badge> : null}
@@ -307,7 +319,7 @@ function FileMenu({
   onDelete: () => void;
 }>) {
   const t = useT();
-  const captured = doc.origin !== undefined;
+  const captured = doc.attachment.entity_type === "activity";
   return (
     <OverflowMenu
       label={t("table.rowActions", { name: doc.attachment.filename })}

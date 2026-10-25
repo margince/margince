@@ -47,8 +47,15 @@
   color: var(--textSecondary);
   overflow-wrap: anywhere;
 }
+/* A pill and a verb may share the slot; they wrap onto a second line before
+   they push the title narrower than its share. */
 .overviewrow-right {
+  display: flex;
   flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gapActions);
   max-inline-size: 45%;
   font: var(--fontBodySmall);
   color: var(--textSecondary);

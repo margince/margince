@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // suggestionEntity names a suggestion in its audit rows and events.
@@ -110,7 +111,7 @@ func validDraft(d SuggestionDraft) error {
 	if d.CompanyID.IsZero() || !nameHints[d.NameHint] || len(d.Evidence) == 0 {
 		return ErrSuggestionDraftInvalid
 	}
-	if moneyPairError(d.AmountMinor, nil, d.Currency) != nil || amountSetError(d.AmountMinor) != nil ||
+	if moneyPairError(d.AmountMinor, nil, d.Currency) != nil || (d.Currency != nil && !values.AssignableCurrency(*d.Currency)) || amountSetError(d.AmountMinor) != nil ||
 		d.Confidence < 0 || d.Confidence > 1 {
 		return ErrSuggestionDraftInvalid
 	}

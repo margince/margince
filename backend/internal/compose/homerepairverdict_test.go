@@ -46,7 +46,7 @@ func TestRepairDigestUsesTheExecutedTypedScope(t *testing.T) {
 }
 
 func TestClassificationReviewDistinguishesMissingChecksFromUncertainty(t *testing.T) {
-	candidate := activities.OwedReviewCandidate{Verdict: activities.OwedVerdictAsksUs, Pristine: true, ContextReadable: true}
+	candidate := activities.OwedReviewCandidate{Verdict: activities.OwedVerdictAsksUs, Pristine: true, ContextReadable: true, EvidenceComplete: true}
 	for _, test := range []struct {
 		prediction, reason string
 		action             homeRepairAction

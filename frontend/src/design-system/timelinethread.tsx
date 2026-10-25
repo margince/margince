@@ -12,8 +12,8 @@ import "./composed.css";
 
 import {
   CommitmentReviewFlag,
-  conversationDirection,
   directionClass,
+  entryMove,
   groupCountLabel,
   MoveFlag,
   TIMELINE_ICON,
@@ -343,7 +343,7 @@ export function ThreadRow({
             {/* Whose move the conversation waits on, read off its newest
                 message. It goes on the card that stands for it, never on the
                 members inside. */}
-            {conversationDirection(newest) && <MoveFlag entry={newest} />}
+            {entryMove(newest) && <MoveFlag entry={newest} />}
             <CommitmentReviewFlag
               count={group.entries.reduce(
                 (count, entry) =>

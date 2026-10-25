@@ -422,12 +422,19 @@ func writeLinkedInHandle(ctx context.Context, tx pgx.Tx, connectionID, contactID
 	if handle == nil || *handle == "" {
 		return false, nil
 	}
+	// The slot holds a profile URL only; a connection row whose URL is anything
+	// else writes no handle.
+	profile, err := NormalizeContactLinkedInURL(*handle)
+	if err != nil {
+		//nolint:nilerr // a connection URL the slot refuses is a skipped handle, not a fault
+		return false, nil
+	}
 	// No lock here: ApplyLinkedInMatch holds this subject from the top of its
 	// transaction, ahead of the connection row, and re-taking it below that
 	// would be the ordering the eraser deadlocks against. contact_social is a
 	// declared PII table Art. 17 deletes, and the hold is what stops a handle
 	// landing after the erasure cleared it.
-	_, landed, err := insertSocialHandle(ctx, tx, contactID, SocialLinkedIn, *handle)
+	_, landed, err := insertSocialHandle(ctx, tx, contactID, SocialLinkedIn, profile)
 	if err != nil || !landed {
 		return false, err
 	}

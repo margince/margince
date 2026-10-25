@@ -7,8 +7,10 @@ import {
   formatDate,
   formatDateTime,
   formatDayMonth,
+  formatDayMonthNearYear,
   formatDayRange,
   formatDuration,
+  formatHours,
   formatMoney,
   formatMoneyCompact,
   formatMoneyOrAbsent,
@@ -23,6 +25,7 @@ import {
   ordinalNumber,
 } from "./format";
 import { formatDayFull, formatTimeRange } from "./meetingtime";
+import { type DateFormat, setDateTimePreferences } from "./preferences";
 
 // B-EP09.17/18/19 acceptance: locale changes the RENDERING of the same stored
 // value and never the value; de-DE renders decimal-comma / dot-thousands;
@@ -163,6 +166,29 @@ describe("a money figure abbreviated for a KPI slot", () => {
   });
 });
 
+describe("localized compact currency units", () => {
+  it.each([
+    [3_000_000, "30K\u00a0€"],
+    [120_000_000, "1,2 triệu\u00a0€"],
+    [120_000_000_000, "1,2 tỷ\u00a0€"],
+    [-120_000_000, "-1,2 triệu\u00a0€"],
+    [99_999_999, "999,9K\u00a0€"],
+  ])("renders Vietnamese business units for %s", (minor, expected) => {
+    expect(formatMoneyCompact(minor, "EUR", "vi")).toBe(expected);
+  });
+  it("keeps the English and German locale conventions", () => {
+    expect(formatMoneyCompact(120_000_000, "EUR", "en").toLowerCase()).toBe(
+      "€1.2m",
+    );
+    expect(formatMoneyCompact(120_000_000, "EUR", "de")).toMatch(
+      /^1,2\sMio\.\s€$/,
+    );
+    expect(formatMoneyCompact(1_200_000_000, "VND", "vi")).toBe(
+      "1,2 tỷ\u00a0₫",
+    );
+  });
+});
+
 // Both halves of a money value are required, and neither absence has a safe
 // default: an invented currency is indistinguishable from a real one, and an
 // invented zero is a figure the server never sent.
@@ -232,6 +258,42 @@ describe("date/time formatting (B-EP09.17/19)", () => {
     expect(formatDayMonth(instant, "en", "Europe/Berlin")).toBe("4 Jun");
     // And it is genuinely the year-less sibling of formatDateAbbrev.
     expect(formatDayMonth(instant, "en", "Europe/Berlin")).not.toMatch(/2026/);
+  });
+
+  it("adds the year to a day-month only when it is not the year of now", () => {
+    const now = new Date("2026-06-10T12:00:00Z");
+    const near = (day: string) =>
+      formatDayMonthNearYear(day, "en", "Europe/Berlin", now);
+    expect(near("2026-11-03")).toBe("3 Nov");
+    expect(near("2027-03-04")).toBe("4 Mar 2027");
+    expect(near("2025-12-30")).toBe("30 Dec 2025");
+  });
+
+  it("reads the year of now in the zone, not in UTC", () => {
+    // 23:30Z on 31 Dec is 2027 in Auckland; 03:00Z on 1 Jan is 2026 in New York.
+    const ahead = new Date("2026-12-31T23:30:00Z");
+    expect(
+      formatDayMonthNearYear("2027-01-01", "en", "Pacific/Auckland", ahead),
+    ).toBe("1 Jan");
+    const behind = new Date("2027-01-01T03:00:00Z");
+    expect(
+      formatDayMonthNearYear("2026-12-31", "en", "America/New_York", behind),
+    ).toBe("31 Dec");
+  });
+
+  it("writes the full date under a fixed date format, even in the year of now", () => {
+    const now = new Date("2026-06-10T12:00:00Z");
+    const written = (dateFormat: DateFormat) => {
+      setDateTimePreferences({ dateFormat, timeFormat: "locale" });
+      try {
+        return formatDayMonthNearYear("2026-11-03", "en", "Europe/Berlin", now);
+      } finally {
+        setDateTimePreferences({ dateFormat: "locale", timeFormat: "locale" });
+      }
+    };
+    expect(written("dmy")).toBe("03.11.2026");
+    expect(written("mdy")).toBe("11/03/2026");
+    expect(written("ymd")).toBe("2026-11-03");
   });
 
   it("carries the zone into a day-month rendering too", () => {
@@ -435,5 +497,18 @@ describe("formatMoneyWhole", () => {
   it("drops the cents of a whole amount and keeps them otherwise", () => {
     expect(formatMoneyWhole(4_800_000, "EUR", "en")).toBe("€48,000");
     expect(formatMoneyWhole(4_800_050, "EUR", "en")).toBe("€48,000.50");
+  });
+});
+
+describe("formatHours", () => {
+  it("keeps one decimal in the reader's notation and unit word", () => {
+    expect(formatHours(3.5, "en")).toMatch(/^3\.5\s*hr/);
+    expect(formatHours(3.5, "de")).toMatch(/^3,5\s*Std\./);
+    expect(formatHours(3.5, "vi")).toMatch(/^3,5\s*giờ$/);
+  });
+
+  it("rounds a long fraction to one decimal and drops a whole one", () => {
+    expect(formatHours(2.04, "en")).toMatch(/^2\s*hr/);
+    expect(formatHours(12.26, "en")).toMatch(/^12\.3\s*hr/);
   });
 });

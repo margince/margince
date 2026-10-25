@@ -6,6 +6,7 @@ import { CounterpartyHoldRow } from "../../components/counterparty-hold";
 import { Disclosure } from "../../design-system/disclosure";
 import { PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { companyWebsite } from "./companyheader";
 import { SectionSummary } from "./companyrailshared";
 
 type Company = components["schemas"]["Company"];
@@ -21,18 +22,15 @@ export function CompanyHoldSection({
   company,
 }: Readonly<{ company: Company | undefined }>) {
   const t = useT();
-  const host = hostOf(company?.website_url);
+  const website = company ? companyWebsite(company) : undefined;
+  const host = hostOf(website);
   if (!host) {
     return null;
   }
   return (
     <Disclosure summary={<SectionSummary title={t("hold.sectionTitle")} />}>
       <PanelBody>
-        {/* The row takes an ADDRESS and derives the domain from it, which is
-            what every contact page hands it. An account has only the domain, so
-            it is handed a bare address at that domain — the same value the
-            row's own domain verb would compute. */}
-        <CounterpartyHoldRow email={`x@${host}`} />
+        <CounterpartyHoldRow scope={{ domain: host }} />
       </PanelBody>
     </Disclosure>
   );

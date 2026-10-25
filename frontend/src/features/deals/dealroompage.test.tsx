@@ -3,7 +3,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -153,4 +160,44 @@ it("marks a paused room as stopped rather than current", async () => {
   const badge = (await screen.findByText("Paused")).closest(".badge");
   expect(badge).toHaveClass("badge-warning");
   expect(badge?.querySelector(".badge-live-dot")).not.toBeInTheDocument();
+});
+
+it("ends access on the day picked from the calendar", async () => {
+  const expiring = { ...ROOM, expires_at: "2026-09-30T23:59:59Z" };
+  const sent: unknown[] = [];
+  vi.stubGlobal("fetch", async (input: Request) => {
+    const path = new URL(input.url).pathname;
+    if (path.endsWith("/expiry")) {
+      sent.push(await input.json());
+      return jsonResponse(expiring);
+    }
+    if (path.endsWith("/me")) {
+      return jsonResponse(
+        meFixture({ allow: { deal_room: ["read", "update"] } }),
+      );
+    }
+    if (path.endsWith("/deal-rooms")) {
+      return jsonResponse({ data: [expiring], page: {} });
+    }
+    return jsonResponse({ data: [], page: {} });
+  });
+  const user = userEvent.setup();
+  render(<DealRoomPage dealId="deal-1" />);
+
+  await user.click(await screen.findByRole("button", { name: "Room access" }));
+  await user.click(
+    await screen.findByRole("button", { name: /^Set end date/ }),
+  );
+  const box = await screen.findByRole("textbox", { name: "Access ends on" });
+  expect(box).toHaveValue("30/09/2026");
+  await user.click(screen.getByRole("button", { name: /^Choose date/ }));
+  await user.click(
+    await screen.findByRole("button", { name: "Monday, 28 September 2026" }),
+  );
+  const dialog = screen.getByRole("dialog", { name: "Set end date" });
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+
+  await waitFor(() =>
+    expect(sent).toEqual([{ expires_at: "2026-09-28T23:59:59.000Z" }]),
+  );
 });

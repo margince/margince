@@ -26,7 +26,7 @@ const RECORDS = {
         id: "00000000-0000-7000-8000-0000000000c1",
         label: "GEM",
       },
-      changes: [{ field: "industry", after: "Software" }],
+      changes: [{ field: "industry", after: "software" }],
       undo: {
         undoable: true,
         audit_id: "00000000-0000-7000-8000-0000000000a1",
@@ -41,7 +41,13 @@ const RECORDS = {
         id: "00000000-0000-7000-8000-0000000000c2",
         label: "Kandu GmbH",
       },
-      changes: [{ field: "industry", before: "Retail", after: "Software" }],
+      changes: [
+        {
+          field: "industry",
+          before: "consumer_goods_retail",
+          after: "software",
+        },
+      ],
       undo: { undoable: false, reason: "already_undone" },
     },
   ],
@@ -101,7 +107,9 @@ describe("a done line standing for many records", () => {
     const dialog = await screen.findByRole("dialog");
     expect(await within(dialog).findByText("Kandu GmbH")).toBeTruthy();
     expect(within(dialog).getByText("empty → Software")).toBeTruthy();
-    expect(within(dialog).getByText("Retail → Software")).toBeTruthy();
+    expect(
+      within(dialog).getByText("Consumer Goods and Retail → Software"),
+    ).toBeTruthy();
     // One press per record: the undoable one offers it, the other says why not.
     expect(
       within(dialog).getAllByRole("button", { name: "Undo" }),
@@ -117,5 +125,49 @@ describe("a done line standing for many records", () => {
         .find((url) => url.includes(`/magic/lines/${LINE}/records`));
       expect(opened).toContain("since=");
     });
+  });
+
+  it("never opens a decision line through the audit records read", async () => {
+    stubOpenedLine();
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      const path = String(input instanceof Request ? input.url : input).split(
+        "?",
+      )[0];
+      if (path.endsWith("/magic")) {
+        return jsonResponse(
+          receipt({
+            done: [
+              line({
+                id: LINE,
+                approval_kind: "send_email",
+                summary: {
+                  key: "magic.action.decided_summary",
+                  values: { summary: "Sent it" },
+                },
+                entity: {
+                  type: "deal",
+                  id: "00000000-0000-7000-8000-0000000000d1",
+                  label: "PIM Rollout",
+                },
+                undo: undefined,
+              }),
+            ],
+          }),
+        );
+      }
+      return jsonResponse({ data: [] });
+    });
+    renderMagic();
+    const subject = await screen.findByRole("link", { name: "PIM Rollout" });
+    expect(subject.getAttribute("href")).toContain(
+      "00000000-0000-7000-8000-0000000000d1",
+    );
+    expect(screen.queryByRole("button", { name: "PIM Rollout" })).toBeNull();
+    const asked = vi
+      .mocked(fetch)
+      .mock.calls.map(([input]) =>
+        String(input instanceof Request ? input.url : input),
+      );
+    expect(asked.some((url) => url.includes("/magic/lines/"))).toBe(false);
   });
 });

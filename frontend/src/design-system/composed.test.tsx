@@ -356,7 +356,7 @@ describe("DealCard + PipelineBoard", () => {
     );
     expect(screen.getByText("40%")).toBeTruthy();
     expect(screen.getByText("1 deal")).toBeTruthy();
-    expect(screen.getByText("€60,500.00")).toBeTruthy();
+    expect(screen.getByText("≈ €60,500.00")).toBeTruthy();
     expect(screen.getByText("weighted €24,200.00")).toBeTruthy();
   });
 
@@ -385,22 +385,18 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.queryByText("1 deal")).toBeNull();
   });
 
-  // A refused sum says it was refused. Dropping the figure and leaving the count
-  // alone is a blank where a total belongs, and a blank cannot tell "these are in
-  // several currencies, so no one total means anything" apart from "nobody has
-  // priced these" — which reads as a column that failed to load. On a board whose
-  // stages hold euros, dollars and dong, most columns are in this state.
-  it("says why a mixed-currency column shows no total", () => {
+  it("shows converted totals and excludes unpriced deals explicitly", () => {
     const column: BoardMoneyColumn = {
-      stage: "won",
-      label: "Won",
-      probabilityPct: 100,
-      rawMinor: null,
-      weightedMinor: null,
-      currency: null,
+      stage: "proposal",
+      label: "Proposal",
+      probabilityPct: 40,
+      rawMinor: 125_000,
+      weightedMinor: 50_000,
+      currency: "EUR",
+      asOf: "2026-10-01",
+      unpricedCount: 2,
       deals: [deal],
       count: 29,
-      sumHidden: true,
     };
     render(
       <PipelineBoard
@@ -409,19 +405,10 @@ describe("DealCard + PipelineBoard", () => {
         zone="Europe/Berlin"
       />,
     );
-    // Selected by CLASS, because which class it carries is the behaviour: the
-    // refusal is prose and wraps, where `.board-col-weighted` is a money line
-    // that ellipsises — sharing it cut this sentence to "several currencies —
-    // no sing…" in a 240px stage. Matched on the words alone, the assertion
-    // stayed green through exactly that.
-    expect(
-      screen.getByText("several currencies, no single total", {
-        selector: ".board-col-refusal",
-      }),
-    ).toBeTruthy();
-    // The count is a fact and stays; no money figure is invented beside it.
+    expect(screen.getByText("≈ €1,250.00")).toBeTruthy();
+    expect(screen.getByText(/Converted · rates as of/)).toBeTruthy();
+    expect(screen.getByText("2 deals not priced · excluded")).toBeTruthy();
     expect(screen.getByText("29 deals")).toBeTruthy();
-    expect(screen.queryByText(/weighted/)).toBeNull();
   });
 
   // A money figure is an amount AND its currency. Either half absent leaves no

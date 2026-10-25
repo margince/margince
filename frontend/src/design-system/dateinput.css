@@ -1,0 +1,32 @@
+/* The text box floors at its own pattern (set inline from the placeholder), so
+ * the shell may not shrink below the box plus the calendar button. */
+.date-input {
+  min-inline-size: min-content;
+}
+.date-input .icon-action {
+  flex: none;
+}
+
+/* Above a dialog's overlay, as every portalled popup is (select.css). */
+.date-popup {
+  position: fixed;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  inline-size: max-content;
+  max-inline-size: calc(100vw - 2 * var(--pageGutter));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-3);
+  background: var(--bgElevated);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-pop);
+}
+
+.date-popup-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--gapActions);
+}

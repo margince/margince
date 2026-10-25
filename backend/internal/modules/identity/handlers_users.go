@@ -4,6 +4,7 @@
 package identity
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -369,18 +370,34 @@ func (h Handlers) writeUserByID(w http.ResponseWriter, r *http.Request, actor Id
 }
 
 // sendInvite mails the single-use set-password link when a mailer is wired.
-// Delivery is best-effort — the member and token already committed, so a mail
-// failure is an operator incident (logged), never a failed invite.
+// It runs off the request. The member and token already committed.
+// A slow relay must not hold the admin's Invite action.
+//
+// A goroutine and not a queued job because the link holds the raw token.
+// A job table stores its arguments verbatim, so the token must not enter it.
+// A refusal is logged.
 func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Identity) {
 	if !h.canSendPasswordLink() || rawToken == "" {
 		return
 	}
-	link := passwordLink(h.passwordLinkBaseURL, rawToken)
-	words := h.mailCopy(r.Context(), email)
-	body := words.AccountMessage(true, inviter.DisplayName, inviter.WorkspaceName, link)
-	if err := mailer.SendProduct(r.Context(), h.resetMailer, email, words.InviteSubject, body); err != nil {
-		slog.Error("invite email failed", "err", err)
-	}
+	// releaseSend runs in the goroutine, which outlives this handler.
+	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), inviteSendTimeout)
+	done := h.resetSendStarted // test seam; nil in production
+	go func() {
+		defer releaseSend()
+		if done != nil {
+			defer done()
+		}
+		defer recoverDetached("invite send")
+		link := passwordLink(h.passwordLinkBaseURL, rawToken)
+		words := h.mailCopy(workCtx, email)
+		body := words.AccountMessage(true, inviter.DisplayName, inviter.WorkspaceName, link)
+		sendErr := mailer.SendProduct(workCtx, h.resetMailer, email, words.InviteSubject, body)
+		if sendErr == nil {
+			return
+		}
+		slog.Error("invite email failed", "err", sendErr)
+	}()
 }
 
 // CreateFormerMember (POST /users/former): record a colleague who already left,

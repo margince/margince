@@ -39,8 +39,9 @@ func MeetingStatusCounts(status string) bool {
 }
 
 // InteractionCounts is InteractionCountsSQL for a reader holding the row in Go.
-func InteractionCounts(kind, meetingStatus string) bool {
-	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus))
+// automatic is the row's Evidence.Automatic, empty when a human wrote it.
+func InteractionCounts(kind, meetingStatus string, automatic AutomaticKind) bool {
+	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus)) && automatic == ""
 }
 
 // MeetingTookPlaceSQL is a meeting that counts as contact we had: not called
@@ -63,18 +64,48 @@ func NotCalledOffSQL(alias string) string {
 	return "(" + alias + ".kind <> '" + kindMeeting + "' OR " + MeetingCountsSQL(alias) + ")"
 }
 
-// LastActivityCountsSQL admits an activity row to a record's last-activity
-// clock: not a called-off meeting, and already happened at now. The
-// last_activity_of_* functions carry its text rendered with now().
-func LastActivityCountsSQL(alias, now string) string {
-	return "(" + NotCalledOffSQL(alias) + " AND " + alias + ".occurred_at <= " + now + ")"
+// lastActivityKinds are the kinds that move a record's last-activity clock. A
+// task is intent, not contact, whether a member or an agent filed it. A note
+// moves the clock but never scores, so this is not interactionKinds.
+var lastActivityKinds = []string{kindEmail, kindMessage, kindMeeting, kindCall, "note"}
+
+// LastActivityKinds lists lastActivityKinds for the gate that holds the
+// frontend's copy of the set to this one.
+func LastActivityKinds() []string {
+	return slices.Clone(lastActivityKinds)
 }
 
-// InteractionCountsSQL is the whole test for an activity row that counts
-// toward contact strength: an interaction kind, and if it is a meeting, one
-// nobody called off.
+// LastActivityKindSQL admits an activity row whose kind moves the clock.
+func LastActivityKindSQL(alias string) string {
+	return alias + ".kind IN (" + sqlList(lastActivityKinds) + ")"
+}
+
+// LastActivityCountsSQL admits an activity row to a record's last-activity
+// clock: a kind that moves it, not a called-off meeting, and already happened
+// at now. The last_activity_of_* functions carry its text rendered with now().
+func LastActivityCountsSQL(alias, now string) string {
+	return "(" + LastActivityKindSQL(alias) + " AND " + NotCalledOffSQL(alias) + " AND " +
+		alias + ".occurred_at <= " + now + ")"
+}
+
+// InteractionCountsSQL is the whole test for an activity row that counts as an
+// exchange. It needs an interaction kind and a meeting nobody called off. It
+// also needs a row a human wrote (WrittenByHumanSQL).
 func InteractionCountsSQL(alias string) string {
-	return alias + ".kind IN " + InteractionKindSQLGroup() + " AND " + NotCalledOffSQL(alias)
+	return alias + ".kind IN " + InteractionKindSQLGroup() + " AND " + NotCalledOffSQL(alias) +
+		" AND " + WrittenByHumanSQL(alias)
+}
+
+// InteractionRolesSQL lists the participant roles that make a party part of an
+// exchange. The graph fold and the seats-without-mailbox notice both read it,
+// so a role added for one cannot be missed by the other.
+const InteractionRolesSQL = `('from','to','cc','bcc','attendee','organizer')`
+
+// WorkspaceAudienceSQL admits only an activity every member may read. A limited
+// message (audience participants|selected) is content, so anything derived for
+// all readers from its participants or timing would disclose who talked to whom.
+func WorkspaceAudienceSQL(alias string) string {
+	return alias + ".audience = 'workspace'"
 }
 
 // How an account's contact stands, by what made it so.
@@ -101,8 +132,9 @@ func (r InTouch) Current() bool {
 
 // ReadInTouch folds the three dates every in-touch question rests on. A
 // message or meeting dated after now has not happened, so it never counts as
-// contact we had; a meeting ahead counts only as nextMeeting.
-func ReadInTouch(lastInbound, lastMeeting, nextMeeting *time.Time, now time.Time) InTouch {
+// contact we had; a meeting ahead counts only as nextMeeting. Days are counted
+// by the calendar of loc, the zone the reader sees the dates in.
+func ReadInTouch(lastInbound, lastMeeting, nextMeeting *time.Time, now time.Time, loc *time.Location) InTouch {
 	latest, basis := lastInbound, InTouchWrote
 	if latest != nil && latest.After(now) {
 		latest = nil
@@ -112,7 +144,7 @@ func ReadInTouch(lastInbound, lastMeeting, nextMeeting *time.Time, now time.Time
 	}
 	var reading InTouch
 	if latest != nil {
-		reading.Days = elapsed.Days(*latest, now)
+		reading.Days = elapsed.Days(*latest, now, loc)
 	}
 	if nextMeeting != nil && nextMeeting.After(now) {
 		reading.BookedAt = nextMeeting

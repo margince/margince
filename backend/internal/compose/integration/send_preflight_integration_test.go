@@ -55,13 +55,13 @@ type preflightEnv struct {
 // the connect registry — and with it the pre-flight — is actually wired. The
 // keyvault rides a separate pool for the same database: WithGmailCapture needs
 // a vault before apptest.SetupAppWithOptions has opened the harness's own.
-func setupPreflight(t *testing.T) *preflightEnv {
+func setupPreflight(t *testing.T, extra ...compose.Option) *preflightEnv {
 	t.Helper()
 	gmailCfg := compose.GmailConfig{
 		ClientID: "preflight-id", ClientSecret: "preflight-secret",
 		StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: preflightBaseURL,
 	}
-	return setupPreflightIn(t, compose.WithGmailCapture(gmailCfg, compose.CaptureConfig{}))
+	return setupPreflightIn(t, append([]compose.Option{compose.WithGmailCapture(gmailCfg, compose.CaptureConfig{})}, extra...)...)
 }
 
 // setupPreflightWithoutGoogleApp boots the same composition on a deployment

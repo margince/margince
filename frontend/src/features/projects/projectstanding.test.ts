@@ -250,12 +250,13 @@ describe("the figures and the axis", () => {
       at: "2026-03-01",
       kind: "done",
       phase: "initiative",
-      by: "Lena Fischer",
+      by: { actor_type: "human", actor_name: "Lena Fischer" },
     });
   });
 
   it("names the last update after the newest filed activity", () => {
     const activity = (id: string, subject: string, at: string) => ({
+      offers_email: false,
       id,
       kind: "note" as const,
       subject,

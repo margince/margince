@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -53,6 +54,18 @@ func (a approvalNotifyEnv) stageCommitmentFor(t *testing.T, seat, source ids.UUI
 		TargetType: string(recordTypeActivity), TargetID: source, Summary: "Send the pricing",
 	})
 	a.deliver(t, env)
+	// The dispatcher records the decision a proposal rests on beside it.
+	decision := crmcontracts.CommitmentAdmission{
+		Locator: locator, Summary: "Send the pricing", SourceQuote: "We will send the pricing.",
+		Outcome: string(CommitmentProposed), CurrentWork: true, RuleVersion: activities.CommitmentAdmissionVersion,
+		EvidenceIds: []crmcontracts.Id{crmcontracts.Id(source)}, EvaluatedAt: clocktest.Now(t),
+		Meaning: &crmcontracts.CommitmentMeaning{State: "open", DeadlinePrecision: "none"},
+	}
+	if err := a.e.DB().Tx(a.e.Admin(), func(tx pgx.Tx) error {
+		return activities.RecordCommitmentAdmissionTx(a.e.Admin(), tx, ids.From[ids.ActivityKind](source), decision)
+	}); err != nil {
+		t.Fatal(err)
+	}
 	return id
 }
 

@@ -12,6 +12,7 @@ import { type Locale, type Translator, translatePlural } from "../../i18n";
 import type { ContactTab } from "../../lib/contacttab";
 import { dealRoleLabel } from "../../lib/recordlabels";
 import { omitted } from "./contact360";
+import { contactFirstName } from "./contactfirstname";
 import { awaitsOurReply } from "./contactstanding";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -39,7 +40,11 @@ const CALLED_OFF = new Set(["canceled", "no_show"]);
 const MEETINGS_DRAWN = 3;
 
 function daysAgo(iso: string, view: Contact360, words: StandingWords) {
-  const days = calendarDaysBetween(new Date(iso), new Date(view.as_of));
+  const days = calendarDaysBetween(
+    new Date(iso),
+    new Date(view.as_of),
+    words.zone,
+  );
   if (days < 1) {
     return words.t("contact.strip.today");
   }
@@ -246,7 +251,7 @@ function lastWrote(view: Contact360, words: StandingWords): TimelineEvent[] {
       key: "last-inbound",
       at,
       title: t("standing.wrote", {
-        name: view.contact.full_name.split(" ")[0] ?? view.contact.full_name,
+        name: contactFirstName(view.contact),
       }),
       sub: formatDayMonth(at, locale, zone),
       kind: "last",
@@ -272,8 +277,9 @@ function meetingAhead(view: Contact360, words: StandingWords): TimelineEvent[] {
   ];
 }
 
-/** The silence since the newest message either way. Its sub says whose move
- *  it is, on the same rule as the head's "Your move". */
+/** The silence since the newest exchange of any kind, a meeting included, as
+ *  the backend counts it. Its sub says whose move it is, on the same rule as
+ *  the head's "Your move". */
 export function contactGap(
   view: Contact360,
   words: StandingWords,
@@ -281,11 +287,15 @@ export function contactGap(
   if (omitted(view, "last_touch")) {
     return undefined;
   }
-  const from = newest(view.last_inbound_at, view.last_outbound_at);
+  const from = view.last_contact_at ?? undefined;
   if (!from) {
     return undefined;
   }
-  const days = calendarDaysBetween(new Date(from), new Date(view.as_of));
+  const days = calendarDaysBetween(
+    new Date(from),
+    new Date(view.as_of),
+    words.zone,
+  );
   if (days < 1) {
     return undefined;
   }
@@ -299,14 +309,4 @@ export function contactGap(
       ? t("standing.noReply")
       : t("co.strip.engagement.waiting_on_them"),
   };
-}
-
-function newest(
-  a: string | null | undefined,
-  b: string | null | undefined,
-): string | undefined {
-  if (!a || !b) {
-    return a ?? b ?? undefined;
-  }
-  return Date.parse(a) >= Date.parse(b) ? a : b;
 }

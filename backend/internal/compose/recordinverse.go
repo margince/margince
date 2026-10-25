@@ -68,9 +68,10 @@ var archivedByUndo = map[string]bool{
 }
 
 // unarchivedByUndo are the record types with an un-archive (contacts'
-// RestoreContactTx and RestoreCompanyTx, deals' RestoreDealTx). Another type's
+// RestoreContactTx and RestoreCompanyTx, deals' RestoreDealTx, and activities'
+// RestoreActivityTx). Another type's
 // archive stays a verb no undo reverses.
-var unarchivedByUndo = map[string]bool{"contact": true, "company": true, entityTypeDeal: true}
+var unarchivedByUndo = map[string]bool{"contact": true, "company": true, entityTypeDeal: true, entityTypeActivity: true}
 
 // inverseOf answers which module verb undoes this entry, or inverseNone where
 // the entry is a field replay or nothing undoes it.

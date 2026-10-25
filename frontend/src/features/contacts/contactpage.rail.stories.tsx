@@ -324,6 +324,7 @@ const unsetFields: View = {
     social: {},
     address: undefined,
     emails: [],
+    primary_email: null,
     phones: [],
   },
 };

@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -116,20 +117,11 @@ type WaitingReply struct {
 	// unresolved. REPORTED, never used to exclude, for Engaged's reason — the
 	// caller demotes what it cannot prove.
 	AddressedElsewhere bool
-	// OwnerID is who owes this reply, resolved from the record the thread is
-	// filed under. Zero when no record on it names an owner.
-	//
-	// PRECEDENCE, first owner found: deal, lead, contact, company — the order of
-	// how specific the claim is. A contact outranks their company because the
-	// company owner answers for the account, not for every conversation in it.
-	//
-	// A separate question from the record ids above, which answer "what is this
-	// about" while this answers "who owes the reply"; the two may differ.
-	//
-	// Resolved through the SAME visibility-gated links, so an owner appears only
-	// where the reader may see the record naming them.
+	// OwnerID is the sole verified direct recipient for email. A linked
+	// record's owner does not establish responsibility for a reply. Zero means
+	// non-email or no sole direct recipient.
 	OwnerID ids.UUID
-	// OwnerKnown distinguishes a readable unassigned record from a withheld owner.
+	// OwnerKnown is true after recipient resolution, including no duty.
 	OwnerKnown bool
 	// SenderWasStranger, BccOnly and ForeignLink are what capture judged about
 	// the mail (strangerMailSQL); false where it judged nothing. BccOnly is
@@ -349,15 +341,8 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 			return err
 		}
 		defer rows.Close()
-		waiting = []WaitingReply{}
-		for rows.Next() {
-			row, err := scanWaitingRecipients(rows)
-			if err != nil {
-				return err
-			}
-			waiting = append(waiting, waitingReplyForOwner(row, owner))
-		}
-		return rows.Err()
+		waiting, err = collectWaiting(rows, owner)
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading who is waiting for a reply: %w", err)
@@ -431,47 +416,23 @@ func (s *Store) ownDomainList(ctx context.Context, tx pgx.Tx) ([]string, error) 
 	return domains, nil
 }
 
-// ownDomainSenderSQL is the ONE spelling of "this message came from one of our
-// own domains", rendered under a caller's activity alias with the placeholder
-// holding the domain list.
+// ownDomainSenderSQL is "this message came from one of our own domains" under
+// a caller's activity alias, with the placeholder holding Set's folded domains.
+// The waiting queue and the response reading share it so they agree on who is
+// waiting. It compares the sender's folded domain, never the address, so it
+// agrees with the reply path's owndomain.Set.Covers. An unfolded row stays in
+// the queue as an outside sender.
 //
-// Held by: TestTheOwnDomainSenderPredicateHasOneSpelling
+// Held by: TestEveryOwnDomainComparisonInSQLReadsFoldedDomains
 // (backend/gates/owndomainpredicate_test.go)
-//
-// A shared fragment rather than the same predicate typed twice, because the
-// waiting queue and the response reading judge the same messages: a rule that
-// drifted between them would make /worklist/response disagree with the queue
-// about who is waiting, and nothing would fail.
-//
-// Two things it does NOT do, each learned from a way it can suppress a real
-// customer silently:
-//
-//   - It reads the domain after the LAST at-sign, not the first. A quoted local
-//     part may legally contain one, so a sender can put one of our domains
-//     inside their own local part; splitting at the first would read that as
-//     the domain and hide their message.
-//   - It compares a suffix with right(), never LIKE. A domain is text an
-//     operator typed, and underscore is a LIKE wildcard, so an entry such as
-//     "our_.test" would match "ourx.test" and hide that customer's mail.
-//
-// A blank entry matches nothing on its own: equality fails against any real
-// domain, and the suffix comparison then asks whether a domain ends in a bare
-// dot, which none does. Stated here rather than guarded, because a guard no
-// test can fail is a claim nobody is holding.
 func ownDomainSenderSQL(alias string, domainArg int) string {
 	return fmt.Sprintf(`EXISTS (
 	         SELECT 1 FROM activity_participant ours
-	          CROSS JOIN LATERAL (SELECT lower(split_part(ours.address, '@',
-	                  length(ours.address) - length(replace(ours.address, '@', '')) + 1))
-	              ) AS sender(domain)
 	          WHERE ours.activity_id = %[1]s.id
 	            AND ours.role = 'from'
-	            AND sender.domain <> ''
 	            AND EXISTS (
 	                  SELECT 1 FROM unnest($%[2]d::text[]) AS own(domain)
-	                   WHERE (sender.domain = own.domain
-	                       OR right(sender.domain, length(own.domain) + 1)
-	                          = '.' || own.domain)))`, alias, domainArg)
+	                   WHERE %[3]s))`, alias, domainArg, owndomain.CoversSQL("ours.address_domain_folded", "own.domain"))
 }
 
 func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
@@ -485,4 +446,21 @@ func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
 		row.OwnerID = ids.Nil
 	}
 	return row, err
+}
+
+// collectWaiting reads the scanned waits for this owner, leaving out a mail
+// addressed to more than one seat, which is nobody's automatic duty.
+func collectWaiting(rows pgx.Rows, owner *ids.UUID) ([]WaitingReply, error) {
+	waiting := []WaitingReply{}
+	for rows.Next() {
+		row, err := scanWaitingRecipients(rows)
+		if err != nil {
+			return nil, err
+		}
+		if ambiguouslyAddressed(row) {
+			continue
+		}
+		waiting = append(waiting, waitingReplyForOwner(row, owner))
+	}
+	return waiting, rows.Err()
 }

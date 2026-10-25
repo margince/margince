@@ -2,7 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { mailbox, telUri } from "./contacturi";
+import type { components } from "../api/schema";
+import { mailbox, messengerUris, primaryPhone, telUri } from "./contacturi";
+
+type ContactPhone = components["schemas"]["ContactPhone"];
 
 describe("mailbox", () => {
   it("admits an ordinary address, trimmed", () => {
@@ -33,6 +36,59 @@ describe("mailbox", () => {
   });
 });
 
+describe("messengerUris", () => {
+  it("opens the chat in each messenger with the number's digits", () => {
+    expect(messengerUris("+49 30 1234567")).toEqual({
+      whatsapp: "https://wa.me/49301234567",
+      telegram: "https://t.me/+49301234567",
+      zalo: "https://zalo.me/49301234567",
+    });
+  });
+
+  it("answers no national number, which telUri still dials", () => {
+    expect(messengerUris("030 1234567")).toBeNull();
+    expect(telUri("030 1234567")).toBe("tel:0301234567");
+  });
+
+  it("answers only the shape the server stores as E.164", () => {
+    for (const bad of [
+      "+000 1234 5678",
+      "+123",
+      "+1234567",
+      "+1234567890123456",
+    ]) {
+      expect(messengerUris(bad), bad).toBeNull();
+    }
+    expect(messengerUris("+12345678")?.whatsapp).toBe("https://wa.me/12345678");
+    expect(messengerUris("+123456789012345")?.whatsapp).toBe(
+      "https://wa.me/123456789012345",
+    );
+  });
+
+  it("reads a number the way the server stores it", () => {
+    // ParsePhone takes 00 for + and drops only the brackets around a trunk 0.
+    expect(messengerUris("0049 30 1234567")?.whatsapp).toBe(
+      "https://wa.me/49301234567",
+    );
+    expect(messengerUris("+84 (0) 912 345 678")?.whatsapp).toBe(
+      "https://wa.me/840912345678",
+    );
+    expect(messengerUris("+49 30\n1234567")).toBeNull();
+  });
+
+  it("lets nothing but the digits reach the address", () => {
+    for (const bad of [
+      "+49 30 1234567?text=hi",
+      "+49 30 1234567/x",
+      "+49 30 1234567%0a",
+      "+49 30 1234567#x",
+      "+49 30 12345 ext 7",
+    ]) {
+      expect(messengerUris(bad), bad).toBeNull();
+    }
+  });
+});
+
 describe("telUri", () => {
   it("dials a number written the way contacts write them", () => {
     expect(telUri("+33 6 12 44 08 91")).toBe("tel:+33612440891");
@@ -43,5 +99,43 @@ describe("telUri", () => {
     for (const bad of ["ask reception", "12", "+", "555-CALL", ""]) {
       expect(telUri(bad), bad).toBeNull();
     }
+  });
+});
+
+describe("primaryPhone", () => {
+  const row = (
+    id: string,
+    phone: string,
+    isPrimary: boolean,
+  ): ContactPhone => ({
+    id,
+    phone,
+    phone_type: "work",
+    is_primary: isPrimary,
+    position: 0,
+    source: "manual",
+    captured_by: "human:u-1",
+  });
+
+  it("takes the primary number over the first", () => {
+    const phones = [
+      row("a", "+49 30 1111", false),
+      row("b", "+49 30 2222", true),
+    ];
+    expect(primaryPhone(phones)?.phone).toBe("+49 30 2222");
+  });
+
+  it("skips a primary row with no number and falls back to the first live one", () => {
+    const phones = [
+      row("a", "", true),
+      row("b", "+49 30 1111", false),
+      row("c", "+49 30 2222", false),
+    ];
+    expect(primaryPhone(phones)?.phone).toBe("+49 30 1111");
+  });
+
+  it("finds nothing in no rows", () => {
+    expect(primaryPhone(undefined)).toBeUndefined();
+    expect(primaryPhone([])).toBeUndefined();
   });
 });

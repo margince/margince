@@ -7,6 +7,7 @@ import {
   RELATIONSHIP_TYPE_OPTIONS,
 } from "../../components/companyform";
 import {
+  formatSizeBand,
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
   RELATIONSHIP_TYPE_LABELS,
@@ -107,7 +108,10 @@ export function CompaniesScreen() {
       key: "size_band",
       label: t("company.sizeBand"),
       allLabel: t("company.filterSizeBandAll"),
-      options: SIZE_BAND_OPTIONS.map((value) => ({ value, label: value })),
+      options: SIZE_BAND_OPTIONS.map((value) => ({
+        value,
+        label: formatSizeBand(t, value),
+      })),
     },
   ];
 
@@ -136,7 +140,7 @@ export function CompaniesScreen() {
                 createCompany(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "companies", id })}
-              fields={[...companyCreateFields, ...cf.formFields]}
+              fields={[...companyCreateFields(t, locale), ...cf.formFields]}
             />
           </>
         }
@@ -151,7 +155,9 @@ export function CompaniesScreen() {
                   name={company.display_name}
                   src={company.logo_url}
                 />
-                <strong>{company.display_name}</strong>
+                <strong title={company.display_name}>
+                  {company.display_name}
+                </strong>
                 {company.archived_at && (
                   <Badge tone="warning">{t("record.archived")}</Badge>
                 )}

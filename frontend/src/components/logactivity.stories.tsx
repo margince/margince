@@ -11,7 +11,8 @@ import {
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
-import { LogActivity, LogActivityAction } from "./logactivity";
+import { LogActivity } from "./logactivity";
+import { LogActivityAction } from "./logactivity.action";
 
 // The log-an-activity form embedded in every 360 (contact/company/deal/lead).
 // It reads GET /me only for the caller's own grant; the form itself never

@@ -2,20 +2,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { useIdempotencyKey } from "../api/idempotencykey";
+import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import {
-  Button,
-  Checkbox,
-  Field,
-  Modal,
-  TextInput,
-} from "../design-system/atoms";
-import {
-  DrawerBody,
-  DrawerFoot,
-  DrawerHead,
-} from "../design-system/drawerbands";
+  DateInput,
+  type ISODate,
+  isISODate,
+  isoOrBlank,
+} from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
-import { Heading } from "../design-system/heading";
+import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
 import { Select } from "../design-system/select";
@@ -59,7 +54,15 @@ import { MeetingAttendeeFields } from "./meetingattendees";
 import { useUnsavedGuard } from "./unsaved";
 
 // Meetings arrive through the calendar rather than a preselected form address.
-type OpeningKind = "note" | "task" | "call";
+export type OpeningKind = "note" | "task" | "call";
+
+function latestDayOf(
+  kind: ActivityDraft["kind"],
+  recordZone: string,
+): ISODate | undefined {
+  const day = todayDay(kind, recordZone);
+  return kind !== "task" && isISODate(day) ? day : undefined;
+}
 
 // One form serves record cards and drawers; banded callers own its frame.
 export function LogActivityForm({
@@ -203,6 +206,9 @@ export function LogActivityForm({
       className="form-stack"
       onSubmit={singlePress((event) => {
         event.preventDefault();
+        if (refuseUnreadableField(event.currentTarget)) {
+          return;
+        }
         log.mutate({
           draft: { ...draft, sourceActivityId, custom: custom.body() },
           zone: recordZone,
@@ -244,25 +250,17 @@ export function LogActivityForm({
           hint={draft.kind === "task" ? undefined : t("log.dateHint")}
         >
           {(control) => (
-            <TextInput
+            <DateInput
               {...control}
-              type="date"
-              value={draft.day}
+              value={isoOrBlank(draft.day)}
               // A note or meeting cannot have happened in the future, and the
               // cap makes the picker say so; a due date has no such ceiling.
               // occurredInstant clamps a typed-in future day the same way, and
               // against the same clock, so the box refuses exactly the days the
               // submit would have moved.
-              max={
-                draft.kind === "task"
-                  ? undefined
-                  : todayDay(draft.kind, recordZone)
-              }
+              max={latestDayOf(draft.kind, recordZone)}
+              today={isoOrBlank(todayDay(draft.kind, recordZone)) || undefined}
               onChange={(event) => setField({ day: event.target.value })}
-              // A native date input opens its calendar only from the tiny
-              // icon; a click on the value just places a caret. Opening on
-              // any click is what a writer reaching for "the date" expects.
-              onClick={(event) => event.currentTarget.showPicker?.()}
             />
           )}
         </Field>
@@ -389,97 +387,5 @@ export function LogActivity({
         />
       </PanelBody>
     </Panel>
-  );
-}
-
-/**
- * LogActivityAction is the same composer as a header button, for a screen
- * whose header strip is a row of actions rather than a column of cards.
- */
-export function LogActivityAction({
-  entityType,
-  entityId,
-  askedKind,
-  openOnMount,
-  triggerIcon,
-  disabled,
-  disabledReasonId,
-  onClose,
-  onLogged,
-}: Readonly<{
-  entityType: EntityKind;
-  entityId: string;
-  // A suggestion opens the kind it already asked for.
-  askedKind?: OpeningKind;
-  // Rendered already open, with no trigger button — for a caller that IS the
-  // trigger (a suggestion's action), rather than a toolbar offering the verb.
-  openOnMount?: boolean;
-  // The glyph beside the trigger's words, `aria-hidden` at the call site: a
-  // verb is found by its shape first. Optional: `openOnMount` draws no trigger.
-  triggerIcon?: ReactNode;
-  // Blocks the press while carrying no explanation — for a caller whose grant
-  // has not resolved yet. Claiming a refusal the server has not decided is
-  // worse than a control that is briefly quiet; separate from
-  // `disabledReasonId` so a caller can hold the two apart.
-  disabled?: boolean;
-  // The sentence that refuses this verb, already on the page. A record that
-  // takes no new activity must still SHOW the verb it will not accept — a
-  // reader who cannot tell "this record is archived" from "this build has no
-  // such button" learns nothing from the absence.
-  disabledReasonId?: string;
-  onClose?: () => void;
-  // Only a successful write asks the caller to refresh; dismissal does not.
-  onLogged?: () => void;
-}>) {
-  const t = useT();
-  const titleId = useId();
-  // Asked for a task, this is Add task: trigger, heading and form all say so.
-  const addTask = askedKind === "task";
-  const verb = addTask ? "log.addTask" : "log.title";
-  const [open, setOpen] = useState(Boolean(openOnMount));
-  const close = () => {
-    setOpen(false);
-    onClose?.();
-  };
-  return (
-    <>
-      {!openOnMount && (
-        <Button
-          disabled={disabled}
-          reasonId={disabledReasonId}
-          onClick={() => setOpen(true)}
-        >
-          {triggerIcon}
-          {t(verb)}
-        </Button>
-      )}
-      <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
-        <DrawerHead>
-          <Heading size="large" id={titleId} className="t-h2">
-            {/* The heading answers the verb that opened it: a reader who
-                pressed "Add task" reads "Log activity" as the wrong dialog. */}
-            {t(verb)}
-          </Heading>
-        </DrawerHead>
-        <LogActivityForm
-          entityType={entityType}
-          entityId={entityId}
-          askedKind={askedKind}
-          frame={(body, submit) => (
-            <>
-              <DrawerBody className="logactivity-drawer-body">
-                {body}
-              </DrawerBody>
-              <DrawerFoot className="actions">{submit}</DrawerFoot>
-            </>
-          )}
-          onlyTasks={addTask}
-          onLogged={() => {
-            onLogged?.();
-            close();
-          }}
-        />
-      </Modal>
-    </>
   );
 }

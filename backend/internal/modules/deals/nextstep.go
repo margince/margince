@@ -12,7 +12,11 @@ package deals
 // fixing one would have left the other proposing follow-ups for deals that
 // visibly had one.
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+)
 
 // OpenNextStepSQL renders the predicate "this deal has a next step planned",
 // true when either is on its timeline:
@@ -28,7 +32,9 @@ import "fmt"
 // it contains an `IN` over a nullable column, so an unmarked meeting made it
 // NULL, `NOT NULL` is NULL, and every such row silently failed the filter.
 //
-// A meeting on the calendar IS a next step, which is the half that was missing.
+// A meeting on the calendar is a next step when somebody here takes part in
+// it (storekit.MeetingResponsibilitySQL). A colleague's meeting counts for the
+// account. An imported row no seat hosts or attends is history, not a plan.
 // A deal whose only forward commitment is Thursday's review reads as planned to
 // the rep looking at it, and a sweep that asked only about tasks proposed a
 // follow-up for exactly that deal.
@@ -48,11 +54,11 @@ func OpenNextStepSQL(dealExpr, asOf, currentTask string) string {
 			SELECT 1 FROM activity m
 			JOIN activity_link ml ON ml.activity_id = m.id AND ml.deal_id = %[1]s
 			WHERE m.kind = 'meeting' AND m.archived_at IS NULL
-			  AND %[3]s
+			  AND %[3]s AND NOT %[5]s
 			  AND %[2]s < m.occurred_at
 			         + make_interval(secs => coalesce(m.duration_seconds, 0))
 		)
-	)`, dealExpr, asOf, meetingStillStandingSQL("m"), currentTask)
+	)`, dealExpr, asOf, meetingStillStandingSQL("m"), currentTask, storekit.UnclaimedMeetingSQL("m"))
 }
 
 // MeetingIsOverSQL renders "this meeting is finished", the reading the waiting

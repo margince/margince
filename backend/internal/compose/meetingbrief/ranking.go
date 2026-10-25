@@ -36,7 +36,7 @@ func rankClaims(in Input) *rankedClaims {
 	ordered := make([]ClaimIn, len(in.Commitments))
 	copy(ordered, in.Commitments)
 	sort.SliceStable(ordered, func(i, j int) bool {
-		return score(ordered[i], in.Now) > score(ordered[j], in.Now)
+		return score(ordered[i], in.Now, in.Zone) > score(ordered[j], in.Now, in.Zone)
 	})
 	return &rankedClaims{claims: ordered, taken: make([]bool, len(ordered))}
 }
@@ -92,7 +92,7 @@ func (r *rankedClaims) takeAll(want func(ClaimIn) bool, limit int) []ClaimIn {
 // date, then what they objected to, then what they owe us, then what they
 // told us matters. Inside a kind, a nearer due
 // date wins, then the newer claim.
-func score(claim ClaimIn, now time.Time) int {
+func score(claim ClaimIn, now time.Time, loc *time.Location) int {
 	s := 0
 	if claim.Status == statusOpen {
 		s += 1000
@@ -118,17 +118,17 @@ func score(claim ClaimIn, now time.Time) int {
 	case kindDecision:
 		s += 100
 	}
-	return s + urgency(claim, now) + freshness(claim, now)
+	return s + urgency(claim, now, loc) + freshness(claim, now, loc)
 }
 
 // urgency: due sooner ranks higher, and once overdue, later ranks higher — a
 // promise a month late is sharper than one a day late. Both arms are bounded
 // at thirty days so they reorder inside a kind and never across kinds.
-func urgency(claim ClaimIn, now time.Time) int {
+func urgency(claim ClaimIn, now time.Time, loc *time.Location) int {
 	if claim.DueAt == nil {
 		return 0
 	}
-	days := elapsed.Days(now, *claim.DueAt)
+	days := elapsed.Days(now, *claim.DueAt, loc)
 	if days < 0 {
 		return 30 + min(-days, 30)
 	}
@@ -139,11 +139,11 @@ func urgency(claim ClaimIn, now time.Time) int {
 }
 
 // freshness: newer first among equals; a month-old priority is stale news.
-func freshness(claim ClaimIn, now time.Time) int {
+func freshness(claim ClaimIn, now time.Time, loc *time.Location) int {
 	if claim.OccurredAt == nil {
 		return 0
 	}
-	age := max(elapsed.Days(*claim.OccurredAt, now), 0)
+	age := max(elapsed.Days(*claim.OccurredAt, now, loc), 0)
 	if age >= 60 {
 		return 0
 	}

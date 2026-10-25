@@ -253,3 +253,55 @@ describe("the account's document library", () => {
     expect(screen.queryByText("Pinned")).toBeNull();
   });
 });
+
+describe("a file a mail carried, in the account's library", () => {
+  const MAIL_FILE = {
+    id: "d-mail",
+    filename: "order.pdf",
+    category: "email_attachment",
+    doc_state: "current",
+    pinned: false,
+    created_at: "2026-08-04T09:00:00Z",
+    entity_type: "activity",
+    entity_id: "m-1",
+    source: "imap",
+    captured_by: "connector:imap",
+  };
+  const ORIGIN = {
+    activity_id: "m-1",
+    kind: "email",
+    subject: "Signed order",
+    occurred_at: "2026-08-04T08:00:00Z",
+    sender: { address: "bea@buyer.example" },
+  };
+
+  it("names the mail it came with and opens that mail", async () => {
+    stub([{ ...MAIL_FILE, origin: ORIGIN }]);
+    const onOpenEmail = vi.fn();
+    show(<CompanyDocumentsCard companyId="o-1" onOpenEmail={onOpenEmail} />);
+
+    const origin = await screen.findByRole("button", {
+      name: "From bea@buyer.example · Signed order",
+    });
+    fireEvent.click(origin);
+    expect(onOpenEmail).toHaveBeenCalledWith("m-1");
+  });
+
+  it("names nothing about a mail the server sent no origin for", async () => {
+    stub([MAIL_FILE]);
+    show(<CompanyDocumentsCard companyId="o-1" onOpenEmail={vi.fn()} />);
+
+    await screen.findByRole("link", { name: "order.pdf" });
+    expect(screen.queryByText(/^From /)).toBeNull();
+    expect(screen.queryByText(/Signed order/)).toBeNull();
+  });
+
+  it("leaves an upload's row as it was", async () => {
+    stub(DOCS);
+    show(<CompanyDocumentsCard companyId="o-1" onOpenEmail={vi.fn()} />);
+
+    await screen.findByText("Framework agreement — signed");
+    expect(screen.queryByText(/^From /)).toBeNull();
+    expect(screen.queryAllByRole("button", { name: /^From / })).toHaveLength(0);
+  });
+});

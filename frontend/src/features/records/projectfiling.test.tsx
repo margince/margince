@@ -394,6 +394,7 @@ describe("ProjectFilingAction", () => {
 
 describe("TimelineActions", () => {
   const activity: Activity = {
+    offers_email: false,
     id: "act-1",
     kind: "note",
     subject: "Milestone",

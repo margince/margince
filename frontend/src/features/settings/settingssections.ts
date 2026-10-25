@@ -56,6 +56,7 @@ export const SETTINGS_SECTIONS = {
   ],
   notifications: [
     "notifications.title",
+    "notifications.browser.label",
     "delivery.panelTitle",
     "notifications.class.approval_pending.label",
     "notifications.class.coach.label",
@@ -104,6 +105,9 @@ export const SETTINGS_SECTIONS = {
     "installationSettings.baseLanguage",
     "installationSettings.fiscalYearStart",
     "installationSettings.forwardMeasure",
+    "installationSettings.callWhatsApp",
+    "installationSettings.callTelegram",
+    "installationSettings.callZalo",
     "followUpSettings.days",
     "signatureTemplate.label",
   ],
@@ -125,7 +129,7 @@ export const SETTINGS_SECTIONS = {
   ],
   stageautomation: ["stageAutomation.record"],
   leads: [
-    "leadSources.title",
+    "leadOrigins.title",
     "leadReasons.title",
     "leadHandling.title",
     "leadHandling.firstResponse",

@@ -16,6 +16,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -115,6 +116,7 @@ func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 		Relationship: &crmcontracts.AttentionRelationshipFacts{
 			Strength:    relationshipBand(quiet.Strength.Bucket),
 			HasOpenDeal: &funded,
+			OwnerId:     optionalUUID(quiet.OwnerID),
 		},
 		Subject:    subjectOf(subjectContact, quiet.ContactID),
 		OccurredAt: &lastAt,
@@ -185,4 +187,12 @@ func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
 		facts.OwnerId = &owner
 	}
 	return facts
+}
+
+// optionalUUID is the wire's absent-or-set uuid: zero is absent.
+func optionalUUID(id ids.UUID) *openapi_types.UUID {
+	if id.IsZero() {
+		return nil
+	}
+	return idPtr(id)
 }

@@ -3,7 +3,7 @@
 
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatNumber } from "../../format/format";
+import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { reveal } from "../../lib/reveal";
@@ -29,9 +29,45 @@ export function ProjectFigures({
   return (
     <StatStrip density="plate" testId="project-figures">
       <PhaseTimeCell view={view} />
+      <DealValueCell view={view} kind="open" />
+      <DealValueCell view={view} kind="won" />
       <OpenCommitmentsCell view={view} />
       <DocumentsCell view={view} onOpen={onOpenDocuments} />
     </StatStrip>
+  );
+}
+
+function DealValueCell({
+  view,
+  kind,
+}: Readonly<{ view: Project360; kind: "open" | "won" }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const totals = view.rollups;
+  const money =
+    kind === "open" ? totals?.open_deal_value : totals?.won_deal_value;
+  const unpriced =
+    kind === "open" ? totals?.open_deals_unpriced : totals?.won_deals_unpriced;
+  return (
+    <StatCard
+      label={t(
+        kind === "open" ? "project.openDealValue" : "project.wonDealValue",
+      )}
+      value={
+        totals
+          ? formatMoneyOrAbsent(money?.amount_minor, money?.currency, locale)
+          : t("state.withheld")
+      }
+      detail={
+        unpriced
+          ? plural("brief.readings.unpricedCount", unpriced, {
+              count: formatNumber(unpriced, locale),
+            })
+          : undefined
+      }
+      onOpen={totals ? reveal(PROJECT_DEALS_ANCHOR) : undefined}
+    />
   );
 }
 

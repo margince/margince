@@ -22,6 +22,7 @@ import { useReviewActions } from "../../lib/reviewactions";
 
 type Review = components["schemas"]["HomeRepairReview"];
 type Task = components["schemas"]["HomeRepairTask"];
+type RepairSource = NonNullable<Task["source"]>;
 const actionLabels: Record<Task["action"], MessageKey> = {
   reclassify_message: "homeRepair.reclassify",
   supersede_suggestion: "homeRepair.supersede",
@@ -29,6 +30,7 @@ const actionLabels: Record<Task["action"], MessageKey> = {
   archive_automatic_reminder: "homeRepair.archive",
   human_review: "homeRepair.keepReview",
   leave_current: "homeRepair.keepCurrent",
+  revalidate_settlement: "homeRepair.revalidate",
 };
 export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
   classification_not_attempted: "homeRepair.reason.classificationNotAttempted",
@@ -37,6 +39,8 @@ export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
   human_changed_or_provenance_missing:
     "homeRepair.reason.classificationAdopted",
   classification_context_withheld: "homeRepair.reason.classificationWithheld",
+  classification_evidence_incomplete:
+    "homeRepair.reason.classificationIncomplete",
   classification_current: "homeRepair.reason.classificationCurrent",
   classification_changed: "homeRepair.reason.classificationChanged",
   company_has_deal: "homeRepair.reason.dealExists",
@@ -46,6 +50,7 @@ export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
   source_rule_not_verified: "homeRepair.reason.unverified",
   source_unavailable: "homeRepair.reason.unavailable",
   historical_without_current_deadline: "homeRepair.reason.historical",
+  historical_proposed: "homeRepair.reason.lateProposed",
   before_mailbox_history_baseline: "homeRepair.reason.baseline",
   meeting_cancelled: "homeRepair.reason.cancelled",
   request_past_waiting_horizon: "homeRepair.reason.requestAge",
@@ -54,11 +59,21 @@ export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
   lifecycle_evidence_changed: "homeRepair.reason.evidenceChanged",
   duplicate_pending_proposal: "homeRepair.reason.duplicate",
   later_context_not_read: "homeRepair.reason.contextUnread",
+  source_text_incomplete: "homeRepair.reason.sourceIncomplete",
+  source_text_unassessed: "homeRepair.reason.sourceUnassessed",
   later_context_not_assessed: "homeRepair.reason.contextUnassessed",
   source_time_unknown: "homeRepair.reason.timeUnknown",
   source_time_contradicted: "homeRepair.reason.timeContradicted",
   meeting_not_yet_held: "homeRepair.reason.meetingPending",
   current_work: "homeRepair.reason.current",
+  settlement_revalidate: "homeRepair.reason.settlementRevalidate",
+  settlement_provenance_unknown: "homeRepair.reason.settlementProvenance",
+  settlement_human_work: "homeRepair.reason.settlementHuman",
+  settlement_past_horizon: "homeRepair.reason.settlementPastHorizon",
+  settlement_no_usable_answers: "homeRepair.reason.settlementNoAnswers",
+  settlement_revalidation_pending: "homeRepair.reason.settlementPending",
+  settlement_unavailable: "homeRepair.reason.settlementUnavailable",
+  settlement_changed_since_listed: "homeRepair.reason.settlementChanged",
 };
 
 function RepairTask({ task }: Readonly<{ task: Task }>) {
@@ -208,14 +223,13 @@ export function HomeRepairControls({
   const mayRetireSuggestions = useCanWrite("deal", "create");
   const mayReclassify = useCanWrite("activity", "update");
   const mayArchiveTasks = useCanWrite("activity", "delete");
-  const [source, setSource] = useState<
-    "task" | "approval" | "suggestion" | "verdict"
-  >("task");
+  const [source, setSource] = useState<RepairSource>("task");
   const sourcePermission = {
     task: mayArchiveTasks,
     approval: true,
     suggestion: mayRetireSuggestions,
     verdict: mayReclassify,
+    settlement: mayReclassify,
   }[source];
   const preview = useMutation({
     mutationFn: async ({
@@ -223,7 +237,7 @@ export function HomeRepairControls({
       source,
     }: {
       after?: string;
-      source: "task" | "approval" | "suggestion" | "verdict";
+      source: RepairSource;
     }) =>
       unwrap(
         await api.POST("/admin/home-repair/preview", {
@@ -251,7 +265,8 @@ export function HomeRepairControls({
         review.counts.withdraw,
         review.counts.supersede,
         review.counts.reclassify,
-      ].reduce((total, count) => total + (count ?? 0), 0)
+        review.counts.revalidate,
+      ].reduce<number>((total, count) => total + (count ?? 0), 0)
     : 0;
   return (
     <>
@@ -263,6 +278,7 @@ export function HomeRepairControls({
           { value: "approval", label: t("homeRepair.proposals") },
           { value: "suggestion", label: t("homeRepair.suggestions") },
           { value: "verdict", label: t("homeRepair.classifications") },
+          { value: "settlement", label: t("homeRepair.settlements") },
         ]}
         label={t("homeRepair.kind")}
         onChange={(next) => {
@@ -310,6 +326,7 @@ export function HomeRepairControls({
               keep: formatNumber(review.counts.keep, locale),
             })}
           </p>
+          <RevalidateLine count={review.counts.revalidate} />
           <SettingList>
             {review.tasks.map((task) =>
               task.source === "suggestion" ? (
@@ -344,6 +361,22 @@ export function HomeRepairControls({
   );
 }
 
+// How many older answered requests the run asks to judge again; nothing when none.
+function RevalidateLine({ count }: Readonly<{ count?: number }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (!count) {
+    return null;
+  }
+  return (
+    <p>
+      {plural("homeRepair.revalidateSummary", count, {
+        count: formatNumber(count, locale),
+      })}
+    </p>
+  );
+}
+
 function verdictLabel(verdict: string) {
   if (verdict === "asks_us") return "homeRepair.asks";
   if (verdict === "informs_us") return "homeRepair.informs";
@@ -351,7 +384,8 @@ function verdictLabel(verdict: string) {
 }
 
 function permissionLabel(source: string): MessageKey {
-  if (source === "verdict") return "homeRepair.classificationPermission";
+  if (source === "verdict" || source === "settlement")
+    return "homeRepair.classificationPermission";
   if (source === "task") return "homeRepair.taskPermission";
   return "homeRepair.suggestionPermission";
 }

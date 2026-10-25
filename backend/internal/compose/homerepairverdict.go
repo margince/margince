@@ -66,7 +66,7 @@ func (c *OwedClassifier) reviewedVerdictPredictions(ctx context.Context, candida
 	}
 	eligible := make([]owedCandidate, 0, len(candidates))
 	for _, candidate := range candidates {
-		if candidate.Pristine && candidate.ContextReadable {
+		if candidate.Pristine && candidate.ContextReadable && candidate.EvidenceComplete {
 			eligible = append(eligible, candidate.Candidate)
 		}
 	}
@@ -106,6 +106,10 @@ func homeRepairVerdictRef(candidate activities.OwedReviewCandidate, predicted st
 	}
 	if !candidate.ContextReadable {
 		item.Reason = "classification_context_withheld"
+		return item
+	}
+	if !candidate.EvidenceComplete {
+		item.Reason = "classification_evidence_incomplete"
 		return item
 	}
 	if predicted == "" {

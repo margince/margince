@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 0,
     "never_driven": 8,
     "permitted_but_never_required": 4,
-    "tokens_served_but_never_driven": 3415,
+    "tokens_served_but_never_driven": 3419,
     "use_case_cases": 35,
     "acceptance_criteria_named": 83,
     "tools_added_by_shipped_units": 0,
@@ -1783,7 +1783,7 @@
   "tools": [
     {
       "name": "read_view",
-      "tokens": 989,
+      "tokens": 993,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1958,7 +1958,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 1812,
+      "tokens": 1891,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"
@@ -1991,7 +1991,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 1697,
+      "tokens": 1722,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -2056,7 +2056,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 1361,
+      "tokens": 1386,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -2084,6 +2084,68 @@
           "runs": 13,
           "passed": 12,
           "reliability": 0.9230769230769231,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "change_state",
+      "tokens": 1117,
+      "agents": [],
+      "required_by_cases": [
+        "case40_sort_the_queue",
+        "case41_close_the_project",
+        "case45_move_the_deal_on",
+        "case47_tidy_the_fair_list"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 10,
+          "passed": 8,
+          "reliability": 0.8,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "read_analytics",
+      "tokens": 1045,
+      "agents": [],
+      "required_by_cases": [
+        "case20_put_it_in_the_board_pack"
+      ],
+      "required_as_one_of_a_set_by_cases": [
+        "case7_ask_for_a_number"
+      ],
+      "permitted_in_cases": [
+        "case21_what_are_we_closing",
+        "case49_who_can_introduce_us"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -2145,68 +2207,6 @@
       }
     },
     {
-      "name": "read_analytics",
-      "tokens": 998,
-      "agents": [],
-      "required_by_cases": [
-        "case20_put_it_in_the_board_pack"
-      ],
-      "required_as_one_of_a_set_by_cases": [
-        "case7_ask_for_a_number"
-      ],
-      "permitted_in_cases": [
-        "case21_what_are_we_closing",
-        "case49_who_can_introduce_us"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "change_state",
-      "tokens": 866,
-      "agents": [],
-      "required_by_cases": [
-        "case40_sort_the_queue",
-        "case41_close_the_project",
-        "case45_move_the_deal_on",
-        "case47_tidy_the_fair_list"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 10,
-          "passed": 8,
-          "reliability": 0.8,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 9,
-          "passed": 8,
-          "reliability": 0.8888888888888888,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "read_forecast",
       "tokens": 824,
       "agents": [],
@@ -2240,7 +2240,7 @@
     },
     {
       "name": "bulk_update_records",
-      "tokens": 809,
+      "tokens": 808,
       "agents": [],
       "required_by_cases": [
         "case47_tidy_the_fair_list"
@@ -2261,6 +2261,36 @@
           "runs": 3,
           "passed": 2,
           "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "create_record",
+      "tokens": 748,
+      "agents": [],
+      "required_by_cases": [
+        "case1_log_it",
+        "case2_business_card",
+        "case54_a_word_from_the_fair",
+        "case56_not_the_same"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
           "cases_below_their_bar": []
         }
       }
@@ -2293,14 +2323,12 @@
       }
     },
     {
-      "name": "create_record",
-      "tokens": 643,
+      "name": "update_record",
+      "tokens": 620,
       "agents": [],
       "required_by_cases": [
-        "case1_log_it",
-        "case2_business_card",
-        "case54_a_word_from_the_fair",
-        "case56_not_the_same"
+        "case33_two_cards_for_one_company",
+        "case43_the_fair_leads_are_prospects"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
@@ -2309,15 +2337,15 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 9,
-          "passed": 8,
-          "reliability": 0.8888888888888888,
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 9,
-          "passed": 8,
-          "reliability": 0.8888888888888888,
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -2345,34 +2373,6 @@
           "runs": 3,
           "passed": 2,
           "reliability": 0.6666666666666666,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "update_record",
-      "tokens": 585,
-      "agents": [],
-      "required_by_cases": [
-        "case33_two_cards_for_one_company",
-        "case43_the_fair_leads_are_prospects"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 4,
-          "passed": 4,
-          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -2479,7 +2479,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 474,
+      "tokens": 469,
       "agents": [],
       "required_by_cases": [
         "case46_get_us_in_a_room"
@@ -2660,7 +2660,7 @@
     },
     {
       "name": "check_availability",
-      "tokens": 342,
+      "tokens": 337,
       "agents": [],
       "required_by_cases": [
         "case23_find_us_a_slot"

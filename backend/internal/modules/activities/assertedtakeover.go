@@ -72,6 +72,7 @@ import (
 //     refuse every legitimate take-over, which is the whole feature.
 func TakeOverAssertedActivityTx(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, subject, body, wasCapturedBy, capturedBy string,
+	senderIsMachine bool,
 ) error {
 	// The OBJECT permission still binds, and is this function's own to ask. A
 	// connector acts with the permissions of the human who granted it, so an
@@ -102,15 +103,18 @@ func TakeOverAssertedActivityTx(
 		return err
 	}
 	// COALESCE on subject and body: a connector that reads a message with no
-	// subject supplies an empty one, and letting that blank a subject the
-	// import had would lose the only description the row carries.
+	// subject supplies an empty one. Letting that blank the import's subject
+	// would lose the only description the row carries. The read
+	// message's sender stamp only adds: the import's own From may have proved
+	// it already.
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity
-		   SET subject     = COALESCE(NULLIF($2, ''), subject),
-		       body        = COALESCE(NULLIF($3, ''), body),
-		       captured_by = $4
+		   SET subject           = COALESCE(NULLIF($2, ''), subject),
+		       body              = COALESCE(NULLIF($3, ''), body),
+		       captured_by       = $4,
+		       sender_is_machine = sender_is_machine OR $5
 		 WHERE id = $1`,
-		activityID, subject, body, capturedBy)
+		activityID, subject, body, capturedBy, senderIsMachine)
 	if err != nil {
 		return fmt.Errorf("activities: writing the read message over %s: %w", activityID, err)
 	}

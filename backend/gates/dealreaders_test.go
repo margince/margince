@@ -83,7 +83,6 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 	"internal/compose/stageprogression.go:refuseAStaleAutomaticMove":                 "reads a deal's `pipeline_id` to refuse an automatic stage move whose pipeline has changed underneath it. Its only effect is a REFUSAL — the move does not happen — and the executor runs under the system principal",
 	"internal/modules/commissions/entryfieldmask.go:dealAmountExcludedClause":        "the arm that takes a ledger entry out when the deal's amount is withheld from this reader: `EXISTS (SELECT 1 FROM deal d WHERE d.id = deal_id AND ...)` over the write-authority predicate auth renders. No deal column is selected and none reaches the response — the entry's own columns do, under the commission grant the read already holds. Removing the condition could only WIDEN the ledger, which is the disclosure it exists to close",
 	"internal/modules/activities/attachment.go:accountRollUp":                        "resolves `company_id` from the deal an attachment's activity is linked to, so the file rolls up to the right account. One id leaves it, inside the upload's own write",
-	"internal/modules/activities/capturedfiles.go:accountForCapturedActivity":        "the same `company_id` resolution for captured files, on the capture path. One id, consumed by the write that files them",
 	"internal/modules/activities/companyscope.go":                                    "the account-scope fragment: which activities belong to an account, reached through the link's deal among other ends. It is a clause that only ever narrows the activities a caller is shown, never a reader of deal columns",
 	"internal/modules/activities/lasttouch.go:lastTouchCandidateQuery":               "the live-account CTE of the same cold-queue selector: a company carries an open deal, which is what makes it an account worth a reminder. The deal is reached only inside that CTE and no deal column is selected — what leaves the query is a company id the account arm then tests",
 	"internal/modules/activities/lasttouch.go:lastTouchEligibility":                  "the deal arm of the cold-queue selector, the twin of the company and lead arms the other censuses file the same way: the deal's status and age decide which QUEUE ENTRIES are stale enough to surface, and no deal column reaches the caller. The selector now also COLLAPSES a deal onto the account absorbing it, so removing the arm no longer merely widens the queue — it restores the duplicate entries the collapse exists to remove. Either way no deal column leaves the query, and the entry that survives sits on a company the caller already reaches",
@@ -119,7 +118,10 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/signals/entitykeys.go":                                    "the backfill of the per-type record keys asks only whether the deal its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no deal column leaves the statement",
+	"internal/modules/weeklyplan/linkedkeys.go":                                 "the backfill of the per-type record keys asks only whether the deal its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no deal column leaves the statement",
 	"internal/compose/extsystemread.go:readDealSummary":                         "an extension unit's system read of one deal (Runtime.Deals().Get). It runs as the delivery's or tick's PrincipalSystem and answers only on an unattended Runtime: systemRead refuses it with ErrAttendedRead on any invocation a caller could receive the answer from. A unit that shows the deal to a colleague asks Authority().CanRead, which is auth.VisibleTo under that colleague's own grants",
+	"internal/compose/extsystemread.go:dealResponsibleQuery":                    "the statement readDealResponsible runs, in that same unattended system read: only user ids and an owner flag leave it",
 	"internal/compose/extsystemread.go:readDealResponsible":                     "the same unattended system read for the colleagues a deal names (Runtime.Deals().Responsible): the deal is read for its existence and its owner_id, and only user ids leave the statement. Refused on an attended Runtime by systemRead",
 	"internal/modules/privacy/reportingquestions.go:heldQuestionSource":         "Retention lifecycle checks legal holds on every record behind a kept question answer before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
@@ -177,7 +179,6 @@ var calleeGatedDealReads = gatekit.Waive(map[string]string{
 	"internal/modules/deals/correctionimage.go:currentCorrectedValues":     "`to_jsonb(d)` — the before-image a correction audits against, read inside the correcting write. Its callers ask the deal object gate and the image goes into the audit row, not to a caller",
 	"internal/modules/deals/deal_singleread.go:readDeal":                   "the shared single-row deal read, and the spine every deal surface goes through — get, create, update, advance, the merge survivor. Each entry point asks auth.Require for the deal object and most take a row probe as well",
 	"internal/modules/deals/dealcommercial.go:lockedAcquisitionSource":     "the acquisition source held under the deal's lock, so a write cannot silently change where the deal came from. Inside the gated commercial write",
-	"internal/modules/deals/forecasthistory.go:recordForecastMovement":     "records a forecast movement against the deal it belongs to, reading the prior standing so the series carries forward. Reached from the advance, past its own gate",
 	"internal/modules/deals/health.go:healthExpectedPace":                  "the expected pace a deal's health is judged against, from the stage history. Its callers are the health reads, each asking the deal object gate at their entry",
 	"internal/modules/deals/health.go:healthInputs":                        "the activity and stage inputs the same health verdict rests on, behind the same gated entry points",
 	"internal/modules/deals/offer.go:resolveBuyerCompany":                  "reads `company_id` from the deal an offer is being created for, so the offer names the right buyer. Reached from CreateOffer, which asks the offer object gate",
@@ -238,21 +239,15 @@ func readsDealTable(filePath string, file *ast.File) bool {
 func TestEveryReaderOfTheDealTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 	t.Parallel()
 	files := dealReaderScope.Files(t)
-	gated := dealGate.gatedFunctionsByPackage(t, files)
+	walk := dealGate.walkPackages(t, files)
 	consts := constantTable{}
 
 	var satisfied int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
 		for _, site := range dealGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := parsed.Path
-			if site.function != "" {
-				subject += ":" + site.function
-			}
-			carriesGate := site.holdsGate || callsAGatedHelper(site.calls, gated[pkg])
-			if site.function == "" {
-				carriesGate = site.holdsGate || dealGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
-			}
+			subject := site.subject(parsed.Path)
+			carriesGate := walk.carries(t, dealGate, parsed, site, consts.of(t, pkg))
 			verdict := verdictIn(t, subject, dealVerdicts)
 
 			switch {

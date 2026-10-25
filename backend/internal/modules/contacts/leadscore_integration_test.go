@@ -63,7 +63,8 @@ func seedScoredLead(ctx context.Context, t *testing.T, store *Store) ids.LeadID 
 		FullName: new("Jonas Petersen"),
 		Email:    new("jonas@nordwind.example"),
 		Title:    new("VP Sales"),
-		Source:   "webform",
+		Source:   "manual",
+		Origin:   new("website"),
 		Status:   "new",
 	})
 	if err != nil {
@@ -89,7 +90,7 @@ func TestACreatedLeadCarriesItsOwnExplanation(t *testing.T) {
 	if out.Current.Score != out.Score {
 		t.Errorf("displayed score %d disagrees with the entry's %d", out.Score, out.Current.Score)
 	}
-	// VP Sales + webform: the two fit factors, and no behavioral ones yet.
+	// VP Sales + a website origin: the two fit factors, and no behavioral ones yet.
 	factors := *out.Current.Factors
 	if len(factors) != 2 {
 		t.Fatalf("want the two fit factors, got %+v", factors)
@@ -410,7 +411,8 @@ func TestARepCannotScoreALeadTheyDoNotOwn(t *testing.T) {
 		FullName: new("Annika Vogel"),
 		Email:    new("annika@sudwind.example"),
 		Title:    new("VP Sales"),
-		Source:   "webform",
+		Source:   "manual",
+		Origin:   new("website"),
 		Status:   "new",
 		OwnerID:  &teammate,
 	})

@@ -84,17 +84,18 @@ func (t readReporting) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 }
 
 var (
-	reportingReadInput   = describedSchema[ReportingRead](pipelineIDProvenance)
-	reportingMetricInput = describedSchema[crmcontracts.ReportMetricReference](pipelineIDProvenance)
+	reportingReadInput   = describedSchema[ReportingRead](pipelineIDProvenance, windowRule)
+	reportingMetricInput = describedSchema[crmcontracts.ReportMetricReference](pipelineIDProvenance, windowRule)
 )
 
-func describedSchema[T any](description string) json.RawMessage {
+func describedSchema[T any](description, rule string) json.RawMessage {
 	shape, err := describeType(reflect.TypeFor[T]())
 	if err != nil {
 		//craft:ignore panic-in-domain Tool schemas are constructed at composition time; an unsupported static type must fail boot.
 		panic(fmt.Sprintf("describe tool input: %v", err))
 	}
 	shape.Description = description
+	noteTimestamps(shape, rule)
 	raw, err := json.Marshal(shape)
 	if err != nil {
 		//craft:ignore panic-in-domain A schema encoding failure is a composition defect, before any request is admitted.

@@ -32,6 +32,23 @@ type digestLines struct {
 	total    int
 }
 
+// without leaves out the lines whose decision or record no longer qualifies.
+func (lines digestLines) without(excluded map[ids.UUID]bool) digestLines {
+	if len(excluded) == 0 {
+		return lines
+	}
+	kept := lines
+	kept.quotable = nil
+	for _, line := range lines.quotable {
+		if line.target.Named() && excluded[line.target.ID] {
+			kept.total--
+			continue
+		}
+		kept.quotable = append(kept.quotable, line)
+	}
+	return kept
+}
+
 type digestItem struct {
 	text     string
 	target   notices.Target

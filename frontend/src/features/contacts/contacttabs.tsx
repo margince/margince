@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
+import { CallAction } from "../../design-system/callaction";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
   hasTimelineFilters,
@@ -25,6 +26,7 @@ import {
 } from "../records/recordconversations";
 import { TimelineActions } from "../records/timelineactions";
 import { MeetingBriefAction } from "./contactmeetings";
+import { callBackNumber } from "./contactmemory.rows";
 import { timelineState } from "./contacttimelinestate";
 import "./contact360.css";
 import { invalidateRecord } from "../../lib/recordwritekeys";
@@ -104,7 +106,18 @@ export function ContactTimelineTab({
         entityId={contactId}
         contactId={contactId}
         extra={(row) => (
-          <MeetingBriefAction activity={row} onBriefMeeting={onBriefMeeting} />
+          <>
+            <MeetingBriefAction
+              activity={row}
+              onBriefMeeting={onBriefMeeting}
+            />
+            <CallAction
+              appearance="button"
+              label={t("record.verb.call")}
+              number={callBackNumber(row.kind, view?.contact)}
+              record={{ entityType: "contact", entityId: contactId }}
+            />
+          </>
         )}
       />
     ),

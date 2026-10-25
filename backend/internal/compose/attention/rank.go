@@ -70,6 +70,9 @@ const meetingHorizon = 2 * time.Hour
 // produced it is the server's business.
 type ranked struct {
 	item crmcontracts.WorklistItem
+	// lane is the source of the lane that produced the row; empty for a row
+	// read outside the day's lanes, whose own source names it.
+	lane crmcontracts.WorklistItemSource
 	// deadlineAt is the moment this item's clock runs out, zero when it has
 	// none. Overdue items carry a past instant and sort first by that fact.
 	deadlineAt time.Time
@@ -117,6 +120,9 @@ type ranked struct {
 	// reader's ordering preference move a figure their manager reads.
 	pinned        bool
 	semanticLevel int
+	// reminded says the row is a task of the reader's whose reminder came due.
+	// It sorts at the pin level for the same reason, and means what it meant.
+	reminded bool
 	// opportunity is the overnight brief's own composite for this deal, between
 	// 0 and 1, and zero where the night did not rank it.
 	//

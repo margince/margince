@@ -147,9 +147,10 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// the routed id is the parent deal (margince/margince#1046).
 	//
 	// upsertPartner was one and is gone: setting a partner's margin tier is
-	// human-only (crm.yaml), so no agent reaches that route and a decoder for
-	// it would read as coverage of a door nobody can open. addListMember was
-	// another, retired with the list routes themselves.
+	// human-only (crm.yaml), so no agent reaches that route. A decoder for it
+	// would read as coverage of a door nobody can open. The tier-free write is
+	// setUpPartner, served by the registry. addListMember was another, retired
+	// with the list routes themselves.
 	//
 	// Four of the five share their operationId constant with agentsplit.go's
 	// own (opApplyTag's own comment says why); createOffer has no such twin

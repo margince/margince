@@ -36,14 +36,57 @@ type LeadSourceKey struct {
 	SourceID     string
 }
 
-// LiveLeadByEmail reports the live lead holding this address, if any. The
-// address is lowercased by the query to match lead_email_norm's storage
-// contract, so a caller that has not normalized still compares like for like.
+// LiveLeadClause is what makes a lead a live identity. Promotion,
+// disqualification and a lead merge all archive the lead they retire. So this
+// one column is the whole lifecycle test, as in uq_lead_email_dedupe.
+func LiveLeadClause(alias string) string {
+	return alias + ".archived_at IS NULL"
+}
+
+// LeadEmailMatchClause is an exact address match against a lead. The address
+// is folded the way lead_email_norm stores it and capture stamps a participant.
+func LeadEmailMatchClause(alias, address string) string {
+	return alias + ".email = lower(btrim(" + address + "))"
+}
+
+// LeadEmailHeldAtClause asks that address was already the lead's at the moment
+// at. The lead's first change of email after that moment must start from its
+// current address.
+//
+// Mail from before the lead was created is its history only for a lead an
+// import run created. Even then no other lead, live or retired, may hold or
+// have held the address. Erasure nulls an address without recording it, so
+// the import rule bounds what the history cannot see.
+func LeadEmailHeldAtClause(alias, address, at string) string {
+	folded := "lower(btrim(" + address + "))"
+	return `(` + at + ` >= ` + alias + `.created_at OR (` + leadImportedClause(alias) + ` AND NOT (
+		EXISTS (SELECT 1 FROM lead other_holder
+		         WHERE other_holder.id <> ` + alias + `.id AND other_holder.email = ` + folded + `)
+		OR EXISTS (SELECT 1 FROM audit_log given_up
+		         WHERE given_up.entity_type = 'lead' AND given_up.entity_id <> ` + alias + `.id
+		           AND given_up.before ? 'email' AND lower(given_up.before->>'email') = ` + folded + `))))
+	   AND NOT EXISTS (SELECT 1 FROM (
+		SELECT email_change.before->>'email' AS held FROM audit_log email_change
+		 WHERE email_change.entity_type = 'lead' AND email_change.entity_id = ` + alias + `.id
+		   AND email_change.before ? 'email' AND email_change.after ? 'email'
+		   AND email_change.occurred_at > ` + at + `
+		 ORDER BY email_change.occurred_at, email_change.id LIMIT 1) first_change
+		 WHERE lower(first_change.held) IS DISTINCT FROM ` + alias + `.email)`
+}
+
+// leadImportedClause asks whether an import run created the lead: its create
+// audit row carries the run as its batch, which only the import job sets.
+func leadImportedClause(alias string) string {
+	return `EXISTS (SELECT 1 FROM audit_log created JOIN import_run run ON run.id = created.batch_id
+		 WHERE created.entity_type = 'lead' AND created.entity_id = ` + alias + `.id AND created.action = 'create')`
+}
+
+// LiveLeadByEmail reports the live lead holding this address, if any.
 func LiveLeadByEmail(ctx context.Context, tx pgx.Tx, email string, exclude *LeadSourceKey) (ids.LeadID, bool, error) {
 	if email == "" {
 		return ids.LeadID{}, false, nil
 	}
-	return liveLeadBy(ctx, tx, `email = lower($1)`, email, exclude, "email")
+	return liveLeadBy(ctx, tx, LeadEmailMatchClause("lead", "$1"), email, exclude, "email")
 }
 
 // LiveLeadByLinkedInURL reports the live lead holding this profile URL. The
@@ -73,7 +116,7 @@ func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate, value string, exclude
 	var id ids.LeadID
 	err := tx.QueryRow(ctx, `
 		SELECT id FROM lead
-		 WHERE `+predicate+` AND archived_at IS NULL
+		 WHERE `+predicate+` AND `+LiveLeadClause("lead")+`
 		   AND ($2::text IS NULL
 		        OR source_system IS DISTINCT FROM $2
 		        OR source_id IS DISTINCT FROM $3)

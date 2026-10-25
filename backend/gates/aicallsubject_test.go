@@ -66,7 +66,7 @@ var namesItsSubject = map[string]subjectClaim{
 		"internal/compose/replydraftvoice.go",
 		"the message being answered, named once so the critic retry cites what the first draft did",
 	},
-	"internal/compose/captureenrich.go:enrichOne": {
+	"internal/compose/captureenrich.go:readSignature": {
 		"internal/compose/captureenrich.go",
 		"the contact whose signature block is being read",
 	},

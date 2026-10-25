@@ -90,9 +90,9 @@ func TestOnlyMeetingsThatWereHeldCountTowardTheWeek(t *testing.T) {
 
 	for _, status := range []string{"held", "booked", "no_show", "canceled"} {
 		if _, err := owner.Exec(ctx, `
-			INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
-			VALUES ($1, 'meeting', $2, $3, $4, 'manual', $5)`,
-			ids.NewV7(), "A meeting ("+status+")", inWeek, status, capturedBy(e.Rep1)); err != nil {
+			INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by, host_user_id)
+			VALUES ($1, 'meeting', $2, $3, $4, 'manual', $5, $6)`,
+			ids.NewV7(), "A meeting ("+status+")", inWeek, status, capturedBy(e.Rep1), e.Rep1); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -172,9 +172,9 @@ func TestTheNewCountsAreFrozenAgainstLaterEdits(t *testing.T) {
 
 	meeting := ids.NewV7()
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
-		VALUES ($1, 'meeting', 'The meeting', $2, 'held', 'manual', $3)`,
-		meeting, inWeek, capturedBy(e.Rep1)); err != nil {
+		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by, host_user_id)
+		VALUES ($1, 'meeting', 'The meeting', $2, 'held', 'manual', $3, $4)`,
+		meeting, inWeek, capturedBy(e.Rep1), e.Rep1); err != nil {
 		t.Fatal(err)
 	}
 	lead := ids.NewV7()

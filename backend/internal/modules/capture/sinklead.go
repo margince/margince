@@ -23,6 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -60,13 +62,12 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 	// a mail natural key is a message-id, whereas a channel record's embeds the
 	// account id itself, so the channel refusal names no identifier at all.
 	if fields.Email != "" {
-		suppressed, err := storekit.EmailSuppressed(ctx, tx, fields.Email)
-		if err != nil {
+		if err := storekit.RefuseErasedEmail(ctx, tx, "email", fields.Email); err != nil {
+			if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+				return datasource.EntityRef{}, nil, nil, fmt.Errorf("capture: %s/%s matches the erasure suppression list: %w",
+					rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, connector.ErrSkip)
+			}
 			return datasource.EntityRef{}, nil, nil, err
-		}
-		if suppressed {
-			return datasource.EntityRef{}, nil, nil, fmt.Errorf("capture: %s/%s matches the erasure suppression list: %w",
-				rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, connector.ErrSkip)
 		}
 		existing, captured, err := s.findLeadCollision(ctx, tx, rec, fields)
 		if err != nil {
@@ -119,14 +120,16 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 		owner = nil
 	}
 	err := tx.QueryRow(ctx, `
-		INSERT INTO lead (full_name, email, company_name, title, source_system, source_id, source, captured_by, owner_id)
-		VALUES (NULLIF($1, ''), NULLIF(lower($2), ''), NULLIF($3, ''), NULLIF($4, ''), $5, $6, $7, $8, $9)
+		INSERT INTO lead (full_name, email, company_name, title, source_system, source_id, source, captured_by, owner_id,
+		                  origin, origin_detail)
+		VALUES (NULLIF($1, ''), NULLIF(lower($2), ''), NULLIF($3, ''), NULLIF($4, ''), $5, $6, $7, $8, $9,
+		        (SELECT key FROM lead_origin WHERE key = $10 AND active), NULLIF($11, ''))
 		ON CONFLICT (source_system, source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL
 		DO NOTHING
 		RETURNING id`,
 		fields.FullName, fields.Email, fields.CompanyName, fields.Title,
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), rec.CapturedBy,
-		owner).Scan(&id)
+		owner, fields.Origin, textcut.Runes(fields.OriginDetail, values.MaxLeadOriginDetailRunes)).Scan(&id)
 	if err == nil {
 		var stamps []storekit.FieldStamp
 		for _, f := range []struct{ field, value string }{

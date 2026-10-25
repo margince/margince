@@ -12,74 +12,113 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// signatureCandidateSQL selects the contacts whose latest mail this pass has not
-// read. Its own declaration rather than a literal inside the query call: the
-// predicates it carries are the pass's whole policy — who wrote the message,
-// whose mailbox may be mined, what a narrowed or held row costs — and a
-// function that holds them inline reads as plumbing rather than as the rules.
+// signatureCandidateSQL selects the contacts whose newest readable mail this
+// pass has not read. Every test on the mail itself is in signatureSourceSQL, so
+// this query and OlderSignatureSources cannot read different mail.
 var signatureCandidateSQL = `
-			SELECT p.id, p.full_name, coalesce(pe.email, ''), a.id, coalesce(a.body, '')
+			SELECT p.id, p.full_name, coalesce(pe.email, ''), ` + olderMailMayFillTitleSQL("p") + `, a.id, coalesce(a.body, '')
 			FROM contact p
 			LEFT JOIN contact_email pe ON pe.contact_id = p.id AND pe.is_primary AND pe.archived_at IS NULL
 			JOIN LATERAL (
-				SELECT a.id, a.body, a.occurred_at, a.captured_by
+				SELECT a.id, a.body, a.occurred_at
 				FROM activity_link al
 				JOIN activity a ON a.id = al.activity_id
-				WHERE al.contact_id = p.id AND al.entity_type = 'contact'
-				  AND a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
-				  -- THIS CONTACT WROTE IT. Reaching them is not writing it, and a
-				  -- signature is only theirs to be read off a message they sent.
-				  AND ` + SenderPredicate("p.id", "a") + `
-				  -- Whose mail may be mined for whom: SignatureSourceEligible
-				  -- states the rule, and the apply asks the same fragment.
-				  AND ` + SignatureSourceEligible("p", "a") + `
-				  -- A row held under a statutory obligation is out of reach of
-				  -- every ordinary read, and the model call this feeds is
-				  -- processing — which is exactly what such a hold bars.
-				  AND a.restricted_at IS NULL
-				ORDER BY a.occurred_at DESC
+				WHERE ` + signatureSourceSQL("$2") + `
+				ORDER BY a.occurred_at DESC, a.id DESC
 				LIMIT 1
 			) a ON true
 			LEFT JOIN contact_signature_enrich_state st ON st.contact_id = p.id
 			-- Anyone the workspace still corresponds with, and no longer only
 			-- the contacts whose details are missing. A contact changes jobs and
 			-- numbers, so a filled field is a question this pass must keep
-			-- asking; the emptiness test that used to live here would answer it
-			-- once and never again. The watermark below is what keeps that
-			-- affordable: it is arrival of NEW mail, not absence of an answer,
-			-- that makes somebody a candidate.
+			-- asking. The watermark keeps that affordable: NEW mail, not a
+			-- missing answer, makes somebody a candidate.
 			WHERE p.archived_at IS NULL AND p.merged_into_id IS NULL
 			  AND (st.last_activity_at IS NULL OR a.occurred_at > st.last_activity_at)
-			  -- The mailbox that captured THIS mail decides whether it may be
-			  -- read for a signature, and the test is here rather than in the
-			  -- Go loop so a switched-off mailbox never consumes a slot of the
-			  -- pass's own limit. Gated on the activity, not on p.captured_by:
-			  -- a contact captured by one mailbox is regularly last written to
-			  -- from another, and it is the mail being read that matters.
-			  --
-			  -- The join is the provenance string capture stamps
-			  -- (connector:<provider>:<user id>); there is no foreign key. A row
-			  -- stamped with the bare connector:<name> form — no granting user
-			  -- bound — matches no connection and follows the workspace default,
-			  -- which is the same answer it had before this switch existed.
-			  AND COALESCE((
-				SELECT cc.signature_enrich_enabled
-				  FROM capture_connection cc
-				 WHERE ('connector:' || cc.provider || ':' || cc.user_id::text) = a.captured_by
-				   AND cc.archived_at IS NULL
-			  ), $2)
-			-- Freshest mail first. The pass is capped, and it now runs within
-			-- minutes of a message arriving, so ordering by contact age would
-			-- put a contact who just wrote behind every older one still waiting
-			-- — the contact whose details a rep is about to look at is the one
-			-- who would wait longest.
+			-- Freshest mail first. The pass is capped and runs within minutes of
+			-- a message arriving, so the contact who just wrote is the one a rep
+			-- is about to look at.
 			ORDER BY a.occurred_at DESC
 			LIMIT $1`
+
+// olderSignatureSourcesSQL lists a live contact's readable mails strictly older
+// than the one named, in the candidate query's order.
+var olderSignatureSourcesSQL = `
+			SELECT a.id
+			FROM contact p
+			JOIN activity newest ON newest.id = $4
+			JOIN activity_link al ON al.contact_id = p.id
+			JOIN activity a ON a.id = al.activity_id
+			WHERE p.id = $3 AND p.archived_at IS NULL AND p.merged_into_id IS NULL
+			  AND ` + signatureSourceSQL("$2") + `
+			  AND (a.occurred_at, a.id) < (newest.occurred_at, newest.id)
+			ORDER BY a.occurred_at DESC, a.id DESC
+			LIMIT $1`
+
+// readableSignatureSourceSQL returns the body of one named mail only while the
+// pass may still read it for this live contact. The pass asks it right before
+// each model call, so a mailbox switched off mid-walk stops the walk.
+var readableSignatureSourceSQL = `
+			SELECT coalesce(a.body, '')
+			FROM contact p
+			JOIN activity_link al ON al.contact_id = p.id
+			JOIN activity a ON a.id = al.activity_id
+			WHERE p.id = $1 AND a.id = $3 AND p.archived_at IS NULL AND p.merged_into_id IS NULL
+			  AND ` + signatureSourceSQL("$2")
+
+// signatureSourceSQL holds the tests one mail must pass before this pass reads
+// it for the contact's signature. The caller joins `activity_link al` and
+// `activity a`; defaultEnabled is the placeholder of the workspace's answer for
+// a mailbox that never chose.
+func signatureSourceSQL(defaultEnabled string) string {
+	return `al.contact_id = p.id AND al.entity_type = 'contact'
+				  -- THIS CONTACT WROTE IT. A signature is only theirs to be read
+				  -- off a message they sent, never one that merely reached them.
+				  AND ` + relstrength.SenderSQL("p.id", "a") + `
+				  AND ` + SignatureSourceEligible("p", "a") + `
+				  AND ` + signatureMailSQL(defaultEnabled)
+}
+
+// signatureMailSQL holds the mail-wide conditions; signatureSourceSQL also
+// binds the mail to its contact. The final apply rechecks the complete rule.
+//
+// The mailbox switch is a test on each mail. A newer mail from a switched-off or
+// disconnected mailbox therefore does not hide an older mail from one that is on.
+// A bare connector:<name> stamp matches no connection and follows the workspace
+// default.
+func signatureMailSQL(defaultEnabled string) string {
+	return `a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
+				  -- A row held under a statutory obligation is out of reach of
+				  -- the model call this feeds, which is processing.
+				  AND a.restricted_at IS NULL
+				  -- A body the parser did not decode in full may have lost the
+				  -- signature, and newsletter mail states the list's footer.
+				  AND ` + provenance.MailBodyCompleteSQL("a") + `
+				  AND NOT a.bulk_mail_attested
+				  AND COALESCE((
+					SELECT cc.signature_enrich_enabled AND cc.status = 'connected'
+					  FROM capture_connection cc WHERE ` + capturingMailboxSQL("a") + `
+				  ), ` + defaultEnabled + `)`
+}
+
+// capturingMailboxSQL matches the live connection whose mailbox captured the
+// activity, by the provenance string capture stamps (connector:<provider>:<user
+// id>). There is no foreign key.
+func capturingMailboxSQL(activity string) string {
+	return `('connector:' || cc.provider || ':' || cc.user_id::text) = ` + activity + `.captured_by
+					   AND cc.archived_at IS NULL`
+}
 
 // SignatureSourceEligible is the ONE spelling of "may this message be mined for
 // this contact's signature", given the contact's alias and the activity's.
@@ -136,12 +175,16 @@ func SignatureSourceEligible(contact, activity string) string {
 		  )`, contact, activity)
 }
 
-// SignatureCandidates lists the contacts whose latest inbound mail this pass has
-// not read yet, freshest first and capped at limit.
+// SignatureCandidates lists the contacts whose newest readable mail this pass
+// has not read yet, freshest first and capped at limit.
 //
-// The watermark, not the emptiness of a field, is what retires somebody: a
-// contact changes jobs and numbers, so a filled title is a question worth
-// asking again when they write. defaultEnabled is the workspace answer for a
+// The watermark, not the emptiness of a field, is what retires somebody. A
+// contact changes jobs and numbers, so a filled title is worth asking about
+// again when they write. A contact returns only when mail newer than the
+// watermark arrives. Each new mail then costs at most signatureHistoryDepth
+// model calls, however often the pass runs. The comparison is on occurred_at:
+// an activity id check would reopen the contact once the mail it names is
+// archived. defaultEnabled is the workspace answer for a
 // mailbox that never made its own choice.
 func (s *Store) SignatureCandidates(ctx context.Context, limit int, defaultEnabled bool) ([]SignatureCandidate, error) {
 	var out []SignatureCandidate
@@ -153,7 +196,7 @@ func (s *Store) SignatureCandidates(ctx context.Context, limit int, defaultEnabl
 		defer rows.Close()
 		for rows.Next() {
 			var c SignatureCandidate
-			if err := rows.Scan(&c.ContactID, &c.FullName, &c.Email, &c.ActivityID, &c.Body); err != nil {
+			if err := rows.Scan(&c.ContactID, &c.FullName, &c.Email, &c.OlderMailMayFillTitle, &c.ActivityID, &c.Body); err != nil {
 				return err
 			}
 			out = append(out, c)
@@ -164,4 +207,42 @@ func (s *Store) SignatureCandidates(ctx context.Context, limit int, defaultEnabl
 		return nil, fmt.Errorf("contacts: listing signature candidates: %w", err)
 	}
 	return out, nil
+}
+
+// OlderSignatureSources lists up to limit of the contact's readable mails older
+// than before, newest first. It returns ids only: the pass reads each body
+// through ReadableSignatureBody right before it asks the model.
+func (s *Store) OlderSignatureSources(ctx context.Context, contactID ids.ContactID, before ids.UUID, limit int, defaultEnabled bool) ([]ids.UUID, error) {
+	var out []ids.UUID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, olderSignatureSourcesSQL, limit, defaultEnabled, contactID, before)
+		if err != nil {
+			return err
+		}
+		out, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("contacts: listing older signature sources: %w", err)
+	}
+	return out, nil
+}
+
+// ReadableSignatureBody returns the mail's body, and false when the pass may no
+// longer read it for this contact. It applies the candidate query's tests.
+func (s *Store) ReadableSignatureBody(ctx context.Context, contactID ids.ContactID, activityID ids.UUID, defaultEnabled bool) (string, bool, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return "", false, err
+	}
+	var body string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, readableSignatureSourceSQL, contactID, defaultEnabled, activityID).Scan(&body)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("contacts: reading a signature source: %w", err)
+	}
+	return body, true, nil
 }

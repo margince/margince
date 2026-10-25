@@ -25,6 +25,7 @@ import (
 	"unicode"
 
 	"github.com/margince/margince/backend/internal/platform/mailrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -74,15 +75,7 @@ var nameParticles = map[string]bool{
 // an address, in that order of authority: what the sender calls themselves
 // beats what their mailbox is called.
 func ParseContactName(displayName, email string) ParsedName {
-	// Both inputs are untrusted header text. Bidi controls are removed before
-	// anything else: they are invisible, they survive every other transform,
-	// and left in `full_name` they make the stored string render as a name it
-	// is not: a right-to-left override before "htimS" makes it display as "Smith".
-	displayName = stripBidiControls(displayName)
-	if tooLongToBeAName(displayName) {
-		displayName = ""
-	}
-	if parsed, ok := parseDisplayName(displayName); ok {
+	if parsed, ok := headerName(displayName); ok {
 		return parsed
 	}
 	if tooLongToBeAName(email) {
@@ -111,6 +104,19 @@ func ParseContactName(displayName, email string) ParsedName {
 // it exists so that a path which somehow gets there writes a row a human can
 // see and fix rather than failing a NOT NULL constraint deep in a transaction.
 const unknownContactName = "Unknown sender"
+
+// headerName is what ParseContactName reads from a header display name. It
+// reports false when the header names nobody, so the address decides.
+func headerName(displayName string) (ParsedName, bool) {
+	// Header text is untrusted. Bidi controls go first, because they are
+	// invisible and survive every other transform. Left in `full_name`, a
+	// right-to-left override before "htimS" makes it display as "Smith".
+	displayName = stripBidiControls(displayName)
+	if tooLongToBeAName(displayName) {
+		return ParsedName{}, false
+	}
+	return parseDisplayName(displayName)
+}
 
 // parseDisplayName reads the RFC 5322 display name. It reports false when the
 // header carries nothing usable, so the caller falls through to the address.
@@ -150,41 +156,50 @@ func parseDisplayName(displayName string) (ParsedName, bool) {
 	return parsed, true
 }
 
-// parseLocalPart reads the mailbox identifier — the last evidence there is.
-//
-// It is far more willing to abstain than the display-name path: a local part is
-// not a claim about a name, it is an address that sometimes contains one.
-func parseLocalPart(email string) ParsedName {
-	local, _, ok := strings.Cut(strings.TrimSpace(email), "@")
-	if !ok || local == "" {
-		return ParsedName{Full: strings.TrimSpace(email)}
+// readableLocalPart returns the local part of an address and, when it reads as
+// name-shaped words, those words. ok is false when the local part is empty, a
+// role mailbox, or has a field that did not read as a word. A dropped field
+// would change which contact this is ("josé.maria.garcia" minus a decomposed
+// "josé" is a different contact), so the whole reading is refused.
+func readableLocalPart(email string) (local string, tokens []string, ok bool) {
+	local, _, found := strings.Cut(strings.TrimSpace(email), "@")
+	if !found || local == "" {
+		return strings.TrimSpace(email), nil, false
 	}
 	// Plus-addressing is a routing tag the mailbox owner appended, never part
 	// of their name: `anna.weber+crm@` is Anna Weber.
-	if base, _, found := strings.Cut(local, "+"); found && base != "" {
-		local = base
-	}
+	local = correspondence.LocalPartBase(local)
 	if hasRoleToken(local) {
-		return ParsedName{Full: local}
+		return local, nil, false
 	}
 	tokens, complete := localPartTokens(local)
 	if len(tokens) == 0 || !complete {
-		// Something in the address did not read as a word — a dropped field
-		// would change WHICH human this is ("josé.maria.garcia" minus a
-		// decomposed "josé" is a different contact), so the whole reading is
-		// refused rather than silently shortened.
+		return local, nil, false
+	}
+	return local, tokens, true
+}
+
+// parseLocalPart reads the mailbox identifier, the last evidence there is.
+//
+// It abstains far more often than the display-name path. A local part is not a
+// claim about a name, it is an address that sometimes contains one.
+func parseLocalPart(email string) ParsedName {
+	local, tokens, ok := readableLocalPart(email)
+	if !ok {
+		return ParsedName{Full: local}
+	}
+	// "dv@" and "d.v@" are initials, not a word anyone is called. The local part
+	// is shown as it is and no name is claimed from it.
+	if readsAsInitials(tokens) {
 		return ParsedName{Full: local}
 	}
 	// One token is a surname, a handle, or a first name — the local part does
 	// not say which, so it names the contact without splitting them.
+	full := addressGuessName(tokens)
 	if len(tokens) == 1 {
-		return ParsedName{Full: titleCaseToken(tokens[0])}
+		return ParsedName{Full: full}
 	}
-	cased := make([]string, 0, len(tokens))
-	for _, token := range tokens {
-		cased = append(cased, titleCaseToken(token))
-	}
-	full := strings.Join(cased, " ")
+	cased := strings.Fields(full)
 	parsed := ParsedName{Full: full}
 	if first, last, ok := splitFirstLast(cased); ok {
 		parsed.First, parsed.Last, parsed.Confident = first, last, true

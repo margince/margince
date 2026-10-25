@@ -47,6 +47,8 @@ export type MockApiOptions = Readonly<{
   // One run in flight on the agent feed. Without it the rail is at rest in
   // every spec and its live line is never drawn.
   agentRunning?: true;
+  // The day's queue holds the two tasks on the called contact instead.
+  callTasks?: true;
 }>;
 
 export type LoggedActivity = {

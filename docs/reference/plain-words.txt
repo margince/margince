@@ -774,7 +774,6 @@ job
 join
 joke
 journal
-jpeg
 judge
 judgement
 jurisdiction
@@ -1091,7 +1090,6 @@ plant
 platform
 plural
 plus
-png
 poc
 pod
 point

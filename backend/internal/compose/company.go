@@ -218,7 +218,7 @@ func (h companyHandlers) GetAnchorCompanyContext(w http.ResponseWriter, r *http.
 	if !ok {
 		return
 	}
-	companyContext, err := h.store.GetCompanyContext(r.Context(), scopes)
+	companyContext, err := h.store.GetCompanyContext(r.Context(), scopes, contacts.OfferingSelector{})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

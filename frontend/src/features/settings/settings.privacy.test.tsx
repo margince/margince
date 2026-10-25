@@ -31,6 +31,7 @@ const DSR = {
   status: "open",
   due_at: "2099-10-01T00:00:00Z",
   due_overridden: false,
+  dispute_open: false,
   created_at: "2026-08-01T00:00:00Z",
 };
 

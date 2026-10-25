@@ -43,7 +43,7 @@ export function taskStanding(
     return { kind: "undated" };
   }
   if (step.overdue) {
-    return { kind: "late", days: daysLate(step, asOf) };
+    return { kind: "late", days: daysLate(step, asOf, zone) };
   }
   const days = calendarDaysUntil(step.due_at, zone, new Date(asOf));
   if (days <= 0) {

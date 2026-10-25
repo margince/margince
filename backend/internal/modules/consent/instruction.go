@@ -23,6 +23,7 @@ package consent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -157,6 +158,9 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		review, err := claimReviewForDirectionTx(ctx, tx, reviewID)
 		if err != nil {
 			return err
+		}
+		if !directableBy(ctx, review.Refusals) {
+			return apperrors.ErrPermissionDenied
 		}
 		// THE FACTS ARE THE REVIEW'S, not the clock's. An instruction says "on
 		// what this review recorded, send anyway", and dating it from now would
@@ -353,6 +357,9 @@ type directableReview struct {
 	// IntentID is the held message this review is about, so the decision can
 	// fingerprint what the human is looking at.
 	IntentID ids.UUID
+	// Refusals are the reasons the message was held, which decide whether this
+	// caller may direct past them (directableBy).
+	Refusals []RefusedRecipient
 }
 
 // claimReviewForDirectionTx takes the review this decision is about.
@@ -364,17 +371,22 @@ type directableReview struct {
 // impossible.
 func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (directableReview, error) {
 	var out directableReview
+	var refusals []byte
 	err := tx.QueryRow(ctx, `
 		SELECT state, opened_at,
-		       coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid)
+		       coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
+		       coalesce(refusals, '[]'::jsonb)
 		  FROM communication_review
 		 WHERE id = $1 AND resolved_at IS NULL
-		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt, &out.IntentID)
+		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt, &out.IntentID, &refusals)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return directableReview{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return directableReview{}, fmt.Errorf("consent: reading the review this decision answers: %w", err)
+	}
+	if err := json.Unmarshal(refusals, &out.Refusals); err != nil {
+		return directableReview{}, fmt.Errorf("consent: reading what this review refused: %w", err)
 	}
 	return out, nil
 }

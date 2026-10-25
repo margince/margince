@@ -362,17 +362,18 @@ func (r *Registry) Disconnect(ctx context.Context, name string) error {
 //   - fully done (disconnected, ref NULL): matches neither arm → ErrNoRows →
 //     idempotent no-op.
 //
-// A credential_ref-only predicate misses the legacy case entirely:
-// credential_ref IS NULL there even though a live secret sits in auth, so the
-// row would never match and disconnect would be a silent no-op that leaves the
-// row connected and the credential intact.
+// A credential_ref-only predicate misses the legacy case, whose secret sits in
+// auth: disconnect would leave that row connected and the credential intact.
 //
-// The row is read FOR UPDATE before the flip so the audit before-image is the
-// status the human is actually withdrawing from, and so a concurrent reconnect
-// serializes behind this transaction rather than racing it.
+// The row is read FOR UPDATE so the audit before-image is the status being
+// withdrawn from, and a concurrent reconnect serializes behind this one. The
+// seat-address claim lock on its label comes first, as for a connect.
 func (r *Registry) withdrawConnection(ctx context.Context, userID ids.UUID, name string) (*string, error) {
 	var ref *string
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockConnectionClaimsTx(ctx, tx, userID, name, nil); err != nil {
+			return err
+		}
 		var connID ids.UUID
 		var priorStatus string
 		var priorLabel *string

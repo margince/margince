@@ -142,7 +142,21 @@ const DEFAULTS: Routes = {
   "GET /agent-tools": () => jsonResponse(emptyPage),
   // A row names its owner by id; naming nobody leaves the id as the label.
   "GET /users/names": () => jsonResponse({ data: [] }),
+  // The focus card reads the task it holds. Linked to no contact, it offers no
+  // next steps.
+  "GET /activities/{id}": () =>
+    jsonResponse({
+      id: "00000000-0000-7000-8000-00000000a001",
+      kind: "task",
+      occurred_at: "2026-09-13T08:00:00Z",
+      is_done: false,
+      links: [],
+    }),
 };
+
+function activityRoute(route: string): string {
+  return route.replace(/^GET \/activities\/[^/]+$/, "GET /activities/{id}");
+}
 
 /**
  * Routes the stubbed fetch by method+path and RECORDS every call, because what
@@ -155,7 +169,8 @@ export function stubApi(routes: Routes): Call[] {
     const call = await readCall(input, init);
     calls.push(call);
     const route = `${call.method} ${call.path}`;
-    const handler = routes[route] ?? DEFAULTS[route];
+    const handler =
+      routes[route] ?? DEFAULTS[route] ?? DEFAULTS[activityRoute(route)];
     if (!handler) {
       unrouted.push(route);
       return jsonResponse(emptyPage);

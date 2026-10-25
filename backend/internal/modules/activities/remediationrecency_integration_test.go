@@ -131,13 +131,15 @@ func (e *recencyEnv) lastActivity(t *testing.T, deal ids.UUID) *time.Time {
 	return at
 }
 
-// logAgainstDeal writes one activity through the real store and links it.
+// logAgainstDeal writes one note through the real store and links it. A note,
+// because no task moves the clock whatever its origin, so a task could not
+// tell the origin rule from the kind rule.
 func (e *recencyEnv) logAgainstDeal(t *testing.T, deal ids.UUID, subject, origin string) {
 	t.Helper()
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	subj := subject
 	_, created, err := store.LogActivity(e.as(), LogActivityInput{
-		Kind:    "task",
+		Kind:    "note",
 		Subject: &subj,
 		Source:  "test",
 		Origin:  origin,
@@ -151,9 +153,9 @@ func (e *recencyEnv) logAgainstDeal(t *testing.T, deal ids.UUID, subject, origin
 	}
 }
 
-// TestRemediationWorkDoesNotRefreshTheDealClock is the whole point: the same
-// write, twice, differing only in origin. A human task moves the clock because
-// a contact did something; a system review task does not, because nobody did.
+// TestRemediationWorkDoesNotRefreshTheDealClock is the same write, twice,
+// differing only in origin. A human note moves the clock; a system review note
+// does not, because nobody did anything.
 func TestRemediationWorkDoesNotRefreshTheDealClock(t *testing.T) {
 	e := setupRecency(t)
 	quietSince := time.Now().Add(-90 * 24 * time.Hour).Truncate(time.Second)
@@ -169,7 +171,7 @@ func TestRemediationWorkDoesNotRefreshTheDealClock(t *testing.T) {
 	e.logAgainstDeal(t, deal, "Confirm the close date", OriginSystemRemediation)
 
 	if got := e.lastActivity(t, deal); got == nil || !got.UTC().Equal(quietSince.UTC()) {
-		t.Errorf("after a system review task the deal reads as last touched %v, "+
+		t.Errorf("after a system review note the deal reads as last touched %v, "+
 			"wanted the buyer's own message at %v — the system asking about a silent "+
 			"deal has made it look engaged, and the staleness rule that filed the "+
 			"task will now skip this deal", got, quietSince)
@@ -181,7 +183,7 @@ func TestRemediationWorkDoesNotRefreshTheDealClock(t *testing.T) {
 
 	after := e.lastActivity(t, deal)
 	if after == nil || !after.After(quietSince) {
-		t.Errorf("after a human task the deal still reads as last touched %v — the "+
+		t.Errorf("after a human note the deal still reads as last touched %v — the "+
 			"exclusion is swallowing real work too", after)
 	}
 }

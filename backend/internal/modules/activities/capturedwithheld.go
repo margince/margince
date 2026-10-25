@@ -65,7 +65,7 @@ func (s *Store) RecordWithheldFiles(
 			byteSize: file.ByteSize,
 			withheld: true,
 		}
-		if err := insertCapturedAttachment(ctx, tx, activityID, nil, from, row); err != nil {
+		if err := insertCapturedAttachment(ctx, tx, activityID, from, row); err != nil {
 			return err
 		}
 	}

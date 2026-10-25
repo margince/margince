@@ -26,6 +26,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "webhooks.headers.namePlaceholder",
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
+  "compose.aboutWhen",
   "deal.committee.seatSub",
   "lead.card.askedQuote",
   "signatureTemplate.placeholder",
@@ -168,6 +169,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // These slots receive category counts and action names already translated by their owners.
   "brief.agenda.summary",
   "magic.action.approval_pending",
+  "magic.action.decided_summary",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   "dealSuggestion.name",

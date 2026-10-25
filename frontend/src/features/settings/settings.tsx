@@ -42,7 +42,7 @@ import { LinkedInNetworkPanel } from "../import/linkedin-import";
 import {
   LeadDisqualifyReasonsCard,
   LeadHandlingCard,
-  LeadSourcesCard,
+  LeadOriginsCard,
 } from "../leads/leadvocab";
 import { TagVocabularyCard } from "../lists/tagadmin";
 import { SignatureTemplateCard } from "../mail/signaturetemplatecard";
@@ -188,7 +188,7 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
     case "leads":
       return (
         <>
-          <LeadSourcesCard />
+          <LeadOriginsCard />
           <LeadDisqualifyReasonsCard />
           <LeadHandlingCard />
         </>

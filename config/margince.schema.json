@@ -943,7 +943,7 @@
       }
     },
     "geocode_base_url": {
-      "description": "Nominatim base URL, or public; set it on the api and the worker together, or a lookup is never queued.",
+      "description": "Nominatim base URL; unset or public uses the public service, off stops the lookup of map points; give the api and the worker the same value, or a lookup is never queued.",
       "type": [
         "string",
         "null"
@@ -1191,6 +1191,30 @@
             "null"
           ],
           "default": "en"
+        },
+        "call_telegram": {
+          "description": "Show a Telegram chat link next to a contact's phone number that starts with a country code.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
+        "call_whatsapp": {
+          "description": "Show a WhatsApp chat link next to a contact's phone number that starts with a country code.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
+        "call_zalo": {
+          "description": "Show a Zalo chat link next to a contact's phone number that starts with a country code.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
         },
         "close_date_sweep_interval_seconds": {
           "description": "Seconds between the close-date sweeps.",

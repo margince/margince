@@ -123,6 +123,7 @@ export function stubBackend(
   deals: Deal[],
   opts: {
     onAdvance?: (body: unknown, ifMatch: string | null) => void;
+    onCloseDay?: (body: unknown, ifMatch: string | null) => void;
     // Makes the stub enforce the server's win-evidence rule. A win naming
     // neither a contract nor a reason is refused 422, as the real server does.
     // Off by default, so every existing test keeps the deal that wins on the
@@ -145,6 +146,8 @@ export function stubBackend(
     pipelines?: components["schemas"]["Pipeline"][];
     agentTools?: components["schemas"]["AgentTool"][];
     stageTotalsRows?: Record<string, unknown>[];
+    stageTotalsAsOf?: string;
+    stageTotalsTimezone?: string;
     // Answers the totals report with this status and a problem body instead.
     stageTotalsStatus?: number;
     onStageTotalsBody?: (body: unknown) => void;
@@ -254,6 +257,9 @@ export function stubBackend(
       }
       return jsonResponse({
         report: "deals-by-stage",
+        base_currency: "EUR",
+        as_of: opts.stageTotalsAsOf ?? "2026-10-01",
+        timezone: opts.stageTotalsTimezone,
         plan: {},
         columns: [],
         rows: opts.stageTotalsRows ?? [],
@@ -267,6 +273,13 @@ export function stubBackend(
           ? { ...body, count: 1, affected: [], excluded: [], sample: [] }
           : { batch_id: "b-1", changed: 1, skipped: [] },
       );
+    }
+    if (method === "POST" && url.includes("/close-day")) {
+      const body = request
+        ? await request.json()
+        : JSON.parse(String(init?.body));
+      opts.onCloseDay?.(body, request?.headers.get("If-Match") ?? null);
+      return jsonResponse(opts.single ?? deals[0]);
     }
     if (method === "POST" && url.includes("/advance")) {
       const body = request

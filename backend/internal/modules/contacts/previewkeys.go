@@ -4,7 +4,6 @@
 package contacts
 
 const (
-	columnAddressLine1 = "address_line1"
 	columnContactID    = "contact_id"
 	columnCompanyID    = "company_id"
 	contactEmailsField = "emails"

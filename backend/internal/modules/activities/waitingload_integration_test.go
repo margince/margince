@@ -130,6 +130,24 @@ func (e *loadEnv) waitFor(t *testing.T, activity ids.UUID) WaitingReply {
 	return WaitingReply{}
 }
 
+// seatAddress is the account address setupLoad gives a seat.
+func seatAddress(seat ids.UUID) string { return "rep-" + seat.String() + "@load.test" }
+
+// waitAbsent fails when the message is on the team waiting queue.
+func (e *loadEnv) waitAbsent(t *testing.T, activity ids.UUID) {
+	t.Helper()
+	rows, err := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).
+		WaitingReplies(e.as(), clocktest.Now(t))
+	if err != nil {
+		t.Fatalf("reading who is waiting: %v", err)
+	}
+	for _, row := range rows {
+		if row.ActivityID == activity {
+			t.Fatalf("mail no seat is addressed by is on the team queue: %+v", row)
+		}
+	}
+}
+
 // seedWait writes one unanswered inbound filed under the records given, and
 // returns its id. Every rule the eligibility query applies is satisfied here —
 // a sales link, inside the horizon, a human sender, no later reply — so what the
@@ -154,9 +172,9 @@ func TestAWaitWithoutARecipientDoesNotInheritItsRecordOwner(t *testing.T) {
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.other)
 	activity := e.seedWait(t, "Question about pricing", "contact_id", contact)
 
-	if got := e.waitFor(t, activity); !got.OwnerKnown || !got.OwnerID.IsZero() {
-		t.Fatalf("mail without recipient evidence inherited a record owner: %+v", got)
-	}
+	// Mail no seat is addressed by is nobody's wait: not the record owner's,
+	// and not shared work either.
+	e.waitAbsent(t, activity)
 }
 
 func TestADealOnTheThreadDoesNotOverrideTheMailRecipient(t *testing.T) {
@@ -195,9 +213,7 @@ func TestAWaitOnAnUnownedRecordNamesNobody(t *testing.T) {
 		VALUES ($1, 'Unowned Buyer', 'seed', 'system')`, contact)
 	activity := e.seedWait(t, "Question about pricing", "contact_id", contact)
 
-	if got := e.waitFor(t, activity); !got.OwnerID.IsZero() {
-		t.Fatalf("a wait on a record nobody owns was attributed to %v", got.OwnerID)
-	}
+	e.waitAbsent(t, activity)
 }
 
 // The overdue count is per assignee, counts only what is actually late, and
@@ -280,25 +296,27 @@ func TestAWaitNamesItsRecordWithoutBorrowingEitherOwner(t *testing.T) {
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
 		VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), activity, secondDeal)
 
+	// Addressed to a third seat that owns neither deal, so the owner can only
+	// come from the recipient and never from a linked deal.
+	addressed := ids.NewV7()
+	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Third')`, addressed, seatAddress(addressed))
+	e.directlyTo(t, activity, addressed)
 	got := e.waitFor(t, activity)
 	if got.DealID != firstDeal {
 		t.Fatalf("the row named deal %v, wanted the first by id %v — the fixture no longer "+
 			"pins the two orderings against each other", got.DealID, firstDeal)
 	}
-	if !got.OwnerKnown || !got.OwnerID.IsZero() {
-		t.Fatalf("mail without recipient evidence borrowed owner %v from linked deals", got.OwnerID)
+	if got.OwnerID != addressed {
+		t.Fatalf("the wait is owned by %v, want its sole addressed seat %v, not a deal owner", got.OwnerID, addressed)
 	}
 }
 
-func TestAReadableWaitingRecordCanBeExplicitlyUnassigned(t *testing.T) {
+func TestAWaitOnAReadableUnownedRecordWithNoRecipientIsNobodys(t *testing.T) {
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Unassigned buyer', 'seed', 'system')`, contact)
 	activity := e.seedWait(t, "Question about pricing", "contact_id", contact)
-	row := e.waitFor(t, activity)
-	if !row.OwnerKnown || !row.OwnerID.IsZero() {
-		t.Fatalf("readable unassigned ownership lost: known=%v owner=%s", row.OwnerKnown, row.OwnerID)
-	}
+	e.waitAbsent(t, activity)
 }
 
 func TestAWaitingRecipientDoesNotRevealAnUnreadableRecordOwner(t *testing.T) {

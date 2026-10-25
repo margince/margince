@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
+import { bucketLabel } from "../../lib/bucketlabel";
 import { awaitsOurReply, contactDims, contactVerdict } from "./contactstanding";
 import {
   contactFigures,
@@ -243,6 +244,7 @@ describe("contactFigures", () => {
         activities: {
           data: [
             {
+              offers_email: false,
               id: "a-1",
               kind: "email",
               subject: "Re: retrofit timeline",
@@ -314,7 +316,7 @@ describe("the timeline", () => {
     );
     expect(events.map((event) => [event.title, event.kind])).toEqual([
       ["Commitment due", "late"],
-      ["Dana wrote", "last"],
+      ["Dana Buyer wrote", "last"],
       ["Walkthrough", "ahead"],
     ]);
   });
@@ -326,6 +328,7 @@ describe("the timeline", () => {
           ...VIEW,
           last_inbound_at: "2026-08-01T09:00:00Z",
           last_outbound_at: "2026-07-20T09:00:00Z",
+          last_contact_at: "2026-08-01T09:00:00Z",
         },
         words,
       ),
@@ -334,5 +337,46 @@ describe("the timeline", () => {
       title: "12 days",
       sub: "no reply",
     });
+  });
+
+  it("counts the silence from a meeting, not only from the last message", () => {
+    expect(
+      contactGap(
+        {
+          ...VIEW,
+          last_inbound_at: "2026-07-20T09:00:00Z",
+          last_outbound_at: "2026-07-25T09:00:00Z",
+          last_contact_at: "2026-08-05T09:00:00Z",
+        },
+        words,
+      )?.title,
+    ).toBe("8 days");
+  });
+});
+
+describe("bucketLabel", () => {
+  const buckets: Strength["bucket"][] = ["none", "weak", "moderate", "strong"];
+  it.each(["en", "de", "vi"] as const)(
+    "names no signal yet for none and the band word otherwise (%s)",
+    (locale) => {
+      const say: Translator = (key, params) => translate(locale, key, params);
+      for (const bucket of buckets) {
+        const want =
+          bucket === "none"
+            ? translate(locale, "standing.ring.noInteractions")
+            : translate(locale, `contact.bandBadge.${bucket}`);
+        expect(bucketLabel(bucket, say)).toBe(want);
+      }
+    },
+  );
+
+  it("is the word the contact page's verdict prints", () => {
+    for (const bucket of buckets) {
+      const verdict = contactVerdict(
+        { ...VIEW, strength: strength(bucket, 40) },
+        t,
+      );
+      expect(verdict?.word).toBe(bucketLabel(bucket, t));
+    }
   });
 });

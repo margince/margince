@@ -1,6 +1,7 @@
 import type { components } from "../../api/schema";
 import { useInteractionLabel } from "../../components/interactionchrome";
 import { Button } from "../../design-system/atoms";
+import { CallAction } from "../../design-system/callaction";
 import {
   OverviewCard,
   OverviewList,
@@ -10,7 +11,7 @@ import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { omitted } from "./contact360";
 import { CardLink, rowPill } from "./contactcards";
-import { memoryRows } from "./contactmemory.rows";
+import { callBackNumber, memoryRows } from "./contactmemory.rows";
 
 // What was said: conversations as entities, condensed. The History tab stays
 // the whole ledger, with its filters, faces and Reply. A summary never
@@ -61,6 +62,7 @@ export function ContactMemory({
         <OverviewList>
           {rows.map((row) => {
             const emailId = row.emailId;
+            const number = callBackNumber(row.kind, view.contact);
             return (
               <OverviewRow
                 key={row.key}
@@ -78,7 +80,24 @@ export function ContactMemory({
                   )
                 }
                 sub={row.sub}
-                right={rowPill(row)}
+                right={
+                  number ? (
+                    <>
+                      {rowPill(row)}
+                      <CallAction
+                        appearance="button"
+                        label={t("record.verb.call")}
+                        number={number}
+                        record={{
+                          entityType: "contact",
+                          entityId: view.contact.id,
+                        }}
+                      />
+                    </>
+                  ) : (
+                    rowPill(row)
+                  )
+                }
               />
             );
           })}

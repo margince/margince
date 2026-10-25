@@ -72,7 +72,7 @@ export function ComposeBlockers({
   bodyKey: MessageKey;
   /** The engine's answer, drawn by the surface that asks for it, with the
    *  reason pick this band offers where a reason may be recorded. */
-  permission: (override: ReactNode) => ReactNode;
+  permission: (override: ReactNode, picksReason: boolean) => ReactNode;
 }>) {
   const target = isChannelReply
     ? undefined
@@ -106,6 +106,7 @@ export function ComposeBlockers({
                   chosen={send.claimedContext}
                 />
               ),
+              asksWhy(anchorActivity),
             )}
         </>
       )}

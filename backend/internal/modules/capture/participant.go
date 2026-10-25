@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -88,17 +89,10 @@ func stampCaptureParticipants(
 	// Normalized the same way contact_email is, so the promotion below and the
 	// erasure lookup both match without a runtime case fold.
 	address := strings.ToLower(strings.TrimSpace(counterparty.Email))
-	// Never the owner's OWN address as the other end. The connector derives the
-	// counterparty by comparing the From header against the one address the
-	// grant names, so a message the owner sent from an alias arrives with that
-	// alias as its counterparty — and stamping it here would record the owner
-	// at both ends of their own message, in the rows the interaction graph
-	// reads as "who talked to whom".
-	//
-	// Nothing promotes such a row to a contact (the promotion needs a
-	// contact_email, and the capture gates keep an alias from having one), so
-	// what this prevents is a durable falsehood about the exchange rather than
-	// a contact record.
+	// Never the owner's OWN address as the other end. Mail the owner sent from
+	// an alias arrives with that alias as its counterparty, and stamping it
+	// would record the owner at both ends of their own message. A colleague's
+	// address stays: their participant row is how they read held mail.
 	self, err := ownerIdentitiesTx(ctx, tx)
 	if err != nil {
 		return err
@@ -111,7 +105,7 @@ func stampCaptureParticipants(
 		channelUserID = strings.TrimSpace(counterparty.ChannelIdentity.ChannelUserID)
 	}
 	if address != "" || channelUserID != "" {
-		if err := insertParticipant(ctx, tx, activityID, theirRole, nil, nil, address, channelUserID); err != nil {
+		if err := insertCounterpartyParticipant(ctx, tx, activityID, theirRole, kind, counterparty, address, channelUserID, ownerUserID); err != nil {
 			return fmt.Errorf("capture: stamping the counterparty as a participant: %w", err)
 		}
 	}
@@ -372,12 +366,23 @@ func StampFurtherParticipants(
 	// carrying both would file under whoever holds the ADDRESS while the row
 	// kept somebody else's account — one row naming two contacts, and an erasure
 	// keyed on either of them reaching a record about the other.
+	return insertFurtherParticipants(ctx, tx, kind, partyListIsAttested,
+		[]any{activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider, storedDomainsOf(addresses)})
+}
+
+// insertFurtherParticipants writes the parties StampFurtherParticipants
+// collected, with args holding the statement's first eight arguments.
+func insertFurtherParticipants(ctx context.Context, tx pgx.Tx, kind string, partyListIsAttested bool, args []any) error {
+	seatMatch, err := calendarSeatMatch(ctx, tx, kind, partyListIsAttested, &args)
+	if err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name)
-		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name
-		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[]) AS inp(address, role, display_name, account)
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name, address_domain_folded)
+		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name, inp.domain_folded
+		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[], $8::text[]) AS inp(address, role, display_name, account, domain_folded)
 		  LEFT JOIN app_user u
-		         ON $4 AND inp.address <> '' AND lower(u.email) = inp.address
+		         ON $4 AND inp.address <> '' AND `+seatMatch+`
 		  LEFT JOIN LATERAL (
 		       SELECT coalesce(
 		           (SELECT c.contact_id
@@ -392,7 +397,7 @@ func StampFurtherParticipants(
 		             ORDER BY p.contact_id
 		             LIMIT 1)) AS contact_id) pe ON u.id IS NULL
 		ON CONFLICT DO NOTHING`,
-		activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider); err != nil {
+		args...); err != nil {
 		return fmt.Errorf("capture: stamping the further participants of an interaction: %w", err)
 	}
 	return nil
@@ -419,12 +424,12 @@ func insertParticipant(
 	// read off the wire, over a participant row that is a nicety rather than
 	// the point of the write.
 	_, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role)
-		SELECT $1, $2, $3, NULLIF($4, ''), NULLIF($6, ''), $5
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, address_domain_folded)
+		SELECT $1, $2, $3, NULLIF($4, ''), NULLIF($6, ''), $5, $7
 		 WHERE $2::uuid IS NULL
 		    OR EXISTS (SELECT 1 FROM app_user u WHERE u.id = $2)
 		ON CONFLICT DO NOTHING`,
-		activityID, userID, contactID, address, role, channelUserID)
+		activityID, userID, contactID, address, role, channelUserID, owndomain.StoredOfAddress(address))
 	return err
 }
 

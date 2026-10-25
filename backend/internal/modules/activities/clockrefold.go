@@ -89,7 +89,7 @@ func PassedActivitiesTx(ctx context.Context, tx pgx.Tx, after ClockRefoldMark, a
 		     AND (a.occurred_at, a.id) > ($1, $2) AND a.occurred_at <= $3
 		   ORDER BY a.occurred_at, a.id
 		   LIMIT $4)
-		SELECT p.id, p.occurred_at, l.contact_id, l.deal_id, l.company_id
+		SELECT p.id, p.occurred_at, l.contact_id, l.deal_id, l.company_id, l.project_id
 		  FROM passed p LEFT JOIN activity_link l ON l.activity_id = p.id
 		 ORDER BY p.occurred_at, p.id`, after.At, after.ID, asOf, limit)
 	if err != nil {
@@ -101,8 +101,8 @@ func PassedActivitiesTx(ctx context.Context, tx pgx.Tx, after ClockRefoldMark, a
 	for rows.Next() {
 		var id ids.UUID
 		var at time.Time
-		var contact, deal, company *ids.UUID
-		if err := rows.Scan(&id, &at, &contact, &deal, &company); err != nil {
+		var contact, deal, company, project *ids.UUID
+		if err := rows.Scan(&id, &at, &contact, &deal, &company, &project); err != nil {
 			return PassedActivities{}, fmt.Errorf("activities: reading activities whose time has come: %w", err)
 		}
 		if out.Count == 0 || id != last {
@@ -113,6 +113,7 @@ func PassedActivitiesTx(ctx context.Context, tx pgx.Tx, after ClockRefoldMark, a
 		out.Targets.Contacts = appendSet(out.Targets.Contacts, contact)
 		out.Targets.Deals = appendSet(out.Targets.Deals, deal)
 		out.Targets.Companies = appendSet(out.Targets.Companies, company)
+		out.Targets.Projects = appendSet(out.Targets.Projects, project)
 	}
 	if err := rows.Err(); err != nil {
 		return PassedActivities{}, fmt.Errorf("activities: reading activities whose time has come: %w", err)

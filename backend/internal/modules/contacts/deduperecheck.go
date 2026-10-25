@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/shared/kernel/filedpairs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -155,11 +156,11 @@ func lockOpenPairs(ctx context.Context, tx pgx.Tx, after ids.UUID) ([]openPair, 
 
 // stillFiled answers whether today's rule would file this pair, and its score
 // now. An identity conflict (a shared phone, a domain two companies claim) is a
-// fact rather than a score and always stands. So does a pair with an end this
-// pass cannot read. Leads have no identity-conflict lane, so a lead pair at 1.0
-// is a fuzzy score like any other and is scored again.
+// fact rather than a score and stands while both companies are live. A contact
+// or lead pair with an end this pass cannot read stands. Leads have no
+// identity-conflict lane, so a lead pair at 1.0 is scored again.
 func stillFiled(ctx context.Context, tx pgx.Tx, consumerMail *freemail.Matcher, pair openPair) (bool, float64, error) {
-	if pair.confidence >= identityConflictConfidence && pair.entityType != entityLead {
+	if pair.confidence >= identityConflictConfidence && pair.entityType == entityContact {
 		return true, pair.confidence, nil
 	}
 	switch pair.entityType {
@@ -195,13 +196,6 @@ func archiveDedupeCandidateTx(ctx context.Context, tx pgx.Tx, id ids.UUID, reaso
 	return true, nil
 }
 
-// bothNamesFold reports the name-collision lane's own test: two records written
-// with the same name, which that lane files whatever else disagrees.
-func bothNamesFold(a, b string) bool {
-	key := NormalizeContactName(a)
-	return key != "" && key == NormalizeContactName(b)
-}
-
 // contactSide is what the contact score reads about one end of a pair.
 type contactSide struct {
 	name           string
@@ -221,7 +215,10 @@ func contactPairStillFiled(ctx context.Context, tx pgx.Tx, consumerMail *freemai
 		return true, pair.confidence, err
 	}
 	score := max(contactScore(left, right, consumerMail), contactScore(right, left, consumerMail))
-	return score >= dedupeReviewThreshold || bothNamesFold(left.name, right.name), score, nil
+	// The review lanes' own pair tests. A pair stays while the evidence it was
+	// filed on still holds, and retires once an edit removes it.
+	_, _, variant := addressVariantPair(left.emails, right.emails)
+	return score >= dedupeReviewThreshold || contactNamesCollide(left.name, right.name) || variant, score, nil
 }
 
 // contactScore is contactConfidence with one side as the candidate and the
@@ -334,8 +331,8 @@ func readLeadSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (leadSide, bool, 
 }
 
 // companyPairStillFiled re-scores two companies with the name pairing the
-// filing path uses. Companies carry no corroboration rule, so a pair closes
-// here only when a name changed since it was filed.
+// filing path uses and holds it to the same second fact (keepCorroborated). It
+// keeps a pair whose domains still nest (domainNests).
 func companyPairStillFiled(ctx context.Context, tx pgx.Tx, pair openPair) (bool, float64, error) {
 	var leftDisplay, leftLegal, rightDisplay, rightLegal string
 	err := tx.QueryRow(ctx, `
@@ -343,16 +340,30 @@ func companyPairStillFiled(ctx context.Context, tx pgx.Tx, pair openPair) (bool,
 		  FROM company l, company r
 		 WHERE l.id = $1 AND r.id = $2 AND l.archived_at IS NULL AND r.archived_at IS NULL`,
 		pair.left, pair.right).Scan(&leftDisplay, &leftLegal, &rightDisplay, &rightLegal)
+	// An archived company is no duplicate to review. Restoring it writes the
+	// row, so the duplicate scan reads it and files the pair again.
 	if errors.Is(err, pgx.ErrNoRows) {
-		return true, pair.confidence, nil
+		return false, pair.confidence, nil
 	}
 	if err != nil {
 		return true, pair.confidence, fmt.Errorf("read dedupe companies: %w", err)
 	}
+	if pair.confidence >= identityConflictConfidence {
+		return true, pair.confidence, nil
+	}
 	forward := bestCompanyNamePairing(leftDisplay, leftLegal, rightDisplay, rightLegal)
 	backward := bestCompanyNamePairing(rightDisplay, rightLegal, leftDisplay, leftLegal)
 	score := max(forward.Confidence, backward.Confidence)
-	return score >= dedupeReviewThreshold || forward.ExactName || backward.ExactName, score, nil
+	if score >= dedupeReviewThreshold || forward.ExactName || backward.ExactName {
+		forward.CompanyID = ids.From[ids.CompanyKind](pair.right)
+		subject := ids.From[ids.CompanyKind](pair.left)
+		kept, err := keepCorroborated(ctx, tx, CompanyCandidate{ExcludeID: &subject}, []CompanyCandidateScore{forward})
+		if err != nil || len(kept) > 0 {
+			return true, score, err
+		}
+	}
+	nests, err := companyDomainsNest(ctx, tx, pair.left, pair.right)
+	return nests, score, err
 }
 
 // refileArchivedCandidateTx brings back an open pair the system archived without
@@ -382,5 +393,6 @@ func refileArchivedCandidateTx(ctx context.Context, tx pgx.Tx, entityType, leftC
 		}); err != nil {
 		return false, fmt.Errorf("contacts: audit the reopened dedupe candidate: %w", err)
 	}
+	filedpairs.Note(ctx, id)
 	return true, nil
 }

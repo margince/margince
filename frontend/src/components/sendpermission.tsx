@@ -117,6 +117,7 @@ export function SendPermission({
   asking = false,
   onOverride,
   override,
+  picksReason = false,
 }: Readonly<{
   preview: Preview | undefined;
   /**
@@ -144,9 +145,12 @@ export function SendPermission({
    * the button `onOverride` asks for. Same state, same rule: absent, no control.
    */
   override?: ReactNode;
+  /** The surface also draws the message's own reason-for-contact pick. */
+  picksReason?: boolean;
 }>) {
   const t = useT();
   const { state, recipient } = decidingRecipient(preview, asking);
+  const surface = { recordable: Boolean(override || onOverride), picksReason };
 
   if (unanswered) {
     return <p role="status">{t("sendPermission.unanswered")}</p>;
@@ -170,7 +174,7 @@ export function SendPermission({
         icon={ShieldAlert}
         title={t("sendPermission.refused")}
       >
-        {t(sendPermissionReasonKey(recipient?.reason_code))}
+        {t(sendPermissionReasonKey(recipient?.reason_code, surface))}
       </Callout>
     );
   }
@@ -194,11 +198,7 @@ export function SendPermission({
           offer: with the control, how to answer; without it, what happens if
           the message goes as it stands. Telling a reader to "say so" beside no
           control would be the dead button in prose. */}
-      {t(
-        override || onOverride
-          ? "sendPermission.unprovenHint"
-          : "sendPermission.unprovenRefuses",
-      )}
+      {t(sendPermissionReasonKey(recipient?.reason_code, surface))}
     </Callout>
   );
 }

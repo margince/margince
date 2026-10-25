@@ -203,8 +203,8 @@ func TestParticipantsOfReadsAStoredEvent(t *testing.T) {
 	if roles["second@acme.com"] != connector.ParticipantRoleAttendee {
 		t.Errorf("attendee role = %q", roles["second@acme.com"])
 	}
-	if _, ok := roles[owner]; ok {
-		t.Error("the owner must not appear among the participant rows — capture stamps them from the connection")
+	if roles[owner] != connector.ParticipantRoleAttendee {
+		t.Errorf("the owner's role = %q, want the provider's attendee role: it is the evidence they take part", roles[owner])
 	}
 }
 

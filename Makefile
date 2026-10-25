@@ -67,6 +67,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
+.PHONY: gate-timings
 .PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc config-gen lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition check-static test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln vendor-live tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -205,6 +206,16 @@ check-go:
 ## and a prerequisite here would only run them twice.
 check-gates:
 	@cd backend && $(GO) test -count=1 -run 'TestEveryPackageLevelReasonMapIsAWaiverOrADeclaredFixture|TestEveryWaiversDeclarationIsSweptForStalenessExactlyOnce|TestGatekitServesTestsOnly|TestEveryVersionPinnedTableBumpsItsVersion|TestEveryToolRegistrarIsInvokedByEveryFullRegistry|TestAPublishedFieldNameIsAFieldNameNotProse|TestEveryValidationFieldLiteralNamesAContractField|TestSeamReachableModulesCarryTheirOwnFieldVerdict|TestEveryStoreEntryPointIsAuthGated' ./gates
+
+## gate-timings — where the gates lane spent its time, gate by gate. The lane
+## already runs its gates in parallel, so what a run costs is the sum of their
+## work over the cores it is given: this prints both, and the costliest gates,
+## so an optimization starts from a reading rather than from a guess.
+gate-timings:
+	@mkdir -p backend/.tmp
+	@cd backend && $(GO) test ./gates/ -count=1 -v > .tmp/gate-timings.log 2>&1 || true
+	@GATE_TIMING_CORES="$$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)" \
+		bash scripts/gate-timings.sh backend/.tmp/gate-timings.log
 
 ## infra-up / infra-down — aliases for the dev stack (some deploy tooling and
 ## UAT guides call the infra lane by these names). infra-up
@@ -420,8 +431,9 @@ ds-spacing-roles:
 ## drawer clipped its own heading against the viewport edge.
 space-tokens:
 	frontend/scripts/check-space-tokens.sh
-## native-controls — no browser-drawn dropdown: `<select>`, `<option>` or
-## `<optgroup>` anywhere under frontend/src or extensions/*/frontend. It is a
+## native-controls — no browser-drawn control: `<select>`, `<option>`,
+## `<optgroup>` or a native date input (`type="date"` on `input` or
+## `TextInput`) anywhere under frontend/src or extensions/*/frontend. It is a
 ## vitest fitness function over the TypeScript AST now — see
 ## frontend/src/design-system/native-controls.test.ts — so it runs in `fe-unit`
 ## with the rest of the suite. This target keeps its name for anyone who runs
@@ -1036,6 +1048,14 @@ test-sbom-sign:
 ## license-gate job runs it.
 test-sbom-census:
 	@./scripts/test-sbom-census.sh
+
+## test-sbom-license-parity — prove the licence comparison inside
+## `sbom-parity` fails on each way the three signed documents can disagree,
+## and passes on the ways they differ harmlessly. Planted documents, and the
+## real script: a comparison nothing tests is one that can quietly compare
+## the intersection and report a pass.
+test-sbom-license-parity:
+	@./scripts/test-sbom-license-parity.sh
 
 ## test-api-entrypoint — prove the container entrypoint writes the bootstrap
 ## credential ONLY onto an unprovisioned installation, retires a spent one, and
@@ -1693,8 +1713,10 @@ sbom:
 sbom-supplement:
 	@test -f $(SBOM_DIR)/margince.cdx.json || { echo "FAIL: no SBOM found — run 'make sbom' first"; exit 1; }
 	@set -e; cdx=$(SBOM_DIR)/margince.cdx.json; s22=$(SBOM_DIR)/margince.spdx221.json; \
+	  s30=$(SBOM_DIR)/margince.spdx300.json; \
 	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .components |= map(((.purl // "") | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then .licenses = [{"license": {"id": $$map[$$k]}}] else . end)' "$$cdx" > "$$cdx.tmp" && mv "$$cdx.tmp" "$$cdx"; \
-	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .packages |= map((([.externalRefs[]? | select(.referenceType == "purl") | .referenceLocator] | (.[0] // "")) | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then (.licenseConcluded = $$map[$$k] | .licenseDeclared = $$map[$$k]) else . end)' "$$s22" > "$$s22.tmp" && mv "$$s22.tmp" "$$s22"
+	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .packages |= map((([.externalRefs[]? | select(.referenceType == "purl") | .referenceLocator] | (.[0] // "")) | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then (.licenseConcluded = $$map[$$k] | .licenseDeclared = $$map[$$k]) else . end)' "$$s22" > "$$s22.tmp" && mv "$$s22.tmp" "$$s22" ; \
+	  jq --slurpfile m sbom-schemas/license-supplement.json -f sbom-schemas/spdx30-licenses.jq "$$s30" > "$$s30.tmp" && mv "$$s30.tmp" "$$s30"
 
 ## sbom-normalize — reconcile syft's three writers so all three SBOMs describe one
 ## tree, the invariant the constellation dist gate enforces. syft scans the export
@@ -1734,6 +1756,10 @@ sbom-parity:
 	  else \
 	    echo "FAIL: SBOM file sets differ — see the diff above"; exit 1; \
 	  fi
+	@# The packages and their licenses, which the file sets above say nothing
+	@# about: a supplement that reached two of the three documents drifted
+	@# under this target for as long as it compared files alone.
+	@bash scripts/sbom-license-parity.sh $(SBOM_DIR)
 
 ## sbom-census — the license gate's coverage check: every package a committed
 ## pnpm-lock.yaml resolves must be an npm component of the CycloneDX SBOM,

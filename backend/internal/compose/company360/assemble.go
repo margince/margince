@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -102,6 +101,10 @@ type AssembleOptions struct {
 	// contacts, deals and tags describe the account, not a project, and stay
 	// whole.
 	ProjectID *ids.ProjectID
+	// WrittenByHumanOnly narrows the recent timeline to rows a human wrote
+	// (relstrength.WrittenByHumanSQL) before its cap, for the briefs and
+	// drafts. The page itself keeps every record.
+	WrittenByHumanOnly bool
 }
 
 // AssembleScoped is Assemble narrowed by opts.
@@ -181,6 +184,8 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.Company
 		// grants and the same row scope, so they can see further back than a
 		// truncated section page without ever seeing wider.
 		{sectionSuggestions, a.readSuggestions},
+		// Before moments, which takes its "ours" claims from the same read.
+		{sectionCommitments, a.readOpenCommitments},
 		// After next_steps, whose rows it ranks. See moment.go.
 		{sectionMoments, a.readMoment},
 	}
@@ -221,7 +226,8 @@ type assembly struct {
 	// them (the 360's query budget is what noticed).
 	baseCurrency     string
 	baseCurrencyRead bool
-	baseLanguage     textlang.Lang
+	readerLanguage   textlang.Lang
+	loc              *time.Location
 
 	contacts      []contacts.ContactStrength
 	contactsRead  bool
@@ -234,6 +240,11 @@ type assembly struct {
 	staged        []crmcontracts.Approval
 	stagedRead    bool
 	stagedRefused bool
+
+	ours         []contacts.CompanyCommitment
+	oursComplete bool
+	oursErr      error
+	oursRead     bool
 }
 
 // contactStrengths reads every visible contact's §4 score once per request.
@@ -348,8 +359,12 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 			if base, a.adviceErr = a.installationBaseCurrency(); a.adviceErr != nil {
 				return a.advice, a.adviceErr
 			}
+			var loc *time.Location
+			if loc, a.adviceErr = a.zone(); a.adviceErr != nil {
+				return a.advice, a.adviceErr
+			}
 			a.advice, a.adviceErr = gatherSuggestionInputs(
-				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts, a.recordLanguage())
+				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts, a.recordLanguage(), loc)
 		}
 		a.adviceRead = true
 	}
@@ -380,6 +395,13 @@ func (a *assembly) readNextSteps() error {
 		Data []crmcontracts.Company360NextStep `json:"data"`
 		Page crmcontracts.PageInfo             `json:"page"`
 	}{Data: data, Page: page}
+	hidden, err := hiddenNextStepsExist(a.ctx, a.tx, a.companyID, a.now, a.opts)
+	if err != nil {
+		return err
+	}
+	if hidden {
+		markAttentionWithheld(a.out)
+	}
 	return nil
 }
 
@@ -463,27 +485,4 @@ func accountStrengthToWire(account contacts.AccountStrength, now time.Time) *crm
 		out.ContributorContactId = &v
 	}
 	return &out
-}
-
-// installationBaseCurrency resolves the installation's reporting currency once
-// per assembly. The sections that label money each want the same answer, and
-// the 360's query budget counts every read.
-func (a *assembly) installationBaseCurrency() (string, error) {
-	if a.baseCurrencyRead {
-		return a.baseCurrency, nil
-	}
-	base, err := identity.BaseCurrencyOf(a.ctx, a.tx)
-	if err != nil {
-		return "", err
-	}
-	a.baseCurrency, a.baseCurrencyRead = base, true
-	return base, nil
-}
-
-// One assembly uses one language even if the setting changes during its reads.
-func (a *assembly) recordLanguage() textlang.Lang {
-	if a.baseLanguage == "" {
-		a.baseLanguage = identity.BaseLanguageForRecord(a.ctx, a.tx)
-	}
-	return a.baseLanguage
 }

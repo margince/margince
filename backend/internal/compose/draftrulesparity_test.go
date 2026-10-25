@@ -114,6 +114,10 @@ func TestEveryDraftingSurfaceCarriesTheSharedRules(t *testing.T) {
 				t.Errorf("the drafting surface in %s does not carry the shared rules block verbatim in its "+
 					"prompt %d of %d", where, at+1, len(systems))
 			}
+			if !strings.Contains(system, draftrules.Rewrite) {
+				t.Errorf("the drafting surface in %s does not carry the rewrite rule verbatim in its "+
+					"prompt %d of %d, although every drafting route now takes rewrite_of", where, at+1, len(systems))
+			}
 		}
 	}
 }

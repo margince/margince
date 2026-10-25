@@ -159,3 +159,56 @@ func TestTextThatDecidesTheLanguageReadsNoSetting(t *testing.T) {
 		t.Errorf("an unreadable purpose = %q after %d setting reads, want vi after one", fallen.Language, reads.Load())
 	}
 }
+
+// The rest of the conversation is correspondence too: it outranks the rep's
+// app language, and only the stored label and the answered message outrank it.
+func TestTheThreadNamesTheLanguageWhenTheAnsweredMessageDoesNot(t *testing.T) {
+	t.Parallel()
+	const englishEarlier = "Thanks for the update, we plan to review the proposal with our team next week and come back to you."
+	const germanEarlier = "Guten Tag, wir haben das Angebot geprüft und melden uns wegen der offenen Punkte bei Ihnen."
+	const englishAnswered = "Thanks, we will review the proposal with our team and come back to you with the open points soon."
+	const duThread = "Hallo Anna, ich wollte dich fragen, ob wir das Pilotprojekt im Mai mit dir starten können und ob du Zeit hast."
+
+	for name, tc := range map[string]struct {
+		written draftfloor.Written
+		want    string
+	}{
+		"a short answered message follows the thread, not the app language": {
+			written: draftfloor.Written{Body: "ok, thanks", Thread: []string{englishEarlier}},
+			want:    "en",
+		},
+		"nothing names a language: the app language": {
+			written: draftfloor.Written{Body: "ok", Thread: []string{"fine"}},
+			want:    "vi",
+		},
+		"the stored label wins over the thread": {
+			written: draftfloor.Written{Stored: "de", Body: "ok", Thread: []string{englishEarlier}},
+			want:    "de",
+		},
+		"a clear answered message wins over the thread": {
+			written: draftfloor.Written{Body: englishAnswered, Thread: []string{germanEarlier}},
+			want:    "en",
+		},
+		"the first thread entry that names a language decides": {
+			written: draftfloor.Written{Body: "ok", Thread: []string{"fine", germanEarlier, englishEarlier}},
+			want:    "de",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			resolver := draftfloor.NewResolver().
+				WithUserLanguage(func(context.Context) string { return "vi" })
+			got := resolver.Resolve(context.Background(), tc.written, convstate.State{Band: convstate.BandNone})
+			if got.Language != tc.want {
+				t.Errorf("language = %q, want %q", got.Language, tc.want)
+			}
+		})
+	}
+
+	resolver := draftfloor.NewResolver()
+	du := resolver.Resolve(context.Background(), draftfloor.Written{Body: "ok", Thread: []string{duThread}}, convstate.State{Band: convstate.BandNone})
+	sie := resolver.Resolve(context.Background(), draftfloor.Written{Body: "ok"}, convstate.State{Band: convstate.BandNone})
+	if du.Language != "de" || du.Register == sie.Register {
+		t.Errorf("a du thread gave language %q register %q, same as a bare message (%q)", du.Language, du.Register, sie.Register)
+	}
+}

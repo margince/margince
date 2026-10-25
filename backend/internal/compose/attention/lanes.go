@@ -162,6 +162,10 @@ type Tasks interface {
 	// single upcoming row was reached, and the reader who most needs next
 	// week's deadline is exactly the one who would never see it.
 	UpcomingForViewer(ctx context.Context, asOf, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
+	// RemindersForViewer answers every one of the reader's tasks whose reminder
+	// is due, latest reminder first. Not under the day's cap, which orders by
+	// due date, and not under any cap, because the lane's count counts them all.
+	RemindersForViewer(ctx context.Context, asOf time.Time) ([]Task, error)
 }
 
 // Task is one piece of agreed work.
@@ -196,6 +200,8 @@ type Task struct {
 	// ReadOnly says the reader may see the task but not change it, so the row
 	// offers no verb that writes to it.
 	ReadOnly bool
+	// ReminderDue says the reader is the assignee and the reminder came due.
+	ReminderDue bool
 }
 
 // Receipts is what the system did on its own, most recent first.
@@ -219,6 +225,8 @@ type Receipt struct {
 	// state: not every approval is about one.
 	TargetType string
 	TargetID   ids.UUID
+	// TargetLabel is the target's name as the decision was staged.
+	TargetLabel *string
 	// Undo names the audit row the record-history restore route puts back, on
 	// a receipt for work that was APPLIED rather than approved.
 	//

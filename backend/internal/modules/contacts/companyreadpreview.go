@@ -6,7 +6,6 @@ package contacts
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -88,10 +87,15 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		if !backed {
 			continue
 		}
-		stored := column
 		if column == columnAddress {
-			stored = columnAddressLine1
+			rows, err := previewReadAddress(ctx, tx, id, current.Address, field)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, rows...)
+			continue
 		}
+		stored := column
 		if err := previewFieldsVisible(ctx, companyEntity, stored); err != nil {
 			return nil, err
 		}
@@ -102,17 +106,15 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		if value == "" {
 			continue
 		}
-		predicate, found := companyColumnReadPredicates[column][authority]
-		if !found {
-			return nil, apperrors.ErrInvalidArgument
-		}
-		var applies bool
-		// The writer's predicate includes structured-address and current-value guards.
-		arguments := []any{id, value}
-		valueParameter := fmt.Sprintf("$%d", len(arguments))
-		err = tx.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM company WHERE "+predicate+" AND "+valueParameter+"::text IS NOT NULL)", arguments...).Scan(&applies)
-		if err != nil {
-			return nil, err
+		// The preview asks the question the write will ask, with the value the
+		// write will bind: text that names no industry code writes nothing.
+		bound, unmapped := companyColumnArgument(column, value)
+		applies := false
+		if !unmapped {
+			applies, err = companyColumnWriteApplies(ctx, tx, column, authority, []any{id, bound})
+			if err != nil {
+				return nil, err
+			}
 		}
 		before, err := companyReadColumnValue(values[stored])
 		if err != nil {
@@ -120,7 +122,7 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		}
 		after := before
 		if applies {
-			after = value
+			after = deref(bound)
 		}
 		out = append(out, CompanyReadValue{Field: stored, Before: before, After: after, Proposed: value, Retained: !applies, Quote: field.EvidenceSnippet, SourceURL: field.SourceURL})
 	}

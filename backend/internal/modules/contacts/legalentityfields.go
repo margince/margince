@@ -24,6 +24,7 @@ type LegalEntityInput struct {
 	Country, DefaultLanguage             *string
 	BankAccountHolder, IBAN, BIC         *string
 	Imprint                              *string
+	Offering                             LegalEntityOffering
 }
 
 // entityField is one column with the value a submission sent for it.
@@ -74,6 +75,10 @@ func (in LegalEntityInput) fields() []entityField {
 		{column: wireIBAN, value: in.IBAN, limit: 34, clean: cleanIBAN},
 		{column: wireBIC, value: in.BIC, limit: 11, clean: cleanBIC},
 		{column: "imprint", value: in.Imprint, limit: legalEntityImprintLimit},
+		{column: fieldOfferSummary, value: in.Offering.OfferSummary, limit: legalEntityImprintLimit, anchored: true},
+		{column: fieldICP, value: in.Offering.ICP, limit: legalEntityImprintLimit, anchored: true},
+		{column: fieldValueProposition, value: in.Offering.ValueProposition, limit: legalEntityImprintLimit, anchored: true},
+		{column: fieldUSP, value: in.Offering.USP, limit: legalEntityImprintLimit, anchored: true},
 	}
 	for i := range out {
 		if out[i].wire == "" {
@@ -92,6 +97,7 @@ func (e LegalEntity) asInput() LegalEntityInput {
 		VatID: e.VatID, RegisterCourt: e.RegisterCourt, RegisterNumber: e.RegisterNumber,
 		Country: e.Country, DefaultLanguage: e.DefaultLanguage,
 		BankAccountHolder: e.BankAccountHolder, IBAN: e.IBAN, BIC: e.BIC, Imprint: e.Imprint,
+		Offering: e.Offering,
 	}
 }
 

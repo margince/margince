@@ -36,7 +36,7 @@ func TestCommitmentAdmissionUsesCurrentEvidenceBeforeWriting(t *testing.T) {
 		status *string
 		want   CommitmentOutcome
 	}{
-		{"old undated", asOf.AddDate(-2, 0, 0), "", false, "email", nil, CommitmentOutcome(activities.CommitmentHistorical)},
+		{"old undated", asOf.AddDate(-2, 0, 0), "", false, "meeting", nil, CommitmentOutcome(activities.CommitmentHistorical)},
 		{"old but due next month", asOf.AddDate(-2, 0, 0), "2026-11-18", false, "email", nil, CommitmentTaskWritten},
 		{"recent overdue deadline", asOf.AddDate(0, 0, -45), "2026-10-15", false, "email", nil, CommitmentTaskWritten},
 		{"recent", asOf.AddDate(0, 0, -2), "", false, "email", nil, CommitmentTaskWritten},
@@ -51,9 +51,14 @@ func TestCommitmentAdmissionUsesCurrentEvidenceBeforeWriting(t *testing.T) {
 			e := integration.Setup(t)
 			body, key := "I will send the pricing.", "pricing@buyer.test"
 			direction := "outbound"
+			// A colleague's own late report is proposed; the horizon's history is for imported evidence.
+			logged := "manual"
+			if test.want == CommitmentOutcome(activities.CommitmentHistorical) {
+				logged = "import"
+			}
 			source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 				Kind: test.kind, Body: &body, Direction: &direction, OccurredAt: &test.source,
-				ThreadKey: key, Source: "manual", MeetingStatus: test.status,
+				ThreadKey: key, Source: logged, MeetingStatus: test.status,
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -172,7 +177,7 @@ func TestHistoricalPromiseRemainsSearchableWithoutBecomingCurrentWork(t *testing
 	}
 	at := time.Date(2024, 10, 18, 12, 0, 0, 0, time.UTC)
 	quote := "I will send the pricing."
-	source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "meeting", Body: &quote, OccurredAt: &at, Source: "manual"})
+	source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "meeting", Body: &quote, OccurredAt: &at, Source: "import"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,7 +281,7 @@ func TestAdmissionDoesNotDemoteWatchedOrProposedCommitments(t *testing.T) {
 			contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
 			at := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 			quote := "I will send the pricing."
-			source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "meeting", Body: &quote, OccurredAt: &at, Source: "manual"})
+			source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "meeting", Body: &quote, OccurredAt: &at, Source: "import"})
 			if err != nil {
 				t.Fatal(err)
 			}

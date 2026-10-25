@@ -3,6 +3,7 @@ import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { isLocale } from "../../i18n";
 import {
+  callMessengersRoute,
   installFetchStub,
   jsonResponse,
   meRoute,
@@ -31,6 +32,7 @@ const meta: Meta<typeof ContactDetails> = {
     installFetchStub({
       "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
       "GET /users": () => jsonResponse({ data: [] }),
+      "GET /installation/settings": callMessengersRoute(),
     }),
 };
 export default meta;
@@ -72,6 +74,7 @@ const boughtFixture: components["schemas"]["Contact"] = {
   ...fixture,
   title: "Head of Revenue",
   social: { linkedin: "https://www.linkedin.com/in/dana" },
+  primary_email: "dana@bought.example",
   emails: [
     {
       id: "e-bought",
@@ -144,6 +147,7 @@ const longAddress = (local: string) =>
 const manual = { source: "manual", captured_by: "human:u1" };
 const longFixture: components["schemas"]["Contact"] = {
   ...fixture,
+  primary_email: longAddress("alexandra.konstantinopoulou"),
   emails: [
     {
       ...manual,
@@ -355,4 +359,74 @@ export const LongAddressesGerman: Story = {
       kindsBeneath: [],
       marksBeneath: [0],
     }),
+};
+
+const twoNumbers: components["schemas"]["Contact"] = {
+  ...fixture,
+  phones: [
+    {
+      ...manual,
+      id: "p-1",
+      phone: "+493012345678",
+      phone_type: "mobile",
+      is_primary: true,
+      position: 0,
+    },
+    {
+      ...manual,
+      id: "p-2",
+      phone: "+849123456789012",
+      phone_type: "work",
+      is_primary: false,
+      position: 1,
+    },
+  ],
+};
+
+// Each number keeps one line, its kind beside it or (with no room) under it,
+// and its app links under both.
+async function expectNumbersOnOneLine(canvasElement: HTMLElement) {
+  await within(canvasElement).findAllByRole("link", { name: /WhatsApp/ });
+  const handles = [
+    ...canvasElement.querySelectorAll<HTMLElement>(".fieldgrid-handle"),
+  ].filter((handle) => handle.querySelector(".callaction-chats"));
+  await expect(handles).toHaveLength(2);
+  for (const handle of handles) {
+    const number = handle.querySelector<HTMLElement>("a[href^='tel:']");
+    const kind = handle.querySelector<HTMLElement>(":scope > .t-caption");
+    const chats = handle.querySelector<HTMLElement>(".callaction-chats");
+    if (!number || !kind || !chats) {
+      throw new Error("a phone handle lost its number, kind or app links");
+    }
+    const line = document.createRange();
+    line.selectNodeContents(number);
+    await expect(line.getClientRects()).toHaveLength(1);
+    const box = number.getBoundingClientRect();
+    const kindBox = kind.getBoundingClientRect();
+    await expect(chats.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      Math.max(box.bottom, kindBox.bottom) - 0.5,
+    );
+  }
+  await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+    document.documentElement.clientWidth,
+  );
+}
+
+export const TwoNumbers: Story = {
+  args: { contact: twoNumbers },
+  play: ({ canvasElement }) => expectNumbersOnOneLine(canvasElement),
+};
+export const TwoNumbersPhone: Story = {
+  ...TwoNumbers,
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+export const TwoNumbersPhoneGerman: Story = {
+  ...TwoNumbersPhone,
+  parameters: { layout: "fullscreen", locale: "de" },
+};
+export const TwoNumbersPhoneVietnamese: Story = {
+  ...TwoNumbersPhone,
+  parameters: { layout: "fullscreen", locale: "vi" },
 };

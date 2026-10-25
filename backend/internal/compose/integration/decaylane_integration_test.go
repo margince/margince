@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -110,11 +111,13 @@ func TestQuietCandidatesCarryOnlyContactsInsideRowScope(t *testing.T) {
 	seedLapsedPair(t, e, e.Rep1, theirs, "their private thread")
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
-	var quiet []search.InteractionEdge
+	now := time.Now().UTC()
+	var quiet []search.QuietContact
 	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		quiet, err = search.QuietEdgesForUser(
-			rep, tx, time.Now().UTC().AddDate(0, 0, -relstrength.QuietDays), 10, nil)
+		quiet, err = search.QuietContacts(rep, tx, search.QuietRead{
+			QuietBefore: now.AddDate(0, 0, -relstrength.QuietDays), TouchedAfter: now.AddDate(0, 0, -180), Limit: 10,
+		})
 		return err
 	})
 	if err != nil {
@@ -123,8 +126,78 @@ func TestQuietCandidatesCarryOnlyContactsInsideRowScope(t *testing.T) {
 	if len(quiet) != 1 {
 		t.Fatalf("candidates = %d, want only the readable lapsed contact", len(quiet))
 	}
-	if quiet[0].ContactID != mine {
-		t.Errorf("candidate is %s, want the caller's own contact %s", quiet[0].ContactID, mine)
+	if quiet[0].Edge.ContactID != mine {
+		t.Errorf("candidate is %s, want the caller's own contact %s", quiet[0].Edge.ContactID, mine)
+	}
+}
+
+// seedColleagueMessage files a recent mail to a colleague, sent by `sender`,
+// with `copied` on the thread, and folds it through the real projection writer.
+func seedColleagueMessage(t *testing.T, e *Env, colleague, sender, copied ids.UUID) {
+	t.Helper()
+	owner := OwnerConn(t)
+	ctx := context.Background()
+	activity := ids.NewV7()
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'email', 'the thread they are copied on', $2, 'inbound', 'manual', 'human:x')`,
+		activity, clocktest.Now(t).UTC().AddDate(0, 0, -2)); err != nil {
+		t.Fatal(err)
+	}
+	LinkActivity(t, owner, activity, "contact", copied)
+	LinkActivity(t, owner, activity, "contact", sender)
+	for _, p := range []struct {
+		column string
+		id     ids.UUID
+		role   string
+	}{{"user_id", colleague, "to"}, {"contact_id", sender, "from"}, {"contact_id", copied, "cc"}} {
+		if _, err := owner.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, `+p.column+`, role) VALUES ($1, $2, $3)`,
+			activity, p.id, p.role); err != nil {
+			t.Fatal(err)
+		}
+	}
+	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
+	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{activity})
+	}); err != nil {
+		t.Fatalf("folding the colleague message: %v", err)
+	}
+}
+
+// A contact who is only copied on a colleague's recent mail has not been heard
+// from. That holds when the same colleague holds the contact's older exchange.
+// The contact who wrote that mail has been heard from, so the read drops them.
+func TestQuietCandidatesIgnoreAColleaguesMailTheContactOnlyReceived(t *testing.T) {
+	e := Setup(t)
+	copied := e.SeedContact(t, "Copied Only", &e.Rep1)
+	writer := e.SeedContact(t, "Wrote Recently", &e.Rep1)
+	seedLapsedPair(t, e, e.Rep1, copied, "the lapsed thread")
+	seedLapsedPair(t, e, e.Rep1, writer, "the other lapsed thread")
+	seedColleagueMessage(t, e, e.Rep2, writer, copied)
+	sameColleague := e.SeedContact(t, "Copied Same Seat", &e.Rep1)
+	seedLapsedPair(t, e, e.Rep1, sameColleague, "the third lapsed thread")
+	seedColleagueMessage(t, e, e.Rep1, writer, sameColleague)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
+	now := clocktest.Now(t).UTC()
+	var quiet []search.QuietContact
+	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		quiet, err = search.QuietContacts(rep, tx, search.QuietRead{
+			QuietBefore: now.AddDate(0, 0, -relstrength.QuietDays), TouchedAfter: now.AddDate(0, 0, -180), Limit: 10,
+		})
+		return err
+	})
+	if err != nil {
+		t.Fatalf("reading quiet candidates: %v", err)
+	}
+	got := map[ids.UUID]bool{}
+	for _, candidate := range quiet {
+		got[candidate.Edge.ContactID] = true
+	}
+	if len(got) != 2 || !got[copied] || !got[sameColleague] {
+		t.Fatalf("candidates = %+v, want only the two contacts who were copied", quiet)
 	}
 }
 
@@ -143,10 +216,12 @@ func TestBatchedChangesAdmitOnlyReadableContacts(t *testing.T) {
 	store := contacts.NewStore(e.DB())
 	var changed []contacts.ContactChanges
 	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
-		var err error
-		changed, err = store.RelationshipChangesForContacts(rep, tx,
-			[]ids.ContactID{ids.From[ids.ContactKind](mine), ids.From[ids.ContactKind](theirs)},
-			time.Now().UTC())
+		candidates := []ids.ContactID{ids.From[ids.ContactKind](mine), ids.From[ids.ContactKind](theirs)}
+		touches, zone, err := contactTouches(rep, tx, candidates...)
+		if err != nil {
+			return err
+		}
+		changed, err = store.RelationshipChangesForContacts(rep, tx, candidates, time.Now().UTC(), touches, zone)
 		return err
 	})
 	if err != nil {
@@ -201,14 +276,15 @@ func TestADismissedContactDoesNotSpendACandidateSlot(t *testing.T) {
 	}
 
 	now := time.Now().UTC()
-	var quiet []search.InteractionEdge
+	var quiet []search.QuietContact
 	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		quiet, err = search.QuietEdgesForUser(
-			rep, tx, now.AddDate(0, 0, -relstrength.QuietDays), 1,
-			func(arg func(any) int) (string, error) {
+		quiet, err = search.QuietContacts(rep, tx, search.QuietRead{
+			QuietBefore: now.AddDate(0, 0, -relstrength.QuietDays), TouchedAfter: now.AddDate(0, 0, -180), Limit: 1,
+			Exclude: func(arg func(any) int) (string, error) {
 				return contacts.NotDismissedClause(rep, "e", now, arg)
-			})
+			},
+		})
 		return err
 	})
 	if err != nil {
@@ -218,8 +294,8 @@ func TestADismissedContactDoesNotSpendACandidateSlot(t *testing.T) {
 	if len(quiet) != 1 {
 		t.Fatalf("candidates = %d, want the one live lapse the budget has room for", len(quiet))
 	}
-	if quiet[0].ContactID != standing {
+	if quiet[0].Edge.ContactID != standing {
 		t.Errorf("the candidate is %s, want %s — the dismissed contact spent the slot",
-			quiet[0].ContactID, standing)
+			quiet[0].Edge.ContactID, standing)
 	}
 }

@@ -171,6 +171,7 @@ const dana: RecordContact = { id: "p-dana", full_name: "Dana Buyer" };
 // its sender with the server's phrase when one is given.
 function thread(links: Activity["links"], sender: string | null): Activity[] {
   return ["m-2", "m-1"].map((id, at) => ({
+    offers_email: false,
     id,
     kind: "email",
     subject: "Fleet renewal",

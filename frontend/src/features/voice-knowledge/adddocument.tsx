@@ -55,7 +55,8 @@ import { staleAfterUpload, uploadRefusal } from "./adddocument.upload";
 
 type Attachment = components["schemas"]["Attachment"];
 
-type Category = NonNullable<Attachment["category"]>;
+// A document link arrives with a mail and is never filed from this dialog.
+type Category = Exclude<NonNullable<Attachment["category"]>, "link">;
 
 type DealPage = components["schemas"]["DealListResponse"];
 

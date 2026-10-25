@@ -95,3 +95,19 @@ export const SomeDaysUnavailable: Story = {
     />
   ),
 };
+
+// The week opens on Monday in every UI language, legend and grid alike.
+export const InVietnamese: Story = {
+  render: () => (
+    <LocaleProvider initial="vi">
+      <Calendar
+        month={TODAY}
+        onMonthChange={() => {}}
+        selected="2026-08-15"
+        onSelect={() => {}}
+        today={TODAY}
+        locale="vi"
+      />
+    </LocaleProvider>
+  ),
+};

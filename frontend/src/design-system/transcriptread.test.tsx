@@ -131,6 +131,32 @@ function stubReads(options: {
   return { calls };
 }
 
+function renderWatched(initial: Report["status"]) {
+  let status = initial;
+  stubReads({
+    stored: report({ status }),
+    read: () => jsonResponse(report({ status })),
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const invalidated = vi.spyOn(client, "invalidateQueries");
+  rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <TranscriptReadCard activityId="a-1" />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return {
+    client,
+    invalidated,
+    setStatus: (next: Report["status"]) => {
+      status = next;
+    },
+  };
+}
+
 describe("reading a transcript for its next steps", () => {
   it("starts a reading on click and shows what it staged, with a way into Today", async () => {
     const user = userEvent.setup();
@@ -336,6 +362,43 @@ describe("reading a transcript for its next steps", () => {
     expect(screen.queryByText("1 suggestion reviewed")).toBeNull();
   });
 
+  it("refreshes timelines, tasks, worklist and the activity when a running reading turns done", async () => {
+    const { client, invalidated, setStatus } = renderWatched("running");
+    expect(await screen.findByText("Reading…")).toBeTruthy();
+    expect(invalidated).not.toHaveBeenCalled();
+
+    setStatus("done");
+    await client.refetchQueries({ queryKey: ["transcript-read"] });
+
+    await waitFor(() =>
+      expect(invalidated).toHaveBeenCalledWith({ queryKey: ["tasks"] }),
+    );
+    expect(invalidated).toHaveBeenCalledWith({ queryKey: ["worklist"] });
+    expect(invalidated).toHaveBeenCalledWith({ queryKey: ["activity", "a-1"] });
+    const predicate = invalidated.mock.calls
+      .map(([filters]) => filters?.predicate)
+      .find((one) => one !== undefined);
+    expect(predicate).toBeDefined();
+    const matches = (queryKey: unknown[]) =>
+      predicate?.({ queryKey } as never) ?? false;
+    expect(matches(["activities", "contact", "c-1"])).toBe(true);
+    expect(matches(["company360", "co-1"])).toBe(true);
+    expect(matches(["contact360", "c-1"])).toBe(true);
+    expect(matches(["project", "p-1", "360"])).toBe(true);
+    expect(matches(["settings", "profile"])).toBe(false);
+  });
+
+  it("refreshes nothing when a running reading fails", async () => {
+    const { client, invalidated, setStatus } = renderWatched("running");
+    expect(await screen.findByText("Reading…")).toBeTruthy();
+
+    setStatus("failed");
+    await client.refetchQueries({ queryKey: ["transcript-read"] });
+
+    expect(await screen.findByText("Failed")).toBeTruthy();
+    expect(invalidated).not.toHaveBeenCalled();
+  });
+
   it("offers a first reading, and no outcome, on a transcript nobody has read", async () => {
     stubReads({});
     render(<TranscriptReadCard activityId="a-1" />);
@@ -378,6 +441,7 @@ describe("which activity carries a transcript", () => {
   it("recognises a call or a meeting logged as a transcript", () => {
     expect(
       isTranscriptActivity({
+        offers_email: false,
         ...base,
         kind: "call",
         source_system: "transcript",
@@ -385,6 +449,7 @@ describe("which activity carries a transcript", () => {
     ).toBe(true);
     expect(
       isTranscriptActivity({
+        offers_email: false,
         ...base,
         kind: "meeting",
         source_system: "transcript",
@@ -393,9 +458,12 @@ describe("which activity carries a transcript", () => {
   });
 
   it("leaves an ordinary meeting and a mail-sourced row alone", () => {
-    expect(isTranscriptActivity({ ...base, kind: "meeting" })).toBe(false);
+    expect(
+      isTranscriptActivity({ offers_email: false, ...base, kind: "meeting" }),
+    ).toBe(false);
     expect(
       isTranscriptActivity({
+        offers_email: false,
         ...base,
         kind: "email",
         source_system: "transcript",
@@ -405,8 +473,13 @@ describe("which activity carries a transcript", () => {
 
   it("attaches the reading card to the transcript row of a timeline, and only it", () => {
     const [transcript, note] = activityTimeline([
-      { ...base, kind: "call", source_system: "transcript" },
-      { ...base, id: "a-2", kind: "note" },
+      {
+        offers_email: false,
+        ...base,
+        kind: "call",
+        source_system: "transcript",
+      },
+      { offers_email: false, ...base, id: "a-2", kind: "note" },
     ]);
     expect(transcript.detail).toBeTruthy();
     expect(note.detail).toBeUndefined();

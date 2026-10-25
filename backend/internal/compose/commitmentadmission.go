@@ -13,37 +13,54 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/stateddeadline"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commitment) (activities.CommitmentAdmissionReason, error) {
+// commitmentRead is the admission verdict together with who supplied the evidence.
+type commitmentRead struct {
+	Reason       activities.CommitmentAdmissionReason
+	LoggedByHand bool
+}
+
+// proposeLate is true when the horizon stopped a promise whose evidence a
+// colleague logged by hand. Such a promise is put to its promiser instead of
+// being filed as history.
+func (read commitmentRead) proposeLate() bool {
+	return read.Reason == activities.CommitmentHistorical && read.LoggedByHand
+}
+
+// proposeLate adds the promise's own conditions to the evidence's: ours, from
+// the original source, not private mail, and not withheld on its meaning.
+func (c Commitment) proposeLate(read commitmentRead) bool {
+	return read.proposeLate() && c.Theirs == nil && c.PrivateTo == nil && c.AdmissionSourceID == nil && c.Meaning.withheldOutcome() == ""
+}
+
+func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commitment) (commitmentRead, error) {
 	var due *time.Time
 	if c.DueDate != "" {
-		at, err := commitmentDueInstant(ctx, tx, c.DueDate)
+		at, err := commitmentDueInstant(ctx, tx, c.DueDate, c.DueZone)
 		if err != nil {
-			return "", err
+			return commitmentRead{}, err
 		}
 		due = &at
 	}
-	return commitmentAdmissionForDue(ctx, tx, c, due)
+	return readCommitmentEvidence(ctx, tx, c, due, true)
 }
 
-func commitmentAdmissionForDue(ctx context.Context, tx pgx.Tx, c Commitment, due *time.Time) (activities.CommitmentAdmissionReason, error) {
-	return readCommitmentAdmission(ctx, tx, c, due, true)
-}
-
-func readCommitmentAdmission(ctx context.Context, tx pgx.Tx, c Commitment, due *time.Time, forDecision bool) (activities.CommitmentAdmissionReason, error) {
+func readCommitmentEvidence(ctx context.Context, tx pgx.Tx, c Commitment, due *time.Time, forDecision bool) (commitmentRead, error) {
 	sourceID := c.SourceActivityID
 	if c.AdmissionSourceID != nil {
 		if _, err := activities.CommitmentAdmissionEvidenceTx(ctx, tx, activities.CommitmentAdmissionInput{
 			SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages, Preview: !forDecision,
 		}); err != nil {
 			if errors.Is(err, apperrors.ErrNotFound) {
-				return activities.CommitmentSourceUnavailable, nil
+				return commitmentRead{Reason: activities.CommitmentSourceUnavailable}, nil
 			}
-			return "", err
+			return commitmentRead{}, err
 		}
 		sourceID = *c.AdmissionSourceID
 	}
@@ -51,24 +68,88 @@ func readCommitmentAdmission(ctx context.Context, tx pgx.Tx, c Commitment, due *
 		SourceID: ids.From[ids.ActivityKind](sourceID), ReadMessages: c.ReadMessages, Preview: !forDecision,
 	})
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return activities.CommitmentSourceUnavailable, nil
+		return commitmentRead{Reason: activities.CommitmentSourceUnavailable}, nil
 	}
 	if err != nil {
-		return "", err
+		return commitmentRead{}, err
 	}
+	if evidence.OccurredAt, err = commitmentSaidAt(ctx, tx, evidence); err != nil {
+		return commitmentRead{}, err
+	}
+	read := commitmentRead{Reason: activities.AdmitAutomaticCommitment(evidence, c.AsOf, due), LoggedByHand: evidence.LoggedByHand}
+	if read.Reason != activities.CommitmentCurrent || !evidence.CapturedMail {
+		return read, nil
+	}
+	read.Reason, err = mailboxBaselineAdmission(ctx, tx, c, sourceID, evidence.RawCaptureID)
+	return read, err
+}
+
+// commitmentSaidAt is when the source was said: captured mail's own stated
+// time, not when capture stored it.
+func commitmentSaidAt(ctx context.Context, tx pgx.Tx, evidence activities.CommitmentAdmissionEvidence) (time.Time, error) {
 	if evidence.CapturedMail && evidence.SourceOccurredAt != nil {
-		evidence.OccurredAt = *evidence.SourceOccurredAt
-	} else if evidence.CapturedMail {
-		evidence.OccurredAt, err = commitmentOriginalTime(ctx, tx, evidence.RawCaptureID)
-		if err != nil {
-			return "", err
-		}
+		return *evidence.SourceOccurredAt, nil
 	}
-	reason := activities.AdmitAutomaticCommitment(evidence, c.AsOf, due)
-	if reason != activities.CommitmentCurrent || !evidence.CapturedMail {
-		return reason, nil
+	if evidence.CapturedMail {
+		return commitmentOriginalTime(ctx, tx, evidence.RawCaptureID)
 	}
-	return mailboxBaselineAdmission(ctx, tx, c, sourceID, evidence.RawCaptureID)
+	return evidence.OccurredAt, nil
+}
+
+// withStatedWeek gives a promise made "this week" the last working day of the
+// week it was said in. The words are the deadline quote the meaning validator
+// already found in the source; any other range stays undated.
+func withStatedWeek(ctx context.Context, tx pgx.Tx, c Commitment) (Commitment, error) {
+	if c.DueDate != "" || c.Meaning == nil || c.Meaning.DeadlinePrecision != commitmentPrecisionRange {
+		return c, nil
+	}
+	// The words stating the deadline are in the message being read: the
+	// renewal when one renewed the promise, else the original.
+	stated := c.SourceActivityID
+	if c.AdmissionSourceID != nil {
+		stated = *c.AdmissionSourceID
+	}
+	evidence, err := activities.CommitmentAdmissionEvidenceTx(ctx, tx, activities.CommitmentAdmissionInput{
+		SourceID: ids.From[ids.ActivityKind](stated), ReadMessages: c.ReadMessages, Preview: true,
+	})
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return c, nil
+	}
+	if err != nil {
+		return c, err
+	}
+	said, err := commitmentSaidAt(ctx, tx, evidence)
+	if err != nil {
+		return c, err
+	}
+	zone, workdays, err := promiserWeek(ctx, tx, c.Seat)
+	if err != nil {
+		return c, err
+	}
+	if day, ok := stateddeadline.ThisWeek(c.Meaning.DeadlineQuote, stateddeadline.SentDay(said, zone), workdays); ok {
+		c.DueDate, c.DueZone = day.String(), zone.String()
+	}
+	return c, nil
+}
+
+// promiserWeek is the zone and working days of the colleague who made the
+// promise, so "this week" ends on their own last working day. With no named
+// promiser, the installation's zone and a Monday-to-Friday week apply.
+func promiserWeek(ctx context.Context, tx pgx.Tx, seat *ids.UUID) (*time.Location, []int, error) {
+	if seat == nil {
+		zone, err := installationZoneTx(ctx, tx)
+		return zone, nil, err
+	}
+	hours, _, err := identity.WorkingHoursOf(ctx, tx, ids.From[ids.UserKind](*seat))
+	if errors.Is(err, apperrors.ErrNotFound) {
+		zone, err := installationZoneTx(ctx, tx)
+		return zone, nil, err
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	zone, err := hours.Location()
+	return zone, hours.Days, err
 }
 
 // mailboxBaselineAdmission withholds current mail work when the mailbox of the
@@ -148,7 +229,7 @@ func (d *CommitmentDispatcher) renewTask(ctx context.Context, tx pgx.Tx, c Commi
 	if err != nil || held {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
-	due, err := commitmentDueInstant(ctx, tx, c.DueDate)
+	due, err := commitmentDueInstant(ctx, tx, c.DueDate, c.DueZone)
 	if err != nil {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
@@ -165,7 +246,7 @@ func (d *CommitmentDispatcher) renewTask(ctx context.Context, tx pgx.Tx, c Commi
 }
 
 func (outcome CommitmentOutcome) wroteWork() bool {
-	return outcome == CommitmentWatched || outcome == CommitmentTaskWritten || outcome == CommitmentProposed
+	return outcome == CommitmentWatched || outcome == CommitmentTaskWritten || outcome == CommitmentProposed || outcome == CommitmentHistoricalProposed
 }
 
 func (outcome CommitmentOutcome) withheld() bool {

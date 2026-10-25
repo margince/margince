@@ -30,7 +30,7 @@ func TestAFollowUpOwedAfterAMeetingOutranksAnOpenTask(t *testing.T) {
 	first, second := ids.NewV7(), ids.NewV7()
 	met := owedAfter(first, second)
 	f := facts{
-		deal: openDeal(), now: testNow, followUps: []activities.AwaitingReply{met},
+		deal: openDeal(), now: testNow, loc: time.UTC, followUps: []activities.AwaitingReply{met},
 		openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Agree the next step on Nordwind"}},
 	}
 	mv := decideMove(f)
@@ -51,7 +51,7 @@ func TestAFollowUpOwedAfterAMeetingOutranksAnOpenTask(t *testing.T) {
 
 func TestABookedMeetingStillOutranksAFollowUpOwed(t *testing.T) {
 	f := facts{
-		deal: openDeal(), now: testNow, nextMeeting: booked(testNow.AddDate(0, 0, 2)),
+		deal: openDeal(), now: testNow, loc: time.UTC, nextMeeting: booked(testNow.AddDate(0, 0, 2)),
 		followUps: []activities.AwaitingReply{owedAfter(ids.NewV7())},
 	}
 	if mv := decideMove(f); mv.Action != ActionOpenMeetingBrief {
@@ -62,7 +62,7 @@ func TestABookedMeetingStillOutranksAFollowUpOwed(t *testing.T) {
 func TestAFollowUpWithNobodyOnFileLeavesTheMoveToTheNextRung(t *testing.T) {
 	task := ids.NewV7()
 	f := facts{
-		deal: openDeal(), now: testNow, followUps: []activities.AwaitingReply{owedAfter()},
+		deal: openDeal(), now: testNow, loc: time.UTC, followUps: []activities.AwaitingReply{owedAfter()},
 		openTasks: []activities.OpenTask{{ID: task, Subject: "Send the deck"}},
 	}
 	if mv := decideMove(f); mv.Action != ActionOpenTask {
@@ -74,7 +74,7 @@ func TestAFollowUpWithNobodyOnFileLeavesTheMoveToTheNextRung(t *testing.T) {
 // rewrites the card instead of serving the old To line.
 func TestTheFollowUpCacheKeyNamesItsRecipients(t *testing.T) {
 	recipient := ids.NewV7()
-	f := facts{deal: openDeal(), now: testNow, followUps: []activities.AwaitingReply{owedAfter(recipient)}}
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, followUps: []activities.AwaitingReply{owedAfter(recipient)}}
 	if key := moveKey(decideMove(f)); !strings.Contains(key, recipient.String()) {
 		t.Fatalf("move key %q does not name the recipient %s", key, recipient)
 	}
@@ -85,7 +85,7 @@ func TestTheFollowUpCacheKeyNamesItsRecipients(t *testing.T) {
 func TestTheFollowUpCacheKeyMovesWithTheMeetingsSubjectAndTime(t *testing.T) {
 	met := owedAfter(ids.NewV7())
 	keyOf := func(met activities.AwaitingReply) string {
-		return moveKey(decideMove(facts{deal: openDeal(), now: testNow, followUps: []activities.AwaitingReply{met}}))
+		return moveKey(decideMove(facts{deal: openDeal(), now: testNow, loc: time.UTC, followUps: []activities.AwaitingReply{met}}))
 	}
 	renamed, moved := met, met
 	renamed.Subject = "Contract review"

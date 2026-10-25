@@ -141,6 +141,7 @@ export function ContactTabPanel({
         <ContactFilesTab
           contactId={contactId}
           refusedReasonId={refusedReasonId}
+          onOpenEmail={onOpenEmail}
         />
       );
     // Overview is drawn by the page itself, above this component. Its stack

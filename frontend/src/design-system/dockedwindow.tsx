@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { useT } from "../i18n";
+import { useFocusHandoff } from "./focushandoff";
 import { Heading } from "./heading";
 import { IconAction } from "./iconaction";
 import "./dockedwindow.css";
@@ -48,6 +49,7 @@ export function DockedWindow({
   onClose,
   closeDisabled,
   initialFocusTo,
+  openedFrom,
   children,
 }: Readonly<{
   /** Names the window and its folded bar; a heading, not a dialog title row. */
@@ -59,6 +61,8 @@ export function DockedWindow({
   closeDisabled?: boolean;
   /** The control focus lands on when the window first opens. */
   initialFocusTo?: () => HTMLElement | null;
+  /** The control that opened the window, which gets focus back on close. */
+  openedFrom?: HTMLElement;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -87,9 +91,23 @@ export function DockedWindow({
     () => globalThis.matchMedia?.(SHEET).matches ?? false,
   );
   const focusFirst = useRef(initialFocusTo);
+  // The pressed control, else where focus was: Safari does not focus a clicked
+  // button. Closing hands focus back there instead of to the page body.
+  const opener = useRef(openedFrom ?? null);
   useEffect(() => {
+    const before = document.activeElement;
+    if (
+      !opener.current &&
+      before instanceof HTMLElement &&
+      before !== document.body
+    ) {
+      opener.current = before;
+    }
     (focusFirst.current?.() ?? box.current)?.focus();
   }, []);
+  useFocusHandoff(box, () =>
+    opener.current?.isConnected ? opener.current : null,
+  );
   // A narrower glass pulls a slid window back into view. The breakpoint that
   // makes it a sheet is read again too, so neither waits for another render.
   useEffect(() => {

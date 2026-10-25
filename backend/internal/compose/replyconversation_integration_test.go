@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -51,7 +52,7 @@ func TestReplyDraftUsesTheSelectedMessageAndReadableThreadContext(t *testing.T) 
 	}
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Wrong target","body":"Could we confirm the proposal?"}`}}
 	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
-	result, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), "Ask for confirmation")
+	result, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), draftfloor.Steering{Intent: "Ask for confirmation"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,6 +75,43 @@ func TestReplyDraftUsesTheSelectedMessageAndReadableThreadContext(t *testing.T) 
 	// the band's name.
 	if !strings.Contains(content, `"occurred_at":"2026-09-01T09:00:00Z"`) {
 		t.Fatalf("the selected message's date never reached the model: %s", content)
+	}
+}
+
+func TestAReplyRewriteCarriesTheDraftOnScreenIntoThePrompt(t *testing.T) {
+	e := integration.Setup(t)
+	anchor := logReplyMessage(e.Admin(), t, e, "pricing", "Pricing", "Selected proposal", 0)
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Pricing","body":"Shorter."}`}}
+	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
+	steering := draftfloor.Steering{Intent: "shorter", RewriteOf: "Hallo Marek, bitte bestätigen Sie die Lieferung."}
+	if _, err := drafter.DraftEmailWithProvenance(e.Admin(), ids.UUID(anchor.Id), steering); err != nil {
+		t.Fatal(err)
+	}
+	content := brain.request.Messages[0].Content
+	if !strings.Contains(content, `"rewrite_of":"Hallo Marek, bitte bestätigen Sie die Lieferung."`) {
+		t.Fatalf("the draft on screen never reached the model: %s", content)
+	}
+	if !strings.Contains(brain.request.System, "rewrite_of, when present") {
+		t.Fatalf("the reply prompt does not say what rewrite_of means: %s", brain.request.System)
+	}
+	if !strings.Contains(content, `"output_language":"de"`) && !strings.Contains(content, `"language":"de"`) {
+		t.Fatalf("a rewrite lost the language of the draft it revises: %s", content)
+	}
+}
+
+func TestAShortReplyToAnEnglishThreadIsDraftedInEnglishWhateverTheAppLanguage(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	logReplyMessage(ctx, t, e, "pilot", "Pilot", "Thanks for the update, we plan to review the proposal with our team next week and come back to you.", 0)
+	anchor := logReplyMessage(ctx, t, e, "pilot", "Pilot", "ok", time.Hour)
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Pilot","body":"Great."}`}}
+	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
+	drafter.envelope = draftfloor.NewResolver().WithUserLanguage(func(context.Context) string { return "vi" })
+	if _, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), draftfloor.Steering{}); err != nil {
+		t.Fatal(err)
+	}
+	if content := brain.request.Messages[0].Content; !strings.Contains(content, `"output_language":"en"`) {
+		t.Fatalf("the thread's English lost to the app language: %s", content)
 	}
 }
 
@@ -105,5 +143,79 @@ func TestReplyEndpointNormalizesTheSubjectForEveryDraftAdapter(t *testing.T) {
 				t.Fatalf("reply endpoint: status %d, draft %+v", response.Code, draft)
 			}
 		})
+	}
+}
+
+func TestAnOldInboundMessageStillDecidesTheReplyLanguageBehindManyNewerOutboundOnes(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	at := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
+	inbound, subject := "inbound", "Angebot"
+	german := "Vielen Dank für das Angebot, wir prüfen es mit unserem Team und melden uns nächste Woche bei Ihnen zurück."
+	if _, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Body: &german, ThreadKey: "angebot",
+		Direction: &inbound, OccurredAt: &at, Source: "manual",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var anchor crmcontracts.Activity
+	for i := range replyContextTurns + 4 {
+		anchor = logReplyMessage(ctx, t, e, "angebot", "Angebot", "ok", time.Duration(i+1)*time.Hour)
+	}
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
+	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
+	drafter.envelope = draftfloor.NewResolver().WithUserLanguage(func(context.Context) string { return "en" })
+	if _, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), draftfloor.Steering{}); err != nil {
+		t.Fatal(err)
+	}
+	if content := brain.request.Messages[0].Content; !strings.Contains(content, `"output_language":"de"`) {
+		t.Fatalf("the older German inbound message was cut before the language was decided: %s", content)
+	}
+}
+
+func TestAReadableCopiedContactDoesNotSetTheReplyLanguageWhenTheSenderIsPrivate(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	at := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
+	inbound, subject := "inbound", "Angebot"
+	logInbound := func(body string, offset time.Duration) crmcontracts.Activity {
+		when := at.Add(offset)
+		row, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
+			Kind: "email", Subject: &subject, Body: &body, ThreadKey: "angebot",
+			Direction: &inbound, OccurredAt: &when, Source: "manual",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return row
+	}
+	english := logInbound("Thanks for the update, we plan to review the proposal with our team next week and come back to you.", 0)
+	german := logInbound("Vielen Dank für das Angebot, wir prüfen es mit unserem Team und melden uns nächste Woche bei Ihnen zurück.", time.Hour)
+	anchor := logInbound("ok", 2*time.Hour)
+
+	copied := e.SeedContact(t, "Anne Copied", &e.Rep1)
+	sender := e.SeedContact(t, "Dietmar Private", &e.Rep1)
+	e.MakeCapturePrivate(t, "contact", sender, e.Rep2)
+	participate := func(activity crmcontracts.Activity, role string, contact ids.UUID) {
+		e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, $2, $3)`,
+			ids.UUID(activity.Id), role, contact)
+	}
+	participate(english, "from", copied)
+	participate(german, "from", sender)
+	participate(anchor, "from", sender)
+	participate(anchor, "cc", copied)
+
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
+	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
+	drafter.envelope = draftfloor.NewResolver().WithUserLanguage(func(context.Context) string { return "en" })
+	recipient, err := e.Activities.ReplyRecipientFor(ctx, ids.From[ids.ActivityKind](ids.UUID(anchor.Id)))
+	if err != nil || recipient.FullName != "Anne Copied" || recipient.ContactID != "" {
+		t.Fatalf("precondition: recipient = %+v, err %v; want the copied contact named with no addressee id", recipient, err)
+	}
+	if _, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), draftfloor.Steering{}); err != nil {
+		t.Fatal(err)
+	}
+	if content := brain.request.Messages[0].Content; !strings.Contains(content, `"output_language":"de"`) {
+		t.Fatalf("the copied contact's English mail set the language of a reply to someone else: %s", content)
 	}
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const (
@@ -94,6 +95,9 @@ func readWords(
 			return nil, err
 		}
 		message.At = message.At.UTC()
+		// The quote gate reads Text too, so a quoted reply can be neither shown
+		// nor cited as this message's words.
+		message.Text = textlang.SenderText(message.Text)
 		out = append(out, message)
 	}
 	if err := rows.Err(); err != nil {

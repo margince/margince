@@ -340,8 +340,14 @@ function LineSubject({
   }
   // A done change about records OPENS, to every record it touched, what
   // changed on each and an undo per record; inside, each links to its page.
-  // Retention names no record, and another lane's line changed nothing.
-  const opens = line.lane === "done" && line.entity !== undefined && since;
+  // Retention names no record, and another lane's line changed nothing. A
+  // decision line's id is an approval's, which the audit records read does
+  // not know, so it links to its record instead.
+  const opens =
+    line.lane === "done" &&
+    line.entity !== undefined &&
+    line.approval_kind === undefined &&
+    since;
   const href = many ? undefined : recordHref(line);
   return (
     <span className="magic-line-subject">

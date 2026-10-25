@@ -33,6 +33,10 @@ type Store struct {
 	// under. Injected by compose because the setting lives in identity
 	// (installationcountry.go).
 	country InstallationCountryReader
+	// zone and retireCase serve a privacy request's proof
+	// (requestproofseams.go).
+	zone       InstallationZoneFunc
+	retireCase RightsCaseRetirer
 	// language is which language the controller mail this store stages is
 	// written in. Nil sends in the fallback rather than refusing.
 	language MailLanguageReader

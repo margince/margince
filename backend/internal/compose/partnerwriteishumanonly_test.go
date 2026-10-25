@@ -21,7 +21,13 @@ package compose
 // This pins the conclusion rather than the wording: if somebody reopens the
 // route to agents, they change this test and state the tier deliberately.
 
-import "testing"
+import (
+	"reflect"
+	"strings"
+	"testing"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+)
 
 const upsertPartnerRoute = "PUT /v1/companies/{id}/partner"
 
@@ -59,4 +65,35 @@ func TestReadingAPartnerStaysOpenToAgents(t *testing.T) {
 	if policy.Tool != "read_record" {
 		t.Errorf("reading a partner maps to tool %q, want read_record", policy.Tool)
 	}
+}
+
+// The one partner write an agent can reach starts a program and carries no
+// tier. The tool's argument list and the request type generated from the
+// contract both leave out everything commercial.
+func TestTheAgentPartnerSetUpCannotCarryATier(t *testing.T) {
+	spec, registered := NewRegistry(nil, SendPath{}).Spec("set_up_partner")
+	if !registered {
+		t.Fatal("set_up_partner is not registered")
+	}
+	for _, field := range []string{"margin_tier", "cert_status", "gate_metrics", "served_segments"} {
+		if strings.Contains(string(spec.InputSchema), `"`+field+`"`) {
+			t.Errorf("set_up_partner takes %q; a program set up by an agent starts with none of the commercial terms", field)
+		}
+		if reflectHasJSONField(reflect.TypeFor[crmcontracts.SetUpPartnerRequest](), field) {
+			t.Errorf("SetUpPartnerRequest declares %q", field)
+		}
+	}
+	policy := agentPolicies["POST /v1/companies/{id}/partner/setup"]
+	if policy.Tier != tierConfirmationRequired || policy.Tool != "set_up_partner" {
+		t.Errorf("setUpPartner policy = tool %q tier %q, want set_up_partner at %q", policy.Tool, policy.Tier, tierConfirmationRequired)
+	}
+}
+
+func reflectHasJSONField(t reflect.Type, name string) bool {
+	for field := range t.Fields() {
+		if strings.Split(field.Tag.Get("json"), ",")[0] == name {
+			return true
+		}
+	}
+	return false
 }

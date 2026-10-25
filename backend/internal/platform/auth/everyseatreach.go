@@ -69,6 +69,12 @@ func ActivitiesReachingEverySeat(ctx context.Context, tx pgx.Tx, activityIDs []i
 	return reach, rows.Err()
 }
 
+// EverySeatVisible is VisiblePredicate asked of aStranger: the rows of one
+// table that every seat can find. A row kept private by its owner fails it.
+func EverySeatVisible(table string, arg func(any) int) func(alias string) string {
+	return VisiblePredicate(aStranger(), table, arg)
+}
+
 // aStranger is a seated human with nothing: no teams, own-scope only, and a
 // user id that owns no row because it names nobody.
 //

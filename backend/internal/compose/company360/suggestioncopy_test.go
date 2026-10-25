@@ -6,6 +6,7 @@ package company360
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -22,7 +23,7 @@ func TestSuggestionLanguagesCoverEveryPhrase(t *testing.T) {
 func TestSuggestionLanguagePreservesEvidenceAndDismissalIdentity(t *testing.T) {
 	company, deal := testCompanyID(t), ids.NewV7()
 	in := suggestionInputs{
-		timeline: true, pipeline: true, hasNewest: true,
+		timeline: true, loc: time.UTC, pipeline: true, hasNewest: true,
 		newest: sentAgo(10, crmcontracts.ActivityDirectionOutbound), companyName: "Acme",
 		contractEnded: true, contractEndedSaid: "Original contract words.", lifecycle: "customer",
 		open: pipeline{OpenCount: 1, OpenDigest: "one", Open: []openDeal{{ID: deal, Name: "Expansion"}}, Stalled: []stalledDeal{{ID: deal, Name: "Expansion"}}},

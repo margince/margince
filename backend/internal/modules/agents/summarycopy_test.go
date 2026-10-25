@@ -48,6 +48,7 @@ var summaryVerbs = map[string][]string{
 	"confirmProfileField": {"%s", "%s"},
 	"updateProfileField":  {"%s", "%s"},
 	"mergeTags":           {"%q", "%q", "%q"},
+	"setUpPartner":        {"%s", "%s"},
 	"promoteLead":         {"%s", "%s"},
 	"disqualifyLead":      {"%s"},
 	"demoteLead":          {"%s"},

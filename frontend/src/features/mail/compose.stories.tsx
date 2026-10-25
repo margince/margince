@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { viewerZone } from "../../format/timezone";
 import type { Transport } from "../../lib/contacttransports";
 import {
   installFetchStub,
@@ -14,6 +15,7 @@ import {
 } from "../../testing/story-utils";
 import { ComposeModal } from "./compose";
 import { RelinkModal } from "./composerelink";
+import { editSeedOf } from "./schedulededit";
 
 // The composer surface (draftEmail / sendEmail / relinkActivity) rendered off
 // the same fixture shapes compose.test.tsx exercises — never a live call. The
@@ -221,6 +223,27 @@ export const Drafted: Story = {
     await screen.findByDisplayValue("Re: Q3 numbers");
     await userEvent.click(screen.getByRole("button", { name: "Draft reply" }));
     await screen.findByText(DRAFT.body);
+  },
+};
+
+// A logged call is context for a new email, never a message to answer.
+export const AboutACall: Story = {
+  render: composeStory({
+    "GET /activities/act-1": () =>
+      jsonResponse({
+        id: "act-1",
+        kind: "call",
+        subject: "Voicemail",
+        occurred_at: "2026-09-01T09:00:00Z",
+      }),
+  }),
+  play: async () => {
+    await composerOnScreen();
+    await screen.findByText(/^About: Voicemail/);
+    await expect(
+      screen.getByRole("button", { name: "Draft email" }),
+    ).toBeVisible();
+    await expect(screen.queryByText(/Replying to/)).toBeNull();
   },
 };
 
@@ -641,4 +664,69 @@ export const HeadDark: Story = {
   play: async () => {
     await composerOnScreen();
   },
+};
+
+// Built through the edit's own seeding, from a message frozen with markup, two
+// files and a voice draft, due tomorrow.
+const SCHEDULED_EDIT = editSeedOf({
+  id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
+  status: "scheduled",
+  scheduled_at: new Date(Date.now() + 86_400_000).toISOString(),
+  scheduled_tz: viewerZone(),
+  subject: "The renewal quote",
+  to: ["dana@brandt.example"],
+  body: "Hi Dana, here is the renewal quote. The terms are on the site.",
+  html_body:
+    '<p>Hi Dana, here is the <strong>renewal quote</strong>. The terms are on <a href="https://nordwand.example/terms">the site</a>.</p>',
+  attachments: [
+    {
+      id: "att-1",
+      filename: "Offer_Nordwand_v3.pdf",
+      content_type: "application/pdf",
+      byte_size: 412_000,
+    },
+    {
+      id: "att-3",
+      filename: "Retrofit_timeline.xlsx",
+      content_type: "application/vnd.ms-excel",
+      byte_size: 88_000,
+    },
+  ],
+  draft_ref: "vd-1",
+  links: [{ entity_type: "contact", entity_id: "p-1" }],
+  version: 1,
+  created_at: "2026-08-20T09:00:00Z",
+  updated_at: "2026-08-20T09:00:00Z",
+});
+
+/** A scheduled message opened to be written again: its formatting, its files
+ *  and its moment come back as they were scheduled. */
+export const EditingScheduled: Story = {
+  render: () => {
+    installFetchStub(HEAD_ROUTES);
+    return (
+      <StoryProviders>
+        <ComposeModal
+          edit={SCHEDULED_EDIT}
+          entityType="contact"
+          entityId="p-1"
+          open
+          onClose={() => {}}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await composerOnScreen();
+    await expect(
+      await screen.findByText("Offer_Nordwand_v3.pdf"),
+    ).toBeVisible();
+    await expect(screen.getByRole("link", { name: "the site" })).toBeVisible();
+  },
+};
+
+export const EditingScheduledPhone: Story = {
+  ...EditingScheduled,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

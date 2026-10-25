@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -200,6 +201,12 @@ func (x *SignalExtractor) readThread(
 	ctx context.Context, wsID ids.WorkspaceID, thread settledThread, now time.Time,
 ) (int, error) {
 	if len(thread.Messages) == 0 {
+		return 0, nil
+	}
+	// A message not read in full landed after the offer, which refuses such a
+	// thread. Reading the rest would present an older subset as the current
+	// conversation, so nothing is read or recorded; the next offer refuses it.
+	if slices.ContainsFunc(thread.Messages, func(m threadMessage) bool { return m.Incomplete }) {
 		return 0, nil
 	}
 	events, err := x.ask(ctx, thread)

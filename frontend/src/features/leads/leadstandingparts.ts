@@ -16,6 +16,7 @@ import {
 } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import type { Locale, Translator } from "../../i18n";
+import { movesLastActivity } from "./lastactivity";
 import { promoteEligible, scoreFactorLabel } from "./leadpresentation";
 import { scoreTone } from "./leadpresentation.board";
 import type { LadderOpenStep } from "./leads.stepper";
@@ -240,9 +241,9 @@ export function leadFigures(
 }
 
 /**
- * When the lead was last touched, as of `asOf`. `last_activity_at` counts a
- * meeting booked for next week and a task nobody sent, so the newest row that
- * has happened wins. The field stands in only for a cut page with no such row.
+ * When the lead was last touched, as of `asOf`: the newest row that moves last
+ * activity by then. The stored field stands in only for a cut page with no
+ * such row.
  */
 function lastTouchAt(
   lead: Lead,
@@ -252,12 +253,7 @@ function lastTouchAt(
 ): string | undefined {
   const now = Date.parse(asOf);
   const happened = activities
-    .filter(
-      (row) =>
-        row.kind !== "task" &&
-        row.meeting_status !== "canceled" &&
-        Date.parse(row.occurred_at) <= now,
-    )
+    .filter((row) => movesLastActivity(row, now))
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))[0];
   if (happened || wholeHistory) {
     return happened?.occurred_at;
@@ -275,7 +271,9 @@ function lastTouchFigure(
     key: "last-touch",
     label: t("lead.figure.lastTouch"),
     value: at ? formatDayMonth(at, locale, zone) : t("standing.noneYet"),
-    detail: at ? relativeDays(at, t, locale, new Date(ctx.asOf)) : undefined,
+    detail: at
+      ? relativeDays(at, t, locale, zone, new Date(ctx.asOf))
+      : undefined,
   };
 }
 

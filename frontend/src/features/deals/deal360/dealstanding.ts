@@ -214,11 +214,13 @@ export function stageTimes({
   currentId,
   entries,
   asOf,
+  zone,
 }: Readonly<{
   stages: readonly Pick<Stage, "id">[];
   currentId: string | null;
   entries: ReadonlyMap<string, string>;
   asOf: string;
+  zone: string;
 }>): ReadonlyMap<string, StageTime> {
   const times = new Map<string, StageTime>();
   const dated = stages
@@ -233,7 +235,7 @@ export function stageTimes({
       return;
     }
     times.set(stage.id, {
-      days: calendarDaysBetween(new Date(stage.at), new Date(end)),
+      days: calendarDaysBetween(new Date(stage.at), new Date(end), zone),
       current,
     });
   });
@@ -317,13 +319,16 @@ function soonest(
   return best;
 }
 
-/** The newest message the buyer sent, from the loaded page of the timeline. */
+/**
+ * The newest message the buyer sent, from the loaded page of the timeline. A
+ * row the server says no human wrote (automatic_kind) is not their word.
+ */
 export function lastInbound(
   activities: readonly Activity[],
 ): Activity | undefined {
   let latest: Activity | undefined;
   for (const row of activities) {
-    if (row.direction !== "inbound") {
+    if (row.direction !== "inbound" || row.automatic_kind) {
       continue;
     }
     if (

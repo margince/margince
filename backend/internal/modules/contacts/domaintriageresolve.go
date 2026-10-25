@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -293,7 +294,7 @@ func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in R
 	// A near-match creates anyway — triage is resolving a question a human
 	// already answered, and DEDUPE_FUZZY_AUTOMERGE is pinned never — but the
 	// pair goes on the review queue so the twin is visible.
-	if err := match.recordIfReview(ctx, tx, companyID, domainTriageSource(in.Domain), by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, companyID, domainTriageSource(in.Domain), by); err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
 	return ResolveDomainTriageResult{CompanyID: &companyID, CompanyCreated: true}, nil
@@ -323,6 +324,11 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 	if err != nil {
 		return 0, err
 	}
+	seats, err := seatContactsTx(ctx, tx, candidates)
+	if err != nil {
+		return 0, err
+	}
+	candidates = slices.DeleteFunc(candidates, func(id ids.ContactID) bool { return seats[id] })
 	// Then the same per-contact lock every other writer of this state takes.
 	// Without it this planter reads "they already have a primary", skips them,
 	// and a patch ending that employment commits beside the read: the contact is
@@ -374,6 +380,9 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 	// that count a company's contacts learn to recount.
 	for _, one := range made {
 		if err := auditCapturedEmployment(ctx, tx, one.edge, one.contact, companyID, relationshipOriginCapture); err != nil {
+			return 0, err
+		}
+		if err := fileEmployerTwins(ctx, tx, one.contact, by); err != nil {
 			return 0, err
 		}
 	}

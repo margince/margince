@@ -7,6 +7,7 @@ import type { MessageKey } from "../../i18n/en";
 // A kind run as its namesake principal reuses its systemJob label; a principal is not a kind.
 const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   account_scan: "jobs.kind.account_scan",
+  address_country_check: "systemJob.address_country_check",
   agent_scheduler: "systemJob.agent_scheduler",
   agent_task_retention: "jobs.kind.agent_task_retention",
   ai_activity_reconcile: "systemJob.ai_activity_reconcile",
@@ -76,6 +77,7 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   owed_verdict: "systemJob.owed_verdict",
   participant_backfill: "systemJob.participant_backfill",
   past_activity_clock_refold: "systemJob.past_activity_clock_refold",
+  privacy_request_proof_expiry: "systemJob.privacy_request_proof_expiry",
   privacy_retention: "jobs.kind.privacy_retention",
   provider_lookup_sweep: "jobs.kind.provider_lookup_sweep",
   provider_run_poll_sweep: "jobs.kind.provider_run_poll_sweep",

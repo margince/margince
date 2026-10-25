@@ -70,8 +70,18 @@ func (g *AudienceRescopeGen) HandleEvent(ctx context.Context, env events.Envelop
 	if err != nil {
 		return err
 	}
-	return g.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := g.db.Tx(ctx, func(tx pgx.Tx) error {
 		return g.rescope(ctx, tx, env.Entity.ID)
+	}); err != nil {
+		return err
+	}
+	// A title or a number lifted from the message's signature is its content
+	// restated on a record everybody reads. Taken back in a transaction of its
+	// own: the signature writer locks the contact before the activity, and the
+	// rescope above holds the activity. The retraction asks again, under those
+	// locks, whether the message is still limited.
+	return g.db.Tx(ctx, func(tx pgx.Tx) error {
+		return contacts.RetractSignatureFieldsTx(ctx, tx, env.Entity.ID)
 	})
 }
 
@@ -141,10 +151,7 @@ func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID 
 		if _, err := signals.NarrowDerivedForActivity(ctx, tx, activityID, owner); err != nil {
 			return err
 		}
-		// contacts owns contact_profile_field, so the edge is injected here rather
-		// than reached for inside activities.
-		if err := activities.RetractDerivedForActivityTx(
-			ctx, tx, activityID, contacts.RetractSignatureFieldsTx); err != nil {
+		if err := activities.RetractDerivedForActivityTx(ctx, tx, activityID); err != nil {
 			return err
 		}
 	}
@@ -153,9 +160,19 @@ func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID 
 	// re-derives under the audience as it now stands (a still-live narrowed
 	// signal keeps its fingerprint, so the re-derivation cannot double it).
 	if threadKey != nil {
-		if _, err := tx.Exec(ctx, `DELETE FROM signal_thread_scan WHERE thread_key = $1`, *threadKey); err != nil {
-			return fmt.Errorf("audience-rescope: marking thread due again: %w", err)
+		if err := markConversationDueTx(ctx, tx, *threadKey); err != nil {
+			return fmt.Errorf("audience-rescope: %w", err)
 		}
+	}
+	return nil
+}
+
+// markConversationDueTx drops a conversation's scan watermark, so the next
+// event pass reads it again as it now stands. Every writer that changes what
+// a conversation says, or who may read it, calls this.
+func markConversationDueTx(ctx context.Context, tx pgx.Tx, threadKey string) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM signal_thread_scan WHERE thread_key = $1`, threadKey); err != nil {
+		return fmt.Errorf("marking the conversation due again: %w", err)
 	}
 	return nil
 }

@@ -39,6 +39,7 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 const inbound: Activity = {
+  offers_email: false,
   id: "act-1",
   kind: "email",
   direction: "inbound",

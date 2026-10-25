@@ -26,6 +26,7 @@ func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmco
 		AiWritten:       params.AiWritten,
 		MinScore:        params.MinScore,
 		Source:          params.Source,
+		Origin:          params.Origin,
 		SLAState:        params.SlaState,
 		Sort:            params.Sort,
 		TagIDs:          uuidArgs(params.TagId),

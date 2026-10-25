@@ -54,7 +54,7 @@ func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal app
 	}
 	var due *time.Time
 	if staged.DueDate != "" {
-		at, err := commitmentDueInstant(ctx, tx, staged.DueDate)
+		at, err := commitmentDueInstant(ctx, tx, staged.DueDate, staged.DueZone)
 		if err != nil {
 			return item, err
 		}
@@ -64,7 +64,9 @@ func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal app
 	if asked, named := approvalsubject.CommitmentAskedOf(proposal.Change); named {
 		seat = &asked
 	}
-	action, reason, err := homeRepairCommitmentAdmissionTx(ctx, tx, Commitment{SourceActivityID: staged.SourceActivityID, Seat: seat, AsOf: asOf}, due, repairWithdrawProposal, forDecision)
+	// Only an open promise was ever staged, so the meaning check of the late rule holds by construction.
+	held := Commitment{SourceActivityID: staged.SourceActivityID, Seat: seat, AsOf: asOf, PrivateTo: staged.PrivateTo, Meaning: &commitmentMeaning{State: commitmentStateOpen}}
+	action, reason, err := homeRepairCommitmentAdmissionTx(ctx, tx, held, due, repairWithdrawProposal, forDecision)
 	if err != nil {
 		return item, err
 	}
@@ -105,12 +107,16 @@ func applyHomeRepairProposal(ctx context.Context, tx pgx.Tx, expected homeRepair
 }
 
 func homeRepairCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, commitment Commitment, due *time.Time, retire homeRepairAction, forDecision bool) (homeRepairAction, string, error) {
-	reason, err := readCommitmentAdmission(ctx, tx, commitment, due, forDecision)
+	read, err := readCommitmentEvidence(ctx, tx, commitment, due, forDecision)
+	reason := read.Reason
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return repairHumanReview, string(activities.CommitmentSourceUnavailable), nil
 	}
 	if err != nil {
 		return "", "", err
+	}
+	if retire == repairWithdrawProposal && commitment.proposeLate(read) {
+		return repairLeaveCurrent, string(CommitmentHistoricalProposed), nil
 	}
 	switch reason {
 	case activities.CommitmentCurrent:

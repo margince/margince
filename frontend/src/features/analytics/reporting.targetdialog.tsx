@@ -1,5 +1,5 @@
 import "./reporting.css";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -20,11 +20,14 @@ import { formatDateAbbrev, monthName } from "../../format/format";
 import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { dayInZone, UTC_ZONE } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { throwProblem } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { metricLabel, type ReportingMetricID } from "./reporting.model";
-import { useReportingPipelines } from "./reporting.queries";
+import {
+  useReportingCatalog,
+  useReportingPipelines,
+} from "./reporting.queries";
 import { TargetHistory } from "./reporting.targethistory";
 
 type Target = components["schemas"]["ReportingTarget"];
@@ -69,13 +72,7 @@ export function ReportingTargetDialog({
   const [amount, setAmount] = useState(
     targetAmount(target, context.base_currency),
   );
-  const catalog = useQuery({
-    queryKey: ["reporting-catalog"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/metrics"));
-    },
-  });
-  const pipelines = useReportingPipelines();
+  const catalog = useReportingCatalog();
   const definition = catalog.data?.metrics.find(
     (candidate) => candidate.id === metric,
   );
@@ -130,7 +127,7 @@ export function ReportingTargetDialog({
               input: {
                 metric,
                 scope,
-                pipeline_id: pipeline || undefined,
+                pipeline_id: heldPipeline(target, definition, pipeline),
                 period_kind: periodKind,
                 period_start: periodStart,
                 value,
@@ -178,23 +175,12 @@ export function ReportingTargetDialog({
               }
             />
           )}
-          <Field label={t("reporting.pipeline")}>
-            {(field) => (
-              <Select
-                {...field}
-                disabled={!!target}
-                value={pipeline}
-                options={[
-                  { value: "", label: t("reporting.allPipelines") },
-                  ...(pipelines.data?.data ?? []).map((pipeline) => ({
-                    value: pipeline.id,
-                    label: pipeline.name,
-                  })),
-                ]}
-                onChange={setPipeline}
-              />
-            )}
-          </Field>
+          <TargetPipelineField
+            definition={definition}
+            disabled={!!target}
+            value={pipeline}
+            onChange={setPipeline}
+          />
           <Field label={t("reporting.targetBasis")}>
             {(field) => (
               <Select
@@ -350,6 +336,60 @@ export function ReportingTargetDialog({
       </DrawerFoot>
     </Modal>
   );
+}
+
+type MetricDefinition = components["schemas"]["ReportingMetricDefinition"];
+
+// A figure without the pipeline filter counts every pipeline, and the server
+// refuses a target held to one.
+function takesPipeline(definition: MetricDefinition | undefined): boolean {
+  return !!definition?.allowed_filters?.includes("pipeline");
+}
+
+function TargetPipelineField({
+  definition,
+  disabled,
+  value,
+  onChange,
+}: Readonly<{
+  definition: MetricDefinition | undefined;
+  disabled: boolean;
+  value: string;
+  onChange: (value: string) => void;
+}>) {
+  const t = useT();
+  const pipelines = useReportingPipelines();
+  if (!takesPipeline(definition)) return null;
+  return (
+    <Field label={t("reporting.pipeline")}>
+      {(field) => (
+        <Select
+          {...field}
+          disabled={disabled}
+          value={value}
+          options={[
+            { value: "", label: t("reporting.allPipelines") },
+            ...(pipelines.data?.data ?? []).map((pipeline) => ({
+              value: pipeline.id,
+              label: pipeline.name,
+            })),
+          ]}
+          onChange={onChange}
+        />
+      )}
+    </Field>
+  );
+}
+
+// A revision keeps its target's pipeline, which the server holds immutable,
+// whether or not the catalog has loaded.
+function heldPipeline(
+  target: Target | undefined,
+  definition: MetricDefinition | undefined,
+  pipeline: string,
+): string | undefined {
+  if (target) return target.definition.pipeline_id;
+  return takesPipeline(definition) && pipeline ? pipeline : undefined;
 }
 
 function targetAmount(target: Target | undefined, currency: string): string {

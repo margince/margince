@@ -165,9 +165,12 @@ func recordFirstResponseTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, at
 			return err
 		}
 		var current *time.Time
-		if err := tx.QueryRow(ctx, `SELECT first_response_at FROM lead WHERE id = $1`, leadID).Scan(&current); err != nil {
+		var created time.Time
+		if err := tx.QueryRow(ctx, `SELECT first_response_at, created_at FROM lead WHERE id = $1`, leadID).Scan(&current, &created); err != nil {
 			return err
 		}
+		// A backdated activity can predate the lead it answers.
+		at = firstResponseStamp(at, created)
 		// The FIRST response is the earliest one, not the first one this
 		// subscriber happened to process: the bus is at-least-once and
 		// unordered, so a 09:00 reply may arrive after a 10:00 one. A later

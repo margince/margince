@@ -78,6 +78,16 @@ func (s *Service) raisesMoment(
 			return true, nil
 		}
 	}
+	// Not yet on a "Done?" question puts that question away, keyed on its mail.
+	asked, err := doneQuestions(ctx, tx, now, momentCopyFor("en"), items)
+	if err != nil {
+		return false, err
+	}
+	for _, question := range asked {
+		if question.EvidenceFingerprint == fingerprint {
+			return true, nil
+		}
+	}
 	return false, nil
 }
 

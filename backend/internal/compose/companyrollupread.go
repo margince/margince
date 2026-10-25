@@ -46,7 +46,7 @@ type CompanyRollupResult struct {
 	RootID                 ids.UUID
 	Scope                  string
 	WeightedPipelineMinor  int64
-	ClosedWonMinor         int64
+	ClosedWonMinor         *int64
 	BaseCurrency           string
 	ActivityCount30d       int
 	AggregatedAccountCount int
@@ -107,7 +107,7 @@ func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.
 		if result.WeightedPipelineMinor, err = weightedPipelineMinor(ctx, tx, included, fx); err != nil {
 			return err
 		}
-		if result.ClosedWonMinor, err = closedWonMinorThisQuarter(ctx, tx, included, asOf, loc, fiscalStart); err != nil {
+		if result.ClosedWonMinor, err = closedWonMinorThisQuarter(ctx, tx, included, asOf, loc, fiscalStart, baseCurrency); err != nil {
 			return err
 		}
 		if result.ActivityCount30d, err = companyActivityCount30d(ctx, tx, included, asOf); err != nil {
@@ -366,24 +366,9 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 	return total, nil
 }
 
-// closedWonMinorThisQuarter sums won deals closed in the current
-// workspace-timezone quarter [start, end). amount_minor_base carries each
-// deal's amount in the base currency at its FROZEN close-time rate, written
-// once by the freeze writer across both currencies' minor-unit scales — never
-// a live lookup, and never a product to recompute here: the scales are not on
-// the row, so multiplying the amount by the rate would be short by a factor of
-// a hundred for a zero-decimal currency.
-//
-// Held by: TestSchema_amountMinorBaseHasOneWriter
-// (backend/migrations/schema_fitness_integration_test.go) No FX failure can arise
-// here: the deal_closed_fx CHECK guarantees fx_rate_to_base for every
-// closed deal that has an amount, and an amountless won deal's NULL
-// amount_minor_base is skipped by SUM — an honest 0, not an invented rate.
-// The quarter is the installation's FISCAL one, threaded in alongside the zone
-// it is cut in. A reader who checks this figure against the win-loss report by
-// quarter is comparing two answers to one question, and they have to be cut the
-// same way or the company page and the report disagree in front of them.
-func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UUID, asOf time.Time, loc *time.Location, fiscalStart int) (int64, error) {
+// closedWonMinorThisQuarter values closed deals in the workspace's fiscal
+// quarter through the same valuation rule as its other deal totals.
+func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UUID, asOf time.Time, loc *time.Location, fiscalStart int, baseCurrency string) (*int64, error) {
 	start, end := currentQuarterBounds(asOf, loc, fiscalStart)
 	args := []any{included, start, end}
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -392,16 +377,22 @@ func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UU
 	// — it needs no second clause threaded into a WHERE that already binds
 	// three positions. A withheld amount contributes nothing to the quarter,
 	// which is the same answer the row itself gives the caller.
-	amount, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor_base", arg)
+	amount, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
+		deals.BaseValueSQL(fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d"), arg)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	var total int64
+	nativeAmount, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d", "d.amount_minor", arg)
+	if err != nil {
+		return nil, err
+	}
+	value := deals.FinalizeBaseTotalSQL("sum("+amount+")", deals.UnpricedValueCountSQL(amount, nativeAmount, "TRUE"))
+	var total *int64
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT COALESCE(SUM(%s), 0)::bigint
+		SELECT %s
 		FROM deal d
 		WHERE d.company_id = ANY($1) AND d.status = 'won' AND d.archived_at IS NULL
-		  AND d.closed_at >= $2 AND d.closed_at < $3`, amount),
+		  AND d.closed_at >= $2 AND d.closed_at < $3`, value),
 		args...).Scan(&total)
 	return total, err
 }

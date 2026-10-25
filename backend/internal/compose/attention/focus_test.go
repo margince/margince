@@ -117,7 +117,7 @@ func TestFocusDistinguishesMeetingPreparationFromSchedule(t *testing.T) {
 func TestFocusKeepsPromisesDueLaterToday(t *testing.T) {
 	// These two lanes already read through the installation's end of today.
 	day := crmcontracts.Attention{AsOf: rankInstant, Commitments: lane(item("promise", "conversation_claim", withDue(rankInstant.Add(time.Hour))))}
-	svc := &Service{planRows: []ranked{{item: crmcontracts.WorklistItem{Id: "plan", Source: sourceWeeklyCommitment, Level: levelPromise}, deadlineAt: rankInstant.Add(time.Hour)}}}
+	svc := &Service{planRows: []ranked{{item: crmcontracts.WorklistItem{Id: "plan", Source: sourceWeeklyCommitment, Level: levelPromise}, ownerRef: ownedBy(ids.NewV7()), deadlineAt: rankInstant.Add(time.Hour)}}}
 	out := svc.worklistFrom(context.Background(), day, "all", "all", 25, waitingRead{}, worklistCursor{}, nil)
 	if out.Focus == nil || len(out.Focus.Items) != 2 {
 		t.Fatalf("today's promises disappeared: %+v", out.Focus)
