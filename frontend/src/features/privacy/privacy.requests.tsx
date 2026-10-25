@@ -12,7 +12,7 @@ import {
   useRosterPartial,
   useRosterPartialHint,
 } from "../../components/entityref";
-import { Button, Field, Textarea, TextInput } from "../../design-system/atoms";
+import { Button, Field, Textarea } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
@@ -36,8 +36,6 @@ import {
   DSR_STATUS_LABEL,
   type DsrClosing,
   type DsrStatus,
-  IDENTITY_CHECK_LABEL,
-  IDENTITY_CHECKS,
   isIllegalTransition,
   isOverdue,
   isTerminal,
@@ -45,8 +43,8 @@ import {
 } from "../../lib/privacy.logic";
 import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import "./privacy.css";
-import { isOption } from "../../lib/options";
 import { isUuid } from "../../lib/uuid";
+import { DsrDispute, DsrProofFields } from "./privacy.requestproof";
 
 export type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
 type UpdateDataSubjectRequest =
@@ -448,83 +446,6 @@ function DsrAssignee({
         />
       )}
     </Field>
-  );
-}
-
-// What the proof of a closed request records beside the answer.
-function DsrProofFields({
-  closing,
-  onDraft,
-}: Readonly<{
-  closing: DsrClosing;
-  onDraft: (change: Partial<DsrClosing>) => void;
-}>) {
-  const t = useT();
-  const options: SelectOption[] = [
-    { value: "", label: t("privacy.identityCheckPick"), disabled: true },
-    ...IDENTITY_CHECKS.map((check) => ({
-      value: check,
-      label: t(IDENTITY_CHECK_LABEL[check]),
-    })),
-  ];
-  return (
-    <>
-      <Field
-        label={t("privacy.identityCheck")}
-        hint={t("privacy.identityCheckHint")}
-      >
-        {(control) => (
-          <Select
-            {...control}
-            options={options}
-            value={closing.identityCheck}
-            onChange={(next) => {
-              if (isOption(next, IDENTITY_CHECKS)) {
-                onDraft({ identityCheck: next });
-              }
-            }}
-          />
-        )}
-      </Field>
-      <Field
-        label={t("privacy.requesterEmail")}
-        hint={t("privacy.requesterEmailHint")}
-      >
-        {(control) => (
-          <TextInput
-            {...control}
-            type="email"
-            value={closing.requesterEmail}
-            onChange={(event) =>
-              onDraft({ requesterEmail: event.target.value })
-            }
-          />
-        )}
-      </Field>
-    </>
-  );
-}
-
-// A complaint holds the closed request's proof past its retention date.
-function DsrDispute({
-  open,
-  pending,
-  onChange,
-}: Readonly<{
-  open: boolean;
-  pending: boolean;
-  onChange: (next: boolean) => void;
-}>) {
-  const t = useT();
-  return (
-    <div className="form-stack">
-      <p className="t-caption">{t("privacy.disputeHint")}</p>
-      <div className="dsr-actions">
-        <Button disabled={pending} onClick={() => onChange(!open)}>
-          {open ? t("privacy.closeDispute") : t("privacy.openDispute")}
-        </Button>
-      </div>
-    </div>
   );
 }
 
