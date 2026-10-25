@@ -18,15 +18,17 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// keepCorroborated keeps the name rivals a pair may be filed for. A subject
-// not stored yet (a create) has nothing to share, so only same-brand rivals
-// stay. The duplicate scan reads the new company again once it is stored.
-func keepCorroborated(ctx context.Context, tx pgx.Tx, subject *ids.CompanyID,
+// keepCorroborated keeps the name rivals a pair may be filed for. A stored
+// subject (ExcludeID) is compared on what it holds; a company not stored yet
+// is compared on the address and numbers the candidate carries.
+func keepCorroborated(ctx context.Context, tx pgx.Tx, c CompanyCandidate,
 	ranked []CompanyCandidateScore,
 ) ([]CompanyCandidateScore, error) {
 	var unproven []ids.CompanyID
@@ -36,9 +38,9 @@ func keepCorroborated(ctx context.Context, tx pgx.Tx, subject *ids.CompanyID,
 		}
 	}
 	shared := map[ids.CompanyID]bool{}
-	if subject != nil && len(unproven) > 0 {
+	if len(unproven) > 0 {
 		var err error
-		if shared, err = companiesSharingEvidence(ctx, tx, *subject, unproven); err != nil {
+		if shared, err = companiesSharingEvidence(ctx, tx, c, unproven); err != nil {
 			return nil, err
 		}
 	}
@@ -58,28 +60,92 @@ type companyEvidence struct {
 	sharesContact bool
 }
 
-// companiesSharingEvidence answers which rivals share an address, a phone
-// number or a currently employed contact with the subject. It is one statement,
-// over the primary key, uq_company_fact and the relationship indexes.
-func companiesSharingEvidence(ctx context.Context, tx pgx.Tx, subject ids.CompanyID,
+// candidateEvidence is what a company not stored yet brings to the comparison.
+func candidateEvidence(c CompanyCandidate) companyEvidence {
+	var own companyEvidence
+	if c.Address != nil {
+		own.addressKey = streetAddressKey(*c.Address)
+	}
+	own.phones = comparablePhones(c.Phones)
+	return own
+}
+
+// companiesSharingEvidence answers which rivals share one fact with the
+// subject. The fact is a street address, a number that is no switchboard, or a
+// current contact every seat can see.
+func companiesSharingEvidence(ctx context.Context, tx pgx.Tx, c CompanyCandidate,
 	rivals []ids.CompanyID,
 ) (map[ids.CompanyID]bool, error) {
-	rows, err := tx.Query(ctx, `
+	evidence, err := readCompanyEvidence(ctx, tx, c.ExcludeID, rivals)
+	if err != nil {
+		return nil, err
+	}
+	own := candidateEvidence(c)
+	if c.ExcludeID != nil {
+		own = evidence[*c.ExcludeID]
+	}
+	shared := make(map[ids.CompanyID]bool, len(rivals))
+	sharedNumbers := map[ids.CompanyID][]string{}
+	var numbers []string
+	for _, rival := range rivals {
+		held := evidence[rival]
+		if held.sharesContact || (own.addressKey != "" && own.addressKey == held.addressKey) {
+			shared[rival] = true
+			continue
+		}
+		for _, phone := range own.phones {
+			if slices.Contains(held.phones, phone) {
+				sharedNumbers[rival] = append(sharedNumbers[rival], phone)
+				numbers = append(numbers, phone)
+			}
+		}
+	}
+	if len(numbers) == 0 {
+		return shared, nil
+	}
+	switchboards, err := switchboardNumbers(ctx, tx, numbers, c.ExcludeID == nil)
+	if err != nil {
+		return nil, err
+	}
+	for rival, common := range sharedNumbers {
+		shared[rival] = slices.ContainsFunc(common, func(phone string) bool { return !switchboards[phone] })
+	}
+	return shared, nil
+}
+
+// readCompanyEvidence reads the address and stated numbers of the rivals and
+// of a stored subject, in one statement over the primary key and
+// uq_company_fact. Each rival also answers whether a contact is employed at it
+// and at the subject now, over the relationship company and contact indexes.
+// Only a contact every seat can see counts, so a suggestion never discloses an
+// employment kept private by its owner.
+func readCompanyEvidence(ctx context.Context, tx pgx.Tx, subject *ids.CompanyID,
+	rivals []ids.CompanyID,
+) (map[ids.CompanyID]companyEvidence, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	subjectAt, rivalsAt := arg(subject), arg(rivals)
+	categoryAt, fieldAt := arg(factCategoryCompany), arg(FactPhone)
+	visible := auth.EverySeatVisible(entityContact, arg)("p")
+	current := func(edge string) string {
+		return employment.IsCurrentSQL(edge+".ended_at") + " AND " + employment.InPlaceAtSQL(edge, "now()")
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.address_line1, c.address_line2, c.address_city, c.address_region,
 		       c.address_postal_code, c.address_country,
 		       coalesce((SELECT array_agg(f.value) FROM company_fact f
-		                  WHERE f.company_id = c.id AND f.category = $3 AND f.field = $4), '{}'),
-		       c.id <> $1 AND EXISTS (
+		                  WHERE f.company_id = c.id AND f.category = $%[3]d AND f.field = $%[4]d), '{}'),
+		       coalesce(c.id <> $%[1]d::uuid AND EXISTS (
 		         SELECT 1 FROM relationship s
 		           JOIN relationship r ON r.contact_id = s.contact_id
-		           JOIN contact p ON p.id = s.contact_id AND p.archived_at IS NULL
-		          WHERE s.company_id = $1 AND r.company_id = c.id
+		           JOIN contact p ON p.id = s.contact_id AND p.archived_at IS NULL AND %[5]s
+		          WHERE s.company_id = $%[1]d::uuid AND r.company_id = c.id
 		            AND s.kind = 'employment' AND r.kind = 'employment'
 		            AND s.archived_at IS NULL AND r.archived_at IS NULL
-		            AND `+employment.IsCurrentSQL("s.ended_at")+`
-		            AND `+employment.IsCurrentSQL("r.ended_at")+`)
+		            AND %[6]s AND %[7]s), false)
 		  FROM company c
-		 WHERE c.id = $1 OR c.id = ANY($2)`, subject, rivals, factCategoryCompany, FactPhone)
+		 WHERE c.id = $%[1]d::uuid OR c.id = ANY($%[2]d)`,
+		subjectAt, rivalsAt, categoryAt, fieldAt, visible, current("s"), current("r")), args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading what similar companies share: %w", err)
 	}
@@ -87,49 +153,36 @@ func companiesSharingEvidence(ctx context.Context, tx pgx.Tx, subject ids.Compan
 	evidence := map[ids.CompanyID]companyEvidence{}
 	for rows.Next() {
 		var id ids.CompanyID
-		var line1, line2, city, region, postal, country *string
+		var address crmcontracts.Address
 		var phones []string
 		var held companyEvidence
-		if err := rows.Scan(&id, &line1, &line2, &city, &region, &postal, &country,
-			&phones, &held.sharesContact); err != nil {
+		if err := rows.Scan(&id, &address.Line1, &address.Line2, &address.City, &address.Region,
+			&address.PostalCode, &address.Country, &phones, &held.sharesContact); err != nil {
 			return nil, fmt.Errorf("contacts: reading what similar companies share: %w", err)
 		}
-		held.addressKey = streetAddressKey(line1, line2, city, region, postal, country)
+		held.addressKey = streetAddressKey(address)
 		held.phones = comparablePhones(phones)
 		evidence[id] = held
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("contacts: reading what similar companies share: %w", err)
 	}
-	own := evidence[subject]
-	shared := make(map[ids.CompanyID]bool, len(rivals))
-	for _, rival := range rivals {
-		shared[rival] = own.shares(evidence[rival])
-	}
-	return shared, nil
+	return evidence, nil
 }
 
-// shares reports whether the rival holds one fact in common with this company.
-func (own companyEvidence) shares(rival companyEvidence) bool {
-	if rival.sharesContact || (own.addressKey != "" && own.addressKey == rival.addressKey) {
-		return true
-	}
-	for _, phone := range own.phones {
-		if slices.Contains(rival.phones, phone) {
-			return true
-		}
-	}
-	return false
-}
-
-// streetAddressKey is the geocoder's identity of an address (addressQuery),
-// asked only of an address with a street line. Two companies in one city or
-// one postal code have not said they sit at one door.
-func streetAddressKey(line1, line2, city, region, postal, country *string) string {
-	if line1 == nil || strings.TrimSpace(*line1) == "" {
+// streetAddressKey is a postal address folded part by part, suite line
+// included, so two suites at one street are two addresses. It is asked only of
+// an address with a street line: one city or postal code is not one door.
+func streetAddressKey(a crmcontracts.Address) string {
+	if foldedNameKey(derefOr(a.Line1)) == "" {
 		return ""
 	}
-	return addressHash(addressQuery(line1, line2, city, region, postal, country))
+	parts := []*string{a.Line1, a.Line2, a.PostalCode, a.City, a.Region, a.Country}
+	folded := make([]string, 0, len(parts))
+	for _, part := range parts {
+		folded = append(folded, foldedNameKey(derefOr(part)))
+	}
+	return strings.Join(folded, "|")
 }
 
 // comparablePhones is each stated number in E.164. A number with no country

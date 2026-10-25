@@ -188,6 +188,7 @@ func manualDedupeCompany(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) 
 		DisplayName: in.DisplayName,
 		LegalName:   deref(in.LegalName),
 		Domains:     domains,
+		Address:     in.Address,
 	})
 }
 

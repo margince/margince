@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -34,6 +35,10 @@ type CompanyCandidate struct {
 	// must be filtered by the caller before it reaches here — this
 	// resolver matches domains, it does not judge them.
 	Domains []string
+	// Address and Phones are what a company not stored yet can share with a
+	// similar-named one (keepCorroborated). A stored subject is read instead.
+	Address *crmcontracts.Address
+	Phones  []string
 	// ExcludeID drops one company from both tiers. The rename re-check
 	// scores an EXISTING row against its neighbours: without this it matches
 	// itself on every key it holds and masks every real rival behind a
@@ -280,7 +285,7 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 	if err := rows.Err(); err != nil {
 		return CompanyMatch{}, fmt.Errorf("drain company candidates: %w", err)
 	}
-	if ranked, err = keepCorroborated(ctx, tx, c.ExcludeID, ranked); err != nil {
+	if ranked, err = keepCorroborated(ctx, tx, c, ranked); err != nil {
 		return CompanyMatch{}, err
 	}
 	if len(ranked) == 0 {

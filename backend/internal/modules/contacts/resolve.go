@@ -306,6 +306,7 @@ func resolveCompany(ctx context.Context, tx pgx.Tx, c ResolveCandidate, consumer
 		DisplayName: c.Name,
 		LegalName:   c.LegalName,
 		Domains:     domains,
+		Phones:      c.Phones,
 	})
 	if err != nil {
 		return ResolveOutcome{}, err

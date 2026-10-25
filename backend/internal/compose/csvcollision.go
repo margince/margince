@@ -73,6 +73,7 @@ func (w *csvWriters) companyCollides(ctx context.Context, row migration.Row) (bo
 	candidate := contacts.CompanyCandidate{
 		DisplayName: strings.TrimSpace(fields[fieldDisplayName]),
 		LegalName:   strings.TrimSpace(fields["legal_name"]),
+		Address:     addressFrom(fields),
 	}
 	if candidate.DisplayName == "" && candidate.LegalName == "" {
 		return false, nil

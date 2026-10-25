@@ -422,5 +422,9 @@ func coldStartCandidate(host string, fields []ColdStartFieldInput) (CompanyCandi
 		nameSource = nameSourceDossier
 	}
 
-	return CompanyCandidate{DisplayName: displayName, LegalName: legal, Domains: []string{host}}, nameSource
+	candidate := CompanyCandidate{DisplayName: displayName, LegalName: legal, Domains: []string{host}}
+	if address, split := SplitAddressText(fieldValue(fields, fieldRegisteredAddress)); split {
+		candidate.Address = &address
+	}
+	return candidate, nameSource
 }

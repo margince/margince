@@ -24,12 +24,15 @@ const (
 )
 
 // companyAt creates a company through the manual create path in one city, at
-// a street line when one is given.
-func (e *dedupeEnv) companyAt(ctx context.Context, t *testing.T, name, street string) ids.CompanyID {
+// a street line and a suite line when they are given.
+func (e *dedupeEnv) companyAt(ctx context.Context, t *testing.T, name, street, suite string) ids.CompanyID {
 	t.Helper()
 	address := &crmcontracts.Address{PostalCode: new("80331"), City: new("München")}
 	if street != "" {
 		address.Line1 = &street
+	}
+	if suite != "" {
+		address.Line2 = &suite
 	}
 	created, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: name, Source: "manual", Address: address})
 	if err != nil {
@@ -106,21 +109,24 @@ func TestASimilarCompanyNameFilesOnlyWithASharedFact(t *testing.T) {
 	}
 }
 
-// One street address is a shared fact; one city or postal code is not.
+// One street address is a shared fact; one city or postal code is not, and
+// two suites at one street are two addresses.
 func TestASimilarCompanyNameAtOneStreetAddressIsFiled(t *testing.T) {
 	for name, tc := range map[string]struct {
-		brandStreet, lineStreet string
-		filed                   bool
+		brandStreet, brandSuite, lineStreet, lineSuite string
+		filed                                          bool
 	}{
-		"one street address":   {"Marienplatz 8", "Marienplatz 8", true},
-		"two street addresses": {"Marienplatz 8", "Sendlinger Straße 1", false},
-		"one city, no street":  {"", "", false},
+		"one street address":   {"Marienplatz 8", "", "Marienplatz 8", "", true},
+		"one suite, two cases": {"Marienplatz 8", "Suite 4", "marienplatz 8", "SUITE 4", true},
+		"two suites":           {"Marienplatz 8", "Suite 4", "Marienplatz 8", "Suite 5", false},
+		"two street addresses": {"Marienplatz 8", "", "Sendlinger Straße 1", "", false},
+		"one city, no street":  {"", "", "", "", false},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := setupDedupe(t)
 			ctx := e.as()
-			brand := e.companyAt(ctx, t, brandName, tc.brandStreet)
-			e.companyAt(ctx, t, lineName, tc.lineStreet)
+			brand := e.companyAt(ctx, t, brandName, tc.brandStreet, tc.brandSuite)
+			e.companyAt(ctx, t, lineName, tc.lineStreet, tc.lineSuite)
 			e.forgetFiledPairs(ctx, t)
 			if got := e.scanOne(t, DedupeScanCompanies, brand.UUID); (got == 1) != tc.filed {
 				t.Errorf("the scan filed %d pairs, want filed=%v", got, tc.filed)
