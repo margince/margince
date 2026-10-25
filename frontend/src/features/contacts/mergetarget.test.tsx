@@ -54,6 +54,7 @@ async function openAndSearch(
           invalidate="contacts"
           recordKey="contact"
           survivorRoute={() => ({ name: "home" }) as never}
+          requires={{ object: "contact", action: "update" }}
         />
       </LocaleProvider>
     </QueryClientProvider>,
