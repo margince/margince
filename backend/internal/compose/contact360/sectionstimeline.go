@@ -248,7 +248,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 		// A draft reads content, so a row withheld from this reader must leave
 		// before the cap rather than occupy a slot the draft then discards.
 		gate = activityScope
-		extra += " AND " + relstrength.LoggedTouchHappenedSQL("a", bind(arg(s.now().UTC())))
+		extra += " AND " + relstrength.HappenedByNowSQL("a", bind(arg(s.now().UTC())))
 	}
 	scope, err := gate(ctx, arg)
 	if err != nil {

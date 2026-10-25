@@ -71,14 +71,20 @@ func TestACapturedLeadOpensWithTheScoreAHandCreatedLeadGets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ref, err := newCaptureSink(e.Pool, CaptureConfig{}).Upsert(connectorCtx(e), connector.NormalizedRecord{
+	sink := newCaptureSink(e.Pool, CaptureConfig{})
+	record := connector.NormalizedRecord{
 		EntityType: "lead",
 		NaturalKey: connector.NaturalKey{SourceSystem: "test", SourceID: "scored-1"},
 		Fields:     capture.LeadFields{FullName: "Machine Made", Title: title, Origin: origin},
 		Source:     "test:scored-1", CapturedBy: "connector:test",
-	})
+	}
+	ref, err := sink.Upsert(connectorCtx(e), record)
 	if err != nil {
 		t.Fatal(err)
+	}
+	replayed, err := sink.Upsert(connectorCtx(e), record)
+	if err != nil || replayed.ID != ref.ID {
+		t.Fatalf("replaying the capture gave %v (%v), want the same lead %s", replayed.ID, err, ref.ID)
 	}
 
 	wantScore, wantHistory := leadScoreOf(t, e, ids.UUID(made.Id))
@@ -88,5 +94,8 @@ func TestACapturedLeadOpensWithTheScoreAHandCreatedLeadGets(t *testing.T) {
 	gotScore, gotHistory := leadScoreOf(t, e, ref.ID)
 	if gotScore != wantScore || gotHistory != wantHistory {
 		t.Errorf("captured lead scored %d with history %+v, want %d with %+v", gotScore, gotHistory, wantScore, wantHistory)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'lead' AND entity_id = $1 AND action = 'create'`, ref.ID); n != 1 {
+		t.Errorf("the captured lead has %d create audit rows, want 1", n)
 	}
 }

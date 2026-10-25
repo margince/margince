@@ -115,8 +115,8 @@ type ListActivitiesInput struct {
 	WithinProjectID *ids.ProjectID
 	// ConversationAsOf keeps only the rows a drafting prompt can read at that
 	// instant, before the limit. The caller must be able to open the content.
-	// A note or meeting must record contact that happened
-	// (relstrength.LoggedTouchHappenedSQL). Rows cut after the fetch would
+	// Rows dated later, and canceled or no-show meetings, are dropped
+	// (relstrength.HappenedByNowSQL). Rows cut after the fetch would
 	// spend the page and push real correspondence out of it.
 	ConversationAsOf *time.Time
 	// WrittenByHuman keeps only rows a human wrote (relstrength.WrittenByHumanSQL),

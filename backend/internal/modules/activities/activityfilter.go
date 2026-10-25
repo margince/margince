@@ -117,7 +117,7 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 		where = append(where, relstrength.WrittenByHumanSQL("a"))
 	}
 	if in.ConversationAsOf != nil {
-		where = append(where, relstrength.LoggedTouchHappenedSQL("a", fmt.Sprintf("$%d", arg(*in.ConversationAsOf))))
+		where = append(where, relstrength.HappenedByNowSQL("a", fmt.Sprintf("$%d", arg(*in.ConversationAsOf))))
 	}
 	if where, err = appendWaitingReplyClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err

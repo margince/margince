@@ -84,8 +84,8 @@ func TestTheLeadDraftQuotesTheLeadNotTheNoticesAfterIt(t *testing.T) {
 }
 
 // More rows than the page holds, newer than the lead's message, must not push
-// it out. They are a mail withheld from this reader, a note dated ahead and a
-// canceled meeting.
+// it out. They are a mail withheld from this reader, a note and an email dated ahead,
+// and canceled and no-show meetings.
 func TestFilteredRowsNewerThanTheLeadsMessageDoNotEmptyTheDraftHistory(t *testing.T) {
 	e := integration.Setup(t)
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
@@ -116,10 +116,10 @@ func TestFilteredRowsNewerThanTheLeadsMessageDoNotEmptyTheDraftHistory(t *testin
 		EmailFrom: "rep@ws.example", EmailTo: []string{"prospect@buyer.example"},
 	})
 
-	filtered := 2*contactdraft.DraftInputActivities + 1
+	filtered := 4*contactdraft.DraftInputActivities + 2
 	for i := range filtered {
 		at := now.AddDate(0, 0, -5).Add(time.Duration(i) * time.Hour)
-		switch i % 3 {
+		switch i % 5 {
 		case 0:
 			private := "Private note " + strconv.Itoa(i)
 			mail := log(activities.LogActivityInput{
@@ -132,9 +132,18 @@ func TestFilteredRowsNewerThanTheLeadsMessageDoNotEmptyTheDraftHistory(t *testin
 		case 1:
 			ahead, text := now.AddDate(0, 0, 3+i), "Planned for later"
 			log(activities.LogActivityInput{Kind: "note", Body: &text, OccurredAt: &ahead})
-		default:
+		case 2:
 			canceled, title := "canceled", "Called-off call"
 			log(activities.LogActivityInput{Kind: "meeting", Subject: &title, MeetingStatus: &canceled, OccurredAt: &at})
+		case 3:
+			noShow, title := "no_show", "Missed call"
+			log(activities.LogActivityInput{Kind: "meeting", Subject: &title, MeetingStatus: &noShow, OccurredAt: &at})
+		default:
+			ahead, later := now.AddDate(0, 0, 3+i), "Scheduled send"
+			log(activities.LogActivityInput{
+				Kind: "email", Direction: &outbound, Subject: &later, Body: &later, OccurredAt: &ahead,
+				EmailFrom: "rep@ws.example", EmailTo: []string{"prospect@buyer.example"},
+			})
 		}
 	}
 
