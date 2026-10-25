@@ -104,15 +104,20 @@ func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, erro
 // colleague's mail is from the colleague. The seat whose mailbox held the copy
 // received it, and that participant row lets the seat read it.
 func stampMessageEnds(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID, fields ActivityFields, counterparty connector.Counterparty,
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID, fields ActivityFields, rec connector.NormalizedRecord,
 ) error {
+	counterparty := rec.Counterparty
+	us, err := workspacePartiesTx(ctx, tx, append([]string{counterparty.Email}, rec.Addresses...)...)
+	if err != nil {
+		return err
+	}
 	if err := stampOwnMailRecipient(ctx, tx, id, fields); err != nil {
 		return err
 	}
 	if fields.SentByColleague.IsZero() {
-		return stampCaptureParticipants(ctx, tx, id, seat, fields.Kind, fields.Direction, counterparty)
+		return stampCaptureParticipants(ctx, tx, id, seat, fields.Kind, fields.Direction, counterparty, us)
 	}
-	if err := stampCaptureParticipants(ctx, tx, id, fields.SentByColleague, fields.Kind, fields.Direction, counterparty); err != nil {
+	if err := stampCaptureParticipants(ctx, tx, id, fields.SentByColleague, fields.Kind, fields.Direction, counterparty, us); err != nil {
 		return err
 	}
 	if seat.IsZero() {
@@ -184,16 +189,36 @@ func insertCounterpartyParticipant(
 }
 
 // recipientColleagueTx is the seat, other than the owner, whose login is
-// address; zero when there is none. An archived seat does not count.
+// address or whose connected mailbox it is; zero when there is none. A mailbox
+// counts only when the provider attested it and no other seat did. An archived
+// seat does not count.
 func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner ids.UUID) (ids.UUID, error) {
 	var seat ids.UUID
 	err := tx.QueryRow(ctx, `SELECT id FROM app_user WHERE lower(email) = $1 AND id <> $2 AND archived_at IS NULL`,
 		address, owner).Scan(&seat)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.Nil, nil
+	if err == nil {
+		return seat, nil
 	}
-	if err != nil {
+	if !errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, fmt.Errorf("capture: reading whether a recipient is a colleague: %w", err)
 	}
-	return seat, nil
+	proved, err := UnambiguouslyProvedAddressesTx(ctx, tx)
+	if err != nil {
+		return ids.Nil, err
+	}
+	folded := foldAddress(bareAddress(address))
+	for _, p := range proved {
+		if p.Address != folded || p.Seat == owner {
+			continue
+		}
+		err := tx.QueryRow(ctx, `SELECT id FROM app_user WHERE id = $1 AND archived_at IS NULL`, p.Seat).Scan(&seat)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ids.Nil, nil
+		}
+		if err != nil {
+			return ids.Nil, fmt.Errorf("capture: reading whether a mailbox holder is a colleague: %w", err)
+		}
+		return seat, nil
+	}
+	return ids.Nil, nil
 }

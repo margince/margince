@@ -69,6 +69,7 @@ func stampCaptureParticipants(
 	kind string,
 	direction string,
 	counterparty connector.Counterparty,
+	us workspaceParties,
 ) error {
 	// The same kinds the hand-logged path accepts. Without this a captured note
 	// becomes a conversation while an identical hand-logged one does not, and
@@ -92,11 +93,7 @@ func stampCaptureParticipants(
 	// Never the owner's OWN address as the other end. Mail the owner sent from
 	// an alias arrives with that alias as its counterparty. Stamping it would
 	// put the owner at both ends of their own message. A seat's address
-	// is no outside party either. Read under the claim lock, as the ladder reads it.
-	us, err := workspacePartiesTx(ctx, tx, address)
-	if err != nil {
-		return err
-	}
+	// is no outside party either. The caller read it under the claim lock the ladder takes.
 	if us.self.Covers(address) {
 		address = ""
 	}

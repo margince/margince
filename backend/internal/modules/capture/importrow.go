@@ -167,7 +167,7 @@ func (s *Sink) recordThisImport(
 		fields.judged.bccOnly); err != nil {
 		return err
 	}
-	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec); err != nil {
 		return err
 	}
 	// The confidentiality question for THIS seat's view of the thread, opened
