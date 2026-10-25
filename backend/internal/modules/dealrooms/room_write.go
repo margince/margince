@@ -171,7 +171,7 @@ func resolveSteward(ctx context.Context, tx pgx.Tx, in CreateRoomInput) (ids.Use
 }
 
 // requireEligibleSteward refuses a steward the caller named who cannot be
-// pointed a buyer at. Create and edit both ask it, so the two cannot disagree.
+// pointed a buyer at. Create and edit both ask it.
 func requireEligibleSteward(ctx context.Context, tx pgx.Tx, user ids.UserID) error {
 	eligible, err := stewardIsEligible(ctx, tx, user)
 	if err != nil {
@@ -188,14 +188,19 @@ func requireEligibleSteward(ctx context.Context, tx pgx.Tx, user ids.UserID) err
 // Both halves, and neither implies the other: `archived_at` retires the record,
 // `status` retires the contact's access. A seat deactivated but not archived is
 // the ordinary shape of somebody who has left, and it is exactly the one the
-// old existence check admitted.
+// old existence check admitted. A steward is a named human, so an agent seat is
+// refused too. FOR SHARE holds a concurrent deactivation until this write commits.
 func stewardIsEligible(ctx context.Context, tx pgx.Tx, user ids.UserID) (bool, error) {
 	var eligible bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (
-		     SELECT 1 FROM app_user
-		      WHERE id = $1 AND `+workforce.LiveMemberSQL("")+`)`,
-		user).Scan(&eligible); err != nil {
+	err := tx.QueryRow(ctx,
+		`SELECT true FROM app_user
+		  WHERE id = $1 AND is_agent = false AND `+workforce.LiveMemberSQL("")+`
+		  FOR SHARE`,
+		user).Scan(&eligible)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
 		return false, fmt.Errorf("check steward: %w", err)
 	}
 	return eligible, nil

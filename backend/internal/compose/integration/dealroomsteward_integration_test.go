@@ -137,6 +137,49 @@ func TestARoomEditRefusesADeactivatedColleagueTheCallerNamed(t *testing.T) {
 	}
 }
 
+func TestARoomEditThatRepeatsADepartedStewardStillSavesItsTitle(t *testing.T) {
+	e := Setup(t)
+	ctx := e.As(e.AdminUser, nil, roomStewardAdmin)
+	dealID := e.SeedWonDealLinkedTo(t)
+	store := dealrooms.NewStore(e.DB())
+	steward := ids.From[ids.UserKind](e.Rep1)
+	room, err := store.CreateRoom(ctx, dealrooms.CreateRoomInput{
+		DealID: ids.From[ids.DealKind](dealID), Title: "Acme — Deal Room", Source: "manual", StewardUserID: &steward,
+	})
+	if err != nil {
+		t.Fatalf("opening the room with a live steward: %v", err)
+	}
+	deactivate(t, e, e.Rep1)
+
+	// The app sends the standing steward back with every save of the room's words.
+	title, repeated := "Acme — renewal room", &steward
+	saved, err := store.UpdateRoom(ctx, ids.From[ids.DealRoomKind](ids.UUID(room.Id)), dealrooms.UpdateRoomInput{
+		Title: &title, StewardUserID: &repeated,
+	})
+
+	if err != nil {
+		t.Fatalf("a title edit that repeats the standing steward was refused because that steward left: %v", err)
+	}
+	if saved.Title != title {
+		t.Errorf("the room reads back %q, want the new title %q", saved.Title, title)
+	}
+}
+
+func TestARoomRefusesAnAgentSeatAsItsSteward(t *testing.T) {
+	e := Setup(t)
+	ctx := e.As(e.AdminUser, nil, roomStewardAdmin)
+	dealID := e.SeedWonDealLinkedTo(t)
+	agent := seedAgentSeat(t)
+
+	_, err := dealrooms.NewStore(e.DB()).CreateRoom(ctx, dealrooms.CreateRoomInput{
+		DealID: ids.From[ids.DealKind](dealID), Title: "Acme — Deal Room", Source: "manual", StewardUserID: &agent,
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "steward") {
+		t.Fatalf("an agent seat was accepted as the steward a buyer is pointed at, got: %v", err)
+	}
+}
+
 // roomStewardAdmin is the seat that opens a room.
 var roomStewardAdmin = principal.Permissions{
 	RoleKeys: []string{"admin"},

@@ -484,6 +484,9 @@ func TestAssigningALeadToItsCurrentOwnerWritesNothing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the lead: %v", err)
 	}
+	// Every write's event rides with its audit row, so an unchanged count proves both.
+	const auditRows = `SELECT count(*) FROM audit_log WHERE entity_id = $1`
+	auditBefore := e.WsCount(t, auditRows, id)
 
 	got, err := e.Contacts.AssignLeads(admin, contacts.AssignLeadsInput{
 		OwnerID: ids.From[ids.UserKind](e.Rep1),
@@ -505,5 +508,8 @@ func TestAssigningALeadToItsCurrentOwnerWritesNothing(t *testing.T) {
 	}
 	if *after.Version != *before.Version {
 		t.Errorf("lead version moved from %d to %d on an assignment that changes nothing", *before.Version, *after.Version)
+	}
+	if got := e.WsCount(t, auditRows, id); got != auditBefore {
+		t.Errorf("an assignment that changes nothing wrote %d audit rows", got-auditBefore)
 	}
 }
