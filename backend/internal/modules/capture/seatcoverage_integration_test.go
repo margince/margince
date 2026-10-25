@@ -31,6 +31,8 @@ type seatThread struct {
 	archived  bool
 	seatEmail string
 	role      string
+	// contactID puts the thread on an existing contact; zero seeds a new one.
+	contactID ids.UUID
 }
 
 // seedSeat inserts a colleague with the given status and a unique login.
@@ -59,11 +61,14 @@ func connectSeat(ctx context.Context, t *testing.T, tx pgx.Tx, userID ids.UUID, 
 // as a recipient, through StampFurtherParticipants.
 func seedThread(ctx context.Context, t *testing.T, tx pgx.Tx, th seatThread) ids.UUID {
 	t.Helper()
-	contactID := ids.NewV7()
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO contact (id, full_name, source, captured_by)
-		VALUES ($1, 'Outside Contact', 'manual', 'human:test')`, contactID); err != nil {
-		t.Fatalf("seeding contact: %v", err)
+	contactID := th.contactID
+	if contactID == (ids.UUID{}) {
+		contactID = ids.NewV7()
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO contact (id, full_name, source, captured_by)
+			VALUES ($1, 'Outside Contact', 'manual', 'human:test')`, contactID); err != nil {
+			t.Fatalf("seeding contact: %v", err)
+		}
 	}
 	var activityID ids.ActivityID
 	archivedAt := "NULL"
@@ -92,13 +97,13 @@ func seedThread(ctx context.Context, t *testing.T, tx pgx.Tx, th seatThread) ids
 	return contactID
 }
 
-func seatGaps(ctx context.Context, t *testing.T, tx pgx.Tx, contactID ids.UUID) []UncapturedSeat {
+func seatGaps(ctx context.Context, t *testing.T, tx pgx.Tx, contactID ids.UUID) UncapturedSeats {
 	t.Helper()
 	got, err := SeatsWithoutMailbox(ctx, tx, contactID, testMailProviders, 10)
 	if err != nil {
 		t.Fatalf("SeatsWithoutMailbox: %v", err)
 	}
-	return got.Seats
+	return got
 }
 
 func TestSeatCoverage(t *testing.T) {
@@ -156,13 +161,16 @@ func TestSeatCoverage(t *testing.T) {
 
 				got := seatGaps(ctx, t, tx, contactID)
 				if !tc.wantSeat {
-					if len(got) != 0 {
-						t.Fatalf("got %v, want no seat", got)
+					if len(got.Seats) != 0 || got.Total != 0 {
+						t.Fatalf("got %+v, want no seat and a total of 0", got)
 					}
 					return nil
 				}
-				if len(got) != 1 || got[0].UserID != seat || got[0].Invited != tc.wantInvite {
-					t.Fatalf("got %+v, want seat %v invited=%v", got, seat, tc.wantInvite)
+				if len(got.Seats) != 1 || got.Seats[0].UserID != seat || got.Seats[0].Invited != tc.wantInvite {
+					t.Fatalf("got %+v, want seat %v invited=%v", got.Seats, seat, tc.wantInvite)
+				}
+				if got.Total != 1 {
+					t.Fatalf("total = %d, want 1", got.Total)
 				}
 				return nil
 			}); err != nil {
@@ -179,7 +187,7 @@ func TestSeatCoverageDoesNotBindAnUnattestedAddress(t *testing.T) {
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, email := seedSeat(ctx, t, tx, "invited")
 		contactID := seedThread(ctx, t, tx, seatThread{kind: "email", audience: "workspace", seatEmail: email})
-		if len(seatGaps(ctx, t, tx, contactID)) != 1 {
+		if len(seatGaps(ctx, t, tx, contactID).Seats) != 1 {
 			t.Fatal("the invited seat was not noticed")
 		}
 		var bound, edges int
@@ -191,6 +199,28 @@ func TestSeatCoverageDoesNotBindAnUnattestedAddress(t *testing.T) {
 		}
 		if bound != 0 || edges != 0 {
 			t.Errorf("an unattested address bound %d participant rows and %d edges to the seat", bound, edges)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A seat on many of the contact's threads is one colleague, so the total
+// counts it once, the way the list names it once.
+func TestSeatCoverageCountsASeatOnSeveralThreadsOnce(t *testing.T) {
+	ctx, pool := meetingTenureEnv(t)
+	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		seat, email := seedSeat(ctx, t, tx, "active")
+		thread := seatThread{kind: "email", audience: "workspace", seatEmail: email}
+		thread.contactID = seedThread(ctx, t, tx, thread)
+		seedThread(ctx, t, tx, thread)
+		seedThread(ctx, t, tx, seatThread{kind: "meeting", audience: "workspace", attested: true,
+			seatEmail: email, contactID: thread.contactID})
+
+		got := seatGaps(ctx, t, tx, thread.contactID)
+		if len(got.Seats) != 1 || got.Seats[0].UserID != seat || got.Total != 1 {
+			t.Fatalf("got %+v, want the one seat counted once", got)
 		}
 		return nil
 	}); err != nil {

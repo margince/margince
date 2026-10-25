@@ -114,8 +114,14 @@ func TestAnUncapturedColleagueIsNoticedAndNotListedAsKnowingThem(t *testing.T) {
 	}
 
 	env := sealedEnvelope(t, out)
-	if _, warned := warningNamed(env, warningCaptureGap); !warned {
+	gapWarning, warned := warningNamed(env, warningCaptureGap)
+	if !warned {
 		t.Errorf("an unattended seat on the threads raised no capture_gap warning: %v", env.Warnings)
+	}
+	// The list is capped, so the model must be told to report the rest.
+	if !strings.Contains(gapWarning.Message, "capture_gaps_total") ||
+		!strings.Contains(gapWarning.Message, "how many more") {
+		t.Errorf("the capture_gap warning names neither the total nor the remainder: %q", gapWarning.Message)
 	}
 	var payload WhoKnowsAnswer
 	if err := json.Unmarshal(payloadOf(t, out), &payload); err != nil {

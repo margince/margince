@@ -128,4 +128,20 @@ describe("the notice of colleagues without a mailbox", () => {
     );
     expect(notice.textContent).not.toMatch(/more/);
   });
+
+  // A server older than capture_gaps_total sends only the list. The notice
+  // then names that list and makes up no "and N more".
+  it("names the whole list when an older server sends no total", async () => {
+    stubNetwork(async () =>
+      jsonResponse({
+        contact_id: CONTACT,
+        colleagues: [],
+        capture_gaps: seats(2),
+      }),
+    );
+    renderNotice();
+    const notice = await screen.findByText(MISSING);
+    expect(notice.textContent).toContain("Colleague 0, Colleague 1 are");
+    expect(notice.textContent).not.toMatch(/more/);
+  });
 });

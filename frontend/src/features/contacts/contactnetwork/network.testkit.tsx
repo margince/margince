@@ -55,6 +55,7 @@ function stub(
   allow: GrantSpec = {},
   asks: readonly IntroRequest[] = [],
   captureGaps: readonly unknown[] = [],
+  asksPending = false,
 ) {
   let answered: () => void = () => {};
   const seatAnswered = new Promise<void>((resolve) => {
@@ -76,6 +77,9 @@ function stub(
         });
       }
       if (url.includes("/intro-requests")) {
+        if (asksPending) {
+          return new Promise<Response>(() => {});
+        }
         return jsonResponse({ data: asks });
       }
       if (url.includes("/me")) {
@@ -99,9 +103,17 @@ export function renderTab(
     asks?: readonly IntroRequest[];
     view?: Moments;
     captureGaps?: readonly unknown[];
+    // The ask list never answers, for a case about the page before it does.
+    asksPending?: boolean;
   }> = {},
 ) {
-  const { seatAnswered } = stub(graph, allow, beside.asks, beside.captureGaps);
+  const { seatAnswered } = stub(
+    graph,
+    allow,
+    beside.asks,
+    beside.captureGaps,
+    beside.asksPending,
+  );
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });

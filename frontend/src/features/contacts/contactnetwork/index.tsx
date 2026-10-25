@@ -144,6 +144,7 @@ export function ContactNetworkTab({
         change={moved.change}
         changeWithheld={moved.withheld}
         open={read.open}
+        openPending={asks.isPending}
         openUnread={asks.isError}
       />
 
