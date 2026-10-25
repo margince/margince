@@ -198,14 +198,14 @@ func TestADayCallDatedTodayMovesTheClockOnAMorningRefold(t *testing.T) {
 	}
 	mailed := f.now.AddDate(0, 0, -3)
 	f.log(t, "email", mailed)
-	today := f.now.In(kiritimati).AddDate(0, 0, 2)
-	called := f.logDay(t, "call", today)
+	callDate := f.now.In(kiritimati).AddDate(0, 0, 2)
+	called := f.logDay(t, "call", callDate)
 	f.assertClocks(t, mailed, "a call dated two days ahead has not happened")
 
-	runRefold(t, shiftedPool(t, shiftTo(t, today.AddDate(0, 0, -1), 20, kiritimati)))
+	runRefold(t, shiftedPool(t, shiftTo(t, callDate.AddDate(0, 0, -1), 20, kiritimati)))
 	f.assertClocks(t, mailed, "the evening before its date, the call is still ahead")
 
-	runRefold(t, shiftedPool(t, shiftTo(t, today, 8, kiritimati)))
+	runRefold(t, shiftedPool(t, shiftTo(t, callDate, 8, kiritimati)))
 	f.assertClocks(t, called, "on the morning of its date the call has happened, before its stored noon")
 }
 
@@ -228,6 +228,71 @@ func TestADayMeetingMovesTheClockOnceItsDateEnds(t *testing.T) {
 
 	runRefold(t, shiftedPool(t, shiftTo(t, date.AddDate(0, 0, 1), 1, losAngeles)))
 	f.assertClocks(t, met, "once its date is over the meeting has taken place")
+}
+
+// East of UTC+12 a day meeting's date ends before its stored noon, so the
+// refold after the date ends moves the clock before the walk reaches the noon.
+func TestADayMeetingEastOfUTCPlus12MovesTheClockBeforeItsStoredNoon(t *testing.T) {
+	f := newAccountFixture(t)
+	f.e.WsExec(t, `UPDATE setting SET value = '"Pacific/Kiritimati"'::jsonb WHERE key = 'installation.timezone'`)
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mailed := f.now.AddDate(0, 0, -3)
+	f.log(t, "email", mailed)
+	date := f.now.In(kiritimati).AddDate(0, 0, 2)
+	met := f.logDay(t, "meeting", date)
+
+	runRefold(t, shiftedPool(t, shiftTo(t, date, 13, kiritimati)))
+	f.assertClocks(t, mailed, "on its own date the day meeting has not yet taken place")
+
+	year, month, day := date.AddDate(0, 0, 1).Date()
+	if refoldAt := time.Date(year, month, day, 1, 0, 0, 0, kiritimati); !refoldAt.Before(met) {
+		t.Fatalf("the refold at %v is not before the stored noon %v, so this test proves nothing", refoldAt, met)
+	}
+	runRefold(t, shiftedPool(t, shiftTo(t, date.AddDate(0, 0, 1), 1, kiritimati)))
+	f.assertClocks(t, met, "once its date is over the meeting has taken place, before its stored noon")
+}
+
+// The day entries come a batch at a time, each batch after the last one's key,
+// so a date holding more entries than a batch is read whole.
+func TestDayEntriesAreReadABatchAtATime(t *testing.T) {
+	f := newAccountFixture(t)
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	date := f.now.In(kiritimati).AddDate(0, 0, 2)
+	f.logDay(t, "call", date)
+	f.logDay(t, "note", date)
+	year, month, day := date.Date()
+	asOf := time.Date(year, month, day, 8, 0, 0, 0, kiritimati)
+	mark := activities.ClockRefoldMark{At: asOf.AddDate(0, 0, -1)}
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), f.e.WS), pastActivityClockActor)
+
+	seen := map[ids.UUID]bool{}
+	var after activities.ClockRefoldMark
+	for range 3 {
+		var page activities.PassedActivities
+		if err := f.e.DB().Tx(ctx, func(tx pgx.Tx) (err error) {
+			page, err = activities.DayActivitiesComeTx(ctx, tx, mark, asOf, kiritimati, after, 1)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if page.Count == 0 {
+			break
+		}
+		if page.Count != 1 || seen[page.Through.ID] {
+			t.Fatalf("a batch of one read %d entries ending at %v, want one not read before", page.Count, page.Through)
+		}
+		seen[page.Through.ID] = true
+		after = page.Through
+	}
+	if len(seen) != 2 {
+		t.Errorf("the batches read %d day entries, want both dated today", len(seen))
+	}
 }
 
 // clockRow is what a rewrite would change on a record even when its value stands.

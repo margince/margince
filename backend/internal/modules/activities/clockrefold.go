@@ -85,7 +85,8 @@ func PassedActivitiesTx(ctx context.Context, tx pgx.Tx, after ClockRefoldMark, a
 	}
 	out, err := refoldTargetsTx(ctx, tx, `
 		  SELECT a.id, a.occurred_at FROM activity a
-		   WHERE a.archived_at IS NULL AND a.created_at < a.occurred_at
+		   WHERE a.archived_at IS NULL
+		     AND a.created_at < a.occurred_at -- occurred_at raw: written ahead of its time, a row the refold re-reads
 		     AND (a.occurred_at, a.id) > ($1, $2)
 		     AND a.occurred_at <= $3 -- occurred_at raw: the keyset bound of the walk; DayActivitiesComeTx reads day entries
 		   ORDER BY a.occurred_at, a.id
@@ -99,14 +100,17 @@ func PassedActivitiesTx(ctx context.Context, tx pgx.Tx, after ClockRefoldMark, a
 	return out, nil
 }
 
-// DayActivitiesComeTx reads the day entries the (occurred_at, id) walk cannot
-// time: a day's moment is its date in zone, not its stored noon. Another kind
-// has begun from its date's start. East of UTC that is before the noon the walk
-// waits for, so the run its date begins reads it. A meeting takes place when its
-// date ends. West of UTC that is after the noon the walk passed, so the arm
-// reads the meetings whose date ended since the mark. Each arm reads a date or two.
-// Its Through is unused: the walk alone moves the mark.
-func DayActivitiesComeTx(ctx context.Context, tx pgx.Tx, mark ClockRefoldMark, asOf time.Time, zone *time.Location) (PassedActivities, error) {
+// DayActivitiesComeTx reads the next batch of day entries the (occurred_at, id)
+// walk cannot time, after the given key: a day's moment is its date in zone,
+// not its stored noon. Another kind has begun from its date's start, which in
+// every zone east of UTC-12 is before the noon the walk waits for. So the run its
+// date begins reads it. A meeting takes place when its date ends, before its
+// noon east of UTC+12 and after it elsewhere. So the arm reads every meeting
+// whose date ended since the mark, and a refold the walk repeats changes nothing.
+// A batch shorter than limit is the last.
+func DayActivitiesComeTx(
+	ctx context.Context, tx pgx.Tx, mark ClockRefoldMark, asOf time.Time, zone *time.Location, after ClockRefoldMark, limit int,
+) (PassedActivities, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return PassedActivities{}, err
 	}
@@ -114,12 +118,14 @@ func DayActivitiesComeTx(ctx context.Context, tx pgx.Tx, mark ClockRefoldMark, a
 	return refoldTargetsTx(ctx, tx, `
 		SELECT a.id, a.occurred_at FROM activity a
 		 WHERE a.archived_at IS NULL AND a.occurred_precision = 'day'
-		   AND ((a.kind <> $1 AND a.occurred_at = $2 AND $4 < $2 AND a.created_at < a.occurred_at
+		   AND ((a.kind <> $1 AND a.occurred_at = $2 AND $4 < $2
+		         AND a.created_at < a.occurred_at -- occurred_at raw: written ahead of its time, a row the refold re-reads
 		         AND a.occurred_at > $3) -- occurred_at raw: past the bound of the walk, at the anchor of today in zone
-		     OR (a.kind = $1 AND a.occurred_at >= $4 AND a.occurred_at < $2
-		         AND a.occurred_at <= $5 -- occurred_at raw: the walk passed it, its date ended since
-		   ))`,
-		KindMeeting, today, asOf, markDay, mark.At)
+		     OR (a.kind = $1 AND a.occurred_at >= $4 AND a.occurred_at < $2))
+		   AND (a.occurred_at, a.id) > ($5, $6)
+		 ORDER BY a.occurred_at, a.id
+		 LIMIT $7`,
+		KindMeeting, today, asOf, markDay, after.At, after.ID, limit)
 }
 
 // refoldTargetsTx reads the records the activities passed selects are filed
