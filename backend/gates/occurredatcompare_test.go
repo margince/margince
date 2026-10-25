@@ -23,9 +23,15 @@ package gates
 // SQL, as `-- occurred_at raw: <reason>`, so a second comparison added to a
 // waived statement is a finding of its own.
 //
+// Go may also hand the column to a helper as text, `in("a.occurred_at")`, which
+// then compares it where the census cannot see the alias. Only occurredday may
+// take it. Any other call says why on its line or the one above, as
+// `// occurred_at raw: <reason>`.
+//
 // The .sql files count too: every function and view body the migrations leave
 // in the schema, a later definition replacing an earlier one. A body may carry
-// the owner's SQL rendered verbatim, which is the owner's and not a finding. A
+// the owner's SQL rendered verbatim, or employment.InPlaceForSQL built on it,
+// which is the owner's and not a finding. A
 // migration's other statements ran once, at the upgrade that shipped them; they
 // judge no moment that is still to come.
 
@@ -42,18 +48,30 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // aliasedColumn is occurred_at under its alias if any, past a cast.
 const aliasedColumn = `(?:\b([a-z_]\w*)\.)?\boccurred_at\b(?:\s*::\s*[a-z_]\w*)?`
 
+// callArguments is a call's other arguments, one level of nesting deep.
+const callArguments = `(?:[^()]|\([^()]*\))*`
+
+// columnSpelling is occurred_at, under its alias if any: bare, in parentheses,
+// or any argument of a call such as max() or coalesce().
+const columnSpelling = `\b[a-z_]\w*\((?:` + callArguments + `,\s*)?` + aliasedColumn + `(?:\s*,` + callArguments + `)?\)|\(\s*` +
+	aliasedColumn + `\s*\)|` + aliasedColumn
+
 var (
 	// occurredAtOwner is the one package allowed to compare occurred_at raw.
 	occurredAtOwner = filepath.Join("internal", "shared", "kernel", "occurredday")
-	// occurredAtColumn is occurred_at, under its alias if any: bare, in
-	// parentheses, or first in a call such as max() or coalesce().
-	occurredAtColumn = regexp.MustCompile(`(?i)\b[a-z_]\w*\(\s*` + aliasedColumn + `(?:\s*,[^()]*)?\)|\(\s*` + aliasedColumn + `\s*\)|` + aliasedColumn)
+	// occurredAtColumn finds columnSpelling in a line of SQL.
+	occurredAtColumn = regexp.MustCompile(`(?i)` + columnSpelling)
+	// columnText is a literal that is nothing but the column, as a helper takes it.
+	columnText = regexp.MustCompile(`(?i)^\s*(?:` + columnSpelling + `)\s*$`)
+	// goWaiver is the waiver a Go comment carries for a column handed to a helper.
+	goWaiver = regexp.MustCompile(`^(?://|/\*)\s*occurred_at raw:\s*(\S.*?)\s*(?:\*/)?$`)
 	// orderAfter is an ordering operator after the column, past a cast.
 	orderAfter = regexp.MustCompile(`(?i)^(?:\s*::\s*[a-z_]\w*)?\s*(<=|>=|<>|!=|<|>)`)
 	// orderBefore is an ordering operator before the column. An arrow, `=>` or
@@ -84,21 +102,28 @@ type rawCompare struct {
 	// swallows marks a waiver on a literal's last line, where the SQL comment
 	// would swallow whatever the caller appends.
 	swallows bool
+	// handed marks the column passed to a helper as text, waived in Go.
+	handed bool
 }
 
 func TestWhetherAnActivityHappenedIsAskedOfItsOwner(t *testing.T) {
 	t.Parallel()
 	scope := gatekit.Scope{
 		Roots:   []string{"internal"},
-		Subject: func(path string, file *ast.File) bool { return len(rawOccurredAtCompares(path, file)) > 0 },
+		Subject: func(_ string, file *ast.File) bool { return namesOccurredAt(file) },
 		Exempt:  gatekit.Waive(map[string]string{}),
 	}
 	seen := 0
+	root := gatekit.ModuleRoot(t)
 	for _, src := range scope.Files(t) {
 		if strings.HasPrefix(filepath.Clean(src.Path), occurredAtOwner) {
 			continue
 		}
-		found := rawOccurredAtCompares(src.Path, src.File)
+		text, err := os.ReadFile(filepath.Join(root, src.Path)) // #nosec G304 -- a swept file of the trusted module tree
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := rawOccurredAtCompares(src.Path, src.File, text)
 		seen += len(found)
 		judgeRawCompares(t, found)
 	}
@@ -112,6 +137,10 @@ func judgeRawCompares(t *testing.T, found []rawCompare) {
 	t.Helper()
 	for _, compare := range found {
 		switch {
+		case !compare.waived && compare.handed:
+			t.Errorf("%s is handed to a helper as text, which compares it where the census cannot see. Pass the "+
+				"alias to an occurredday function, or say why on its line or the one above: // occurred_at raw: <reason>",
+				compare.where)
 		case !compare.waived:
 			t.Errorf("%s compares an activity's occurred_at with a moment raw. A day entry is stored at its "+
 				"date's noon UTC, so ask occurredday.BegunSQL, MeetingTookPlaceSQL, HappenedSQL or AheadSQL, "+
@@ -176,12 +205,7 @@ func comparesActivity(alias string, scopes ...tables) bool {
 func orderedAliases(line string) []string {
 	var out []string
 	for _, at := range occurredAtColumn.FindAllStringSubmatchIndex(line, -1) {
-		alias := ""
-		for _, group := range []int{2, 4, 6} {
-			if at[group] >= 0 {
-				alias = strings.ToLower(line[at[group]:at[group+1]])
-			}
-		}
+		alias := matchedAlias(line, at)
 		if after := orderAfter.FindStringSubmatchIndex(line[at[1]:]); after != nil {
 			op := line[at[1]+after[2] : at[1]+after[3]]
 			if op != "<>" && op != "!=" {
@@ -194,6 +218,16 @@ func orderedAliases(line string) []string {
 		}
 	}
 	return out
+}
+
+// matchedAlias is the alias an occurredAtColumn match at names, "" for none.
+func matchedAlias(text string, at []int) string {
+	for _, group := range []int{2, 4, 6} {
+		if at[group] >= 0 {
+			return strings.ToLower(text[at[group]:at[group+1]])
+		}
+	}
+	return ""
 }
 
 // linesComparing judges each line of text and returns the raw comparisons on
@@ -216,27 +250,99 @@ func linesComparing(where, text string, scopes ...tables) []rawCompare {
 	return out
 }
 
+// namesOccurredAt says whether any string literal in file names the column.
+func namesOccurredAt(file *ast.File) bool {
+	found := false
+	ast.Inspect(file, func(n ast.Node) bool {
+		if lit, ok := n.(*ast.BasicLit); ok {
+			text, isString := gatekit.LiteralText(lit)
+			found = found || isString && strings.Contains(text, "occurred_at")
+		}
+		return !found
+	})
+	return found
+}
+
 // rawOccurredAtCompares finds each raw as-of comparison of an activity row's
-// occurred_at in file's string literals.
-func rawOccurredAtCompares(path string, file *ast.File) []rawCompare {
+// occurred_at in file's string literals, and each time the column is handed to
+// a helper outside occurredday. source is file's text, for the waivers' lines.
+func rawOccurredAtCompares(path string, file *ast.File, source []byte) []rawCompare {
 	var out []rawCompare
 	whole := tablesIn(gatekit.SQLStatementsOf(file)...)
+	waivers := goWaivers(file, source)
 	for _, decl := range file.Decls {
 		declared := tablesIn(gatekit.SQLStatementsOf(decl)...)
 		ast.Inspect(decl, func(n ast.Node) bool {
-			lit, ok := n.(*ast.BasicLit)
-			if !ok || lit.Kind != token.STRING {
-				return true
+			switch node := n.(type) {
+			case *ast.BasicLit:
+				if text, isString := gatekit.LiteralText(node); isString && node.Kind == token.STRING {
+					out = append(out, linesComparing(path, text, tablesIn(text), declared, whole)...)
+				}
+			case *ast.CallExpr:
+				out = append(out, columnsHandedOver(path, node, waivers, sourceLine(file, source), declared, whole)...)
 			}
-			text, isString := gatekit.LiteralText(lit)
-			if !isString {
-				return true
-			}
-			out = append(out, linesComparing(path, text, tablesIn(text), declared, whole)...)
 			return true
 		})
 	}
 	return out
+}
+
+// columnsHandedOver is each argument of call that is the column as text, where
+// the callee is not occurredday's. A waiver on the call's line or the one above
+// carries its reason.
+func columnsHandedOver(path string, call *ast.CallExpr, waivers map[int]string, line func(token.Pos) int, scopes ...tables) []rawCompare {
+	if callee, ok := call.Fun.(*ast.SelectorExpr); ok {
+		if pkg, ok := callee.X.(*ast.Ident); ok && pkg.Name == "occurredday" {
+			return nil
+		}
+	}
+	var out []rawCompare
+	for _, arg := range call.Args {
+		lit, ok := arg.(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
+			continue
+		}
+		text, isString := gatekit.LiteralText(lit)
+		if !isString || !columnText.MatchString(text) {
+			continue
+		}
+		// A bare name is a column a write sets, not a time a helper reads.
+		alias := matchedAlias(text, occurredAtColumn.FindStringSubmatchIndex(text))
+		if alias == "" || !comparesActivity(alias, scopes...) {
+			continue
+		}
+		compare := rawCompare{where: path + ": " + text, handed: true}
+		at := line(lit.Pos())
+		for _, waived := range []int{at, at - 1} {
+			if reason, found := waivers[waived]; found {
+				compare.waived, compare.reason = true, reason
+			}
+		}
+		out = append(out, compare)
+	}
+	return out
+}
+
+// goWaivers maps each line holding a Go waiver comment to its reason.
+func goWaivers(file *ast.File, source []byte) map[int]string {
+	line := sourceLine(file, source)
+	out := map[int]string{}
+	for _, group := range file.Comments {
+		for _, comment := range group.List {
+			if waiver := goWaiver.FindStringSubmatch(comment.Text); waiver != nil {
+				out[line(comment.Pos())] = waiver[1]
+			}
+		}
+	}
+	return out
+}
+
+// sourceLine maps a position in file to its line in source.
+func sourceLine(file *ast.File, source []byte) func(token.Pos) int {
+	return func(pos token.Pos) int {
+		offset := min(max(int(pos-file.FileStart), 0), len(source))
+		return 1 + strings.Count(string(source[:offset]), "\n")
+	}
 }
 
 // minLiveBodiesComparingOccurredAt is the floor under the .sql census: the
@@ -366,12 +472,18 @@ func bodyCompares(body sqlBody) []rawCompare {
 		if table != "activity" {
 			continue
 		}
-		for _, owned := range []string{
-			occurredday.HappenedSQL(alias, "now()"), occurredday.MeetingTookPlaceSQL(alias, "now()"),
+		// The bound built on the owner goes first, before its parts are taken out.
+		var owned []string
+		for edge, kind := range bound.aliases {
+			if kind == "relationship" {
+				owned = append(owned, employment.InPlaceForSQL(edge, alias))
+			}
+		}
+		owned = append(owned, occurredday.HappenedSQL(alias, "now()"), occurredday.MeetingTookPlaceSQL(alias, "now()"),
 			occurredday.BegunSQL(alias, "now()"), occurredday.AheadSQL(alias, "now()"),
-			occurredday.EndSQL(alias), occurredday.StartSQL(alias),
-		} {
-			text = strings.ReplaceAll(text, owned, " ")
+			occurredday.EndSQL(alias), occurredday.StartSQL(alias))
+		for _, rendered := range owned {
+			text = strings.ReplaceAll(text, rendered, " ")
 		}
 	}
 	return linesComparing(body.where, text, bound)
@@ -437,12 +549,14 @@ func TestTheOccurredAtCensusSeesEachRawComparison(t *testing.T) {
 		"before another column":     "SELECT 1 FROM activity a JOIN deal d ON a.occurred_at < d.closed_at",
 		"latest of them":            "SELECT 1 FROM activity a GROUP BY a.id HAVING max(a.occurred_at) <= $1",
 		"first in a coalesce":       "SELECT 1 FROM activity a WHERE coalesce(a.occurred_at, a.created_at) <= $1",
+		"last in a coalesce":        "SELECT 1 FROM activity a WHERE COALESCE(h.scheduled_start, a.occurred_at) >= $1",
+		"amid nested arguments":     "SELECT 1 FROM activity a WHERE greatest(lower(x), a.occurred_at, now()) < $1",
 		"cast to a date":            "SELECT 1 FROM activity a WHERE a.occurred_at::date <= current_date",
 		"from now on":               "SELECT 1 FROM activity a WHERE a.occurred_at >= now()",
 		"a lower edge":              "SELECT 1 FROM activity a WHERE a.occurred_at >= $1",
 		"a lower edge after a cast": "SELECT 1 FROM activity a WHERE a.occurred_at::date >= $1",
 	} {
-		if got := rawOccurredAtCompares("seeded.go", parseSeed(t, sql)); len(got) != 1 || got[0].waived {
+		if got := seededCompares(t, sql); len(got) != 1 || got[0].waived {
 			t.Errorf("%s: the census found %+v in %q, want one unwaived comparison", name, got, sql)
 		}
 	}
@@ -453,7 +567,7 @@ func TestTheOccurredAtCensusSeesEachRawComparison(t *testing.T) {
 		"a keyset row":       "SELECT 1 FROM activity a WHERE (a.occurred_at, a.id) > ($1, $2)",
 		"a json arrow":       "SELECT a.after->>'x' FROM activity a WHERE a.after->>'at' = a.occurred_at::text",
 	} {
-		if got := rawOccurredAtCompares("seeded.go", parseSeed(t, sql)); len(got) != 0 {
+		if got := seededCompares(t, sql); len(got) != 0 {
 			t.Errorf("%s: the census flagged %+v in %q", name, got, sql)
 		}
 	}
@@ -462,39 +576,75 @@ func TestTheOccurredAtCensusSeesEachRawComparison(t *testing.T) {
 		"a period up to now":     "SELECT 1 FROM activity a WHERE a.occurred_at >= $1 AND a.occurred_at < now()",
 		"another alias's period": "SELECT 1 FROM activity a JOIN activity b ON b.id = a.id WHERE b.occurred_at >= $1 AND a.occurred_at < $2",
 	} {
-		if got := rawOccurredAtCompares("seeded.go", parseSeed(t, sql)); len(got) != 2 {
+		if got := seededCompares(t, sql); len(got) != 2 {
 			t.Errorf("%s: the census found %+v in %q, want both edges", name, got, sql)
 		}
 	}
 	joined := "package p\nfunc f(b string) string { return `SELECT 1 FROM activity a WHERE a.occurred_at >= ` + b + ` AND a.occurred_at < ` + b }\n"
-	if got := rawOccurredAtCompares("seeded.go", parseSource(t, joined)); len(got) != 2 {
+	if got := sourceCompares(t, joined); len(got) != 2 {
 		t.Errorf("a period whose edges Go joins on was not flagged twice: %+v", got)
 	}
 	fragment := "package p\nconst q = `SELECT 1 FROM audit_log a WHERE `\nfunc f() string { return \" AND a.occurred_at <= \" }\n"
-	if got := rawOccurredAtCompares("seeded.go", parseSource(t, fragment)); len(got) != 0 {
+	if got := sourceCompares(t, fragment); len(got) != 0 {
 		t.Errorf("a fragment whose file binds its alias to audit_log was flagged: %+v", got)
 	}
 	waived := "SELECT 1 FROM activity a\n WHERE a.occurred_at > $1 -- occurred_at raw: the window's lower edge\n AND a.occurred_at <= now()"
-	got := rawOccurredAtCompares("seeded.go", parseSeed(t, waived))
+	got := seededCompares(t, waived)
 	if len(got) != 2 || !got[0].waived || got[1].waived {
 		t.Errorf("a waiver reached past its own line or missed it: %+v", got)
 	}
 	last := "SELECT 1 FROM activity a WHERE a.occurred_at > $1 -- occurred_at raw: the window has a lower edge"
-	if got := rawOccurredAtCompares("seeded.go", parseSeed(t, last)); len(got) != 1 || !got[0].swallows {
+	if got := seededCompares(t, last); len(got) != 1 || !got[0].swallows {
 		t.Errorf("a waiver ending its string passed: %+v", got)
 	}
 }
 
-func parseSeed(t *testing.T, sql string) *ast.File {
-	t.Helper()
-	return parseSource(t, "package p\nconst q = `"+sql+"`\n")
+// A column handed to a helper as text is a finding wherever it sits among the
+// arguments, unless occurredday takes it or a Go comment beside it waives it.
+func TestTheCensusSeesAColumnHandedToAHelper(t *testing.T) {
+	t.Parallel()
+	handed := map[string]struct {
+		source string
+		want   int
+	}{
+		"a column a helper takes": {"package p\nconst q = `FROM activity a`\nfunc f() string { return in(\"a.occurred_at\") }\n", 1},
+		"second of its arguments": {"package p\nconst q = `FROM activity a`\nfunc f() string { return x.Between(\"y\", \"a.occurred_at\") }\n", 1},
+		"a call over the column":  {"package p\nconst q = `FROM activity a`\nfunc f() string { return in(\"coalesce(h.at, a.occurred_at)\") }\n", 1},
+		"the owner takes it":      {"package p\nconst q = `FROM activity a`\nfunc f() string { return occurredday.StartAtSQL(\"a.occurred_at\", \"p\") }\n", 0},
+		"a bare column name":      {"package p\nfunc f() { p.Set(\"occurred_at\", 1) }\n", 0},
+		"another table's column":  {"package p\nconst q = `FROM audit_log a`\nfunc f() string { return in(\"a.occurred_at\") }\n", 0},
+	}
+	for name, c := range handed {
+		if got := sourceCompares(t, c.source); len(got) != c.want || (c.want > 0 && got[0].waived) {
+			t.Errorf("%s: the census found %+v, want %d unwaived", name, got, c.want)
+		}
+	}
+	for name, source := range map[string]string{
+		"on the line above": "package p\nconst q = `FROM activity a`\nfunc f() string {\n\t// occurred_at raw: a signal's cited time has no precision\n\treturn in(\"a.occurred_at\")\n}\n",
+		"inside the call":   "package p\nconst q = `FROM activity a`\nfunc f() string { return in(\"a.occurred_at\" /* occurred_at raw: a cited time has none */) }\n",
+	} {
+		if got := sourceCompares(t, source); len(got) != 1 || !got[0].waived {
+			t.Errorf("%s: a waived hand-over read as %+v", name, got)
+		}
+	}
+	far := "package p\nconst q = `FROM activity a`\n// occurred_at raw: too far above to count\n\nfunc f() string { return in(\"a.occurred_at\") }\n"
+	if got := sourceCompares(t, far); len(got) != 1 || got[0].waived {
+		t.Errorf("a waiver two lines up reached the call: %+v", got)
+	}
 }
 
-func parseSource(t *testing.T, source string) *ast.File {
+// seededCompares runs the census over SQL planted in a constant.
+func seededCompares(t *testing.T, sql string) []rawCompare {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), "seeded.go", source, 0)
+	return sourceCompares(t, "package p\nconst q = `"+sql+"`\n")
+}
+
+// sourceCompares runs the census over a planted Go file.
+func sourceCompares(t *testing.T, source string) []rawCompare {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), "seeded.go", source, parser.ParseComments)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return file
+	return rawOccurredAtCompares("seeded.go", file, []byte(source))
 }

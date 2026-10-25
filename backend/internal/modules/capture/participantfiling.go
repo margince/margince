@@ -65,7 +65,7 @@ var participantRecordsSQL = `
 		  JOIN lead ld ON ` + storekit.LeadEmailMatchClause("ld", "ap.address") + `
 		 WHERE ap.activity_id = $1 AND ap.address IS NOT NULL
 		   AND ` + storekit.LiveLeadClause("ld") + `
-		   AND ` + storekit.LeadEmailHeldAtClause("ld", "ap.address", "a.occurred_at") + `
+		   AND ` + storekit.LeadEmailHeldAtClause("ld", "ap.address", "a") + `
 		 GROUP BY ld.id
 	) named
 	ORDER BY organized DESC, rank, id`

@@ -246,6 +246,13 @@ func beforeAtSQL(at, precision, to string) string {
 		at, precision, to, StartAtSQL(at, precision))
 }
 
+// DatedFromSQL is "the activity under alias falls on or after the date in the
+// date column date". The date is read at its UTC midnight, the instant a date
+// binds to (storekit.AsDate). So a day entry compares by its own date.
+func DatedFromSQL(alias, date string) string {
+	return fmt.Sprintf(`(%[2]s::timestamp AT TIME ZONE 'UTC' <= %[1]s.occurred_at)`, alias, date)
+}
+
 // DatesSQL is "the day entry under alias names a date in [from, before)", both
 // bounds anchors (Anchor) the caller renders. Anchors order as their dates do.
 func DatesSQL(alias, from, before string) string {

@@ -122,7 +122,7 @@ var companyArms = `FROM activity_link l
 		    LEFT JOIN deal d ON d.id = l.deal_id
 		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
 		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
-		      AND ` + employment.InPlaceAtSQL("r", "la.occurred_at")
+		      AND ` + employment.InPlaceForSQL("r", "la")
 
 // participantEmployerArm is the READER's fourth arm: the employer of somebody
 // who is on the event as a participant rather than as a link.
@@ -149,7 +149,7 @@ var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
 		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
 		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
-		        AND ` + employment.InPlaceAtSQL("emp", "a.occurred_at") + `
+		        AND ` + employment.InPlaceForSQL("emp", "a") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 
 // participantEntry is where companyReach's participant branch starts: every
@@ -206,7 +206,7 @@ func activityReachesCompany(operand string) string {
 // row-level security, and every caller runs inside WithWorkspaceTx.
 //
 // The employment arm reaches only mail sent while the edge was in place
-// (employment.InPlaceAtSQL). Mail from someone's previous job is therefore not
+// (employment.InPlaceForSQL). Mail from someone's previous job is therefore not
 // filed against their employer today. An edge with no date stays unbounded.
 // For those, the extractor's one-account rule carries the weight: a contact
 // with two live employers makes their conversations ambiguous and skipped.

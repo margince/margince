@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // Buyer intent selects candidates; meetings and documents only corroborate them.
@@ -63,13 +64,16 @@ func dealScoutSQL(since, now time.Time, companyCap int) (string, []any) {
 	return query, args
 }
 
+// scoutEvidenceSQL places a meeting or a document by occurredday.StartSQL, so a
+// day entry falls in the window and past the floor by its date.
 func scoutEvidenceSQL(in func(string) string, document string) string {
+	placed := occurredday.StartSQL("a")
 	return `
 	  SELECT mc.company_id, 'meeting' AS kind, a.id AS ref, a.occurred_at, NULL::text AS signal_kind, a.id::text AS source_identity, NULL::text AS matter
 	    FROM (` + activities.HeldMeetingCounterparties() + `) mc
 	    JOIN activity a ON a.id = mc.activity_id
-	   WHERE ` + workspaceEvidence("a") + ` AND ` + in("a.occurred_at") + `
-	     AND ` + scoutCandidate("mc.company_id", "a.occurred_at") + `
+	   WHERE ` + workspaceEvidence("a") + ` AND ` + in(placed) + `
+	     AND ` + scoutCandidate("mc.company_id", placed) + `
 	  UNION ALL
 	  SELECT s.resolved_company_id, 'signal', s.id, source.occurred_at, s.kind, s.id::text, source.matter
 	    FROM signal s
@@ -82,20 +86,20 @@ func scoutEvidenceSQL(in func(string) string, document string) string {
 	   WHERE s.kind IN ('new_opportunity', 'commitment_made')
 	     AND (s.kind <> 'new_opportunity' OR (` + scoutBuyerSignal("s") + ` AND ` + unlinkedCommercialMatter("s") + `))
 	     AND s.status = 'open' AND s.archived_at IS NULL AND s.visibility = 'workspace'
-	     AND ` + in("source.occurred_at") + `
+	     AND ` + in("source.occurred_at" /* occurred_at raw: the time a signal cites carries no precision */) + `
 	     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
 	           WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
 	             WHERE ca.id = ` + storekit.CitedActivityID("cite") + ` AND ` + workspaceEvidence("ca") + `))
-	     AND ` + scoutCandidate("s.resolved_company_id", "source.occurred_at") + `
+	     AND ` + scoutCandidate("s.resolved_company_id", "source.occurred_at" /* occurred_at raw: the time a signal cites carries no precision */) + `
 	  UNION ALL
 	  SELECT filed.company_id, 'attachment', at.id, a.occurred_at, NULL, coalesce(nullif(at.checksum, ''), at.id::text), NULL::text
 	    FROM attachment at
 	    JOIN activity a ON a.id = at.activity_id
 	    JOIN (` + activities.CompanyReachSet() + `) filed ON filed.activity_id = a.id
 	   WHERE at.archived_at IS NULL AND NOT at.bytes_withheld AND a.kind = 'email' AND a.direction = 'outbound'
-	     AND ` + workspaceEvidence("a") + ` AND ` + in("a.occurred_at") + `
+	     AND ` + workspaceEvidence("a") + ` AND ` + in(placed) + `
 	     AND ` + document + `
-	     AND ` + scoutCandidate("filed.company_id", "a.occurred_at") + ``
+	     AND ` + scoutCandidate("filed.company_id", placed) + ``
 }
 
 // workspaceEvidence admits an activity the whole workspace may read: the

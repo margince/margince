@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -432,6 +433,42 @@ func TestWithinSQLAnswersTheSharedCases(t *testing.T) {
 		}
 		if within != c.Within {
 			t.Errorf("%s: SQL says within = %v, want %v", c.Name, within, c.Within)
+		}
+	}
+}
+
+// employment.InPlaceForSQL reads a day entry by its date: in place from the
+// edge's start date, or once its date begins after capture first saw the edge.
+// In Auckland a day entry's stored noon falls on the next local date.
+func TestAnEmploymentIsInPlaceForADayEntryByItsDate(t *testing.T) {
+	e := setupSend(t)
+	setInstallationZone(t, e, "Pacific/Auckland")
+	auckland := zoneNamed(t, "Pacific/Auckland")
+	date := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
+	day, morning := occurredday.Anchor(date), time.Date(2026, 3, 10, 9, 0, 0, 0, auckland)
+	for name, c := range map[string]struct {
+		at        time.Time
+		precision string
+		started   *time.Time
+		observed  *time.Time
+		inPlace   bool
+	}{
+		"started on its date":           {day, PrecisionDay, &date, nil, true},
+		"started the date after":        {day, PrecisionDay, new(date.AddDate(0, 0, 1)), nil, false},
+		"first seen during its date":    {day, PrecisionDay, nil, &morning, false},
+		"first seen the evening before": {day, PrecisionDay, nil, new(morning.Add(-10 * time.Hour)), true},
+		"an hour after it was seen":     {morning.Add(time.Hour), PrecisionInstant, nil, &morning, true},
+		"an edge with no start":         {day, PrecisionDay, nil, nil, true},
+	} {
+		var inPlace bool
+		if err := e.owner.QueryRow(context.Background(), `SELECT `+employment.InPlaceForSQL("r", "a")+`
+			FROM (VALUES ($1::date, $2::timestamptz)) AS r(started_at, first_observed_at),
+			     (VALUES ($3::timestamptz, $4::text)) AS a(occurred_at, occurred_precision)`,
+			c.started, c.observed, c.at, c.precision).Scan(&inPlace); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if inPlace != c.inPlace {
+			t.Errorf("%s: in place = %v, want %v", name, inPlace, c.inPlace)
 		}
 	}
 }
