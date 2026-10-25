@@ -46,11 +46,7 @@ func reconcileContinuity(ctx context.Context, tx pgx.Tx, company ids.CompanyID, 
 	if !Actionable(finding) {
 		return finding, nil
 	}
-	location, err := identity.ZoneAppliedTx(ctx, tx)
-	if err != nil {
-		return Finding{}, err
-	}
-	active, complete, err := contracts.CompanyContinuityTx(ctx, tx, company, storekit.WorkspaceDay(now, location), lock)
+	active, complete, err := contracts.CompanyContinuityTx(ctx, tx, company, storekit.WorkspaceDay(now, zone), lock)
 	if err != nil {
 		return Finding{}, err
 	}
