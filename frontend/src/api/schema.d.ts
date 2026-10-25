@@ -24009,7 +24009,10 @@ export interface components {
             /** @description How many files came with it. Zero when withheld, like every other count. */
             attachment_count: number;
             /**
-             * @description Whose move it is, derived from what this reader can see of the thread. `none` when
+             * @description Whose move it is, derived from what this reader can see of the thread.
+             *     `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+             *     that is still the last word with them. A calendar invitation, update, cancellation
+             *     or answer is `none` unless someone confirmed it asks us something. `none` also when
              *     the question cannot be answered honestly — an unanswerable move is not a claim.
              * @enum {string}
              */
@@ -43433,6 +43436,13 @@ export interface components {
             /** Format: uuid */
             assignee_id?: string | null;
             resolution?: string | null;
+            /**
+             * @description True while a complaint or dispute about this request is open. The proof of the
+             *     answer is kept until 1 January of the fourth year after the year it was answered in,
+             *     with both the year and that date read in the installation's time zone
+             *     (`installation.timezone`), and past that date until this is false again.
+             */
+            dispute_open: boolean;
             /** Format: date-time */
             created_at: string;
         };
@@ -43732,6 +43742,28 @@ export interface components {
             assignee_id?: string | null;
             /** @description A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft. */
             resolution?: string | null;
+            /**
+             * @description How the requester's identity was checked, recorded in the proof the request keeps once
+             *     it closes. Required on the patch that closes a request, except one that arrived through
+             *     the subject's own confirm link, where the link is the check. `confirm_link`: the
+             *     subject used a link mailed to their address. `address_on_file`: the request came from,
+             *     or was confirmed at, an address the record already held. `id_document`: an identity
+             *     document was seen. `in_person`: the requester was known in person. `not_verified`: the
+             *     identity could not be checked. A request closes with `not_verified` only as `rejected`;
+             *     a patch that fulfils with it is refused with 422 before anything is erased. Ignored on
+             *     any other patch.
+             * @enum {string}
+             */
+            identity_check?: "confirm_link" | "address_on_file" | "id_document" | "in_person" | "not_verified";
+            /**
+             * Format: email
+             * @description The address the request came from, recorded in the proof. Optional: when absent, the
+             *     proof takes the address the confirm link was mailed to, or the subject reference when it
+             *     is an address. Ignored on a patch that does not close the request.
+             */
+            requester_email?: string;
+            /** @description Opens (true) or closes (false) a complaint or dispute about the request. Any status takes it. */
+            dispute_open?: boolean;
         };
         /**
          * @description The consent passthrough every capture surface (booking, public forms, imports) must carry

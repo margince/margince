@@ -252,7 +252,7 @@ func TestAnImportedInboundIsNeverOwedAReply(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		states, err := EmailStatesFor(context.Background(), tx, []ids.UUID{activity})
+		states, err := EmailStatesFor(e.followUpReader(), tx, []ids.UUID{activity})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -267,5 +267,48 @@ func TestAnImportedInboundIsNeverOwedAReply(t *testing.T) {
 	e.exec(t, `UPDATE activity SET source_system = 'mirror:csv:old-crm' WHERE id = $1`, activity)
 	if got := move(); got != crmcontracts.EmailSummaryMoveNone {
 		t.Fatalf("an imported inbound's move = %q, want none", got)
+	}
+}
+
+// The follow-up lane and the badge ask one question about a sent message. An
+// invitation we sent is on neither; a plain unanswered mail is on both until
+// the customer answers on its thread.
+func TestTheFollowUpLaneAndTheBadgeAgreeOnASentMessage(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+	customer := e.customerAt(t, "customer")
+	plain, thread := e.sentTo(t, customer, "", 3*24*time.Hour)
+	invitation, _ := e.sentTo(t, customer, "", 3*24*time.Hour)
+	setCalendarMethod(t, e, invitation, "REQUEST")
+
+	moves := func() map[ids.UUID]crmcontracts.EmailSummaryMove {
+		tx, err := e.owner.Begin(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := tx.Rollback(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+		}()
+		states, err := EmailStatesFor(e.followUpReader(), tx, []ids.UUID{plain, invitation})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return map[ids.UUID]crmcontracts.EmailSummaryMove{plain: states[plain].Move, invitation: states[invitation].Move}
+	}
+	got := moves()
+	if !awaited(t, s, e, plain) || got[plain] != crmcontracts.EmailSummaryMoveWaitingForThem {
+		t.Errorf("an unanswered plain mail: lane %v, move %q; want on the lane and waiting_for_them",
+			awaited(t, s, e, plain), got[plain])
+	}
+	if awaited(t, s, e, invitation) || got[invitation] != crmcontracts.EmailSummaryMoveNone {
+		t.Errorf("our invitation: lane %v, move %q; want off the lane and none",
+			awaited(t, s, e, invitation), got[invitation])
+	}
+
+	e.afterwards(t, customer, "email", "inbound", thread)
+	if awaited(t, s, e, plain) || moves()[plain] != crmcontracts.EmailSummaryMoveNone {
+		t.Error("the customer answered on the thread, yet the lane or the badge still waits on them")
 	}
 }

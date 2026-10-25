@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -56,7 +57,7 @@ func (h Handlers) WithSettings(s *config.Config) Handlers {
 // fulfillment of an erasure request EXECUTES the erasure, it never just
 // marks a row done.
 type Eraser interface {
-	EraseContact(ctx context.Context, contactID ids.UUID, reason string) error
+	EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error)
 }
 
 // SubjectAccessAssembler is the Art. 15 read seam (compose injects the real

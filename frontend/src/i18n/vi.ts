@@ -1749,6 +1749,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.linkedin_rematch": "Đối chiếu dữ liệu nhập từ LinkedIn",
   "systemJob.list_checker": "Kiểm tra danh sách động",
   "systemJob.mail_draft_retention": "Dọn dẹp thư nháp",
+  "systemJob.privacy_request_proof_expiry":
+    "Dọn dẹp bằng chứng yêu cầu quyền riêng tư",
   "systemJob.waiting_horizon_refresh": "Đo thời gian phản hồi",
   "systemJob.meeting_delivery": "Gửi lời mời trên lịch",
   "systemJob.merge": "Gộp hồ sơ",
@@ -8238,6 +8240,23 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.assignee": "Người xử lý",
   "privacy.resolution": "Kết quả xử lý",
   "privacy.resolutionRequired": "Cần có câu trả lời để đóng yêu cầu.",
+  "privacy.identityCheck": "Cách xác minh danh tính",
+  "privacy.identityCheckHint":
+    "Được lưu trong bằng chứng của yêu cầu này đến ba năm sau khi kết thúc năm yêu cầu được đóng.",
+  "privacy.identityCheckPick": "Chọn cách",
+  "privacy.identityCheck.confirm_link": "Chủ thể dữ liệu đã dùng liên kết được gửi qua thư",
+  "privacy.identityCheck.address_on_file": "Yêu cầu đến từ địa chỉ có trong hồ sơ",
+  "privacy.identityCheck.id_document": "Đã xem giấy tờ tùy thân",
+  "privacy.identityCheck.in_person": "Đã gặp trực tiếp để xác minh",
+  "privacy.identityCheck.not_verified": "Không thể xác minh",
+  "privacy.requesterEmail": "Địa chỉ email đã gửi yêu cầu",
+  "privacy.requesterEmailHint":
+    "Không bắt buộc. Để trống nếu yêu cầu đến qua liên kết riêng của chủ thể dữ liệu hoặc đã ghi địa chỉ.",
+  "privacy.disputeOpen": "Có khiếu nại đang mở về yêu cầu này",
+  "privacy.disputeHint":
+    "Khi khiếu nại còn mở, bằng chứng của yêu cầu này được giữ quá thời hạn lưu trữ.",
+  "privacy.openDispute": "Ghi nhận khiếu nại",
+  "privacy.closeDispute": "Đóng khiếu nại",
   "privacy.movedOn":
     "Một thành viên khác đã quyết định yêu cầu này trước. Xem lại trạng thái hiện tại.",
   "privacy.inProgress": "Đang xử lý",

@@ -1798,6 +1798,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.linkedin_rematch": "Zuordnung des LinkedIn-Imports",
   "systemJob.list_checker": "Prüfung der Live-Listen",
   "systemJob.mail_draft_retention": "Bereinigung von E-Mail-Entwürfen",
+  "systemJob.privacy_request_proof_expiry":
+    "Bereinigung der Nachweise zu Datenschutzanfragen",
   "systemJob.waiting_horizon_refresh": "Messung der Antwortzeiten",
   "systemJob.meeting_delivery": "Versand von Kalendereinladungen",
   "systemJob.merge": "Zusammenführung von Datensätzen",
@@ -8477,6 +8479,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.resolution": "Ergebnis",
   "privacy.resolutionRequired":
     "Eine Anfrage lässt sich erst abschließen, wenn ihre Antwort erfasst ist.",
+  "privacy.identityCheck": "Wie die Identität geprüft wurde",
+  "privacy.identityCheckHint":
+    "Wird im Nachweis dieser Anfrage aufbewahrt, bis drei Jahre nach dem Ende des Jahres, in dem sie abgeschlossen wird.",
+  "privacy.identityCheckPick": "Auswählen",
+  "privacy.identityCheck.confirm_link": "Der zugeschickte Link wurde genutzt",
+  "privacy.identityCheck.address_on_file":
+    "Die Anfrage kam von einer Adresse aus dem Datensatz",
+  "privacy.identityCheck.id_document": "Ein Ausweisdokument wurde gesehen",
+  "privacy.identityCheck.in_person": "Die Anfrage wurde persönlich gestellt",
+  "privacy.identityCheck.not_verified": "Die Identität ließ sich nicht prüfen",
+  "privacy.requesterEmail": "E-Mail-Adresse, von der die Anfrage kam",
+  "privacy.requesterEmailHint":
+    "Optional. Lass das Feld leer, wenn die Anfrage über den zugeschickten Link kam oder die Adresse nennt.",
+  "privacy.disputeOpen": "Zu dieser Anfrage ist eine Beschwerde offen",
+  "privacy.disputeHint":
+    "Solange eine Beschwerde offen ist, bleibt der Nachweis dieser Anfrage über die Aufbewahrungsfrist hinaus erhalten.",
+  "privacy.openDispute": "Beschwerde erfassen",
+  "privacy.closeDispute": "Beschwerde abschließen",
   "privacy.movedOn":
     "Jemand anders hat zuerst über diese Anfrage entschieden. Prüfe ihren aktuellen Stand.",
   "privacy.inProgress": "In Bearbeitung",

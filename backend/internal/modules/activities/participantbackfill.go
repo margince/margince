@@ -130,7 +130,7 @@ func (s *Store) BackfillParticipantsBatch(ctx context.Context, limit int) (int, 
 // rebuilt against them. The repair would appear to work and then silently come
 // undone.
 func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
-	tag, err := tx.Exec(ctx, `
+	rows, err := tx.Query(ctx, `
 		WITH candidate AS (
 		    SELECT a.id, a.direction, a.counterparty_email, o.user_id
 		      FROM activity a
@@ -204,9 +204,10 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 		              CASE WHEN c.direction = 'inbound' THEN 'from' ELSE 'to' END
   ) r
 		 WHERE r.user_id IS NOT NULL OR r.contact_id IS NOT NULL OR r.address IS NOT NULL
-		ON CONFLICT DO NOTHING`, limit)
+		ON CONFLICT DO NOTHING
+		RETURNING id, coalesce(address, '')`, limit)
 	if err != nil {
 		return 0, fmt.Errorf("activities: backfilling interaction participants: %w", err)
 	}
-	return int(tag.RowsAffected()), nil
+	return foldInsertedParticipants(ctx, tx, rows)
 }

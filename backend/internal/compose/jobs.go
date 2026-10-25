@@ -462,6 +462,7 @@ func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
 		periodicFor(cfg, AIActivityReconcileArgs{}),
 		periodicFor(cfg, AIActivityRetentionArgs{}),
 		periodicFor(cfg, MailDraftRetentionArgs{}),
+		periodicFor(cfg, RequestProofExpiryArgs{}),
 		periodicFor(cfg, WaitingHorizonRefreshArgs{}),
 		periodicFor(cfg, ApprovalExpiryArgs{}),
 		periodicFor(cfg, PastActivityClockRefoldArgs{}),

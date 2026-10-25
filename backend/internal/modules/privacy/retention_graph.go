@@ -37,7 +37,7 @@ var sweptParticipantsDelete = `
 
 var sweptParticipantsBlank = `
 		UPDATE activity_participant ap
-		   SET contact_id = NULL, address = NULL, display_name = NULL, channel_user_id = NULL
+		   SET contact_id = NULL, address = NULL, address_domain_folded = NULL, display_name = NULL, channel_user_id = NULL
 		 WHERE ap.user_id IS NOT NULL` + subjectNamedOnAParticipantRow() +
 	notTransitivelyHeld("ap.activity_id")
 
