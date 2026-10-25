@@ -34,17 +34,16 @@ func TestTheFrontendCurrencyListMatchesTheGoOne(t *testing.T) {
 	}
 	const marker = "ASSIGNED_CURRENCIES: readonly string[] = ["
 	text := tsCurrencyComment.ReplaceAllString(string(source), " ")
-	start := strings.Index(text, marker)
-	if start < 0 {
+	_, body, found := strings.Cut(text, marker)
+	if !found {
 		t.Fatalf("%s no longer declares the list as an array literal, so this gate reads a shape that is gone", frontendAssignedCurrencies)
 	}
-	body := text[start+len(marker):]
-	end := strings.Index(body, "];")
-	if end < 0 {
+	list, _, terminated := strings.Cut(body, "];")
+	if !terminated {
 		t.Fatalf("%s: the currency array is unterminated", frontendAssignedCurrencies)
 	}
 	inTS := map[string]bool{}
-	for _, m := range tsCurrencyCode.FindAllStringSubmatch(body[:end], -1) {
+	for _, m := range tsCurrencyCode.FindAllStringSubmatch(list, -1) {
 		inTS[m[1]] = true
 	}
 	if len(inTS) == 0 {
