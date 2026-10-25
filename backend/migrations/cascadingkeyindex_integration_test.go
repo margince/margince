@@ -57,7 +57,7 @@ const (
 const uncoveredKeysTemplate = `
 WITH fk AS (
   SELECT c.oid, c.conrelid AS childoid, c.conrelid::regclass::text AS child,
-         c.confrelid::regclass::text AS parent, c.conkey
+         c.confrelid::regclass::text AS parent, c.conkey, c.conname
     FROM pg_constraint c
     JOIN pg_class t ON t.oid = c.conrelid
     JOIN pg_namespace n ON n.oid = t.relnamespace
@@ -82,7 +82,8 @@ WITH fk AS (
               FROM unnest(i.indkey::int2[]) WITH ORDINALITY AS x(a, ord)
              WHERE ord <= array_length(fk.conkey, 1))
 )
-SELECT fk.child || ' (' || (SELECT string_agg(att.attname, ', ' ORDER BY u.ord)
+SELECT fk.child || '.' || fk.conname,
+       fk.child || ' (' || (SELECT string_agg(att.attname, ', ' ORDER BY u.ord)
           FROM unnest(fk.conkey) WITH ORDINALITY AS u(k, ord)
           JOIN pg_attribute att ON att.attrelid = fk.childoid AND att.attnum = u.k) || ')',
        fk.parent
@@ -115,13 +116,13 @@ func TestEveryCascadingKeyCanFindItsChildren(t *testing.T) {
 			"stopped recognising them rather than the schema having given them up", cascades)
 	}
 
-	if uncovered, _ := readUncovered(ctx, t, conn, cascadeAction); len(uncovered) > 0 {
+	if uncovered := readUncovered(ctx, t, conn, cascadeAction); len(uncovered) > 0 {
 		t.Errorf("%d cascading foreign key(s) have no index their delete can use:\n\t%s\n"+
 			"Deleting the parent scans the whole child table, inside the parent's transaction "+
 			"and holding its locks. Add an index on the referencing columns in the constraint's "+
 			"own order — it is instant on an empty table and a CONCURRENTLY with a maintenance "+
 			"window once there is data.",
-			len(uncovered), strings.Join(uncovered, "\n\t"))
+			len(uncovered), strings.Join(describeAll(uncovered), "\n\t"))
 	}
 }
 
@@ -147,8 +148,8 @@ func TestTheCascadeIndexQueryNoticesAWithdrawnIndex(t *testing.T) {
 	}()
 
 	const anIndexACascadeUses = `
-SELECT i.indexrelid::regclass::text, fk.child || ' (' || fk.cols || ')'
-  FROM (SELECT c.conrelid AS childoid, c.conrelid::regclass::text AS child, c.conkey,
+SELECT i.indexrelid::regclass::text, fk.child || '.' || fk.conname
+  FROM (SELECT c.conrelid AS childoid, c.conrelid::regclass::text AS child, c.conkey, c.conname,
                (SELECT string_agg(att.attname, ', ' ORDER BY u.ord)
                   FROM unnest(c.conkey) WITH ORDINALITY AS u(k, ord)
                   JOIN pg_attribute att ON att.attrelid = c.conrelid AND att.attnum = u.k) AS cols
@@ -172,12 +173,31 @@ SELECT i.indexrelid::regclass::text, fk.child || ' (' || fk.cols || ')'
 		t.Fatalf("dropping %s: %v", index, err)
 	}
 
-	uncovered, _ := readUncovered(ctx, t, tx, cascadeAction)
-	if !slices.Contains(uncovered, key) {
+	uncovered := readUncovered(ctx, t, tx, cascadeAction)
+	if !slices.ContainsFunc(uncovered, func(u uncoveredKey) bool { return u.constraint == key }) {
 		t.Errorf("dropped %s, the only index serving the cascade on %s, and the query still "+
 			"reported it covered — it is matching something other than a usable index, so a "+
 			"schema with no index at all would read as clean", index, key)
 	}
+}
+
+// uncoveredKey is one foreign key no usable index serves. constraint is its
+// identity, child.conname, because two keys on the same columns to different
+// parents read alike in columns.
+type uncoveredKey struct {
+	constraint, columns, parent string
+}
+
+func (u uncoveredKey) String() string {
+	return u.columns + " -> " + u.parent + " [" + u.constraint + "]"
+}
+
+func describeAll(keys []uncoveredKey) []string {
+	described := make([]string, 0, len(keys))
+	for _, key := range keys {
+		described = append(described, key.String())
+	}
+	return described
 }
 
 // readUncovered runs uncoveredKeysTemplate against whatever the caller has — the
@@ -185,53 +205,34 @@ SELECT i.indexrelid::regclass::text, fk.child || ' (' || fk.cols || ')'
 func readUncovered(ctx context.Context, t *testing.T, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }, action string,
-) ([]string, map[string]string) {
+) []uncoveredKey {
 	t.Helper()
 	rows, err := q.Query(ctx, fmt.Sprintf(uncoveredKeysTemplate, action))
 	if err != nil {
 		t.Fatalf("reading uncovered cascades: %v", err)
 	}
 	defer rows.Close()
-	var uncovered []string
-	parentOf := map[string]string{}
+	var uncovered []uncoveredKey
 	for rows.Next() {
-		var one, parent string
-		if err := rows.Scan(&one, &parent); err != nil {
+		var one uncoveredKey
+		if err := rows.Scan(&one.constraint, &one.columns, &one.parent); err != nil {
 			t.Fatalf("scanning: %v", err)
 		}
 		uncovered = append(uncovered, one)
-		parentOf[one] = parent
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatalf("reading uncovered cascades: %v", err)
 	}
-	return uncovered, parentOf
+	return uncovered
 }
 
-// foreignKeyIndexDebt is every non-cascading foreign key whose child carries no index
-// the parent's delete can use. It is a REGISTER, not a waiver list: each line is work
-// owed, and the test below fails in both directions — a key missing from it is one
-// somebody added uncovered, and a line with no finding behind it is one somebody fixed
-// and did not delete.
-//
-// It is not a judgement that indexing all 166 is right. Some are lookup parents nothing
-// ever deletes (activity (kind) references a small kind table), where an index on a
-// low-cardinality column costs every insert and buys nothing; others are SET NULL on
-// hot children, where the scan is followed by an update of every row it found. Which
-// ones to index is a measurement, tracked separately — what this register buys today is
-// that the number cannot grow without somebody saying so.
-// TestEveryOtherForeignKeyIsIndexedOrRegisteredDebt holds the 219 keys the cascade
-// gate above never looks at.
-//
-// A non-cascading parent delete still has to FIND the children before it can decide:
-// SET NULL scans the child and then updates every row it found, and RESTRICT and NO
-// ACTION scan it to refuse. Deleting one app_user reaches 63 such tables, audit_log and
-// system_log among them.
-//
-// The assertion is equality with the register rather than emptiness, because 166 of
-// them are uncovered today and pretending otherwise would mean either a red gate
-// nobody can merge past or no gate at all.
-func TestEveryOtherForeignKeyIsIndexedOrRegisteredDebt(t *testing.T) {
+// TestEveryOtherForeignKeyIsIndexedOrMeasured holds the keys the cascade gate
+// above never looks at. A non-cascading parent delete still has to find the
+// children: `SET NULL` then updates them, and `RESTRICT` and `NO ACTION` refuse on them.
+// So each such key is indexed, or a measurement says the lookup is affordable.
+// The measurement is of its parent in foreignKeyNoIndexNeeded, or of the key itself
+// in foreignKeyScanAccepted.
+func TestEveryOtherForeignKeyIsIndexedOrMeasured(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -248,64 +249,42 @@ func TestEveryOtherForeignKeyIsIndexedOrRegisteredDebt(t *testing.T) {
 			"has stopped recognising them rather than the schema having given them up", others)
 	}
 
-	uncovered, parentOf := readUncovered(ctx, t, conn, otherActions)
-	registered := slices.Clone(foreignKeyIndexDebt)
-	slices.Sort(registered)
-	judged := map[string]bool{}
+	uncovered := readUncovered(ctx, t, conn, otherActions)
 	for _, key := range uncovered {
-		if _, measured := foreignKeyNoIndexNeeded[parentOf[key]]; measured {
-			judged[key] = true
-			continue
-		}
-		if !slices.Contains(registered, key) {
-			t.Errorf("%s has no index its parent's delete can use, and neither the register nor "+
-				"foreignKeyNoIndexNeeded accounts for it.\n"+
-				"Index the referencing columns in the constraint's own order, add the line and say "+
-				"in the PR why the scan is affordable there, or measure the parent and record what "+
-				"you found.", key)
+		_, parentMeasured := foreignKeyNoIndexNeeded[key.parent]
+		_, keyMeasured := foreignKeyScanAccepted[key.constraint]
+		switch {
+		case parentMeasured && keyMeasured:
+			t.Errorf("%s is in foreignKeyScanAccepted and under a parent foreignKeyNoIndexNeeded "+
+				"already measured: keep one reason, so a reader knows which one holds.", key)
+		case !parentMeasured && !keyMeasured:
+			t.Errorf("%s has no index its parent's delete can use, and no measurement accounts "+
+				"for it.\nIndex the referencing columns, or measure the parent delete on seeded "+
+				"data and record why the lookup is affordable in foreignKeyScanAccepted.", key)
 		}
 	}
-	for _, key := range registered {
-		if !slices.Contains(uncovered, key) {
-			t.Errorf("%s is in the register but is indexed now: delete its line, so the register "+
-				"keeps meaning what it says.", key)
-		}
-		if judged[key] {
-			t.Errorf("%s is in the register and under a parent foreignKeyNoIndexNeeded has "+
-				"already measured: delete the line, or the register counts work nobody owes.", key)
+	for key := range foreignKeyScanAccepted {
+		if !slices.ContainsFunc(uncovered, func(u uncoveredKey) bool { return u.constraint == key }) {
+			t.Errorf("foreignKeyScanAccepted measures %s, which is indexed now or no longer "+
+				"exists: delete the entry, so what remains is a judgement about the schema as it is", key)
 		}
 	}
 	// A parent whose keys all gained an index, or which no longer has an
 	// uncovered key at all, is a measurement with nothing left to answer for.
-	// Left in place it reads as a standing judgement about a shape that has
-	// moved on.
 	for parent := range foreignKeyNoIndexNeeded {
-		var still bool
-		for _, key := range uncovered {
-			if parentOf[key] == parent {
-				still = true
-				break
-			}
-		}
-		if !still {
+		if !slices.ContainsFunc(uncovered, func(u uncoveredKey) bool { return u.parent == parent }) {
 			t.Errorf("foreignKeyNoIndexNeeded measures %q, which has no uncovered key left: "+
 				"delete the entry, so what remains is a judgement about the schema as it is", parent)
 		}
 	}
 }
 
-// foreignKeyNoIndexNeeded records the parents whose keys have been MEASURED and
-// need no index, with what the measurement found. A key under one of these
-// parents is accounted for without being work owed.
-//
-// The distinction matters because the register is a list of work: a key that
-// will never want an index would otherwise sit in it forever, and a reader
-// cannot tell those from the ones nobody has looked at yet.
+// foreignKeyNoIndexNeeded records the parents measured as never deleted. Every
+// key under one of them is accounted for, as its lookup never runs.
 //
 // gatekit:fixture the parent table each measurement was taken of, and what the
-// measurement found. Not a waiver: its keys are parents, where a finding names
-// one child key, and the three directions below are checked here rather than by
-// subject matching.
+// measurement found. Not a waiver: its keys are parents, where a finding names one
+// child key. The test above checks the directions, not subject matching.
 var foreignKeyNoIndexNeeded = map[string]string{
 	"deal_room_participant":      "a seat is revoked and anonymized in place by the erasure, never deleted: a comment names its participant row, and deleting the seat would orphan the conversation",
 	"report_definition_revision": "append-only: a revision is what a report meant when it ran",
@@ -354,26 +333,18 @@ var foreignKeyNoIndexNeeded = map[string]string{
 	"comms_outbound":             "append-only: the ledger of what was sent",
 	"weekly_review":              "append-only: a review is what a reader saw that week",
 	"app_user": "nothing deletes an app_user row. A member is retired by setting " +
-		"archived_at, every read filters on it, and preservedResetTables keeps the table " +
+		"archived_at, live-member reads filter on it, and preservedResetTables keeps the table " +
 		"out of the installation reset (compose/datasweep.go); the only DELETE FROM " +
-		"app_user in the tree is in three integration tests, over a handful of rows. " +
+		"app_user in the tree is in integration tests, over a handful of rows. " +
 		"So the referential scan these 63 keys would need an index for never runs, and " +
 		"adding one to each would cost every insert on 63 children to serve a delete " +
-		"that does not happen. Migration 1790813926 removed fifteen indexes for exactly " +
-		"that trade. Should a hard delete arrive, this entry is what has to be revisited, " +
-		"and the keys return to the register below.",
+		"that does not happen. Should a hard delete arrive, this entry is what has to be revisited.",
 }
 
-var foreignKeyIndexDebt = []string{
-	"attachment (supersedes_id)",
-	"comms_outbound (link_id)",
-	"communication_suppression (carried_from)",
-	"contact_phone (superseded_phone_id)",
-	"deal_room_document (attachment_id)",
-	"deal_room_thread (attachment_id)",
-	"preference_token (contact_email_id)",
-	"voice_build (voice_profile_id, result_version)",
-	"voice_learning_signal (voice_profile_id, profile_version)",
-	"voice_profile_delta (voice_profile_id, from_version)",
-	"voice_profile_version (voice_profile_id, predecessor_version)",
-}
+// foreignKeyScanAccepted records single keys, by child.conname, whose parent is
+// deleted and whose lookup a measurement found affordable without an index of its
+// own. Each entry says what EXPLAIN ANALYZE of the real delete on seeded data found.
+//
+// gatekit:fixture each constraint and what its measurement found. Not a waiver: the
+// directions are checked by the test above, not by subject matching.
+var foreignKeyScanAccepted = map[string]string{}

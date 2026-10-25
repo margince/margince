@@ -1433,6 +1433,7 @@ public.attachment_extraction.status text NOT NULL gen=- def='queued'::text
 public.attachment_extraction.status_detail text gen=- def=-
 public.attachment_extraction_pkey CREATE UNIQUE INDEX attachment_extraction_pkey ON public.attachment_extraction USING btree (id)
 public.attachment_pkey CREATE UNIQUE INDEX attachment_pkey ON public.attachment USING btree (id)
+public.attachment_supersedes_ix CREATE INDEX attachment_supersedes_ix ON public.attachment USING btree (supersedes_id) WHERE (supersedes_id IS NOT NULL)
 public.audit_log acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false
 public.audit_log.action text NOT NULL gen=- def=-
 public.audit_log.actor_id text NOT NULL gen=- def=-
@@ -2173,6 +2174,7 @@ public.comms_outbound_attachments_well_formed(files jsonb) secdef=false cfg=- ac
 public.comms_outbound_bounced_idx CREATE INDEX comms_outbound_bounced_idx ON public.comms_outbound USING btree (bounced_at DESC) WHERE (bounced_at IS NOT NULL)
 public.comms_outbound_controller_payload CREATE INDEX comms_outbound_controller_payload ON public.comms_outbound USING btree (payload_expires_at) WHERE (payload_ref IS NOT NULL)
 public.comms_outbound_due CREATE INDEX comms_outbound_due ON public.comms_outbound USING btree (delivery_due_at) WHERE ((delivery_due_at IS NOT NULL) AND (status <> 'sent'::text))
+public.comms_outbound_link_ix CREATE INDEX comms_outbound_link_ix ON public.comms_outbound USING btree (link_id) WHERE (link_id IS NOT NULL)
 public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_unique ON public.comms_outbound USING btree (message_id)
 public.comms_outbound_one_delivery_per_instruction CREATE UNIQUE INDEX comms_outbound_one_delivery_per_instruction ON public.comms_outbound USING btree (instruction_id) WHERE (instruction_id IS NOT NULL)
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
@@ -2386,6 +2388,7 @@ public.communication_suppression.purpose_id uuid gen=- def=-
 public.communication_suppression.recorded_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_suppression.revoked_at timestamp with time zone gen=- def=-
 public.communication_suppression.source text NOT NULL gen=- def=-
+public.communication_suppression_carried_from_ix CREATE INDEX communication_suppression_carried_from_ix ON public.communication_suppression USING btree (carried_from) WHERE (carried_from IS NOT NULL)
 public.communication_suppression_live_address CREATE INDEX communication_suppression_live_address ON public.communication_suppression USING btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_one_live_bounce CREATE UNIQUE INDEX communication_suppression_one_live_bounce ON public.communication_suppression USING btree (lower(address)) WHERE ((kind = 'hard_bounce'::text) AND (address IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_suppression_pkey CREATE UNIQUE INDEX communication_suppression_pkey ON public.communication_suppression USING btree (id)
@@ -3263,6 +3266,7 @@ public.contact_phone.trg_contact_phone_updated CREATE TRIGGER trg_contact_phone_
 public.contact_phone.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_phone.version bigint NOT NULL gen=- def=1
 public.contact_phone_pkey CREATE UNIQUE INDEX contact_phone_pkey ON public.contact_phone USING btree (id)
+public.contact_phone_superseded_phone_ix CREATE INDEX contact_phone_superseded_phone_ix ON public.contact_phone USING btree (superseded_phone_id) WHERE (superseded_phone_id IS NOT NULL)
 public.contact_pkey CREATE UNIQUE INDEX contact_pkey ON public.contact USING btree (id)
 public.contact_profile_field acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact_profile_field.captured_by text NOT NULL gen=- def=-
@@ -3792,6 +3796,7 @@ public.deal_room_document.title text NOT NULL gen=- def=-
 public.deal_room_document.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_room_document.uq_deal_room_document_in_room UNIQUE (id, room_id)
 public.deal_room_document.version bigint NOT NULL gen=- def=1
+public.deal_room_document_attachment_ix CREATE INDEX deal_room_document_attachment_ix ON public.deal_room_document USING btree (attachment_id)
 public.deal_room_document_pkey CREATE UNIQUE INDEX deal_room_document_pkey ON public.deal_room_document USING btree (id)
 public.deal_room_engagement acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_room_engagement.deal_room_engagement_document_fkey FOREIGN KEY (document_id, room_id) REFERENCES deal_room_document(id, room_id) ON DELETE RESTRICT
@@ -3898,6 +3903,7 @@ public.deal_room_thread.source text NOT NULL gen=- def=-
 public.deal_room_thread.state text NOT NULL gen=- def='open'::text
 public.deal_room_thread.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_room_thread.version bigint NOT NULL gen=- def=1
+public.deal_room_thread_attachment_ix CREATE INDEX deal_room_thread_attachment_ix ON public.deal_room_thread USING btree (attachment_id) WHERE (attachment_id IS NOT NULL)
 public.deal_room_thread_pkey CREATE UNIQUE INDEX deal_room_thread_pkey ON public.deal_room_thread USING btree (id)
 public.deal_stage_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_stage_evidence.author_side text NOT NULL gen=- def=-
@@ -6079,6 +6085,7 @@ public.preference_token.preference_token_token_key UNIQUE (token)
 public.preference_token.revoked_at timestamp with time zone gen=- def=-
 public.preference_token.revoked_reason text gen=- def=-
 public.preference_token.token text NOT NULL gen=- def=-
+public.preference_token_contact_email_ix CREATE INDEX preference_token_contact_email_ix ON public.preference_token USING btree (contact_email_id) WHERE (contact_email_id IS NOT NULL)
 public.preference_token_pkey CREATE UNIQUE INDEX preference_token_pkey ON public.preference_token USING btree (id)
 public.preference_token_token_key CREATE UNIQUE INDEX preference_token_token_key ON public.preference_token USING btree (token)
 public.privacy_notice_case acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -8004,7 +8011,7 @@ public.voice_build_deferred_due CREATE INDEX voice_build_deferred_due ON public.
 public.voice_build_one_active CREATE UNIQUE INDEX voice_build_one_active ON public.voice_build USING btree (voice_profile_id) WHERE (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text]))
 public.voice_build_pkey CREATE UNIQUE INDEX voice_build_pkey ON public.voice_build USING btree (id)
 public.voice_build_poll CREATE INDEX voice_build_poll ON public.voice_build USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
-public.voice_build_profile_fk CREATE INDEX voice_build_profile_fk ON public.voice_build USING btree (voice_profile_id)
+public.voice_build_profile_version_ix CREATE INDEX voice_build_profile_version_ix ON public.voice_build USING btree (voice_profile_id, result_version)
 public.voice_build_requester_fk CREATE INDEX voice_build_requester_fk ON public.voice_build USING btree (requested_by) WHERE (requested_by IS NOT NULL)
 public.voice_corpus_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.voice_corpus_source.archived_at timestamp with time zone gen=- def=-
@@ -8072,7 +8079,7 @@ public.voice_learning_signal.voice_learning_signal_version_fkey FOREIGN KEY (voi
 public.voice_learning_signal.voice_learning_signal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.voice_learning_signal.voice_profile_id uuid NOT NULL gen=- def=-
 public.voice_learning_signal_pkey CREATE UNIQUE INDEX voice_learning_signal_pkey ON public.voice_learning_signal USING btree (id)
-public.voice_learning_signal_profile_fk CREATE INDEX voice_learning_signal_profile_fk ON public.voice_learning_signal USING btree (voice_profile_id)
+public.voice_learning_signal_profile_version_ix CREATE INDEX voice_learning_signal_profile_version_ix ON public.voice_learning_signal USING btree (voice_profile_id, profile_version)
 public.voice_learning_signal_retention CREATE INDEX voice_learning_signal_retention ON public.voice_learning_signal USING btree (retention_until) WHERE (content_erased_at IS NULL)
 public.voice_profile acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.voice_profile.active_source_hash text gen=- def=-
@@ -8122,6 +8129,7 @@ public.voice_profile_delta.voice_profile_delta_profile_fkey FOREIGN KEY (voice_p
 public.voice_profile_delta.voice_profile_delta_to_fkey FOREIGN KEY (voice_profile_id, to_version) REFERENCES voice_profile_version(voice_profile_id, profile_version)
 public.voice_profile_delta.voice_profile_delta_to_version_check CHECK ((to_version >= 1))
 public.voice_profile_delta.voice_profile_id uuid NOT NULL gen=- def=-
+public.voice_profile_delta_from_version_ix CREATE INDEX voice_profile_delta_from_version_ix ON public.voice_profile_delta USING btree (voice_profile_id, from_version)
 public.voice_profile_delta_history CREATE INDEX voice_profile_delta_history ON public.voice_profile_delta USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.voice_profile_delta_pkey CREATE UNIQUE INDEX voice_profile_delta_pkey ON public.voice_profile_delta USING btree (id)
 public.voice_profile_owner_fk CREATE INDEX voice_profile_owner_fk ON public.voice_profile USING btree (owner_id) WHERE (owner_id IS NOT NULL)
@@ -8165,6 +8173,7 @@ public.voice_profile_version.voice_profile_version_version_js_safe CHECK (((vers
 public.voice_profile_version_history CREATE INDEX voice_profile_version_history ON public.voice_profile_version USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.voice_profile_version_one_active CREATE UNIQUE INDEX voice_profile_version_one_active ON public.voice_profile_version USING btree (voice_profile_id) WHERE (status = 'active'::text)
 public.voice_profile_version_pkey CREATE UNIQUE INDEX voice_profile_version_pkey ON public.voice_profile_version USING btree (id)
+public.voice_profile_version_predecessor_ix CREATE INDEX voice_profile_version_predecessor_ix ON public.voice_profile_version USING btree (voice_profile_id, predecessor_version)
 public.webhook_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.webhook_delivery.attempts integer NOT NULL gen=- def=0
 public.webhook_delivery.claimed_until timestamp with time zone gen=- def=-

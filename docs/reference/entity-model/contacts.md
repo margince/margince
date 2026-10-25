@@ -780,6 +780,7 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `contact_phone_pkey`: `unique, btree (id)`
+- `contact_phone_superseded_phone_ix`: `btree (superseded_phone_id) WHERE (superseded_phone_id IS NOT NULL)`
 - `idx_contact_phone_contact`: `btree (contact_id)`
 - `idx_contact_phone_dedupe_scan`: `btree (updated_at, id)`
 - `uq_contact_phone_primary`: `unique, btree (contact_id, phone_type) WHERE (is_primary AND (archived_at IS NULL))`

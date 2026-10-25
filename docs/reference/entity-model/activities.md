@@ -772,6 +772,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `attachment_contract_ix`: `btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))`
 - `attachment_external_part_key`: `unique, btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)`
 - `attachment_pkey`: `unique, btree (id)`
+- `attachment_supersedes_ix`: `btree (supersedes_id) WHERE (supersedes_id IS NOT NULL)`
 - `idx_attachment_entity`: `btree (entity_type, entity_id) WHERE (archived_at IS NULL)`
 
 **Triggers**
