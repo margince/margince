@@ -67,12 +67,14 @@ func berlinAfterClockChange() *time.Time {
 	return new(time.Date(2026, 11, 10, 12, 0, 0, 0, berlin))
 }
 
-// readInstant is the case's own read instant, or the test's.
-func (c reminderCase) readInstant(t *testing.T) time.Time {
+// readInstant is the case's own read instant, or base, the one instant the
+// whole test reads the clock at. Reading the clock once per case would let a
+// second tick between the cases and move the boundary ones.
+func (c reminderCase) readInstant(base time.Time) time.Time {
 	if c.readAt != nil {
 		return *c.readAt
 	}
-	return reminderInstant(t)
+	return base
 }
 
 // reminderInstant is a read instant at whole seconds, which Postgres stores
@@ -99,9 +101,10 @@ func (c reminderCase) row(reader, colleague ids.UUID, asOf time.Time) crmcontrac
 
 func TestTheReminderClauseAndPredicateAgree(t *testing.T) {
 	reader, colleague := ids.NewV7(), ids.NewV7()
+	base := reminderInstant(t)
 	for _, c := range reminderCases {
 		t.Run(c.name, func(t *testing.T) {
-			asOf := c.readInstant(t)
+			asOf := c.readInstant(base)
 			if got := ReminderDueFor(c.row(reader, colleague, asOf), reader, asOf); got != c.want {
 				t.Errorf("ReminderDueFor = %v, want %v", got, c.want)
 			}
