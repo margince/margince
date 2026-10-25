@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -202,7 +203,7 @@ func TestAColleaguesMeetingWithOutsideGuestsIsFiledOnGuestsWhoArriveLater(t *tes
 	ctx := contactCreator(e)
 	var arrived []ids.ContactID
 	for _, g := range lateGuests {
-		contact, err := store.EnsureContactByEmail(ctx, "", g, "manual")
+		contact, err := store.EnsureContactByEmail(ctx, "", g, "manual", storekit.RefuseErased)
 		if err != nil {
 			t.Fatalf("creating the guest %s: %v", g, err)
 		}

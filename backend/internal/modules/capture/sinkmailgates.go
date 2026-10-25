@@ -98,7 +98,7 @@ func calendarOwnerDomainProvesInternalTx(ctx context.Context, tx pgx.Tx, own Int
 	if err != nil || consumer {
 		return false, err
 	}
-	if own.empty() {
+	if own.Empty() {
 		return true, nil
 	}
 	possiblyOwn, err := ownDomainsTx(ctx, tx)
