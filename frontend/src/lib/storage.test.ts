@@ -116,6 +116,7 @@ describe("a stored value", () => {
       "margince.signin.returnRoute",
       "margince.room.session",
       "margince.setup.reminderHidden",
+      "margince.taskReminders.shown",
     ]);
   });
 });

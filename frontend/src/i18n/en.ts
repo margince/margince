@@ -8446,6 +8446,18 @@ export const en = {
   "notifications.empty":
     "Nothing has come in yet. What the product tells you about arrives here.",
   "notifications.title": "Delivery by kind",
+  "notifications.browser.label": "Browser notifications",
+  "notifications.browser.default":
+    "When a reminder on one of your tasks comes due, the browser can show it while Margince is open in a tab.",
+  "notifications.browser.granted":
+    "On. A due reminder on one of your tasks shows as a browser notification while Margince is open in a tab. To turn it off, block notifications for this site in your browser settings.",
+  "notifications.browser.denied":
+    "Blocked in this browser. To allow them, change the notification setting for this site in your browser settings.",
+  "notifications.browser.unsupported":
+    "This browser cannot show notifications. A due reminder still leads your Home and your Worklist.",
+  "notifications.browser.allow": "Allow",
+  "reminder.notification.body": "Your reminder is due. Click to open the task.",
+  "reminder.notification.untitled": "Task reminder",
   "notifications.sub":
     "Every notice also stays in your notification center, whatever you choose here.",
   "notifications.saveFailedFor": "“{setting}” was not saved",
@@ -15945,6 +15957,7 @@ export const en = {
   "worklist.category.relationships": "Quiet relationship",
   "worklist.category.system": "System",
   "worklist.because.pinned": "pinned by you",
+  "worklist.because.reminder_due": "your reminder is due",
   "worklist.because.non_buyer_request": "not established as customer work",
   "worklist.because.buyer_wrote_last": "buyer wrote last",
   "worklist.because.waiting_days": "waiting",

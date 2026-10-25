@@ -11,10 +11,12 @@ package attention
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // planned is today's agreed work, overdue first. The bound is the day's end,
@@ -38,7 +40,15 @@ func (s *Service) planned(
 	if err != nil {
 		return nil, 0, err
 	}
-	open = append(open, upcoming...)
+	// Only the reader's own queue is reminded: a reminder is for its assignee,
+	// and a manager looking at a colleague's work is not its assignee.
+	var reminders []Task
+	if scope == TasksMine {
+		if reminders, err = s.tasks.RemindersForViewer(ctx, asOf, plannedCap); err != nil {
+			return nil, 0, err
+		}
+	}
+	open = remindersFirst(reminders, append(open, upcoming...))
 	// How many there ARE, beside the page. The lane is capped at a dozen, so a
 	// badge of len(items) tells a reader with thirteen that they have twelve —
 	// and there is no second page on this lane to find the thirteenth by. The
@@ -49,12 +59,38 @@ func (s *Service) planned(
 	}
 	items := make([]crmcontracts.AttentionItem, 0, len(open))
 	for _, task := range open {
-		items = append(items, taskItem(task, asOf, until, loc))
+		item := taskItem(task, asOf, until, loc)
+		if task.ReminderDue {
+			item.ReminderDue = new(true)
+		}
+		items = append(items, item)
 	}
-	// Overdue first: a promise already broken outranks one merely due, and the
-	// server resolves it so every surface agrees on where the line falls.
+	// Due reminders first, then overdue. A promise already broken outranks one
+	// merely due. The server decides both, so every surface agrees.
 	sort.SliceStable(items, func(i, j int) bool {
+		if reminded(items[i]) != reminded(items[j]) {
+			return reminded(items[i])
+		}
 		return overdue(items[i]) && !overdue(items[j])
 	})
 	return items, total, nil
+}
+
+// remindersFirst puts the due reminders ahead of the other rows. It lists each
+// task once, because a reminded task can also be due today.
+func remindersFirst(reminders, rest []Task) []Task {
+	seen := make(map[ids.UUID]bool, len(reminders))
+	out := make([]Task, 0, len(reminders)+len(rest))
+	for _, task := range slices.Concat(reminders, rest) {
+		if seen[task.ID] {
+			continue
+		}
+		seen[task.ID] = true
+		out = append(out, task)
+	}
+	return out
+}
+
+func reminded(item crmcontracts.AttentionItem) bool {
+	return item.ReminderDue != nil && *item.ReminderDue
 }

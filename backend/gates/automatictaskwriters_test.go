@@ -112,6 +112,7 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/requestrecovery.go:requestAvailableForAcceptance": "checks a request has no accepted task before a human accepts it",
 	"modules/activities/whichdealanswer.go:answerWhichDealTx":             "closes the deal questions a colleague's filing has just answered; it creates no work",
 	"modules/activities/taskwindow.go:openTaskWindowClauses":              "narrows a list the caller already gates with the worklist clauses",
+	"modules/activities/taskreminder.go:dueReminderClause":                "narrows a list the caller already gates with the worklist clauses",
 	"modules/contacts/claimrecord.go:SetClaimTaskTx":                      "links a promise to its own task row",
 	"modules/contacts/lead_read.go:leadNextTaskDueSQL":                    "the lead's next due date as a record fact",
 	"modules/deals/nextstep.go:OpenNextStepSQL":                           "its caller passes storekit.CurrentTaskClause in as currentTask",

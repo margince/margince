@@ -2589,6 +2589,11 @@ paths:
           schema: {type: boolean}
           description: >-
             Restrict the list to an inbound message still awaiting an answer: the newest message of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it answers what on this record is waiting for a reply.
+        - name: reminder_due
+          in: query
+          schema: {type: boolean}
+          description: >-
+            Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out.
       responses:
         '200':
           description: A page of activities (newest first by default).
@@ -14867,7 +14872,7 @@ components:
             What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
         occurred_at: {type: string, format: date-time}
         due_at: {type: [string, 'null'], format: date-time, description: Task only.}
-        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only.'}
+        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         assignee_id: {type: [string, 'null'], format: uuid, description: Task only.}
         is_done: {type: boolean, default: false, description: Task only.}
         done_at: {type: [string, 'null'], format: date-time}
@@ -15144,7 +15149,7 @@ components:
         body: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time}
         due_at: {type: [string, 'null'], format: date-time}
-        remind_at: {type: [string, 'null'], format: date-time, description: Task only.}
+        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         assignee_id: {type: [string, 'null'], format: uuid}
         host_user_id:
           type: string
@@ -15230,7 +15235,7 @@ components:
         occurred_at: {type: string, format: date-time}
         due_at: {type: [string, 'null'], format: date-time}
         assignee_id: {type: [string, 'null'], format: uuid}
-        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. The reminder scan fires on this.'}
+        remind_at: {type: [string, 'null'], format: date-time, description: 'Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee''s own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.'}
         is_done: {type: boolean, description: 'Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta.'}
         meeting_status:
           type: [string, 'null']

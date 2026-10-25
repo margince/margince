@@ -8138,6 +8138,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.empty":
     "Chưa có thông báo nào. Những gì cần báo cho bạn sẽ hiển thị ở đây.",
   "notifications.title": "Cách gửi theo loại",
+  "notifications.browser.label":
+    "Thông báo trình duyệt",
+  "notifications.browser.default":
+    "Khi lời nhắc của một việc bạn được giao đến giờ, trình duyệt có thể hiện thông báo trong lúc Margince đang mở ở một thẻ.",
+  "notifications.browser.granted":
+    "Đang bật. Lời nhắc đến giờ của việc bạn được giao hiện thành thông báo trình duyệt trong lúc Margince đang mở ở một thẻ. Để tắt, hãy chặn thông báo của trang này trong cài đặt trình duyệt.",
+  "notifications.browser.denied":
+    "Trình duyệt này đang chặn thông báo. Để cho phép, hãy đổi cài đặt thông báo của trang này trong cài đặt trình duyệt.",
+  "notifications.browser.unsupported":
+    "Trình duyệt này không hiện được thông báo. Lời nhắc đến giờ vẫn đứng đầu Trang chủ và Danh sách công việc của bạn.",
+  "notifications.browser.allow":
+    "Cho phép",
+  "reminder.notification.body":
+    "Đã đến giờ nhắc. Bấm để mở việc này.",
+  "reminder.notification.untitled":
+    "Lời nhắc việc",
   "notifications.sub":
     "Mọi thông báo vẫn nằm trong trung tâm thông báo, dù chọn gì ở đây.",
   "notifications.saveFailedFor": "Không thể lưu “{setting}”",
@@ -15601,6 +15617,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.category.relationships": "Liên hệ đã im lặng",
   "worklist.category.system": "Hệ thống",
   "worklist.because.pinned": "bạn đã ghim",
+  "worklist.because.reminder_due": "đã đến giờ nhắc của bạn",
   "worklist.because.non_buyer_request": "chưa xác định là việc của khách hàng",
   "worklist.because.buyer_wrote_last": "bên mua gửi tin sau cùng",
   "worklist.because.waiting_days": "đang chờ",

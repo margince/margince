@@ -96,8 +96,9 @@ func (t attentionTasks) OpenForViewer(
 		return nil, err
 	}
 	open := make([]attention.Task, 0, len(rows))
+	reader := reminderReaderFor(ctx, scope)
 	for _, row := range rows {
-		open = append(open, taskFromActivity(row))
+		open = append(open, taskFromActivity(row, reader, asOf))
 	}
 	return t.markReadOnly(ctx, open)
 }
@@ -122,10 +123,40 @@ func (t attentionTasks) UpcomingForViewer(
 		return nil, err
 	}
 	upcoming := make([]attention.Task, 0, len(rows))
+	reader := reminderReaderFor(ctx, scope)
 	for _, row := range rows {
-		upcoming = append(upcoming, taskFromActivity(row))
+		upcoming = append(upcoming, taskFromActivity(row, reader, asOf))
 	}
 	return t.markReadOnly(ctx, upcoming)
+}
+
+// RemindersForViewer reads the reader's due reminders through the store's
+// reminder_due filter, the same read GET /v1/activities?reminder_due=true makes.
+func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time, limit int) ([]attention.Task, error) {
+	reader := activities.ReminderReader(ctx)
+	if reader.IsZero() {
+		return nil, nil
+	}
+	rows, _, err := t.store.ListActivities(ctx, activities.ListActivitiesInput{
+		RemindersDue: true, TaskAsOf: &asOf, Limit: &limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	due := make([]attention.Task, 0, len(rows))
+	for _, row := range rows {
+		due = append(due, taskFromActivity(row, reader, asOf))
+	}
+	return t.markReadOnly(ctx, due)
+}
+
+// reminderReaderFor is whose reminders a scope's rows may carry: the reader's
+// on their own queue, and nobody's on any other.
+func reminderReaderFor(ctx context.Context, scope attention.TaskScope) ids.UUID {
+	if scope != attention.TasksMine {
+		return ids.UUID{}
+	}
+	return activities.ReminderReader(ctx)
 }
 
 // markReadOnly flags the tasks the reader may see and not change, asked of the

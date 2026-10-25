@@ -162,6 +162,10 @@ type Tasks interface {
 	// single upcoming row was reached, and the reader who most needs next
 	// week's deadline is exactly the one who would never see it.
 	UpcomingForViewer(ctx context.Context, asOf, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
+	// RemindersForViewer answers the reader's own tasks whose reminder is due,
+	// latest reminder first. Its own bound, because a reminder on a task due
+	// next week would sort past the day's cap on the due date.
+	RemindersForViewer(ctx context.Context, asOf time.Time, limit int) ([]Task, error)
 }
 
 // Task is one piece of agreed work.
@@ -196,6 +200,8 @@ type Task struct {
 	// ReadOnly says the reader may see the task but not change it, so the row
 	// offers no verb that writes to it.
 	ReadOnly bool
+	// ReminderDue says the reader is the assignee and the reminder came due.
+	ReminderDue bool
 }
 
 // Receipts is what the system did on its own, most recent first.

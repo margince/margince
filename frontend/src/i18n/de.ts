@@ -8378,6 +8378,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.empty":
     "Bisher ist nichts eingegangen. Was das Produkt dir mitteilt, erscheint hier.",
   "notifications.title": "Zustellung nach Typ",
+  "notifications.browser.label": "Browser-Benachrichtigungen",
+  "notifications.browser.default":
+    "Wenn eine Erinnerung an einer deiner Aufgaben fällig wird, kann der Browser sie zeigen, solange Margince in einem Tab offen ist.",
+  "notifications.browser.granted":
+    "An. Eine fällige Erinnerung an einer deiner Aufgaben erscheint als Browser-Benachrichtigung, solange Margince in einem Tab offen ist. Zum Ausschalten blockierst du Benachrichtigungen für diese Seite in den Einstellungen deines Browsers.",
+  "notifications.browser.denied":
+    "In diesem Browser blockiert. Um sie zu erlauben, änderst du die Benachrichtigungen für diese Seite in den Einstellungen deines Browsers.",
+  "notifications.browser.unsupported":
+    "Dieser Browser kann keine Benachrichtigungen zeigen. Eine fällige Erinnerung steht trotzdem oben auf deiner Home und in deiner Worklist.",
+  "notifications.browser.allow": "Zulassen",
+  "reminder.notification.body":
+    "Deine Erinnerung ist fällig. Klicke, um die Aufgabe zu öffnen.",
+  "reminder.notification.untitled": "Erinnerung an eine Aufgabe",
   "notifications.sub":
     "Jede Benachrichtigung bleibt auch unter „Benachrichtigungen“ erhalten, egal was du hier wählst.",
   "notifications.saveFailedFor": "„{setting}“ wurde nicht gespeichert",
@@ -16011,6 +16024,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.category.relationships": "Ruhende Beziehung",
   "worklist.category.system": "System",
   "worklist.because.pinned": "von dir angeheftet",
+  "worklist.because.reminder_due": "deine Erinnerung ist fällig",
   "worklist.because.non_buyer_request": "nicht als Kundenanliegen bestätigt",
   "worklist.because.buyer_wrote_last":
     "die Käuferseite hat zuletzt geschrieben",

@@ -163,6 +163,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "occurred_after", Type: "string"},
 		{Name: "occurred_before", Type: "string"},
 		{Name: "project_id", Type: "string"},
+		{Name: "reminder_due", Type: "boolean"},
 		{Name: "sort", Type: "string"},
 		{Name: "source_activity_id", Type: "string"},
 		{Name: "thread_key", Type: "string"},

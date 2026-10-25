@@ -62,7 +62,7 @@ func applyPins(rows []ranked, pinned map[RowRef]bool) []ranked {
 		return rows
 	}
 	for i := range rows {
-		if rows[i].item.Level == levelPinned || !pinned[refOf(rows[i])] {
+		if rows[i].pinned || !pinned[refOf(rows[i])] {
 			continue
 		}
 		// The level the ranking sorts on, and the SEMANTIC level kept beside
@@ -72,8 +72,7 @@ func applyPins(rows []ranked, pinned map[RowRef]bool) []ranked {
 		// a pinned piece of hygiene as urgent, which is a figure a manager
 		// reads.
 		rows[i].pinned = true
-		rows[i].semanticLevel = rows[i].item.Level
-		rows[i].item.Level = levelPinned
+		raiseToTop(&rows[i])
 		// And the row says the reader put it here. Without it a page whose only
 		// row is pinned, or two adjacent pinned rows, offers no comparison and
 		// no explanation — the one row a reader definitely knows the reason for
@@ -81,6 +80,17 @@ func applyPins(rows []ranked, pinned map[RowRef]bool) []ranked {
 		rows[i].item.Because = append(rows[i].item.Because, reason("pinned", nil))
 	}
 	return rows
+}
+
+// raiseToTop moves a row to the pin level and keeps what its classifier said
+// it was. A pin and a due reminder both lead the page, and neither changes
+// whether somebody is waiting or a promise is breaking.
+func raiseToTop(row *ranked) {
+	if row.item.Level == levelPinned {
+		return
+	}
+	row.semanticLevel = row.item.Level
+	row.item.Level = levelPinned
 }
 
 // readingPins returns a copy of this service holding the pins THIS reader made.

@@ -148,6 +148,10 @@ type stubTasks struct {
 	upcomingFrom  *time.Time
 	upcomingUntil *time.Time
 	upcomingLimit int
+	// The reminder read's own rows, and whether it was asked at all.
+	reminders      []Task
+	remindersAsked bool
+	remindersLimit int
 }
 
 func (s *stubTasks) CountOpenForViewer(
@@ -181,6 +185,13 @@ func (s *stubTasks) UpcomingForViewer(
 	s.scope = scope
 	s.owner = owner
 	return s.upcoming, s.upcomingErr
+}
+
+// RemindersForViewer answers the reader's due reminders, recorded so a test
+// can prove the read is made only for the reader's own queue.
+func (s *stubTasks) RemindersForViewer(_ context.Context, _ time.Time, limit int) ([]Task, error) {
+	s.remindersAsked, s.remindersLimit = true, limit
+	return s.reminders, nil
 }
 
 // mineOnly is what most callers actually ask of the recorded scope.
