@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 329 |
-| Columns | 3866 |
+| Columns | 3869 |
 | Foreign keys | 534 |
 | Owning areas | 36 |
 
@@ -39,7 +39,7 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 30 | 141 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 31 | 141 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 34 | 46 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 44 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 65 | 38 |
@@ -144,7 +144,7 @@ erDiagram
 | [`activity_meeting_rsvp_backfill`](compose.md#activity_meeting_rsvp_backfill) | compose | 3 | 0 |
 | [`activity_own_sent_mail_repair`](compose.md#activity_own_sent_mail_repair) | compose | 3 | 0 |
 | [`activity_own_sent_mail_repair_cutoff`](compose.md#activity_own_sent_mail_repair_cutoff) | compose | 2 | 0 |
-| [`activity_participant`](activities.md#activity_participant) | activities | 9 | 0 |
+| [`activity_participant`](activities.md#activity_participant) | activities | 10 | 0 |
 | [`activity_participant_replay`](compose.md#activity_participant_replay) | compose | 3 | 0 |
 | [`activity_reader_state`](activities.md#activity_reader_state) | activities | 8 | 0 |
 | [`activity_reply_verdict_history`](activities.md#activity_reply_verdict_history) | activities | 6 | 0 |
@@ -165,7 +165,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 30 | 141 |
+| [`app_user`](identity.md#app_user) | identity | 31 | 141 |
 | [`approval`](approvals.md#approval) | approvals | 35 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -224,7 +224,7 @@ erDiagram
 | [`company`](contacts.md#company) | contacts | 44 | 44 |
 | [`company_address_country`](contacts.md#company_address_country) | contacts | 3 | 0 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
-| [`company_domain`](contacts.md#company_domain) | contacts | 10 | 0 |
+| [`company_domain`](contacts.md#company_domain) | contacts | 11 | 0 |
 | [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 22 | 1 |
 | [`company_domain_question_reader`](contacts.md#company_domain_question_reader) | contacts | 3 | 0 |
 | [`company_dossier`](compose.md#company_dossier) | compose | 6 | 0 |

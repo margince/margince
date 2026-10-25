@@ -23,8 +23,8 @@ import (
 // small tables go first, so the read arm opens before the long participant pass.
 func ownDomainFoldDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1792892696_own_domains_folded", Version: 1,
-		Title: "Fold the mail domains own-domain checks compare", Requires: []string{"core/1792892695"},
+		ID: "core/1792909146_own_domains_folded", Version: 1,
+		Title: "Fold the mail domains own-domain checks compare", Requires: []string{"core/1792909145"},
 		Steps: []datatask.Step{
 			foldStep("fold_login_domains", "identity writes the same folded login domain on the seat it inserts, without a separate audit",
 				identity.FoldLoginDomainsTx, identity.CountUnfoldedLoginDomains),
