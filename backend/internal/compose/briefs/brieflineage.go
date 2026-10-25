@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // dealLineage is why one candidate is back: the day the rep dismissed it, and
@@ -120,9 +121,9 @@ func briefLineage(
 		   -- happened yet, and the candidate query bounds itself the same way,
 		   -- so the two agree about which deals are returning — disagreement
 		   -- would put a deal back with no line explaining it.
-		   AND a.occurred_at <= $%d
 		   AND %s
-		 GROUP BY m.deal_id, m.state_at`, orderPos, userPos, dealScope, nowPos, readable),
+		   AND %s
+		 GROUP BY m.deal_id, m.state_at`, orderPos, userPos, dealScope, occurredday.HappenedSQL("a", fmt.Sprintf("$%d", nowPos)), readable),
 		args...)
 	if err != nil {
 		return nil, err

@@ -268,7 +268,8 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 		                 AND ai.occurred_at < a.occurred_at),
 		       a.kind, coalesce(a.meeting_status, ''), a.source
 		FROM activity_link l JOIN activity a ON a.id = l.activity_id
-		WHERE l.lead_id = $1 AND a.archived_at IS NULL AND a.occurred_at <= $2
+		WHERE l.lead_id = $1 AND a.archived_at IS NULL
+		  AND a.occurred_at <= $2 -- occurred_at raw: the response deadline is an instant a touch must beat
 		  AND `+auth.ActivityAvailableClause("a"), leadID, deadline)
 	if err != nil {
 		return nil, fmt.Errorf("read the lead's activities before its deadline: %w", err)

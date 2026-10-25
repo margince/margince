@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -75,11 +76,11 @@ func PromiseFollowUpsTx(ctx context.Context, tx pgx.Tx, promises []PromiseBasis,
        AND a.channel_provider IS NOT DISTINCT FROM src.channel_provider
        AND a.direction = 'outbound' AND a.counterparty_outbound_attested AND NOT a.bulk_mail_attested
        AND a.archived_at IS NULL
-       AND a.occurred_at > src.occurred_at AND a.occurred_at <= $%[2]d
+       AND a.occurred_at > src.occurred_at AND %[2]s
        AND %[3]s
        AND %[4]s
      ORDER BY a.occurred_at DESC, a.id DESC
-     LIMIT 1) later`, basis, until, promiseRecipientAddressedSQL("a", "basis.recipient_id"), readable), args...)
+     LIMIT 1) later`, basis, occurredday.BegunSQL("a", fmt.Sprintf("$%d", until)), promiseRecipientAddressedSQL("a", "basis.recipient_id"), readable), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading mail that may have kept a promise: %w", err)
 	}

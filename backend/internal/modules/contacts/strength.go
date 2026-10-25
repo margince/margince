@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -367,7 +368,7 @@ func contactStrengths(
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = l.contact_id
 		         WHERE i.direction = 'inbound' AND `+strengthCitedCounts+`
 		           AND i.archived_at IS NULL AND i.occurred_at >= $2`+auth.AudienceWorkspaceOnly("i")+`
-		           AND ($3::timestamptz IS NULL OR i.occurred_at <= $3)`+citedWithin+`
+		           AND ($3::timestamptz IS NULL OR `+occurredday.HappenedSQL("i", "$3")+`)`+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM activity a
@@ -375,7 +376,7 @@ func contactStrengths(
 		WHERE l.contact_id = ANY($1) AND `+strengthCounts+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 		  -- NULL means no upper bound, so the live score is unchanged; an
 		  -- as-of read passes the instant it is asking about.
-		  AND ($3::timestamptz IS NULL OR a.occurred_at <= $3)`+scoreWithin+`
+		  AND ($3::timestamptz IS NULL OR `+occurredday.HappenedSQL("a", "$3")+`)`+scoreWithin+`
 		GROUP BY l.contact_id`, args...)
 	if err != nil {
 		return nil, err

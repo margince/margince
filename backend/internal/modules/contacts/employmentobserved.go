@@ -32,9 +32,12 @@ func employmentFirstObservedSQL(contact, domain, activity, skew string) string {
 		    -- A literal suffix compare, never LIKE — see OnDomain.
 		    AND (split_part(pe.email, '@', 2) = %[2]s
 		         OR right(split_part(pe.email, '@', 2), length(%[2]s) + 1) = '.' || %[2]s)
-		    AND ev.occurred_at <= now() + %[4]s::interval),
+		    AND ev.occurred_at <= now() + %[4]s::interval -- occurred_at raw: the instant a message was captured, with clock skew allowed
+		),
 		(SELECT ev.occurred_at FROM activity ev
-		  WHERE ev.id = %[3]s AND ev.occurred_at <= now() + %[4]s::interval))`,
+		  WHERE ev.id = %[3]s
+		    AND ev.occurred_at <= now() + %[4]s::interval -- occurred_at raw: the instant a message was captured, with clock skew allowed
+		))`,
 		contact, domain, activity, skew)
 }
 
@@ -53,7 +56,9 @@ func observeEmployment(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInpu
 	err := tx.QueryRow(ctx, `
 		WITH msg AS (
 			SELECT occurred_at FROM activity
-			 WHERE id = $4 AND occurred_at <= now() + $5::interval),
+			 WHERE id = $4
+			   AND occurred_at <= now() + $5::interval -- occurred_at raw: the instant a message was captured, with clock skew allowed
+		),
 		edge AS (
 			SELECT r.id, r.first_observed_at
 			  FROM relationship r

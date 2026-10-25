@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // briefUnnarrowed is the predicate that narrows nothing — what a clause becomes
@@ -153,11 +154,11 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 				  -- dismissed deal back for something still to come — and the
 				  -- lineage read bounds itself the same way, so an unbounded
 				  -- one here would return deals whose card can say nothing.
-				  AND a.occurred_at <= $%d
+				  AND %s
 				  AND %s) END)`,
 		baseValue, userPos, asOfPos,
 		briefSnoozeLiftedSQL("d.id", "bi.reopen_on", "bi.reopen_ref", "bi.state_at", fmt.Sprintf("$%d", asOfPos)),
-		asOfPos, readable)
+		occurredday.HappenedSQL("a", fmt.Sprintf("$%d", asOfPos)), readable)
 	if scope != "" {
 		q += " AND " + scope
 	}
@@ -239,14 +240,14 @@ func briefEvidenceRows(
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $%[1]d
 		WHERE a.archived_at IS NULL
-		  AND ($%[2]d::timestamptz IS NULL OR a.occurred_at > $%[2]d)
+		  AND ($%[2]d::timestamptz IS NULL OR a.occurred_at > $%[2]d) -- occurred_at raw: since the last view of the reader, a window edge
 		  -- Bounded at the cutoff, the way the dismissal filter above is: a
 		  -- future-dated row has not happened, so counting it as overnight
 		  -- movement claims the deal moved for something still to come.
-		  AND a.occurred_at <= $%[3]d
+		  AND %[3]s
 		  AND %[5]s
 		ORDER BY a.occurred_at DESC, a.id DESC
-		LIMIT $%[4]d`, dealPos, sincePos, asOfPos, capPos, readable)
+		LIMIT $%[4]d`, dealPos, sincePos, occurredday.HappenedSQL("a", fmt.Sprintf("$%d", asOfPos)), capPos, readable)
 	for _, dealID := range order {
 		f := facts[dealID]
 		args[dealPos-1] = dealID

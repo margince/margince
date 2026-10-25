@@ -42,7 +42,7 @@ func AssuranceSignalSubjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]a
  WHERE role_cite->>'commercial_role' IN ('supplier', 'partner', 'provider'))
  AND (source.occurred_at >= $%[1]d OR `+scoutBuyerSignal("s")+`)
  AND s.visibility = 'workspace' AND c.archived_at IS NULL AND NOT c.is_anchor
- AND source.occurred_at <= $%[2]d
+ AND source.occurred_at <= $%[2]d -- occurred_at raw: the time a signal cites carries no precision
  AND source.occurred_at > coalesce(`+deals.SuggestionFloorExpr("c.id")+`, '-infinity'::timestamptz)
  AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
   WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca

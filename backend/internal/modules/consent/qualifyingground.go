@@ -324,7 +324,7 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		  AND a.captured_by LIKE 'connector:%'
 		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
 		  AND a.occurred_at >= $2
-		  AND a.occurred_at <= now() + $3::interval
+		  AND a.occurred_at <= now() + $3::interval -- occurred_at raw: a connector meeting is an instant, read with a lookahead
 		ORDER BY a.occurred_at DESC
 		LIMIT 1`, contactID, since, meetingHorizonInterval).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {

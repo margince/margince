@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -139,7 +140,7 @@ var settlementEvidenceCompleteSQL = provenance.MailBodyCompleteSQL("a") + `
  AND NOT EXISTS (SELECT 1 FROM activity later
    WHERE later.thread_key = a.thread_key AND later.kind = a.kind
      AND later.counterparty_email = a.counterparty_email AND later.archived_at IS NULL
-     AND later.occurred_at <= $1 AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
+     AND ` + occurredday.BegunSQL("later", "$1") + ` AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
      AND NOT ` + provenance.MailBodyCompleteSQL("later") + `)
  AND NOT EXISTS (SELECT 1 FROM (` + offThreadAnswersSQL("a", "$1") + `) off
    JOIN activity answer ON answer.id = off.id
@@ -155,7 +156,7 @@ func settlementAnswersSQL() string {
    WHERE (` + ourOutboundInThisThread("reply", "a") + `
      OR (` + correspondentInThisThread("reply", "a") + ` AND ` + CapturedInboundSQL("reply") + `))
      AND reply.audience = 'workspace' AND reply.restricted_at IS NULL
-     AND reply.occurred_at <= $1
+     AND ` + occurredday.BegunSQL("reply", "$1") + `
      AND (reply.occurred_at, reply.id) > (a.occurred_at, a.id)
  UNION ` + offThreadAnswersSQL("a", "$1")
 }

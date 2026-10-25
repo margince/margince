@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -231,7 +232,7 @@ var awaitingRepliesSQL = `
 	   AND NOT ` + ImportedHistorySQL + `
 	   -- An invitation or the product's own mail asks nobody a question.
 	   AND ` + relstrength.WrittenByHumanSQL("a") + `
-	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int)
+	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int) -- occurred_at raw: an age of whole days
 	   AND a.occurred_at >= $%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)
 	   AND %[2]s
 	   -- The reader sent it. Mail sent through the product and mail captured
@@ -253,7 +254,7 @@ var awaitingRepliesSQL = `
 	                      AND later.kind = a.kind
 	                      AND later.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	                      AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
-	                      AND later.occurred_at <= $%[1]d
+	                      AND ` + occurredday.BegunSQL("later", "$%[1]d") + `
 	                      AND EXISTS (SELECT 1 FROM activity_link heard
 	                                    JOIN activity_link sent ON sent.activity_id = a.id
 	                                   WHERE heard.activity_id = later.id
@@ -270,7 +271,7 @@ var awaitingRepliesSQL = `
 	                      AND %[7]s
 	                      AND %[8]s
 	                      AND later.occurred_at > a.occurred_at
-	                      AND later.occurred_at <= $%[1]d)
+	                      AND ` + occurredday.BegunSQL("later", "$%[1]d") + `)
 	   -- A customer: a lead, someone at a prospect or customer company, or a
 	   -- record with an open deal or a lead being worked.
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[11]s)

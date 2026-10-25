@@ -37,7 +37,7 @@ var retentionSelectors = map[string]string{
 		  AND entered_at < now() - make_interval(days => $1) LIMIT $2`,
 	"activity/": `SELECT a.id FROM activity a
 		WHERE a.archived_at IS NULL
-		  AND a.occurred_at < now() - make_interval(days => $1)
+		  AND a.occurred_at < now() - make_interval(days => $1) -- occurred_at raw: a retention age in days
 		  AND a.created_at < now() - make_interval(days => $1)
 		  ` + correspondenceFloorPredicate(3, 4) + `
 		  AND NOT EXISTS (SELECT 1 FROM activity_link l
@@ -52,7 +52,7 @@ var retentionSelectors = map[string]string{
 		LIMIT $2`,
 	"activity/transcript": `SELECT a.id FROM activity a
 		WHERE a.source_system = 'transcript' AND a.body IS NOT NULL
-		  AND a.occurred_at < now() - make_interval(days => $1)
+		  AND a.occurred_at < now() - make_interval(days => $1) -- occurred_at raw: a retention age in days
 		  AND a.created_at < now() - make_interval(days => $1)
 		  ` + correspondenceFloorPredicate(3, 4) + `
 		  AND NOT EXISTS (SELECT 1 FROM activity_link l

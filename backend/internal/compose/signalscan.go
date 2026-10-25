@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -87,7 +88,7 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 			   -- last, so it is skipped rather than guessed at — the same rule
 			   -- PO-F-4 applies to the engagement state.
 			   AND a.direction IS NOT NULL
-			   AND a.occurred_at <= $1
+			   AND `+occurredday.HappenedSQL("a", "$1")+`
 			 ORDER BY ro.company_id, a.occurred_at DESC, a.id DESC
 		)
 		SELECT n.company_id, n.id, n.occurred_at
