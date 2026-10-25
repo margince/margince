@@ -85,8 +85,14 @@ func AuthorSideOf(direction string, participants []Participant, ownDomains []str
 		// author. It is not attributable to a contact, so it settles nothing.
 		return AuthorUnknown
 	}
-	if author.UserID != "" || addressIsOurs(author.Address, ownDomains) {
+	if author.UserID != "" {
 		return AuthorSeller
+	}
+	switch domainSideOf(author.Address, ownDomains) {
+	case ownDomain:
+		return AuthorSeller
+	case ownSubdomain:
+		return AuthorUnknown
 	}
 	// An identified author who is neither a seat nor on one of our domains is
 	// the counterparty, direction or no direction.
@@ -126,16 +132,35 @@ func authorOf(participants []Participant) (Participant, bool) {
 	return Participant{}, false
 }
 
-// addressIsOurs reports whether an address is at one of our own domains itself,
-// not a subdomain, with both sides folded by owndomain.Fold.
+// domainSide is which side an address's domain puts its writer on.
+type domainSide int
+
+const (
+	outsideDomain domainSide = iota
+	ownDomain
+	ownSubdomain
+)
+
+// domainSideOf places an address by its domain, with both sides folded by
+// owndomain.Fold. Only an own domain itself proves the writer is ours.
 //
-// Exact, where capture covers subdomains. Authorship settles a contract
-// milestone, so it needs proof the sender is ours. A workspace may own
-// example.com and delegate customer.example.com to a customer, whose buyer
-// must not read as seller side. Capture only decides what mail is internal.
-func addressIsOurs(address string, ownDomains []string) bool {
+// Capture covers subdomains, but authorship settles a contract milestone. A
+// workspace may own example.com and delegate customer.example.com to a
+// customer, and a subsidiary may write from an own subdomain. Neither side is
+// proven, so a subdomain that owndomain.Set.Covers accepts but nobody listed
+// is ownSubdomain: it settles nothing as seller and nothing as buyer.
+func domainSideOf(address string, ownDomains []string) domainSide {
 	domain := owndomain.OfAddress(address)
-	return domain != "" && slices.Contains(owndomain.New(ownDomains).Domains(), domain)
+	own := owndomain.New(ownDomains)
+	switch {
+	case domain == "":
+		return outsideDomain
+	case slices.Contains(own.Domains(), domain):
+		return ownDomain
+	case own.CoversDomain(domain):
+		return ownSubdomain
+	}
+	return outsideDomain
 }
 
 // TranscriptSourceSystem is the activity.source_system value that marks a body
@@ -178,7 +203,7 @@ func CountsAsBuyerParticipant(p Participant, ownDomains []string) bool {
 		// nobody at all is not an attendee either way.
 		return false
 	}
-	return !addressIsOurs(p.Address, ownDomains)
+	return domainSideOf(p.Address, ownDomains) == outsideDomain
 }
 
 // MeetingProof is what a meeting offers as evidence that it happened.
