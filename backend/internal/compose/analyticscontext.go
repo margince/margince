@@ -222,10 +222,9 @@ func scopeToWire(s ResolvedScope) crmcontracts.AnalyticsScope {
 	return out
 }
 
-// markAssertable says whether a forecast call or a share may name this scope,
-// by asking the rule ResolveAssertionScope applies, so the screen hides the
-// controls the write routes would refuse. managed_teams names several
-// populations and no write accepts it.
+// markAssertable says whether a forecast call or a share may name this scope.
+// It asks the rule ResolveAssertionScope applies, so the screen hides what the
+// write routes would refuse. No write accepts managed_teams.
 func markAssertable(p principal.Principal, scope *crmcontracts.AnalyticsScope) {
 	assertable := false
 	if scope.Kind != crmcontracts.AnalyticsScopeKindManagedTeams {

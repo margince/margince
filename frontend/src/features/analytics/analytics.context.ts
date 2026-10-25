@@ -99,13 +99,11 @@ export function reportScope(
 /**
  * The scope a WRITE names, or null when the selection cannot be written to.
  *
- * A read may omit the scope and let the server resolve the reader's lens. A
- * write may not: a forecast or a share is an assertion about one named
- * population, and `managed_teams` covers several. Rather than pick one team on
- * the caller's behalf — a narrower claim than the number they are looking at —
- * this returns null and the surface withholds the action. The same holds for a
- * scope the server marks `assertable: false`: the seat may read it, and the
- * write routes would refuse it.
+ * A write names one population, so it cannot omit the scope the way a read can.
+ * `managed_teams` covers several, and picking one would claim less than the
+ * number on screen. A scope marked `assertable: false` is one the seat may read
+ * and the write routes refuse. Both return null and the surface withholds the
+ * action.
  */
 export function writableScope(
   scope: AnalyticsScope,

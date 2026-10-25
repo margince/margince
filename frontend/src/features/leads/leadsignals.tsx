@@ -45,9 +45,9 @@ export function useLeadSignalCatalog() {
 }
 
 /**
- * The factors to list. The catalog is authoritative while it answers; when it
- * does not (a client newer than its server), the factors already stored are
- * listed so a recorded signal is never hidden by a missing catalog.
+ * The factors to list. The catalog is authoritative while it answers.
+ * Without it (a client newer than its server), the stored factors are listed
+ * so a recorded signal is never hidden.
  */
 export function listedFactors(
   catalog: readonly SignalCatalogFactor[] | undefined,
