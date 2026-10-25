@@ -76,8 +76,8 @@ func TestActivityReadsSayWhetherTheCallerMayChangeIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The workspace is shared with the package's other tests, so the list is
-	// judged on the two rows this test seeded.
+	// Other tests in the package share the workspace, so only the two seeded
+	// rows are judged.
 	seen := 0
 	for _, a := range listed {
 		id := ids.UUID(a.Id)
@@ -85,12 +85,12 @@ func TestActivityReadsSayWhetherTheCallerMayChangeIt(t *testing.T) {
 			continue
 		}
 		seen++
-		if want := id == mine; a.Writable == nil || *a.Writable != want {
-			t.Errorf("list row %s: writable = %v, want %v", a.Id, a.Writable, want)
+		if a.Writable == nil || *a.Writable != (id == mine) {
+			t.Errorf("list row %s: writable = %v, want %v", a.Id, a.Writable, id == mine)
 		}
 	}
 	if seen != 2 {
-		t.Fatalf("list returned %d of the 2 seeded activities", seen)
+		t.Fatalf("list carried %d of the 2 seeded activities", seen)
 	}
 
 	if err := store.tx(e.asEditor(), func(tx pgx.Tx) error {

@@ -283,7 +283,7 @@ export const OperatorValidating: Story = {
 };
 
 /**
- * The typed confirm behind "Delete purchased data": the danger plate says what
+ * The typed confirm behind "Delete provider data": the danger plate says what
  * goes and what stays, and the field asks for the provider's name.
  */
 export const DeleteDataDialog: Story = {
@@ -296,7 +296,7 @@ export const DeleteDataDialog: Story = {
       }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Delete purchased data" }),
+      await screen.findByRole("button", { name: "Delete provider data" }),
     );
     await screen.findByRole("dialog");
   },

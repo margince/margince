@@ -29698,10 +29698,13 @@ type BlockedDomainListResponse struct {
 // the events read from a conversation) is read only from a `complete` mail body.
 type BodyCompleteness string
 
-// BoughtField One value on a contact that a data provider's purchase wrote and still owns.
+// BoughtField One value on a contact that a data provider's run wrote and still owns.
 type BoughtField struct {
-	// AppliedAt When the purchase wrote it.
+	// AppliedAt When the run wrote it.
 	AppliedAt time.Time `json:"applied_at"`
+
+	// Paid True when a seat started the run and it spent credits. A value from an automatic run is never paid, because automatic runs take only free categories.
+	Paid bool `json:"paid"`
 
 	// Provider A licensed data provider registered in THIS installation; the domain/run contract
 	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
@@ -29712,8 +29715,17 @@ type BoughtField struct {
 	// live set.
 	Provider Provider `json:"provider"`
 
-	// Target Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the purchase wrote is bought.
+	// RequestedBy The seat that started the run. Set only when `trigger` is `manual`.
+	RequestedBy *openapi_types.UUID `json:"requested_by,omitempty"`
+
+	// Target Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the run wrote is the provider's.
 	Target string `json:"target"`
+
+	// Trigger What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+	// contact that existed before the provider was connected, or that no run has covered
+	// yet; like the other automatic triggers it buys only the categories that cost
+	// nothing.
+	Trigger ProviderRunTrigger `json:"trigger"`
 }
 
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
@@ -34529,7 +34541,7 @@ type Contact struct {
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
-	// BoughtFields Which of this contact's values a data provider's purchase put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete bought data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company.
+	// BoughtFields Which of this contact's values a data provider's run put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete provider data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company.
 	BoughtFields *[]BoughtField `json:"bought_fields,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
@@ -46940,18 +46952,18 @@ type ProviderRunState string
 // populated for that kind (PI-DDL-2).
 type ProviderRunSubjectKind string
 
-// ProviderRunTrigger What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
-// contact that existed before the provider was connected, or that no run has covered
-// yet; like the other automatic triggers it buys only the categories that cost
-// nothing.
-type ProviderRunTrigger string
-
 // ProviderRunReservation defines model for ProviderRunReservation.
 type ProviderRunReservation struct {
 	ActualCredits   *int   `json:"actual_credits,omitempty"`
 	Pool            string `json:"pool"`
 	ReservedCredits int    `json:"reserved_credits"`
 }
+
+// ProviderRunTrigger What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+// contact that existed before the provider was connected, or that no run has covered
+// yet; like the other automatic triggers it buys only the categories that cost
+// nothing.
+type ProviderRunTrigger string
 
 // ProviderSpend A bounded consumption series: the current month plus a small number of prior
 // months, so the connection read stays one round trip.

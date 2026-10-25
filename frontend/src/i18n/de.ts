@@ -5694,6 +5694,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "evidence.mark": "gelesen",
 
   "evidence.bought": "gekauft",
+  "evidence.fromProvider": "vom Anbieter",
   "evidence.confirm": "Bestätigen",
   "evidence.correct": "Korrigieren",
   "evidence.save": "Speichern",
@@ -14564,6 +14565,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.bandBadge.moderate": "Mittel",
   "contact.bandBadge.strong": "Stark",
   "contact.bought.from": "Bei {provider} gekauft",
+  "contact.provider.from": "Von {provider}",
+  "contact.provider.trigger.automatic_create":
+    "Für einen neuen Kontakt ergänzt",
+  "contact.provider.trigger.automatic_import":
+    "Für einen neuen Kontakt ergänzt",
+  "contact.provider.trigger.automatic_backfill": "Vom Nachholabgleich ergänzt",
+  "contact.provider.trigger.scheduled_refresh": "Planmäßig aktualisiert",
+  "contact.provider.trigger.manual": "Angefragt von",
   "contact.network.title": "Teammitglieder, die diesen Kontakt kennen",
 
   "contact.page.loading": "Wird geladen…",
@@ -14878,7 +14887,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "provider.disconnectConfirm.title": "Diesen Anbieter trennen?",
   "provider.disconnectConfirm.body":
     "Neue Abfragen stoppen sofort, und der Schlüssel wird vernichtet. Gekaufte Daten bleiben an deinen Datensätzen. Das Trennen löscht sie nicht.",
-  "provider.deleteData": "Gekaufte Daten löschen",
+  "provider.deleteData": "Anbieterdaten löschen",
   "provider.deleteDataConfirm.title": "Alle Daten dieses Anbieters löschen?",
   "provider.deleteDataConfirm.impactTitle":
     "Das lässt sich nicht rückgängig machen",

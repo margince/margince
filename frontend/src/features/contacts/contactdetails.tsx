@@ -319,7 +319,10 @@ export function ContactDetails({
           <>
             {/* What a provider sold that no field holds: shown as bought facts
                 beside the record, never copied into the address. */}
-            <BoughtAttributes profiles={profiles} />
+            <BoughtAttributes
+              profiles={profiles}
+              runs={contact.bought_fields}
+            />
             {contact.archived_at ? null : (
               <FieldRow label={t("tags.panelTitle")} align="top">
                 <ContactTagsSection contact={contact} />

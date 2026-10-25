@@ -60,6 +60,9 @@
 // The provider_run relink is the merge's alone: it decides which of two
 // colliding LIVE runs keeps the one-live-run index, which is knowable
 // only where both records' run states are visible at once.
+// The contact read also READS integrations' provider_run and
+// provider_run_reservation (providerboughtfields.go). They say which run wrote a
+// provider value, what started it, and whether it spent credits.
 // The contact list READS two of collections' — tag and taggable — for the
 // contract's `tag` filter: a tagged contact is a link row whichever module
 // writes it, and the alternative is a declared filter answered by nobody.
