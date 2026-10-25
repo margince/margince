@@ -22,7 +22,7 @@ import (
 // prove the name came from the address. Without one, the name stays.
 func initialsNamesDataTask() datatask.Task {
 	return datatask.Task{
-		ID: contacts.InitialsRepairTaskID, Version: 1,
+		ID: "core/1792896243_initials_display_names", Version: 1,
 		Title: "Showing initials-only addresses as they are instead of a made-up name",
 		Steps: []datatask.Step{{
 			Name: "contacts", Limit: 200, MinLimit: 10,
