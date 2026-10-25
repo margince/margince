@@ -28497,6 +28497,8 @@ export interface components {
              * @description An instant, so the client names its day in the record's own zone.
              */
             at?: string;
+            /** @description How to read `at`, from the row it names. `day` means only its UTC date is known. Absent with `at`. */
+            at_precision?: components["schemas"]["OccurredPrecision"];
         };
         /**
          * @description How the relationship stands, in the parts a reader can act on (AC-company-3).
@@ -28522,6 +28524,8 @@ export interface components {
             reply_balance?: number | null;
             /** Format: date-time */
             last_meeting_at?: string | null;
+            /** @description How to read `last_meeting_at`, from the row it names. Absent when that is null or absent. */
+            last_meeting_precision?: components["schemas"]["OccurredPrecision"];
             /** @description How many contacts here have interacted at all — the account's real surface. */
             active_contacts?: number | null;
             /** @description The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account. */

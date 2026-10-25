@@ -173,6 +173,22 @@ func TestRelationshipReasonCarriesTheValuesItNames(t *testing.T) {
 	if params == nil || params.At == nil || !params.At.Equal(*healthDaysAgo(-2)) {
 		t.Fatalf("reason params = %+v, want the booked meeting's start, as an instant", params)
 	}
+	if params.AtPrecision == nil || *params.AtPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionInstant {
+		t.Errorf("at_precision = %v, want instant", params.AtPrecision)
+	}
+}
+
+// A day meeting booked ahead is named by its date: the precision travels with
+// its stored noon.
+func TestABookedDayMeetingCarriesItsPrecision(t *testing.T) {
+	health := crmcontracts.Company360Health{ActiveContacts: new(2), SingleThreaded: new(false)}
+	booked := &occurredday.Moment{At: occurredday.Anchor(healthNow.AddDate(0, 0, 2)), DateOnly: true}
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(instantAt(healthDaysAgo(77)), nil, booked, healthNow, time.UTC))
+
+	params := health.Relationship.ReasonParams
+	if params == nil || params.AtPrecision == nil || *params.AtPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+		t.Fatalf("reason params = %+v, want the day meeting's date with precision day", params)
+	}
 }
 
 func TestCommercialIsAbsentWhenTheReaderHasNoDealGrant(t *testing.T) {

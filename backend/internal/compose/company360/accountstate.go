@@ -240,7 +240,7 @@ func (a *assembly) readHealth() error {
 		return err
 	}
 	if lastMeeting != nil {
-		health.LastMeetingAt = &lastMeeting.At
+		health.LastMeetingAt, health.LastMeetingPrecision = &lastMeeting.At, activitywhen.PrecisionOf(*lastMeeting)
 	}
 
 	loc, err := a.zone()

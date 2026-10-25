@@ -10332,6 +10332,9 @@ components:
           type: string
           format: date-time
           description: An instant, so the client names its day in the record's own zone.
+        at_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `at`, from the row it names. `day` means only its UTC date is known. Absent with `at`.
     Company360Health:
       type: object
       description: |-
@@ -10360,6 +10363,9 @@ components:
         last_meeting_at:
           type: [string, 'null']
           format: date-time
+        last_meeting_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `last_meeting_at`, from the row it names. Absent when that is null or absent.
         active_contacts:
           type: [integer, 'null']
           description: How many contacts here have interacted at all — the account's real surface.

@@ -31905,6 +31905,9 @@ type Company360Health struct {
 	DaysSinceLastInbound *int       `json:"days_since_last_inbound,omitempty"`
 	LastMeetingAt        *time.Time `json:"last_meeting_at,omitempty"`
 
+	// LastMeetingPrecision How to read `last_meeting_at`, from the row it names. Absent when that is null or absent.
+	LastMeetingPrecision *OccurredPrecision `json:"last_meeting_precision,omitempty"`
+
 	// OpenCommitments Commitments either side made with the contacts at this account, read out of conversations, still owed and not yet a task. Null when the caller cannot read contacts and activities.
 	OpenCommitments *int `json:"open_commitments,omitempty"`
 
@@ -39989,10 +39992,13 @@ type HealthDimensionReasonCode string
 // HealthDimensionReasonParams The values the reason names. Each code lists which it reads.
 type HealthDimensionReasonParams struct {
 	// At An instant, so the client names its day in the record's own zone.
-	At    *time.Time `json:"at,omitempty"`
-	Count *int       `json:"count,omitempty"`
-	Days  *int       `json:"days,omitempty"`
-	Total *int       `json:"total,omitempty"`
+	At *time.Time `json:"at,omitempty"`
+
+	// AtPrecision How to read `at`, from the row it names. `day` means only its UTC date is known. Absent with `at`.
+	AtPrecision *OccurredPrecision `json:"at_precision,omitempty"`
+	Count       *int               `json:"count,omitempty"`
+	Days        *int               `json:"days,omitempty"`
+	Total       *int               `json:"total,omitempty"`
 }
 
 // HeldEntityType defines model for HeldEntityType.

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -60,10 +61,11 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 			crmcontracts.HealthDimensionReasonParams{Days: &touch.Days},
 			fmt.Sprintf("No reply and no meeting for %d days.", touch.Days))
 	case touch.Basis == relstrength.InTouchBooked:
-		// The instant, not a day: which day it falls on depends on the record's
-		// zone, which the client holds and this read does not.
+		// The stored time and its precision: the client names an instant's day
+		// in the record's zone, which this read does not hold, and a day's own date.
+		booked := crmcontracts.HealthDimensionReasonParams{At: &touch.BookedAt.At, AtPrecision: activitywhen.PrecisionOf(*touch.BookedAt)}
 		return dimension(crmcontracts.HealthDimensionRatingGood, crmcontracts.HealthDimensionReasonCodeMeetingBooked,
-			crmcontracts.HealthDimensionReasonParams{At: &touch.BookedAt.At}, "A meeting with them is booked.")
+			booked, "A meeting with them is booked.")
 	case touch.Basis == relstrength.InTouchMet:
 		// The meeting is named even on a single-threaded account: it is what
 		// keeps the rating off at risk, and SingleThreaded still says the rest.

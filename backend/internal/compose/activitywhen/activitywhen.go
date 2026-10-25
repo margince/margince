@@ -21,6 +21,14 @@ func MomentOf(a crmcontracts.Activity) occurredday.Moment {
 	return occurredday.Moment{At: a.OccurredAt, DateOnly: occurredday.IsDay(a.OccurredPrecision)}
 }
 
+// PrecisionOf is the wire precision of a time occurredday reads.
+func PrecisionOf(m occurredday.Moment) *crmcontracts.OccurredPrecision {
+	if m.DateOnly {
+		return new(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
+	}
+	return new(crmcontracts.OccurredPrecisionOccurredPrecisionInstant)
+}
+
 // Stated is the wire precision of a row a reader found. It is nil when there
 // was no row ("" from a SQL coalesce): a missing time has no precision.
 func Stated(precision string) *crmcontracts.OccurredPrecision {

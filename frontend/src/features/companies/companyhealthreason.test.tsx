@@ -62,6 +62,21 @@ describe("useHealthReason", () => {
     expect(said).not.toContain("{at}");
   });
 
+  // A day meeting names its own date in every zone: its stored noon UTC is
+  // already the next morning in Kiritimati.
+  it("names a booked day meeting's own date", () => {
+    const en = renderHook(() => useHealthReason(), {
+      wrapper: wrapper("en", "Pacific/Kiritimati"),
+    });
+    const said = en.result.current({
+      reason: "A meeting with them is booked.",
+      reason_code: "meeting_booked",
+      reason_params: { at: "2026-10-08T12:00:00Z", at_precision: "day" },
+    });
+    expect(said).toMatch(/\b8\b/);
+    expect(said).not.toMatch(/\b9\b/);
+  });
+
   // A code whose sentence needs a value the server did not send is said in
   // the server's own words, never as "{days}" or a made-up zero.
   it("falls back to the sentence when a value the code needs is missing", () => {
