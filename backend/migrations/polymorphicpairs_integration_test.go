@@ -27,6 +27,7 @@ package migrations_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -74,31 +75,7 @@ func TestEveryPolymorphicPairAnswersForItsRecord(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
-	ctx := context.Background()
-
-	rows, err := conn.Query(ctx, polymorphicPairs)
-	if err != nil {
-		t.Fatalf("reading the polymorphic pairs: %v", err)
-	}
-	defer rows.Close()
-	var candidates []polymorphicPair
-	for rows.Next() {
-		var pair polymorphicPair
-		if err := rows.Scan(&pair.table, &pair.id, &pair.discriminator); err != nil {
-			t.Fatalf("scanning: %v", err)
-		}
-		candidates = append(candidates, pair)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatalf("reading the polymorphic pairs: %v", err)
-	}
-	var found []string
-	for _, pair := range candidates {
-		if shapeAnswers(readShapeFacts(ctx, t, conn, pair)) {
-			continue
-		}
-		found = append(found, pair.table+"."+pair.id+" ("+pair.discriminator+")")
-	}
+	found := unansweredPairs(context.Background(), t, conn)
 
 	// NO COUNT FLOOR, and the reason is worth stating because the sibling gates in this
 	// package carry one. Theirs count the whole corpus — every foreign key — which does
@@ -110,15 +87,32 @@ func TestEveryPolymorphicPairAnswersForItsRecord(t *testing.T) {
 	// that stops matching, so a query returning nothing leaves every register entry
 	// stale. That same report stops a resolved pair from leaving its line behind.
 	defer pairResolution.AssertAllMatched(t)
-	for _, pair := range found {
-		if pairResolution.Waived(t, pair) {
-			continue
-		}
-		t.Errorf("%s names a record with nothing to say when that record goes.\n"+
-			"Give it one of the three endings — a foreign key per branch (SHAPE), a table per "+
-			"branch (SPLIT), or a reason it outlives the record (OUTLIVES) — and put it in "+
-			"pairResolution with which and why.", pair)
+	judgePairs(t, found, pairResolution)
+}
+
+// unansweredPairs lists the polymorphic pairs in the catalog that no SHAPE
+// answers, spelled as the register keys it.
+func unansweredPairs(ctx context.Context, t *testing.T, conn *pgx.Conn) []string {
+	t.Helper()
+	rows, err := conn.Query(ctx, polymorphicPairs)
+	if err != nil {
+		t.Fatalf("reading the polymorphic pairs: %v", err)
 	}
+	candidates, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (polymorphicPair, error) {
+		var pair polymorphicPair
+		err := row.Scan(&pair.table, &pair.id, &pair.discriminator)
+		return pair, err
+	})
+	if err != nil {
+		t.Fatalf("reading the polymorphic pairs: %v", err)
+	}
+	var found []string
+	for _, pair := range candidates {
+		if !shapeAnswers(readShapeFacts(ctx, t, conn, pair)) {
+			found = append(found, pair.table+"."+pair.id+" ("+pair.discriminator+")")
+		}
+	}
+	return found
 }
 
 // pairResolution is what each polymorphic pair is going to do about the row it names,
@@ -164,13 +158,10 @@ var pairResolution = gatekit.Waive(map[string]string{
 	"report_edition_contribution.source_id (source_type)":                "DECIDE — what the reference means is not settled, so neither shape nor split can be chosen yet",
 	"report_edition_question_source.source_id (source_type)":             "OUTLIVES — a sent edition's kept answer names the records it counted, and the reader withholds the whole answer once one of them is gone or out of reach; a cascade would drop the gone record from its row, and the records left would vouch for a count that still includes it",
 	"sales_target.scope_id (scope_kind)":                                 "SPLIT — narrow table, two or three branches: one table per branch costs less than the columns a shape would add, and removes the discriminator with them",
-	"signal.entity_id (entity_type)":                                     "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"system_log.actor_id (actor_type)":                                   "OUTLIVES — the row is a record of what happened and is meant to survive the record it names; the reference resolving to nothing is the designed end state, not a leak",
 	"taggable.entity_id (entity_type)":                                   "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
-	"user_record_view.entity_id (entity_type)":                           "SPLIT — narrow table, two or three branches: one table per branch costs less than the columns a shape would add, and removes the discriminator with them",
 	"webhook_delivery.entity_id (entity_type)":                           "DECIDE — what the reference means is not settled, so neither shape nor split can be chosen yet",
 	"webhook_delivery.event_id (event_type)":                             "DECIDE — what the reference means is not settled, so neither shape nor split can be chosen yet",
-	"weekly_plan_commitment.linked_record_id (linked_record_type)":       "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE, and a CHECK binding the discriminator to exactly one, as activity_link carries",
 	"weekly_review_learning_citation.subject_id (subject_type)":          "SPLIT — narrow table, two or three branches: one table per branch costs less than the columns a shape would add, and removes the discriminator with them",
 })
 
@@ -221,13 +212,13 @@ func readTriggerFilledFacts(ctx context.Context, t *testing.T, conn *pgx.Conn, f
 	t.Helper()
 	table := facts.pair.table
 	facts.foreignKeys = catalogRows(ctx, t, conn, table, `
-		SELECT a.attname, fk.confrelid::regclass::text, fk.confdeltype = 'c', fk.convalidated
+		SELECT a.attname, fk.confrelid::regclass::text, fk.confdeltype::text, fk.convalidated
 		  FROM pg_constraint fk
 		  JOIN pg_attribute a ON a.attrelid = fk.conrelid AND fk.conkey = ARRAY[a.attnum]
 		 WHERE fk.conrelid = $1::regclass AND fk.contype = 'f'`,
 		func(row pgx.CollectableRow) (foreignKey, error) {
 			var fk foreignKey
-			err := row.Scan(&fk.column, &fk.references, &fk.cascades, &fk.validated)
+			err := row.Scan(&fk.column, &fk.references, &fk.onDelete, &fk.validated)
 			return fk, err
 		})
 	facts.flags = catalogRows(ctx, t, conn, table, `
@@ -262,4 +253,44 @@ func catalogRows[T any](
 		t.Fatalf("reading the catalog of %s: %v", table, err)
 	}
 	return got
+}
+
+// A pair the census misses is never asked about, and the gate passes over it.
+// The fixture pair shares a constraint name with a foreign key on another
+// table. A census joined on the name alone would drop it.
+func TestThePolymorphicCensusFindsAPairNobodyClassified(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	headSchema(t, conn)
+	ctx := context.Background()
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("opening the fixture transaction: %v", err)
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Errorf("rolling the fixture back: %v", err)
+		}
+	}()
+	if _, err := tx.Exec(ctx, `
+		CREATE TABLE poly_census_fixture (
+			id uuid PRIMARY KEY,
+			subject_type text NOT NULL CHECK (subject_type IN ('deal', 'lead')),
+			subject_id uuid NOT NULL,
+			CONSTRAINT poly_census_shared UNIQUE (subject_id));
+		CREATE TABLE poly_census_keyed (
+			id uuid PRIMARY KEY,
+			subject_type text NOT NULL CHECK (subject_type IN ('deal')),
+			subject_id uuid NOT NULL,
+			CONSTRAINT poly_census_shared FOREIGN KEY (subject_id) REFERENCES deal(id))`); err != nil {
+		t.Fatalf("creating the fixture tables: %v", err)
+	}
+
+	found := unansweredPairs(ctx, t, tx.Conn())
+	if !slices.Contains(found, "poly_census_fixture.subject_id (subject_type)") {
+		t.Errorf("the census did not find the fixture pair, so a new table like it would pass unclassified: %q", found)
+	}
+	if slices.Contains(found, "poly_census_keyed.subject_id (subject_type)") {
+		t.Error("the census reported a pair that carries a foreign key")
+	}
 }

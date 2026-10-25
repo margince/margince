@@ -17,10 +17,13 @@ package migrations_test
 // it on every insert and keeps it on every update.
 
 import (
+	"fmt"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 type polymorphicPair struct{ table, id, discriminator string }
@@ -40,9 +43,10 @@ type rowTrigger struct {
 }
 
 // foreignKey is one single-column foreign key, with what a plain key needs of it.
+// onDelete is pg_constraint.confdeltype: c for CASCADE, n for SET NULL.
 type foreignKey struct {
-	column, references  string
-	cascades, validated bool
+	column, references, onDelete string
+	validated                    bool
 }
 
 type shapeFacts struct {
@@ -86,21 +90,32 @@ func shapeAnswers(f shapeFacts) bool {
 		return false
 	}
 
-	id := regexp.QuoteMeta(f.pair.id)
-	shape := regexp.MustCompile(`^CHECK \(\((?:\(` + id + ` IS NULL\) OR \(|(\w+) OR \()?num_nonnulls\(([^()]*)\) = 1\)\)?\)$`)
 	slices.Sort(columns)
 	for _, def := range f.checks {
-		m := shape.FindStringSubmatch(def)
-		if m == nil || (m[1] != "" && !slices.Contains(guarded, m[1])) {
+		marker, keyList, ok := shapeCheck(f.pair, def)
+		if !ok || (marker != "" && !slices.Contains(guarded, marker)) {
 			continue
 		}
-		read := strings.Split(m[2], ", ")
+		read := strings.Split(keyList, ", ")
 		slices.Sort(read)
 		if slices.Equal(read, columns) {
 			return true
 		}
 	}
 	return false
+}
+
+// shapeCheck reads a CHECK that holds the keys to one value per row. It may be
+// excused by a marker, by an absent id, or by both, in that order.
+func shapeCheck(pair polymorphicPair, def string) (marker, keys string, ok bool) {
+	id := regexp.QuoteMeta(pair.id)
+	shape := regexp.MustCompile(`^CHECK \(\((?:(?:(\w+) OR )?(?:\(` + id + ` IS NULL\) OR )?` +
+		`\(num_nonnulls\(([^()]*)\) = 1\)|num_nonnulls\(([^()]*)\) = 1)\)\)$`)
+	m := shape.FindStringSubmatch(def)
+	if m == nil {
+		return "", "", false
+	}
+	return m[1], m[2] + m[3], true
 }
 
 // branchExpression matches the expression that derives one key from the pair:
@@ -114,7 +129,9 @@ func branchExpression(pair polymorphicPair) *regexp.Regexp {
 // owes a key column.
 func owedValues(f shapeFacts) []string {
 	disc, id := regexp.QuoteMeta(f.pair.discriminator), regexp.QuoteMeta(f.pair.id)
-	vocabulary := regexp.MustCompile(`^CHECK \(\(` + disc + ` = ANY \(ARRAY\[(.*)\]\)\)\)$`)
+	// The discriminator may be NULL where the id is: a row that names no record.
+	vocabulary := regexp.MustCompile(`^CHECK \(\((?:\(` + disc + ` IS NULL\) OR \()?` +
+		disc + ` = ANY \(ARRAY\[(.*)\]\)\)\)\)?$`)
 	// A value whose rows carry no id, stated by the schema: (kind = 'v') = (id IS NULL).
 	idless := regexp.MustCompile(`^CHECK \(\(\(` + disc + ` = '([^']*)'::text\) = \(` + id + ` IS NULL\)\)\)$`)
 
@@ -139,12 +156,11 @@ func owedValues(f shapeFacts) []string {
 }
 
 // boundKeys are the generated keys plus every plain column a CHECK binds to the
-// pair. A binding CHECK whose marker no trigger guards fails the whole answer,
-// since it would excuse new rows too.
-//
-// A plain key counts as keyed only through a validated cascading foreign key to
-// the table its value names. Its rows are what deletes reach, and a key that
-// pointed elsewhere or refused nothing would pass the census on its name alone.
+// pair. A binding CHECK with an unguarded marker fails the whole answer.
+// A plain key counts only through a validated foreign key to the table its
+// value names, which cascades or sets NULL. SET NULL counts only beside a
+// trigger that clears the pair. The action's own update is not checked against
+// the key, so a trigger that refilled it would leave it naming the gone row.
 func boundKeys(f shapeFacts, guarded []string) ([]branchKey, bool) {
 	binding := regexp.MustCompile(`(?s)^CHECK \(\((\w+) OR \(NOT \((\w+) IS DISTINCT FROM\s+(CASE.*END)\)\)\)\)$`)
 	keys := slices.Clone(f.keys)
@@ -158,17 +174,31 @@ func boundKeys(f shapeFacts, guarded []string) ([]branchKey, bool) {
 		}
 		value := branchExpression(f.pair).FindStringSubmatch(strings.TrimSpace(m[3]))
 		keyed := value != nil && slices.ContainsFunc(f.foreignKeys, func(fk foreignKey) bool {
-			return fk.column == m[2] && fk.references == value[1] && fk.cascades && fk.validated
+			follows := fk.onDelete == "c" || (fk.onDelete == "n" && clearsPair(f))
+			return fk.column == m[2] && fk.references == value[1] && follows && fk.validated
 		})
 		keys = append(keys, branchKey{column: m[2], expression: m[3], keyed: keyed})
 	}
 	return keys, true
 }
 
+// clearsPair says whether an update trigger sets both halves of the pair to
+// NULL. That is how a row lets go of a record its SET NULL key cleared.
+func clearsPair(f shapeFacts) bool {
+	disc, id := regexp.QuoteMeta(f.pair.discriminator), regexp.QuoteMeta(f.pair.id)
+	clearsDisc := regexp.MustCompile(`\bNEW\.` + disc + ` := NULL;`)
+	clearsID := regexp.MustCompile(`\bNEW\.` + id + ` := NULL;`)
+	return slices.ContainsFunc(f.triggers, func(trigger rowTrigger) bool {
+		return trigger.onUpdate && (trigger.enabled == "O" || trigger.enabled == "A") &&
+			clearsDisc.MatchString(trigger.source) && clearsID.MatchString(trigger.source)
+	})
+}
+
 // markerReset is how a trigger function must open to guard a marker. An insert
-// clears it before anything else runs. Every other event keeps the old value.
+// clears it before anything else runs. Every other event keeps the old value,
+// or clears it when the update asks: `OLD.m AND NEW.m` can never set it.
 var markerReset = regexp.MustCompile(
-	`(?s)^\s*BEGIN\s+IF TG_OP = 'INSERT' THEN\s+NEW\.(\w+) := false;\s+ELSE\s+NEW\.(\w+) := OLD\.(\w+);\s+END IF;`)
+	`(?s)^\s*BEGIN\s+IF TG_OP = 'INSERT' THEN\s+NEW\.(\w+) := false;\s+ELSE\s+NEW\.(\w+) := OLD\.(\w+)(?: AND NEW\.(\w+))?;\s+END IF;`)
 
 // guardedMarkers are the NOT NULL boolean columns a writer cannot set. One
 // trigger opens with markerReset for it and fires on every insert and update.
@@ -180,7 +210,7 @@ func guardedMarkers(f shapeFacts) []string {
 		m := markerReset.FindStringSubmatch(trigger.source)
 		fires := trigger.onInsert && trigger.onUpdate && !trigger.qualified && !trigger.columns &&
 			(trigger.enabled == "O" || trigger.enabled == "A")
-		if m == nil || !fires || m[1] != m[2] || m[1] != m[3] {
+		if m == nil || !fires || m[1] != m[2] || m[1] != m[3] || (m[4] != "" && m[4] != m[1]) {
 			continue
 		}
 		if slices.Contains(f.flags, m[1]) && !assignedElsewhere(f.triggers, m[1]) {
@@ -291,7 +321,7 @@ func taskItemShape() shapeFacts {
 			"CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))",
 			"CHECK ((subject_unkeyed OR (num_nonnulls(subject_deal_id, subject_signal_id, subject_offer_id, subject_contract_id) = 1)))",
 		},
-		foreignKeys: []foreignKey{{column: "cycle_id", references: "assurance_cycle", cascades: true, validated: true}},
+		foreignKeys: []foreignKey{{column: "cycle_id", references: "assurance_cycle", onDelete: "c", validated: true}},
 		flags:       []string{"subject_unkeyed"},
 		triggers: []rowTrigger{
 			{onInsert: true, onUpdate: true, enabled: "O", source: taskItemKeysSource},
@@ -303,7 +333,7 @@ func taskItemShape() shapeFacts {
 		f.checks = append(f.checks, "CHECK ((subject_unkeyed OR (NOT ("+column+" IS DISTINCT FROM\nCASE\n"+
 			"    WHEN (subject_kind = '"+kind+"'::text) THEN subject_id\n    ELSE NULL::uuid\nEND))))")
 		f.foreignKeys = append(f.foreignKeys,
-			foreignKey{column: column, references: kind, cascades: true, validated: true})
+			foreignKey{column: column, references: kind, onDelete: "c", validated: true})
 	}
 	return f
 }
@@ -380,9 +410,10 @@ func TestATriggerFilledShapeIsAnsweredOnlyWhenTheMarkerIsGuarded(t *testing.T) {
 			f.foreignKeys = slices.DeleteFunc(f.foreignKeys,
 				func(fk foreignKey) bool { return fk.column == "subject_offer_id" })
 		},
-		"a key's foreign key was never validated": func(f *shapeFacts) { offerKey(f).validated = false },
-		"a key's foreign key does not cascade":    func(f *shapeFacts) { offerKey(f).cascades = false },
-		"a key's foreign key names another table": func(f *shapeFacts) { offerKey(f).references = "deal" },
+		"a key's foreign key was never validated":        func(f *shapeFacts) { offerKey(f).validated = false },
+		"a key's foreign key does not follow the delete": func(f *shapeFacts) { offerKey(f).onDelete = "a" },
+		"a key sets NULL and nothing clears the pair":    func(f *shapeFacts) { offerKey(f).onDelete = "n" },
+		"a key's foreign key names another table":        func(f *shapeFacts) { offerKey(f).references = "deal" },
 		"two key columns are bound to one value": func(f *shapeFacts) {
 			f.checks[5] = strings.Replace(f.checks[5], "'contract'", "'deal'", 1)
 		},
@@ -395,5 +426,174 @@ func TestATriggerFilledShapeIsAnsweredOnlyWhenTheMarkerIsGuarded(t *testing.T) {
 				t.Error("the pair was counted as answered, so it would leave the census unresolved")
 			}
 		})
+	}
+}
+
+// commitmentShape is the shape weekly_plan_commitment ships. Its pair may name
+// no record, its keys let go of a deleted record, and an update may clear its
+// marker.
+func commitmentShape() shapeFacts {
+	types := []string{"deal", "lead", "contact", "company", "project"}
+	f := shapeFacts{
+		pair: polymorphicPair{table: "weekly_plan_commitment", id: "linked_record_id", discriminator: "linked_record_type"},
+		checks: []string{
+			"CHECK (((linked_record_type IS NULL) OR (linked_record_type = ANY (ARRAY['deal'::text, 'lead'::text, " +
+				"'contact'::text, 'company'::text, 'project'::text]))))",
+			"CHECK ((linked_record_unkeyed OR (linked_record_id IS NULL) OR (num_nonnulls(linked_deal_id, " +
+				"linked_lead_id, linked_contact_id, linked_company_id, linked_project_id) = 1)))",
+		},
+		flags: []string{"linked_record_unkeyed"},
+		triggers: []rowTrigger{{onInsert: true, onUpdate: true, enabled: "O", source: `
+BEGIN
+	IF TG_OP = 'INSERT' THEN
+		NEW.linked_record_unkeyed := false;
+	ELSE
+		NEW.linked_record_unkeyed := OLD.linked_record_unkeyed AND NEW.linked_record_unkeyed;
+	END IF;
+	IF NOT NEW.linked_record_unkeyed AND NEW.linked_deal_id IS NULL THEN
+		NEW.linked_record_type := NULL;
+		NEW.linked_record_id := NULL;
+	END IF;
+	RETURN NEW;
+END `}},
+	}
+	for _, kind := range types {
+		column := "linked_" + kind + "_id"
+		f.checks = append(f.checks, "CHECK ((linked_record_unkeyed OR (NOT ("+column+" IS DISTINCT FROM\nCASE\n"+
+			"    WHEN (linked_record_type = '"+kind+"'::text) THEN linked_record_id\n    ELSE NULL::uuid\nEND))))")
+		f.foreignKeys = append(f.foreignKeys,
+			foreignKey{column: column, references: kind, onDelete: "n", validated: true})
+	}
+	return f
+}
+
+func TestAShapeOverANullablePairWithAClearableMarkerIsAnswered(t *testing.T) {
+	if !shapeAnswers(commitmentShape()) {
+		t.Fatal("the shape weekly_plan_commitment ships was not recognised; every case below would pass vacuously")
+	}
+
+	reset := "NEW.linked_record_unkeyed := OLD.linked_record_unkeyed AND NEW.linked_record_unkeyed;"
+	cases := map[string]func(*shapeFacts){
+		"an update can set the marker": func(f *shapeFacts) {
+			f.triggers[0].source = strings.Replace(f.triggers[0].source, reset,
+				"NEW.linked_record_unkeyed := OLD.linked_record_unkeyed OR NEW.linked_record_unkeyed;", 1)
+		},
+		"the update keeps another column's value": func(f *shapeFacts) {
+			f.triggers[0].source = strings.Replace(f.triggers[0].source, reset,
+				"NEW.linked_record_unkeyed := OLD.linked_record_unkeyed AND NEW.archived;", 1)
+		},
+		"the shape CHECK names a marker and no pair": func(f *shapeFacts) {
+			f.checks[1] = strings.Replace(f.checks[1], "linked_record_unkeyed OR ", "", 1)
+			f.checks[1] = strings.Replace(f.checks[1], "(linked_record_id IS NULL)", "(label IS NULL)", 1)
+		},
+		"no trigger clears the pair a SET NULL key let go of": func(f *shapeFacts) {
+			f.triggers[0].source = strings.Replace(f.triggers[0].source, "NEW.linked_record_id := NULL;", "", 1)
+		},
+		"the vocabulary is excused by another column": func(f *shapeFacts) {
+			f.checks[0] = strings.Replace(f.checks[0], "(linked_record_type IS NULL)", "(label IS NULL)", 1)
+		},
+	}
+	for name, plant := range cases {
+		t.Run(name, func(t *testing.T) {
+			f := commitmentShape()
+			plant(&f)
+			if shapeAnswers(f) {
+				t.Error("the pair was counted as answered, so it would leave the census unresolved")
+			}
+		})
+	}
+}
+
+// resolutionGroups are the four endings a register entry may name. A reason
+// opens with one of them, so no pair can stand in two groups.
+var resolutionGroups = []string{"SHAPE", "SPLIT", "DECIDE", "OUTLIVES"}
+
+// namesOneGroup says whether a register reason opens with one of the groups.
+func namesOneGroup(reason string) bool {
+	group, _, ok := strings.Cut(reason, " — ")
+	return ok && slices.Contains(resolutionGroups, group)
+}
+
+func TestARegisterReasonNamesExactlyOneGroup(t *testing.T) {
+	for reason, want := range map[string]bool{
+		"SHAPE — one key per branch":        true,
+		"OUTLIVES — the row is history":     true,
+		"SHAPE/OUTLIVES — one or the other": false,
+		"shape — lower case is no group":    false,
+		"a reason with no group at all":     false,
+	} {
+		if got := namesOneGroup(reason); got != want {
+			t.Errorf("namesOneGroup(%q) = %v, want %v", reason, got, want)
+		}
+	}
+}
+
+// judgePairs holds a register against the unanswered pairs. A pair with no
+// entry is a finding, and so is an entry that names no group or two. The
+// caller's AssertAllMatched reports an entry whose pair is answered or gone.
+func judgePairs(t testing.TB, found []string, register *gatekit.Waivers[string]) {
+	t.Helper()
+	for _, pair := range found {
+		if register.Waived(t, pair) {
+			continue
+		}
+		t.Errorf("%s names a record with nothing to say when that record goes.\n"+
+			"Give it one of the three endings — a foreign key per branch (SHAPE), a table per "+
+			"branch (SPLIT), or a reason it outlives the record (OUTLIVES) — and put it in "+
+			"pairResolution with which and why.", pair)
+	}
+	for pair, reason := range register.Reasons() {
+		if !namesOneGroup(reason) {
+			t.Errorf("%s does not open with one of SHAPE, SPLIT, DECIDE or OUTLIVES, so the next "+
+				"change cannot tell which work it owes", pair)
+		}
+	}
+}
+
+// findingRecorder keeps the gate's findings instead of failing with them.
+type findingRecorder struct {
+	testing.TB
+	findings []string
+}
+
+func (r *findingRecorder) Helper() {}
+
+func (r *findingRecorder) Errorf(format string, args ...any) {
+	r.findings = append(r.findings, fmt.Sprintf(format, args...))
+}
+
+func TestTheRegisterFailsAPairOutsideEveryGroupAndAStaleEntry(t *testing.T) {
+	const fixture, stale = "poly_fixture.subject_id (subject_type)", "gone_table.subject_id (subject_type)"
+	cases := map[string]struct {
+		found    []string
+		register map[string]string
+	}{
+		"a pair with no entry": {found: []string{fixture}, register: map[string]string{}},
+		"an entry whose pair is answered": {register: map[string]string{
+			stale: "SHAPE — one nullable foreign key per branch with ON DELETE CASCADE",
+		}},
+		"an entry that names no group": {found: []string{fixture}, register: map[string]string{
+			fixture: "one nullable foreign key per branch, or a table per branch",
+		}},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			recorder := &findingRecorder{TB: t}
+			register := gatekit.Waive(c.register)
+			judgePairs(recorder, c.found, register)
+			register.AssertAllMatched(recorder)
+			if len(recorder.findings) != 1 {
+				t.Errorf("got %d findings, want 1: %q", len(recorder.findings), recorder.findings)
+			}
+		})
+	}
+	recorder := &findingRecorder{TB: t}
+	register := gatekit.Waive(map[string]string{
+		fixture: "SPLIT — narrow table, one table per branch costs less than the columns",
+	})
+	judgePairs(recorder, []string{fixture}, register)
+	register.AssertAllMatched(recorder)
+	if len(recorder.findings) != 0 {
+		t.Errorf("a classified pair was reported: %q", recorder.findings)
 	}
 }
