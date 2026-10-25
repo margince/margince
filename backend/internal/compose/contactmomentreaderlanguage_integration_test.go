@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -23,11 +24,11 @@ import (
 func TestAContactMomentIsWrittenInTheReadersLanguage(t *testing.T) {
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "sprache@kunde.example")
-	logTaskFor(t, e, contact, "Send the signed contract", new(time.Now().Add(24*time.Hour)))
+	logTaskFor(t, e, contact, "Send the signed contract", new(clocktest.Now(t).Add(24*time.Hour)))
 	svc := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
 		consent.NewStore(InstallationDB(e.Pool)),
-		comms.NewStore(InstallationDB(e.Pool), time.Now, activities.NewStore(InstallationDB(e.Pool))),
-		ai.NewFeedbackStore(InstallationDB(e.Pool)), time.Now)
+		comms.NewStore(InstallationDB(e.Pool), func() time.Time { return clocktest.Now(t) }, activities.NewStore(InstallationDB(e.Pool))),
+		ai.NewFeedbackStore(InstallationDB(e.Pool)), func() time.Time { return clocktest.Now(t) })
 	contactID := ids.From[ids.ContactKind](contact)
 
 	english, err := svc.Assemble(e.Admin(), contactID)

@@ -63,7 +63,10 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 	if err != nil {
 		return out, err
 	}
-	language := string(identity.ReaderLanguageForRecord(ctx, tx))
+	language := string(identity.BaseLanguageForRecord(ctx, tx))
+	if !isPublicationRun(ctx) {
+		language = string(identity.ReaderLanguageForRecord(ctx, tx))
+	}
 	out.ProseLanguage = &language
 	out.Timezone = calendar.Timezone
 	out.Currency = calendar.Currency

@@ -13,15 +13,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// ReaderLanguageForRecord is the language a sentence is written in when the
-// caller alone reads it and nothing stores it: the caller's chosen display
-// language, else the installation's base language.
+// ReaderLanguageForRecord is the language for a sentence only the caller reads
+// and nothing stores: their chosen display language, else the base language.
 //
-// Text that is stored once for the whole team keeps BaseLanguageForRecord. A
-// system caller has no display language and gets the base language too.
+// Text stored once for the whole team keeps BaseLanguageForRecord. A system
+// caller has no display language and gets the base language too.
 //
-// Like BaseLanguageForRecord it never fails the caller: a wording must not turn
-// into a refusal, so a failed read is logged and falls back to the base language.
+// It never fails the caller. A failed read is logged and falls back to the
+// base language, because a wording must not turn into a refusal.
 func ReaderLanguageForRecord(ctx context.Context, tx pgx.Tx) textlang.Lang {
 	human := actingHuman(ctx)
 	if human.IsZero() {
