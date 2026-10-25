@@ -79,3 +79,25 @@ func TestCurrentMessageKeepsItsCutSoStoredQuoteProofsStillVerify(t *testing.T) {
 		t.Fatal("a proof made from CurrentMessage stopped verifying")
 	}
 }
+
+func TestAFromSentenceAfterTheEnvelopeIsNotAQuote(t *testing.T) {
+	body := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n" +
+		"From: our finance team's perspective this is the right call\n\nPlease approve the budget."
+	if got := textlang.NewTextOnly(body); !strings.Contains(got, "Please approve the budget.") {
+		t.Fatalf("a prose line opening with From: cut the message: %q", got)
+	}
+}
+
+func TestMessageOpeningStopsAtAnOutlookBlockThatFollowsTheEnvelope(t *testing.T) {
+	body := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n\nThanks, works for me.\n\n" +
+		"From: Sam Seller <sam@example.org>\nSent: Monday, June 2, 2026 10:00 AM\n" +
+		"To: Alex Buyer <contact@example.com>\nSubject: Next steps\n\n" + quotedSellerSignature
+	if got := textlang.MessageOpening(body, 800); got != "Thanks, works for me." {
+		t.Fatalf("opening = %q, want only the reply above the Outlook block", got)
+	}
+	direct := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n" +
+		"From: Sam Seller <sam@example.org>\nSent: Monday\nTo: Alex Buyer <contact@example.com>\n\n" + quotedSellerSignature
+	if got := textlang.MessageOpening(direct, 800); got != "" {
+		t.Fatalf("opening = %q, want nothing from an envelope followed directly by a quote", got)
+	}
+}

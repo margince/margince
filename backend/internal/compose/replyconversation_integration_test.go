@@ -172,3 +172,50 @@ func TestAnOldInboundMessageStillDecidesTheReplyLanguageBehindManyNewerOutboundO
 		t.Fatalf("the older German inbound message was cut before the language was decided: %s", content)
 	}
 }
+
+func TestAReadableCopiedContactDoesNotSetTheReplyLanguageWhenTheSenderIsPrivate(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	at := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
+	inbound, subject := "inbound", "Angebot"
+	logInbound := func(body string, offset time.Duration) crmcontracts.Activity {
+		when := at.Add(offset)
+		row, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
+			Kind: "email", Subject: &subject, Body: &body, ThreadKey: "angebot",
+			Direction: &inbound, OccurredAt: &when, Source: "manual",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return row
+	}
+	english := logInbound("Thanks for the update, we plan to review the proposal with our team next week and come back to you.", 0)
+	german := logInbound("Vielen Dank für das Angebot, wir prüfen es mit unserem Team und melden uns nächste Woche bei Ihnen zurück.", time.Hour)
+	anchor := logInbound("ok", 2*time.Hour)
+
+	copied := e.SeedContact(t, "Anne Copied", &e.Rep1)
+	sender := e.SeedContact(t, "Dietmar Private", &e.Rep1)
+	e.MakeCapturePrivate(t, "contact", sender, e.Rep2)
+	participate := func(activity crmcontracts.Activity, role string, contact ids.UUID) {
+		e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, $2, $3)`,
+			ids.UUID(activity.Id), role, contact)
+	}
+	participate(english, "from", copied)
+	participate(german, "from", sender)
+	participate(anchor, "from", sender)
+	participate(anchor, "cc", copied)
+
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
+	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
+	drafter.envelope = draftfloor.NewResolver().WithUserLanguage(func(context.Context) string { return "en" })
+	recipient, err := e.Activities.ReplyRecipientFor(ctx, ids.From[ids.ActivityKind](ids.UUID(anchor.Id)))
+	if err != nil || recipient.FullName != "Anne Copied" || recipient.ContactID != "" {
+		t.Fatalf("precondition: recipient = %+v, err %v; want the copied contact named with no addressee id", recipient, err)
+	}
+	if _, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), draftfloor.Steering{}); err != nil {
+		t.Fatal(err)
+	}
+	if content := brain.request.Messages[0].Content; !strings.Contains(content, `"output_language":"de"`) {
+		t.Fatalf("the copied contact's English mail set the language of a reply to someone else: %s", content)
+	}
+}

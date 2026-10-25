@@ -38,6 +38,8 @@ import (
 type ReplyRecipient struct {
 	// ContactID is the contact the reply is addressed to, so the language of
 	// that contact's own mail can be told from other participants' mail.
+	// Empty unless that contact is also the message's top-ranked participant,
+	// so a readable CC never stands in for a sender this caller may not read.
 	ContactID string
 	// FullName as recorded, for the drafter to greet by.
 	FullName string
@@ -143,7 +145,13 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 			                   FROM contact_email pe
 			                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
 			contactaddress.ReachableOrder + `
-			                  LIMIT 1), '')
+			                  LIMIT 1), ''),
+			       p.id IS NOT DISTINCT FROM (
+			            SELECT top.contact_id FROM activity_participant top
+			             WHERE top.activity_id = $1 AND top.contact_id IS NOT NULL
+			             ORDER BY CASE top.role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END,
+			                      top.created_at, top.id
+			             LIMIT 1)
 			  FROM contact p
 			  JOIN (
 			       SELECT contact_id,
@@ -164,7 +172,9 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 
 		var contactID ids.UUID
 		var address string
-		err = tx.QueryRow(ctx, q, args...).Scan(&contactID, &out.FullName, &out.FirstName, &out.LastName, &address)
+		var topParticipant bool
+		err = tx.QueryRow(ctx, q, args...).Scan(
+			&contactID, &out.FullName, &out.FirstName, &out.LastName, &address, &topParticipant)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Linked to nobody, or to a contact out of scope. Both mean no
 			// name, which the floor renders as an unnamed greeting rather
@@ -184,7 +194,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// recipient would greet "steireif Partnernet," which is worse than
 		// either. The empty recipient is already this type's documented answer
 		// for "no name", and the floor opens without one.
-		out.ContactID = contactID.String()
+		out.ContactID = addresseeID(contactID, topParticipant)
 		if mailrole.GreetsNobody(out.FullName, address) {
 			out = ReplyRecipient{}
 		}
@@ -195,6 +205,15 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 	}
 	out.WrittenAbout, out.FiledAddress = written, filed
 	return out, nil
+}
+
+// addresseeID names the contact only when it is also the message's top-ranked
+// participant, so a readable CC never stands in for an unreadable sender.
+func addresseeID(contact ids.UUID, topParticipant bool) string {
+	if !topParticipant {
+		return ""
+	}
+	return contact.String()
 }
 
 // GreetingName is the one name a floor draft greets by, or empty.

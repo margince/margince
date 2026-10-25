@@ -214,16 +214,30 @@ type quoteReading struct {
 	keepSecondSender bool
 }
 
+// opensReplyHeader reports whether the line starts an Outlook block, by the
+// rule the mail display splitter applies: a sent-date field sits just below.
+func opensReplyHeader(runes []rune, offset int, line []rune) bool {
+	rest := strings.Split(string(runes[offset+len(line):]), "\n")
+	if len(rest) > 5 {
+		rest = rest[:5]
+	}
+	for i := range rest {
+		rest[i] = strings.TrimSpace(rest[i])
+	}
+	return mailquote.OpensReplyHeader(string(line), rest)
+}
+
 // quoteBoundary finds the first quote line. The stored envelope names its
-// sender once. A second sender header in that run is an Outlook quote block
-// that follows the envelope directly, unless keepSecondSender is set.
+// sender once. A second sender header in that run that opens an Outlook block
+// follows the envelope directly and is a quote, unless keepSecondSender is set.
 func quoteBoundary(runes []rune, reading quoteReading) int {
 	passMarked, secondSenderQuotes := reading.passMarked, !reading.keepSecondSender
 	ownHeaders, senderSeen := true, false
 	for offset, atLineStart := 0, true; offset < len(runes); offset++ {
 		if atLineStart && !unicode.IsSpace(runes[offset]) {
 			line := lineAt(runes, offset)
-			own := ownHeaders && isOwnHeader(line, offset) && !(secondSenderQuotes && senderSeen)
+			own := ownHeaders && isOwnHeader(line, offset) &&
+				!(secondSenderQuotes && senderSeen && opensReplyHeader(runes, offset, line))
 			if startsQuote(line) && !own &&
 				(!passMarked || !opensMarkedQuote(runes, offset, line)) {
 				return offset
