@@ -120,19 +120,17 @@ func markBreaches(ctx context.Context, tx pgx.Tx, policy leadSLAPolicy, now time
 	return breaches, nil
 }
 
-// stampDayAnswers stamps the first response of each unanswered lead a day
-// touch has answered by now. The subscriber skips a day touch while its date
-// runs, and this scan runs on the clock whether or not a target is set.
+// stampDayAnswers stamps the first response of each lead owing a reply that a
+// day touch has answered by now. The subscriber skips a day touch while its
+// date runs, and this scan runs on the clock whether or not a target is set.
 func stampDayAnswers(ctx context.Context, tx pgx.Tx, now time.Time) error {
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT l.lead_id
-		  FROM activity_link l
-		  JOIN lead ld ON ld.id = l.lead_id
-		  JOIN activity a ON a.id = l.activity_id
-		 WHERE ld.archived_at IS NULL AND ld.first_response_at IS NULL
-		   AND a.archived_at IS NULL AND a.occurred_precision = 'day'
-		   AND `+occurredday.ProvenSQL("a")+` <= $1
-		   AND `+auth.ActivityAvailableClause("a"), now)
+		SELECT lead.id FROM lead
+		 WHERE `+leadOwesAReplySQL+`
+		   AND EXISTS (SELECT 1 FROM activity_link l JOIN activity a ON a.id = l.activity_id
+		                WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.occurred_precision = 'day'
+		                  AND `+occurredday.ProvenSQL("a")+` <= $1
+		                  AND `+auth.ActivityAvailableClause("a")+`)`, now)
 	if err != nil {
 		return fmt.Errorf("select leads a day touch may have answered: %w", err)
 	}
