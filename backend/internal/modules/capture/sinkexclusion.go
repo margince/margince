@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -118,7 +119,7 @@ func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) 
 	domains := make([]string, 0, len(rec.Addresses))
 	for _, a := range rec.Addresses {
 		addresses = append(addresses, strings.ToLower(strings.TrimSpace(a)))
-		if d := domainOfAddress(a); d != "" {
+		if d := owndomain.OfAddress(a); d != "" {
 			domains = append(domains, d)
 		}
 	}

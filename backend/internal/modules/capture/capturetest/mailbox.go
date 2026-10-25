@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -54,7 +55,8 @@ func NewMailbox(t *testing.T, provider, address string) Mailbox {
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, workspace); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := owner.Exec(ctx, `INSERT INTO app_user (id,email,display_name) VALUES ($1,$2,'Mailbox owner')`, seat, address); err != nil {
+	if _, err := owner.Exec(ctx, `INSERT INTO app_user (id,email,display_name,email_domain_folded) VALUES ($1,$2,'Mailbox owner',$3)`,
+		seat, address, owndomain.StoredOfAddress(address)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `INSERT INTO capture_connection (user_id,provider,status,credential_ref,account_label) VALUES ($1,$2,'connected','vault:test',$3)`, seat, provider, address); err != nil {

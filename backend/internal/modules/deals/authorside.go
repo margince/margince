@@ -14,7 +14,11 @@ package deals
 // context and no transaction, so every case it must answer can be written as a
 // table — which is what makes the seller-authored case testable at all.
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+)
 
 // AuthorSide is the Go spelling of deal_stage_evidence.author_side.
 type AuthorSide string
@@ -122,23 +126,10 @@ func authorOf(participants []Participant) (Participant, bool) {
 }
 
 // addressIsOurs reports whether an address sits on a domain this installation
-// writes from.
-//
-// Compared on the domain alone, case-folded. A sub-domain is NOT ours unless
-// it is listed: treating mail.example.com as example.com would let anybody who
-// can register a look-alike host author seller-side evidence.
+// writes from. It asks owndomain.Set.Covers, which folds and covers subdomains:
+// the rule capture uses to decide which mail is internal.
 func addressIsOurs(address string, ownDomains []string) bool {
-	at := strings.LastIndex(address, "@")
-	if at < 0 || at == len(address)-1 {
-		return false
-	}
-	domain := strings.ToLower(address[at+1:])
-	for _, own := range ownDomains {
-		if domain == strings.ToLower(strings.TrimSpace(own)) {
-			return true
-		}
-	}
-	return false
+	return owndomain.New(ownDomains).Covers(address)
 }
 
 // TranscriptSourceSystem is the activity.source_system value that marks a body

@@ -67,16 +67,20 @@ func TestAnInboundMailFromTheBuyerIsBuyerSide(t *testing.T) {
 	}
 }
 
-// A sub-domain is not ours unless it is listed. Folding one in would let
-// anybody who can register a look-alike host author seller-side evidence —
-// and seller-side is the SAFE answer, so the risk runs the other way: a
-// buyer's mail from a look-alike domain would be dismissed as our own.
-func TestALookAlikeSubDomainIsNotOurs(t *testing.T) {
-	side := AuthorSideOf(directionInbound, []Participant{
-		{Role: roleFrom, Address: "spoof@mail.acme-sales.example"},
-	}, ourDomains)
-	if side != AuthorBuyer {
-		t.Fatalf("mail.acme-sales.example was treated as ours (%s); only listed domains are", side)
+// Ours is decided by the one own-domain rule. A subdomain of an own domain is
+// ours, as capture already treats its mail as internal. A unicode spelling is
+// the same domain as its punycode. A lookalike sibling is not ours.
+func TestOursIsTheOwnDomainRuleCaptureUses(t *testing.T) {
+	own := []string{"acme-sales.example", "xn--bcher-kva.example"}
+	for _, address := range []string{"rep@mail.acme-sales.example", "anna@bücher.example", "anna@BÜCHER.example"} {
+		if side := AuthorSideOf(directionInbound, []Participant{{Role: roleFrom, Address: address}}, own); side != AuthorSeller {
+			t.Errorf("%s read as %s; it is at an own domain", address, side)
+		}
+	}
+	for _, address := range []string{"spoof@acme-sales.example.evil", "anna@bücher-other.example"} {
+		if side := AuthorSideOf(directionInbound, []Participant{{Role: roleFrom, Address: address}}, own); side != AuthorBuyer {
+			t.Errorf("%s read as %s; it is not at an own domain", address, side)
+		}
 	}
 }
 

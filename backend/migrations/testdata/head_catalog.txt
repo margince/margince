@@ -349,6 +349,7 @@ public.activity_participant.activity_participant_pkey PRIMARY KEY (id)
 public.activity_participant.activity_participant_role_check CHECK ((role = ANY (ARRAY['from'::text, 'to'::text, 'cc'::text, 'bcc'::text, 'attendee'::text, 'organizer'::text])))
 public.activity_participant.activity_participant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.activity_participant.address text gen=- def=-
+public.activity_participant.address_domain_folded text gen=- def=-
 public.activity_participant.channel_user_id text gen=- def=-
 public.activity_participant.contact_id uuid gen=- def=-
 public.activity_participant.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1074,6 +1075,7 @@ public.app_user.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.delivery_hour_local integer gen=- def=-
 public.app_user.display_name text NOT NULL gen=- def=-
 public.app_user.email text NOT NULL gen=- def=-
+public.app_user.email_domain_folded text gen=- def=-
 public.app_user.failed_login_count integer NOT NULL gen=- def=0
 public.app_user.greeting_name text gen=- def=-
 public.app_user.greeting_name_chosen_at timestamp with time zone gen=- def=-
@@ -2506,6 +2508,7 @@ public.company_domain.company_domain_version_js_safe CHECK (((version >= '-90071
 public.company_domain.company_id uuid NOT NULL gen=- def=-
 public.company_domain.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_domain.domain text NOT NULL gen=- def=-
+public.company_domain.domain_folded text gen=- def=-
 public.company_domain.id uuid NOT NULL gen=- def=uuidv7()
 public.company_domain.is_primary boolean NOT NULL gen=- def=false
 public.company_domain.source text NOT NULL gen=- def=-

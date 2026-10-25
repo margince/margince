@@ -408,13 +408,14 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_participant
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `address` | `text` |  |  |
+| `address_domain_folded` | `text` |  |  |
 | `channel_user_id` | `text` |  |  |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `display_name` | `text` |  |  |
