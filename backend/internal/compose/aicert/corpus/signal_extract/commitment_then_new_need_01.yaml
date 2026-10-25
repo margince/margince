@@ -27,7 +27,8 @@ fixture:
     subject: 'Re: Podcast recording'
     sent: '2026-09-08'
     body: |
-      Happy to help, I will ask our product team to get in touch.
+      Happy to help: Jana Weber runs the beta, and you can write to her at
+      beta@example.com.
 
       Lars
 expect:
