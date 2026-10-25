@@ -53,14 +53,6 @@ CREATE TABLE privacy_request_proof (
 -- The January sweep reads expired proofs in this order.
 CREATE INDEX privacy_request_proof_keep_until ON privacy_request_proof (keep_until, id);
 
--- The tombstone of the erasure a request ran, found by its reason
--- "dsr:<request-id>": a replayed fulfilment answers that erasure's account
--- instead of erasing again, and the proof backfill reads it. Partial on the
--- contact erase rows, which are a small fraction of audit_log.
-CREATE INDEX IF NOT EXISTS idx_audit_erasure_reason
-    ON audit_log ((evidence->>'reason'))
-    WHERE action = 'erase' AND entity_type = 'contact';
-
 -- An open complaint or dispute about the request. While it is set, the
 -- request's proof outlives its retention date.
 ALTER TABLE data_subject_request
