@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -160,6 +161,73 @@ func TestAMeetingThatStartedDuringAnOutageStillMovesTheClock(t *testing.T) {
 
 	runRefold(t, shiftedPool(t, 4*24*time.Hour))
 	f.assertClocks(t, meetsAt, "a meeting that started three days before the next run")
+}
+
+// logDay files a day entry of kind for date on the contact and the deal.
+func (f accountFixture) logDay(t *testing.T, kind string, date time.Time) time.Time {
+	t.Helper()
+	at := occurredday.Anchor(date)
+	subject := "Past clock day " + kind
+	in := activities.LogActivityInput{
+		Kind: kind, Subject: &subject, OccurredAt: &at, OccurredPrecision: activities.PrecisionDay, Source: "manual",
+		Links: []activities.ActivityLinkInput{onRecord("contact", f.contact), onRecord("deal", f.deal)},
+	}
+	if _, _, err := f.e.Activities.LogActivity(f.e.Admin(), in); err != nil {
+		t.Fatalf("logging the day %s: %v", kind, err)
+	}
+	return at
+}
+
+// shiftTo answers the shift that puts a pool's now() at the given local time
+// on date, in zone.
+func shiftTo(t *testing.T, date time.Time, hour int, zone *time.Location) time.Duration {
+	t.Helper()
+	year, month, day := date.Date()
+	return time.Until(time.Date(year, month, day, hour, 0, 0, 0, zone))
+}
+
+// A day call logged yesterday for today counts from the start of its date. In
+// Kiritimati that start is fourteen hours before the noon UTC it is stored at,
+// so the morning refold moves the clock, not the walk.
+func TestADayCallDatedTodayMovesTheClockOnAMorningRefold(t *testing.T) {
+	f := newAccountFixture(t)
+	f.e.WsExec(t, `UPDATE setting SET value = '"Pacific/Kiritimati"'::jsonb WHERE key = 'installation.timezone'`)
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mailed := f.now.AddDate(0, 0, -3)
+	f.log(t, "email", mailed)
+	today := f.now.In(kiritimati).AddDate(0, 0, 2)
+	called := f.logDay(t, "call", today)
+	f.assertClocks(t, mailed, "a call dated two days ahead has not happened")
+
+	runRefold(t, shiftedPool(t, shiftTo(t, today.AddDate(0, 0, -1), 20, kiritimati)))
+	f.assertClocks(t, mailed, "the evening before its date, the call is still ahead")
+
+	runRefold(t, shiftedPool(t, shiftTo(t, today, 8, kiritimati)))
+	f.assertClocks(t, called, "on the morning of its date the call has happened, before its stored noon")
+}
+
+// A day meeting takes place when its date ends. West of UTC that is after the
+// noon the walk passes, so the refold after the date ends moves the clock.
+func TestADayMeetingMovesTheClockOnceItsDateEnds(t *testing.T) {
+	f := newAccountFixture(t)
+	f.e.WsExec(t, `UPDATE setting SET value = '"America/Los_Angeles"'::jsonb WHERE key = 'installation.timezone'`)
+	losAngeles, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mailed := f.now.AddDate(0, 0, -3)
+	f.log(t, "email", mailed)
+	date := f.now.In(losAngeles).AddDate(0, 0, 2)
+	met := f.logDay(t, "meeting", date)
+
+	runRefold(t, shiftedPool(t, shiftTo(t, date, 13, losAngeles)))
+	f.assertClocks(t, mailed, "on its own date the day meeting has not yet taken place")
+
+	runRefold(t, shiftedPool(t, shiftTo(t, date.AddDate(0, 0, 1), 1, losAngeles)))
+	f.assertClocks(t, met, "once its date is over the meeting has taken place")
 }
 
 // clockRow is what a rewrite would change on a record even when its value stands.

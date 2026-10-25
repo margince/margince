@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // clockRefoldSettle holds the window back from now, so a write that started
@@ -86,7 +87,8 @@ func PassedActivitiesTx(ctx context.Context, tx pgx.Tx, after ClockRefoldMark, a
 		WITH passed AS (
 		  SELECT a.id, a.occurred_at FROM activity a
 		   WHERE a.archived_at IS NULL AND a.created_at < a.occurred_at
-		     AND (a.occurred_at, a.id) > ($1, $2) AND a.occurred_at <= $3
+		     AND (a.occurred_at, a.id) > ($1, $2)
+		     AND a.occurred_at <= $3 -- occurred_at raw: the keyset bound of the walk; DayActivitiesComeTx reads day entries
 		   ORDER BY a.occurred_at, a.id
 		   LIMIT $4)
 		SELECT p.id, p.occurred_at, l.contact_id, l.deal_id, l.company_id, l.project_id
@@ -120,6 +122,62 @@ func PassedActivitiesTx(ctx context.Context, tx pgx.Tx, after ClockRefoldMark, a
 	}
 	if out.Count < limit {
 		out.Through = ClockRefoldMark{At: asOf, ID: clockRefoldEnd}
+	}
+	return out, nil
+}
+
+// DayRefoldTargets are the records day entries are filed under whose time came
+// since the mark without the walk passing them.
+type DayRefoldTargets struct {
+	Targets storekit.LastActivityTargets
+	Count   int
+}
+
+// DayActivitiesComeTx reads the day entries the (occurred_at, id) walk cannot
+// time, because a day's moment is its date in zone, not its stored noon.
+// Another kind is begun from its date's start, which east of UTC is before the
+// noon the walk waits for; the arm reads it once, the run its date begins. A
+// meeting takes place when its date ends, which west of UTC is after the noon
+// the walk passed; the arm reads the meetings whose date ended since the mark.
+// Each arm reads at most a date or two, which bounds it.
+func DayActivitiesComeTx(ctx context.Context, tx pgx.Tx, mark ClockRefoldMark, asOf time.Time, zone *time.Location) (DayRefoldTargets, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return DayRefoldTargets{}, err
+	}
+	today, markDay := occurredday.AnchorIn(asOf, zone), occurredday.AnchorIn(mark.At, zone)
+	rows, err := tx.Query(ctx, `
+		SELECT a.id, l.contact_id, l.deal_id, l.company_id, l.project_id
+		  FROM activity a LEFT JOIN activity_link l ON l.activity_id = a.id
+		 WHERE a.archived_at IS NULL AND a.occurred_precision = 'day'
+		   AND ((a.kind <> $1 AND a.occurred_at = $2 AND $4 < $2 AND a.created_at < a.occurred_at
+		         AND a.occurred_at > $3) -- occurred_at raw: past the bound of the walk, at the anchor of today in zone
+		     OR (a.kind = $1 AND a.occurred_at >= $4 AND a.occurred_at < $2
+		         AND a.occurred_at <= $5 -- occurred_at raw: the walk passed it, its date ended since
+		   ))`,
+		KindMeeting, today, asOf, markDay, mark.At)
+	if err != nil {
+		return DayRefoldTargets{}, fmt.Errorf("activities: reading day entries whose time has come: %w", err)
+	}
+	defer rows.Close()
+	var out DayRefoldTargets
+	seen := map[ids.UUID]bool{}
+	for rows.Next() {
+		var id ids.UUID
+		var contact, deal, company, project *ids.UUID
+		if err := rows.Scan(&id, &contact, &deal, &company, &project); err != nil {
+			return DayRefoldTargets{}, fmt.Errorf("activities: reading day entries whose time has come: %w", err)
+		}
+		if !seen[id] {
+			seen[id] = true
+			out.Count++
+		}
+		out.Targets.Contacts = appendSet(out.Targets.Contacts, contact)
+		out.Targets.Deals = appendSet(out.Targets.Deals, deal)
+		out.Targets.Companies = appendSet(out.Targets.Companies, company)
+		out.Targets.Projects = appendSet(out.Targets.Projects, project)
+	}
+	if err := rows.Err(); err != nil {
+		return DayRefoldTargets{}, fmt.Errorf("activities: reading day entries whose time has come: %w", err)
 	}
 	return out, nil
 }
