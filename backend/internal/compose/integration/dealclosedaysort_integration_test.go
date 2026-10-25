@@ -44,7 +44,7 @@ func TestTheDealsListSortsByTheCloseDayItDraws(t *testing.T) {
 		return ids.From[ids.DealKind](ids.UUID(d.Id))
 	}
 	forecast := func(days int) *time.Time { d := today.AddDate(0, 0, days); return &d }
-	close := func(id ids.DealID, to ids.StageID, in deals.AdvanceDealInput, closedOn *time.Time) {
+	closeDeal := func(id ids.DealID, to ids.StageID, in deals.AdvanceDealInput, closedOn *time.Time) {
 		t.Helper()
 		in.ToStageID = to
 		if _, err := e.Deals.AdvanceDeal(ctx, id, in); err != nil {
@@ -62,18 +62,18 @@ func TestTheDealsListSortsByTheCloseDayItDraws(t *testing.T) {
 	openDated := create("Open next month", forecast(30))
 	openUndated := create("Open with no forecast", nil)
 	won := create("Won with a stale forecast", forecast(365))
-	close(won, wonStage, deals.AdvanceDealInput{WonWithoutContractReason: &reason}, forecast(-5))
+	closeDeal(won, wonStage, deals.AdvanceDealInput{WonWithoutContractReason: &reason}, forecast(-5))
 	lostDeal := create("Lost with a forecast", forecast(60))
-	close(lostDeal, lost, deals.AdvanceDealInput{LostReason: &lostReason}, forecast(-2))
+	closeDeal(lostDeal, lost, deals.AdvanceDealInput{LostReason: &lostReason}, forecast(-2))
 
 	// 10:00Z and 18:30Z on one UTC date are one day in UTC. In Ho Chi Minh
 	// the later one is already the next morning.
 	utcDay := today.AddDate(0, 0, -8)
 	earlyInZone := create("Closed before midnight there", nil)
-	close(earlyInZone, wonStage, deals.AdvanceDealInput{WonWithoutContractReason: &reason}, nil)
+	closeDeal(earlyInZone, wonStage, deals.AdvanceDealInput{WonWithoutContractReason: &reason}, nil)
 	e.WsExec(t, `UPDATE deal SET closed_at = $2 WHERE id = $1`, earlyInZone, utcDay.Add(10*time.Hour))
 	lateInZone := create("Closed after midnight there", nil)
-	close(lateInZone, wonStage, deals.AdvanceDealInput{WonWithoutContractReason: &reason}, nil)
+	closeDeal(lateInZone, wonStage, deals.AdvanceDealInput{WonWithoutContractReason: &reason}, nil)
 	e.WsExec(t, `UPDATE deal SET closed_at = $2 WHERE id = $1`, lateInZone, utcDay.Add(18*time.Hour+30*time.Minute))
 
 	ascending := []ids.DealID{earlyInZone, lateInZone, won, lostDeal, openDated, openUndated}
@@ -104,7 +104,7 @@ func TestTheDealsListSortsByTheCloseDayItDraws(t *testing.T) {
 	dated := slices.Clone(ascending[:len(ascending)-1])
 	slices.Reverse(dated)
 	// Nulls stay last in both directions.
-	descending := append(dated, openUndated)
+	descending := append(slices.Clone(dated), openUndated)
 	if got := listed("-close_day", 50, 0); !slices.Equal(got, descending) {
 		t.Errorf("close day descending = %v, want %v", got, descending)
 	}

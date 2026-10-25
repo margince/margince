@@ -166,6 +166,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The days-late count takes the zone its date is drawn in; the fixture pins UTC so the expected count does not move with the test machine.",
   },
   {
+    file: "features/deals/deals.columns.test.tsx",
+    why: "The close column draws its day in the zone it is given; the fixture pins UTC so the expected day does not move with the test machine.",
+  },
+  {
     file: "features/deals/deal360/dealstanding.test.ts",
     why: "Days in a stage are counted in the record zone; the fixture pins UTC so the expected count does not move with the test machine.",
   },
