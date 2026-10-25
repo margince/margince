@@ -81,7 +81,7 @@ func withApprovalWords(
 ) (notices.EmailAttempt, approvalMailFacts, bool, error) {
 	var facts approvalMailFacts
 	if current.Summary != nil && *current.Summary != "" {
-		attempt.Notice.Subject = *current.Summary
+		attempt.Notice.Subject = plainSentence(*current.Summary)
 	}
 	if current.TargetLabel != nil {
 		attempt.Notice.Body = mailcopy.OneLine(*current.TargetLabel)

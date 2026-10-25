@@ -37,7 +37,7 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 		facts.Heading = *approval.TargetLabel
 	}
 	if approval.Summary != nil {
-		facts.add(words.MailProposal, *approval.Summary)
+		facts.add(words.MailProposal, plainSentence(*approval.Summary))
 	}
 	lang := textlang.Lang(words.Language)
 	var shown []approvalMailLine

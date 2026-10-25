@@ -281,3 +281,15 @@ func TestEveryStageableActReadsAsWords(t *testing.T) {
 		}
 	}
 }
+
+func TestPlainSentenceDropsTheRawFieldList(t *testing.T) {
+	for summary, want := range map[string]string{
+		`Close deal "Acme" as won: to_stage_id=018f2a10-0000-7000-8000-00000000000a, won_without_contract_reason=other`: `Close deal "Acme" as won`,
+		`Update a deal: name=Acme`:         `Update a deal`,
+		`Move deal "Acme: phase 2" to won`: `Move deal "Acme: phase 2" to won`,
+	} {
+		if got := plainSentence(summary); got != want {
+			t.Errorf("plainSentence(%q) = %q, want %q", summary, got, want)
+		}
+	}
+}

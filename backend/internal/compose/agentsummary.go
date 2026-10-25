@@ -67,6 +67,20 @@ func stagedSentence(info agents.StageInfo, said approvalSummaryCopy, pol agentPo
 	return info.Summary + ": " + strings.Join(unshown, ", ")
 }
 
+// fieldTail finds where stagedSentence and restSummary start listing raw
+// key=value fields after the sentence.
+var fieldTail = regexp.MustCompile(`: [a-z][a-z0-9_]*=`)
+
+// plainSentence is a staged summary without the raw field list stagedSentence
+// and restSummary append. The approval email reads this where it has no room
+// for ids and field names; the card lists the fields from the preview.
+func plainSentence(summary string) string {
+	if loc := fieldTail.FindStringIndex(summary); loc != nil {
+		return strings.TrimSpace(summary[:loc[0]])
+	}
+	return summary
+}
+
 // sentenceShows reports whether the sentence already tells the approver this
 // field. A text value is shown when the sentence carries it, a list or object
 // when the sentence names the key. A number, a flag or a null never is, because
