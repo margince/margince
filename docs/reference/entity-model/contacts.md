@@ -6,7 +6,7 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-44 columns · primary key `(id)` · referenced by 44 foreign keys
+44 columns · primary key `(id)` · referenced by 47 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -516,7 +516,7 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-34 columns · primary key `(id)` · referenced by 46 foreign keys
+34 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1142,7 +1142,7 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-40 columns · primary key `(id)` · referenced by 17 foreign keys
+40 columns · primary key `(id)` · referenced by 18 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

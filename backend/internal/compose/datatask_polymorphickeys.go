@@ -29,9 +29,9 @@ func polymorphicKeysDataTask() datatask.Task {
 			action + " does the same without an audit row"}
 	}
 	return datatask.Task{
-		ID: "core/1792893105_polymorphic_rows_keyed", Version: 1,
+		ID: "core/1792911121_polymorphic_rows_keyed", Version: 1,
 		Title:    "Linking signals, weekly commitments and record views to the records they name",
-		Requires: []string{"core/1792893105"},
+		Requires: []string{"core/1792911121"},
 		Steps: []datatask.Step{
 			keyPolymorphicRowsStep("key_signals", follows("CASCADE"), signals.KeyEntitiesTx, signals.EstimateUnkeyedEntities),
 			keyPolymorphicRowsStep("key_weekly_commitments", follows("SET NULL"),
