@@ -76,14 +76,26 @@ func TestActivityReadsSayWhetherTheCallerMayChangeIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed) != 2 {
-		t.Fatalf("list returned %d activities, want 2", len(listed))
-	}
+	// The two rows this test seeded, picked out of the list rather than counted
+	// off it. An activity carries no workspace, so the list is every activity
+	// the database holds.
+	//
+	// A count then holds only while this test is the only writer. That is true
+	// when it runs alone and false in its own package.
+	seeded := map[ids.UUID]bool{mine: true, theirs: false}
+	seen := 0
 	for _, a := range listed {
-		want := ids.UUID(a.Id) == mine
+		want, ours := seeded[ids.UUID(a.Id)]
+		if !ours {
+			continue
+		}
+		seen++
 		if a.Writable == nil || *a.Writable != want {
 			t.Errorf("list row %s: writable = %v, want %v", a.Id, a.Writable, want)
 		}
+	}
+	if seen != len(seeded) {
+		t.Fatalf("the list carried %d of the %d activities this test seeded", seen, len(seeded))
 	}
 
 	if err := store.tx(e.asEditor(), func(tx pgx.Tx) error {
