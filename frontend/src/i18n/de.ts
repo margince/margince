@@ -16628,9 +16628,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.card.saidEmpty": "Noch kein Gespräch erfasst.",
   "contact.card.theyWrote": "eingehend",
   "contact.card.youWrote": "ausgehend",
-  "contact.card.theyCalled": "eingehend",
-  "contact.card.youCalled": "ausgehend",
   "contact.card.bothSides": "beide Seiten",
+  "contact.card.wroteBy": "{who} schrieb",
+  "contact.card.inCc": "in Kopie",
   "contact.card.awaitingThem": "Wartet auf Antwort",
   "contact.card.noEconomicBuyer":
     "Noch kein wirtschaftlicher Entscheider benannt",
