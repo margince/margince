@@ -59,7 +59,7 @@
     "@vitest/coverage-v8": "^5.0.0",
     "eslint": "10.11.0",
     "eslint-plugin-react-hooks": "7.1.1",
-    "happy-dom": "20.14.6",
+    "happy-dom": "21.0.4",
     "jsdom": "^30.0.0",
     "node-html-parser": "^9.0.1",
     "openapi-typescript": "^7.13.0",
