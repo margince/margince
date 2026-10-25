@@ -126,7 +126,7 @@ func (a attendeeRow) firstTime() bool { return a.LastTouch == nil }
 // It narrows the attendees' last-touch dates only when the meeting itself is
 // filed under no project: a filed meeting's own project wins, and a request
 // that disagrees with it is refused by resolveScope after this read.
-func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUID, requested *ids.ProjectID) (meeting, error) {
+func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUID, requested *ids.ProjectID, now time.Time) (meeting, error) {
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activityID); err != nil {
 		return meeting{}, err
 	}
@@ -134,6 +134,7 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(activityID)
 	requestedPos := arg(nullableProject(requested))
+	happened := occurredday.HappenedSQL("pa", fmt.Sprintf("$%d", arg(now)))
 	clauses, err := roomClauses(ctx, arg)
 	if err != nil {
 		return meeting{}, err
@@ -148,7 +149,7 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	var project projectRow
 	var projectID *ids.UUID
 	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.contact, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos,
-		clauses.amount), args...).
+		clauses.amount, happened), args...).
 		Scan(&out.ID, &out.StartsAt, &out.DateOnly, &subject,
 			&dealID, &deal.Name, &stage, &deal.AmountMinor, &currency, &deal.CloseDate,
 			&projectID, &project.Name, &project.Key, &project.Phase, &project.TargetEndDate,
@@ -195,9 +196,9 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 // told about rather than filtering it afterwards, plus the seat edge's own
 // admission on the LEFT JOIN that carries the deal role.
 //
-// last_touch is the most recent captured conversation with that attendee, and
-// it is what makes the first-time flag honest: null means we have never
-// exchanged anything with them, which is precisely "you have not met".
+// last_touch is the newest conversation with that attendee that has happened
+// by now. The first-time flag reads it: null means we have never exchanged
+// anything with them, which is "you have not met".
 const meetingQuery = `
 	SELECT a.id, a.occurred_at, a.occurred_precision = 'day', a.subject,
 	       d.id, COALESCE(d.name, ''), d.stage_name, d.amount_minor, d.currency, d.expected_close_date,
@@ -214,6 +215,7 @@ const meetingQuery = `
 	                    JOIN activity_participant pp ON pp.activity_id = pa.id
 	                    WHERE pp.contact_id = p.id AND pa.archived_at IS NULL
 	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at -- occurred_at raw: a touch before this meeting, an ordering of rows
+	                      AND %[9]s
 	                      AND pa.audience = 'workspace'
 	                      AND %[4]s
 	                      -- Workspace-visible messages only. A brief is read by

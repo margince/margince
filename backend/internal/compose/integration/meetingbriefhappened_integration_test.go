@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -132,5 +133,39 @@ func TestABriefCountsADayCallDatedTodayBeforeItsStoredNoon(t *testing.T) {
 	}
 	if strings.Contains(arc, ahead.String()) {
 		t.Errorf("the arc cites a call an hour ahead: %s", arc)
+	}
+}
+
+// attendeeLine is the brief's line for the room's one contact.
+func (r briefRoom) attendeeLine(t *testing.T) string {
+	t.Helper()
+	brief, err := meetingBriefServiceAt(r.e, r.now).Get(r.e.Admin(), r.meeting)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	for _, section := range brief.Sections {
+		if section.Kind == crmcontracts.MeetingBriefSectionKindAttendees && len(section.Sentences) == 1 {
+			return section.Sentences[0].Text
+		}
+	}
+	t.Fatal("the brief names no attendee")
+	return ""
+}
+
+// An attendee's last touch has happened by now. A meeting booked for later in
+// the week and a day call dated ahead both come before the room. Neither has
+// taken place, so the reader still meets the contact for the first time.
+func TestABriefTakesNoTouchStillAheadAsAnAttendeesLastTouch(t *testing.T) {
+	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
+	room := newBriefRoom(t, "UTC", now, now.Add(7*24*time.Hour))
+	room.log(t, "meeting", now.Add(48*time.Hour), activities.PrecisionInstant)
+	room.log(t, "call", occurredday.Anchor(now.AddDate(0, 0, 3)), activities.PrecisionDay)
+	if line := room.attendeeLine(t); !strings.Contains(line, "first time you are meeting them") {
+		t.Errorf("attendee = %q, but every touch with them is still ahead", line)
+	}
+
+	room.log(t, "call", now.Add(-time.Hour), activities.PrecisionInstant)
+	if line := room.attendeeLine(t); !strings.Contains(line, "last spoke today") {
+		t.Errorf("attendee = %q, want the call an hour ago", line)
 	}
 }
