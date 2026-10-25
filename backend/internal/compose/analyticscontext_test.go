@@ -4,12 +4,43 @@
 package compose
 
 import (
+	"context"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+func forecastGrant(read, create bool) map[string]principal.ObjectGrant {
+	return map[string]principal.ObjectGrant{"forecast": {Read: read, Create: create}}
+}
+
+func TestMarkAssertableNeedsTheForecastGrants(t *testing.T) {
+	cases := []struct {
+		name         string
+		read, create bool
+		want         bool
+	}{
+		{"read and create", true, true, true},
+		{"no forecast read", false, true, false},
+		{"no forecast create", true, false, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actor := actorWithScope(principal.RowScopeOwn)
+			actor.Permissions.Objects = forecastGrant(tc.read, tc.create)
+			ctx := principal.WithActor(context.Background(), actor)
+			scope := crmcontracts.AnalyticsScope{
+				Kind: crmcontracts.AnalyticsScopeKindOwner, Id: ptrUUID(actor.UserID),
+			}
+			markAssertable(ctx, actor, &scope)
+			if scope.Assertable == nil || *scope.Assertable != tc.want {
+				t.Fatalf("assertable = %v, want %v", scope.Assertable, tc.want)
+			}
+		})
+	}
+}
 
 func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
 	mine, foreign := ids.NewV7(), ids.NewV7()
@@ -37,7 +68,9 @@ func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			markAssertable(tc.actor, &tc.scope)
+			tc.actor.Permissions.Objects = forecastGrant(true, true)
+			ctx := principal.WithActor(context.Background(), tc.actor)
+			markAssertable(ctx, tc.actor, &tc.scope)
 			if tc.scope.Assertable == nil || *tc.scope.Assertable != tc.want {
 				t.Fatalf("assertable = %v, want %v", tc.scope.Assertable, tc.want)
 			}

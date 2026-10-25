@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
 import { unwrap } from "../../lib/problem";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 
@@ -20,8 +21,6 @@ export type AnalyticsSelection = {
   readonly scope: AnalyticsScope;
 };
 
-const CONTEXT_KEY = ["analytics-context"] as const;
-
 /**
  * The caller's frame, read once.
  *
@@ -32,7 +31,7 @@ const CONTEXT_KEY = ["analytics-context"] as const;
  */
 export function useAnalyticsContext() {
   return useQuery({
-    queryKey: CONTEXT_KEY,
+    queryKey: ANALYTICS_CONTEXT_KEY,
     queryFn: async () => {
       return unwrap(await api.GET("/analytics/context", {}));
     },

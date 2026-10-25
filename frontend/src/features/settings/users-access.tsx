@@ -20,6 +20,7 @@ import { stable } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
 import { useCan, useCanWrite, useHoldsAdminRole } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
@@ -181,6 +182,7 @@ export function TeamsCard() {
     },
     onSuccess: (_restored, { name }) => {
       qc.invalidateQueries({ queryKey: ["teams"] });
+      qc.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY });
       toast.show(t("users.teamRestored", { name }));
     },
   });
@@ -197,6 +199,7 @@ export function TeamsCard() {
       // Read before the refetch lands, which takes the named row away.
       const name = teamName(teams.data, id);
       qc.invalidateQueries({ queryKey: ["teams"] });
+      qc.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY });
       toast.show(t("users.teamArchived", { name }), {
         action: {
           kind: "undo",

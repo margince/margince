@@ -109,9 +109,10 @@ export function MergeAction<Survivor extends { id: string }>({
             onPick={setTarget}
             selected={target}
             // The server refuses a survivor the caller cannot write, so a
-            // read-only row says so here instead of failing on submit.
+            // row not reported writable (an omitted flag means not writable) says so
+            // here instead of failing on submit.
             unavailableReason={(candidate) =>
-              candidate.writable === false
+              candidate.writable !== true
                 ? t("merge.targetReadOnly")
                 : undefined
             }

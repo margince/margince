@@ -119,9 +119,9 @@ func analyticsContextFor(ctx context.Context, tx pgx.Tx, now time.Time) (crmcont
 	maySubmit := auth.Require(ctx, objectForecast, principal.ActionCreate) == nil
 
 	defaultScope := scopeToWire(def)
-	markAssertable(p, &defaultScope)
+	markAssertable(ctx, p, &defaultScope)
 	for i := range allowed {
-		markAssertable(p, &allowed[i])
+		markAssertable(ctx, p, &allowed[i])
 	}
 
 	return crmcontracts.AnalyticsContext{
@@ -223,11 +223,13 @@ func scopeToWire(s ResolvedScope) crmcontracts.AnalyticsScope {
 }
 
 // markAssertable says whether a forecast call or a share may name this scope.
-// It asks the rule ResolveAssertionScope applies, so the screen hides what the
-// write routes would refuse. No write accepts managed_teams.
-func markAssertable(p principal.Principal, scope *crmcontracts.AnalyticsScope) {
-	assertable := false
-	if scope.Kind != crmcontracts.AnalyticsScopeKindManagedTeams {
+// It asks what the write routes ask: the forecast read and create grants, then
+// the lens rule ResolveAssertionScope applies. No write accepts managed_teams.
+func markAssertable(ctx context.Context, p principal.Principal, scope *crmcontracts.AnalyticsScope) {
+	assertable := auth.Allows(ctx, objectForecast, principal.ActionRead) &&
+		auth.Allows(ctx, objectForecast, principal.ActionCreate) &&
+		scope.Kind != crmcontracts.AnalyticsScopeKindManagedTeams
+	if assertable {
 		var id *ids.UUID
 		if scope.Id != nil {
 			named := ids.UUID(*scope.Id)

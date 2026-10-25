@@ -18,12 +18,12 @@ afterEach(() => {
 
 const READ_ONLY = "You can only read this record, so it cannot be kept.";
 
-function row(id: string, name: string, writable: boolean) {
+function row(id: string, name: string, writable?: boolean) {
   return {
     id,
     full_name: name,
     display_name: name,
-    writable,
+    ...(writable === undefined ? {} : { writable }),
     source: "manual",
     captured_by: "u",
     created_at: "2026-10-01T10:00:00Z",
@@ -85,6 +85,17 @@ describe("the merge target search", () => {
     expect(screen.getByTestId("merge-confirm").hasAttribute("disabled")).toBe(
       false,
     );
+  });
+
+  it("treats a row that does not say it is writable as not writable", async () => {
+    stubList([row("c1", "Unflagged Ann")]);
+    await openAndSearch(searchContactsTargets);
+
+    const unflagged = await screen.findByRole("button", {
+      name: /Unflagged Ann/,
+    });
+    expect(unflagged.hasAttribute("disabled")).toBe(true);
+    expect(unflagged.textContent).toContain(READ_ONLY);
   });
 
   it("applies the same rule to company targets", async () => {

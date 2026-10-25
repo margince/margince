@@ -26,7 +26,7 @@ export type RecordPickerCandidate = {
   name: string;
   detail?: string;
   // Whether this reader may change the row, as the list read reports it.
-  // `false` means the caller's write would be refused; absent means unknown.
+  // Callers whose write needs a writable row treat absent as not writable.
   writable?: boolean;
 };
 
