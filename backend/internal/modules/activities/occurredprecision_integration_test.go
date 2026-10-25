@@ -383,14 +383,19 @@ func TestHappenedSQLAnswersTheSharedCases(t *testing.T) {
 			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, c.Zone); err != nil {
 			t.Fatal(err)
 		}
-		var happened bool
+		var happened, ahead bool
 		if err := e.owner.QueryRow(context.Background(), fmt.Sprintf(
-			`SELECT %s FROM (VALUES ($2::text, $3::timestamptz, $4::text)) AS a(kind, occurred_at, occurred_precision)`,
-			occurredday.HappenedSQL("a", "$1")), c.Now, c.Kind, c.At, c.Precision).Scan(&happened); err != nil {
+			`SELECT %s, %s FROM (VALUES ($2::text, $3::timestamptz, $4::text, NULL::integer))
+			   AS a(kind, occurred_at, occurred_precision, duration_seconds)`,
+			occurredday.HappenedSQL("a", "$1"), occurredday.AheadSQL("a", "$1")), c.Now, c.Kind, c.At, c.Precision).Scan(&happened, &ahead); err != nil {
 			t.Fatalf("%s: %v", c.Name, err)
 		}
 		if happened != c.Happened {
 			t.Errorf("%s: SQL says happened = %v, want %v", c.Name, happened, c.Happened)
+		}
+		// A meeting is ahead exactly until it takes place.
+		if c.Kind == "meeting" && ahead == c.Happened {
+			t.Errorf("%s: AheadSQL = %v beside a meeting that took place = %v", c.Name, ahead, c.Happened)
 		}
 	}
 }

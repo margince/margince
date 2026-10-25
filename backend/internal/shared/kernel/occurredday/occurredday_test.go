@@ -214,5 +214,8 @@ func TestHappenedAnswersTheCasesTheFrontendShares(t *testing.T) {
 		if got := Happened(c.Kind, at, c.Now, zone(t, c.Zone)); got != c.Happened {
 			t.Errorf("%s: Happened = %v, want %v", c.Name, got, c.Happened)
 		}
+		if took := MeetingTookPlace(at, c.Now, zone(t, c.Zone)); c.Kind == meetingKind && took != c.Happened {
+			t.Errorf("%s: MeetingTookPlace = %v, want %v", c.Name, took, c.Happened)
+		}
 	}
 }
