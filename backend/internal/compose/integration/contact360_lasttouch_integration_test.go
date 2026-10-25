@@ -27,7 +27,7 @@ func TestACalledOffMeetingDoesNotMoveAContactsDirectionClocks(t *testing.T) {
 		VALUES ($1, 'email', 'Re: pricing', '2026-08-01T09:00:00Z', 'inbound', 'manual', 'human:x')`)
 	LinkActivity(t, owner, wrote, "contact", mine)
 	// The inbound clock asks who SENT it, not who the row is linked to
-	// (contacts.SenderPredicate), so the fixture records the sender too.
+	// (relstrength.SenderSQL), so the fixture records the sender too.
 	LinkActivitySender(t, owner, wrote, mine)
 	// Newer than the mail, and called off in each direction.
 	for _, dir := range []string{"inbound", "outbound"} {

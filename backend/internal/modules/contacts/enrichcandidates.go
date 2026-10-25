@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // signatureCandidateSQL selects the contacts whose newest readable mail this
@@ -84,7 +85,7 @@ func signatureSourceSQL(defaultEnabled string) string {
 	return `al.contact_id = p.id AND al.entity_type = 'contact'
 				  -- THIS CONTACT WROTE IT. A signature is only theirs to be read
 				  -- off a message they sent, never one that merely reached them.
-				  AND ` + SenderPredicate("p.id", "a") + `
+				  AND ` + relstrength.SenderSQL("p.id", "a") + `
 				  AND ` + SignatureSourceEligible("p", "a") + `
 				  AND ` + signatureMailSQL(defaultEnabled)
 }

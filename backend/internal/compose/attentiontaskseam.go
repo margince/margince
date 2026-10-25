@@ -47,7 +47,7 @@ type attentionTasks struct {
 func openTasksDueBy(
 	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID,
 ) (activities.ListActivitiesInput, bool) {
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true, WorklistAsOf: &asOf}
+	in := activities.ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true, WorklistAsOf: &asOf, ReadableOnly: true}
 	switch scope {
 	case attention.TasksMine:
 		actor, ok := principal.Actor(ctx)
@@ -140,7 +140,7 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 	}
 	var due []attention.Task
 	page := reminderPage
-	in := activities.ListActivitiesInput{RemindersDue: true, TaskAsOf: &asOf, Limit: &page}
+	in := activities.ListActivitiesInput{RemindersDue: true, TaskAsOf: &asOf, Limit: &page, ReadableOnly: true}
 	for {
 		rows, next, err := t.store.ListActivities(ctx, in)
 		if err != nil {

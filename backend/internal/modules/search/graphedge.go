@@ -230,13 +230,8 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 // a Limit emits, so an edge whose last evidence is limited is re-folded away.
 const audienceWorkspaceOnly = ` AND a.audience = 'workspace'`
 
-// liveMemberJoin and laterMemberJoin join app_user on the shared definition of
-// "still works here". laterMemberJoin asks it of a SECOND edge in one
-// statement: has any live colleague spoken to this contact since.
-var (
-	liveMemberJoin  = `JOIN app_user u ON u.id = e.user_id AND ` + workforce.LiveMemberSQL("u")
-	laterMemberJoin = `JOIN app_user lu ON lu.id = later.user_id AND ` + workforce.LiveMemberSQL("lu")
-)
+// liveMemberJoin joins app_user on the shared definition of "still works here".
+var liveMemberJoin = `JOIN app_user u ON u.id = e.user_id AND ` + workforce.LiveMemberSQL("u")
 
 // EdgesForContact answers "who on our team knows this contact".
 //
