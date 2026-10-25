@@ -14,6 +14,7 @@ import (
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
 )
 
 // extractText returns the message's plain-text body, its link hosts and the
@@ -71,7 +72,7 @@ func bodyText(plain, html string) (text string, cut bool) {
 		return strings.TrimSpace(plain), false
 	}
 	if html != "" {
-		return renderHTML(html)
+		return htmltext.Render(html)
 	}
 	return "", false
 }

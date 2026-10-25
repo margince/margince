@@ -286,7 +286,7 @@ func buildBody(ev Event, attendeeEmails []string) (body string, masked bool) {
 		header += "\nAttendees: " + strings.Join(attendeeEmails, ", ")
 	}
 	body = header
-	if desc := strings.TrimSpace(ev.Description); desc != "" {
+	if desc := descriptionText(ev.Description); desc != "" {
 		body = header + "\n\n" + desc
 	}
 	maskedBody := credentialmask.MaskText(body)

@@ -302,3 +302,39 @@ func TestTheBodyIsStoredWithItsCredentialsMasked(t *testing.T) {
 		t.Errorf("the stored body keeps the half of the key the cut left: %q", body[len(body)-80:])
 	}
 }
+
+func TestAnHTMLDescriptionIsStoredAsReadableText(t *testing.T) {
+	body, _ := buildBody(Event{Description: "Booked by <b>Guest</b><br>Topic: intro<script>alert(1)</script><style>p{x:y}</style>"}, nil)
+	if !strings.Contains(body, "Booked by Guest\nTopic: intro") {
+		t.Fatalf("body = %q, want text with the line break kept", body)
+	}
+	for _, leak := range []string{"<b>", "<br>", "alert", "p{x:y}"} {
+		if strings.Contains(body, leak) {
+			t.Fatalf("body = %q, must not contain %q", body, leak)
+		}
+	}
+}
+
+func TestAPlainDescriptionIsStoredUnchanged(t *testing.T) {
+	desc := "Agenda:\n\n  1. a < b\n  2. R&D"
+	body, _ := buildBody(Event{Description: desc}, nil)
+	if want := "Organizer: -\n\n" + desc; body != want {
+		t.Fatalf("body = %q, want %q", body, want)
+	}
+}
+
+func TestABracketedAddressOrLinkIsNotMistakenForMarkup(t *testing.T) {
+	for _, desc := range []string{"Contact <john@example.com>", "Join <https://example.test/room>\nPasscode 42"} {
+		body, _ := buildBody(Event{Description: desc}, nil)
+		if want := "Organizer: -\n\n" + desc; body != want {
+			t.Errorf("body = %q, want %q", body, want)
+		}
+	}
+}
+
+func TestAnHTMLDescriptionWithACommentAndClosingTagsIsRendered(t *testing.T) {
+	body, _ := buildBody(Event{Description: "<!-- booking -->Hello <i>there</i></p>"}, nil)
+	if want := "Organizer: -\n\nHello there"; body != want {
+		t.Errorf("body = %q, want %q", body, want)
+	}
+}

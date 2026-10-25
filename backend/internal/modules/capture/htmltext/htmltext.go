@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package mailmap
+// Package htmltext renders HTML as the text a reader would see. Mail bodies and
+// calendar descriptions both arrive as markup from a stranger, so they share it.
+package htmltext
 
 import (
 	"errors"
@@ -50,17 +52,18 @@ var paragraphBreakers = map[atom.Atom]bool{
 // textWriter assembles the rendered text. Breaks are requested rather than
 // written, so a run of nested block elements collapses to one break instead of
 // one per element, and a break before any text is dropped.
-// How much rendered text is worth building. Only maxBodyLen of it is stored, so
-// a sender cannot make this hold a hundred megabytes of repeated text in memory
-// to have all but the first few thousand characters thrown away. The margin
-// above maxBodyLen leaves tidy() something to trim without cutting the excerpt
-// short of what gets stored.
-const maxRenderedLen = 4 * maxBodyLen
+// StoredLen is the longest text any caller stores from a render.
+const StoredLen = 64 * 1024
 
-// The largest single token worth buffering. A mail is written by a stranger and
-// only maxBodyLen of it is stored, so no one token needs to be bigger than the
-// whole excerpt; a token past this ends the walk with what was read so far.
-const maxTokenLen = maxRenderedLen
+// MaxRenderedLen is how much rendered text is worth building. Only StoredLen of
+// it is stored. A sender cannot make this hold megabytes of repeated text that
+// is then thrown away. The margin above StoredLen leaves tidy() something to
+// trim without cutting the excerpt short of what gets stored.
+const MaxRenderedLen = 4 * StoredLen
+
+// MaxTokenLen is the largest single token worth buffering. No token needs to
+// exceed the whole excerpt. A token past this ends the walk with what was read.
+const MaxTokenLen = MaxRenderedLen
 
 type textWriter struct {
 	out     strings.Builder
@@ -70,7 +73,7 @@ type textWriter struct {
 
 // full reports that the excerpt is long enough. What follows would be truncated
 // away, so rendering it buys nothing and costs whatever the sender chose.
-func (w *textWriter) full() bool { return w.out.Len() >= maxRenderedLen }
+func (w *textWriter) full() bool { return w.out.Len() >= MaxRenderedLen }
 
 func (w *textWriter) breakLine(n int) {
 	if w.out.Len() == 0 {
@@ -239,11 +242,11 @@ func (a *anchorState) flush(w *textWriter) {
 	w.write(linkText(a.text.String(), a.href))
 }
 
-// renderHTML renders an HTML mail body as the text a contact would read. Entity
+// Render renders an HTML document as the text a contact would read. Entity
 // references are decoded, blocks become line breaks, list items are marked, and
 // style and script are left out. cut reports that the render stopped at
-// maxRenderedLen, or at a token past the buffer cap, before the document ended.
-func renderHTML(src string) (text string, cut bool) {
+// MaxRenderedLen, or at a token past the buffer cap, before the document ended.
+func Render(src string) (text string, cut bool) {
 	r := &renderer{w: &textWriter{}, a: &anchorState{}}
 	z := html.NewTokenizer(strings.NewReader(src))
 	// The loop's budget is checked between tokens, which bounds a document made
@@ -251,7 +254,7 @@ func renderHTML(src string) (text string, cut bool) {
 	// buffers a token entire before returning it, so an unbroken run of text
 	// allocates the sender's chosen size no matter what is done with it after.
 	// Capping the buffer moves the bound to where the memory is actually taken.
-	z.SetMaxBuf(maxTokenLen)
+	z.SetMaxBuf(MaxTokenLen)
 	for !r.w.full() {
 		switch token := z.Next(); token {
 		case html.ErrorToken:
@@ -340,8 +343,8 @@ func (r *renderer) finish() string {
 // A space is asked for only where the source had one, so an inline tag between
 // two halves of a word does not split it.
 func writeText(w *textWriter, a *anchorState, raw string) {
-	if len(raw) > maxRenderedLen {
-		raw = raw[:maxRenderedLen]
+	if len(raw) > MaxRenderedLen {
+		raw = raw[:MaxRenderedLen]
 	}
 	leading, trailing := edgeSpace(raw)
 	text := collapse(raw)
