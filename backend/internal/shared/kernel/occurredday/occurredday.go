@@ -85,6 +85,22 @@ func DaysSince(at time.Time, dateOnly bool, asOf time.Time, zone *time.Location)
 	return elapsed.Days(time.Date(year, month, day, 12, 0, 0, 0, zone), asOf, zone)
 }
 
+// Moment is an activity's stored time and whether it names only a date.
+type Moment struct {
+	At       time.Time
+	DateOnly bool
+}
+
+// DaysBetween counts the calendar days from the date one activity names to the
+// date a later one names, each read by its own precision.
+func DaysBetween(from, to Moment, zone *time.Location) int {
+	later := to.At
+	if to.DateOnly {
+		later = Begins(later, zone)
+	}
+	return DaysSince(from.At, from.DateOnly, later, zone)
+}
+
 // BegunSQL is Begun for the activity under alias at asOf, both SQL the caller
 // renders. A day entry stored at or before asOf is at or before today's anchor
 // too. So one bound on occurred_at holds both arms and keeps a range scan.

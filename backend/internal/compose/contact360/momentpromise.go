@@ -13,10 +13,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -176,7 +178,8 @@ func heldByAnother(ctx context.Context, task crmcontracts.Activity) bool {
 // terms: a deadline still ahead, one already behind, or none at all.
 func (said momentCopy) openPromiseWhyNow(now time.Time, task crmcontracts.Activity) string {
 	if task.DueAt == nil {
-		return fmt.Sprintf(said.Say(momentWords.TaskUndated), task.OccurredAt.In(said.zone).Format(time.DateOnly))
+		logged := occurredday.DateIn(task.OccurredAt, activitywhen.IsDay(task.OccurredPrecision), said.zone)
+		return fmt.Sprintf(said.Say(momentWords.TaskUndated), logged.Format(time.DateOnly))
 	}
 	return owedwork.DeadlineWords(*task.DueAt, now, string(said.Lang()))
 }

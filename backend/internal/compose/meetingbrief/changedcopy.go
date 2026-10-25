@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
@@ -41,8 +40,8 @@ var changedWords = struct {
 	Said:      langcopy.Phrase{En: "Since then %s said: %s", De: "Seitdem hat %s gesagt: %s", Vi: "Kể từ đó, %s đã nói: %s"},
 }
 
-func (said briefCopy) lastDealtLine(now, at time.Time, loc *time.Location) string {
-	days := elapsed.Days(at, now, loc)
+func (said briefCopy) lastDealtLine(now time.Time, at Occurred, loc *time.Location) string {
+	days := at.daysAgo(now, loc)
 	switch {
 	case days <= 0:
 		return said.Say(changedWords.Today)

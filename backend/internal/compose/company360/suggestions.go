@@ -34,8 +34,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/receiptcopy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // noReplyDays is how long an unanswered outbound message waits before it is
@@ -276,10 +276,9 @@ func (said suggestionCopy) staleThread(
 	waited := now.Sub(newest.At)
 	// The THRESHOLD stays a duration — it asks whether enough time has passed,
 	// which is a question about elapsed time. The figure PRINTED below is a
-	// day count a reader compares against dates on their screen, so it is
-	// counted the way they count: shared/kernel/elapsed, same as every other
-	// day count a reader reads.
-	waitedDays := elapsed.Days(newest.At, now, loc)
+	// day count a reader checks against dates on screen. So it counts from the
+	// date the message names, as every other day count a reader reads.
+	waitedDays := occurredday.DaysSince(newest.At, newest.DateOnly, now, loc)
 	if waited < noReplyDays*24*time.Hour {
 		return nil
 	}

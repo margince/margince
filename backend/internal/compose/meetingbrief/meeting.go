@@ -92,7 +92,22 @@ type attendeeRow struct {
 	// LastTouch is the newest conversation with this attendee BEFORE this
 	// meeting. Null is the first-time flag: it means nothing was ever captured
 	// with them, which is exactly "you have not met".
-	LastTouch *time.Time `json:"last_touch"`
+	LastTouch *touchRow `json:"last_touch"`
+}
+
+// touchRow is the newest conversation the meeting query names for an attendee,
+// with the precision read off that same row.
+type touchRow struct {
+	At       time.Time `json:"at"`
+	DateOnly bool      `json:"date_only"`
+}
+
+// occurred is the touch as the brief reads it; nil is no touch at all.
+func (r *touchRow) occurred() *Occurred {
+	if r == nil {
+		return nil
+	}
+	return &Occurred{At: r.At, DateOnly: r.DateOnly}
 }
 
 // firstTime reports whether the reader is meeting this contact for the first
@@ -194,7 +209,8 @@ const meetingQuery = `
 	                  'title', COALESCE(p.title, ''),
 	                  'deal_role', COALESCE(r.role, ''),
 	                  'last_touch', (
-	                    SELECT max(pa.occurred_at) FROM activity pa
+	                    SELECT json_build_object('at', pa.occurred_at, 'date_only', pa.occurred_precision = 'day')
+	                    FROM activity pa
 	                    JOIN activity_participant pp ON pp.activity_id = pa.id
 	                    WHERE pp.contact_id = p.id AND pa.archived_at IS NULL
 	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at
@@ -225,6 +241,7 @@ const meetingQuery = `
 	                          OR NOT EXISTS (
 	                            SELECT 1 FROM activity_link tf
 	                            WHERE tf.activity_id = pa.id AND tf.project_id IS NOT NULL))
+	                    ORDER BY pa.occurred_at DESC, pa.id DESC LIMIT 1
 	                  ))
 	                ORDER BY p.full_name, p.id)
 	         FROM (SELECT DISTINCT ap.contact_id FROM activity_participant ap

@@ -52,6 +52,8 @@ type HistoryIn struct {
 	Subject   string
 	Direction string
 	At        time.Time
+	// DateOnly says At is a day entry's stored noon.
+	DateOnly  bool
 	ThreadKey string
 	// OnDeal marks a conversation filed under the deal this brief is about.
 	OnDeal bool
@@ -64,7 +66,7 @@ type HistoryIn struct {
 
 const historyQuery = `
 	SELECT a.id, a.kind, COALESCE(a.subject, ''), COALESCE(a.direction, ''),
-	       a.occurred_at, COALESCE(a.thread_key, ''),
+	       a.occurred_at, a.occurred_precision = 'day', COALESCE(a.thread_key, ''),
 	       ($%[3]d::uuid IS NOT NULL AND EXISTS (
 	          SELECT 1 FROM activity_link dl
 	          WHERE dl.activity_id = a.id AND dl.deal_id = $%[3]d)) AS on_deal,
@@ -156,7 +158,7 @@ func (s *Service) readHistory(
 		var id ids.UUID
 		var readableRow bool
 		if err := rows.Scan(&id, &row.Kind, &row.Subject, &row.Direction,
-			&row.At, &row.ThreadKey, &row.OnDeal, &readableRow); err != nil {
+			&row.At, &row.DateOnly, &row.ThreadKey, &row.OnDeal, &readableRow); err != nil {
 			return nil, fmt.Errorf("read the account history: %w", err)
 		}
 		row.ID = id.String()

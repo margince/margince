@@ -166,3 +166,18 @@ func TestADayEntryDatedTodayIsZeroDaysOld(t *testing.T) {
 		t.Errorf("an instant an hour ago is %d days old, want 0", got)
 	}
 }
+
+// Two activities are as many days apart as the dates they name. A day entry
+// names its own date, an instant its date in the zone.
+func TestDaysBetweenCountsTheDatesEachActivityNames(t *testing.T) {
+	t.Parallel()
+	kiritimati := zone(t, "Pacific/Kiritimati")
+	day := Anchor(time.Date(2025, 3, 9, 0, 0, 0, 0, time.UTC))
+	evening := time.Date(2025, 3, 11, 9, 0, 0, 0, time.UTC)
+	if got := DaysBetween(Moment{At: day, DateOnly: true}, Moment{At: evening}, kiritimati); got != 2 {
+		t.Errorf("a day entry to an instant on the 11th local is %d days, want 2", got)
+	}
+	if got := DaysBetween(Moment{At: evening.AddDate(0, 0, -3)}, Moment{At: day, DateOnly: true}, kiritimati); got != 1 {
+		t.Errorf("an instant on the 8th local to a day entry on the 9th is %d days, want 1", got)
+	}
+}

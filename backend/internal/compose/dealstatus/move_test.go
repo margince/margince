@@ -100,8 +100,10 @@ func TestTheMovesBasisCarriesItsMailsPrecision(t *testing.T) {
 	if len(mv.Evidence) != 1 || mv.Evidence[0].OccurredPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionDay {
 		t.Fatalf("basis = %+v, want the day mail's precision", mv.Evidence)
 	}
-	task := facts{deal: openDeal(), now: testNow, loc: time.UTC,
-		openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Agree the next step"}}}
+	task := facts{
+		deal: openDeal(), now: testNow, loc: time.UTC,
+		openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Agree the next step"}},
+	}
 	if got := decideMove(task).Evidence; len(got) != 1 || got[0].OccurredAt != nil ||
 		got[0].OccurredPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionInstant {
 		t.Fatalf("an undated basis = %+v, want no time read as an instant", got)

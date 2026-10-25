@@ -30,3 +30,9 @@ func Stated(precision string) *crmcontracts.OccurredPrecision {
 func IsDay(precision crmcontracts.OccurredPrecision) bool {
 	return precision == crmcontracts.OccurredPrecisionOccurredPrecisionDay
 }
+
+// IsStatedDay is IsDay for a precision the wire may leave out, which it does
+// only beside an absent time.
+func IsStatedDay(precision *crmcontracts.OccurredPrecision) bool {
+	return precision != nil && IsDay(*precision)
+}

@@ -117,8 +117,8 @@ func planPromptOf(in Input, floor Plan) PlanPrompt {
 	}
 	for _, moment := range floor.Arc {
 		shown := PromptMoment{
-			From:  moment.Moment.From.UTC().Format(time.DateOnly),
-			To:    moment.Moment.To.UTC().Format(time.DateOnly),
+			From:  moment.Moment.From.At.UTC().Format(time.DateOnly),
+			To:    moment.Moment.To.At.UTC().Format(time.DateOnly),
 			Title: moment.Moment.Title,
 		}
 		for _, current := range moment.Moment.Threads {

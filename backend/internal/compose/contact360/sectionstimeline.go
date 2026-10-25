@@ -329,6 +329,7 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids
 	out.LastInboundPrecision = activitywhen.Stated(touch.InboundPrecision)
 	out.LastOutboundPrecision = activitywhen.Stated(touch.OutboundPrecision)
 	out.LastContactPrecision = activitywhen.Stated(touch.ContactPrecision)
+	out.LastLiveInboundPrecision = activitywhen.Stated(touch.LiveInboundPrecision)
 	return nil
 }
 

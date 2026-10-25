@@ -45,13 +45,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -319,7 +320,9 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 	if page.LastOutboundAt == nil {
 		return crmcontracts.ContactMoment{}, false
 	}
-	sinceWeWrote := elapsed.Days(*page.LastOutboundAt, inbound, said.zone)
+	sinceWeWrote := occurredday.DaysBetween(
+		occurredday.Moment{At: *page.LastOutboundAt, DateOnly: activitywhen.IsStatedDay(page.LastOutboundPrecision)},
+		occurredday.Moment{At: inbound, DateOnly: activitywhen.IsStatedDay(page.LastLiveInboundPrecision)}, said.zone)
 	if sinceWeWrote < reEngagedQuietDays {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -371,13 +374,13 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		// They answered. Silence is not the story.
 		return crmcontracts.ContactMoment{}, false
 	}
-	waiting := elapsed.Days(outbound, now, said.zone)
+	waiting := occurredday.DaysSince(outbound, activitywhen.IsStatedDay(page.LastOutboundPrecision), now, said.zone)
 	if waiting < goneQuietAfterDays {
 		return crmcontracts.ContactMoment{}, false
 	}
 	quietFor := waiting
 	if page.LastInboundAt != nil {
-		quietFor = elapsed.Days(*page.LastInboundAt, now, said.zone)
+		quietFor = occurredday.DaysSince(*page.LastInboundAt, activitywhen.IsStatedDay(page.LastInboundPrecision), now, said.zone)
 	}
 	evidence := said.outboundEvidence(page, outbound)
 	return crmcontracts.ContactMoment{

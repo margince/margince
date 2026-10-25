@@ -143,7 +143,7 @@ func freshness(claim ClaimIn, now time.Time, loc *time.Location) int {
 	if claim.OccurredAt == nil {
 		return 0
 	}
-	age := max(elapsed.Days(*claim.OccurredAt, now, loc), 0)
+	age := max(claim.OccurredAt.daysAgo(now, loc), 0)
 	if age >= 60 {
 		return 0
 	}

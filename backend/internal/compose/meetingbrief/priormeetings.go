@@ -36,7 +36,7 @@ const priorMeetingCap = 2
 type priorMeeting struct {
 	ID       ids.UUID
 	Subject  string
-	StartsAt time.Time
+	StartsAt Occurred
 }
 
 // readPriorMeetings finds the most recent meetings before this one that shared
@@ -114,7 +114,7 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 	for rows.Next() {
 		var prior priorMeeting
 		var subject *string
-		if err := rows.Scan(&prior.ID, &subject, &prior.StartsAt); err != nil {
+		if err := rows.Scan(&prior.ID, &subject, &prior.StartsAt.At, &prior.StartsAt.DateOnly); err != nil {
 			return nil, fmt.Errorf("read an earlier meeting: %w", err)
 		}
 		prior.Subject = deref(subject)
@@ -130,7 +130,7 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 // with it. DISTINCT because a meeting with three of the same attendees is one
 // meeting, not three.
 const priorMeetingsQuery = `
-	SELECT DISTINCT m.id, m.subject, m.occurred_at
+	SELECT DISTINCT m.id, m.subject, m.occurred_at, m.occurred_precision = 'day'
 	FROM activity m
 	JOIN activity_participant mp ON mp.activity_id = m.id
 	WHERE m.kind = 'meeting' AND m.archived_at IS NULL

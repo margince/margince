@@ -17,7 +17,7 @@ func TestArcCopyKeepsDatesTitlesAndConversationCounts(t *testing.T) {
 		said := briefCopyFor(language)
 		for _, title := range []string{"", "Original title"} {
 			for _, count := range []int{1, 3} {
-				line := said.arcSummary(ArcMoment{Title: title, From: at(2), To: at(5)}, count)
+				line := said.arcSummary(ArcMoment{Title: title, From: instantOn(2), To: instantOn(5)}, count)
 				if !strings.Contains(line, "2026-08-02–2026-08-05") || (title != "" && !strings.Contains(line, title)) || (count == 3 && !strings.Contains(line, "3")) {
 					t.Fatalf("%s lost arc facts: %s", language, line)
 				}

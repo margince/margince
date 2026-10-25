@@ -437,3 +437,23 @@ func TestEveryRiskCarriesADealAndAReason(t *testing.T) {
 		}
 	}
 }
+
+// A day entry counts from the date it names. Its stored noon UTC is already
+// the next morning in Kiritimati, which would put the deal a day under the window.
+func TestGoingColdCountsADayTouchFromItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	asOf := time.Date(2026, 6, 15, 9, 0, 0, 0, kiritimati)
+	logged := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC).AddDate(0, 0, -goingColdDays)
+	cover := DealCoverage{
+		DealID: ids.NewV7(), Status: dealStatusOpen, LastTouchAt: logged, LastTouchDateOnly: true,
+		TouchedAsOf: asOf, Zone: kiritimati,
+		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
+	}
+	cold, ok := goingCold(cover, testEnglish)
+	if !ok || cold.DaysSinceTouch != goingColdDays {
+		t.Fatalf("a day touch dated %d days ago reads %+v, want going cold for %d days", goingColdDays, cold, goingColdDays)
+	}
+}

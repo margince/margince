@@ -58,10 +58,10 @@ type Input struct {
 	PriorMeetings []PriorMeetingIn
 	// LastSpokeAt is when the READER last dealt with anyone in the room — the
 	// baseline "what changed" is measured from. Nil is first contact.
-	LastSpokeAt *time.Time
+	LastSpokeAt *Occurred
 	// LastTouchAt is the newest conversation with anyone in the room before
 	// this meeting. Nil means nothing was ever captured with any of them.
-	LastTouchAt *time.Time
+	LastTouchAt *Occurred
 	// DealMoves are what happened to the DEAL since LastSpokeAt — stage moves,
 	// offers issued, what the buyer did in the Deal Room. Empty when nothing
 	// moved, when the meeting is about no deal, or when this reader may not
@@ -114,7 +114,7 @@ type DealIn struct {
 type PriorMeetingIn struct {
 	ID       string
 	Subject  string
-	StartsAt time.Time
+	StartsAt Occurred
 }
 
 // foldPriorMeetings maps the read rows into the brief's own shape.
@@ -143,7 +143,7 @@ type AttendeeIn struct {
 	FullName  string
 	Title     string
 	DealRole  string
-	LastTouch *time.Time
+	LastTouch *Occurred
 	FirstTime bool
 }
 
@@ -161,7 +161,7 @@ type ClaimIn struct {
 	SourceLabel string
 	DueAt       *time.Time
 	// OccurredAt is when the claim was made, for ranking the newer first.
-	OccurredAt *time.Time
+	OccurredAt *Occurred
 }
 
 // ActIn is one recent conversation as the brief reads it. Every field here is
@@ -214,10 +214,10 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 			FullName:  attendee.FullName,
 			Title:     attendee.Title,
 			DealRole:  attendee.DealRole,
-			LastTouch: attendee.LastTouch,
+			LastTouch: attendee.LastTouch.occurred(),
 			FirstTime: attendee.firstTime(),
 		})
-		in.LastTouchAt = latest(in.LastTouchAt, attendee.LastTouch)
+		in.LastTouchAt = latest(in.LastTouchAt, attendee.LastTouch.occurred())
 		in.Commitments = append(in.Commitments, foldClaims(attendee.FullName, perAttendee[attendee.ContactID])...)
 	}
 	return in
@@ -242,7 +242,9 @@ func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []Cl
 			Status:      string(claim.Status),
 			SourceID:    ids.UUID(claim.SourceActivityId).String(),
 			DueAt:       claim.DueAt,
-			OccurredAt:  claim.OccurredAt,
+		}
+		if claim.OccurredAt != nil {
+			folded.OccurredAt = &Occurred{At: *claim.OccurredAt, DateOnly: activitywhen.IsDay(claim.OccurredPrecision)}
 		}
 		if claim.SourceLabel != nil {
 			folded.SourceLabel = *claim.SourceLabel
@@ -341,11 +343,11 @@ func currentEmployer(view crmcontracts.Contact360) string {
 // latest keeps the newer of two optional instants, treating nil as "nothing
 // captured" rather than as the zero time — the zero time would win every
 // comparison and report a relationship as touched in year one.
-func latest(current, candidate *time.Time) *time.Time {
+func latest(current, candidate *Occurred) *Occurred {
 	if candidate == nil {
 		return current
 	}
-	if current == nil || candidate.After(*current) {
+	if current == nil || candidate.At.After(current.At) {
 		return candidate
 	}
 	return current

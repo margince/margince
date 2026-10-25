@@ -29441,6 +29441,8 @@ export interface components {
             last_outbound_precision?: components["schemas"]["OccurredPrecision"];
             /** @description How to read `last_contact_at`, from the row it names. Absent when that is null or absent. */
             last_contact_precision?: components["schemas"]["OccurredPrecision"];
+            /** @description How to read `last_live_inbound_at`, from the row it names. Absent when that is null or absent. */
+            last_live_inbound_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
             sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile" | "dead_addresses" | "billing_roles")[];
             strength?: components["schemas"]["RelationshipStrength"];

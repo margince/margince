@@ -32,9 +32,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -107,6 +107,9 @@ type DealCoverage struct {
 	// that as "do not judge", so a hand-built fixture cannot accidentally
 	// assert a cold deal it never described.
 	LastTouchAt time.Time
+	// LastTouchDateOnly says the activity behind LastTouchAt names only a date,
+	// so going-cold counts from that date.
+	LastTouchDateOnly bool
 	// TouchedAsOf is the DATABASE's clock at the moment LastTouchAt was read,
 	// and it is the only thing going-cold may measure against.
 	//
@@ -216,6 +219,7 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 		return out, err
 	}
 	out.Status, out.LastTouchAt, out.EverTouched = facts.status, facts.lastTouchAt, facts.everTouched
+	out.LastTouchDateOnly = facts.lastTouchDateOnly
 	out.TouchedAsOf = facts.asOf
 	if out.Zone, err = identity.ZoneAppliedTx(ctx, tx); err != nil {
 		return out, err
@@ -393,7 +397,7 @@ func goingCold(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
 	if c.Status != dealStatusOpen || c.LastTouchAt.IsZero() || c.TouchedAsOf.IsZero() || c.Zone == nil {
 		return Risk{}, false
 	}
-	days := elapsed.Days(c.LastTouchAt, c.TouchedAsOf, c.Zone)
+	days := occurredday.DaysSince(c.LastTouchAt, c.LastTouchDateOnly, c.TouchedAsOf, c.Zone)
 	if days < goingColdDays {
 		return Risk{}, false
 	}

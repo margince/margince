@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // HealthReason is one factor's number and the fact behind it.
@@ -35,7 +35,7 @@ func HealthReasons(h DealHealth, now time.Time, loc *time.Location, language str
 	ev := h.Evidence
 	said := langcopy.For(language)
 	return []HealthReason{
-		{Key: "activity_recency", Value: h.Factors.ActivityRecency, Reason: recencyReason(ev.LastActivityAt, ev.Stalled, now, loc, said)},
+		{Key: "activity_recency", Value: h.Factors.ActivityRecency, Reason: recencyReason(ev, now, loc, said)},
 		{
 			Key: "stage_velocity", Value: h.Factors.StageVelocity,
 			Reason: fmt.Sprintf(said.Say(healthWords.Stage), int(ev.DaysInStage), int(ev.ExpectedDaysInStage)),
@@ -63,11 +63,11 @@ func HealthReasons(h DealHealth, now time.Time, loc *time.Location, language str
 // (health.daysBetween). A number that measures how stale a deal is should move
 // continuously; a sentence a reader can check against a timestamp should not
 // move between cache writes.
-func recencyReason(last *time.Time, stalled bool, now time.Time, loc *time.Location, said langcopy.Spoken) string {
-	if last == nil {
+func recencyReason(ev DealHealthEvidence, now time.Time, loc *time.Location, said langcopy.Spoken) string {
+	if ev.LastActivityAt == nil {
 		return said.Say(healthWords.NoActivity)
 	}
-	days := elapsed.Days(*last, now, loc)
+	days := occurredday.DaysSince(*ev.LastActivityAt, ev.LastActivityDateOnly, now, loc)
 	when := fmt.Sprintf(said.Say(healthWords.DaysAgo), days)
 	switch {
 	case days <= 0:
@@ -75,7 +75,7 @@ func recencyReason(last *time.Time, stalled bool, now time.Time, loc *time.Locat
 	case days == 1:
 		when = said.Say(healthWords.Yesterday)
 	}
-	if stalled {
+	if ev.Stalled {
 		return fmt.Sprintf(said.Say(healthWords.Stalled), when)
 	}
 	return fmt.Sprintf(said.Say(healthWords.Active), when)

@@ -238,7 +238,7 @@ func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]stri
 	// own page, newest first; the sections prompt reads them and never History.
 	slices.SortStableFunc(in.Recent, func(a, b meetingbrief.ActIn) int { return b.At.Compare(a.At) })
 	if len(in.Recent) > 0 {
-		newest := in.Recent[0].At
+		newest := meetingbrief.Occurred{At: in.Recent[0].At, DateOnly: in.Recent[0].DateOnly}
 		in.Attendees[0].LastTouch = &newest
 		in.LastTouchAt = &newest
 	}

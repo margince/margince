@@ -40,18 +40,23 @@ type LastTouch struct {
 	// PrecedingContactAt is the newest exchange strictly before InboundAt,
 	// the far side of the silence a reply broke.
 	PrecedingContactAt *time.Time
-	// The precisions of the rows behind InboundAt, OutboundAt and ContactAt:
-	// "day" when that row names only a date, empty when there is no row.
+	// The precisions of the rows behind each time: "day" when that row names
+	// only a date, empty when there is no row.
 	InboundPrecision, OutboundPrecision, ContactPrecision string
+	LiveInboundPrecision, PrecedingPrecision              string
 }
 
 // Touches is what the relationship-change derivation needs from this answer.
 func (t LastTouch) Touches() relstrength.Touches {
 	return relstrength.Touches{
-		LastTouch:     t.ContactAt,
-		LatestInbound: t.InboundAt,
-		Preceding:     t.PrecedingContactAt,
+		LastTouch:     dated(t.ContactAt, t.ContactPrecision),
+		LatestInbound: dated(t.InboundAt, t.InboundPrecision),
+		Preceding:     dated(t.PrecedingContactAt, t.PrecedingPrecision),
 	}
+}
+
+func dated(at *time.Time, precision string) relstrength.Dated {
+	return relstrength.Dated{At: at, DateOnly: precision == activities.PrecisionDay}
 }
 
 // LastTouchFor answers the two moments for every contact in the set the caller
@@ -118,18 +123,20 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		relstrength.InteractionCountsSQL("a"), relstrength.LastActivityCountsSQL("a", "now()"), sender)
 	// One newest row per direction carries its time and its precision together.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT c.id, inbound.touched_at, outbound.touched_at,
-		       (SELECT max(a.occurred_at) %[1]s AND %[2]s AND NOT %[6]s),
-		       exchange.touched_at,
-		       (SELECT max(a.occurred_at) %[1]s AND %[7]s AND a.occurred_at < inbound.touched_at),
-		       coalesce(inbound.touched_precision, ''), coalesce(outbound.touched_precision, ''), coalesce(exchange.touched_precision, '')
+		SELECT c.id, inbound.touched_at, outbound.touched_at, live.touched_at, exchange.touched_at, preceding.touched_at,
+		       coalesce(inbound.touched_precision, ''), coalesce(outbound.touched_precision, ''), coalesce(exchange.touched_precision, ''),
+		       coalesce(live.touched_precision, ''), coalesce(preceding.touched_precision, '')
 		FROM contact c
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[2]s %[8]s) inbound ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND a.direction = 'outbound' AND %[5]s %[8]s) outbound ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		                     %[1]s AND %[2]s AND NOT %[6]s %[8]s) live ON true
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[7]s %[8]s) exchange ON true
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		                     %[1]s AND %[7]s AND a.occurred_at < inbound.touched_at %[8]s) preceding ON true
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
 		reached, inbound, wantedPos, visible, humanClock, activities.ImportedHistorySQL, exchange, newestRow), args...)
 	if err != nil {
@@ -141,7 +148,8 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		var touch LastTouch
 		if err := rows.Scan(&contactID, &touch.InboundAt, &touch.OutboundAt, &touch.LiveInboundAt,
 			&touch.ContactAt, &touch.PrecedingContactAt,
-			&touch.InboundPrecision, &touch.OutboundPrecision, &touch.ContactPrecision); err != nil {
+			&touch.InboundPrecision, &touch.OutboundPrecision, &touch.ContactPrecision,
+			&touch.LiveInboundPrecision, &touch.PrecedingPrecision); err != nil {
 			return nil, err
 		}
 		out[contactID] = touch

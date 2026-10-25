@@ -173,8 +173,8 @@ func wireArc(arc []ArcSentence, known map[Evidence]string) []crmcontracts.Meetin
 			continue
 		}
 		out = append(out, crmcontracts.MeetingPlanArcMoment{
-			From:    moment.Moment.From,
-			To:      moment.Moment.To,
+			From:    moment.Moment.From.At,
+			To:      moment.Moment.To.At,
 			Title:   moment.Moment.Title,
 			Summary: summary,
 		})
