@@ -42969,7 +42969,7 @@ components:
       description: |
         The colleagues who know this contact, warmest first. Ordering is the answer, not
         a presentation detail: it is who to ask.
-      required: [contact_id, colleagues, capture_gaps]
+      required: [contact_id, colleagues, capture_gaps, capture_gaps_total]
       properties:
         contact_id:  { type: string, format: uuid }
         colleagues: { type: array, items: { $ref: '#/components/schemas/ContactNetworkColleague' } }
@@ -42980,8 +42980,14 @@ components:
             later replies they alone receive may be missing here. Information only: a seat
             listed here is not a route in, owns no work and may not send. An invited seat
             appears here and never in `colleagues`. At most ten are returned, most recent
-            first.
+            first; `capture_gaps_total` counts them all.
           items: { $ref: '#/components/schemas/ContactCaptureGap' }
+        capture_gaps_total:
+          type: integer
+          minimum: 0
+          description: |
+            How many colleagues meet the `capture_gaps` condition in all. When it is larger
+            than the length of `capture_gaps`, the list names only the most recent of them.
 
     ContactCaptureGap:
       type: object

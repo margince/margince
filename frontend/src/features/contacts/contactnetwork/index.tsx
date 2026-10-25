@@ -144,6 +144,7 @@ export function ContactNetworkTab({
         change={moved.change}
         changeWithheld={moved.withheld}
         open={read.open}
+        openUnread={asks.isError}
       />
 
       <CaptureGapsNotice contactId={contactId} />

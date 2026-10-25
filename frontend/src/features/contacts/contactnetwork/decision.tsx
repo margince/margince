@@ -40,6 +40,7 @@ export function DecisionStrip({
   change,
   changeWithheld,
   open,
+  openUnread,
 }: Readonly<{
   routes: readonly RouteCandidate[];
   // The colleague named by a server that predates the candidate list. Without
@@ -55,6 +56,8 @@ export function DecisionStrip({
   // The ask in flight, if there is one. Its absence is a reading too: nobody
   // owes anybody anything yet.
   open: IntroRequest | undefined;
+  // The asks could not be read, so "not started" would be a guess.
+  openUnread?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -109,7 +112,9 @@ export function DecisionStrip({
         value={
           open
             ? t(HANDOFF_VALUE[open.status])
-            : t("contact.intro.handoffNotStarted")
+            : openUnread
+              ? t("contact.intro.handoffUnread")
+              : t("contact.intro.handoffNotStarted")
         }
         detail={open ? handoffDetail(open, reader, t) : undefined}
       />

@@ -35300,10 +35300,14 @@ type ContactNetwork struct {
 	// later replies they alone receive may be missing here. Information only: a seat
 	// listed here is not a route in, owns no work and may not send. An invited seat
 	// appears here and never in `colleagues`. At most ten are returned, most recent
-	// first.
-	CaptureGaps []ContactCaptureGap       `json:"capture_gaps"`
-	Colleagues  []ContactNetworkColleague `json:"colleagues"`
-	ContactId   openapi_types.UUID        `json:"contact_id"`
+	// first; `capture_gaps_total` counts them all.
+	CaptureGaps []ContactCaptureGap `json:"capture_gaps"`
+
+	// CaptureGapsTotal How many colleagues meet the `capture_gaps` condition in all. When it is larger
+	// than the length of `capture_gaps`, the list names only the most recent of them.
+	CaptureGapsTotal int                       `json:"capture_gaps_total"`
+	Colleagues       []ContactNetworkColleague `json:"colleagues"`
+	ContactId        openapi_types.UUID        `json:"contact_id"`
 }
 
 // ContactNetworkColleague One colleague's own relationship with this contact.

@@ -38,6 +38,7 @@ func whoKnowsLister(pool *pgxpool.Pool, store *contacts.Store) agents.WhoKnowsLi
 	return func(ctx context.Context, contactID ids.UUID) (agents.WhoKnowsReading, error) {
 		var out []agents.KnownColleague
 		var gaps []agents.CaptureGap
+		var gapsTotal int
 		var truncated bool
 		var contactName string
 		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -95,7 +96,8 @@ func whoKnowsLister(pool *pgxpool.Pool, store *contacts.Store) agents.WhoKnowsLi
 			if err != nil {
 				return err
 			}
-			for _, s := range seats {
+			gapsTotal = seats.Total
+			for _, s := range seats.Seats {
 				gaps = append(gaps, agents.CaptureGap{
 					UserID: s.UserID, DisplayName: s.DisplayName, Invited: s.Invited,
 					LastOnThreadAt: s.LastOnThread,
@@ -104,7 +106,8 @@ func whoKnowsLister(pool *pgxpool.Pool, store *contacts.Store) agents.WhoKnowsLi
 			return nil
 		})
 		return agents.WhoKnowsReading{
-			ContactName: contactName, Colleagues: out, CaptureGaps: gaps, Truncated: truncated,
+			ContactName: contactName, Colleagues: out, CaptureGaps: gaps,
+			CaptureGapsTotal: gapsTotal, Truncated: truncated,
 		}, err
 	}
 }

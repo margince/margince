@@ -72,6 +72,7 @@ function stub(
           contact_id: CONTACT,
           colleagues: [],
           capture_gaps: captureGaps,
+          capture_gaps_total: captureGaps.length,
         });
       }
       if (url.includes("/intro-requests")) {

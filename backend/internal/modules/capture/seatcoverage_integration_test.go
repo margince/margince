@@ -98,7 +98,7 @@ func seatGaps(ctx context.Context, t *testing.T, tx pgx.Tx, contactID ids.UUID) 
 	if err != nil {
 		t.Fatalf("SeatsWithoutMailbox: %v", err)
 	}
-	return got
+	return got.Seats
 }
 
 func TestSeatCoverage(t *testing.T) {

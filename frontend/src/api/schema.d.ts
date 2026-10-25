@@ -30623,9 +30623,14 @@ export interface components {
              *     later replies they alone receive may be missing here. Information only: a seat
              *     listed here is not a route in, owns no work and may not send. An invited seat
              *     appears here and never in `colleagues`. At most ten are returned, most recent
-             *     first.
+             *     first; `capture_gaps_total` counts them all.
              */
             capture_gaps: components["schemas"]["ContactCaptureGap"][];
+            /**
+             * @description How many colleagues meet the `capture_gaps` condition in all. When it is larger
+             *     than the length of `capture_gaps`, the list names only the most recent of them.
+             */
+            capture_gaps_total: number;
         };
         /** @description One colleague on a contact's threads whose mail is not captured. */
         ContactCaptureGap: {

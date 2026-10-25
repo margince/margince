@@ -99,7 +99,10 @@ func TestACappedColleagueListSaysSo(t *testing.T) {
 func TestAnUncapturedColleagueIsNoticedAndNotListedAsKnowingThem(t *testing.T) {
 	invited := ids.NewV7()
 	tool := whoKnowsTool{list: func(context.Context, ids.UUID) (WhoKnowsReading, error) {
-		return WhoKnowsReading{CaptureGaps: []CaptureGap{{UserID: invited, DisplayName: "Ben Invited", Invited: true}}}, nil
+		return WhoKnowsReading{
+			CaptureGaps:      []CaptureGap{{UserID: invited, DisplayName: "Ben Invited", Invited: true}},
+			CaptureGapsTotal: 3,
+		}, nil
 	}}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	r.Register(tool)
@@ -120,6 +123,9 @@ func TestAnUncapturedColleagueIsNoticedAndNotListedAsKnowingThem(t *testing.T) {
 	}
 	if len(payload.Colleagues) != 0 || len(payload.CaptureGaps) != 1 || payload.CaptureGaps[0].UserID != invited {
 		t.Errorf("seat listed wrongly: colleagues=%v gaps=%v", payload.Colleagues, payload.CaptureGaps)
+	}
+	if payload.CaptureGapsTotal != 3 {
+		t.Errorf("capture_gaps_total = %d, want the 3 the reading counted", payload.CaptureGapsTotal)
 	}
 }
 

@@ -13347,6 +13347,9 @@
               ]
             }
           },
+          "capture_gaps_total": {
+            "type": "integer"
+          },
           "colleagues": {
             "type": "array",
             "items": {
@@ -13387,6 +13390,7 @@
         },
         "required": [
           "capture_gaps",
+          "capture_gaps_total",
           "colleagues",
           "contact_id"
         ]
