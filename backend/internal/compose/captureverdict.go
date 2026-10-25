@@ -90,7 +90,9 @@ type CounterpartyVerdictEngine struct {
 	skipReservedDomains bool
 	// answeredPage is how many contacts one reconciling pass publishes.
 	answeredPage int
-	log          *slog.Logger
+	// markLift is where the vendor-mark pass continues on its next tick.
+	markLift *markLiftCursor
+	log      *slog.Logger
 }
 
 // NewCounterpartyVerdictEngine builds the engine over the pool and the verdict
@@ -117,6 +119,7 @@ func NewCounterpartyVerdictEngine(
 			lists.TransactionalExtra, lists.TransactionalNever),
 		skipReservedDomains: lists.SkipReservedDomainProposals,
 		answeredPage:        answeredSweepContacts,
+		markLift:            &markLiftCursor{},
 		log:                 log,
 	}
 }

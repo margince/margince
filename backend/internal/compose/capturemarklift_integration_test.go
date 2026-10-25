@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -28,6 +29,39 @@ func markedVendor(t *testing.T, e *integration.Env, sender, domain string) {
 	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{row.String(): capture.KindVendorPitch}})
 	if mark, _, _ := markOf(t, e, sender); mark != "vendor_marketing" {
 		t.Fatalf("setup: %s carries mark %q, want vendor_marketing", sender, mark)
+	}
+}
+
+// sendFiled records one attested outbound mail to the address and files it under
+// the contact (nil means the contact holding the address). age is how long ago it was sent.
+func sendFiled(t *testing.T, e *integration.Env, sourceID, address, thread, body string, under *ids.UUID, age time.Duration) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var activity ids.UUID
+		if err := tx.QueryRow(context.Background(), `
+			INSERT INTO activity (kind, subject, body, direction, source_system, source_id,
+			                      source, captured_by, thread_key, counterparty_email,
+			                      counterparty_outbound_attested, occurred_at)
+			VALUES ('email', 'Re: Free audit', $4, 'outbound', 'gmail', $1,
+			        'gmail:'||$1, 'connector:gmail', $3, $2, true, now() - make_interval(secs => $5))
+			RETURNING id`, sourceID, address, thread, body, age.Seconds()).Scan(&activity); err != nil {
+			return err
+		}
+		contact := under
+		if contact == nil {
+			var held ids.UUID
+			if err := tx.QueryRow(context.Background(),
+				`SELECT contact_id FROM contact_email WHERE email = $1`, address).Scan(&held); err != nil {
+				return err
+			}
+			contact = &held
+		}
+		_, err := tx.Exec(context.Background(),
+			`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
+			activity, *contact)
+		return err
+	}); err != nil {
+		t.Fatalf("filing the workspace's mail to %s: %v", address, err)
 	}
 }
 
@@ -62,8 +96,8 @@ func TestAnAutomaticVendorMarkEndsOnceTheWorkspaceWritesToTheContact(t *testing.
 		t.Fatal("the mark was cleared with no correspondence")
 	}
 
-	seedAttestedOutbound(t, e, "lift-out-1", sender, "lift-t1")
-	seedAttestedOutbound(t, e, "lift-out-2", sender, "lift-t2")
+	sendFiled(t, e, "lift-out-1", sender, "lift-t1", "Anbei.", nil, 0)
+	sendFiled(t, e, "lift-out-2", sender, "lift-t2", "Anbei.", nil, 0)
 	liftMarks(t, e)
 
 	mark, setBy, _ := markOf(t, e, sender)
@@ -94,8 +128,8 @@ func TestAHandSetMarkSurvivesCorrespondence(t *testing.T) {
 		t.Fatalf("recording a hand-set mark: %v", err)
 	}
 
-	seedAttestedOutbound(t, e, "hand-out-1", sender, "hand-t1")
-	seedAttestedOutbound(t, e, "hand-out-2", sender, "hand-t2")
+	sendFiled(t, e, "hand-out-1", sender, "hand-t1", "Anbei.", nil, 0)
+	sendFiled(t, e, "hand-out-2", sender, "hand-t2", "Anbei.", nil, 0)
 	liftMarks(t, e)
 
 	if mark, _, _ := markOf(t, e, sender); mark != "vendor_marketing" {
@@ -108,21 +142,81 @@ func TestOneDecliningReplyDoesNotEndTheMark(t *testing.T) {
 	const sender = "lee@coldreach.example"
 	markedVendor(t, e, sender, "coldreach.example")
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity (kind, subject, body, direction, source_system, source_id,
-			                      source, captured_by, thread_key, counterparty_email,
-			                      counterparty_outbound_attested)
-			VALUES ('email', 'Re: Free audit', 'Not interested, please remove me.', 'outbound', 'gmail',
-			        'decline-1', 'gmail:decline-1', 'connector:gmail', 'decline-t', $1, true)`, sender)
-		return err
-	}); err != nil {
-		t.Fatalf("seeding the declining reply: %v", err)
-	}
+	sendFiled(t, e, "decline-1", sender, "decline-t", "Not interested, please remove me.", nil, 0)
 	liftMarks(t, e)
 
 	if mark, _, _ := markOf(t, e, sender); mark != "vendor_marketing" {
 		t.Errorf("one declining reply ended the mark (mark %q); it is not a correspondence", mark)
+	}
+}
+
+func TestAVendorsAnswerToOurDeclineDoesNotEndItsMark(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "ines@coldreach.example"
+	markedVendor(t, e, sender, "coldreach.example")
+
+	sendFiled(t, e, "decl-out", sender, "decl-t", "No thanks, not interested.", nil, 0)
+	captureInboundThroughRealSink(t, e, e.Rep1, "decl-in", sender, "decl-t")
+	liftMarks(t, e)
+
+	if mark, _, _ := markOf(t, e, sender); mark != "vendor_marketing" {
+		t.Errorf("the vendor lifted its own mark by answering our decline (mark %q)", mark)
+	}
+}
+
+func TestOnlyMailAfterTheMarkAndFiledUnderTheContactEndsIt(t *testing.T) {
+	e := integration.Setup(t)
+	const sender, other = "pia@mixedmail.example", "someone@elsewhere.example"
+	markedVendor(t, e, sender, "mixedmail.example")
+	otherID := seedContactWithEmail(t, e, "Else Where", other)
+
+	before := 48 * time.Hour
+	sendFiled(t, e, "old-1", sender, "old-t1", "Anbei.", nil, before)
+	sendFiled(t, e, "old-2", sender, "old-t2", "Anbei.", nil, before)
+	sendFiled(t, e, "wrong-1", sender, "wrong-t1", "Anbei.", &otherID, 0)
+	sendFiled(t, e, "wrong-2", sender, "wrong-t2", "Anbei.", &otherID, 0)
+	liftMarks(t, e)
+	if mark, _, _ := markOf(t, e, sender); mark != "vendor_marketing" {
+		t.Fatalf("old mail or mail filed under another contact ended the mark (mark %q)", mark)
+	}
+
+	sendFiled(t, e, "now-1", sender, "now-t1", "Anbei.", nil, 0)
+	sendFiled(t, e, "now-2", sender, "now-t2", "Anbei.", nil, 0)
+	liftMarks(t, e)
+	if mark, _, _ := markOf(t, e, sender); mark != "" {
+		t.Errorf("current mail filed under the contact left the mark %q", mark)
+	}
+}
+
+func TestAnAddressThatMovedAwayLeavesTheOldContactsMark(t *testing.T) {
+	e := integration.Setup(t)
+	const sender = "rae@moved.example"
+	markedVendor(t, e, sender, "moved.example")
+	oldID := contactIDOf(t, e, sender)
+	sendFiled(t, e, "mv-1", sender, "mv-t1", "Anbei.", nil, 0)
+	sendFiled(t, e, "mv-2", sender, "mv-t2", "Anbei.", nil, 0)
+
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, oldID)
+		return err
+	}); err != nil {
+		t.Fatalf("moving the address away: %v", err)
+	}
+	err := database.WithWorkspaceTx(principal.WithWorkspaceID(e.Admin(), e.WS), e.Pool, func(tx pgx.Tx) error {
+		return liftVendorMarkTx(e.Admin(), tx, newCounterpartyStore(e.Pool), ids.From[ids.ContactKind](oldID), sender)
+	})
+	if err != nil {
+		t.Fatalf("clearing with a stale (contact, address) pair: %v", err)
+	}
+	var mark *string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT relationship_mark FROM contact WHERE id = $1`, oldID).Scan(&mark)
+	}); err != nil {
+		t.Fatalf("reading the mark: %v", err)
+	}
+	if mark == nil {
+		t.Error("the old contact lost its mark on evidence about an address it no longer holds")
 	}
 }
 
@@ -131,7 +225,7 @@ func TestLaterMailFromAMarkedContactClearsAnAutomaticMarkOnceTheyAnswer(t *testi
 	const sender = "robin@outreach.example"
 	markedVendor(t, e, sender, "outreach.example")
 
-	seedAttestedOutbound(t, e, "hook-out-1", sender, "hook-t1")
+	sendFiled(t, e, "hook-out-1", sender, "hook-t1", "Anbei.", nil, 0)
 	captureInboundThroughRealSink(t, e, e.Rep1, "hook-in-1", sender, "hook-t1")
 
 	if mark, _, _ := markOf(t, e, sender); mark != "" {
@@ -187,8 +281,8 @@ func TestTheReconnectLaneFollowsTheMarkNotTheLedgerKind(t *testing.T) {
 		t.Fatal("a marked vendor reached the reconnect lane")
 	}
 
-	seedAttestedOutbound(t, e, "rc-out-1", sender, "rc-t1")
-	seedAttestedOutbound(t, e, "rc-out-2", sender, "rc-t2")
+	sendFiled(t, e, "rc-out-1", sender, "rc-t1", "Anbei.", nil, 0)
+	sendFiled(t, e, "rc-out-2", sender, "rc-t2", "Anbei.", nil, 0)
 	liftMarks(t, e)
 	if kind := countIn(t, e, `SELECT count(*) FROM capture_pending_counterparty
 		WHERE email = $1 AND kind = 'vendor_pitch'`, sender); kind != 1 {
@@ -197,4 +291,15 @@ func TestTheReconnectLaneFollowsTheMarkNotTheLedgerKind(t *testing.T) {
 	if !allowed() {
 		t.Error("a contact whose mark was cleared stayed out of the reconnect lane because of its old ledger kind")
 	}
+}
+
+func contactIDOf(t *testing.T, e *integration.Env, email string) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT contact_id FROM contact_email WHERE email = $1`, email).Scan(&id)
+	}); err != nil {
+		t.Fatalf("finding the contact of %s: %v", email, err)
+	}
+	return id
 }

@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -19,23 +20,33 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AutomaticallyMarkedTx reports whether the contact carries a mark that the
-// sender check set. A mark a human or an agent set returns false.
-// Only they may take it off.
-func (s *Store) AutomaticallyMarkedTx(ctx context.Context, tx pgx.Tx, id ids.ContactID) (bool, error) {
+// LockAutomaticMarkTx locks the contact and returns when it was made, if it
+// carries a mark the sender check set and still holds this address.
+//
+// The sender check sets the mark only when it makes the contact, so the
+// creation time is when the mark was set. A mark a human or an agent set
+// reports false, and so does a contact the address has moved away from.
+// The caller decides and clears under this lock.
+func (s *Store) LockAutomaticMarkTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, email string) (time.Time, bool, error) {
 	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
-		return false, err
+		return time.Time{}, false, err
 	}
-	var marked bool
+	var madeAt time.Time
 	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM contact
-		                WHERE id = $1 AND archived_at IS NULL
-		                  AND relationship_mark IS NOT NULL AND relationship_mark_set_by = $2)`,
-		id, CaptureVerdictActor).Scan(&marked)
-	if err != nil {
-		return false, fmt.Errorf("contacts: reading whether the sender check marked the contact: %w", err)
+		SELECT c.created_at FROM contact c
+		 WHERE c.id = $1 AND c.archived_at IS NULL
+		   AND c.relationship_mark IS NOT NULL AND c.relationship_mark_set_by = $2
+		   AND EXISTS (SELECT 1 FROM contact_email ce
+		                WHERE ce.contact_id = c.id AND ce.archived_at IS NULL
+		                  AND lower(ce.email) = lower($3))
+		   FOR UPDATE OF c`, id, CaptureVerdictActor, email).Scan(&madeAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return time.Time{}, false, nil
 	}
-	return marked, nil
+	if err != nil {
+		return time.Time{}, false, fmt.Errorf("contacts: locking the contact the sender check marked: %w", err)
+	}
+	return madeAt, true, nil
 }
 
 // LiftAutomaticMarkTx clears the mark on a contact when the sender check set

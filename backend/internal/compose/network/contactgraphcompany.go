@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
 // accountContact is one COWORKER of the contact — another contact at the same
@@ -151,7 +152,7 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		   AND colleague.kind = 'employment'
 		   AND `+employment.IsCurrentSQL("colleague.ended_at")+`
 		   AND colleague.archived_at IS NULL
-		  JOIN contact p ON p.id = colleague.contact_id AND p.archived_at IS NULL
+		  JOIN contact p ON p.id = colleague.contact_id AND p.archived_at IS NULL AND `+relationshipmark.NotMarkedSQL("p")+`
 		 WHERE theirs.contact_id = $%d
 		   AND theirs.kind = 'employment'
 		   AND `+employment.IsCurrentSQL("theirs.ended_at")+`

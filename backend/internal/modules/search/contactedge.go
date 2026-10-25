@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -226,7 +227,7 @@ func ContactEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID, 
 		  FROM graph_contact_edge e
 		  JOIN contact p
 		    ON p.id = CASE WHEN e.contact_a = $%d THEN e.contact_b ELSE e.contact_a END
-		   AND p.archived_at IS NULL
+		   AND p.archived_at IS NULL AND `+relationshipmark.NotMarkedSQL("p")+`
 		 WHERE (e.contact_a = $%d OR e.contact_b = $%d) AND (%s)
 		 ORDER BY e.last_at DESC, e.contact_a, e.contact_b
 		 LIMIT $%d`, anchorPos, anchorPos, anchorPos, scope, limitPos), args...)
