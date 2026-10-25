@@ -295,6 +295,11 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
+	// A row reaches this page through a Cc or an attendance too, so each row
+	// says which part this contact had in it.
+	if err := activities.WithContactRole(ctx, tx, out, contactID.UUID); err != nil {
+		return nil, false, err
+	}
 	// Every link the caller may see, read the way /activities reads them, so
 	// a row means the same on either page.
 	if err := activities.AttachLinks(ctx, tx, out); err != nil {

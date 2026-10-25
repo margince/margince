@@ -8322,6 +8322,41 @@ components:
           type: [string, 'null']
           description: >-
             Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
+    ActivityVoice:
+      type: object
+      description: |-
+        Who wrote an activity, read from what is recorded on it, and the part the
+        page's contact had in it. Every surface that names a speaker reads this
+        rather than guessing from `direction`: a mail that came in was not
+        necessarily written by the contact whose page shows it.
+      properties:
+        author:
+          allOf: [{$ref: '#/components/schemas/ActivityAuthor'}]
+          nullable: true
+          description: >-
+            Who wrote it: the `from` party of a message, the organizer of a meeting, the seat or imported author of a note, call or task. Null when nothing recorded names an author, which a reader shows as no author rather than a guess.
+        contact_role:
+          type: string
+          enum: [author, addressee, cc, organizer, attendee, other]
+          description: >-
+            Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+    ActivityAuthor:
+      type: object
+      required: [kind, is_reader]
+      description: One author, named by the record that identifies them.
+      properties:
+        kind:
+          type: string
+          enum: [contact_record, colleague, machine, unresolved]
+          description: >-
+            `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+        display_name: {type: [string, 'null']}
+        address: {type: [string, 'null']}
+        contact_id: {type: [string, 'null'], format: uuid}
+        user_id: {type: [string, 'null'], format: uuid}
+        is_reader:
+          type: boolean
+          description: The author is the signed-in caller.
     EmailSummary:
       type: object
       description: |-
@@ -14948,6 +14983,12 @@ components:
           enum: [product, calendar, sending_system]
           description: >-
             What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+        voice:
+          allOf: [{$ref: '#/components/schemas/ActivityVoice'}]
+          readOnly: true
+          nullable: true
+          description: >-
+            Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
         audience:
           allOf: [{$ref: '#/components/schemas/ActivityAudience'}]
           readOnly: true

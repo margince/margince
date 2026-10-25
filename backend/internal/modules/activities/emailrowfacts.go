@@ -22,8 +22,13 @@ import (
 // are refused on a withheld row — and a page that picked up one and not the
 // other would show a parked message as though it had gone.
 //
-// No statements at all when the page carries no readable email.
+// Who wrote each readable row (WithMessageVoices) rides the same entry point,
+// so no reader of a page gets a row without its author. Beyond that, no
+// statements at all when the page carries no readable email.
 func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
+	if err := WithMessageVoices(ctx, tx, page); err != nil {
+		return err
+	}
 	emailIDs := emailIDsOf(page)
 	if len(emailIDs) == 0 {
 		return nil
