@@ -148,6 +148,33 @@ func TestAPromiseInPrivateMailStaysWithItsOwner(t *testing.T) {
 	}
 }
 
+// Mail from our seat that names a colleague not on the message as the one who
+// acts reports no promiser. The sender gets no task and nobody is asked; the
+// finding stays on the message.
+func TestACommitmentForAColleagueNotOnTheMailFilesNoTaskForTheSender(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	ines := employeeOf(t, e, company, "Ines Huber")
+	const demo = "Product demo on the 5th at 10:00, online with Robin."
+	message := captureCommitmentMessage(t, e, ines, "thread-demo", "Product demo", "Hi Ines, "+demo, "outbound",
+		extractClock.Add(-48*time.Hour))
+	party(t, message, "from", &e.Rep1, nil)
+	party(t, message, "to", nil, &ines)
+
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, "", demo, "")})
+
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
+		t.Errorf("a demo Robin runs became %d task(s) for the sender", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 0 {
+		t.Errorf("%d request(s) staged for a promise with no promiser, want none", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission
+		WHERE outcome = 'promiser_not_assignable' AND NOT current_work`); n != 1 {
+		t.Errorf("the promise is recorded %d time(s) on the message, want once", n)
+	}
+}
+
 // A customer's reply quoting our promise back to us is not their promise.
 func TestAQuotedPromiseIsNotTheRepliersPromise(t *testing.T) {
 	for _, tc := range []struct{ name, body string }{
