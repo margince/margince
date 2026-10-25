@@ -114,8 +114,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	// subsystem is shaped to prevent.
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
-		WithFieldCatalog(customfields.NewService(pool, nil)).
-		WithRecordZone(installationZoneTx).
+		WithFieldCatalog(customfields.NewService(pool, nil)).WithRecordZone(installationZoneTx).
 		WithSettings(StoredConfig(pool)).
 		WithLocks(loadedLocks).
 		WithConsent(gate).
