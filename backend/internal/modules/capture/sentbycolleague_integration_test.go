@@ -210,6 +210,47 @@ func TestAnUnauthenticatedColleagueIsNotTrusted(t *testing.T) {
 	}
 }
 
+// An invitation a colleague organised is received mail: whom they invited is
+// not whom they wrote to. It stays inbound, but its From names the colleague,
+// so no reader credits it to the other side. Invited seats count.
+func TestAColleaguesInvitationIsCreditedToTheColleague(t *testing.T) {
+	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
+	ws, _ := principal.WorkspaceID(ctx)
+	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
+	colleague := seedSeat(ctx, t, db, "sam@acme.com", "invited")
+	rec := colleagueCopy("invite-1", "sam@acme.com")
+	fields, ok := rec.Fields.(capture.ActivityFields)
+	if !ok {
+		t.Fatalf("the fixture carries %T, want capture.ActivityFields", rec.Fields)
+	}
+	fields.HasCalendarPart = true
+	rec.Fields = fields
+
+	for range 2 {
+		if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, rec)); err != nil {
+			t.Fatalf("Upsert: %v", err)
+		}
+	}
+
+	got := storedMailFor(ctx, t, db, "invite-1")
+	if got.direction != connector.DirectionInbound || got.colleague != nil {
+		t.Errorf("stored as %s with sent_by_colleague %v, want the received invitation it is", got.direction, got.colleague)
+	}
+	if got.fromUser == nil || *got.fromUser != colleague {
+		t.Errorf("the From participant is %v, want the colleague %v who organised it", got.fromUser, colleague)
+	}
+
+	unauth := colleagueCopy("invite-unauth", "sam@acme.com")
+	unauth.SenderAuthentication = connector.SenderAuthentication{}
+	unauth.Fields = fields
+	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, unauth)); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+	if got := storedMailFor(ctx, t, db, "invite-unauth"); got.fromUser != nil {
+		t.Errorf("an unauthenticated invitation credited seat %v; a sender types From", got.fromUser)
+	}
+}
+
 // capturedAs is rec as the seat's own connector hands it to the sink: the
 // acting connector is the one the record names.
 func capturedAs(ctx context.Context, ws, seat ids.UUID, rec connector.NormalizedRecord) (context.Context, connector.NormalizedRecord) {

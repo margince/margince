@@ -56,6 +56,10 @@ type ActivityFields struct {
 	// SentByColleague is the live seat who wrote a mail this mailbox holds a
 	// copy of (asSentByColleagueTx); zero for every other record.
 	SentByColleague ids.UUID
+	// InvitationFromSeat is the seat who sent an invitation this mailbox
+	// received (asSentByColleagueTx). The invitation stays received mail; only
+	// its From participant names the seat. Zero for every other record.
+	InvitationFromSeat ids.UUID
 
 	// Envelope is what the mail parser read about addressing and links; nil
 	// for anything not parsed from a mail, and for list mail.

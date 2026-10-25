@@ -136,6 +136,9 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 	"SentByColleague": "zero is the right answer for a unit. The sink sets it itself, from a From address " +
 		"that exactly matches a seat; a unit stating it would name a colleague as the author of a message " +
 		"the core never checked against its seats",
+	"InvitationFromSeat": "zero is the right answer for a unit, for the reason SentByColleague's is: the sink " +
+		"sets it from a From address it authenticated against a seat; a unit stating it would credit a " +
+		"colleague with an invitation the core never checked",
 	"Envelope": "nil is the right answer for a unit, for the reason HasCalendarPart's is: the To and Cc " +
 		"lists and the link hosts are read from a raw RFC822 message, and a unit hands over none. Nil " +
 		"leaves the Bcc and foreign-link facts unjudged, so the unit's message ranks as it did",
