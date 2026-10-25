@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
@@ -108,12 +109,8 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		if err != nil {
 			return err
 		}
-		if written = slices.Contains(writtenAboutKinds, activity.Kind); written {
-			offered, err := offeredEmails(ctx, tx, []ids.UUID{id.UUID})
-			if err != nil {
-				return err
-			}
-			filed = offered[id.UUID]
+		if written, filed, err = writtenAboutAddress(ctx, tx, id, activity.Kind); err != nil {
+			return err
 		}
 
 		// ONE statement: the row scope, the archived test and the name are
@@ -140,31 +137,31 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// a "to" recipient (our own outbound, where the addressee is the
 		// counterparty), then anyone else on it, then the bare link.
 		q := `
-			SELECT p.id, p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
-			       coalesce((SELECT pe.email
-			                   FROM contact_email pe
-			                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
+				SELECT p.id, p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
+				       coalesce((SELECT pe.email
+				                   FROM contact_email pe
+				                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
 			contactaddress.ReachableOrder + `
-			                  LIMIT 1), ''),
-			       p.id IS NOT DISTINCT FROM (
-			            SELECT top.contact_id FROM activity_participant top
-			             WHERE top.activity_id = $1 AND top.contact_id IS NOT NULL
-			             ORDER BY CASE top.role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END,
-			                      top.created_at, top.id
-			             LIMIT 1)
-			  FROM contact p
-			  JOIN (
-			       SELECT contact_id,
-			              CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
-			              created_at, id
-			         FROM activity_participant
-			        WHERE activity_id = $1 AND contact_id IS NOT NULL
-			       UNION ALL
-			       SELECT contact_id, 4 AS rank, created_at, id
-			         FROM activity_link
-			        WHERE activity_id = $1 AND contact_id IS NOT NULL
-			  ) c ON c.contact_id = p.id
-			 WHERE p.archived_at IS NULL`
+				                  LIMIT 1), ''),
+				       p.id IS NOT DISTINCT FROM (
+				            SELECT top.contact_id FROM activity_participant top
+				             WHERE top.activity_id = $1 AND top.contact_id IS NOT NULL
+				             ORDER BY CASE top.role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END,
+				                      top.created_at, top.id
+				             LIMIT 1)
+				  FROM contact p
+				  JOIN (
+				       SELECT contact_id,
+				              CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
+				              created_at, id
+				         FROM activity_participant
+				        WHERE activity_id = $1 AND contact_id IS NOT NULL
+				       UNION ALL
+				       SELECT contact_id, 4 AS rank, created_at, id
+				         FROM activity_link
+				        WHERE activity_id = $1 AND contact_id IS NOT NULL
+				  ) c ON c.contact_id = p.id
+				 WHERE p.archived_at IS NULL`
 		if scope != "" {
 			q += ` AND (` + scope + `)`
 		}
@@ -205,6 +202,19 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 	}
 	out.WrittenAbout, out.FiledAddress = written, filed
 	return out, nil
+}
+
+// writtenAboutAddress says whether a reply to this kind writes about the record,
+// and the address it offers when it does.
+func writtenAboutAddress(ctx context.Context, tx pgx.Tx, id ids.ActivityID, kind crmcontracts.ActivityKind) (bool, string, error) {
+	if !slices.Contains(writtenAboutKinds, kind) {
+		return false, "", nil
+	}
+	offered, err := offeredEmails(ctx, tx, []ids.UUID{id.UUID})
+	if err != nil {
+		return false, "", err
+	}
+	return true, offered[id.UUID], nil
 }
 
 // addresseeID names the contact only when it is also the message's top-ranked

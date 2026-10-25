@@ -237,9 +237,8 @@ func quoteBoundary(runes []rune, reading quoteReading) int {
 		if atLineStart && !unicode.IsSpace(runes[offset]) {
 			line := lineAt(runes, offset)
 			own := ownHeaders && isOwnHeader(line, offset) &&
-				(!secondSenderQuotes || !senderSeen || !opensReplyHeader(runes, offset, line))
-			if startsQuote(line) && !own &&
-				(!passMarked || !opensMarkedQuote(runes, offset, line)) {
+				!quotesSecondSender(secondSenderQuotes && senderSeen, runes, offset, line)
+			if !own && opensQuote(runes, offset, line, passMarked) {
 				return offset
 			}
 			senderSeen = senderSeen || (own && startsQuote(line))
@@ -250,6 +249,12 @@ func quoteBoundary(runes []rune, reading quoteReading) int {
 		atLineStart = atLineStart || runes[offset] == '\n' || runes[offset] == '\r'
 	}
 	return -1
+}
+
+// opensQuote is whether the line starts a quote this reading cuts at. With
+// passMarked set, a quote that marks every line with ">" is read past.
+func opensQuote(runes []rune, offset int, line []rune, passMarked bool) bool {
+	return startsQuote(line) && (!passMarked || !opensMarkedQuote(runes, offset, line))
 }
 
 // opensMarkedQuote reports whether the line is a ">" line, or the attribution
@@ -277,6 +282,11 @@ func isOwnHeader(line []rune, offset int) bool {
 }
 
 // lineAt returns the rest of the line beginning at offset.
+// quotesSecondSender is whether a reply header after the sender's own opens a quote.
+func quotesSecondSender(armed bool, runes []rune, offset int, line []rune) bool {
+	return armed && opensReplyHeader(runes, offset, line)
+}
+
 func lineAt(runes []rune, offset int) []rune {
 	for end := offset; end < len(runes); end++ {
 		if runes[end] == '\n' || runes[end] == '\r' {

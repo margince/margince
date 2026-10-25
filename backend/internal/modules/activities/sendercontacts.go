@@ -21,7 +21,7 @@ import (
 // so an activity this caller cannot read yields nothing.
 func (s *Store) SenderContacts(ctx context.Context, activityIDs []ids.UUID) (map[ids.UUID]ids.UUID, error) {
 	if len(activityIDs) == 0 {
-		return nil, nil
+		return map[ids.UUID]ids.UUID{}, nil
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
