@@ -82,9 +82,11 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	// which is the tighter ceiling the caller-written predicates ask for.
 	setDurationParam(cfg, dsn, "statement_timeout", StatementCeiling)
 	setDurationParam(cfg, dsn, "idle_in_transaction_session_timeout", IdleTransactionCeiling)
-	// Typed entity ids ride uuid/uuid[] on every connection.
+	// Typed entity ids ride uuid/uuid[] on every connection, and every
+	// timestamptz reads back in UTC.
 	cfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		RegisterIDTypes(conn)
+		RegisterUTCTimes(conn)
 		return nil
 	}
 	return cfg, nil

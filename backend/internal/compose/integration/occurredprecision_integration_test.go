@@ -211,3 +211,41 @@ func TestADayMadeAnInstantWithoutATimeIsRefusedOnTheWire(t *testing.T) {
 		t.Errorf("after the refusal the note reads %v as %q, want the day untouched", read.OccurredAt, read.OccurredPrecision)
 	}
 }
+
+// A day entry renders at noon UTC whatever zone the server process runs in. A
+// day value's date is read in its own offset. So +07:00 would round-trip to the
+// next date on a server east of +12. The process zone is moved for this
+// test alone, which is why it does not run in parallel.
+func TestADayEntryRendersAtNoonUTCInAnyProcessZone(t *testing.T) {
+	processZone := time.Local
+	time.Local = time.FixedZone("ICT", 7*3600)
+	t.Cleanup(func() { time.Local = processZone })
+
+	d := newTwoDoors(t, "day-entry-utc", "read", "write")
+	const noon = "2026-10-22T12:00:00Z"
+	occurredAt := func(door string, raw json.RawMessage) {
+		t.Helper()
+		var read struct {
+			OccurredAt string `json:"occurred_at"`
+			// Fields is a tool result's record.
+			Fields struct {
+				OccurredAt string `json:"occurred_at"`
+			} `json:"fields"`
+		}
+		if err := json.Unmarshal(raw, &read); err != nil {
+			t.Fatal(err)
+		}
+		if read.OccurredAt+read.Fields.OccurredAt != noon {
+			t.Errorf("%s renders the day as %q, want %q", door, read.OccurredAt+read.Fields.OccurredAt, noon)
+		}
+	}
+	day := map[string]any{"kind": "note", "subject": "Fair", "occurred_at": noon, "occurred_precision": "day", "source": "manual"}
+	made := d.restStatus(t, "POST", "/v1/activities", day, http.StatusCreated)
+	occurredAt("POST", made)
+	id := anIDIn(t, made)
+	occurredAt("GET", d.restStatus(t, "GET", "/v1/activities/"+id, nil, http.StatusOK))
+	occurredAt("PATCH", d.restStatus(t, "PATCH", "/v1/activities/"+id, map[string]any{"subject": "Trade fair"}, http.StatusOK))
+	occurredAt("tool", d.tool(t, "log_activity", map[string]any{
+		"kind": "note", "subject": "Fair", "occurred_at": noon, "occurred_precision": "day",
+	}))
+}
