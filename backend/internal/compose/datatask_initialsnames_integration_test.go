@@ -31,7 +31,7 @@ import (
 // display name, as the Gmail sink does.
 func captureFromStoredMail(t *testing.T, e *integration.Env, from, display, email string) ids.ContactID {
 	t.Helper()
-	activity := seedStoredMail(t, e, from, email)
+	activity := seedStoredMail(t, from, email)
 	res, err := e.Contacts.EnsureCounterparty(e.ConnectorOwnerCtx(e.AdminUser, "gmail"), contacts.EnsureCounterpartyInput{
 		Email: email, DisplayName: display, Domain: email[strings.IndexByte(email, '@')+1:],
 		OwnerID: e.AdminUser, ActivityID: ids.From[ids.ActivityKind](activity),
@@ -43,9 +43,12 @@ func captureFromStoredMail(t *testing.T, e *integration.Env, from, display, emai
 	return res.ContactID
 }
 
+// initialsAddress is an initials-only address, the case the repair is for.
+const initialsAddress = "dv@initials.test"
+
 // seedStoredMail records an inbound Gmail activity from email and its stored
 // original, whose From line is from, the way the sink stores them.
-func seedStoredMail(t *testing.T, e *integration.Env, from, email string) ids.UUID {
+func seedStoredMail(t *testing.T, from, email string) ids.UUID {
 	t.Helper()
 	owner := integration.OwnerConn(t)
 	sourceID := "initials-" + ids.NewV7().String()
@@ -66,7 +69,7 @@ func verdictCreatesFromStoredMails(t *testing.T, e *integration.Env, email strin
 	t.Helper()
 	var first ids.UUID
 	for i, from := range froms {
-		if id := seedStoredMail(t, e, from, email); i == 0 {
+		if id := seedStoredMail(t, from, email); i == 0 {
 			first = id
 		}
 	}
@@ -92,7 +95,8 @@ func verdictCreatesFromStoredMails(t *testing.T, e *integration.Env, email strin
 // legacyInitialsContact is a contact capture minted from a bare dv@ before the
 // parser kept the local part, so it shows "Dv". No current writer stores that
 // name, so it is planted without an audit row, as the old capture left it.
-func legacyInitialsContact(t *testing.T, e *integration.Env, email string) ids.ContactID {
+func legacyInitialsContact(t *testing.T, e *integration.Env) ids.ContactID {
+	email := initialsAddress
 	t.Helper()
 	id := captureFromStoredMail(t, e, email, "", email)
 	plantInitialsGuess(t, e, id)
@@ -111,7 +115,7 @@ func runInitialsTask(t *testing.T, e *integration.Env) {
 
 func TestTheInitialsTaskShowsTheLocalPartOfAnAddressTheHeaderDidNotName(t *testing.T) {
 	e := integration.Setup(t)
-	id := legacyInitialsContact(t, e, "dv@initials.test")
+	id := legacyInitialsContact(t, e)
 
 	runInitialsTask(t, e)
 
@@ -126,7 +130,7 @@ func TestTheInitialsTaskShowsTheLocalPartOfAnAddressTheHeaderDidNotName(t *testi
 
 func TestANameLearnedAfterTheInitialsTaskStillReplacesItsRewrite(t *testing.T) {
 	e := integration.Setup(t)
-	id := legacyInitialsContact(t, e, "dv@initials.test")
+	id := legacyInitialsContact(t, e)
 	runInitialsTask(t, e)
 	learnSplitName(t, e, id, "Dana")
 
@@ -153,7 +157,7 @@ func TestTheInitialsTaskKeepsANameTheHeaderSpelled(t *testing.T) {
 
 func TestTheInitialsTaskKeepsANameWhoseOriginalIsGone(t *testing.T) {
 	e := integration.Setup(t)
-	id := legacyInitialsContact(t, e, "dv@initials.test")
+	id := legacyInitialsContact(t, e)
 	owner := integration.OwnerConn(t)
 	if _, err := owner.Exec(context.Background(), `
 		DELETE FROM raw_capture rc USING activity a, activity_link l
@@ -212,7 +216,7 @@ func TestTheInitialsTaskKeepsANameEveryHeaderSpellingGave(t *testing.T) {
 
 func TestTheInitialsTaskRollsItsRewriteBackWithItsProgress(t *testing.T) {
 	e := integration.Setup(t)
-	id := legacyInitialsContact(t, e, "dv@initials.test")
+	id := legacyInitialsContact(t, e)
 	task := initialsNamesDataTask()
 	original := task.Steps[0].Batch
 	task.Steps[0].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
@@ -235,7 +239,7 @@ func TestTheInitialsTaskRollsItsRewriteBackWithItsProgress(t *testing.T) {
 
 func TestTheInitialsTaskReplaysFromTheStartWithoutChangingAnything(t *testing.T) {
 	e := integration.Setup(t)
-	id := legacyInitialsContact(t, e, "dv@initials.test")
+	id := legacyInitialsContact(t, e)
 	runInitialsTask(t, e)
 	if got := shownName(t, e, id); got != "dv" {
 		t.Fatalf("full_name = %q after the first run, want dv", got)
@@ -294,7 +298,7 @@ func TestTheInitialsTaskKeepsAnInitialsNameAHumanRenamed(t *testing.T) {
 
 func TestTheInitialsTaskKeepsAnImportedInitialsName(t *testing.T) {
 	e := integration.Setup(t)
-	id := legacyInitialsContact(t, e, "dv@initials.test")
+	id := legacyInitialsContact(t, e)
 	e.WsExec(t, `UPDATE contact SET source_system = 'crm_import' WHERE id = $1`, id)
 
 	runInitialsTask(t, e)

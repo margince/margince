@@ -11,11 +11,5 @@ import (
 
 // Acting keeps the release task identity in every domain audit written by its batch.
 func Acting(ctx context.Context, taskID string) context.Context {
-	return principal.SystemActing(ctx, ActorID(taskID))
-}
-
-// ActorID is the principal a release task's batches bind, so a module can
-// recognise what the task wrote.
-func ActorID(taskID string) string {
-	return "system:datatask:" + taskID
+	return principal.SystemActing(ctx, "system:datatask:"+taskID)
 }
