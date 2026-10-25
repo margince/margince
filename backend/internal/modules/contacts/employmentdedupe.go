@@ -18,7 +18,7 @@ const employerTwinSource = "employment_edge_recheck"
 // create's own duplicate check ran before the contact had an employer, so the
 // shared employer counts only after the edge is written.
 //
-// A company merge moves edges without calling it.
+// A company merge calls it for every contact whose edge it moves.
 func fileEmployerTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, by string) error {
 	return recheckContactForDuplicates(ctx, tx, contactID, employerTwinSource, by)
 }

@@ -145,3 +145,28 @@ func TestEmploymentEdgeNotesOnlyThePairItFiled(t *testing.T) {
 		t.Fatalf("noted %v, queue has %+v, want the one pair the edge filed", noted, pairs)
 	}
 }
+
+// Two similar-name contacts at different employers are no pair until a company
+// merge puts them at one employer.
+func TestMergingCompaniesFilesTheTwinsItBringsTogether(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	survivor := mustEmployer(t, e, "Acme Robotics GmbH")
+	retired := mustEmployer(t, e, "Acme Robotik GmbH")
+	onFile := mustContact(t, e, "Marlene Wiesinger")
+	employ(t, e, onFile, survivor)
+	twin := mustContact(t, e, "Marlene Wiesingr")
+	employ(t, e, twin, retired)
+	if pairs := openCandidatePairs(ctx, t, e, "contact", twin.UUID); len(pairs) != 0 {
+		t.Fatalf("got %d pairs before the merge, want 0", len(pairs))
+	}
+
+	if _, err := e.store.MergeCompany(ctx, retired, survivor, nil); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+
+	pairs := openCandidatePairs(ctx, t, e, "contact", twin.UUID)
+	if len(pairs) != 1 || pairs[0].OtherID != onFile.String() {
+		t.Fatalf("got pairs %+v, want exactly the pair with the contact on file", pairs)
+	}
+}

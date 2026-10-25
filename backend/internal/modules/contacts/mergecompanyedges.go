@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -42,4 +43,29 @@ func relinkCompanyEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 	}
 	_, err := mergeEdgeWrite(ctx, tx, `counterparty_company_id=@target`, `a.counterparty_company_id=@source AND a.archived_at IS NULL`, mergeArgs)
 	return err
+}
+
+// liveEmployeesOf lists the contacts holding a live employment edge at the
+// company, in id order. A company merge reads it before the edges move, because
+// afterwards the source no longer names them.
+func liveEmployeesOf(ctx context.Context, tx pgx.Tx, company ids.CompanyID) ([]ids.ContactID, error) {
+	rows, err := tx.Query(ctx, `SELECT DISTINCT contact_id FROM relationship
+ WHERE kind=$1 AND company_id=$2 AND contact_id IS NOT NULL AND archived_at IS NULL ORDER BY contact_id`,
+		employmentKind, company)
+	if err != nil {
+		return nil, fmt.Errorf("list the employees of the merged-away company: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.ContactID])
+}
+
+// fileMergedEmployerTwins files the same-employer twins the moved edges
+// created: two similar-name contacts who worked at different companies now
+// share one.
+func fileMergedEmployerTwins(ctx context.Context, tx pgx.Tx, employees []ids.ContactID, by string) error {
+	for _, contact := range employees {
+		if err := fileEmployerTwins(ctx, tx, contact, by); err != nil {
+			return err
+		}
+	}
+	return nil
 }
