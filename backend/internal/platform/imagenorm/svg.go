@@ -295,7 +295,7 @@ func drawSVG(src []byte) (image.Image, error) {
 	if err := refuseLossySVG(src); err != nil {
 		return nil, err
 	}
-	icon, err := oksvg.ReadIconStream(bytes.NewReader(src), oksvg.WarnErrorMode)
+	icon, err := oksvg.ReadIconStream(bytes.NewReader(splitImplicitPathRepeats(src)), oksvg.WarnErrorMode)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrUnsupported, err)
 	}
