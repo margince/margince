@@ -7,6 +7,7 @@ import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { type RequiredGrant, useGrantRefused } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import "../design-system/querystates.css";
 
@@ -86,6 +87,7 @@ export function ArchiveAction<Archived extends { id: string }>({
   archivedMessage,
   onArchived,
   disabledReasonId,
+  requires,
 }: Readonly<{
   label: string;
   confirmText: string;
@@ -101,8 +103,13 @@ export function ArchiveAction<Archived extends { id: string }>({
   // disabled WITH the reason, because the reason is the information and
   // hiding the control hides a fact the reader needs.
   disabledReasonId?: string;
+  // The grant the DELETE needs. Required, so a new caller cannot forget to ask.
+  // A seat without it sees the action disabled with the reason, not a dialog
+  // that ends in a refusal.
+  requires: RequiredGrant;
 }>) {
   const t = useT();
+  const refused = useGrantRefused(requires);
   const [confirming, setConfirming] = useState(false);
   const mutation = useArchiveRecord({
     archive,
@@ -120,6 +127,7 @@ export function ArchiveAction<Archived extends { id: string }>({
       <Button
         variant="danger"
         reasonId={disabledReasonId}
+        reason={refused ? t("record.actionRefused") : undefined}
         onClick={() => setConfirming(true)}
         data-testid="archive-record"
       >
@@ -127,7 +135,10 @@ export function ArchiveAction<Archived extends { id: string }>({
       </Button>
       <ConfirmModal
         open={confirming}
-        onClose={() => setConfirming(false)}
+        onClose={() => {
+          setConfirming(false);
+          mutation.reset();
+        }}
         title={label}
         confirmLabel={label}
         confirmVariant="danger"

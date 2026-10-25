@@ -2289,6 +2289,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Công ty này đang trong kho lưu trữ và không thể thay đổi.",
   "record.notYoursToChange":
     "Bạn không có quyền sửa công ty này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
+  "record.actionRefused":
+    "Bạn không có quyền dùng mục này. Liên hệ quản trị viên để được cấp thêm quyền.",
   "record.logActivityRefused":
     "Bạn không có quyền ghi nhận hoạt động trên hồ sơ này.",
   "record.share": "Chia sẻ",
@@ -3782,6 +3784,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "activity.detail.none": "Hoạt động này",
   "activity.followUps": "Công việc tiếp theo",
   "activity.noFollowUps": "Chưa có công việc tiếp theo",
+  "activity.notYoursToChange":
+    "Bạn không có quyền sửa hoạt động này. Liên hệ quản trị viên để được cấp thêm quyền.",
   "activity.files.empty": "Hoạt động này chưa có tệp nào.",
   "activity.files.title": "Tệp của {subject}",
   "activity.followUpOpen": "Chưa hoàn thành",
@@ -14254,6 +14258,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.commercial.withheld": "Bạn không có quyền xem deal của liên hệ này.",
   "contact.commercial.noDeal": "Chưa có deal đang mở.",
   "contact.commercial.closes": "chốt {date}",
+  "contact.commercial.closed": "đã chốt {date}",
   "contact.commercial.committee": "Nhóm quyết định mua",
   "contact.commercial.openDeal": "Deal đang mở",
 

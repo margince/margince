@@ -6,6 +6,7 @@ package attention
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -37,13 +38,13 @@ func TestEveryProducerStatesAnOwner(t *testing.T) {
 	}
 	rows = append(rows, planRows.planRows...)
 	// Waiting messages are read beside the assembled day.
-	met, actionable := classifyMeetingFollowUp(AwaitedReply{SentAt: rankInstant, DealID: ids.NewV7()}, rankInstant)
+	met, actionable := classifyMeetingFollowUp(AwaitedReply{SentAt: rankInstant, DealID: ids.NewV7()}, rankInstant, time.UTC)
 	if !actionable {
 		t.Fatal("a meeting filed on a deal produced no follow-up row, so this census misses its lane")
 	}
 	rows = append(rows,
 		classifyWaiting(WaitingCustomer{Since: rankInstant}, rankInstant),
-		classifyAwaiting(AwaitedReply{SentAt: rankInstant}, rankInstant), met)
+		classifyAwaiting(AwaitedReply{SentAt: rankInstant}, rankInstant, time.UTC), met)
 	// And the FOLD, which mints rows of its own after everything above has run.
 	// A census that stopped at the classifiers never met the one producer that
 	// synthesises a row rather than classifying one, so a batch reached readers

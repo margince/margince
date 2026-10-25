@@ -86,6 +86,9 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if err := WithCommitmentAdmissions(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if err := StampActivitiesWritable(ctx, tx, activities); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	if err := withCustomValues(ctx, tx, in.Columns.cols, pageOf(activities)); err != nil {
 		return nil, storekit.Page{}, err
 	}

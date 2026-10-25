@@ -70,6 +70,7 @@ export function ContactRecordActions({
   return (
     <>
       <MergeAction
+        requires={{ object: "contact", action: "update" }}
         disabledReasonId={disabledReasonId}
         label={t("merge.contact")}
         sourceId={contact.id}
@@ -102,6 +103,7 @@ export function ContactRecordActions({
       />
       {beforeArchive}
       <ArchiveAction
+        requires={{ object: "contact", action: "delete" }}
         disabledReasonId={disabledReasonId}
         label={t("record.archive")}
         confirmText={t("record.archiveConfirm")}

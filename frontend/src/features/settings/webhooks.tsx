@@ -197,6 +197,10 @@ function SubscriptionRow({
                   )}
                   {canArchive && (
                     <ArchiveAction
+                      requires={{
+                        object: "webhook_subscription",
+                        action: "delete",
+                      }}
                       label={t("webhooks.archive")}
                       confirmText={t("webhooks.archiveConfirm")}
                       archivedMessage={t("webhooks.archiveDone")}

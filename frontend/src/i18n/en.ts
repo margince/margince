@@ -2311,6 +2311,8 @@ export const en = {
   "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange":
     "You cannot edit this company. Ask its owner to share it, or an administrator for edit rights.",
+  "record.actionRefused":
+    "Your role does not include this action. Ask an administrator for the right.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
@@ -3897,6 +3899,8 @@ export const en = {
   "activity.detail.none": "This activity",
   "activity.followUps": "Follow-up tasks",
   "activity.noFollowUps": "No follow-up tasks",
+  "activity.notYoursToChange":
+    "You cannot change this activity. Ask the colleague it belongs to, or an administrator, for edit rights.",
   "activity.files.empty": "No files on this activity yet.",
   "activity.files.title": "Files on {subject}",
   "activity.followUpOpen": "Open",
@@ -14607,6 +14611,7 @@ export const en = {
     "You do not have access to this contact’s deals.",
   "contact.commercial.noDeal": "No open deal.",
   "contact.commercial.closes": "closes {date}",
+  "contact.commercial.closed": "closed {date}",
   "contact.commercial.committee": "Buying committee",
   "contact.commercial.openDeal": "Open deal",
 
