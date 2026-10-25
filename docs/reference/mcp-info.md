@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 126.1 KB |
+| Tool catalog | 126.4 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 33169 |
+| Approx. wire tokens | 33247 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,7 +32,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 24.7 KB | 19% | **No**: a result's shape, never listed to a model |
+| Output schemas | 25.0 KB | 19% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 32.4 KB | 25% | Yes, every step |
 | Input schemas | 60.3 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
@@ -3708,6 +3708,36 @@ document register, filtered by category, contract or state. Keep next_cursor to 
               },
               "filename": {
                 "type": "string"
+              },
+              "origin": {
+                "properties": {
+                  "activity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "occurred_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "sender_address": {
+                    "type": "string"
+                  },
+                  "sender_name": {
+                    "type": "string"
+                  },
+                  "subject": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "activity_id",
+                  "kind",
+                  "occurred_at"
+                ],
+                "type": "object"
               },
               "url": {
                 "type": "string"
