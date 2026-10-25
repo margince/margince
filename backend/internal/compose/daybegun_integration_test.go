@@ -54,8 +54,12 @@ func TestADayEntryDatedTodayHasHappenedBeforeItsStoredNoon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating the contact: %v", err)
 	}
-	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
-		VALUES ('employment', $1, $2, 'seed', 'system')`, contact.Id, company.Id)
+	employee, employer := ids.From[ids.ContactKind](ids.UUID(contact.Id)), ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &employee, CompanyID: &employer,
+	}); err != nil {
+		t.Fatalf("employing the contact: %v", err)
+	}
 	subject, outbound := "Called about the renewal", "outbound"
 	call, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "call", Subject: &subject, Direction: &outbound, OccurredAt: &today, Source: "manual",
@@ -135,10 +139,16 @@ func TestAFollowUpOnADayMeetingsDateAnswersIt(t *testing.T) {
 	e := integration.Setup(t)
 	auckland := setInstallationZone(t, e, "Pacific/Auckland")
 	sent, met := seedFollowUps(t, e)
-	e.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, sent)
+	if _, err := e.Activities.ArchiveActivity(e.Admin(), ids.From[ids.ActivityKind](sent), nil); err != nil {
+		t.Fatalf("archiving the sent mail: %v", err)
+	}
 	now := databaseNow(t, e)
-	dated := occurredday.AnchorIn(now.AddDate(0, 0, -4), auckland)
-	e.WsExec(t, `UPDATE activity SET occurred_at = $2, occurred_precision = 'day', duration_seconds = NULL WHERE id = $1`, met, dated)
+	dated, dayPrecision := occurredday.AnchorIn(now.AddDate(0, 0, -4), auckland), activities.PrecisionDay
+	if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](met), activities.UpdateActivityInput{
+		OccurredAt: &dated, OccurredPrecision: &dayPrecision,
+	}); err != nil {
+		t.Fatalf("making the meeting a day meeting: %v", err)
+	}
 	seam := attentionAwaiting{store: activities.NewStore(e.DB())}
 	owed := func() bool {
 		t.Helper()
@@ -154,13 +164,11 @@ func TestAFollowUpOnADayMeetingsDateAnswersIt(t *testing.T) {
 
 	year, month, day := dated.Date()
 	morning := time.Date(year, month, day, 8, 0, 0, 0, auckland)
-	e.WsExec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, source, captured_by)
-		VALUES ($1, 'email', 'outbound', 'Thanks for today', $2, 'seed', 'system')`, ids.NewV7(), morning)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, user_id)
-		SELECT id, 'from', $1 FROM activity WHERE subject = 'Thanks for today'`, e.AdminUser)
-	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id)
-		SELECT a.id, 'contact', l.contact_id FROM activity a, activity_link l
-		 WHERE a.subject = 'Thanks for today' AND l.activity_id = $1`, met)
+	var attendee ids.UUID
+	if err := e.Pool.QueryRow(context.Background(), `SELECT contact_id FROM activity_link WHERE activity_id = $1`, met).Scan(&attendee); err != nil {
+		t.Fatalf("reading the meeting's contact: %v", err)
+	}
+	logMail(t, e, attendee, "outbound", morning)
 	if owed() {
 		t.Errorf("a follow-up at %v on the meeting's date did not answer it", morning)
 	}

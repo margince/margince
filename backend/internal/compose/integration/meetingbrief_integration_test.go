@@ -425,10 +425,17 @@ func TestMeetingBriefRecallsADayMeetingOnlyOnceItsDateIsOver(t *testing.T) {
 	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
 
 	newDayMeeting := func(subject string, date time.Time) {
-		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, occurred_precision, source, captured_by)
-			VALUES ($1, 'meeting', $2, $3, 'day', 'manual', 'human:x')`, subject, occurredday.Anchor(date))
-		LinkActivity(t, owner, id, "contact", ours)
-		seatInRoom(t, owner, e.WS, id, ours)
+		t.Helper()
+		at := occurredday.Anchor(date)
+		made, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "meeting", Subject: &subject, OccurredAt: &at, OccurredPrecision: activities.PrecisionDay, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ours}},
+		})
+		if err != nil {
+			t.Fatalf("logging %q: %v", subject, err)
+		}
+		// No writer seats a contact as an attendee, so the seat is a raw row.
+		seatInRoom(t, owner, e.WS, ids.UUID(made.Id), ours)
 	}
 	newDayMeeting("Held yesterday", roomFixedNow.AddDate(0, 0, -1))
 	newDayMeeting("Dated today", roomFixedNow)
