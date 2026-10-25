@@ -37492,6 +37492,8 @@ export interface components {
             label?: string | null;
             /** @description For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then. */
             linked?: components["schemas"]["ListLinkedValue"][];
+            /** @description The record holds more linked values than `linked` lists; absent when the list is complete. */
+            linked_truncated?: boolean;
         };
         ListLinkedValue: {
             /** @description The linked row's id, or the value itself where the field has no row. Empty when hidden. */
@@ -37581,6 +37583,8 @@ export interface components {
             value_label?: string | null;
             /** @description For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. */
             linked?: components["schemas"]["ListLinkedValue"][];
+            /** @description The record holds more linked values than `linked` lists; absent when the list is complete. */
+            linked_truncated?: boolean;
         };
         ListMemberExplanation: {
             /** Format: uuid */

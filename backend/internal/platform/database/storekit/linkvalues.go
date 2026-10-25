@@ -17,7 +17,16 @@ import (
 )
 
 // linkedValueCap bounds how many linked values one record reports per field.
+// The reading selects one more, so a record that holds more can say so.
 const linkedValueCap = 50
+
+// capLinked trims a reading that selected one past the cap and says whether it did.
+func capLinked(raw []string) ([]string, bool) {
+	if len(raw) <= linkedValueCap {
+		return raw, false
+	}
+	return raw[:linkedValueCap], true
+}
 
 const linkExistsPrefix = "EXISTS (SELECT 1 FROM "
 
@@ -30,7 +39,7 @@ type LinkedValue struct {
 }
 
 // LinkValuesSQL is a scalar subquery giving the text[] of distinct values the
-// record carries behind field.Link, at most linkedValueCap of them.
+// record carries behind field.Link, at most linkedValueCap+1 of them.
 func LinkValuesSQL(field Field, arg func(any) int) (string, error) {
 	inner, err := scopedLinkInner(field, "TRUE", arg)
 	if err != nil {
@@ -43,7 +52,7 @@ func LinkValuesSQL(field Field, arg func(any) int) (string, error) {
 	from := strings.TrimSuffix(strings.TrimPrefix(exists, linkExistsPrefix), ")")
 	return fmt.Sprintf(
 		"(SELECT coalesce(array_agg(v), '{}') FROM (SELECT DISTINCT (%s)::text AS v FROM %s AND (%s) IS NOT NULL ORDER BY v LIMIT %d) linked_values)",
-		field.Expr, from, field.Expr, linkedValueCap), nil
+		field.Expr, from, field.Expr, linkedValueCap+1), nil
 }
 
 // fieldReading is how one leaf's field is shown to this reader.

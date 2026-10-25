@@ -4,6 +4,7 @@
 package storekit
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -14,7 +15,7 @@ func TestALinkReadingSharesTheLinkTemplateOfTheClause(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"FROM taggable tg", "live_tag.archived_at IS NULL", "LIMIT 50", "array_agg"} {
+	for _, want := range []string{"FROM taggable tg", "live_tag.archived_at IS NULL", fmt.Sprintf("LIMIT %d", linkedValueCap+1), "array_agg"} {
 		if !strings.Contains(sql, want) {
 			t.Errorf("reading %q lacks %q", sql, want)
 		}
@@ -41,5 +42,17 @@ func TestALinkReadingAppliesTheFieldsLinkScope(t *testing.T) {
 func TestATemplateThatIsNotAnExistsCannotBeRead(t *testing.T) {
 	if _, err := LinkValuesSQL(Field{Expr: "x.v", Link: "NOT EXISTS (SELECT 1 FROM x WHERE %s)"}, func(any) int { return 1 }); err == nil {
 		t.Fatal("a template the reading cannot rewrite was accepted")
+	}
+}
+
+func TestACappedLinkReadingSaysItWasCut(t *testing.T) {
+	full := make([]string, linkedValueCap+1)
+	kept, cut := capLinked(full)
+	if len(kept) != linkedValueCap || !cut {
+		t.Errorf("a reading one past the cap kept %d, cut=%v", len(kept), cut)
+	}
+	kept, cut = capLinked(full[:linkedValueCap])
+	if len(kept) != linkedValueCap || cut {
+		t.Errorf("a reading at the cap kept %d, cut=%v", len(kept), cut)
 	}
 }

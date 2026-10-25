@@ -10,6 +10,7 @@ package integration
 // Only a seat without the tag grant does not see them.
 
 import (
+	"fmt"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -95,5 +96,45 @@ func TestATagClauseNamesTheTagsTheRecordCarries(t *testing.T) {
 	}
 	if hidden.Clauses.Hidden == nil || !*hidden.Clauses.Hidden || hidden.Clauses.Linked != nil {
 		t.Fatalf("a seat without the tag grant read %+v, want hidden", hidden.Clauses)
+	}
+}
+
+func TestATagReadingPastTheCapSaysMoreExist(t *testing.T) {
+	e := Setup(t)
+	store := collections.NewStore(e.DB())
+	contact := e.SeedContact(t, "Carries Many", &e.Rep1)
+	var first ids.TagID
+	for i := 0; i < 51; i++ {
+		tag, err := store.CreateTag(e.Admin(), fmt.Sprintf("Bulk Tag %02d", i), nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i == 0 {
+			first = tag.ID
+		}
+		if _, err := store.ApplyTag(e.Admin(), tag.ID, "contact", contact); err != nil {
+			t.Fatal(err)
+		}
+	}
+	list, err := store.CreateList(e.Admin(), collections.CreateListInput{
+		Name: "Bulk tagged", EntityType: "contact", ListType: "dynamic", Sharing: "workspace",
+		Definition: map[string]any{"field": "tag", "op": "eq", "value": first.String()},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, contactListPerms(true))
+
+	why, err := store.ExplainView(reader, list.ID, contact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if why.Clauses.Linked == nil || len(*why.Clauses.Linked) != 50 || why.Clauses.LinkedTruncated == nil || !*why.Clauses.LinkedTruncated {
+		t.Fatalf("the why read %+v, want 50 tags and a truncation flag", why.Clauses)
+	}
+	member := onlyMember(reader, t, store, list.ID, contact)
+	held := (*member.Values)["tag"]
+	if held.Linked == nil || len(*held.Linked) != 50 || held.LinkedTruncated == nil || !*held.LinkedTruncated {
+		t.Fatalf("the member table read %+v, want 50 tags and a truncation flag", held)
 	}
 }

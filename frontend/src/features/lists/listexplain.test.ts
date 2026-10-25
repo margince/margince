@@ -22,4 +22,10 @@ describe("linkedText", () => {
     ).toBe(`Wanted, ${en["lists.why.hidden"]}`);
     expect(linkedText([], t)).toBe(en["lists.why.empty"]);
   });
+
+  it("says more exist when the server cut the reading", () => {
+    expect(
+      linkedText([{ value: "t1", label: "Wanted", hidden: false }], t, true),
+    ).toBe(`Wanted, ${en["lists.why.moreLinked"]}`);
+  });
 });

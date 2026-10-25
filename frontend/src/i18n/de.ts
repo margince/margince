@@ -15307,6 +15307,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.why.value": "Aktuell: {value}",
   "lists.why.empty": "leer",
   "lists.why.hidden": "Wert f\u00fcr dich verborgen",
+  "lists.why.moreLinked": "und weitere, nicht angezeigt",
   "lists.why.daysAgo_one": "vor {count} Tag",
   "lists.why.daysAgo_other": "vor {count} Tagen",
   "lists.why.today": "heute",

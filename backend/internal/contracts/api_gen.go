@@ -43284,7 +43284,10 @@ type ListClauseVerdict struct {
 
 	// Linked For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none.
 	Linked *[]ListLinkedValue `json:"linked,omitempty"`
-	Op     *string            `json:"op,omitempty"`
+
+	// LinkedTruncated The record holds more linked values than `linked` lists; absent when the list is complete.
+	LinkedTruncated *bool   `json:"linked_truncated,omitempty"`
+	Op              *string `json:"op,omitempty"`
 
 	// Operand The clause's value as the filter states it.
 	Operand interface{} `json:"operand,omitempty"`
@@ -43337,6 +43340,9 @@ type ListFieldValue struct {
 
 	// Linked For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then.
 	Linked *[]ListLinkedValue `json:"linked,omitempty"`
+
+	// LinkedTruncated The record holds more linked values than `linked` lists; absent when the list is complete.
+	LinkedTruncated *bool `json:"linked_truncated,omitempty"`
 
 	// Value The value as text, as the explanation states it; null when the record holds none.
 	Value *string `json:"value,omitempty"`

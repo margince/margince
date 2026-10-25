@@ -16728,6 +16728,7 @@ components:
           maxItems: 50
           items: {$ref: '#/components/schemas/ListLinkedValue'}
           description: 'For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then.'
+        linked_truncated: {type: boolean, description: 'The record holds more linked values than `linked` lists; absent when the list is complete.'}
     ListLinkedValue:
       type: object
       required: [value, hidden]
@@ -16797,6 +16798,7 @@ components:
           maxItems: 50
           items: {$ref: '#/components/schemas/ListLinkedValue'}
           description: 'For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none.'
+        linked_truncated: {type: boolean, description: 'The record holds more linked values than `linked` lists; absent when the list is complete.'}
     ListMemberExplanation:
       type: object
       required: [list_id, entity_id, list_type, member]

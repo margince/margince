@@ -14900,6 +14900,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.why.value": "Hi\u1ec7n t\u1ea1i: {value}",
   "lists.why.empty": "tr\u1ed1ng",
   "lists.why.hidden": "Gi\u00e1 tr\u1ecb b\u1ecb \u1ea9n v\u1edbi b\u1ea1n",
+  "lists.why.moreLinked": "v\u00e0 c\u00f2n n\u1eefa ch\u01b0a hi\u1ec3n th\u1ecb",
   "lists.why.daysAgo_one": "{count} ng\u00e0y tr\u01b0\u1edbc",
   "lists.why.daysAgo_other": "{count} ng\u00e0y tr\u01b0\u1edbc",
   "lists.why.today": "h\u00f4m nay",

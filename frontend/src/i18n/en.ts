@@ -15260,6 +15260,7 @@ export const en = {
   "lists.why.value": "Now: {value}",
   "lists.why.empty": "empty",
   "lists.why.hidden": "Value hidden from you",
+  "lists.why.moreLinked": "and more not shown",
   "lists.why.daysAgo_one": "{count} day ago",
   "lists.why.daysAgo_other": "{count} days ago",
   "lists.why.today": "today",
