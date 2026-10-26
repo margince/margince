@@ -308,12 +308,7 @@ func ReadActivityAuthorship(
 	if err != nil {
 		return out, err
 	}
-	seats := SeatDomains(out.Participants)
-	for _, p := range out.Participants {
-		if CountsAsBuyerParticipant(p, parties, seats) {
-			out.BuyerParticipants++
-		}
-	}
+	out.BuyerParticipants = BuyerParticipantCount(out.Participants, parties)
 	return out, nil
 }
 

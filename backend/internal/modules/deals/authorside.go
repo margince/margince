@@ -192,6 +192,19 @@ func CountsAsBuyerParticipant(p Participant, parties owndomain.Parties, seatDoma
 	return parties.IsOutsideAttendee(p.Address, seatDomains)
 }
 
+// BuyerParticipantCount counts the participants CountsAsBuyerParticipant
+// accepts, against the seats on the same activity.
+func BuyerParticipantCount(participants []Participant, parties owndomain.Parties) int {
+	seats := SeatDomains(participants)
+	n := 0
+	for _, p := range participants {
+		if CountsAsBuyerParticipant(p, parties, seats) {
+			n++
+		}
+	}
+	return n
+}
+
 // SeatDomains are the folded domains of the seats on an activity, which
 // CountsAsBuyerParticipant reads.
 func SeatDomains(participants []Participant) []string {

@@ -11,6 +11,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -97,4 +99,88 @@ func TestAMeetingOnACandidateOwnDomainCountsNoColleagueAsTheBuyer(t *testing.T) 
 	f.wantBuyers("a confirmed domain", f.heldMeeting("rep@labs.test", "colleague@ourco.test"), 0)
 	f.wantBuyers("a candidate domain the seat is not on", f.heldMeeting("rep@ourco.test", "dev@labs.test"), 1)
 	f.wantBuyers("a real buyer", f.heldMeeting("rep@ourco.test", "ines@customer.test"), 1)
+}
+
+// heldCriterion adds a required event_held criterion to the fixture's stage.
+func (f *authorshipFixture) heldCriterion() {
+	f.t.Helper()
+	required := true
+	c, err := f.Deals.CreateStageExitCriterion(f.Admin(), deals.CreateCriterionInput{
+		StageID: f.stageID, Key: "held", Label: "held", Kind: string(deals.CriterionEventHeld), Required: &required,
+	})
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	f.crit["held"] = ids.From[ids.ExitCriterionKind](ids.UUID(c.Id))
+}
+
+// heldClaim records that the meeting was held, as the given extractor.
+func (f *authorshipFixture) heldClaim(meeting ids.UUID, extractedBy string) ids.UUID {
+	f.t.Helper()
+	ev, err := f.Deals.RecordStageEvidence(f.Admin(), deals.EvidenceInput{
+		DealID: f.dealID, CriterionID: f.crit["held"], SourceType: deals.SourceActivity, SourceID: meeting,
+		AuthorSide: deals.AuthorUnknown, Commitment: deals.CommitmentAgreed, Met: true,
+		ObservedAt: clocktest.Now(f.t).Add(-time.Hour), ExtractedBy: extractedBy,
+	})
+	if err != nil {
+		f.t.Fatalf("recording a held claim: %v", err)
+	}
+	return ids.UUID(ev.Id)
+}
+
+func (f *authorshipFixture) met(evidence ids.UUID) string {
+	f.t.Helper()
+	return f.WsScalar(f.t, `SELECT met::text FROM deal_stage_evidence WHERE id = $1`, evidence)
+}
+
+// A machine claim written under the old buyer rule stands until the pass
+// judges the meeting again. A claim the meeting still makes, a refuted one and
+// a model's reading are left as they are.
+func TestAStoredMeetingClaimTheMeetingNoLongerMakesIsWithdrawn(t *testing.T) {
+	f := newAuthorshipFixture(t)
+	f.heldCriterion()
+	stale := f.heldClaim(f.heldMeeting("rep@ourco.test", "colleague@ourco.test"), deals.ExtractedByDeterministic)
+	genuine := f.heldClaim(f.heldMeeting("rep@ourco.test", "ines@customer.test"), deals.ExtractedByDeterministic)
+	refuted := f.heldClaim(f.heldMeeting("rep@ourco.test", "pat@ourco.test"), deals.ExtractedByDeterministic)
+	if _, err := f.Deals.RefuteStageEvidence(f.Admin(), f.dealID, refuted); err != nil {
+		t.Fatal(err)
+	}
+	read := f.heldClaim(f.heldMeeting("rep@ourco.test", "sam@ourco.test"), stageEvidenceExtractedBy)
+
+	f.runPass()
+	for name, c := range map[string]struct {
+		id   ids.UUID
+		want string
+	}{"stale": {stale, "false"}, "genuine": {genuine, "true"}, "refuted": {refuted, "true"}, "model reading": {read, "true"}} {
+		if got := f.met(c.id); got != c.want {
+			t.Errorf("the %s claim is met = %s after the pass, want %s", name, got, c.want)
+		}
+	}
+	audits := `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_stage_evidence' AND entity_id = $1
+		AND evidence->>'rejudged_against' = 'meeting_parties'`
+	if n := f.WsCount(t, audits, stale); n != 1 {
+		t.Errorf("%d audit rows name the withdrawal, want 1", n)
+	}
+	f.runPass()
+	if n := f.WsCount(t, audits, stale); n != 1 {
+		t.Errorf("a second pass wrote %d audit rows for the withdrawal, want still 1", n)
+	}
+}
+
+// The stage-move check judges the meeting live, so a stale claim settles
+// nothing even before the pass has run.
+func TestACardOnAStaleMeetingClaimIsRefusedBeforeThePass(t *testing.T) {
+	f := newAuthorshipFixture(t)
+	f.heldCriterion()
+	stale := f.heldClaim(f.heldMeeting("rep@ourco.test", "colleague@ourco.test"), deals.ExtractedByDeterministic)
+	checked := deals.NewStore(f.DB(), DealsInstallation()).WithOwnDomains(ownDomainReader{store: f.own})
+	err := database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+		return checked.ValidateProgressionCriteriaTx(f.Admin(), tx, f.cardFor("held"))
+	})
+	if !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a card resting on a meeting only colleagues attended stands: %v", err)
+	}
+	if got := f.met(stale); got != "true" {
+		t.Errorf("the check changed the stored claim to met = %s; only the pass writes", got)
+	}
 }
