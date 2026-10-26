@@ -350,3 +350,10 @@ func TestReplaceNoncesReplacesEveryMarkerWhateverCallMintedIt(t *testing.T) {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
+
+func TestReplaceNoncesLeavesALongerNameAlone(t *testing.T) {
+	longer := "untrusted-" + strings.Repeat("a", 26) + "x"
+	if got := promptfence.ReplaceNonces(longer, "fence"); got != longer {
+		t.Fatalf("a 27-character name was rewritten to %q", got)
+	}
+}

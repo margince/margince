@@ -220,8 +220,9 @@ func (f Fence) Rule(kind string) string {
 var markerPattern = regexp.MustCompile(`<(` + markerName + `)>`)
 
 // markerNamePattern matches a marker's name wherever it appears: in an opening
-// tag, a closing tag or prose.
-var markerNamePattern = regexp.MustCompile(markerName)
+// tag, a closing tag or prose. The trailing boundary keeps a longer name from
+// matching on its first 26 characters.
+var markerNamePattern = regexp.MustCompile(markerName + `\b`)
 
 // MarkerIn returns the marker a system prompt declares, if it declares one.
 //
