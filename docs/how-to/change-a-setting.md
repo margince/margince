@@ -44,24 +44,33 @@ the api reads the file, at the start or with `--check-config`. Keep the line, an
 database, so a deploy pipeline can run it before a rollout. It still needs a DSN to be set, as a
 start does, but it never connects to it.
 
-On a dev stack, after `make dev`, any DSN will do:
+Each program checks only the settings it reads, so run it on the api **and** the worker. The api's
+check passes a file with a wrong worker setting; it lists that setting as `not checked here`.
+
+On a dev stack, one command runs both:
 
 ```bash
-./bin/api --config config/margince.yaml --config-file config/margince.dev.yaml \
-  --env-file .env.local --dsn postgres://localhost/check --check-config
+make check-config
 ```
 
-The images start through an entrypoint that runs migrations first, so call the api in the image
+It reads `config/margince.yaml`, `config/margince.dev.yaml` and `.env.local`. To check other files,
+set `CONFIG=`, `CONFIG_FILE=` or `ENV_FILE=`; an empty `CONFIG_FILE=` or `ENV_FILE=` leaves that
+file out.
+
+The images start through an entrypoint that runs migrations first, so call each program in its image
 directly:
 
 ```bash
 docker run --rm --entrypoint margince-api -e MARGINCE_DSN=postgres://localhost/check \
   -v "$PWD/config:/app/config" \
   margince-api:local --config config/margince.yaml --check-config
+docker run --rm --entrypoint margince-worker -e MARGINCE_DSN=postgres://localhost/check \
+  -v "$PWD/config:/app/config" \
+  margince-worker:local --config config/margince.yaml --check-config
 ```
 
-It exits 0 when every setting is valid. It exits 1 and lists every setting that is not valid. Read
-[check mode](../reference/configuration.md#where-a-value-comes-from) for what it prints.
+Each exits 0 when every setting it reads is valid. It exits 1 and lists every setting that is not
+valid. Read [check mode](../reference/configuration.md#where-a-value-comes-from) for what it prints.
 
 ## See what Margince read
 

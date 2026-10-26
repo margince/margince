@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { UTC_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import {
   StandingTimeline,
@@ -13,6 +14,7 @@ import {
 const meta: Meta<typeof StandingTimeline> = {
   title: "Components/Text and data display/Standing timeline",
   component: StandingTimeline,
+  args: { record: UTC_ZONE },
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -238,6 +240,7 @@ const mark = (
 ): TimelineMark => ({
   key,
   at,
+  precision: "instant",
   kind,
   direction,
   what: kind === "email" ? "Email" : kind === "call" ? "Call" : "Note",

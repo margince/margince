@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -211,6 +212,9 @@ func contactRow(c contacts.ContactStrength, who contactCard, now time.Time) crmc
 		Strength:       contacts.StrengthToWire(c.Strength, now),
 		LastInboundAt:  c.Strength.LastInbound,
 		LastOutboundAt: c.Strength.LastOutbound,
+
+		LastInboundPrecision:  activitywhen.Stated(c.Strength.LastInboundPrecision),
+		LastOutboundPrecision: activitywhen.Stated(c.Strength.LastOutboundPrecision),
 	}
 	return row
 }

@@ -258,7 +258,6 @@ clock
 close
 closure
 cloud
-cluster
 coach
 code
 cold
@@ -288,7 +287,6 @@ compose
 composite
 composition
 compress
-concept
 condition
 conditional
 confidence
@@ -301,7 +299,6 @@ connect
 connection
 connector
 consent
-console
 constant
 constraint
 consume
@@ -320,7 +317,6 @@ corpus
 correct
 correlation
 correspondence
-cors
 cosine
 cost
 could
@@ -743,7 +739,6 @@ kept
 key
 keyset
 kib
-kill
 kind
 know
 known
@@ -941,7 +936,6 @@ offset
 often
 old
 older
-oldest
 on
 onboarding
 once
@@ -1070,7 +1064,6 @@ produce
 product
 production
 profile
-program
 progress
 project
 projection
@@ -1100,7 +1093,6 @@ put
 quality
 quantization
 quantized
-quarantine
 query
 question
 queue
@@ -1320,7 +1312,6 @@ signal
 signature
 silence
 silent
-silicon
 since
 single
 sink
@@ -1335,11 +1326,9 @@ slim
 slot
 slow
 small
-smart
 snapshot
 snooze
 so
-socket
 soft
 software
 some
@@ -1411,7 +1400,6 @@ suggests
 suite
 summary
 superuser
-supervisor
 supply
 support
 suppression
@@ -1654,5 +1642,4 @@ you
 your
 zero
 zheng
-zip
 zone

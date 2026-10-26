@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -75,10 +76,20 @@ func (s *Store) updateMatchedByCard(
 	}
 	result.Outcome = VCardUpdated
 	result.ContactID = &contactID
-	if err := s.fillFromVCard(ctx, tx, contactID, entry); err != nil {
+	st, err := s.fillFromVCard(ctx, tx, contactID, entry)
+	if err != nil {
 		return err
 	}
-	return fillAddressFromCard(ctx, tx, contactID, entry)
+	address, err := fillAddressFromCard(ctx, tx, contactID, entry, st.corrected[fieldAddress])
+	if err != nil {
+		return err
+	}
+	held, err := liveEmails(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
+	result.Fields = updatedReport(entry, st, held, address)
+	return nil
 }
 
 // createFromCard turns a card nobody matched into a contact.
@@ -120,7 +131,45 @@ func (s *Store) createFromCard(
 	created := ids.From[ids.ContactKind](ids.UUID(contact.Id))
 	result.Outcome = VCardCreated
 	result.ContactID = &created
-	return s.attachVCardEmployer(ctx, tx, created, entry)
+	url, err := s.completeCardCreate(ctx, tx, contact, entry)
+	if err != nil {
+		return err
+	}
+	result.Fields = createdReport(contact, entry, url)
+	return nil
+}
+
+// completeCardCreate writes what the contact create does not carry: the
+// employer the card names, and a URL the social slot did not take.
+//
+// That URL is usually the company site, and it lands as evidence as it does on
+// a matched contact. It returns that URL's outcome, or nil when none was filed.
+func (s *Store) completeCardCreate(ctx context.Context, tx pgx.Tx, contact crmcontracts.Contact, entry VCardEntry) (*statedField, error) {
+	created := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+	if err := s.attachVCardEmployer(ctx, tx, created, entry); err != nil {
+		return nil, err
+	}
+	url, ok := cardURLField(entry)
+	if !ok || (contact.Social != nil && (*contact.Social)[profileURLField] != nil) {
+		return nil, nil //nolint:nilnil // a card whose URL the social slot took files nothing more
+	}
+	card, err := readyObservedCard(ctx, tx, entry)
+	if err != nil {
+		return nil, err
+	}
+	outcome, err := applyObservedField(ctx, tx, created, observedField{
+		Field: url.name, Value: url.value, Evidence: card.Evidence, SourceRef: card.SourceRef,
+		Source: card.Source, CapturedBy: card.CapturedBy, ObservedAt: card.ObservedAt,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if outcome.landed() {
+		if err := auditCardFields(ctx, tx, created, []string{url.name}); err != nil {
+			return nil, err
+		}
+	}
+	return &statedField{cardField: url, outcome: outcome}, nil
 }
 
 // errCardSourceNarrowed rolls back the contact a refused card had already minted.
@@ -212,18 +261,40 @@ func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, contactID id
 	if err != nil {
 		return err
 	}
-	role := strings.TrimSpace(entry.Title)
+	return s.ensureEmployment(ctx, tx, contactID, *companyID, entry.Title, vcardSource)
+}
+
+// ensureEmployment gives a contact a live employment at a company, unless it
+// already holds one there. The vCard import, the lead's company link and its
+// promotion write the edge through here.
+func (s *Store) ensureEmployment(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, companyID ids.CompanyID, role, source string) error {
+	held, err := holdsLiveEmployment(ctx, tx, contactID, companyID)
+	if err != nil || held {
+		return err
+	}
 	edge := CreateRelationshipInput{
 		Kind:      employmentKind,
 		ContactID: &contactID,
-		CompanyID: companyID,
-		Source:    vcardSource,
+		CompanyID: &companyID,
+		Source:    source,
 	}
-	if role != "" {
+	if role = strings.TrimSpace(role); role != "" {
 		edge.Role = &role
 	}
 	_, err = s.CreateRelationshipTx(ctx, tx, edge)
 	return err
+}
+
+// holdsLiveEmployment reports whether a contact holds a live employment at a company.
+func holdsLiveEmployment(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, companyID ids.CompanyID) (bool, error) {
+	var held bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM relationship r
+		                WHERE r.contact_id = $1 AND r.company_id = $2 AND `+employment.LiveSlotSQL("r")+`)`,
+		contactID, companyID).Scan(&held); err != nil {
+		return false, fmt.Errorf("looking for the contact's employment at the company: %w", err)
+	}
+	return held, nil
 }
 
 // employerByName finds the company the card names, or creates it.

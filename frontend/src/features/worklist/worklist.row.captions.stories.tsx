@@ -30,6 +30,7 @@ const ACCOUNT = "01a05500-0000-7000-8000-0000000000c0";
 /** A thread filed under a deal, from a contact the server named beside it. */
 function dealFiledThread(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "waiting-1",
     source: "customer_waiting",
     category: "customer_waiting",
@@ -115,6 +116,7 @@ export const MomentsWithheld: Story = {
 export const AccountWhoWroteLast: Story = {
   args: {
     item: {
+      occurred_precision: "instant",
       id: "task-renewal",
       source: "task",
       category: "tasks",
@@ -165,6 +167,7 @@ export const SupplierRequestDark: Story = {
 export const SharedDeliverable: Story = {
   args: {
     item: {
+      occurred_precision: "instant",
       id: "recording-task",
       source: "task",
       category: "tasks",

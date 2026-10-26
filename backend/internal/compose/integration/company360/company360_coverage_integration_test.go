@@ -39,6 +39,7 @@ func TestCoverageCountsTheWholeAccount(t *testing.T) {
 	mail := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: proposal",
 		"inbound", company360Clock.AddDate(0, 0, -3))
 	integration.LinkActivity(t, owner, mail, "contact", waiting)
+	integration.LinkActivitySender(t, owner, mail, waiting)
 
 	got, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
 	if err != nil {

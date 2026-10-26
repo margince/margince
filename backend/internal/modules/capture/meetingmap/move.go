@@ -35,6 +35,6 @@ func MoveOne(ctx context.Context, raw []byte, sink connector.Sink, owner, connec
 		countEvent(ctx, connectorName, m.id, OutcomeMoveUnsupported)
 		return nil
 	}
-	return settleWrite(ctx, connectorName, m.id, OutcomeBeyondHorizon,
-		mover.MoveMeeting(ctx, key, m.occurredAt, m.durationSeconds))
+	slot := connector.MeetingSlot{Start: m.occurredAt, Duration: m.durationSeconds, AllDay: m.allDay}
+	return settleWrite(ctx, connectorName, m.id, OutcomeBeyondHorizon, mover.MoveMeeting(ctx, key, slot))
 }

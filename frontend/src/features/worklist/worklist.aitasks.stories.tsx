@@ -6,6 +6,7 @@ import { WorklistRow } from "./worklist.row";
 import "./worklist.css";
 
 const incident: components["schemas"]["WorklistItem"] = {
+  occurred_precision: "instant",
   id: "failed-task",
   source: "ai_work_health",
   category: "system",

@@ -1,5 +1,6 @@
 import { FieldDiff } from "../../design-system/trust";
-import { type HistoryValueCtx, historyValue } from "./historyvalues";
+import type { OccurredPrecision } from "../../format/activitywhen";
+import { type HistoryValueCtx, historyValue } from "../../lib/historyvalues";
 
 // One field's before and after, read the way the rest of the record page reads
 // them.
@@ -14,11 +15,16 @@ export function HistoryFieldDiff({
   field,
   oldValue,
   newValue,
+  oldPrecision,
+  newPrecision,
   values,
 }: Readonly<{
   field: string;
   oldValue: string | null | undefined;
   newValue: string | null | undefined;
+  // Each side's activity-time precision, when its image carries one.
+  oldPrecision?: OccurredPrecision;
+  newPrecision?: OccurredPrecision;
   // Everything a stored value needs to be read as what it MEANS: the record's
   // currency for a minor-unit column, its zone for a timestamp, and a resolver
   // for the ids a change row holds. One object because they travel together —
@@ -27,8 +33,8 @@ export function HistoryFieldDiff({
 }>) {
   return (
     <FieldDiff
-      oldValue={historyValue(field, oldValue, values)}
-      newValue={historyValue(field, newValue, values)}
+      oldValue={historyValue(field, oldValue, values, oldPrecision)}
+      newValue={historyValue(field, newValue, values, newPrecision)}
     />
   );
 }

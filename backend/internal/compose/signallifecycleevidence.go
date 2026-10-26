@@ -19,11 +19,11 @@ const (
 	lifecycleScopeWorkstream = string(crmcontracts.SignalEvidenceLifecycleScopeWorkstream)
 )
 
+// validateLifecycleEvidence judges scope only on a contract ending. On any other
+// kind the scope means nothing and eventSignalEvidence never records it, so a
+// stray value is dropped rather than refusing the whole reply.
 func validateLifecycleEvidence(event extractedEvent, thread settledThread) string {
 	if event.Kind != signalKindContractEnded {
-		if (event.LifecycleScope != "" && event.LifecycleScope != lifecycleScopeUnknown) || event.Workstream != "" {
-			return "only a contract ending carries lifecycle scope"
-		}
 		return ""
 	}
 	switch event.LifecycleScope {

@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -243,7 +244,7 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.direction = 'inbound'
 			   AND a.archived_at IS NULL
-			   AND a.occurred_at >= $6
+			   AND `+occurredday.FromSQL("a", "$6")+`
 			   AND `+authorIsTheSubject+`
 		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, since).Scan(&found)
 	if err != nil {

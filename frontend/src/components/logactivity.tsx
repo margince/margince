@@ -244,7 +244,7 @@ export function LogActivityForm({
           </Field>
         )}
         {/* One date box, prefilled with today: a task's due date, otherwise the
-            day it happened (occurredInstant), whose hint explains the cap. */}
+            day it happened (occurredFields), whose hint explains the cap. */}
         <Field
           label={draft.kind === "task" ? t("log.dueAt") : t("log.date")}
           hint={draft.kind === "task" ? undefined : t("log.dateHint")}
@@ -255,9 +255,8 @@ export function LogActivityForm({
               value={isoOrBlank(draft.day)}
               // A note or meeting cannot have happened in the future, and the
               // cap makes the picker say so; a due date has no such ceiling.
-              // occurredInstant clamps a typed-in future day the same way, and
-              // against the same clock, so the box refuses exactly the days the
-              // submit would have moved.
+              // occurredFields clamps a typed-in future day the same way, on the
+              // same clock. So the box refuses the days the submit would move.
               max={latestDayOf(draft.kind, recordZone)}
               today={isoOrBlank(todayDay(draft.kind, recordZone)) || undefined}
               onChange={(event) => setField({ day: event.target.value })}

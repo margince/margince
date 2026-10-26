@@ -15,7 +15,7 @@ func scoutBuyerSignal(signal string) string {
   AND buyer_party.contact_id = ` + storekit.CitedEntityID("buyer_cite", "buyer_contact_id") + `
  JOIN relationship buyer_job ON buyer_job.contact_id = buyer_party.contact_id
   AND buyer_job.kind = 'employment' AND buyer_job.archived_at IS NULL
-  AND ` + buyerEmployment("buyer_job", "buyer_source.occurred_at") + `
+  AND ` + buyerEmployment("buyer_job", "buyer_source") + `
  WHERE buyer_cite->>'commercial_role' = 'buyer' AND buyer_cite->>'source_type' = 'activity'
   AND buyer_job.company_id = ` + signal + `.resolved_company_id
   AND NOT EXISTS (SELECT 1 FROM relationship other_job
@@ -23,13 +23,13 @@ func scoutBuyerSignal(signal string) string {
     AND other_company.archived_at IS NULL AND NOT other_company.is_anchor
    WHERE other_job.contact_id = buyer_party.contact_id
     AND other_job.company_id <> buyer_job.company_id
-    AND ` + buyerEmployment("other_job", "buyer_source.occurred_at") + `)
+    AND ` + buyerEmployment("other_job", "buyer_source") + `)
   AND ` + workspaceEvidence("buyer_source") + `)`
 }
 
-func buyerEmployment(alias, at string) string {
+func buyerEmployment(alias, activity string) string {
 	return alias + `.kind = 'employment' AND ` + alias + `.archived_at IS NULL AND ` +
-		employment.IsCurrentSQL(alias+".ended_at") + ` AND ` + employment.InPlaceAtSQL(alias, at)
+		employment.IsCurrentSQL(alias+".ended_at") + ` AND ` + employment.InPlaceForSQL(alias, activity)
 }
 
 func unlinkedCommercialMatter(signal string) string {

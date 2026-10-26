@@ -12,6 +12,7 @@ import { Modal } from "../../design-system/modal";
 import { Popover } from "../../design-system/popover";
 import { QueryGate } from "../../design-system/querystates";
 import { Stack } from "../../design-system/stack";
+import { formatActivityWhen } from "../../format/activitywhen";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -255,8 +256,9 @@ export function ReportingEvidenceDrawer({
                         header: dateHeading,
                         render: (row) =>
                           row.occurred_at
-                            ? formatDateTime(
+                            ? formatActivityWhen(
                                 row.occurred_at,
+                                row.occurred_precision ?? "instant",
                                 locale,
                                 evidence.context.timezone,
                               )

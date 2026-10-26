@@ -18,7 +18,9 @@ import { RequestsPanel } from "./settings.privacy";
 const HELD = {
   activity_id: "00000000-0000-4000-8000-0000000000b1",
   kind: "email",
-  occurred_at: "2025-03-04T09:00:00Z",
+  // Logged for its date alone: the row shows that date on every clock.
+  occurred_at: "2025-03-04T12:00:00Z",
+  occurred_precision: "day",
   restricted_at: "2026-08-18T07:00:00Z",
   restricted_until: "2032-01-01T00:00:00Z",
   reason: "commercial_correspondence · §257 HGB / §147 AO",

@@ -92,6 +92,7 @@ function activity(
   row: Pick<Activity, "id" | "kind" | "occurred_at"> & Partial<Activity>,
 ): Activity {
   return {
+    occurred_precision: "instant",
     offers_email: false,
     is_done: false,
     source: "manual",

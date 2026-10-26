@@ -5,6 +5,7 @@ import { Fragment, type ReactNode } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import type { ActivityWhenFormatter } from "../format/activitywhen";
 import { formatBytes, formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { ENTITY } from "../lib/entity";
@@ -162,7 +163,7 @@ export function EmailEnvelope({
   children,
 }: Readonly<{
   presentation: EmailPresentation;
-  formatWhen: (iso: string) => string;
+  formatWhen: ActivityWhenFormatter;
   children?: ReactNode;
 }>) {
   const t = useT();
@@ -175,7 +176,7 @@ export function EmailEnvelope({
         <span className="emaildetail__partyLabel">
           {t("email.detail.when")}
         </span>
-        {formatWhen(presentation.occurred_at)}
+        {formatWhen(presentation.occurred_at, presentation.occurred_precision)}
       </p>
       {/* Said, not shown: no Bcc line would read as nobody blind-copied. */}
       {presentation.bcc_withheld && (

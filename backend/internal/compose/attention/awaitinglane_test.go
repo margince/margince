@@ -209,6 +209,22 @@ func TestNoMeetingFollowUpRowIsDrawnWithoutAnAction(t *testing.T) {
 	}
 }
 
+func TestAFollowUpToADayEmailSaysItsTimeIsADate(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2026, 9, 6, 9, 0, 0, 0, time.UTC)
+	awaited := AwaitedReply{
+		ActivityID: ids.NewV7(), SentAt: at.Add(-3 * 24 * time.Hour), ContactID: ids.NewV7(),
+		Precision: crmcontracts.OccurredPrecisionOccurredPrecisionDay,
+	}
+	if got := classifyAwaiting(awaited, at, time.UTC).item.OccurredPrecision; got != crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+		t.Errorf("precision = %q, want day", got)
+	}
+	awaited.Precision = ""
+	if got := classifyAwaiting(awaited, at, time.UTC).item.OccurredPrecision; got != crmcontracts.OccurredPrecisionOccurredPrecisionInstant {
+		t.Errorf("precision = %q, want instant", got)
+	}
+}
+
 func metDaysOf(t *testing.T, row crmcontracts.WorklistItem) int {
 	t.Helper()
 	for _, because := range row.Because {
@@ -245,5 +261,30 @@ func TestAMeetingFollowUpCountsCalendarDaysInTheInstallationZone(t *testing.T) {
 		if got := metDaysOf(t, ranked.item); got != c.want || ranked.waitingDays != c.want {
 			t.Errorf("%s: row says %d, ranks on %d, want %d", name, got, ranked.waitingDays, c.want)
 		}
+	}
+}
+
+// A day meeting counts from its date. In Auckland its stored noon UTC is already
+// the next local morning, so the stored instant would count one day short.
+func TestADayMeetingFollowUpCountsFromItsDate(t *testing.T) {
+	t.Parallel()
+	auckland, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatalf("load zone: %v", err)
+	}
+	met := AwaitedReply{
+		ActivityID: ids.NewV7(), SentAt: time.Date(2026, 9, 6, 12, 0, 0, 0, time.UTC), DealID: ids.NewV7(),
+		Precision: crmcontracts.OccurredPrecisionOccurredPrecisionDay,
+	}
+	asOf := time.Date(2026, 9, 7, 9, 0, 0, 0, auckland)
+	ranked, actionable := classifyMeetingFollowUp(met, asOf, auckland)
+	if !actionable {
+		t.Fatal("no row")
+	}
+	if got := metDaysOf(t, ranked.item); got != 1 || ranked.waitingDays != 1 {
+		t.Errorf("row says %d, ranks on %d, want 1 day since 6 September", got, ranked.waitingDays)
+	}
+	if got := classifyAwaiting(met, asOf, auckland).waitingDays; got != 1 {
+		t.Errorf("a day email ranks on %d days, want 1", got)
 	}
 }

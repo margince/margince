@@ -12,7 +12,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // InTouchDays is how long since they last wrote or we last met before contact
@@ -44,27 +44,27 @@ func InteractionCounts(kind, meetingStatus string, automatic AutomaticKind) bool
 	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus)) && automatic == ""
 }
 
-// HappenedByNowSQL admits a row dated no later than now, so a post-dated row
-// cannot take a place in a capped page of history. A note or meeting must also
-// not be canceled or a no-show. draftcore.IsLoggedTouch is the meeting rule for
-// a row held in Go.
+// HappenedByNowSQL admits a row that has happened by now (occurredday.HappenedSQL),
+// so a post-dated row cannot take a place in a capped page of history. A note or
+// meeting must also not be canceled or a no-show. draftcore.IsLoggedTouch is the
+// same rule for a row held in Go.
 func HappenedByNowSQL(alias, now string) string {
-	return "(" + alias + ".occurred_at <= " + now + " AND (" + alias + ".kind NOT IN ('note', '" + kindMeeting + "') OR " +
+	return "(" + occurredday.HappenedSQL(alias, now) + " AND (" + alias + ".kind NOT IN ('note', '" + kindMeeting + "') OR " +
 		MeetingCountsSQL(alias) + "))"
 }
 
 // MeetingTookPlaceSQL is a meeting that counts as contact we had: not called
-// off, and already started. A `booked` row stays booked after it happens,
-// because few users ever mark a meeting held.
+// off, and taken place (occurredday.MeetingTookPlaceSQL). A `booked` row stays
+// booked after it happens, because few users ever mark a meeting held.
 func MeetingTookPlaceSQL(alias, now string) string {
-	return "(" + MeetingCountsSQL(alias) + " AND " + alias + ".occurred_at <= " + now + ")"
+	return "(" + MeetingCountsSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, now) + ")"
 }
 
-// MeetingAheadSQL is a meeting still to come that nobody called off. A `held`
-// row dated ahead is a data error, not a booking.
+// MeetingAheadSQL is a meeting still to come (occurredday.AheadSQL) that nobody
+// called off. A `held` row dated ahead is a data error, not a booking.
 func MeetingAheadSQL(alias, now string) string {
 	return "((" + alias + ".meeting_status IS NULL OR " + alias + ".meeting_status = 'booked') AND " +
-		alias + ".occurred_at > " + now + ")"
+		occurredday.AheadSQL(alias, now) + ")"
 }
 
 // NotCalledOffSQL admits any activity row except a meeting that was canceled or
@@ -91,10 +91,11 @@ func LastActivityKindSQL(alias string) string {
 
 // LastActivityCountsSQL admits an activity row to a record's last-activity
 // clock: a kind that moves it, not a called-off meeting, and already happened
-// at now. The last_activity_of_* functions carry its text rendered with now().
+// at now (occurredday.HappenedSQL). The last_activity_of_* functions carry its
+// text rendered with now().
 func LastActivityCountsSQL(alias, now string) string {
 	return "(" + LastActivityKindSQL(alias) + " AND " + NotCalledOffSQL(alias) + " AND " +
-		alias + ".occurred_at <= " + now + ")"
+		occurredday.HappenedSQL(alias, now) + ")"
 }
 
 // InteractionCountsSQL is the whole test for an activity row that counts as an
@@ -106,10 +107,10 @@ func InteractionCountsSQL(alias string) string {
 }
 
 // InteractionCountsAtSQL is InteractionCountsSQL for a reading made at now: a
-// row dated after now has not happened, so it is no one's latest touch. The
-// contact strength folds render it with their bound clock, never the database's.
+// row that has not happened at now (occurredday.HappenedSQL) is no one's latest
+// touch. The contact strength folds render it with their bound clock.
 func InteractionCountsAtSQL(alias, now string) string {
-	return "(" + InteractionCountsSQL(alias) + " AND " + alias + ".occurred_at <= " + now + ")"
+	return "(" + InteractionCountsSQL(alias) + " AND " + occurredday.HappenedSQL(alias, now) + ")"
 }
 
 // InteractionRolesSQL lists the participant roles that make a party part of an
@@ -133,12 +134,23 @@ const (
 	InTouchNever  = "never"  // no word and no meeting, ever
 )
 
+// begun reports whether m names an activity that has happened at now; nil is
+// no activity.
+func begun(m *occurredday.Moment, now time.Time, loc *time.Location) bool {
+	return m != nil && occurredday.Begun(*m, now, loc)
+}
+
+// tookPlace is begun for a meeting (occurredday.MeetingTookPlace).
+func tookPlace(m *occurredday.Moment, now time.Time, loc *time.Location) bool {
+	return m != nil && occurredday.MeetingTookPlace(*m, now, loc)
+}
+
 // InTouch is one account's contact reading. Days counts from the latest of
 // their last message and our last meeting, and is zero when there was none.
 type InTouch struct {
 	Basis    string
 	Days     int
-	BookedAt *time.Time
+	BookedAt *occurredday.Moment
 }
 
 // Current reports whether the reading keeps the account off "at risk".
@@ -147,22 +159,23 @@ func (r InTouch) Current() bool {
 }
 
 // ReadInTouch folds the three dates every in-touch question rests on. A
-// message or meeting dated after now has not happened, so it never counts as
-// contact we had; a meeting ahead counts only as nextMeeting. Days are counted
+// message that has not begun never counts as contact we had. Nor does a meeting
+// that has not taken place (occurredday.MeetingTookPlace); a meeting ahead
+// counts only as nextMeeting. Days are counted
 // by the calendar of loc, the zone the reader sees the dates in.
-func ReadInTouch(lastInbound, lastMeeting, nextMeeting *time.Time, now time.Time, loc *time.Location) InTouch {
+func ReadInTouch(lastInbound, lastMeeting, nextMeeting *occurredday.Moment, now time.Time, loc *time.Location) InTouch {
 	latest, basis := lastInbound, InTouchWrote
-	if latest != nil && latest.After(now) {
+	if !begun(latest, now, loc) {
 		latest = nil
 	}
-	if lastMeeting != nil && !lastMeeting.After(now) && (latest == nil || lastMeeting.After(*latest)) {
+	if tookPlace(lastMeeting, now, loc) && (latest == nil || lastMeeting.At.After(latest.At)) {
 		latest, basis = lastMeeting, InTouchMet
 	}
 	var reading InTouch
 	if latest != nil {
-		reading.Days = elapsed.Days(*latest, now, loc)
+		reading.Days = occurredday.DaysSince(*latest, now, loc)
 	}
-	if nextMeeting != nil && nextMeeting.After(now) {
+	if nextMeeting != nil && !tookPlace(nextMeeting, now, loc) {
 		reading.BookedAt = nextMeeting
 	}
 	switch {

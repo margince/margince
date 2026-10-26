@@ -7,6 +7,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -21,7 +22,9 @@ type Turn struct {
 	Kind      crmcontracts.ActivityKind
 	Direction string
 	At        time.Time
-	Subject   string
+	// DateOnly says At is a day entry's anchor, so only its date is known.
+	DateOnly bool
+	Subject  string
 	// Text is the authored opening of the message or note. A task or a call
 	// has none and carries only a subject.
 	Text string
@@ -49,7 +52,7 @@ func TurnText(body string) string {
 // It is the anchor itself. It is a note or meeting that records no contact
 // (see IsLoggedTouch). Our own sent mail keeps its text, so a follow-up knows
 // what we already asked.
-func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activity, now time.Time, limit int) []Turn {
+func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activity, now time.Time, zone *time.Location, limit int) []Turn {
 	var turns []Turn
 	for _, activity := range activities {
 		if len(turns) == limit {
@@ -62,14 +65,15 @@ func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activ
 			continue
 		}
 		logged := IsLoggedKind(activity.Kind)
-		if logged && !IsLoggedTouch(activity, now) {
+		if logged && !IsLoggedTouch(activity, now, zone) {
 			continue
 		}
 		turn := Turn{
-			ID:     activity.Id.String(),
-			Kind:   activity.Kind,
-			At:     activity.OccurredAt,
-			Logged: logged,
+			ID:       activity.Id.String(),
+			Kind:     activity.Kind,
+			At:       activity.OccurredAt,
+			DateOnly: occurredday.IsDay(activity.OccurredPrecision),
+			Logged:   logged,
 		}
 		if activity.Direction != nil {
 			turn.Direction = string(*activity.Direction)

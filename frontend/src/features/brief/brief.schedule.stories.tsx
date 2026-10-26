@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { meetingRow, readingsDay } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
@@ -29,6 +30,7 @@ import { SchedulePanel } from "./brief.schedule";
 /** A row the task lane would send: what this rep owes, with no time on it. */
 function taskRow(id: string, title: string): WorklistItem {
   return {
+    occurred_precision: "instant",
     id,
     source: "task",
     level: 2,
@@ -78,6 +80,29 @@ export const Schedule: Story = {
   render: panel(<SchedulePanel day={BOOKED} state="ready" />),
 };
 
+// A meeting known only by its date: its row draws no start time.
+export const ScheduleDateOnlyMeeting: Story = {
+  render: panel(
+    <SchedulePanel
+      day={readingsDay({}, [
+        {
+          ...meetingRow("m3", false, "2026-08-21T10:00:00Z"),
+          occurred_precision: "day",
+        },
+      ])}
+      state="ready"
+    />,
+  ),
+  play: async ({ canvasElement }) => {
+    const title = await within(canvasElement).findByText(
+      "Weber GmbH · quarterly review",
+    );
+    const row = title.closest(".rail-schedule-row");
+    await expect(row).not.toBeNull();
+    await expect(row?.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+  },
+};
+
 // Nothing booked: no panel. The line that says so is on the rail's quiet panel.
 export const ScheduleCollapsed: Story = {
   render: panel(<SchedulePanel day={CLEAR} state="ready" />),
@@ -88,6 +113,7 @@ export const ScheduleCollapsed: Story = {
 const NEXT_MEETING = {
   activity_id: "a-next",
   starts_at: "2026-08-25T08:00:00Z",
+  occurred_precision: "instant" as const,
   subject: "Weber GmbH · kickoff",
   linked_deal_id: "d-1",
   participants: [{ contact_id: "c-1", full_name: "Anna Weber" }],

@@ -41,7 +41,7 @@ func TestCommitmentWhoseSourceIsArchivedDuringReadingCreatesNothing(t *testing.T
 	if got := e.WsCount(t, `SELECT count(*) FROM approval`); got != 0 {
 		t.Fatalf("approvals=%d", got)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM signal_thread_scan`); got != 1 {
-		t.Fatalf("completed scans=%d", got)
+	if got := e.WsCount(t, `SELECT count(*) FROM signal_thread_scan`); got != 0 {
+		t.Fatalf("a conversation the rule no longer reads was retired: scans=%d", got)
 	}
 }

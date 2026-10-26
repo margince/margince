@@ -87,10 +87,10 @@ func (f CallListFilter) where(query *callQuery) string {
 		}
 	}
 	if f.From != nil {
-		clauses = append(clauses, storekit.SQLf("c.occurred_at >= $%d", query.arg(*f.From)))
+		clauses = append(clauses, storekit.SQLf("c.occurred_at >= $%d -- occurred_at raw: an AI call's own time, not an activity's\n", query.arg(*f.From)))
 	}
 	if f.To != nil {
-		clauses = append(clauses, storekit.SQLf("c.occurred_at < $%d", query.arg(*f.To)))
+		clauses = append(clauses, storekit.SQLf("c.occurred_at < $%d -- occurred_at raw: an AI call's own time, not an activity's\n", query.arg(*f.To)))
 	}
 	if f.Outcome != "" {
 		clauses = append(clauses, storekit.SQLf("(%s) = $%d", query.outcome, query.arg(f.Outcome)))

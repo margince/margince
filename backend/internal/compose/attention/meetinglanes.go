@@ -12,17 +12,28 @@ import (
 	"context"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Meetings is today's booked meetings that have not happened yet. Optional: nil
-// means this feed does not read meetings, which is not a day with none in it.
+// Meetings is today's booked meetings that have not happened yet: the day
+// meetings first, as a calendar's all-day row, then by start, all within limit.
+// Optional: nil means this feed does not read meetings, which is not a day with
+// none in it.
 //
 // Scoped like the task lane, because a meeting is somebody's — off one seat's
 // calendar, or naming them as a participant. Answering it unscoped puts one
 // seat's appointments in every colleague's brief.
 type Meetings interface {
-	Today(ctx context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Meeting, error)
+	Today(ctx context.Context, window MeetingWindow, limit int, scope TaskScope, owner ids.UUID) ([]Meeting, error)
+}
+
+// MeetingWindow is the stretch a meetings read covers: a timed meeting starting
+// in [From, Until), and a day meeting whose anchor is in [DaysFrom, DaysUntil).
+// A day has no hour to fall inside the first range.
+type MeetingWindow struct {
+	From, Until         time.Time
+	DaysFrom, DaysUntil time.Time
 }
 
 // MeetingsAwaitingOutcome is today's meetings that have started and whose result
@@ -30,7 +41,7 @@ type Meetings interface {
 // because every stub would otherwise have to answer both. Scoped exactly as
 // Meetings is, or whichever half was left open leaks.
 type MeetingsAwaitingOutcome interface {
-	Since(ctx context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]MeetingAwaitingOutcome, error)
+	Since(ctx context.Context, window MeetingWindow, limit int, scope TaskScope, owner ids.UUID) ([]MeetingAwaitingOutcome, error)
 }
 
 // MeetingAwaitingOutcome is one appointment that happened and owes an answer. It
@@ -43,6 +54,8 @@ type MeetingAwaitingOutcome struct {
 	// Not a due moment: a meeting that happened cannot be late, and an overdue
 	// mark on it would contradict the row's whole point.
 	StartedAt time.Time
+	// Precision says StartedAt is a date's anchor when it is day.
+	Precision crmcontracts.OccurredPrecision
 
 	// What the answer is pinned to: two readers answering one meeting would
 	// otherwise both succeed, the later winning silently. A pointer because a
@@ -65,6 +78,8 @@ type Meeting struct {
 	ID       ids.UUID
 	Subject  string
 	StartsAt time.Time
+	// Precision says StartsAt is a date's anchor when it is day.
+	Precision crmcontracts.OccurredPrecision
 
 	// Who the meeting is with, and so whose page the brief is read on. The
 	// brief opens as `?prep=<activity>` on a CONTACT's record, so the activity
@@ -86,4 +101,21 @@ type Meeting struct {
 	// when no calendar claims it, and the row then names nobody rather than
 	// guessing.
 	HostUserID ids.UUID
+}
+
+// precisionOf is a row's wire precision: what the lane said, else an instant.
+func precisionOf(p *crmcontracts.OccurredPrecision) crmcontracts.OccurredPrecision {
+	if p == nil || *p == "" {
+		return crmcontracts.OccurredPrecisionOccurredPrecisionInstant
+	}
+	return *p
+}
+
+// dayOnly carries a day precision onto a lane item, and nothing for an
+// instant, which the item's absent field already says.
+func dayOnly(p crmcontracts.OccurredPrecision) *crmcontracts.OccurredPrecision {
+	if p != crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+		return nil
+	}
+	return &p
 }

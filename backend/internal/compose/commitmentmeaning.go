@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"encoding/json"
 	"regexp"
 	"slices"
 	"strings"
@@ -38,6 +39,22 @@ func commitmentMeaningSchema() schema.Node {
 		"deadline_precision": schema.Enum(commitmentDeadlinePrecisions...),
 		"deadline_quote":     schema.String(),
 	}, commitmentStateField, "condition", "deadline_precision", "deadline_quote")
+}
+
+// UnmarshalJSON drops the deadline words of a meaning that states no deadline.
+// Loose timing such as "once it is ready" is no deadline. Nothing reads its
+// words, so they are no reason to refuse the reading.
+func (meaning *commitmentMeaning) UnmarshalJSON(data []byte) error {
+	type wire commitmentMeaning
+	var read wire
+	if err := json.Unmarshal(data, &read); err != nil {
+		return err
+	}
+	if read.DeadlinePrecision == commitmentPrecisionNone {
+		read.DeadlineQuote = ""
+	}
+	*meaning = commitmentMeaning(read)
+	return nil
 }
 
 // A valid non-action is an answer; missing or contradictory meaning is a failed reading.

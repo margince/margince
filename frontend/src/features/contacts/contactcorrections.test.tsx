@@ -83,7 +83,7 @@ const MAY_CORRECT = {
   objects: { contact: { update: true } },
 };
 
-function renderFields(fields: ProfileField[]) {
+function renderFields(fields: ProfileField[], locale: "en" | "vi" = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -92,7 +92,7 @@ function renderFields(fields: ProfileField[]) {
   // throws away the editor state a test about surviving a rerender is about.
   const tree = (shown: ProfileField[]) => (
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
+      <LocaleProvider initial={locale}>
         <EnrichedFields contactId="p-1" view={view(shown)} />
       </LocaleProvider>
     </QueryClientProvider>
@@ -288,5 +288,32 @@ describe("a phone is a list", () => {
         "/v1/contacts/p-1/profile-fields/phone/restore?value_key=%2B491715550109",
       ]),
     );
+  });
+});
+
+describe("what the card says in the reader's language", () => {
+  // The name fields come from the signature pass, and a source is a channel id.
+  // Neither may reach the reader as a key or an id.
+  it("names every field and every source in Vietnamese", async () => {
+    stubMe(MAY_CORRECT);
+    const { container } = renderFields(
+      [
+        field({ field: "first_name", value: "Dana", evidence_snippet: "Dana" }),
+        field({
+          field: "last_name",
+          value: "Buyer",
+          evidence_snippet: "Buyer",
+        }),
+        field({ source: "a_channel_from_a_newer_server" }),
+      ],
+      "vi",
+    );
+
+    expect(await screen.findByText("Tên")).toBeTruthy();
+    expect(screen.getByText("Họ")).toBeTruthy();
+    const text = container.textContent ?? "";
+    expect(text).toContain("Đọc từ email của họ");
+    expect(text).toContain("Đọc từ một nguồn đã ghi nhận");
+    expect(text).not.toMatch(/contact\.|capture_enrich|a_channel_from/);
   });
 });

@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -117,7 +118,7 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		folded AS (
 		    SELECT t.contact_a, t.contact_b,
 		           max(a.occurred_at) AS last_at,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`) AS count_90d,
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`) AS count_90d,
 		           count(DISTINCT `+graphInteractionUnit+`) AS count_total
 		      FROM target t
 		      JOIN activity_participant pa

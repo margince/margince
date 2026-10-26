@@ -16,8 +16,8 @@ func comparedExpr(field Field) string {
 
 // compileInstantLeaf compiles a calendar-day comparison against a timestamp
 // column as bounds on that column. A day D runs from D's midnight to the next
-// one, both read in the session time zone as CURRENT_DATE is, so `eq` is the
-// half-open range and each ordering picks the one bound that answers it.
+// one, both read in the session zone, UTC (database.PoolConfig), as CURRENT_DATE
+// is. So `eq` is the half-open range and each ordering picks the one bound that answers it.
 func compileInstantLeaf(p Predicate, field Field, arg func(any) int) (string, error) {
 	value, err := scalarOperand(p.Value, field, p.Field, p.Op)
 	if err != nil {

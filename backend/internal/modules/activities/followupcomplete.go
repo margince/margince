@@ -101,7 +101,8 @@ func (s *Store) CompleteQuietRemindersReachedBy(ctx context.Context, activityID 
 	landed := arg(activityID)
 	where := storekit.SQLf(`a.source_system = ANY($%[2]d)
 			AND EXISTS (SELECT 1 FROM activity landed WHERE landed.id = $%[1]d AND %[3]s
-			            AND landed.occurred_at > coalesce(%[5]s, '-infinity'))
+			            AND landed.occurred_at > coalesce(%[5]s, '-infinity') -- occurred_at raw: past the reminder's anchor, a window's lower edge
+			            )
 			AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND (
 			      l.deal_id IN (SELECT t.deal_id FROM activity_link t WHERE t.activity_id = $%[1]d)
 			   OR l.contact_id IN (SELECT t.contact_id FROM activity_link t WHERE t.activity_id = $%[1]d)
@@ -149,7 +150,8 @@ func (s *Store) ReopenQuietRemindersStillQuietAround(
 			     JOIN activity_link al ON al.activity_id = a.id
 			      AND (al.deal_id = tl.deal_id OR al.contact_id = tl.contact_id
 			           OR al.company_id = tl.company_id)
-			     WHERE %[3]s AND touch.occurred_at > coalesce(%[4]s, '-infinity'))`,
+			     WHERE %[3]s AND touch.occurred_at > coalesce(%[4]s, '-infinity') -- occurred_at raw: past the reminder's anchor, a window's lower edge
+			)`,
 		arg(provenance.EngineReminderSources()), sameRecord,
 		genuineEngagement("touch", arg(systemSource), arg(systemCapturedBy), arg(systemCapturedByPattern)),
 		reminderAnchor("a", arg(provenance.ReminderAnchorSeparator)))

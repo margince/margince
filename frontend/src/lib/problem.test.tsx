@@ -160,6 +160,23 @@ describe("problemMessage", () => {
       ),
     ).toBe(german("common.versionSkew"));
   });
+
+  it("says why a booked meeting cannot become date-only", () => {
+    const refusal = {
+      code: "validation_error",
+      detail: "a booked meeting holds an hour of its host's calendar",
+      details: {
+        errors: [
+          {
+            field: "occurred_precision",
+            code: "day_holds_host_slot",
+            message: "a booked meeting holds an hour of its host's calendar",
+          },
+        ],
+      },
+    };
+    expect(problemMessage(refusal, t)).toBe(t("activity.dayHoldsHostSlot"));
+  });
 });
 
 // The 422 shape httperr.Validation emits: the top-level code is always

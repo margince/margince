@@ -1,0 +1,42 @@
+name: a_focused_reading_sees_the_receipt_beside_a_new_need
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - direction: outbound
+    subject: 'Podcast recording'
+    sent: '2026-09-07'
+    body: |
+      Hi Mira,
+
+      thanks for joining the session. I will send you the edited recording
+      tomorrow.
+
+      Best,
+      Lars
+  - direction: inbound
+    subject: 'Re: Podcast recording'
+    sent: '2026-09-09'
+    reported: new_opportunity
+    body: |
+      Thanks Lars, the edited recording arrived and it sounds great. We would
+      also like to join the beta of your new product.
+
+      Mira
+  - direction: outbound
+    subject: 'Re: Podcast recording'
+    sent: '2026-09-09'
+    body: |
+      Glad you like it. Jana Weber runs the beta, and you can write to her at
+      beta@example.com.
+
+      Lars
+expect:
+  outcome: accepted
+  answer: []
+  judge: none
+  judge_none_reason: >
+    Message 2 confirms the recording arrived, so the promise in message 1 is
+    kept and the right answer is no event. The new need in message 2 is already
+    recorded, and the check fails any event the reply reports.

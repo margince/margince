@@ -53,6 +53,7 @@ const contact: components["schemas"]["Contact"] = {
 const requestSummary: NonNullable<Activity["email_summary"]> = {
   activity_id: "01a05500-0000-7000-8000-00000000ee01",
   occurred_at: "2026-08-29T09:15:00Z",
+  occurred_precision: "instant",
   version: 4,
   subject: "Re: the renewal quote",
   preview: "Can you hold the price until Friday?",
@@ -64,6 +65,7 @@ const requestSummary: NonNullable<Activity["email_summary"]> = {
 };
 
 const email: Activity = {
+  occurred_precision: "instant",
   offers_email: false,
   id: "01a05500-0000-7000-8000-00000000ee01",
   kind: "email",
@@ -81,6 +83,7 @@ const email: Activity = {
 };
 
 const meeting: Activity = {
+  occurred_precision: "instant",
   offers_email: false,
   id: "01a05500-0000-7000-8000-00000000ee02",
   kind: "meeting",
@@ -94,6 +97,7 @@ const meeting: Activity = {
 };
 
 const note: Activity = {
+  occurred_precision: "instant",
   offers_email: false,
   id: "01a05500-0000-7000-8000-00000000ee03",
   kind: "note",
@@ -137,6 +141,7 @@ const reachable: components["schemas"]["Contact"] = {
 // Inbound and not called back, so the row carries its Unanswered pill beside
 // Call: the widest the right slot gets.
 const call: Activity = {
+  occurred_precision: "instant",
   offers_email: false,
   id: "01a05500-0000-7000-8000-00000000ee04",
   kind: "call",

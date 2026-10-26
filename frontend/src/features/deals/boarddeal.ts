@@ -94,9 +94,9 @@ export function toBoardDeal(
 }
 
 /**
- * The wire's last email as the card states it: a span and a direction. The
- * span is measured HERE, where every other span on the card is — a card that
- * read the clock itself would be one no test could pin. Exported for the
+ * The wire's last email as the card states it: when, measured from now, and
+ * which way. Now is read here, where every other span on the card is. A card
+ * that read the clock itself would be one no test could pin. Exported for the
  * table's column, which states the same chip off the same row.
  */
 export function boardMail(last: Deal["last_email"]): BoardDealMail | null {
@@ -104,7 +104,9 @@ export function boardMail(last: Deal["last_email"]): BoardDealMail | null {
     return null;
   }
   return {
-    agoMs: Math.max(0, Date.now() - new Date(last.occurred_at).getTime()),
+    at: last.occurred_at,
+    precision: last.occurred_precision,
+    measuredAt: Date.now(),
     direction: last.direction ?? null,
   };
 }

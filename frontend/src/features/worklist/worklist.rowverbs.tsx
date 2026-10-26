@@ -14,7 +14,12 @@ import { useToast } from "../../design-system/toast";
 import { useTooltip } from "../../design-system/tooltip";
 import { useT } from "../../i18n";
 import { useFoldedViewport } from "../../lib/viewport";
-import { moveHref, moveLabel, subjectHref } from "./worklist.copy";
+import {
+  moveHref,
+  moveLabel,
+  moveOpensComposer,
+  subjectHref,
+} from "./worklist.copy";
 import {
   DoneVerb,
   HandBackLines,
@@ -226,10 +231,9 @@ function routedVerbs(
 
 // The step the product already worked out, offered where the reader stands.
 //
-// In the agent's own colour, with its mark, because a rule wrote this move and
-// pressing it accepts it. company360.tsx draws it the same way. Where
-// the row's answer is this reply, that control already carries the move, so
-// this draws nothing.
+// Indigo only where the press makes the model write. That is the composer,
+// which drafts on arrival, and the meeting brief, assembled on open. Where the
+// row's answer is this reply, that control already carries the move.
 function PreparedMove({
   item,
   onOpenEmail,
@@ -242,8 +246,7 @@ function PreparedMove({
     item.move?.action === "draft_reply" ? item.move.activity_id : undefined;
   if (replyActivity && onOpenEmail && item.subject?.type !== "contact") {
     return (
-      <Button variant="ai" onClick={() => onOpenEmail(replyActivity)}>
-        <Sparkles aria-hidden="true" />
+      <Button variant="ghost" onClick={() => onOpenEmail(replyActivity)}>
         {t("worklist.verb.draft_reply")}
       </Button>
     );
@@ -252,9 +255,11 @@ function PreparedMove({
   if (!move) {
     return null;
   }
+  const modelWrites =
+    moveOpensComposer(item) || item.move?.action === "open_meeting_brief";
   return (
-    <a className={PREPARED_VERB} href={move}>
-      <Sparkles aria-hidden="true" />
+    <a className={modelWrites ? PREPARED_VERB : NAVIGATING_VERB} href={move}>
+      {modelWrites && <Sparkles aria-hidden="true" />}
       {/* The label follows the route and the verb. Where the address opens
           the composer it names the act; where it only reaches the record it
           says so. It names the verb the server chose. */}

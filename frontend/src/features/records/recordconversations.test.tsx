@@ -29,6 +29,7 @@ function entry(
     kind,
     title: overrides.title ?? kind,
     atIso: overrides.atIso ?? "2026-07-01T10:00:00Z",
+    atPrecision: "instant",
     provenance: { kind: "human", self: false },
     ...overrides,
   };
@@ -89,6 +90,7 @@ function summary(
     subject,
     activity_id: "11111111-1111-4111-8111-111111111111",
     occurred_at: "2026-07-03T10:00:00Z",
+    occurred_precision: "instant",
     display_status: "team",
     attachment_count: 0,
     move,

@@ -229,6 +229,26 @@ func toContractVCardResults(results []VCardResult) []crmcontracts.VCardImportRes
 			reason := result.Reason
 			item.Reason = &reason
 		}
+		if len(result.Fields) > 0 {
+			fields := toContractVCardFields(result.Fields)
+			item.Fields = &fields
+		}
+		out = append(out, item)
+	}
+	return out
+}
+
+func toContractVCardFields(fields []VCardField) []crmcontracts.VCardImportField {
+	out := make([]crmcontracts.VCardImportField, 0, len(fields))
+	for _, f := range fields {
+		item := crmcontracts.VCardImportField{
+			Field:  crmcontracts.VCardImportFieldField(f.Field),
+			Action: crmcontracts.VCardImportFieldAction(f.Action),
+		}
+		if f.Value != "" {
+			value := f.Value
+			item.Value = &value
+		}
 		out = append(out, item)
 	}
 	return out

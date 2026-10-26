@@ -180,6 +180,7 @@ export function stubRoutes(
 }
 
 export const activity202: Activity = {
+  occurred_precision: "instant",
   offers_email: false,
   writable: true,
   id: "act-1",

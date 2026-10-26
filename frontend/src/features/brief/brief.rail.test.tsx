@@ -36,6 +36,7 @@ describe("BriefScreen — the context rail", () => {
               taskRow(`t${i}`, `Follow up ${i}`),
             ),
             {
+              occurred_precision: "instant",
               id: "risk-1",
               source: "deal_at_risk",
               category: "deals_at_risk",
@@ -92,6 +93,7 @@ describe("BriefScreen — the context rail", () => {
 
 function taskRow(id: string, title: string): WorklistItem {
   return {
+    occurred_precision: "instant",
     id,
     source: "task",
     level: 2,

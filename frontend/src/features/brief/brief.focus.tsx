@@ -8,11 +8,8 @@ import { useRef } from "react";
 import { TaskNextSteps } from "../../components/tasknextsteps";
 import { Button, Card } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
-import {
-  formatDayMonth,
-  formatNumber,
-  formatTimeOfDay,
-} from "../../format/format";
+import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
+import { formatDayMonth, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
@@ -29,7 +26,6 @@ import {
   whenText,
 } from "../worklist/worklist.copy";
 import { eyebrowKeyFor } from "../worklist/worklist.eyebrow";
-import { hasPane } from "../worklist/worklist.pane";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { WorklistRow } from "../worklist/worklist.row";
 import { contactHref } from "../worklist/worklist.row.captions";
@@ -69,19 +65,13 @@ export function Triage({
       frame.focus();
     }
   };
-  // A meeting gets the door too. Its subject is the activity, not a contact,
-  // so `hasPane` alone would leave it with no way through.
-  const context =
-    onContext &&
-    (hasPane(lead) ||
-      lead.source === "task" ||
-      lead.source === "meeting_outcome");
   // A task row's id is its activity's, so the card reads the task it shows.
   const task = useActivity(lead.id, lead.source === "task").data;
   const cardVerbs =
-    context || task ? (
+    onContext || task ? (
       <>
-        {context && (
+        {/* Every row opens on what it asks and why it is here. */}
+        {onContext && (
           <Button variant="ghost" onClick={() => onContext(lead)}>
             {t("brief.focus.context")}
           </Button>
@@ -92,9 +82,25 @@ export function Triage({
   // The head's facts come from the helpers the row uses, so the card and the
   // queue agree. A message is dated by its arrival, the rest by its own clock.
   // The reader's own pin is the queue's reason, not the card's.
-  const arrived = lead.email_summary?.occurred_at;
+  const arrived = lead.email_summary;
   const when = arrived
-    ? `${formatDayMonth(arrived, locale, zone)}, ${formatTimeOfDay(arrived, locale, zone)}`
+    ? [
+        activityDay(
+          arrived.occurred_at,
+          arrived.occurred_precision,
+          locale,
+          zone,
+          formatDayMonth,
+        ),
+        activityTimeOfDay(
+          arrived.occurred_at,
+          arrived.occurred_precision,
+          locale,
+          zone,
+        ),
+      ]
+        .filter(Boolean)
+        .join(", ")
     : whenText(lead, t, locale, zone, recordZone, new Date());
   const label = t(eyebrowKeyFor(lead));
   return (

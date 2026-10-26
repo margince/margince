@@ -176,7 +176,7 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 		if fact.Metric != metric || fact.ContextID != contextID || !evidenceGroup(frame, fact, group) {
 			continue
 		}
-		if through != nil && (fact.Row.OccurredAt == nil || !fact.Row.OccurredAt.Before(*through)) {
+		if through != nil && (fact.At() == nil || !fact.At().Before(*through)) {
 			continue
 		}
 		matched++
@@ -204,7 +204,7 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 	if after, ok := strings.CutPrefix(group, "stage:"); ok {
 		return fact.StageID == after
 	}
-	if strings.HasPrefix(group, "week:") && fact.Row.OccurredAt != nil {
+	if strings.HasPrefix(group, "week:") && fact.At() != nil {
 		zone, err := time.LoadLocation(frame.Timezone)
 		if err != nil {
 			return false
@@ -214,7 +214,7 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 			return false
 		}
 		days := 7 - (int(start.Weekday())+6)%7
-		return !fact.Row.OccurredAt.Before(start) && fact.Row.OccurredAt.Before(start.AddDate(0, 0, days))
+		return !fact.At().Before(start) && fact.At().Before(start.AddDate(0, 0, days))
 	}
 	return fact.GroupKey == group
 }

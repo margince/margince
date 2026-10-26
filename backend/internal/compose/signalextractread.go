@@ -18,6 +18,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -131,6 +132,64 @@ type settledThread struct {
 	// disclose exactly what the private contact protects.
 	PrivateTo ids.UUID
 	Messages  []threadMessage
+	// Focus is set on the second reading of one pass: the only messages whose
+	// events it may report. The rest of Messages is context. Empty is the
+	// ordinary reading.
+	Focus []ids.UUID
+	// Recorded is what the first reading of the pass found, which the second
+	// reading is told so it reports none of it again.
+	Recorded []extractedEvent
+	// EventCap is how many events this reading may report; zero is
+	// extractMaxEvents. The second reading gets what the first left.
+	EventCap int
+}
+
+// messageLabel names a message in the prompt by its place, m1 for the oldest
+// shown. A small model copies a short label it was given. It garbles a long id,
+// and the fence tag beside it is an id of the same shape.
+func (t settledThread) messageLabel(id string) string {
+	for i, message := range t.Messages {
+		if message.ID.String() == id {
+			return "m" + strconv.Itoa(i+1)
+		}
+	}
+	return id
+}
+
+// messageID is the id a reply's label names. A string that is no label of
+// this thread stays as written, for the validator to refuse.
+func (t settledThread) messageID(label string) string {
+	for i, message := range t.Messages {
+		if label == "m"+strconv.Itoa(i+1) {
+			return message.ID.String()
+		}
+	}
+	return label
+}
+
+func (t settledThread) eventCap() int {
+	if t.EventCap > 0 {
+		return t.EventCap
+	}
+	return extractMaxEvents
+}
+
+// firstReadHere reports whether this pass is the first to read the message:
+// newer than the last read reached, or older than where it started. Both ends,
+// as in threadMessages, because a conversation grows at both.
+func (t settledThread) firstReadHere(m threadMessage) bool {
+	if t.ReadTo == nil {
+		return true
+	}
+	// Not After: newly imported mail can share the ReadTo instant, and a message
+	// already read at that instant is cited or harmlessly re-judged.
+	if !m.At.Before(*t.ReadTo) {
+		return true
+	}
+	if t.ReadFrom == nil || t.ReadFromID == nil {
+		return false
+	}
+	return m.At.Before(*t.ReadFrom) || (m.At.Equal(*t.ReadFrom) && m.ID.String() < t.ReadFromID.String())
 }
 
 // dueThreads lists the conversations that have settled and have moved since

@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -140,10 +141,13 @@ func setupRunner(t *testing.T) *runnerEnv {
 		t.Fatal(err)
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	// The worker's own grounding retriever, so a run here is seeded the way a
+	// production run is.
+	grounding := search.NewRetriever(search.NewStore(compose.InstallationDB(pool)), modelPath.Embedder)
 	return &runnerEnv{
 		AppEnv: e,
 		pool:   pool,
-		svc: compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, nil, logger,
+		svc: compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger,
 			compose.SendPath{}, compose.WithSpecResolver(stagingSpec)),
 		store: runner.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](wsID))),
 		brain: brain,

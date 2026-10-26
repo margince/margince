@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -10,8 +10,17 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../../lib/storage";
-import { readingsDay, taskRow } from "../../testing/brief.fixtures";
-import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
+import {
+  failedApprovalRow,
+  readingsDay,
+  taskRow,
+} from "../../testing/brief.fixtures";
+import {
+  emptyPage,
+  jsonResponse,
+  render,
+  stubApi,
+} from "../../testing/brief.testkit";
 import { BriefScreen } from "./brief";
 import { BriefQueue, WorklistRedirect } from "./brief.queue";
 
@@ -169,13 +178,16 @@ it("opens a task's evidence without replacing the Home overview", async () => {
   expect(document.activeElement).toBe(opener);
 });
 
-it("opens a meeting's own record from its focus row", async () => {
+// A meeting whose outcome is missing opens the meeting itself. What the row
+// asks and the row's own verbs sit above it, so the reader answers it there.
+it("opens a meeting on what it asks, with the row's verbs", async () => {
   const user = userEvent.setup();
   window.location.hash = "#/home";
   const meeting: components["schemas"]["WorklistItem"] = {
     ...taskRow("held-meeting", "Discovery call with Turbinenbau"),
     source: "meeting_outcome",
     category: "meetings",
+    because: [{ kind: "outcome_unrecorded" }],
     actions: ["decide"],
   };
   stubApi({
@@ -190,18 +202,67 @@ it("opens a meeting's own record from its focus row", async () => {
         version: 1,
         is_done: false,
       }),
+    // The meeting reader's own reads: its files, follow-ups and field labels.
+    "GET /activities": () => jsonResponse(emptyPage),
+    "GET /attachments": () => jsonResponse(emptyPage),
+    "GET /custom-fields": () => jsonResponse(emptyPage),
+    "GET /installation/settings": () => jsonResponse({}),
   });
   render(<BriefScreen />);
+  // The card in hand says what the row asks before anything is opened.
+  expect(
+    await screen.findByText(en["worklist.ask.meeting_outcome"]),
+  ).toBeTruthy();
   await user.click(
     await screen.findByRole("button", { name: en["brief.focus.context"] }),
   );
+  const details = await screen.findByRole("dialog");
   expect(
-    await screen.findByText("Organizer: Weber. Attendees: Weber, Ziethen."),
+    await within(details).findByText(
+      "Organizer: Weber. Attendees: Weber, Ziethen.",
+    ),
+  ).toBeTruthy();
+  expect(
+    within(details).getByText(en["worklist.ask.meeting_outcome"]),
+  ).toBeTruthy();
+  expect(
+    within(details).getByRole("button", {
+      name: en["worklist.verb.meetingUpdate"],
+    }),
+  ).toBeTruthy();
+  expect(
+    within(details).getByRole("button", {
+      name: en["worklist.verb.meetingCanceled"],
+    }),
   ).toBeTruthy();
   // The row's own verbs answer a meeting; the read offers no "Done".
   expect(
     screen.queryByRole("button", { name: en["tasks.complete"] }),
   ).toBeNull();
+});
+
+// A row about a deal has no contact pane, and still opens on why it is here.
+// That is its reasons and what slips if nobody acts; the row line has no room.
+it("opens a deal row on why it needs attention", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "#/home";
+  stubApi({
+    "GET /worklist": () => jsonResponse(readingsDay({}, [failedApprovalRow()])),
+  });
+  render(<BriefScreen />);
+  await user.click(
+    await screen.findByRole("button", { name: en["brief.focus.context"] }),
+  );
+  const details = await screen.findByRole("dialog", {
+    name: en["brief.focus.context"],
+  });
+  expect(within(details).getByText(en["worklist.why.title"])).toBeTruthy();
+  expect(
+    within(details).getByText(en["worklist.because.approved_and_failed"]),
+  ).toBeTruthy();
+  expect(
+    within(details).getByText(en["worklist.consequence.task_slips"]),
+  ).toBeTruthy();
 });
 
 // THE BUTTON AND THE LIST IT OPENS NAME ONE QUEUE.

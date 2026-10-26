@@ -674,6 +674,23 @@ func TestABorrowedFallbackGradeSaysWhereItWasMeasured(t *testing.T) {
 	}
 }
 
+// A first rung graded by another provider's record says so on its route line.
+// The feature row must not read as measured where the preset runs.
+func TestABorrowedFirstRungGradeSaysWhereItWasMeasured(t *testing.T) {
+	task := ai.TaskSignalExtract
+	vertex := ai.ProviderConfig{Provider: "gemini_vertex", Location: "eu", Model: "gemini-3.6-flash"}
+	studio := ai.ProviderConfig{Provider: "gemini", Model: vertex.Model}
+	tiers := map[ai.Tier]ai.ProviderConfig{}
+	for _, tier := range ai.ServableTiers(task) {
+		tiers[tier] = vertex
+	}
+	row := attributeOneTask(task, ai.ProfileEUHosted, tiers,
+		measuredRecord(task, studio, ai.ProfileCloudFrontier, aicert.VerdictCertified, 0)).Tasks[0]
+	if got := aiCertRouteLine(row); !strings.Contains(got, "gemini-3.6-flash · "+row.Tier+", measured on `gemini`") {
+		t.Errorf("route line = %q, want the first rung to name the provider it was measured on", got)
+	}
+}
+
 // A local-only task on a cloud preset is graded from its record like any other
 // feature: the router serves it there while the local_only rule is undecided.
 func TestALocalOnlyTaskOnACloudPresetIsGradedFromItsRecord(t *testing.T) {

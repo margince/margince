@@ -14,7 +14,7 @@ find copies of one lead; a second live lead with the same email is refused.
 ### How do I create a lead?
 To create a lead in Margince, open **Leads** in the sidebar and choose **New lead**.
 1. Enter the **Full name** (required).
-2. You may fill **Email**, **LinkedIn URL**, **Title** and **Company** (free text, not a link to a company record).
+2. You may fill **Email**, **LinkedIn URL**, **Title** and **Company**. The company is free text.
 3. Pick the **Owner** (required; **Unassigned** is one of the choices).
 4. Pick the **Origin** if you know it: where the lead came from, such as a referral or an event. You may add an **Origin note**, such as the event name. Only the origin counts for the score, and a lead with none gets no points for it.
 5. Fill any custom fields, then choose **Create**.

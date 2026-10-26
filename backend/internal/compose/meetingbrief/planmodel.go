@@ -55,7 +55,7 @@ func planSystemFor(fence promptfence.Fence, lang string) string {
 // to be affordable.
 type PlanPrompt struct {
 	Subject     string          `json:"subject"`
-	StartsAt    time.Time       `json:"starts_at"`
+	StartsAt    string          `json:"starts_at"`
 	Company     string          `json:"company,omitempty"`
 	MeetingType string          `json:"meeting_type"`
 	TypeSignals []string        `json:"meeting_type_signals,omitempty"`
@@ -101,7 +101,7 @@ type PromptUnknown struct {
 func planPromptOf(in Input, floor Plan) PlanPrompt {
 	prompt := PlanPrompt{
 		Subject:     in.Subject,
-		StartsAt:    in.StartsAt,
+		StartsAt:    in.startsText(),
 		Company:     in.Company,
 		MeetingType: string(floor.Type.Value),
 		TypeSignals: floor.Type.Signals,
@@ -117,8 +117,8 @@ func planPromptOf(in Input, floor Plan) PlanPrompt {
 	}
 	for _, moment := range floor.Arc {
 		shown := PromptMoment{
-			From:  moment.Moment.From.UTC().Format(time.DateOnly),
-			To:    moment.Moment.To.UTC().Format(time.DateOnly),
+			From:  moment.Moment.From.At.UTC().Format(time.DateOnly),
+			To:    moment.Moment.To.At.UTC().Format(time.DateOnly),
 			Title: moment.Moment.Title,
 		}
 		for _, current := range moment.Moment.Threads {

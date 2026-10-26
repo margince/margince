@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/contact360"
@@ -32,7 +33,11 @@ func (r attentionContactTouch) LastTouch(
 			return contact360.LastTouchFor(ctx, tx, wanted, contact360.AssembleOptions{})
 		},
 		func(touch contact360.LastTouch) attention.TouchMoments {
-			return attention.TouchMoments{LastInbound: touch.InboundAt, LastOutbound: touch.OutboundAt}
+			return attention.TouchMoments{
+				LastInbound: touch.InboundAt, LastOutbound: touch.OutboundAt,
+				LastInboundPrecision:  activitywhen.Stated(touch.InboundPrecision),
+				LastOutboundPrecision: activitywhen.Stated(touch.OutboundPrecision),
+			}
 		})
 }
 
@@ -51,7 +56,11 @@ func (r attentionCompanyTouch) LastTouch(
 			return company360.LastTouchFor(ctx, tx, wanted, r.now(), company360.AssembleOptions{})
 		},
 		func(touch company360.LastTouch) attention.TouchMoments {
-			return attention.TouchMoments{LastInbound: touch.InboundAt, LastOutbound: touch.OutboundAt}
+			return attention.TouchMoments{
+				LastInbound: touch.InboundAt, LastOutbound: touch.OutboundAt,
+				LastInboundPrecision:  activitywhen.Stated(touch.InboundPrecision),
+				LastOutboundPrecision: activitywhen.Stated(touch.OutboundPrecision),
+			}
 		})
 }
 

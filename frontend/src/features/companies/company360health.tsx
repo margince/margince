@@ -3,7 +3,10 @@
 
 // The reading words the strip cards share.
 
-import { calendarDaysBetween } from "../../format/format";
+import {
+  type ActivityMoment,
+  activityDaysAway,
+} from "../../format/activitywhen";
 import type { MessageKey } from "../../i18n/en";
 
 // A reading the caller's grants withheld, in the word every stat card in the
@@ -16,10 +19,10 @@ export const WITHHELD_READING: MessageKey = "reading.restricted";
 // days is today, and a NEGATIVE span is skew between a timestamp and the read
 // instant, which no slot may print.
 export function daysAgo(
-  at: string,
+  { at, precision }: ActivityMoment,
   asOf: string,
   zone: string,
 ): number | undefined {
-  const days = calendarDaysBetween(new Date(at), new Date(asOf), zone);
+  const days = -activityDaysAway(at, precision, Date.parse(asOf), zone, zone);
   return days > 0 ? days : undefined;
 }

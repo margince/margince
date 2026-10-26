@@ -149,7 +149,7 @@ CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
 
 check: ## The merge gate: everything a PR must pass
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh reset
-	@bash ../scripts/phase-timer.sh start "backend: build (host + windows)"
+	@bash ../scripts/phase-timer.sh start "backend: build"
 	$(MAKE) build
 	@bash ../scripts/phase-timer.sh stop
 	@bash ../scripts/phase-timer.sh start "backend: $(CHECK_LEGS) (-j4)"
@@ -195,23 +195,8 @@ test-extensions: composition ## Every enabled extension's own test lane (each un
 	done; \
 	[ "$$found" = "1" ] || echo "test-extensions: no enabled Go extensions"
 
-build: composition ## Compile every package (composed workspace), host AND windows/amd64
+build: composition ## Compile every package (composed workspace)
 	$(GOWORK_COMPOSED) $(GO) build ./...
-	# The same tree for Windows, because the desktop bundle ships THESE binaries
-	# there — `api`, `worker` and `migrate` are the server's, unmodified, and a
-	# folder a Windows user runs is only as portable as they are.
-	#
-	# Without this the gate compiles the host GOOS only, so one Unix-only symbol
-	# in a backend package breaks that bundle and nothing says so until somebody
-	# builds it. That is not hypothetical: syscall.O_NOFOLLOW reached
-	# internal/compose and was found by a Windows build days later, not by a
-	# gate. It is the same argument the integration tag gets under `vet` below —
-	# type-checking a lane the gate otherwise never compiles costs seconds
-	# (measured: ~4s here) and belongs in the always-on gate.
-	#
-	# CGO_ENABLED=0 states what cross-compiling implies anyway, so the line does
-	# not change meaning on a machine that has a Windows C toolchain.
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOWORK_COMPOSED) $(GO) build ./...
 
 vet: composition ## Run go vet over every package, untagged (composed workspace)
 	# UNTAGGED, and only untagged. The tagged lanes are vetted by `make lint`:

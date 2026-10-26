@@ -58,7 +58,6 @@ reach features/brief/brief.feed.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.focus.stories.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.focus.tsx features/worklist/worklist.copy.ts
 reach features/brief/brief.focus.tsx features/worklist/worklist.eyebrow.ts
-reach features/brief/brief.focus.tsx features/worklist/worklist.pane.tsx
 reach features/brief/brief.focus.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.focus.tsx features/worklist/worklist.row.captions.tsx
 reach features/brief/brief.focus.tsx features/worklist/worklist.row.tsx

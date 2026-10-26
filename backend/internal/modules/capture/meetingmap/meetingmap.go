@@ -86,18 +86,17 @@ type Event struct {
 	PartiesHidden bool
 }
 
-// Actor is one organizer or attendee. The address is all the rules need to
-// resolve the counterparty and the internal-vs-external classification; Room
-// says the provider marked this a booked room or device rather than a contact,
-// which each decoder answers in its own vendor's terms.
+// Actor is one organizer or attendee. The address resolves the counterparty
+// and the internal test. Room marks a booked room or device, in each vendor's
+// terms. Declined is this attendee's own no, which decides what their row grants.
 type Actor struct {
 	Email string
 	// Name is what the invitation called this party, or "" when the provider
 	// named nobody. It is the only full name an attendee-only contact ever
 	// gets: a contact minted from a bare invitation address is otherwise named
 	// by the local part of their own email.
-	Name string
-	Room bool
+	Name           string
+	Room, Declined bool
 }
 
 // Meeting is the classified result of reading one event against the connected
@@ -182,22 +181,22 @@ func meetingParties(ev Event) connector.Parties {
 	seen := map[string]bool{}
 
 	var out []connector.MessageParticipant
-	add := func(email, name, role string) {
-		address := strings.ToLower(strings.TrimSpace(email))
+	add := func(actor Actor, role string) {
+		address := strings.ToLower(strings.TrimSpace(actor.Email))
 		if address == "" || seen[address] {
 			return
 		}
 		seen[address] = true
 		out = append(out, connector.MessageParticipant{
-			Email: address, Role: role, DisplayName: strings.TrimSpace(name),
+			Email: address, Role: role, DisplayName: strings.TrimSpace(actor.Name), Declined: actor.Declined,
 		})
 	}
-	add(ev.Organizer.Email, ev.Organizer.Name, connector.ParticipantRoleOrganizer)
+	add(ev.Organizer, connector.ParticipantRoleOrganizer)
 	for _, a := range ev.Attendees {
 		if a.Room {
 			continue
 		}
-		add(a.Email, a.Name, connector.ParticipantRoleAttendee)
+		add(a, connector.ParticipantRoleAttendee)
 	}
 
 	return connector.CapParticipants(out)
@@ -230,6 +229,7 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 			// The sink adds a mask of the subject to this.
 			CredentialsMasked: m.masked,
 			OccurredAt:        m.occurredAt,
+			DateOnly:          m.allDay,
 			DurationSeconds:   m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
 			Direction: "",
@@ -306,21 +306,6 @@ func buildBody(ev Event, attendeeEmails []string) (body string, masked bool) {
 	}
 	maskedBody := credentialmask.MaskText(body)
 	return textcut.BytesMarked(maskedBody, MaxBodyLen, "…"), maskedBody != body
-}
-
-// AllDayStart anchors an all-day date (YYYY-MM-DD) at noon UTC.
-//
-// An all-day date is calendar-local with no timezone; reading it as midnight
-// UTC lands it on the PREVIOUS day for any zone west of UTC. Noon keeps the
-// intended calendar date across the whole ±12h range of real offsets, absent a
-// per-event timezone. Exported because every calendar provider has all-day
-// events and the off-by-one is the same one in each.
-func AllDayStart(date string) (time.Time, bool) {
-	t, err := time.Parse("2006-01-02", strings.TrimSpace(date))
-	if err != nil {
-		return time.Time{}, false
-	}
-	return t.Add(12 * time.Hour).UTC(), true
 }
 
 // domainOf returns the lowercased domain part of an address, or "" if it

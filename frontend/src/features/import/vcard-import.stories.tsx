@@ -67,8 +67,34 @@ export const MixedReport: Story = {
       [ROUTE]: () =>
         jsonResponse({
           results: [
-            { index: 0, full_name: "Ada Lovelace", outcome: "created" },
-            { index: 1, full_name: "Grace Hopper", outcome: "updated" },
+            {
+              index: 0,
+              full_name: "Ada Lovelace",
+              outcome: "created",
+              fields: [
+                { field: "name", value: "Ada Lovelace", action: "imported" },
+                {
+                  field: "email",
+                  value: "ada@analytical.example",
+                  action: "imported",
+                },
+                { field: "phone", value: "+49301234567", action: "imported" },
+                { field: "mobile_phone", action: "not_in_card" },
+                { field: "title", action: "not_in_card" },
+                { field: "address", action: "not_in_card" },
+              ],
+            },
+            {
+              index: 1,
+              full_name: "Grace Hopper",
+              outcome: "updated",
+              fields: [
+                { field: "name", value: "Grace Hopper", action: "kept" },
+                { field: "title", value: "Rear Admiral", action: "replaced" },
+                { field: "company_name", value: "Navy", action: "kept" },
+                { field: "mobile_phone", action: "not_in_card" },
+              ],
+            },
             {
               index: 2,
               full_name: "Alan Turing",
@@ -107,6 +133,10 @@ export const MixedReport: Story = {
     // The settled report is what this story asserts, not the arriving node.
     const report = await canvas.findByTestId("vcard-import-report");
     await waitFor(() => expect(report).toBeVisible());
+    await expect(canvas.getAllByTestId("vcard-import-fields")).toHaveLength(2);
+    await expect(
+      canvas.getByRole("button", { name: "Nächste vCard" }),
+    ).toBeVisible();
   },
 };
 

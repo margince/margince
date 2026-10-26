@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { activityHasHappened } from "../../format/activitywhen";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -25,8 +26,13 @@ const COUNTING_MEETING_STATUSES: ReadonlySet<string> = new Set([
 ]);
 
 // Whether a row moves last activity as of `asOf`, as LastActivityCountsSQL
-// decides on the server.
-export function movesLastActivity(row: Activity, asOf: number): boolean {
+// decides on the server. It must have happened, a `day` entry by its date in
+// the record zone. lastactivity.test.ts reads the server's shared cases.
+export function movesLastActivity(
+  row: Activity,
+  asOf: number,
+  record: string,
+): boolean {
   if (!COUNTING.has(row.kind)) return false;
   if (
     row.kind === "meeting" &&
@@ -35,5 +41,5 @@ export function movesLastActivity(row: Activity, asOf: number): boolean {
   ) {
     return false;
   }
-  return Date.parse(row.occurred_at) <= asOf;
+  return activityHasHappened(row, asOf, record);
 }

@@ -19,10 +19,11 @@ import "github.com/margince/margince/backend/internal/shared/ports/connector"
 // activity's create audit.
 func capturedActivityAuditImage(rec connector.NormalizedRecord, fields ActivityFields) map[string]any {
 	return map[string]any{
-		"kind":            fields.Kind,
-		"direction":       fields.Direction,
-		"occurred_at":     fields.OccurredAt,
-		fieldSourceSystem: rec.NaturalKey.SourceSystem,
-		fieldSourceID:     rec.NaturalKey.SourceID,
+		auditKeyKind:         fields.Kind,
+		"direction":          fields.Direction,
+		"occurred_at":        fields.OccurredAt,
+		"occurred_precision": fields.occurredPrecision(),
+		fieldSourceSystem:    rec.NaturalKey.SourceSystem,
+		fieldSourceID:        rec.NaturalKey.SourceID,
 	}
 }

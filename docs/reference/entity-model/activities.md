@@ -6,7 +6,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-66 columns · primary key `(id)` · referenced by 38 foreign keys
+67 columns · primary key `(id)` · referenced by 38 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -41,6 +41,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `language` | `text` |  | What language this message is written in, read from its own text when it was captured. |
 | `meeting_status` | `text` |  | Set only when kind=meeting. |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `occurred_precision` | `text`, default `'instant'::text` | yes | How to read `occurred_at`. |
 | `origin` | `text`, default `'human'::text` | yes | One of `human`, `agent`, `system_remediation`, `system_notice`. |
 | `owed_verdict` | `text` |  | One of `asks_us`, `informs_us`. |
 | `owed_verdict_at` | `timestamp with time zone` |  |  |
@@ -99,6 +100,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_capture_label_check`: `CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment', 'meeting', 'noise']))))`
 - `activity_capture_label_stamped`: `CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))`
 - `activity_colleague_mail_is_outbound`: `CHECK (((sent_by_colleague IS NULL) OR (direction = 'outbound')))`
+- `activity_day_holds_no_host_slot`: `CHECK (((occurred_precision = 'instant') OR (NOT claims_host_slot)))`
 - `activity_direction_check`: `CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound', 'outbound']))))`
 - `activity_done_at`: `CHECK (((is_done = false) OR (done_at IS NOT NULL)))`
 - `activity_exact_booking_duration`: `CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))`
@@ -108,6 +110,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_meeting_status_check`: `CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked', 'held', 'no_show', 'canceled']))))`
 - `activity_message_has_provider`: `CHECK (((kind = 'message') = (channel_provider IS NOT NULL)))`
 - `activity_not_derived_from_itself`: `CHECK (((source_activity_id IS NULL) OR (source_activity_id <> id)))`
+- `activity_occurred_precision_check`: `CHECK ((occurred_precision = ANY (ARRAY['instant', 'day'])))`
 - `activity_origin_check`: `CHECK ((origin = ANY (ARRAY['human', 'agent', 'system_remediation', 'system_notice'])))`
 - `activity_owed_verdict_check`: `CHECK (((owed_verdict IS NULL) OR (owed_verdict = ANY (ARRAY['asks_us', 'informs_us']))))`
 - `activity_owed_verdict_ruleset_shape`: `CHECK (((owed_verdict_ruleset IS NULL) OR (owed_verdict IS NOT NULL)))`
@@ -157,9 +160,9 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `activity_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status))) EXECUTE FUNCTION trg_activity_last_activity()`
+- `activity_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision))) EXECUTE FUNCTION trg_activity_last_activity()`
 - `activity_no_company_meeting_on_rekind`: `BEFORE UPDATE OF kind FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()`
-- `activity_project_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status))) EXECUTE FUNCTION trg_activity_project_last_activity()`
+- `activity_project_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision))) EXECUTE FUNCTION trg_activity_project_last_activity()`
 - `activity_refuse_restricted_mutation`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_activity()`
 - `trg_activity_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
@@ -410,7 +413,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_participant
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -422,6 +425,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `display_name` | `text` |  |  |
 | `role` | `text` | yes | One of `from`, `to`, `cc`, `bcc`, `attendee`, `organizer`. |
+| `roster_seat` | `uuid` |  | Points at `app_user.id`. |
 | `user_id` | `uuid` |  | Points at `app_user.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -431,6 +435,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
 | `contact_id` | `contact` | deleting the parent deletes this row |
+| `roster_seat` | `app_user` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**

@@ -25,6 +25,7 @@ function entry(
     kind,
     title: overrides.title ?? kind,
     atIso: overrides.atIso ?? "2026-07-01T10:00:00Z",
+    atPrecision: "instant",
     provenance: { kind: "human", self: false },
     ...overrides,
   };

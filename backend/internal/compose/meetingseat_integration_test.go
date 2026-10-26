@@ -232,7 +232,7 @@ func TestAStrangerCalendarDoesNotMoveThisSeatsMeeting(t *testing.T) {
 	moved := meetingStart.Add(72 * time.Hour)
 
 	if err := movingCalendarSink(e).MoveMeeting(
-		calendarOwnerCtx(e, ids.NewV7()), meetingKey, moved, nil); err != nil {
+		calendarOwnerCtx(e, ids.NewV7()), meetingKey, connector.MeetingSlot{Start: moved}); err != nil {
 		t.Fatalf("moving: %v", err)
 	}
 
@@ -251,7 +251,7 @@ func TestAParticipantSeatMovesTheMeeting(t *testing.T) {
 	moved := meetingStart.Add(72 * time.Hour)
 
 	if err := movingCalendarSink(e).MoveMeeting(
-		calendarOwnerCtx(e, colleague), meetingKey, moved, nil); err != nil {
+		calendarOwnerCtx(e, colleague), meetingKey, connector.MeetingSlot{Start: moved}); err != nil {
 		t.Fatalf("moving: %v", err)
 	}
 

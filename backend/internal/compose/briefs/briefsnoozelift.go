@@ -19,6 +19,8 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // briefSnoozeLiftedSQL renders the predicate as a boolean expression over five
@@ -56,13 +58,11 @@ func briefSnoozeLiftedSQL(deal, condition, ref, setDown, asOf string) string {
 			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = %s
 			WHERE a.archived_at IS NULL
 			  AND a.direction = 'inbound'
-			  AND a.occurred_at > %s
-			  AND a.occurred_at <= %s)
-		-- The meeting is over once it has ENDED, which is its start plus its
-		-- duration. Lifting at occurred_at would put the work back while the
-		-- rep is still in the room, which is the one moment they certainly
-		-- cannot act on it. A meeting with no duration is treated as ending
-		-- when it starts, because that is all the row says.
+			  AND a.occurred_at > %s -- occurred_at raw: since the item was set down, a window's lower edge
+			  AND %s)
+		-- The meeting is over once it has ENDED (storekit.MeetingIsOverSQL).
+		-- Lifting at occurred_at would put the work back while the rep is
+		-- still in the room, the one moment they cannot act on it.
 		--
 		-- A meeting that will not happen counts as over: archived, cancelled or
 		-- a no-show. The rep is waiting for something that will never come, and
@@ -74,10 +74,7 @@ func briefSnoozeLiftedSQL(deal, condition, ref, setDown, asOf string) string {
 		WHEN 'meeting' THEN EXISTS (
 			SELECT 1 FROM activity m
 			WHERE m.id = %s AND m.kind = '%s'
-			  AND (m.archived_at IS NOT NULL
-			       OR m.meeting_status IN ('canceled', 'no_show')
-			       OR m.occurred_at
-			          + make_interval(secs => coalesce(m.duration_seconds, 0)) <= %s))
+			  AND %s)
 		ELSE false
-	END)`, condition, deal, setDown, asOf, ref, activities.KindMeeting, asOf)
+	END)`, condition, deal, setDown, occurredday.HappenedSQL("a", asOf), ref, activities.KindMeeting, storekit.MeetingIsOverSQL("m", asOf))
 }

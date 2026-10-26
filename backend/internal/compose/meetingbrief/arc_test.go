@@ -136,11 +136,11 @@ func TestTheArcReadsInDateOrder(t *testing.T) {
 	}
 	var last time.Time
 	for _, moment := range arc {
-		if !last.IsZero() && moment.From.Before(last) {
+		if !last.IsZero() && moment.From.At.Before(last) {
 			t.Fatalf("moment starting %s follows one starting %s — the arc is out of order",
-				moment.From, last)
+				moment.From.At, last)
 		}
-		last = moment.From
+		last = moment.From.At
 	}
 }
 
@@ -166,7 +166,7 @@ func TestAWithheldConversationNamesNothing(t *testing.T) {
 	if len(arc) != 1 {
 		t.Fatalf("moments = %d, want 1 — the withheld-only thread has its own moment, dropped", len(arc))
 	}
-	if got, want := arc[0].To, at(3); !got.Equal(want) {
+	if got, want := arc[0].To.At, at(3); !got.Equal(want) {
 		t.Errorf("moment.To = %s, want %s — the withheld message's own date must not extend it", got, want)
 	}
 	if got := conversationCount(arc[0]); got != 1 {
@@ -204,7 +204,7 @@ func TestAWithheldRowIsNotCitedEvenInsideAReadableThread(t *testing.T) {
 	if threads[0].Rows != 2 {
 		t.Errorf("rows = %d, want 2 — a withheld row still happened", threads[0].Rows)
 	}
-	if got, want := threads[0].Last, at(3); !got.Equal(want) {
+	if got, want := threads[0].Last.At, at(3); !got.Equal(want) {
 		t.Errorf("last = %s, want %s — a withheld reply must not date the thread", got, want)
 	}
 }
@@ -229,7 +229,7 @@ func TestAWithheldRowIsNotCitedRegardlessOfScanOrder(t *testing.T) {
 			t.Error("a withheld row is citable through the thread it shares with a readable one")
 		}
 	}
-	if got, want := threads[0].Last, at(3); !got.Equal(want) {
+	if got, want := threads[0].Last.At, at(3); !got.Equal(want) {
 		t.Errorf("last = %s, want %s — a withheld reply scanned FIRST must still not date the thread", got, want)
 	}
 }

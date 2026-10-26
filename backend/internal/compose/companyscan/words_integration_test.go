@@ -6,6 +6,7 @@
 package companyscan
 
 import (
+	"context"
 	"slices"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -127,5 +129,38 @@ func TestTheScanDoesNotReadAMessageDatedAfterNow(t *testing.T) {
 	}
 	if !slices.Contains(got, past) || !slices.Contains(got, atNow) {
 		t.Errorf("the scan lost the past message or the one dated exactly now: %v", got)
+	}
+}
+
+// A reader who may not see partner programmes cannot rule one out, so deal
+// advice is withheld, and nothing names the account a partner.
+func TestAReaderWhoCannotSeePartnersGetsNoDealAdvice(t *testing.T) {
+	e := integration.Setup(t)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Unknown Standing Co", nil))
+	standing := func(ctx context.Context) (bool, bool) {
+		t.Helper()
+		var partner, noDealAdvice bool
+		if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
+			var err error
+			partner, noDealAdvice, err = partnerStanding(ctx, tx, company)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return partner, noDealAdvice
+	}
+	sighted := e.As(e.Rep1, nil, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{"company": {Read: true}, "activity": {Read: true}, "partner": {Read: true}},
+	})
+	if partner, withheld := standing(sighted); partner || withheld {
+		t.Fatalf("a reader who sees no programme reads partner=%v, deal advice withheld=%v; want neither", partner, withheld)
+	}
+	blind := e.As(e.Rep1, nil, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{"company": {Read: true}, "activity": {Read: true}},
+	})
+	if partner, withheld := standing(blind); partner || !withheld {
+		t.Errorf("a reader without the partner grant reads partner=%v, deal advice withheld=%v; want false, true", partner, withheld)
 	}
 }

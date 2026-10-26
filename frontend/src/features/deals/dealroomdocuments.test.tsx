@@ -3,13 +3,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { DealRoomConversation } from "./dealroomconversation";
 import { AddDocument } from "./dealroomdocuments";
 
 // A room shares the DEAL's files and holds none of its own, so a rep whose deal
@@ -117,4 +123,56 @@ it("a refused room offers no upload, only the sentence saying why", () => {
     ),
   ).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Upload a file" })).toBeNull();
+});
+
+function roomEntry(id: string, title: string, reachesBuyer: boolean) {
+  return {
+    id,
+    room_id: ROOM.id,
+    attachment_id: `att-${id}`,
+    group_key: "legal",
+    title,
+    position: 0,
+    filename: `${id}.pdf`,
+    reaches_buyer: reachesBuyer,
+    source: "manual",
+    version: 1,
+    created_at: "2026-08-22T09:00:00Z",
+    updated_at: "2026-08-22T09:00:00Z",
+  };
+}
+
+// A file deleted on the deal stays in the room for the seller to remove. The
+// buyer no longer gets it, so the tile says so and offers no question about it.
+it("marks a room entry whose file the buyer no longer gets", async () => {
+  vi.stubGlobal("fetch", (input: Request) => {
+    const path = new URL(input.url).pathname;
+    if (path.endsWith(`/deal-rooms/${ROOM.id}/documents`)) {
+      return Promise.resolve(
+        jsonResponse({
+          data: [
+            roomEntry("live", "Order form", true),
+            roomEntry("gone", "Old MSA", false),
+          ],
+          page: {},
+        }),
+      );
+    }
+    return Promise.resolve(jsonResponse({ data: [], page: {} }));
+  });
+  render(<DealRoomConversation room={ROOM} refusal={undefined} />);
+
+  const gone = await screen.findByRole("article", { name: "Old MSA" });
+  const live = screen.getByRole("article", { name: "Order form" });
+  expect(within(gone).getByText("Buyers do not see this")).toBeInTheDocument();
+  expect(
+    within(gone).queryByRole("button", { name: "Ask about this document" }),
+  ).toBeNull();
+  expect(
+    within(gone).getByRole("button", { name: "Remove Old MSA from the room" }),
+  ).toBeInTheDocument();
+  expect(within(live).queryByText("Buyers do not see this")).toBeNull();
+  expect(
+    within(live).getByRole("button", { name: "Ask about this document" }),
+  ).toBeInTheDocument();
 });

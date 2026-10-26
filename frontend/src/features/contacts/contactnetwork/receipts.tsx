@@ -9,7 +9,7 @@
 
 import type { components } from "../../../api/schema";
 import { EmailReference } from "../../../design-system/emailreference";
-import { formatDate } from "../../../format/format";
+import { activityDay } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
 import { useRecordZone } from "../../../lib/recordzone";
 
@@ -48,7 +48,12 @@ export function ReceiptList({
           {r.kind === "email" ? (
             <EmailReference
               subject={r.subject}
-              occurredAt={formatDate(r.occurred_at, locale, recordZone)}
+              occurredAt={activityDay(
+                r.occurred_at,
+                r.occurred_precision,
+                locale,
+                recordZone,
+              )}
               onOpen={
                 onOpenEmail ? () => onOpenEmail(r.activity_id) : undefined
               }
@@ -56,7 +61,12 @@ export function ReceiptList({
           ) : (
             <>
               {r.subject ?? t("contact.graph.untitledMessage")} ·{" "}
-              {formatDate(r.occurred_at, locale, recordZone)}
+              {activityDay(
+                r.occurred_at,
+                r.occurred_precision,
+                locale,
+                recordZone,
+              )}
             </>
           )}
         </li>

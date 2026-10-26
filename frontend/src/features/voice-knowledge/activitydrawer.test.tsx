@@ -153,3 +153,36 @@ it("reads out the value of a field the workspace added to activities", async () 
   expect(await screen.findByText("Visit type")).toBeTruthy();
   expect(screen.getByText("on_site")).toBeTruthy();
 });
+
+it("names a meeting's outside guests beside the contacts who attended", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/source": () =>
+      jsonResponse({
+        id: "source",
+        kind: "meeting",
+        subject: "Quarterly review",
+        occurred_at: "2026-07-01T09:00:00Z",
+        content_state: "available",
+        links: [],
+        guests: [
+          { address: "ana@client.example", display_name: "Ana Client" },
+          { address: "ben@client.example", display_name: "" },
+        ],
+      }),
+  });
+  renderWithQueryClient(
+    <OpenActivityDrawer
+      activityId="source"
+      zone={viewerZone()}
+      onClose={() => {}}
+    />,
+  );
+  expect(await screen.findByText("Attendees")).toBeTruthy();
+  expect(screen.getByTitle("ana@client.example").textContent).toBe(
+    "Ana Client",
+  );
+  expect(screen.getByTitle("ben@client.example").textContent).toBe(
+    "ben@client.example",
+  );
+});

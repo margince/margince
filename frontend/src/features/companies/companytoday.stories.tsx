@@ -99,6 +99,7 @@ const populated: View = {
   next_meeting: {
     activity_id: "a-1",
     starts_at: "2026-07-14T09:00:00Z",
+    occurred_precision: "instant",
     subject: "Renewal review",
     participants: [{ contact_id: "p-1", display_name: "Dana Buyer" }],
   },
@@ -214,6 +215,7 @@ const restingOnAMail: View = {
           email_summary: {
             activity_id: "a-4",
             occurred_at: "2026-07-11T14:17:00Z",
+            occurred_precision: "instant",
             version: 1,
             subject: "Re: Scheduling tool: project start + setup",
             preview:
@@ -261,7 +263,7 @@ export const Scanned: Story = {
         state: "done",
         generated_at: "2026-08-07T08:58:00Z",
         generated_by: "model",
-        read: { exchanges: 14, deals: 2 },
+        read: { exchanges: 14, deals: 2, window_days: 180 },
         findings: [
           ...(populated.suggestions ?? []),
           {

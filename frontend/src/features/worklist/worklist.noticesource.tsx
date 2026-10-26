@@ -18,6 +18,7 @@ import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 import { TaskDetailModal } from "./taskdetailmodal";
 import { rowHref } from "./worklist.copy";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
+import { WorklistWhy } from "./worklist.why";
 
 // Task and meeting row ids are activity ids; other lanes must name their activity explicitly.
 export function rowActivityId(item: WorklistItem): string | undefined {
@@ -61,10 +62,15 @@ export function useRowSource(item: WorklistItem): Readonly<{
     // on every window focus, once for each row a reader ever opened.
     drawer:
       opened === null ? null : item.source === "task" ? (
-        <OpenTaskSource activityId={opened} onClose={() => setOpened(null)} />
+        <OpenTaskSource
+          activityId={opened}
+          item={item}
+          onClose={() => setOpened(null)}
+        />
       ) : (
         <SourceDrawer
           activityId={opened}
+          item={item}
           onClose={() => setOpened(null)}
           onReplySent={() =>
             void client.invalidateQueries({ queryKey: worklistKey })
@@ -76,13 +82,19 @@ export function useRowSource(item: WorklistItem): Readonly<{
 
 function OpenTaskSource({
   activityId,
+  item,
   onClose,
-}: Readonly<{ activityId: string; onClose: () => void }>) {
+}: Readonly<{
+  activityId: string;
+  item: WorklistItem;
+  onClose: () => void;
+}>) {
   const canUpdate = useCanWrite("activity", "update");
   const update = useTaskUpdate([worklistKey, TASK_QUEUE_KEY, ["activities"]]);
   return (
     <TaskDetailModal
       activityId={activityId}
+      item={item}
       readOnly={!canUpdate}
       update={update}
       onClose={onClose}
@@ -100,10 +112,12 @@ function OpenTaskSource({
  */
 function SourceDrawer({
   activityId,
+  item,
   onClose,
   onReplySent,
 }: Readonly<{
   activityId: string;
+  item: WorklistItem;
   onClose: () => void;
   onReplySent: () => void;
 }>) {
@@ -125,6 +139,7 @@ function SourceDrawer({
         zone={zone}
         onClose={onClose}
         activity={read.data}
+        about={<WorklistWhy item={item} answer />}
       />
     </>
   );

@@ -15,12 +15,14 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
+import { activityDay } from "../../format/activitywhen";
 import { formatDate, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { isUuid } from "../../lib/uuid";
 import { humanizeToken } from "./audit";
@@ -217,6 +219,9 @@ export function RestrictedRecordsCard() {
   const me = useMe();
   const { locale } = useLocale();
   const tz = viewerZone();
+  // The held activity's own date is the record's, and a `day` one has no
+  // instant to move into the reader's zone.
+  const recordZone = useRecordZone();
   const canRead = useCan("retention_policy", "read");
   // Reading what is held and DECIDING about it are separate grants, so the
   // row action appears only for the authority that can carry it out.
@@ -249,7 +254,12 @@ export function RestrictedRecordsCard() {
           <CellStack>
             <span>{kindOf(row)}</span>
             <span className="t-caption">
-              {formatDate(row.occurred_at, locale, tz)}
+              {activityDay(
+                row.occurred_at,
+                row.occurred_precision,
+                locale,
+                recordZone,
+              )}
             </span>
             <span className="t-caption">
               {removed === 0
@@ -322,7 +332,12 @@ export function RestrictedRecordsCard() {
           <Button
             aria-label={t("restricted.release.actionNamed", {
               kind: kindOf(row),
-              date: formatDate(row.occurred_at, locale, tz),
+              date: activityDay(
+                row.occurred_at,
+                row.occurred_precision,
+                locale,
+                recordZone,
+              ),
             })}
             aria-haspopup="dialog"
             onClick={() => setReleasing({ activityId: row.activity_id })}

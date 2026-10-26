@@ -40,7 +40,7 @@ const (
 // an empty set is saying it could not read the parties, which is a different
 // statement from "there were none", and the direction to fail in is toward
 // keeping the message.
-func (s *Sink) internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
+func internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
 	if _, ok := rec.Fields.(ActivityFields); !ok {
 		return false, nil
 	}

@@ -13,7 +13,7 @@ import {
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { middayInstant } from "../../format/calendarday";
+import { isoWeekOf, middayInstant } from "../../format/calendarday";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -126,6 +126,7 @@ function hasFoot(
 
 export function PlanSection() {
   const t = useT();
+  const { locale } = useLocale();
   const plan = useWeeklyPlan();
   const start = useStartWeeklyPlan();
   const setState = useSetCommitmentState();
@@ -215,7 +216,16 @@ export function PlanSection() {
   return (
     <section id="brief-plan">
       <Panel
-        title={t("plan.title")}
+        title={
+          plan.data
+            ? t("plan.title", {
+                week: formatNumber(
+                  isoWeekOf(plan.data.local_week_start),
+                  locale,
+                ),
+              })
+            : t("plan.titleThisWeek")
+        }
         titleAction={
           editable && !adding ? (
             <Button onClick={() => setAdding(true)}>{t("plan.add")}</Button>

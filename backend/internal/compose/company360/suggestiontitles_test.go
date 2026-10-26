@@ -89,6 +89,25 @@ func TestATitleSaysWhatTheRuleKnows(t *testing.T) {
 	}
 }
 
+// The evidence's date carries its precision: a call known by its date alone
+// gives a due date that is a date, not that date's noon.
+func TestAQuietThreadsDateSaysHowPreciselyItIsKnown(t *testing.T) {
+	now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
+	companyID := ids.CompanyID{UUID: ids.NewV7()}
+	for precision, dateOnly := range map[crmcontracts.OccurredPrecision]bool{
+		crmcontracts.OccurredPrecisionOccurredPrecisionDay:     true,
+		crmcontracts.OccurredPrecisionOccurredPrecisionInstant: false,
+	} {
+		out := englishSuggestions.staleThread(companyID, now, time.UTC, lastMessage{
+			ID: ids.NewV7(), At: now.AddDate(0, 0, -24), DateOnly: dateOnly,
+			Direction: string(crmcontracts.ActivityDirectionOutbound),
+		})
+		if out == nil || out.DuePrecision == nil || *out.DuePrecision != precision {
+			t.Errorf("a %s thread reads due precision %v, want %s", precision, out, precision)
+		}
+	}
+}
+
 // The no-next-step rule fires on an ABSENCE, and an absence has no date.
 // Inventing one would turn a reading into an obligation nobody agreed to.
 func TestARuleThatFiresOnAnAbsenceCarriesNoDate(t *testing.T) {

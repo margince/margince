@@ -47,3 +47,20 @@ func TestAnAssembledContextCarriesWhenEachThingHappened(t *testing.T) {
 		t.Errorf("a contact carries occurred_at %v, want it absent", contact.OccurredAt)
 	}
 }
+
+// A day entry tells the model its time is unknown, so a briefing never states
+// the anchor's noon as the hour it happened.
+func TestAnAssembledDayEntrySaysItIsADay(t *testing.T) {
+	noon := time.Date(2026, 3, 9, 12, 0, 0, 0, time.UTC)
+	got := assembledContext(context.Background(), retrieval.Context{
+		Anchor: datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()},
+		Sections: []retrieval.Section{{Name: "recent", Items: []retrieval.Item{
+			{Ref: datasource.EntityRef{Type: datasource.EntityActivity, ID: ids.NewV7()}, OccurredAt: noon, DateOnly: true},
+			{Ref: datasource.EntityRef{Type: datasource.EntityActivity, ID: ids.NewV7()}, OccurredAt: noon},
+		}}},
+	})
+	day, instant := got.Sections[0].Items[0], got.Sections[0].Items[1]
+	if day.OccurredPrecision != "day" || instant.OccurredPrecision != "" {
+		t.Errorf("precisions = %q and %q, want day and absent", day.OccurredPrecision, instant.OccurredPrecision)
+	}
+}

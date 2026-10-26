@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
@@ -165,11 +166,12 @@ type followUpCandidate struct {
 // TOMORROW satisfied "landed inside the window", and because the LATERAL takes
 // the newest row it also outranked the real call or mail the follow-up should
 // have been about. The rep was then told a meeting "left no next step planned"
-// days before it happened.
+// days before it happened. A day entry counts from the start of its date
+// (occurredday.BegunSQL), not from its stored noon.
 //
-// A meeting is evidence only once it is over — the same reading the waiting
-// queue uses, so a meeting running right now is not yet a touch to reconcile —
-// and only when it took place: MeetingIsOverSQL calls a canceled one over too.
+// A meeting is evidence only once it is over, the waiting queue's reading: a
+// meeting running right now is not yet a touch to reconcile. It must also have
+// taken place, since storekit.MeetingIsOverSQL calls a canceled one over too.
 //
 // Extracted from reconcileWorkspace so the statement, its two bounds and the
 // reason for them sit together rather than being read past on the way to the
@@ -199,8 +201,8 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 			  -- verbs; the predicate is the helper's, and a change to one
 			  -- is a change to both.
 			  AND a.audience = 'workspace'
-			  AND a.occurred_at >= $1
-			  AND a.occurred_at <= $3
+			  AND %[5]s
+			  AND %[4]s
 			  AND (a.kind <> 'meeting' OR (%[1]s AND %[3]s))
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT 1
@@ -209,9 +211,11 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 		  AND NOT %[2]s
 		ORDER BY d.id
 		LIMIT $2`,
-		MeetingIsOverSQL("a", "$3"),
+		storekit.MeetingIsOverSQL("a", "$3"),
 		OpenNextStepSQL("d.id", "$3", current),
-		relstrength.MeetingCountsSQL("a")), args, nil
+		relstrength.MeetingCountsSQL("a"),
+		occurredday.BegunSQL("a", "$3"),
+		occurredday.FromSQL("a", "$1")), args, nil
 }
 
 func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {

@@ -42,13 +42,41 @@ var extractClock = time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 // scriptedBrain answers with whatever the scenario decided the model says,
 // and records what it was asked. The engine's own behaviour is what these
 // tests measure; the model is a boundary, so it is the one thing mocked.
+//
+// replies are answered in order before reply, which stays the default.
+// A focused second reading with nothing queued gets an empty answer. So a test
+// about the first reading is not refused by the reply it scripted for it.
 type scriptedBrain struct {
-	reply string
-	calls int
+	reply   string
+	replies []string
+	// respond, when set, answers every request itself.
+	respond func(req model.Request) string
+	// onCall runs at the start of each call with its 1-based number, for a test
+	// that changes the world while the model is reading.
+	onCall   func(call int)
+	calls    int
+	requests []model.Request
 }
 
-func (b *scriptedBrain) Complete(_ context.Context, _ model.Request) (model.Response, error) {
+const focusedReadingMarker = "Report only commitment_made events stated in these messages"
+
+func (b *scriptedBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	b.calls++
+	b.requests = append(b.requests, req)
+	if b.onCall != nil {
+		b.onCall(b.calls)
+	}
+	if b.respond != nil {
+		return model.Response{Text: b.respond(req)}, nil
+	}
+	if len(b.replies) > 0 {
+		next := b.replies[0]
+		b.replies = b.replies[1:]
+		return model.Response{Text: next}, nil
+	}
+	if strings.Contains(req.Messages[0].Content, focusedReadingMarker) {
+		return model.Response{Text: `{"events": []}`}, nil
+	}
 	return model.Response{Text: b.reply}, nil
 }
 
@@ -201,8 +229,8 @@ func TestASettledThreadIsReadOnceUntilSomethingArrives(t *testing.T) {
 	if raised := extractPass(t, e, brain); raised != 0 {
 		t.Errorf("re-reading a grown conversation raised %d duplicate signals", raised)
 	}
-	if brain.calls != 2 {
-		t.Errorf("the model was called %d times, want a second read once the conversation grew", brain.calls)
+	if brain.calls != 3 {
+		t.Errorf("the model was called %d times, want a read once the conversation grew plus a focused reading of the new message", brain.calls)
 	}
 }
 

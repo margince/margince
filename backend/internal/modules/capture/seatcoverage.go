@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
@@ -22,6 +23,8 @@ type UncapturedSeat struct {
 	DisplayName  string
 	Invited      bool
 	LastOnThread time.Time
+	// LastOnThreadPrecision says how to read LastOnThread, from the activity it names.
+	LastOnThreadPrecision string
 }
 
 // UncapturedSeats is the listed seats and how many met the condition in all,
@@ -54,7 +57,8 @@ func SeatsWithoutMailbox(
 	// The window count runs over the grouped seats before LIMIT, so the total
 	// comes from the same rule and the same statement as the list.
 	rows, err := tx.Query(ctx, `
-		SELECT u.id, u.display_name, u.status = 'invited', max(a.occurred_at), count(*) OVER ()
+		SELECT u.id, u.display_name, u.status = 'invited', max(a.occurred_at),
+		       `+occurredday.LatestPrecisionSQL("a", "")+`, count(*) OVER ()
 		  FROM activity_participant pc
 		  JOIN activity a ON a.id = pc.activity_id AND a.archived_at IS NULL
 		   AND `+relstrength.WorkspaceAudienceSQL("a")+`
@@ -79,7 +83,7 @@ func SeatsWithoutMailbox(
 	out := UncapturedSeats{Seats: []UncapturedSeat{}}
 	for rows.Next() {
 		var s UncapturedSeat
-		if err := rows.Scan(&s.UserID, &s.DisplayName, &s.Invited, &s.LastOnThread, &out.Total); err != nil {
+		if err := rows.Scan(&s.UserID, &s.DisplayName, &s.Invited, &s.LastOnThread, &s.LastOnThreadPrecision, &out.Total); err != nil {
 			return UncapturedSeats{}, fmt.Errorf("capture: scanning a seat without a mailbox: %w", err)
 		}
 		out.Seats = append(out.Seats, s)

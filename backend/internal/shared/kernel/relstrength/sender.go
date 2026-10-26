@@ -52,5 +52,5 @@ const participantNamesSQL = `CASE WHEN %[2]s.address IS NOT NULL
 // from them. The reconnect lane and the colleague edge's last_at both read it.
 func ContactExchangeSQL(activity, contact, now string) string {
 	return InteractionCountsSQL(activity) + " AND " + LastActivityCountsSQL(activity, now) +
-		" AND (" + activity + ".direction IS DISTINCT FROM 'inbound' OR " + SenderSQL(contact, activity) + ")"
+		" AND (" + activity + ".direction IS DISTINCT FROM 'inbound' OR " + TheyWroteSQL(contact, activity) + ")"
 }

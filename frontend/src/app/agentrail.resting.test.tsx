@@ -114,6 +114,7 @@ describe("stillNews", () => {
 describe("restingReadings", () => {
   const QUIET = {
     waiting: undefined,
+    sourcesUnknown: false,
     developmentLine: null,
     settled: [] as readonly SpokenLine[],
   };
@@ -142,12 +143,27 @@ describe("restingReadings", () => {
     expect(answered.map(said)).toEqual(["Nothing needs attention"]);
   });
 
+  it("claims no all-clear when the connections read failed, and keeps saying so beside other news", () => {
+    const unknown = { ...QUIET, sourcesUnknown: true };
+    expect(restingReadings(unknown, WORDS).map(said)).toEqual([
+      "Could not check your connected sources",
+    ]);
+    // Other news does not push the failed check out of the rotation.
+    expect(
+      restingReadings({ ...unknown, waiting: 2 }, WORDS).map(said),
+    ).toEqual([
+      "Could not check your connected sources",
+      "2 approvals waiting",
+    ]);
+  });
+
   // The fix for the pinned line: a day that settled three runs says three
   // things, in severity order behind the queue a contact has to answer.
   it("carries every fresh run, after what is waiting and before the model", () => {
     const lines = restingReadings(
       {
         waiting: 2,
+        sourcesUnknown: false,
         developmentLine: "offline model",
         settled: [plain("brief ready"), plain("summary ready")],
       },

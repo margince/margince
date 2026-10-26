@@ -6,12 +6,22 @@ package relstrength
 import (
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // now is a fixed instant. Every case below states its times relative to it, so
 // a test reads as "they replied 41 days after we last spoke" rather than as
 // arithmetic against whatever the wall clock says.
 var now = time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
+
+// instantAt is an instant activity at at; nil is none.
+func instantAt(at *time.Time) *occurredday.Moment {
+	if at == nil {
+		return nil
+	}
+	return &occurredday.Moment{At: *at}
+}
 
 func daysAgo(n int) *time.Time {
 	t := now.AddDate(0, 0, -n)
@@ -33,8 +43,8 @@ func kindsOf(changes []Change) map[string]Change {
 func TestChangesReportsAReplyThatEndedALongSilence(t *testing.T) {
 	in := ChangeInputs{
 		Current:              Inputs{LastInteraction: daysAgo(3), Count90d: 4, Inbound90d: 2, Outbound90d: 2},
-		LatestInbound:        daysAgo(3),
-		PrecedingInteraction: daysAgo(44),
+		LatestInbound:        instantAt(daysAgo(3)),
+		PrecedingInteraction: instantAt(daysAgo(44)),
 	}
 	got := kindsOf(Changes(in, now))
 	c, found := got[ChangeRepliedAfterGap]
@@ -51,8 +61,8 @@ func TestChangesReportsAReplyThatEndedALongSilence(t *testing.T) {
 func TestChangesIgnoresAReplyInAnActiveThread(t *testing.T) {
 	in := ChangeInputs{
 		Current:              Inputs{LastInteraction: daysAgo(1), Count90d: 12, Inbound90d: 6, Outbound90d: 6},
-		LatestInbound:        daysAgo(1),
-		PrecedingInteraction: daysAgo(3),
+		LatestInbound:        instantAt(daysAgo(1)),
+		PrecedingInteraction: instantAt(daysAgo(3)),
 	}
 	if _, found := kindsOf(Changes(in, now))[ChangeRepliedAfterGap]; found {
 		t.Error("a reply two days after the last message was reported as ending a silence")
@@ -64,7 +74,7 @@ func TestChangesIgnoresAReplyInAnActiveThread(t *testing.T) {
 func TestChangesDoesNotCallAFirstContactAReturn(t *testing.T) {
 	in := ChangeInputs{
 		Current:       Inputs{LastInteraction: daysAgo(2), Count90d: 1, Inbound90d: 1},
-		LatestInbound: daysAgo(2),
+		LatestInbound: instantAt(daysAgo(2)),
 	}
 	if _, found := kindsOf(Changes(in, now))[ChangeRepliedAfterGap]; found {
 		t.Error("a first inbound message was reported as a reply after a gap")
@@ -76,9 +86,9 @@ func TestChangesDoesNotCallAFirstContactAReturn(t *testing.T) {
 func TestChangesDropsAStaleReturnAndReportsTheSilenceSince(t *testing.T) {
 	in := ChangeInputs{
 		Current:              Inputs{LastInteraction: daysAgo(100), Count90d: 0},
-		LastTouch:            daysAgo(100),
-		LatestInbound:        daysAgo(100),
-		PrecedingInteraction: daysAgo(200),
+		LastTouch:            instantAt(daysAgo(100)),
+		LatestInbound:        instantAt(daysAgo(100)),
+		PrecedingInteraction: instantAt(daysAgo(200)),
 	}
 	got := kindsOf(Changes(in, now))
 	if _, found := got[ChangeRepliedAfterGap]; found {
@@ -154,7 +164,7 @@ func TestChangesReportsCoolingWhenTheBandFell(t *testing.T) {
 func TestWentQuietCountsFromTheLastTouchNotTheFold(t *testing.T) {
 	in := ChangeInputs{
 		Current:   Inputs{LastInteraction: daysAgo(5), Count90d: 1},
-		LastTouch: daysAgo(60),
+		LastTouch: instantAt(daysAgo(60)),
 	}
 	c, found := kindsOf(Changes(in, now))[ChangeWentQuiet]
 	if !found || c.Days != 60 || !c.At.Equal(*daysAgo(60)) {
@@ -174,10 +184,37 @@ func TestWentQuietCountsInTheGivenZone(t *testing.T) {
 	}
 	at := time.Date(2026, 6, 20, 20, 0, 0, 0, time.UTC)
 	read := time.Date(2026, 8, 4, 10, 0, 0, 0, time.UTC)
-	if c := kindsOf(Changes(ChangeInputs{LastTouch: &at}, read))[ChangeWentQuiet]; c.Days != 45 {
+	if c := kindsOf(Changes(ChangeInputs{LastTouch: &occurredday.Moment{At: at}}, read))[ChangeWentQuiet]; c.Days != 45 {
 		t.Errorf("UTC days = %d, want 45", c.Days)
 	}
-	if _, found := kindsOf(Changes(ChangeInputs{LastTouch: &at, Zone: bangkok}, read))[ChangeWentQuiet]; found {
+	if _, found := kindsOf(Changes(ChangeInputs{LastTouch: &occurredday.Moment{At: at}, Zone: bangkok}, read))[ChangeWentQuiet]; found {
 		t.Error("in Bangkok this is day 44, below the quiet threshold, and must not be reported")
+	}
+}
+
+// A day entry counts from the date it names. Its stored noon UTC is already the
+// next morning in Kiritimati, which would make every silence a day shorter.
+func TestADayEntryCountsItsSilenceFromItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	read := time.Date(2026, 8, 4, 9, 0, 0, 0, kiritimati)
+	logged := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC).AddDate(0, 0, -QuietDays)
+	quiet, found := kindsOf(Changes(ChangeInputs{LastTouch: &occurredday.Moment{At: logged, DateOnly: true}, Zone: kiritimati}, read))[ChangeWentQuiet]
+	if !found || quiet.Days != QuietDays {
+		t.Fatalf("a day entry dated %d days ago reads %+v, want quiet for %d days", QuietDays, quiet, QuietDays)
+	}
+
+	inbound := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
+	// The instant before it falls on the next local date; the reply keeps its own.
+	preceding := inbound.AddDate(0, 0, -ReplyGapDays-1)
+	replied := kindsOf(Changes(ChangeInputs{
+		LatestInbound:        &occurredday.Moment{At: inbound, DateOnly: true},
+		PrecedingInteraction: &occurredday.Moment{At: preceding},
+		Zone:                 kiritimati,
+	}, read))[ChangeRepliedAfterGap]
+	if replied.Days != ReplyGapDays {
+		t.Fatalf("the reply broke a %d-day silence, want %d", replied.Days, ReplyGapDays)
 	}
 }

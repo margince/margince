@@ -54,13 +54,9 @@ export function ChannelReplyAction({
   // and calling it one claims access to the message being answered.
   contentWithheld?: boolean;
   /**
-   * This reply is the move a rule PREPARED, so the button wears the agent's
-   * own face and mark and the drawer opens already steered.
-   *
-   * INDIGO is the claim, and it is true here: something worked out that this
-   * message wants answering and what the answer should be about. `label` is
-   * the caller's because the word belongs to the surface that ranked the row,
-   * and `intent` seeds the steer field the drafter reads.
+   * This reply is the move a rule PREPARED. The button is indigo because the
+   * press has the model write: the composer drafts on open from `intent`.
+   * `label` is the caller's, since the word belongs to the ranking surface.
    *
    * Absent on the timelines, which mount the plain reply: nothing proposed
    * those, a reader simply opened a conversation and chose to answer it.
@@ -147,6 +143,7 @@ export function ChannelReplyAction({
           // that put this message in front of a rep, and that judgement is what
           // the steer field is for.
           intent={proposed?.intent}
+          draftOnOpen={proposed !== undefined}
           open={reply.open}
           onClose={() => setReply({ ...reply, open: false })}
           onSent={onSent}

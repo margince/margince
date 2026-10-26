@@ -107,10 +107,13 @@ type csvWriters struct {
 	// now is the clock an activity's timestamp is held against; nil is the
 	// system clock.
 	now func() time.Time
-	// updated counts the rows this run rewrote. The engine's EnsureResult has
-	// no "updated" member — the frozen-source model it was built for had no
-	// such outcome — so the count rides here and the report reads it.
+	// zone, read once per run, says which date is today and which date an instant names.
+	zone *time.Location
+	// updated counts the rows this run rewrote; EnsureResult has no "updated"
+	// member, so the count rides here and the report reads it.
 	updated int
+	// predictedNotes is the notes the dry run predicted filed (noteTwinKey).
+	predictedNotes map[string]bool
 }
 
 var _ migration.Writers = (*csvWriters)(nil)

@@ -43,7 +43,7 @@ func main() {
 	defer stop()
 
 	if err := run(ctx, os.Args[1:], os.Stdout, os.Stderr); err != nil {
-		fmt.Fprintln(os.Stderr, "migrate:", err)
+		fmt.Fprintln(os.Stderr, config.RoleMigrate.Refusal(err))
 		os.Exit(1)
 	}
 }

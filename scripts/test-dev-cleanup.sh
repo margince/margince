@@ -743,6 +743,54 @@ kill "$stale_server" 2>/dev/null || true
 wait "$stale_server" 2>/dev/null || true
 rm -rf "$boot_dir"
 
+echo "dev.sh: infrastructure that does not come up is reported on the console"
+
+lift ensure_infra
+infra_dir="$(mktemp -d)"
+# stub_make FAILS — a `make` whose first FAILS calls fail as compose does on a
+# container that is still recovering, and whose later calls succeed.
+stub_make() { # fails
+    : >"$infra_dir/calls"
+    cat >"$infra_dir/make" <<STUB
+#!/usr/bin/env bash
+echo call >>"$infra_dir/calls"
+if [[ \$(wc -l <"$infra_dir/calls") -le $1 ]]; then
+    echo "dependency failed to start: container margince-postgres-1 is unhealthy" >&2
+    echo "make: *** [db-up] Error 1" >&2
+    exit 2
+fi
+STUB
+    chmod +x "$infra_dir/make"
+}
+infra_calls() { wc -l <"$infra_dir/calls" | tr -d ' '; }
+infra_retry_count=2 infra_retry_pause=0
+
+stub_make 1
+infra_report="$(PATH="$infra_dir:$PATH" ensure_infra 2>&1 && echo up)" || true
+check up "$(tail -n 1 <<<"$infra_report")" "a container that turns healthy on a second try lets the boot go on"
+check 2 "$(infra_calls)" "after one more call to db-up"
+
+stub_make 9
+infra_report="$(PATH="$infra_dir:$PATH" ensure_infra 2>&1 && echo up)" || true
+check 3 "$(infra_calls)" "a container that stays unhealthy is tried only as often as the retry count allows"
+check yes "$(grep -qF 'margince-postgres-1 is unhealthy' <<<"$infra_report" && echo yes || echo no)" \
+      "and the failure prints compose's own reason"
+check yes "$(grep -qF 'FAIL: the dev infrastructure could not be brought up' <<<"$infra_report" && echo yes || echo no)" \
+      "and says which step failed"
+
+printf '#!/usr/bin/env bash\necho "Cannot connect to the Docker daemon" >&2\nexit 2\n' >"$infra_dir/make"
+infra_report="$(PATH="$infra_dir:$PATH" ensure_infra 2>&1 && echo up)" || true
+check yes "$(grep -qF 'Cannot connect to the Docker daemon' <<<"$infra_report" && echo yes || echo no)" \
+      "any other failure is reported at once, with its reason"
+check no "$(grep -qF 'trying again' <<<"$infra_report" && echo yes || echo no)" \
+      "and is not retried, because waiting does not fix it"
+rm -rf "$infra_dir"
+
+# Every other call to db-up in dev.sh would fail as the bare "Error 2" again.
+bare_db_up="$(awk '/^ensure_infra\(\) /{inside=1} inside && /^}/{inside=0; next}
+    !inside && !/^[[:space:]]*#/ && /make db-up/ {print FILENAME ":" NR}' "$dev")"
+check "" "$bare_db_up" "dev.sh brings the infrastructure up only through ensure_infra"
+
 if [[ "$failures" -gt 0 ]]; then
     printf 'FAIL: %d check(s)\n' "$failures" >&2
     exit 1
@@ -750,3 +798,4 @@ fi
 printf '==> dev cleanup: a failed boot takes its api, its vite and its worker with it\n'
 printf '==> dev restart: a second run takes the first one down and says so\n'
 printf '==> dev boot: a process that dies during boot is reported at once, with its own last lines\n'
+printf '==> dev infra: a container still recovering is waited for; any other failure is reported on the console\n'

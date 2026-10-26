@@ -7,6 +7,10 @@
 
 import type { components } from "../../../api/schema";
 import type { ReadingTone } from "../../../design-system/readingtone";
+import {
+  activityIsAhead,
+  type OccurredPrecision,
+} from "../../../format/activitywhen";
 import { calendarDaysBetween } from "../../../format/format";
 import { messageFromOutside } from "../../../lib/messagevoice";
 import { ghostCount } from "./dealcommittee";
@@ -265,6 +269,8 @@ export function standingOffer(
 export type NextStep = Readonly<{
   kind: "meeting" | "task";
   at: string;
+  // A task's due time is a deadline; a meeting's is as exact as the meeting.
+  precision: OccurredPrecision;
   subject?: string;
 }>;
 
@@ -277,6 +283,7 @@ export type NextStep = Readonly<{
 export function nextStepOf(
   activities: readonly Activity[],
   asOf: string,
+  record: string,
 ): NextStep | undefined {
   const now = Date.parse(asOf);
   const meeting = soonest(
@@ -284,22 +291,35 @@ export function nextStepOf(
       (row) =>
         row.kind === "meeting" &&
         row.meeting_status === "booked" &&
-        Date.parse(row.occurred_at) >= now,
+        activityIsAhead(row.occurred_at, row.occurred_precision, now, record),
     ),
     (row) => row.occurred_at,
   );
   if (meeting) {
-    return stepOf("meeting", meeting.occurred_at, meeting);
+    return stepOf(
+      "meeting",
+      meeting.occurred_at,
+      meeting.occurred_precision,
+      meeting,
+    );
   }
   const task = soonest(
     activities.filter((row) => row.kind === "task" && !row.is_done),
     (row) => row.due_at ?? undefined,
   );
-  return task?.due_at ? stepOf("task", task.due_at, task) : undefined;
+  return task?.due_at
+    ? stepOf("task", task.due_at, "instant", task)
+    : undefined;
 }
 
-function stepOf(kind: NextStep["kind"], at: string, row: Activity): NextStep {
-  return row.subject ? { kind, at, subject: row.subject } : { kind, at };
+function stepOf(
+  kind: NextStep["kind"],
+  at: string,
+  precision: OccurredPrecision,
+  row: Activity,
+): NextStep {
+  const step: NextStep = { kind, at, precision };
+  return row.subject ? { ...step, subject: row.subject } : step;
 }
 
 function soonest(

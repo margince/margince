@@ -3,6 +3,7 @@
 
 import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
 import { type ReactNode, type RefObject, useRef } from "react";
+import { type ActivityMoment, activityAgo } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
 import {
   formatDayMonthNearYear,
@@ -11,8 +12,7 @@ import {
   MONEY_ABSENT,
 } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
-import { formatElapsed } from "../format/now";
-import { useLocale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import { Avatar, Badge } from "./atoms";
 import { IconAction } from "./iconaction";
 import type { BoardDeal } from "./pipelineboard";
@@ -25,8 +25,8 @@ import { useTooltip } from "./tooltip";
 // The card's vocabulary — `BoardDeal` — stays with the board, because a column
 // is a list of them and the board is what a caller assembles.
 
-export type BoardDealMail = {
-  agoMs: number;
+export type BoardDealMail = ActivityMoment & {
+  measuredAt: number;
   /** Null on a logged email that named no direction. */
   direction: "inbound" | "outbound" | null;
 };
@@ -232,15 +232,15 @@ export function DealMailChip({
 }: Readonly<{ mail: BoardDealMail; aside?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
-  // A Chip, because that is what this is: one fact about the record with the
-  // glyph naming its kind — the same pill a company's domain or a file's type
-  // is drawn as, dense so it sits at the badges' geometry rather than a rung
-  // above the name.
+  const shortDay = (at: string, dayLocale: Locale, zone: string) =>
+    formatDayMonthNearYear(at, dayLocale, zone, new Date(mail.measuredAt));
+  // A Chip: one fact about the record, its glyph naming the kind. It is dense
+  // to sit at the badges' geometry, like the pill a company's domain is.
   const label = (
     <>
       <span className="sr-only">{t("deal.lastMail")}: </span>
       <Chip icon={mail.direction === "outbound" ? Send : Mail} dense>
-        {formatElapsed(mail.agoMs, t, locale)}
+        {activityAgo(mail, mail.measuredAt, t, locale, shortDay)}
       </Chip>
     </>
   );

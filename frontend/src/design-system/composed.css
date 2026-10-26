@@ -746,6 +746,13 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+/* The head's words are separate facts, so a dot stands between two of them;
+   the states after them are badges, which carry their own edge. */
+.tl-head-part + .tl-head-part::before {
+  content: "·";
+  margin-inline-end: var(--space-2);
+  color: var(--textSecondary);
+}
 /* The verbs share the head line only. Beside the whole body they held a
    column the full height of the entry, and long notes wrapped at a few words. */
 .timeline .tl-body > .tl-actions {
@@ -789,8 +796,10 @@
   padding-block: var(--space-3) var(--space-4);
   min-inline-size: 0;
 }
+/* The entry's column keeps a floor beside the verbs: a zero floor let the verbs'
+   `auto` track take the whole width and draw over the entry. */
 .timeline .tl-body:has(> .tl-actions) {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(min(100%, 12rem), 1fr) auto;
 }
 .timeline .tl-body > * {
   grid-column: 1 / -1;

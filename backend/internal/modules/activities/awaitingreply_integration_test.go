@@ -15,6 +15,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -236,6 +237,30 @@ func TestAnImportedMessageIsNotAFollowUp(t *testing.T) {
 	}
 	if awaited(t, s, e, imported) {
 		t.Error("a message an import brought in is a follow-up")
+	}
+}
+
+// A day email logged by hand can be awaiting a reply, and its time is a date.
+func TestAFollowUpCarriesTheRealPrecisionOfItsMessage(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+	dayEmail, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
+	e.exec(t, `UPDATE activity SET occurred_precision = 'day' WHERE id = $1`, dayEmail)
+	instantEmail, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
+
+	rows, _, err := s.AwaitingReplies(e.followUpReader(), clocktest.Now(t))
+	if err != nil {
+		t.Fatalf("reading follow-ups: %v", err)
+	}
+	got := map[ids.UUID]string{}
+	for _, row := range rows {
+		got[row.ActivityID] = row.Precision
+	}
+	if p, ok := got[dayEmail]; !ok || p != PrecisionDay {
+		t.Errorf("day email: listed=%v precision=%q, want listed with %q", ok, p, PrecisionDay)
+	}
+	if p, ok := got[instantEmail]; !ok || p != PrecisionInstant {
+		t.Errorf("instant email: listed=%v precision=%q, want listed with %q", ok, p, PrecisionInstant)
 	}
 }
 

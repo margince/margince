@@ -3,6 +3,7 @@ import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
 import { bucketLabel } from "../../lib/bucketlabel";
+import { directionSentence } from "./contactrail";
 import { awaitsOurReply, contactDims, contactVerdict } from "./contactstanding";
 import {
   contactFigures,
@@ -66,6 +67,7 @@ function promise(id: string, due: string | null): Claim {
     kind: "commitment_ours",
     body: `Promise ${id}`,
     source_activity_id: "a-1",
+    occurred_precision: "instant",
     source_quote: "We will send it",
     status: "open",
     needs_review: false,
@@ -142,6 +144,27 @@ describe("contactVerdict", () => {
     expect(
       contactVerdict({ ...VIEW, sections_omitted: ["moments", "strength"] }, t),
     ).toBeNull();
+  });
+});
+
+describe("directionSentence", () => {
+  it("words the server's direction, not the two dates", () => {
+    // Both dates set, but the server read only our side as written by a human.
+    const view: Contact360 = {
+      ...VIEW,
+      last_inbound_at: "2026-08-10T09:00:00Z",
+      last_outbound_at: "2026-08-11T09:00:00Z",
+      relationship_direction: "outbound_only",
+    };
+    expect(directionSentence(view, t)).toBe(
+      t("contact.standing.direction.outboundOnly"),
+    );
+  });
+
+  it("says none for a server that sent no reading", () => {
+    expect(directionSentence(VIEW, t)).toBe(
+      t("contact.standing.direction.none"),
+    );
   });
 });
 
@@ -244,6 +267,7 @@ describe("contactFigures", () => {
         activities: {
           data: [
             {
+              occurred_precision: "instant",
               offers_email: false,
               id: "a-1",
               kind: "email",
@@ -257,6 +281,7 @@ describe("contactFigures", () => {
               email_summary: {
                 activity_id: "a-1",
                 occurred_at: "2026-08-01T09:00:00Z",
+                occurred_precision: "instant",
                 version: 1,
                 direction: "inbound",
                 display_status: "team",
@@ -309,6 +334,7 @@ describe("the timeline", () => {
         next_meeting: {
           activity_id: "m-2",
           starts_at: "2026-08-20T09:00:00Z",
+          occurred_precision: "instant",
           subject: "Walkthrough",
         },
       },

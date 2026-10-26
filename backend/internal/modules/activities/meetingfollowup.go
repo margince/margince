@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -93,7 +94,7 @@ func (s *Store) queryMeetingFollowUps(
 		instant, g.content, g.links, arg(windowDays), AwaitingReplyLookbackDays,
 		g.later, relstrength.InteractionCountsSQL("later"), arg(readerOrNobody(ctx)),
 		messageSnoozeLiftedSQL(at, g.back), g.customer, AwaitingReplyScanCap,
-		meetingHeldSQL("a", at), addressable, maxActivityLinks, narrowed,
+		meetingHeldSQL("a", at), addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading meetings the reader owes a follow-up: %w", err)
@@ -102,7 +103,7 @@ func (s *Store) queryMeetingFollowUps(
 	var out []AwaitingReply
 	for rows.Next() {
 		var r AwaitingReply
-		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.Recipients, &r.CompanyID, &r.DealID); err != nil {
+		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.Recipients, &r.CompanyID, &r.DealID, &r.Precision); err != nil {
 			return nil, fmt.Errorf("activities: reading a meeting the reader owes a follow-up: %w", err)
 		}
 		if len(r.Recipients) > 0 {
@@ -128,7 +129,13 @@ func addressableContactClause(ctx context.Context, arg func(any) int) (string, e
 }
 
 // meetingEndSQL is when the meeting under alias a ended.
-const meetingEndSQL = `(a.occurred_at + make_interval(secs => coalesce(a.duration_seconds, 0)))`
+var meetingEndSQL = occurredday.EndSQL("a")
+
+// followUpFromSQL is where a follow-up to the meeting under alias a may start:
+// its end for an hour, its date's start for a day. A later touch is placed by
+// its own date too (occurredday.FromSQL).
+var followUpFromSQL = `(CASE WHEN a.occurred_precision = 'day' THEN ` + occurredday.StartSQL("a") +
+	` ELSE ` + meetingEndSQL + ` END)`
 
 // meetingFollowUpsSQL: every rule sits before the cap.
 //
@@ -137,7 +144,8 @@ const meetingEndSQL = `(a.occurred_at + make_interval(secs => coalesce(a.duratio
 //  7. what counts as contact for later, 8. the reader, 9. a snooze lifted,
 //  10. the customer arms the reader may read, 11. the cap, 12. the meeting
 //     took place, 13. the contacts the reader may write to, 14. the recipient
-//     cap, 15. which meetings the caller narrowed the read to.
+//     cap, 15. which meetings the caller narrowed the read to, 16. later comes
+//     after the meeting.
 //
 // The attendees are read once, in the LATERAL, and both the recipient list and
 // the "nothing sent since" test use that one set.
@@ -149,7 +157,8 @@ var meetingFollowUpsSQL = `
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.deal_id ORDER BY wl.deal_id::text)
 	                 FILTER (WHERE wl.deal_id IS NOT NULL))[1],
-	                '00000000-0000-0000-0000-000000000000'::uuid)
+	                '00000000-0000-0000-0000-000000000000'::uuid),
+	       a.occurred_precision
 	  FROM activity a
 	  -- Who it was with: the contacts it is filed under first, then the ones
 	  -- its attendee list resolved to. A merged contact counts as its survivor.
@@ -198,17 +207,18 @@ var meetingFollowUpsSQL = `
 	                      AND later.direction IS DISTINCT FROM 'inbound'
 	                      AND %[6]s
 	                      AND %[7]s
-	                      AND later.occurred_at >= ` + meetingEndSQL + `
-	                      AND later.occurred_at <= $%[1]d)
+	                      AND %[16]s
+	                      AND ` + occurredday.BegunSQL("later", "$%[1]d::timestamptz") + `)
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[10]s)
 	   AND NOT ` + readerSetAsideSQL("$%[8]d", "%[9]s") + `
-	 GROUP BY a.id, a.subject, a.occurred_at, attendees.recipients
+	 GROUP BY a.id, a.subject, a.occurred_at, a.occurred_precision, attendees.recipients
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[11]d`
 
 // meetingHeldSQL is a meeting somebody said took place: its outcome was saved
-// as held, and its start has passed. A booked or unmarked past meeting owes
-// an outcome, which the outcome lane asks for once; it owes no follow-up yet.
+// as held, and it has started (occurredday.BegunSQL). A booked or unmarked
+// past meeting owes an outcome, which the outcome lane asks for once; it owes
+// no follow-up yet.
 func meetingHeldSQL(alias, now string) string {
-	return "(" + alias + ".meeting_status = 'held' AND " + alias + ".occurred_at <= " + now + ")"
+	return "(" + alias + ".meeting_status = 'held' AND " + occurredday.BegunSQL(alias, now) + ")"
 }

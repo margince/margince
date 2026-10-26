@@ -167,7 +167,7 @@ describe("what a request through the api client proves", () => {
     expect(connectivityNow()).toBe("online");
   });
 
-  // nginx, the Vite proxy and the desktop launcher all answer a bare 502 when
+  // nginx and the Vite proxy both answer a bare 502 when
   // the api behind them is down; the api's own 5xx always carries a problem.
   it("takes a proxy's bare gateway answer for Margince gone, and the api's own 5xx for an answer", async () => {
     vi.useFakeTimers({ now: 0 });

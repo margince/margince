@@ -1,7 +1,6 @@
 import { Lock } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { formatTimeOfDay } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { Button } from "./atoms";
 import { EmailEntry } from "./emailentry";
@@ -11,9 +10,11 @@ import { VisibilityBadge } from "./visibility";
 import "./composed.css";
 
 import {
+  AutomaticFlag,
   CommitmentReviewFlag,
   directionClass,
   dotClass,
+  entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
   noteClass,
@@ -117,7 +118,7 @@ function BulkGroupRow({
           that stepped out of the axis read as a different list wedged into
           this one. Its mark is the kind's own icon: the whole conversation is
           one thing that happened, and a dot would say it was one message. */}
-      <TimelineWhen atIso={newest.atIso} zone={zone} />
+      <TimelineWhen entry={newest} zone={zone} />
       <span className="tl-rail" aria-hidden="true">
         <span className="tl-icon">
           <Icon aria-hidden />
@@ -141,7 +142,7 @@ function BulkGroupRow({
         ) : newest.kind === "email" && newest.emailSummary ? (
           <EmailEntry
             summary={newest.emailSummary}
-            timestamp={formatTimeOfDay(newest.atIso, locale, zone)}
+            timestamp={entryTimeOfDay(newest, locale, zone)}
             onOpen={newest.onOpenEmail}
             // Absent on the reply composer, whose rows are the thread being
             // answered rather than a place to act from. Every other surface
@@ -252,7 +253,7 @@ export function TimelineRow({
   if (entry.kind === "email" && entry.emailSummary) {
     return (
       <li className={rowClass}>
-        <TimelineWhen atIso={entry.atIso} zone={zone} />
+        <TimelineWhen entry={entry} zone={zone} />
         <span className="tl-rail" aria-hidden="true">
           <span className={dotClass(entry)} />
         </span>
@@ -262,11 +263,12 @@ export function TimelineRow({
               tells two messages on one subject apart. */}
           <EmailEntry
             summary={entry.emailSummary}
-            timestamp={formatTimeOfDay(entry.atIso, locale, zone)}
+            timestamp={entryTimeOfDay(entry, locale, zone)}
             onOpen={entry.onOpenEmail}
             // As above: absent on the reply composer and nowhere else.
             whyNotOpenable="noReader"
           />
+          <AutomaticFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
           />
@@ -281,7 +283,7 @@ export function TimelineRow({
       {/* The date leads the row, in its own gutter. A chronology is read down
           the dates — a reader looking for "what happened in August" scans one
           column rather than the end of every line. */}
-      <TimelineWhen atIso={entry.atIso} zone={zone} />
+      <TimelineWhen entry={entry} zone={zone} />
       {/* The axis, and this row's place on it. The rail runs THROUGH the row
           rather than a rule sitting under it: a chronology is one thread, and a
           border per entry drew it as a stack of unrelated cards. Filled for
@@ -299,11 +301,14 @@ export function TimelineRow({
             which way it went — one line above the headline, because both
             qualify it and set inline they read as the subject's first words. */}
         <span className="tl-head">
-          <Eyebrow>{t(TIMELINE_KIND_LABEL[entry.kind])}</Eyebrow>
-          <TaskStateFlag entry={entry} />
+          <Eyebrow className="tl-head-part">
+            {t(TIMELINE_KIND_LABEL[entry.kind])}
+          </Eyebrow>
           {/* What the record DID, for a row that is not an exchange: the kind
               says this is a record entry, and this says what happened to it. */}
-          {entry.qualifier && <span>{entry.qualifier}</span>}
+          {entry.qualifier && (
+            <span className="tl-head-part">{entry.qualifier}</span>
+          )}
           {/* Which way it went and who was at the other end, as one phrase.
               The direction alone is a fact about us; with the name it is a
               fact about the relationship, which is what the row is for.
@@ -312,7 +317,7 @@ export function TimelineRow({
               still says who this record is talking to, which is the thing the
               audience limited. */}
           {(entry.direction || entry.counterparts) && (
-            <span>
+            <span className="tl-head-part">
               {directionPhrase(
                 entry.withheld ? { ...entry, counterparts: undefined } : entry,
                 t,
@@ -320,6 +325,7 @@ export function TimelineRow({
             </span>
           )}
           {entry.via}
+          <TaskStateFlag entry={entry} />
           {/* Who may read it, when that is worth a mark: sealed rows and
               withheld ones. Withheld first, because a held row's `audience`
               is not the reader's to see and the mark must not claim one. */}
@@ -331,6 +337,7 @@ export function TimelineRow({
               <VisibilityBadge state={entry.audience} />
             )
           )}
+          <AutomaticFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
           />

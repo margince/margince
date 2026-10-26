@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { UTC_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { StatCard } from "./atoms";
 import { HowItStands } from "./howitstands";
@@ -86,6 +87,7 @@ export const CompanyWithRing: Story = {
         <StandingTimeline
           label="Brandt Automotive over time"
           asOf="2026-08-13T09:00:00Z"
+          record={UTC_ZONE}
           gap={{ from: "2026-08-01", title: "12 days", sub: "no reply" }}
           events={[
             {
@@ -253,6 +255,7 @@ export const NotAssessed: Story = {
         <StandingTimeline
           label="Over time"
           asOf="2026-08-13T09:00:00Z"
+          record={UTC_ZONE}
           events={[]}
         />
       }

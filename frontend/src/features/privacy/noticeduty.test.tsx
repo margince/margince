@@ -122,7 +122,7 @@ describe("a privacy-notice duty on the Focus card", () => {
     stubDuty();
     renderWorklist();
 
-    const recorded = await screen.findByText(/Via gmail$/);
+    const recorded = await screen.findByText(/Via Gmail$/);
     const facts = recorded.closest("dl");
     if (!(facts instanceof HTMLElement)) throw new Error("no fact list");
     expect(

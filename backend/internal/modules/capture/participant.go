@@ -216,10 +216,20 @@ func StampFurtherParticipants(
 	partyListIsAttested bool,
 	participants []connector.MessageParticipant,
 ) error {
+	_, err := stampParties(ctx, tx, activityID, kind, channelProvider, partyListIsAttested, participants, rosterStamp{bindSeats: true})
+	return err
+}
+
+// stampParties is StampFurtherParticipants with roster provenance and a count.
+func stampParties(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind, channelProvider string,
+	partyListIsAttested bool, participants []connector.MessageParticipant, roster rosterStamp,
+) (int, error) {
 	if !relstrength.IsParticipantKind(kind) || len(participants) == 0 {
-		return nil
+		return 0, nil
 	}
 	addresses := make([]string, 0, len(participants))
+	binds := make([]bool, 0, len(participants))
 	roles := make([]string, 0, len(participants))
 	// Names are coalesced to '' rather than left null: '' says the stamp ran
 	// and this transport named nobody, while NULL is reserved for rows written
@@ -268,17 +278,7 @@ func StampFurtherParticipants(
 		if address == "" && account == "" {
 			continue
 		}
-		// Which row already speaks for this party, if any. An account names one
-		// first; an entry carrying none falls back to its address, because a
-		// party described once with an account and once without is still one
-		// human.
-		at, already := -1, false
-		if account != "" {
-			at, already = rowOf[account]
-		} else if address != "" {
-			at, already = rowOfAddress[address]
-		}
-		if already {
+		if at, already := rowSpeakingFor(rowOf, rowOfAddress, account, address); already {
 			// Only an EMPTY field is filled: the first description of a party
 			// stands, and a second spelling of something they already gave is
 			// not a correction.
@@ -309,12 +309,13 @@ func StampFurtherParticipants(
 		accounts = append(accounts, account)
 		roles = append(roles, p.Role)
 		names = append(names, name)
+		binds = append(binds, roster.bindSeats && !p.Declined)
 	}
 	// Nobody recordable, which is not the same as no parties offered: a roster
 	// of accounts on a record naming no transport arrives here and leaves
 	// nothing behind.
 	if len(roles) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	// Both lookups run under the workspace GUC, so neither can resolve an
@@ -364,22 +365,21 @@ func StampFurtherParticipants(
 	// kept somebody else's account — one row naming two contacts, and an erasure
 	// keyed on either of them reaching a record about the other.
 	return insertFurtherParticipants(ctx, tx, kind, partyListIsAttested,
-		[]any{activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider, storedDomainsOf(addresses)})
+		[]any{activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider, storedDomainsOf(addresses), binds, roster.seat})
 }
 
-// insertFurtherParticipants writes the parties StampFurtherParticipants
-// collected, with args holding the statement's first eight arguments.
-func insertFurtherParticipants(ctx context.Context, tx pgx.Tx, kind string, partyListIsAttested bool, args []any) error {
+// insertFurtherParticipants writes stampParties' ten arguments and counts the rows.
+func insertFurtherParticipants(ctx context.Context, tx pgx.Tx, kind string, partyListIsAttested bool, args []any) (int, error) {
 	seatMatch, err := calendarSeatMatch(ctx, tx, kind, partyListIsAttested, &args)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name, address_domain_folded)
-		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name, inp.domain_folded
-		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[], $8::text[]) AS inp(address, role, display_name, account, domain_folded)
+	tag, err := tx.Exec(ctx, `
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name, address_domain_folded, roster_seat)
+		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name, inp.domain_folded, $10::uuid
+		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[], $8::text[], $9::bool[]) AS inp(address, role, display_name, account, domain_folded, bind)
 		  LEFT JOIN app_user u
-		         ON $4 AND inp.address <> '' AND `+seatMatch+`
+		         ON $4 AND inp.bind AND inp.address <> '' AND `+seatMatch+`
 		  LEFT JOIN LATERAL (
 		       SELECT coalesce(
 		           (SELECT c.contact_id
@@ -394,10 +394,11 @@ func insertFurtherParticipants(ctx context.Context, tx pgx.Tx, kind string, part
 		             ORDER BY p.contact_id
 		             LIMIT 1)) AS contact_id) pe ON u.id IS NULL
 		ON CONFLICT DO NOTHING`,
-		args...); err != nil {
-		return fmt.Errorf("capture: stamping the further participants of an interaction: %w", err)
+		args...)
+	if err != nil {
+		return 0, fmt.Errorf("capture: stamping the further participants of an interaction: %w", err)
 	}
-	return nil
+	return int(tag.RowsAffected()), nil
 }
 
 // insertParticipant writes one participant row, idempotently. Capture's sync

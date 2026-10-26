@@ -44,6 +44,7 @@ describe("leadStanding", () => {
       t,
       "en",
       zone,
+      zone,
     );
     expect(merged).toEqual({
       word: "lead.standing.merged",
@@ -64,6 +65,7 @@ describe("leadStanding", () => {
         t,
         "en",
         zone,
+        zone,
       );
       expect(standing).toEqual({
         word: "lead.status.new",
@@ -78,6 +80,7 @@ describe("leadStanding", () => {
       lead({ status: "contacted", first_response_at: "2026-08-21T09:12:00Z" }),
       t,
       "en",
+      zone,
       zone,
     );
     expect(answered.word).toBe("lead.standing.theirMove");
@@ -96,6 +99,7 @@ describe("leadStanding", () => {
       t,
       "en",
       UTC_ZONE,
+      UTC_ZONE,
     );
     expect(engaged.word).toBe("lead.standing.inMotion");
     expect(engaged.sentence).toBe(
@@ -103,10 +107,38 @@ describe("leadStanding", () => {
     );
   });
 
+  // A `day` meeting is stored at noon on the record's clock. West of that
+  // zone the same instant falls on the day before.
+  it("dates the engaging signal on the record's clock", () => {
+    const engaged = leadStanding(
+      lead({
+        status: "engaged",
+        full_name: "Jonas Weber",
+        qualification_evidence: {
+          trigger: "meeting_held",
+          occurred_at: "2026-08-23T05:00:00Z",
+        },
+      }),
+      t,
+      "en",
+      "America/Los_Angeles",
+      "Asia/Ho_Chi_Minh",
+    );
+    expect(engaged.sentence).toBe(
+      'lead.standing.meetingHeldOn:{"name":"Jonas Weber","at":"23 Aug 2026"}',
+    );
+  });
+
   // A lead moved to Engaged by hand has no captured signal to date, so it
   // keeps the general sentence rather than a date nothing recorded.
   it("keeps the general sentence for an engaged lead with no evidence", () => {
-    const engaged = leadStanding(lead({ status: "engaged" }), t, "en", zone);
+    const engaged = leadStanding(
+      lead({ status: "engaged" }),
+      t,
+      "en",
+      zone,
+      zone,
+    );
     expect(engaged).toEqual({
       word: "lead.status.engaged",
       sentence: "lead.standing.engagedBecause",
@@ -120,6 +152,7 @@ describe("leadStanding", () => {
       t,
       "en",
       zone,
+      zone,
     );
     expect(qualified.word).toBe("lead.standing.qualified");
     expect(qualified.tone).toBe("success");
@@ -131,6 +164,7 @@ describe("leadStanding", () => {
       }),
       t,
       "en",
+      zone,
       zone,
     );
     expect(closed.word).toBe("lead.standing.closed");

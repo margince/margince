@@ -18,6 +18,7 @@ import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { historyLine } from "../../lib/historyline";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "../../lib/historyundo";
+import { type HistoryValueCtx, historyValue } from "../../lib/historyvalues";
 import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordRestore } from "../../lib/recordrestore";
 import { useRecordZone } from "../../lib/recordzone";
@@ -33,7 +34,6 @@ import { LeftBehindNotice, useLeftBehind } from "./historyleftbehind";
 import { isMergeReference, MergedRecordName } from "./historymergedref";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
-import { type HistoryValueCtx, historyValue } from "./historyvalues";
 import "./history.css";
 
 // The per-record change list: one sentence per audit_log row, from its verb
@@ -118,6 +118,8 @@ function EntryFieldDetail({
               field={change.field}
               oldValue={change.oldValue}
               newValue={change.newValue}
+              oldPrecision={change.oldPrecision}
+              newPrecision={change.newPrecision}
               values={valueCtx}
             />
           )}
@@ -304,11 +306,12 @@ function UndoButton({
               <li key={change.field} className="entry-field">
                 <span>{historyFieldLabel(change.field, t)}</span>
                 <span>
-                  {historyValue(change.field, change.oldValue, {
-                    currency,
-                    locale,
-                    zone: recordZone,
-                  }) ?? t("history.cleared")}
+                  {historyValue(
+                    change.field,
+                    change.oldValue,
+                    { currency, locale, zone: recordZone },
+                    change.oldPrecision,
+                  ) ?? t("history.cleared")}
                 </span>
               </li>
             ))}

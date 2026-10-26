@@ -50,7 +50,7 @@ var leadFilingCandidatesSQL = `
 	                 JOIN lead ld ON ` + storekit.LeadEmailMatchClause("ld", "ap.address") + `
 	                WHERE ap.activity_id = a.id AND ap.address IS NOT NULL
 	                  AND ` + storekit.LiveLeadClause("ld") + `
-	                  AND ` + storekit.LeadEmailHeldAtClause("ld", "ap.address", "a.occurred_at") + `
+	                  AND ` + storekit.LeadEmailHeldAtClause("ld", "ap.address", "a") + `
 	                  AND NOT EXISTS (SELECT 1 FROM activity_link l
 	                                   WHERE l.activity_id = a.id AND l.lead_id = ld.id))`
 

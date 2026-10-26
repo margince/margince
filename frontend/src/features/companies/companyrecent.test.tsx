@@ -34,6 +34,7 @@ function emailSummary(over: Partial<EmailSummary> = {}): EmailSummary {
   return {
     activity_id: EMAIL_ID,
     occurred_at: "2026-08-29T09:15:00Z",
+    occurred_precision: "instant" as const,
     version: 4,
     subject: "Re: the renewal quote",
     preview: "Can you hold the price until Friday?",
@@ -48,6 +49,7 @@ function emailSummary(over: Partial<EmailSummary> = {}): EmailSummary {
 
 function emailRow(over: Partial<Activity> = {}): Activity {
   return {
+    occurred_precision: "instant",
     offers_email: false,
     id: EMAIL_ID,
     kind: "email",
@@ -70,6 +72,7 @@ function emailRow(over: Partial<Activity> = {}): Activity {
 // A call in the same list. It carries no summary and never will, so it is the
 // control for "only the email branch moved".
 const callRow: Activity = {
+  occurred_precision: "instant",
   offers_email: false,
   id: CALL_ID,
   kind: "call",

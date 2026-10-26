@@ -15,6 +15,7 @@ import {
   decisionRow,
   leadRow,
   meetingRow,
+  nextMeeting,
   readingsDay,
   wholeDecisions,
   wholeLeads,
@@ -246,7 +247,7 @@ describe("the brief readings strip", () => {
     "reads a %s calendar's zero as no measurement",
     async (calendar, value, why) => {
       const user = userEvent.setup();
-      const next_meeting = { activity_id: "a-n", starts_at: NEXT_AT };
+      const next_meeting = nextMeeting("a-n", NEXT_AT);
       drawDay({ ...readingsDay({}, [], []), calendar, next_meeting });
 
       expect(meetingsCard().textContent).toContain(en[value]);
@@ -322,11 +323,7 @@ describe("the brief readings strip", () => {
     drawDay({
       ...readingsDay({}, [], []),
       calendar: "connected",
-      next_meeting: {
-        activity_id: "a-next",
-        starts_at: startsAt,
-        subject: "Weber kickoff",
-      },
+      next_meeting: nextMeeting("a-next", startsAt, "Weber kickoff"),
     });
 
     expect(meetingsCard().querySelector(".stat-card-value")?.textContent).toBe(

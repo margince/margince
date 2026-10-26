@@ -280,7 +280,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // reads the same whether that is tomorrow or next month.
           basis={
             calendar.state === "quiet"
-              ? nextMeetingLine(calendar.next, locale, t)
+              ? nextMeetingLine(calendar.next, locale, t, viewerZone())
               : meetingsDetail(meetings, locale, t, plural)
           }
           unavailable={t("brief.readings.unavailable.meetings")}

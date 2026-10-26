@@ -53,11 +53,14 @@ export function ThreadList({
   threads,
   verbs,
   aboutOf,
+  verbsOf,
 }: Readonly<{
   threads: readonly DealRoomThread[];
   verbs: ThreadVerbs;
   /** What a thread is about, as a label, for a list that mixes documents. */
   aboutOf?: (thread: DealRoomThread) => string | undefined;
+  /** The verbs one thread takes, for a list whose threads differ in them. */
+  verbsOf?: (thread: DealRoomThread) => ThreadVerbs;
 }>) {
   return (
     <div className="board-threads">
@@ -65,7 +68,7 @@ export function ThreadList({
         <ThreadRow
           key={thread.id}
           thread={thread}
-          verbs={verbs}
+          verbs={verbsOf?.(thread) ?? verbs}
           about={aboutOf?.(thread)}
         />
       ))}

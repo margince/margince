@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent } from "storybook/test";
+import { expect, screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import type { ContactTab } from "../../lib/contacttab";
@@ -288,6 +288,7 @@ const guardAllowsMail: components["schemas"]["ContactConsentGuardEntry"][] = [
     channel: "email",
     verdict: "allowed",
     reason: "She wrote to you on 1 Aug 2026.",
+    reason_code: "qualifying_event",
     qualifying_event: {
       kind: "inbound_message",
       occurred_at: "2026-08-01T10:15:00Z",
@@ -302,6 +303,7 @@ const guardAllowsMail: components["schemas"]["ContactConsentGuardEntry"][] = [
     channel: "phone",
     verdict: "unknown",
     reason: "No consent recorded.",
+    reason_code: "no_consent",
   },
 ];
 
@@ -315,6 +317,8 @@ const guardRefusesMail: components["schemas"]["ContactConsentGuardEntry"][] = [
     channel: "email",
     verdict: "blocked",
     reason: "She opted out on 12 Jul 2026.",
+    reason_code: "objection",
+    reason_at: "2026-07-12T00:00:00Z",
   },
 ];
 
@@ -568,6 +572,7 @@ const promised: View = {
   next_steps: {
     data: [
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-9",
         kind: "task",
@@ -581,6 +586,7 @@ const promised: View = {
         updated_at: "2026-08-10T09:00:00Z",
       },
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-8",
         kind: "task",
@@ -626,6 +632,7 @@ const calledBack: View = {
   next_steps: {
     data: [
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-7",
         kind: "task",
@@ -724,6 +731,20 @@ export const LeadMomentFromCall: Story = {
   },
 };
 
+// On a phone the details stay in the page column, above the tabs.
+export const DetailsOnPhone: Story = {
+  name: "Page · details on a phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <Page />,
+  play: async () => {
+    await screen.findByText(en["contact.aside.consent"]);
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      window.innerWidth,
+    );
+  },
+};
+
 // --- Drawers: the surfaces the page opens over itself ------------------------
 //
 // Each renders open, since a closed drawer paints nothing. Writing to the
@@ -734,18 +755,11 @@ const opensDialog = (name: string) => async () => {
   await screen.findByRole("dialog");
 };
 
+// The consent proof lives on the Data & tools tab, so its drawer opens there.
 export const ConsentDrawer: Story = {
   name: "Page · consent drawer",
-  render: () => <Page />,
+  render: () => <Page tab="research" />,
   play: opensDialog("Manage consent and proof history"),
-};
-
-export const DetailsOnPhone: Story = {
-  name: "Page · details on a phone",
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
-  render: () => <Page />,
-  play: opensDialog("Show details and permissions"),
 };
 
 // --- The tabs beside Overview -----------------------------------------------

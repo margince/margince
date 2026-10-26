@@ -306,7 +306,7 @@ export const OutlookWithoutACurrency: Story = {
 export const Scorecard: Story = {
   render: frozen(
     <InTheWeeksPanel>
-      <ScorecardPanel scorecard={weeklyScorecard} />
+      <ScorecardPanel scorecard={weeklyScorecard} weekStart="2026-06-01" />
     </InTheWeeksPanel>,
   ),
 };
@@ -317,7 +317,10 @@ export const Scorecard: Story = {
 export const ScorecardDealsOnly: Story = {
   render: frozen(
     <InTheWeeksPanel>
-      <ScorecardPanel scorecard={{ deal: weeklyScorecard.deal }} />
+      <ScorecardPanel
+        scorecard={{ deal: weeklyScorecard.deal }}
+        weekStart="2026-06-01"
+      />
     </InTheWeeksPanel>,
   ),
 };
@@ -354,6 +357,7 @@ export const ScorecardNothingToCover: Story = {
             close_date_sound: 0,
           },
         }}
+        weekStart="2026-06-01"
       />
     </InTheWeeksPanel>,
   ),

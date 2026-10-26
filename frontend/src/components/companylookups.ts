@@ -8,6 +8,7 @@ import {
   HEALTH_RATINGS,
   type HealthRating,
 } from "../design-system/readingtone";
+import { activityDay } from "../format/activitywhen";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import {
   type Locale,
@@ -174,7 +175,14 @@ export function useHealthReason(): (
     }
     const params = reasonParams(values, locale);
     if (values.at) {
-      params.at = formatDateAbbrev(values.at, locale, zone);
+      const precision = values.at_precision ?? "instant";
+      params.at = activityDay(
+        values.at,
+        precision,
+        locale,
+        zone,
+        formatDateAbbrev,
+      );
     }
     if ("key" in message) {
       return t(message.key, params);

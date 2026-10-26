@@ -194,7 +194,7 @@ func TestTheConversationStateReadsTheSameTwoInstants(t *testing.T) {
 		act("019fe7ae-0000-7000-8000-00000000000a", when.Add(-2*time.Hour),
 			crmcontracts.ActivityDirectionInbound, "Pricing?", "What would this cost?"),
 	}
-	got := leaddraft.ConversationState(activities, when)
+	got := leaddraft.ConversationState(activities, when, time.UTC)
 	want := convstate.Classify(when, when.Add(-2*time.Hour), time.Time{})
 	if got != want {
 		t.Errorf("state = %v, want %v — the envelope and the recipient read different instants", got, want)
@@ -204,7 +204,7 @@ func TestTheConversationStateReadsTheSameTwoInstants(t *testing.T) {
 // A lead with no correspondence at all is a first touch, not a failure.
 func TestALeadNobodyHasWrittenToIsAFirstTouch(t *testing.T) {
 	t.Parallel()
-	if got := leaddraft.ConversationState(nil, when); got != convstate.Classify(when, time.Time{}, time.Time{}) {
+	if got := leaddraft.ConversationState(nil, when, time.UTC); got != convstate.Classify(when, time.Time{}, time.Time{}) {
 		t.Errorf("state = %v on a lead with no history", got)
 	}
 }

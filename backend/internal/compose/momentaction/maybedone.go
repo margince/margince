@@ -42,6 +42,7 @@ func DoneEvidence(said langcopy.Spoken, q DoneQuestion) []crmcontracts.ContactMo
 	at, email := q.Sent.At, openapi_types.UUID(q.Sent.EmailID)
 	return []crmcontracts.ContactMomentEvidence{q.Plain.Evidence[0], {
 		Type: crmcontracts.ContactMomentEvidenceTypeActivity, Id: &email, Label: label, ObservedAt: &at,
+		ObservedPrecision: new(crmcontracts.OccurredPrecision(q.Sent.Precision)),
 	}}
 }
 

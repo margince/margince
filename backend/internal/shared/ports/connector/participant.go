@@ -42,6 +42,9 @@ type MessageParticipant struct {
 	// member, so a roster naming one proves only that the account was in the
 	// room.
 	ChannelUserID string
+	// Declined says the party answered no to a calendar invitation. A declined
+	// colleague is still shown on the meeting, and never bound to their seat.
+	Declined bool
 }
 
 // The roles a further participant may hold. The set is closed by the

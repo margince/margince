@@ -9,6 +9,7 @@ import {
   OverviewRow,
 } from "../../design-system/overviewcard";
 import { provenanceOf } from "../../design-system/provenanceof";
+import { activityDay } from "../../format/activitywhen";
 import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -43,7 +44,7 @@ export function LatestCard({
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
-  const rows = latestExchanges(view);
+  const rows = latestExchanges(view, useRecordZone());
   const hidden = view.sections_omitted.includes("activities");
   return (
     <OverviewCard
@@ -89,7 +90,13 @@ function LatestRow({
   const sub = [
     who,
     t(KIND_WORD[activity.kind]),
-    formatDayMonth(activity.occurred_at, locale, zone),
+    activityDay(
+      activity.occurred_at,
+      activity.occurred_precision,
+      locale,
+      zone,
+      formatDayMonth,
+    ),
   ]
     .filter(Boolean)
     .join(" · ");

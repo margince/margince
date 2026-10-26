@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -114,6 +115,7 @@ func activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within
 	}
 	var title, kind string
 	var occurredAt time.Time
+	var dateOnly bool
 	args := []any{activityID}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	filed := ""
@@ -121,9 +123,9 @@ func activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within
 		filed = " AND " + clause
 	}
 	err := tx.QueryRow(ctx, `
-		SELECT coalesce(a.subject, a.channel_provider, a.kind), a.kind, a.occurred_at
+		SELECT coalesce(a.subject, a.channel_provider, a.kind), a.kind, a.occurred_at, a.occurred_precision = 'day'
 		  FROM activity a WHERE a.id = $1 AND a.archived_at IS NULL`+filed, args...).
-		Scan(&title, &kind, &occurredAt)
+		Scan(&title, &kind, &occurredAt, &dateOnly)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return graphItem{}, apperrors.ErrNotFound
@@ -133,9 +135,10 @@ func activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within
 	// When it happens is half of what a prep is for, and the title alone does
 	// not carry it — a subject line reads the same the day before and the week
 	// after.
+	when := occurredday.When(occurredday.Moment{At: occurredAt, DateOnly: dateOnly})
 	return graphItem{
-		entityType: string(datasource.EntityActivity), id: activityID,
-		summary: fmt.Sprintf("%s — %s on %s", title, kind, occurredAt.UTC().Format(time.RFC3339)),
+		entityType: string(datasource.EntityActivity), id: activityID, dateOnly: dateOnly,
+		summary: fmt.Sprintf("%s — %s on %s", title, kind, when),
 		// Also as a FIELD, not only inside the sentence. The prep's anchor is
 		// the most date-sensitive item it has, and a reader told to prefer the
 		// structured date would read its absence as "not an event".

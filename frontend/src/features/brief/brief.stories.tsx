@@ -390,6 +390,7 @@ const workingMorningRows: WorklistItem[] = [
     }),
   ),
   {
+    occurred_precision: "instant",
     id: conversationID,
     source: "customer_waiting",
     category: "customer_waiting",
@@ -404,6 +405,7 @@ const workingMorningRows: WorklistItem[] = [
     move: { action: "draft_reply", activity_id: conversationID },
   },
   {
+    occurred_precision: "instant",
     id: "risk-one",
     source: "deal_at_risk",
     category: "deals_at_risk",
@@ -431,6 +433,7 @@ const workingMorningRows: WorklistItem[] = [
     },
   },
   {
+    occurred_precision: "instant",
     id: "lead-one",
     source: "lead_response",
     category: "leads",

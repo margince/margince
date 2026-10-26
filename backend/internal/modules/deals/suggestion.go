@@ -52,7 +52,9 @@ type SuggestionEvidence struct {
 	ActivityID   *ids.UUID
 	SignalID     *ids.UUID
 	AttachmentID *ids.UUID
-	OccurredAt   time.Time
+	// OccurredAt is the stored time the item cites, which no zone moves: a
+	// signal's newest cited occurred_at (storekit.CitedActivityStamp).
+	OccurredAt time.Time
 }
 
 // ref is the item's own id, whichever column carries it.
@@ -184,26 +186,13 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 	if err := validDraft(d); err != nil {
 		return false, err
 	}
-	current, err := suggestionSourceTimes(ctx, tx, d.Evidence)
-	if err != nil || !current {
+	through, stands, err := evidenceStandsTx(ctx, tx, d)
+	if err != nil || !stands {
 		return false, err
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return false, err
-	}
-	floor, err := suggestionFloorTx(ctx, tx, d.CompanyID)
-	if err != nil {
-		return false, err
-	}
-	through := d.Evidence[0].OccurredAt
-	for _, e := range d.Evidence {
-		if floor != nil && !e.OccurredAt.After(*floor) {
-			return false, nil
-		}
-		if e.OccurredAt.After(through) {
-			through = e.OccurredAt
-		}
 	}
 	cited, err := evidenceRaisedOnDuplicateTx(ctx, tx, d)
 	if err != nil || cited {

@@ -1,0 +1,49 @@
+name: a_focused_reading_reports_the_promise_the_first_left_out
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - direction: outbound
+    subject: 'Podcast recording'
+    sent: '2026-09-07'
+    body: |
+      Hi Mira,
+
+      thanks for joining the session. I will send you the edited recording
+      once it is ready.
+
+      Best,
+      Lars
+  - direction: inbound
+    subject: 'Re: Podcast recording'
+    sent: '2026-09-08'
+    reported: new_opportunity
+    body: |
+      Thanks Lars. By the way, we would like to join the beta of your new
+      product. Who should we talk to about getting access?
+
+      Mira
+  - direction: outbound
+    subject: 'Re: Podcast recording'
+    sent: '2026-09-08'
+    body: |
+      Happy to help: Jana Weber runs the beta, and you can write to her at
+      beta@example.com.
+
+      Lars
+expect:
+  outcome: accepted
+  answer:
+    - kind: commitment_made
+      message: 1
+  rubric: >
+    The first reading filed the new_opportunity on message 2, so this second
+    reading sends messages 1 and 3 only, and both are its focus. The promise to
+    send the edited recording, cited on message 1, is the event. Message 3
+    names a contact and promises nothing. Then score the summary as one plain
+    sentence a colleague could act on, and the confidence as a real judgement.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

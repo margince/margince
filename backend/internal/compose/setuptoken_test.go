@@ -7,22 +7,17 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
 
-// The setup token is the credential that claims an installation, so the
-// property that matters is not "the file gets written" but "an entry that is
-// already there is refused, and its contents are left alone". That was asserted
-// in a comment on three platforms and checked on none; these run everywhere the
-// unit lane runs, Windows included.
+// The setup token is the credential that claims an installation. The property
+// that matters is that an entry already there is refused and left intact.
 //
-// They do NOT exercise openNoFollow, and nothing here should be read as saying
-// they do: a planted regular file is refused by O_EXCL alone, and on POSIX
-// O_NOFOLLOW guards no case of its own at all (setuptokenflags_unix.go explains
-// why). The symlink behaviour O_EXCL actually IS relied on for is pinned by the
-// last test in this file.
+// These tests do not exercise O_NOFOLLOW. O_EXCL alone refuses a planted
+// regular file, and O_NOFOLLOW guards no case of its own (writeSetupTokenFile
+// says why). The last test in this file pins the symlink case O_EXCL is
+// relied on for.
 
 func TestWriteSetupTokenFileRefusesAnExistingEntryAndLeavesItIntact(t *testing.T) {
 	t.Chdir(t.TempDir())
@@ -86,28 +81,16 @@ func TestWriteSetupTokenFileWritesTheTokenWhenThePathIsFree(t *testing.T) {
 // TestWriteSetupTokenFileRefusesASymlinkAtTheFinalComponent turns a cited
 // standard into a checked one.
 //
-// setuptokenflags_unix.go argues that O_NOFOLLOW adds nothing because POSIX
-// requires open() with O_CREAT|O_EXCL to fail EEXIST when the final component is
-// a symbolic link, whatever it points at. Every reason not to reach for a
-// stronger primitive rests on that sentence, and until now it was a citation. If
+// writeSetupTokenFile relies on O_EXCL alone for the final component. POSIX
+// requires open() with O_CREAT|O_EXCL to fail EEXIST when that component is a
+// symbolic link, whatever it points at. Every reason not to reach for a
+// stronger primitive rests on that sentence, and this test checks it. If
 // it were wrong, the writer would follow an attacker's link and place the
 // credential that claims the installation wherever it aimed.
 //
 // Both directions are covered: a link to an existing file, and a DANGLING one,
 // which is the case a naive implementation lets through.
 func TestWriteSetupTokenFileRefusesASymlinkAtTheFinalComponent(t *testing.T) {
-	// Windows, and only Windows, is skipped — for the fixture, not the property.
-	// Creating a symlink there needs SeCreateSymbolicLinkPrivilege or Developer
-	// Mode, so the plant cannot be built on an ordinary runner. Every lane that
-	// runs this suite runs on Linux, so this never skips in CI.
-	//
-	// The skip names what goes untested rather than an issue number, because a
-	// number tells a reader where to ask and not what is missing — and a skipped
-	// security test looks exactly like a passing one.
-	if runtime.GOOS == "windows" {
-		t.Skip("cannot plant a symlink without SeCreateSymbolicLinkPrivilege: what goes unexercised here is the refusal of a symlinked FINAL component, including the dangling case that setuptokenflags_windows.go documents as behaving differently on NT")
-	}
-
 	for _, tc := range []struct {
 		name    string
 		dangles bool
@@ -165,14 +148,6 @@ func TestWriteSetupTokenFileRefusesASymlinkAtTheFinalComponent(t *testing.T) {
 // directory the attacker owns, and the write reports no error at all, so nothing
 // downstream can tell.
 func TestWriteSetupTokenFileRefusesASymlinkedParentDirectory(t *testing.T) {
-	// Skipped on Windows for the FIXTURE, not the property: planting a symlink
-	// needs SeCreateSymbolicLinkPrivilege or Developer Mode. What goes untested
-	// there is the parent-directory refusal itself — ownTokenDirectory's Lstat is
-	// platform-independent, but no lane in this repository executes it on Windows.
-	if runtime.GOOS == "windows" {
-		t.Skip("cannot plant a symlink without SeCreateSymbolicLinkPrivilege; the parent-directory refusal is therefore unexercised on Windows")
-	}
-
 	work := t.TempDir()
 	// Outside the installation, because relocating the credential out of the tree
 	// is the point.

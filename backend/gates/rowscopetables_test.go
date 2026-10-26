@@ -581,5 +581,10 @@ const (
 	// 139: contacts.primaryEmployersOf lists every current employee of the
 	// company a merge retires, past the reader's scope, because the merge moves
 	// every edge. The ids go only to the merge's twin re-check; none is returned.
-	modulesTierUnscopedCeiling = 139
+	//
+	// 140: contacts.leadLinkedCompany reads the company a lead row is linked to.
+	// The link, the unlink, the promotion's edge and the match offer must see it
+	// whether or not the caller may open the company. Every read of a lead
+	// withholds it through withholdUnreadableCompanies.
+	modulesTierUnscopedCeiling = 140
 )

@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -39,15 +40,31 @@ type LastTouch struct {
 	// PrecedingContactAt is the newest exchange strictly before InboundAt,
 	// the far side of the silence a reply broke.
 	PrecedingContactAt *time.Time
+	// The precisions of the rows behind each time: "day" when that row names
+	// only a date, empty when there is no row.
+	InboundPrecision, OutboundPrecision, ContactPrecision string
+	LiveInboundPrecision, PrecedingPrecision              string
+}
+
+// Direction is which sides have written, by relstrength's one rule.
+func (t LastTouch) Direction() relstrength.Direction {
+	return relstrength.Sides{TheyWrote: t.InboundAt != nil, WeWrote: t.OutboundAt != nil}.Direction()
 }
 
 // Touches is what the relationship-change derivation needs from this answer.
 func (t LastTouch) Touches() relstrength.Touches {
 	return relstrength.Touches{
-		LastTouch:     t.ContactAt,
-		LatestInbound: t.InboundAt,
-		Preceding:     t.PrecedingContactAt,
+		LastTouch:     dated(t.ContactAt, t.ContactPrecision),
+		LatestInbound: dated(t.InboundAt, t.InboundPrecision),
+		Preceding:     dated(t.PrecedingContactAt, t.PrecedingPrecision),
 	}
+}
+
+func dated(at *time.Time, precision string) *occurredday.Moment {
+	if at == nil {
+		return nil
+	}
+	return &occurredday.Moment{At: *at, DateOnly: occurredday.IsDay(precision)}
 }
 
 // LastTouchFor answers the two moments for every contact in the set the caller
@@ -108,20 +125,27 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		fmt.Sprintf(contactReachesActivity, "c.id"), scope, projectScope(opts, arg),
 		auth.AudienceWorkspaceOnly("a"))
 	humanClock := relstrength.LastActivityCountsSQL("a", "now()") + " AND " + relstrength.WrittenByHumanSQL("a")
-	sender := relstrength.SenderSQL("c.id", "a")
-	inbound := fmt.Sprintf(`a.direction = 'inbound' AND %s AND %s`, sender, humanClock)
+	inbound := relstrength.TheyWroteSQL("c.id", "a") + " AND " + humanClock
+	outbound := relstrength.WeWroteSQL("a") + " AND " + humanClock
 	exchange := relstrength.ContactExchangeSQL("a", "c.id", "now()")
+	// One newest row per direction carries its time and its precision together.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT c.id,
-		       (SELECT max(a.occurred_at) %[1]s AND %[2]s),
-		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'outbound' AND %[5]s),
-		       (SELECT max(a.occurred_at) %[1]s AND %[2]s AND NOT %[6]s),
-		       (SELECT max(a.occurred_at) %[1]s AND %[7]s),
-		       (SELECT max(a.occurred_at) %[1]s AND %[7]s
-		           AND a.occurred_at < (SELECT max(a.occurred_at) %[1]s AND %[2]s))
+		SELECT c.id, inbound.touched_at, outbound.touched_at, live.touched_at, exchange.touched_at, preceding.touched_at,
+		       coalesce(inbound.touched_precision, ''), coalesce(outbound.touched_precision, ''), coalesce(exchange.touched_precision, ''),
+		       coalesce(live.touched_precision, ''), coalesce(preceding.touched_precision, '')
 		FROM contact c
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		                     %[1]s AND %[2]s %[8]s) inbound ON true
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		                     %[1]s AND %[5]s %[8]s) outbound ON true
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		                     %[1]s AND %[2]s AND NOT %[6]s %[8]s) live ON true
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		                     %[1]s AND %[7]s %[8]s) exchange ON true
+		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+		                     %[1]s AND %[7]s AND a.occurred_at < inbound.touched_at %[8]s) preceding ON true -- occurred_at raw: the touch before the newest inbound, an ordering of rows
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
-		reached, inbound, wantedPos, visible, humanClock, activities.ImportedHistorySQL, exchange), args...)
+		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange, newestRow), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +154,9 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		var contactID ids.ContactID
 		var touch LastTouch
 		if err := rows.Scan(&contactID, &touch.InboundAt, &touch.OutboundAt, &touch.LiveInboundAt,
-			&touch.ContactAt, &touch.PrecedingContactAt); err != nil {
+			&touch.ContactAt, &touch.PrecedingContactAt,
+			&touch.InboundPrecision, &touch.OutboundPrecision, &touch.ContactPrecision,
+			&touch.LiveInboundPrecision, &touch.PrecedingPrecision); err != nil {
 			return nil, err
 		}
 		out[contactID] = touch
@@ -140,3 +166,6 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	}
 	return out, nil
 }
+
+// newestRow picks a direction's newest row, the one max(a.occurred_at) names.
+const newestRow = "ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1"

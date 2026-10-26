@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -79,6 +80,20 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 var leadHasInboundSQL = auth.LiveLeadInquiryClause("lead")
 
 var leadOwesAReplySQL = "archived_at IS NULL AND first_response_at IS NULL AND " + leadHasInboundSQL
+
+// firstResponseAtSQL is the stamp a response at `at` earns on the lead under
+// alias, firstResponseStamp in SQL: a predicate over many leads cannot call Go.
+func firstResponseAtSQL(alias, at string) string {
+	return "greatest(CAST(" + at + " AS timestamptz), " + alias + ".created_at)"
+}
+
+// leadTakesFirstResponseSQL is whether the live lead under alias takes a
+// response at `at` as its first: no stamp holds it back that is not later. The
+// subscriber's write and the day-answer sweep both ask it.
+func leadTakesFirstResponseSQL(alias, at string) string {
+	return fmt.Sprintf(`(%[1]s.archived_at IS NULL AND coalesce(%[1]s.first_response_at > %[2]s, true))`,
+		alias, firstResponseAtSQL(alias, at))
+}
 
 // slaStateClause renders one sla_state filter as SQL over the lead's own
 // columns, with the same arithmetic leadSLAFields applies in Go: the list
@@ -165,19 +180,18 @@ func recordFirstResponseTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, at
 			return err
 		}
 		var current *time.Time
-		var created time.Time
-		if err := tx.QueryRow(ctx, `SELECT first_response_at, created_at FROM lead WHERE id = $1`, leadID).Scan(&current, &created); err != nil {
+		var takes bool
+		// A backdated activity can predate the lead it answers. The first
+		// response is the earliest one, since the bus is at-least-once and
+		// unordered; a later or equal stamp is a replay and a no-op.
+		if err := tx.QueryRow(ctx, `SELECT first_response_at, `+firstResponseAtSQL("lead", "$2")+`, `+
+			leadTakesFirstResponseSQL("lead", "$2")+` FROM lead WHERE id = $1`, leadID, at).Scan(&current, &at, &takes); err != nil {
 			return err
 		}
-		// A backdated activity can predate the lead it answers.
-		at = firstResponseStamp(at, created)
-		// The FIRST response is the earliest one, not the first one this
-		// subscriber happened to process: the bus is at-least-once and
-		// unordered, so a 09:00 reply may arrive after a 10:00 one. A later
-		// or equal stamp on a lead already answered is a replay and a no-op.
-		if current != nil && !at.Before(*current) {
+		if !takes {
 			return nil
 		}
+		at = at.UTC()
 		p := storekit.NewPatch()
 		p.Set(firstResponseColumn, current, at)
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
@@ -209,7 +223,7 @@ func isFirstResponseActivity(t leadResponseTouch) bool {
 	if humanLoggedNote(t) {
 		return true
 	}
-	if t.direction != "outbound" {
+	if t.direction != touchOutbound {
 		return false
 	}
 	if humanCaptured(t) {
@@ -218,9 +232,9 @@ func isFirstResponseActivity(t leadResponseTouch) bool {
 	return t.hadInbound
 }
 
-// answeredBy is the ground truth the breach scan judges on: the earliest
-// genuine first response linked to this lead that happened at or before the
-// deadline, or nil when there is none.
+// answeredBy is the ground truth the breach scan judges on. It is the earliest
+// first response on this lead that answers by the deadline, or nil when there
+// is none. A day touch answers once its whole date has ended.
 //
 // It reads the ACTIVITIES rather than lead.first_response_at, because that
 // column is a projection an event subscriber writes and the scan's whole
@@ -242,33 +256,29 @@ func answeredBy(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline time
 		if !isFirstResponseActivity(t) {
 			continue
 		}
-		if earliest == nil || t.occurredAt.Before(*earliest) {
-			at := t.occurredAt
+		if earliest == nil || t.respondedAt.Before(*earliest) {
+			at := t.respondedAt
 			earliest = &at
 		}
 	}
 	return earliest, nil
 }
 
-// leadTouchesFor answers this lead's activities up to the deadline in the shape
-// isFirstResponseActivity reads.
+// leadTouchesFor answers this lead's activities that answer by the deadline
+// (occurredday.ProvenSQL) in the shape isFirstResponseActivity reads.
 //
-// The same columns and the same hadInbound sub-select as leadResponseTouches,
-// asked from the other end: that one starts from ONE activity and finds the
-// leads it is linked to, which is what an event subscriber knows; this starts
-// from one LEAD and finds its activities, which is what a scan knows. Neither
-// can be expressed as the other without asking the database for rows its
-// caller has no use for.
+// It reads the same columns and hadInbound (inboundBeforeSQL) as
+// leadResponseTouches, asked from the other end. That one starts from one
+// activity and finds its leads, which an event subscriber knows. This starts
+// from one lead and finds its activities, which a scan knows. Neither can be
+// the other without reading rows its caller has no use for.
 func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline time.Time) ([]leadResponseTouch, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT coalesce(a.direction, ''), a.captured_by, a.occurred_at,
-		       EXISTS (SELECT 1 FROM activity_link li JOIN activity ai ON ai.id = li.activity_id
-		               WHERE li.lead_id = $1 AND ai.direction = 'inbound'
-		                 AND ai.archived_at IS NULL AND `+auth.ActivityAvailableClause("ai")+`
-		                 AND ai.occurred_at < a.occurred_at),
-		       a.kind, coalesce(a.meeting_status, ''), a.source
+		SELECT coalesce(a.direction, ''), a.captured_by, a.occurred_at, `+inboundBeforeSQL("$1", "a")+`,
+		       a.kind, coalesce(a.meeting_status, ''), a.source, `+occurredday.ProvenSQL("a")+`
 		FROM activity_link l JOIN activity a ON a.id = l.activity_id
-		WHERE l.lead_id = $1 AND a.archived_at IS NULL AND a.occurred_at <= $2
+		WHERE l.lead_id = $1 AND a.archived_at IS NULL
+		  AND `+occurredday.ProvenSQL("a")+` <= $2
 		  AND `+auth.ActivityAvailableClause("a"), leadID, deadline)
 	if err != nil {
 		return nil, fmt.Errorf("read the lead's activities before its deadline: %w", err)
@@ -278,7 +288,7 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 	for rows.Next() {
 		t := leadResponseTouch{lead: leadID}
 		if err := rows.Scan(&t.direction, &t.capturedBy, &t.occurredAt, &t.hadInbound,
-			&t.kind, &t.meetingStatus, &t.source); err != nil {
+			&t.kind, &t.meetingStatus, &t.source, &t.respondedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, t)

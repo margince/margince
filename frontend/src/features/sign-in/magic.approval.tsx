@@ -33,8 +33,12 @@ export function MagicApproval({
   const zone = useRecordZone();
   const preview = line.approval_preview;
   if (!preview) return null;
-  const display = commercialPreviewDisplay(preview, t, locale, (value) =>
-    formatDate(middayInstant(value, zone), locale, zone),
+  const display = commercialPreviewDisplay(
+    preview,
+    t,
+    locale,
+    (value) => formatDate(middayInstant(value, zone), locale, zone),
+    zone,
   );
   const commercialStage = [
     "advance_deal",

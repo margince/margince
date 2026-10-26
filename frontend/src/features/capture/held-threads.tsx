@@ -9,7 +9,8 @@ import { CellStack } from "../../design-system/cellstack";
 import { DataTable } from "../../design-system/datatable";
 import { EmailReference } from "../../design-system/emailreference";
 import { useToast } from "../../design-system/toast";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatActivityWhen } from "../../format/activitywhen";
+import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -177,7 +178,12 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
             align: "end",
             render: (row) =>
               row.occurred_at
-                ? formatDateTime(row.occurred_at, locale, zone)
+                ? formatActivityWhen(
+                    row.occurred_at,
+                    row.occurred_precision ?? "instant",
+                    locale,
+                    zone,
+                  )
                 : "—",
           },
           {

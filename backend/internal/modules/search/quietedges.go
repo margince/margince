@@ -66,10 +66,11 @@ func liveExchangeClock() string {
 		      JOIN activity a ON a.id = cp.activity_id AND a.archived_at IS NULL%s
 		       AND %s
 		      JOIN activity_participant up ON up.activity_id = a.id AND up.role IN %s
+		       AND %s
 		      JOIN app_user lu ON lu.id = up.user_id AND %s
 		     WHERE cp.contact_id = e.contact_id AND cp.role IN %s`,
 		audienceWorkspaceOnly, relstrength.ContactExchangeSQL("a", "e.contact_id", "now()"),
-		interactionRoles, workforce.LiveMemberSQL("lu"), interactionRoles)
+		interactionRoles, auth.ParticipantStandsSQL("up", "a"), workforce.LiveMemberSQL("lu"), interactionRoles)
 }
 
 // QuietContacts answers "which relationships have gone silent", most exchanged

@@ -14,9 +14,11 @@ package activities
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -248,18 +250,32 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		pos := arg("%" + storekit.EscapeLike(*in.Query) + "%")
 		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\')", pos, pos))
 	}
-	if in.OccurredAfter != nil {
-		where = append(where, sprintf("a.occurred_at >= $%d", arg(*in.OccurredAfter)))
-	}
-	if in.OccurredBefore != nil {
-		where = append(where, sprintf("a.occurred_at < $%d", arg(*in.OccurredBefore)))
-	}
+	where = append(where, occurredWindowClauses(in, arg)...)
 	if in.AwaitingOutcome {
 		// NULL counts as awaiting: a captured calendar event carries no status,
 		// and excluding it would empty this question on a connected calendar.
 		where = append(where, "(a.meeting_status IS NULL OR a.meeting_status = 'booked')")
 	}
 	return where
+}
+
+// occurredWindowClauses bounds the time a row happened at, a day entry by its
+// date (occurredday.WithinSQL). With DayDates set, an instant keeps the window
+// and a day entry is held to those dates.
+func occurredWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
+	var window []string
+	if in.OccurredAfter != nil {
+		window = append(window, occurredday.FromSQL("a", sprintf("$%d", arg(*in.OccurredAfter))))
+	}
+	if in.OccurredBefore != nil {
+		window = append(window, occurredday.BeforeSQL("a", sprintf("$%d", arg(*in.OccurredBefore))))
+	}
+	if in.DayDates == nil {
+		return window
+	}
+	instant := strings.Join(append([]string{"a.occurred_precision = 'instant'"}, window...), " AND ")
+	day := occurredday.DatesSQL("a", sprintf("$%d", arg(in.DayDates.From)), sprintf("$%d", arg(in.DayDates.Before)))
+	return []string{"((" + instant + ") OR " + day + ")"}
 }
 
 // filtersOnContent reports whether the list narrows on fields a withheld row

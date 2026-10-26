@@ -24,23 +24,14 @@ import (
 // promoteTargetMovedError.
 func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, by string, active []fieldcatalog.Column, candidate ids.ContactID) (PromoteOutcome, error) {
 	var out PromoteOutcome
-	// Consent's stop locks come before any row, for the reason
-	// mergeContactTx gives. A zero candidate names no contact subject.
-	subjects := []commsauthz.StopSubject{commsauthz.LeadStopSubject(id)}
-	if !candidate.IsZero() {
-		subjects = append(subjects, commsauthz.ContactStopSubject(candidate))
-	}
-	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier, subjects...); err != nil {
+	company, err := leadLinkedCompany(ctx, tx, id)
+	if err != nil {
 		return PromoteOutcome{}, err
 	}
 	// The lead lock comes before the promotability read. Two promotes of one
 	// lead serialize here, and the loser reads status=promoted and answers 409.
-	var lanes ContactCandidate
-	if err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id, func() error {
-		var err error
-		lanes, err = s.lockLeadLanes(ctx, tx, id)
-		return err
-	}); err != nil {
+	lanes, err := s.lockLeadForContact(ctx, tx, id, candidate, company)
+	if err != nil {
 		return PromoteOutcome{}, err
 	}
 	lead, err := promotableLead(ctx, tx, id, in)
@@ -76,6 +67,9 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		commsauthz.LeadStopSubject(id),
 		commsauthz.ContactStopSubject(contactID)); err != nil {
 		return PromoteOutcome{}, fmt.Errorf("carry the lead's consent links: %w", err)
+	}
+	if err := s.carryLeadCompany(ctx, tx, id, contactID, deref(lead.Title)); err != nil {
+		return PromoteOutcome{}, err
 	}
 	carried, err := carryLeadActivities(ctx, tx, id, contactID)
 	if err != nil {

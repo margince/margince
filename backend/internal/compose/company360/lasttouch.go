@@ -10,14 +10,18 @@ package company360
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -28,6 +32,9 @@ import (
 type LastTouch struct {
 	InboundAt  *time.Time
 	OutboundAt *time.Time
+	// The precisions of the rows behind InboundAt and OutboundAt: "day" when
+	// that row names only a date, empty when there is no row.
+	InboundPrecision, OutboundPrecision string
 	// Contact is the newest exchange of any direction that counts as contact
 	// (relstrength.InteractionCountsSQL): a note is not contact, and neither is
 	// a meeting called off. Nil when there was none.
@@ -40,6 +47,8 @@ type LastContact struct {
 	At         time.Time
 	Kind       string
 	ActivityID ids.ActivityID
+	// Precision is "day" when At is only a date's anchor.
+	Precision string
 }
 
 // lastTouchCompanyAlias is the company alias LastTouchFor's statement and its
@@ -60,8 +69,8 @@ const lastTouchCompanyAlias = "co"
 // form, so the header can never disagree with the list under it. It carries the
 // caller's activity row scope, so a rep sees the last message THEY may read
 // rather than the account's true last one.
-// A message dated after now has not been sent yet, so it is neither side's last
-// word: a scheduled send must not hide the real last one.
+// A message that has not happened yet (occurredday.BegunSQL) is neither side's
+// last word: a scheduled send must not hide the real last one.
 func LastTouchFor(
 	ctx context.Context, tx pgx.Tx, companyIDs []ids.CompanyID, now time.Time, opts AssembleOptions,
 ) (map[ids.CompanyID]LastTouch, error) {
@@ -94,36 +103,53 @@ func LastTouchFor(
 		touched += " AND " + scope
 	}
 	touched += opts.projectScope(arg)
-	touched += fmt.Sprintf(" AND a.occurred_at <= $%d", arg(now))
-	// Both direction clocks skip a called-off meeting and automatic mail, as
-	// the last contact does through InteractionCountsSQL. DirectionClockSQL
-	// rather than InteractionCountsSQL: a direction clock answers when a
-	// human's message last went each way, so any directed kind counts.
+	touched += " AND " + occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
+	roster, err := employeeRoster(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	// The direction clocks are the roll-up of the employees' own clocks: an
+	// employee wrote it, or it reached one. Activity filed on the account alone
+	// moves only the last contact. Both skip automatic mail (DirectionClockSQL)
+	// and, like the contact page, read only what the whole workspace may see.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH touched AS (
-		  SELECT reach.company_id, a.id, a.occurred_at, a.kind, a.direction,
-		         %[5]s AS held, %[6]s AS is_interaction
+		  SELECT reach.company_id, a.id, a.occurred_at, a.occurred_precision, a.kind,
+		         %[5]s AND %[7]s AS they_wrote, %[5]s AND %[8]s AS we_wrote,
+		         %[6]s AS is_interaction
 		  %[2]s
 		), clocks AS (
 		  SELECT company_id,
-		         max(occurred_at) FILTER (WHERE direction = 'inbound' AND held) AS inbound_at,
-		         max(occurred_at) FILTER (WHERE direction = 'outbound' AND held) AS outbound_at
+		         max(occurred_at) FILTER (WHERE they_wrote) AS inbound_at,
+		         max(occurred_at) FILTER (WHERE we_wrote) AS outbound_at,
+		         %[9]s AS inbound_precision,
+		         %[10]s AS outbound_precision
 		  FROM touched GROUP BY company_id
 		), last_contact AS (
-		  SELECT DISTINCT ON (company_id) company_id, id, occurred_at, kind
+		  SELECT DISTINCT ON (company_id) company_id, id, occurred_at, occurred_precision, kind
 		  FROM touched WHERE is_interaction
 		  ORDER BY company_id, occurred_at DESC, id DESC
 		)
-		SELECT %[1]s.id, clocks.inbound_at, clocks.outbound_at, lc.id, lc.occurred_at, lc.kind
+		SELECT %[1]s.id, clocks.inbound_at, clocks.outbound_at,
+		       coalesce(clocks.inbound_precision, ''), coalesce(clocks.outbound_precision, ''),
+		       lc.id, lc.occurred_at, lc.kind, coalesce(lc.occurred_precision, '')
 		FROM company %[1]s
 		LEFT JOIN clocks ON clocks.company_id = %[1]s.id
 		LEFT JOIN last_contact lc ON lc.company_id = %[1]s.id
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
 		lastTouchCompanyAlias, touched, wantedPos, visible,
-		relstrength.DirectionClockSQL("a"), relstrength.InteractionCountsSQL("a")), args...)
+		relstrength.DirectionClockSQL("a")+" AND "+relstrength.WorkspaceAudienceSQL("a"), relstrength.InteractionCountsSQL("a"),
+		employeeSQL(roster, relstrength.TheyWroteSQL("emp.contact_id", "a")),
+		employeeSQL(roster, relstrength.WeWroteSQL("a")+" AND "+employeeReachedSQL),
+		occurredday.LatestPrecisionSQL("", "they_wrote"), occurredday.LatestPrecisionSQL("", "we_wrote")), args...)
 	if err != nil {
 		return nil, err
 	}
+	return scanLastTouches(rows, out)
+}
+
+// scanLastTouches reads LastTouchFor's rows into out, one company each.
+func scanLastTouches(rows pgx.Rows, out map[ids.CompanyID]LastTouch) (map[ids.CompanyID]LastTouch, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var companyID ids.CompanyID
@@ -131,12 +157,14 @@ func LastTouchFor(
 		var contactID *ids.ActivityID
 		var contactAt *time.Time
 		var contactKind *string
+		var contactPrecision string
 		if err := rows.Scan(&companyID, &touch.InboundAt, &touch.OutboundAt,
-			&contactID, &contactAt, &contactKind); err != nil {
+			&touch.InboundPrecision, &touch.OutboundPrecision,
+			&contactID, &contactAt, &contactKind, &contactPrecision); err != nil {
 			return nil, err
 		}
 		if contactID != nil && contactAt != nil && contactKind != nil {
-			touch.Contact = &LastContact{At: *contactAt, Kind: *contactKind, ActivityID: *contactID}
+			touch.Contact = &LastContact{At: *contactAt, Kind: *contactKind, ActivityID: *contactID, Precision: contactPrecision}
 		}
 		out[companyID] = touch
 	}
@@ -145,3 +173,24 @@ func LastTouchFor(
 	}
 	return out, nil
 }
+
+// employeeRoster is the account's employees this caller may read, the roster
+// the contacts section is built from. A caller refused it reads no employee,
+// so a hidden one moves no clock.
+func employeeRoster(ctx context.Context, arg func(any) int) (string, error) {
+	roster, err := contacts.CompanyRosterSQL(ctx, "reach.company_id", arg)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return `SELECT NULL::uuid AS contact_id WHERE false`, nil
+	}
+	return roster, err
+}
+
+// employeeSQL admits a row when the predicate holds for one roster employee.
+func employeeSQL(roster, predicate string) string {
+	return `EXISTS (SELECT 1 FROM (` + roster + `) emp WHERE ` + predicate + `)`
+}
+
+// employeeReachedSQL is the contact page's reach for emp.contact_id: the
+// activity is linked to them, or they are on it.
+const employeeReachedSQL = `(EXISTS (SELECT 1 FROM activity_link el WHERE el.activity_id = a.id AND el.contact_id = emp.contact_id)
+		    OR EXISTS (SELECT 1 FROM activity_participant ep WHERE ep.activity_id = a.id AND ep.contact_id = emp.contact_id))`

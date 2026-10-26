@@ -220,20 +220,31 @@ func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in Pro
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, leadPromotedPayload(contactID, outcome, in.Trigger, in.EvidenceActivityID, carried)); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("emit lead.promoted: %w", err)
 	}
-	// A fill-only merge that changed nothing emits no contact.updated: a note
-	// with no fields would be a false claim. A create always emits contact.created.
-	if contactPayload := promotedContactPayload(contact, merged, mergeFields); contactPayload != nil {
-		contactAuditID := auditID
-		if merged {
-			if contactAuditID, err = storekit.Audit(ctx, tx, "update", "contact", contactID.UUID, heldNothing(mergeFields), mergeFields); err != nil {
-				return crmcontracts.Contact{}, fmt.Errorf("audit the contact a lead merged into: %w", err)
-			}
-		}
-		if err := storekit.EmitEvent(ctx, tx, contactAuditID, contactID.UUID, contactPayload); err != nil {
-			return crmcontracts.Contact{}, fmt.Errorf("emit %s: %w", contactPayload.EventType(), err)
+	return contact, emitLeadContactEvent(ctx, tx, auditID, contact, contactID, merged, mergeFields)
+}
+
+// emitLeadContactEvent lands the contact side of a write that put a lead on a
+// contact. A create emits contact.created under the lead's audit row. A merge
+// audits the contact and emits contact.updated. A merge that changed nothing
+// emits nothing, because a note with no fields would be a false claim.
+func emitLeadContactEvent(ctx context.Context, tx pgx.Tx, leadAuditID ids.UUID, contact crmcontracts.Contact,
+	contactID ids.ContactID, merged bool, mergeFields map[string]any,
+) error {
+	contactPayload := promotedContactPayload(contact, merged, mergeFields)
+	if contactPayload == nil {
+		return nil
+	}
+	contactAuditID := leadAuditID
+	if merged {
+		var err error
+		if contactAuditID, err = storekit.Audit(ctx, tx, "update", "contact", contactID.UUID, heldNothing(mergeFields), mergeFields); err != nil {
+			return fmt.Errorf("audit the contact a lead merged into: %w", err)
 		}
 	}
-	return contact, nil
+	if err := storekit.EmitEvent(ctx, tx, contactAuditID, contactID.UUID, contactPayload); err != nil {
+		return fmt.Errorf("emit %s: %w", contactPayload.EventType(), err)
+	}
+	return nil
 }
 
 // promotableLead loads the lead and enforces every promotion guard:

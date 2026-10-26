@@ -135,6 +135,7 @@ const richLoops: View = {
       kind: "commitment_theirs",
       body: "send the fleet utilization numbers",
       source_activity_id: "a-1",
+      occurred_precision: "instant",
       source_quote: "I'll get you the utilization numbers by Friday.",
       source_label: "Re: retrofit timeline",
       occurred_at: "2026-08-01T10:15:00Z",
@@ -146,6 +147,7 @@ const richLoops: View = {
       kind: "open_question",
       body: "whether the depot needs a second charger bank",
       source_activity_id: "a-1",
+      occurred_precision: "instant",
       source_quote: "Not sure yet if one charger bank covers the whole depot.",
       source_label: "Re: retrofit timeline",
       occurred_at: "2026-08-01T10:15:00Z",
@@ -157,6 +159,7 @@ const richLoops: View = {
       kind: "commitment_ours",
       body: "confirm the installation window",
       source_activity_id: "a-1",
+      occurred_precision: "instant",
       source_quote: "We'll confirm the installation window by Monday.",
       source_label: "Re: retrofit timeline",
       occurred_at: "2026-07-28T10:15:00Z",
@@ -181,6 +184,7 @@ const richMemory: View = {
       summary: "Walked through the retrofit scope and the depot's constraints.",
       generated_by: "deterministic",
       occurred_at: "2026-07-15T13:00:00Z",
+      occurred_precision: "instant",
       activity_count: 1,
       status: null,
       linked_deal_id: null,
@@ -194,6 +198,7 @@ const richMemory: View = {
       summary: "Confirmed the depot's offline window with Dana.",
       generated_by: "deterministic",
       occurred_at: "2026-07-22T09:30:00Z",
+      occurred_precision: "instant",
       activity_count: 1,
       status: "replied",
       linked_deal_id: null,
@@ -208,6 +213,7 @@ const richMemory: View = {
         "Sam flagged Dana as the sole technical contact on this account.",
       generated_by: "deterministic",
       occurred_at: "2026-07-10T09:00:00Z",
+      occurred_precision: "instant",
       activity_count: 1,
       status: null,
       linked_deal_id: null,
@@ -239,6 +245,7 @@ const foldedActivities: View = {
   activities: {
     data: [
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-40",
         kind: "email",
@@ -256,6 +263,7 @@ const foldedActivities: View = {
         email_summary: {
           activity_id: "a-40",
           occurred_at: "2026-08-29T09:15:00Z",
+          occurred_precision: "instant",
           version: 4,
           subject: "Re: the renewal quote",
           preview: "Can you hold the price until Friday?",
@@ -267,6 +275,7 @@ const foldedActivities: View = {
         },
       },
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-41",
         kind: "email",
@@ -281,6 +290,7 @@ const foldedActivities: View = {
         email_summary: {
           activity_id: "a-41",
           occurred_at: "2026-08-27T16:40:00Z",
+          occurred_precision: "instant",
           version: 2,
           display_status: "withheld",
           move: "none",
@@ -288,6 +298,7 @@ const foldedActivities: View = {
         },
       },
       {
+        occurred_precision: "instant",
         offers_email: false,
         id: "a-42",
         kind: "note",

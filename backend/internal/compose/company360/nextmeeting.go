@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // nextMeetingSection reads the soonest meeting on the account that has not
@@ -43,6 +44,9 @@ import (
 // STARTS_AT, not created_at or due_at: a meeting's identity in time is when it
 // happens. Ordering by anything else would put a long-booked meeting behind one
 // entered this morning for next month.
+//
+// A day meeting is next for its whole date (occurredday.AheadSQL), and sorts
+// by when that date begins.
 //
 // One query, not two. The 360 has a fixed query budget
 // (TestCompany360CostDoesNotGrowWithTheAccount). A section that reads the row
@@ -78,7 +82,7 @@ func nextMeetingSection(
 		occurred  *time.Time
 	)
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT a.id, a.occurred_at, coalesce(a.subject, ''), %[3]s
+		SELECT a.id, a.occurred_at, a.occurred_precision, coalesce(a.subject, ''), %[3]s
 		FROM activity a
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 		  -- A canceled meeting is still a future row. Offering it as the next
@@ -86,14 +90,14 @@ func nextMeetingSection(
 		  -- and hides the real next one behind it. A NULL status is a manual
 		  -- booking nobody has tracked a status on, which is a real meeting.
 		  AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
-		  AND a.occurred_at > $%[4]d
+		  AND %[4]s
 		  AND %[1]s AND %[2]s%[5]s
-		ORDER BY a.occurred_at, a.id
+		ORDER BY %[6]s, a.id
 		LIMIT 1`,
-		activityScope, activities.CompanyLinkedActivityExists(companyPos), room, nowPos,
-		opts.projectScope(arg)),
+		activityScope, activities.CompanyLinkedActivityExists(companyPos), room,
+		occurredday.AheadSQL("a", fmt.Sprintf("$%d", nowPos)), opts.projectScope(arg), occurredday.StartSQL("a")),
 		args...,
-	).Scan(&id, &occurred, &meeting.Subject, &dealID, &attendees)
+	).Scan(&id, &occurred, &meeting.OccurredPrecision, &meeting.Subject, &dealID, &attendees)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing scheduled. The caller holds the grant, so this is the account's
 		// own state and the page says so.

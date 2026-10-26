@@ -187,13 +187,22 @@
   font: var(--fontBody);
   color: var(--textPrimary);
 }
-.brief-triage-lead .worklist-row-title > a {
+/* The name sits in the title itself or, for a subject headline, inside its
+   heading; both shapes wrap inside the card. */
+.brief-triage-lead .worklist-row-title > a,
+.brief-triage-lead .worklist-row-title > .heading > a {
   overflow: visible;
   white-space: normal;
 }
+.brief-triage-lead .worklist-row-title > .heading {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
 /* A task's name is a button, and a button sets its label in the body face; the
    headline is one type whichever control draws it. */
-.brief-triage-lead .worklist-row-title > .btn {
+.brief-triage-lead .worklist-row-title > .btn,
+.brief-triage-lead .worklist-row-title > .heading > .btn {
   font: inherit;
 }
 .brief-triage-lead .emailentry {

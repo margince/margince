@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -39,15 +40,15 @@ func (t replyThread) addresseeEvidence(addressee string) []string {
 
 // The selected message remains separate so a newer turn cannot become the reply target.
 func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts.Activity, addressee string) (replyThread, error) {
-	now := d.envelope.Now()
-	thread := replyThread{anchor: draftcore.Conversation([]crmcontracts.Activity{anchor}, nil, now, 1)}
+	now, zone := d.envelope.Now(), d.envelope.Zone(ctx)
+	thread := replyThread{anchor: draftcore.Conversation([]crmcontracts.Activity{anchor}, nil, now, zone, 1)}
 	if anchor.ThreadKey != nil && strings.TrimSpace(*anchor.ThreadKey) != "" {
 		rows, err := d.threadRows(ctx, *anchor.ThreadKey, addressee)
 		if err != nil {
 			return replyThread{}, err
 		}
-		thread.prompt = draftcore.Conversation(rows, &anchor, now, replyContextTurns)
-		thread.evidence = draftcore.Conversation(rows, &anchor, now, len(rows))
+		thread.prompt = draftcore.Conversation(rows, &anchor, now, zone, replyContextTurns)
+		thread.evidence = draftcore.Conversation(rows, &anchor, now, zone, len(rows))
 	}
 	marked := append(slices.Clone(thread.anchor), thread.evidence...)
 	d.markSenders(ctx, marked)
@@ -133,7 +134,7 @@ func replyConversationText(turns []draftcore.Turn) string {
 			relation = "later than the selected message"
 		}
 		rendered = append(rendered, fmt.Sprintf("%s | %s | %s | %s\n%s", relation,
-			turn.At.Format("2006-01-02T15:04:05Z07:00"), direction, textcut.Runes(turn.Subject, 200), turn.Text))
+			occurredday.When(occurredday.Moment{At: turn.At, DateOnly: turn.DateOnly}), direction, textcut.Runes(turn.Subject, 200), turn.Text))
 	}
 	return textcut.Runes(strings.Join(rendered, "\n\n"), replyActivityMaxRunes)
 }

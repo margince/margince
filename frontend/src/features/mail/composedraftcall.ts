@@ -168,6 +168,13 @@ async function draftFromActivity({
   return draftAnswer(response, error, data, t, rewriteOf);
 }
 
+// A 2xx is read as a draft only when it has the two fields the contract
+// requires. Any other body (a proxy's page, another server version) fails the
+// ask rather than writing `undefined` into the subject.
+function isDrafted(data: DraftedPayload | undefined): data is DraftedPayload {
+  return typeof data?.subject === "string" && typeof data.body === "string";
+}
+
 // What a draft route makes of its answer. A 501 says the stack has no model
 // lane. Success needs a 2xx with a body, because openapi-fetch reports a falsy
 // `error` for a bodiless gateway 5xx.
@@ -181,7 +188,7 @@ function draftAnswer(
   if (response.status === 501) {
     return { available: false as const, reason: "no_model" as const };
   }
-  if (!response.ok || !data) {
+  if (!response.ok || !isDrafted(data)) {
     throwProblem(error || { title: t("compose.actionFailed") });
   }
   return {

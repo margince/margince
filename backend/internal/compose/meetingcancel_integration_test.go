@@ -343,7 +343,7 @@ func TestACancelledMeetingLeavesTodaysSchedule(t *testing.T) {
 	lane := attentionMeetings{store: activities.NewStore(e.DB())}
 	from, until := meetingStart.Add(-time.Hour), meetingStart.Add(time.Hour)
 
-	booked, err := lane.Today(ctx, from, until, 50, attention.TasksVisible, ids.UUID{})
+	booked, err := lane.Today(ctx, attention.MeetingWindow{From: from, Until: until}, 50, attention.TasksVisible, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading today's schedule: %v", err)
 	}
@@ -355,7 +355,7 @@ func TestACancelledMeetingLeavesTodaysSchedule(t *testing.T) {
 		t.Fatalf("cancelling the meeting: %v", err)
 	}
 
-	after, err := lane.Today(ctx, from, until, 50, attention.TasksVisible, ids.UUID{})
+	after, err := lane.Today(ctx, attention.MeetingWindow{From: from, Until: until}, 50, attention.TasksVisible, ids.UUID{})
 	if err != nil {
 		t.Fatalf("re-reading today's schedule: %v", err)
 	}

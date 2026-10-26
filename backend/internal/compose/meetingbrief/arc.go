@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"sort"
 	"time"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // arcGapDays is the silence that closes a moment. Three weeks is long enough
@@ -40,8 +38,8 @@ const arcEvidenceCap = 3
 
 // ArcMoment is a stretch of the relationship, with the conversations it holds.
 type ArcMoment struct {
-	From    time.Time
-	To      time.Time
+	From    Occurred
+	To      Occurred
 	Title   string
 	Threads []thread
 	// Score is why this moment survived, kept for the ranking's own tests.
@@ -54,9 +52,9 @@ func clusterThreads(threads []thread, loc *time.Location) []ArcMoment {
 	for _, current := range threads {
 		if len(moments) > 0 {
 			open := &moments[len(moments)-1]
-			if elapsed.Days(open.To, current.First, loc) <= arcGapDays {
+			if open.To.daysUntil(current.First, loc) <= arcGapDays {
 				open.Threads = append(open.Threads, current)
-				if current.Last.After(open.To) {
+				if current.Last.At.After(open.To.At) {
 					open.To = current.Last
 				}
 				continue
@@ -84,13 +82,13 @@ func rankMoments(moments []ArcMoment, in Input) []ArcMoment {
 			return scored[i].Score > scored[j].Score
 		}
 		// A tie goes to the more recent: same weight, fresher bearing.
-		return scored[i].To.After(scored[j].To)
+		return scored[i].To.At.After(scored[j].To.At)
 	})
 	if len(scored) > arcCap {
 		scored = scored[:arcCap]
 	}
 	sort.SliceStable(scored, func(i, j int) bool {
-		return scored[i].From.Before(scored[j].From)
+		return scored[i].From.At.Before(scored[j].From.At)
 	})
 	return scored
 }
@@ -147,7 +145,7 @@ func scoreMoment(moment ArcMoment, claimSources map[string]bool, now time.Time, 
 		// They wrote back. A thread nobody answered is us talking.
 		score++
 	}
-	switch days := elapsed.Days(moment.To, now, loc); {
+	switch days := moment.To.daysAgo(now, loc); {
 	case days <= 30:
 		score += 3
 	case days <= 90:
@@ -231,8 +229,8 @@ func readableIDs(moment ArcMoment) []string {
 
 // arcSummary is the moment's one line: how much happened, over what stretch.
 func (said briefCopy) arcSummary(moment ArcMoment, conversations int) string {
-	span := moment.From.UTC().Format(time.DateOnly)
-	if end := moment.To.UTC().Format(time.DateOnly); end != span {
+	span := moment.From.At.UTC().Format(time.DateOnly)
+	if end := moment.To.At.UTC().Format(time.DateOnly); end != span {
 		span += "–" + end
 	}
 	if moment.Title == "" {

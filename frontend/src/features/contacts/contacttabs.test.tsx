@@ -44,7 +44,13 @@ function activity(
   row: Pick<SectionActivity, "id" | "kind" | "occurred_at"> &
     Partial<SectionActivity>,
 ): SectionActivity {
-  return { offers_email: false, is_done: false, ...CAPTURED, ...row };
+  return {
+    occurred_precision: "instant",
+    offers_email: false,
+    is_done: false,
+    ...CAPTURED,
+    ...row,
+  };
 }
 
 // The six tabs beside Overview were placeholders for a release, and the thing
@@ -137,6 +143,7 @@ const view: Contact360 = {
   next_meeting: {
     activity_id: "a-9",
     starts_at: "2026-08-20T13:00:00Z",
+    occurred_precision: "instant",
     subject: "Contract review",
     participants: [{ contact_id: "p-1", full_name: "Dana Buyer" }],
   },
@@ -294,7 +301,9 @@ describe("the timeline tab", () => {
     );
 
     expect(container.querySelectorAll(".tl-thread")).toHaveLength(1);
-    expect(screen.getByText("2 messages")).toBeTruthy();
+    expect(
+      screen.getByText("2 messages · 1 from them, 1 from your team"),
+    ).toBeTruthy();
   });
 
   it("says the section is withheld rather than drawing it empty", () => {

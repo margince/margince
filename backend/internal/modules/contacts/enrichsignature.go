@@ -300,7 +300,7 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 		if err != nil {
 			return nil, nil, err
 		}
-		if outcome != observedApplied && outcome != observedConfirmed {
+		if !outcome.landed() {
 			res.Skipped++
 			continue
 		}
@@ -372,7 +372,7 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, contactID id
 		Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &f.Confidence,
 		ObservedAt: observedAt,
 	})
-	if err != nil || (outcome != observedApplied && outcome != observedConfirmed) {
+	if err != nil || !outcome.landed() {
 		return observedSkipped, err
 	}
 	if err := storekit.StampFields(ctx, tx, entityContact, contactID.UUID, sourceRef, enrichCapturedBy,

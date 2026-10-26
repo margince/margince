@@ -41,7 +41,7 @@ func TestTheRecencySentenceCountsTheWayTheCacheKeyDoes(t *testing.T) {
 			// "2 days ago", so a contains-check passes on an answer that is off
 			// by ten days — which is the class of error this test is about.
 			want := "Last activity " + probe.want + "."
-			if got := recencyReason(&last, false, probe.now, time.UTC, langcopy.For("en")); got != want {
+			if got := recencyReason(DealHealthEvidence{LastActivityAt: &last}, probe.now, time.UTC, langcopy.For("en")); got != want {
 				t.Errorf("at %s the card says %q, want %q — a sentence a reader can check "+
 					"against a timestamp must not move between cache writes",
 					probe.now.Format(time.RFC3339), got, want)
@@ -56,7 +56,7 @@ func TestTheRecencySentenceCountsTheWayTheCacheKeyDoes(t *testing.T) {
 func TestARecordAheadOfTheClockReadsAsToday(t *testing.T) {
 	last := time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC)
 	const want = "Last activity today."
-	if got := recencyReason(&last, false, time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC), time.UTC, langcopy.For("en")); got != want {
+	if got := recencyReason(DealHealthEvidence{LastActivityAt: &last}, time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC), time.UTC, langcopy.For("en")); got != want {
 		t.Errorf("an activity dated ahead of now reads %q, want %q", got, want)
 	}
 }
@@ -66,7 +66,7 @@ func TestARecordAheadOfTheClockReadsAsToday(t *testing.T) {
 func TestAStalledDealSaysSoInTheSameSentence(t *testing.T) {
 	last := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
 	const want = "Last activity 21 days ago — the deal counts as stalled."
-	if got := recencyReason(&last, true, time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC), time.UTC, langcopy.For("en")); got != want {
+	if got := recencyReason(DealHealthEvidence{LastActivityAt: &last, Stalled: true}, time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC), time.UTC, langcopy.For("en")); got != want {
 		t.Errorf("a stalled deal's recency reads %q, want %q", got, want)
 	}
 }
@@ -77,10 +77,24 @@ func TestRecencyReasonCountsInTheInstallationZone(t *testing.T) {
 	bangkok := time.FixedZone("UTC+7", 7*3600)
 	last := time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC)
 	now := time.Date(2026, 10, 6, 18, 0, 0, 0, time.UTC)
-	if got, want := recencyReason(&last, false, now, bangkok, langcopy.For("en")), "Last activity yesterday."; got != want {
+	if got, want := recencyReason(DealHealthEvidence{LastActivityAt: &last}, now, bangkok, langcopy.For("en")), "Last activity yesterday."; got != want {
 		t.Errorf("in UTC+7 the card says %q, want %q", got, want)
 	}
-	if got, want := recencyReason(&last, false, now, time.UTC, langcopy.For("en")), "Last activity today."; got != want {
+	if got, want := recencyReason(DealHealthEvidence{LastActivityAt: &last}, now, time.UTC, langcopy.For("en")), "Last activity today."; got != want {
 		t.Errorf("in UTC the card says %q, want %q", got, want)
+	}
+}
+
+// A day entry counts from the date it names. Its stored noon UTC is already
+// the next morning in Kiritimati, which would read as today.
+func TestADayActivityCountsFromItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	last := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	now := time.Date(2026, 8, 21, 9, 0, 0, 0, kiritimati)
+	if got, want := recencyReason(DealHealthEvidence{LastActivityAt: &last, LastActivityDateOnly: true}, now, kiritimati, langcopy.For("en")), "Last activity yesterday."; got != want {
+		t.Errorf("a day entry dated yesterday reads %q, want %q", got, want)
 	}
 }

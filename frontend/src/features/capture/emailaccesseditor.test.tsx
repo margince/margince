@@ -50,9 +50,11 @@ function presentation(access: Partial<EmailAccess>): EmailPresentation {
     id: ACTIVITY,
     lifecycle: "delivered",
     occurred_at: "2026-09-01T09:15:00Z",
+    occurred_precision: "instant",
     summary: {
       activity_id: ACTIVITY,
       occurred_at: "2026-09-01T09:15:00Z",
+      occurred_precision: "instant",
       version: 3,
       subject: "The signed contract",
       preview: "Attached, as agreed.",

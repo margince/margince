@@ -78,7 +78,7 @@ var namesItsSubject = map[string]subjectClaim{
 		"internal/compose/documentextractrun.go",
 		"the record the document hangs on — a contract or an invoice is the largest copy of somebody's words this product sends",
 	},
-	"internal/compose/signalextract.go:ask": {
+	"internal/compose/signalextract.go:askReading": {
 		"internal/compose/signalextract.go",
 		"the account the conversation is with; the messages are several and the account is one",
 	},

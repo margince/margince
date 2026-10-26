@@ -33,6 +33,7 @@ export const HistoricalFinding: Story = {
                 needs_review: true,
                 body: "Colleague agreed to arrange the rollout meeting",
                 source_activity_id: "mail-old",
+                occurred_precision: "instant",
                 source_quote: "I will arrange the rollout meeting.",
                 source_label: "Rollout planning",
                 occurred_at: "2024-07-05T09:00:00Z",

@@ -27,6 +27,10 @@ import { AgentRail } from "./agentrail";
 type Answers = Readonly<{
   aiState: "configured" | "unconfigured" | "development";
   connectorStatus: "connected" | "reauth_required";
+  /** The account's Calendar grant too, with this status; absent is mail only. */
+  calendarStatus?: "connected" | "reauth_required";
+  /** The connections read itself fails, so nobody knows what is reachable. */
+  connectorsReadFails?: boolean;
   licenseState: "valid" | "absent" | "rejected";
   approvals: number;
   /** What `/ai/calls` answers. It feeds the runtime row's served model and
@@ -165,22 +169,39 @@ function story(
           })),
         }),
       "GET /connectors": () =>
-        jsonResponse({
-          data: [
-            {
-              provider: "gmail",
-              status: answers.connectorStatus,
-              account_label: "ada@acme.test",
-              backfill: answers.importing
-                ? {
-                    state: "running",
-                    estimated_messages: answers.importing.estimated,
-                    counts: { messages_scanned: answers.importing.scanned },
-                  }
-                : { state: "none" },
-            },
-          ],
-        }),
+        answers.connectorsReadFails
+          ? jsonResponse(
+              { code: "internal", title: "internal error", status: 500 },
+              500,
+            )
+          : jsonResponse({
+              data: [
+                ...(answers.calendarStatus
+                  ? [
+                      {
+                        id: "018f3a1b-0000-7000-8000-0000000000c2",
+                        provider: "gcal",
+                        status: answers.calendarStatus,
+                        account_label: "ada@acme.test",
+                        backfill: { state: "none" },
+                      },
+                    ]
+                  : []),
+                {
+                  id: "018f3a1b-0000-7000-8000-0000000000c1",
+                  provider: "gmail",
+                  status: answers.connectorStatus,
+                  account_label: "ada@acme.test",
+                  backfill: answers.importing
+                    ? {
+                        state: "running",
+                        estimated_messages: answers.importing.estimated,
+                        counts: { messages_scanned: answers.importing.scanned },
+                      }
+                    : { state: "none" },
+                },
+              ],
+            }),
       "GET /ai/calls": () =>
         jsonResponse({
           data: answers.calls.map((call, index) =>
@@ -395,6 +416,25 @@ export const LicenceRefused: Story = {
  *  paused. Red means not connected, and the line says what is not connected. */
 export const SourceUnreachable: Story = {
   render: story({ ...HEALTHY, connectorStatus: "reauth_required" }),
+};
+
+/** Error: one Google account's Gmail and Calendar grants both lapsed. They
+ *  share the account's address, so the panel names each with its provider and
+ *  keys it by its connection, not by the address they share. */
+export const SameAccountUnreachable: Story = {
+  render: story({
+    ...HEALTHY,
+    connectorStatus: "reauth_required",
+    calendarStatus: "reauth_required",
+  }),
+  play: openThePanel,
+};
+
+/** Idle, but the connections read failed: nobody checked which sources are
+ *  reachable, so the line says so instead of "Nothing needs attention", and
+ *  keeps saying it beside the approvals that are waiting. */
+export const SourcesUnchecked: Story = {
+  render: story({ ...HEALTHY, approvals: 2, connectorsReadFails: true }),
 };
 
 /** Error: no model bound at all — the one posture where nothing else on the

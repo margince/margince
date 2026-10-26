@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -34,11 +35,13 @@ type Finding struct {
 	SourceID       ids.UUID  `json:"source_id"`
 	SourceVersion  int64     `json:"source_version"`
 	OccurredAt     time.Time `json:"-"`
-	Quote          string    `json:"-"`
-	Summary        string    `json:"-"`
-	QuoteDigest    string    `json:"quote_digest"`
-	Scope          string    `json:"scope"`
-	Workstream     string    `json:"-"`
+	// DateOnly says OccurredAt is a day entry's anchor, which names only a date.
+	DateOnly    bool   `json:"-"`
+	Quote       string `json:"-"`
+	Summary     string `json:"-"`
+	QuoteDigest string `json:"quote_digest"`
+	Scope       string `json:"scope"`
+	Workstream  string `json:"-"`
 }
 
 // LiveStages keeps conflict cards and proposal scans on the same account boundary.
@@ -120,6 +123,7 @@ func readSignalSources(ctx context.Context, tx pgx.Tx, signal crmcontracts.Signa
 			continue
 		}
 		finding.SourceID, finding.OccurredAt, finding.Quote = source, activity.OccurredAt, quote
+		finding.DateOnly = occurredday.IsDay(activity.OccurredPrecision)
 		finding.QuoteDigest = proof.SHA256
 		if activity.Version != nil {
 			finding.SourceVersion = *activity.Version

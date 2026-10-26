@@ -44,6 +44,7 @@ type TagSuggestionEvidenceItem struct {
 	Kind       string    `json:"kind"`
 	Subject    *string   `json:"subject"`
 	OccurredAt time.Time `json:"occurred_at"`
+	Precision  string    `json:"occurred_precision"`
 }
 
 const tagSuggestionMaxLimit = 200
@@ -109,6 +110,7 @@ func visibleTagSuggestionsQuery(ctx context.Context, arg func(any) int, read tag
 // A redacted subject reads as absent.
 const tagSuggestionEvidenceJSON = `(SELECT coalesce(jsonb_agg(jsonb_build_object(
 	         'activity_id', ee.activity_id, 'kind', ea.kind, 'occurred_at', ee.occurred_at,
+	         'occurred_precision', ea.occurred_precision,
 	         'subject', CASE WHEN 'subject' = ANY(ea.redacted_fields) THEN NULL ELSE ea.subject END)
 	         ORDER BY ee.occurred_at DESC, ee.activity_id), '[]'::jsonb)
 	    FROM tag_suggestion_evidence ee JOIN activity ea ON ea.id = ee.activity_id

@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, waitFor, within } from "storybook/test";
+import { formatDate } from "../../format/format.dates";
+import { UTC_ZONE } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
   installFetchStub,
@@ -116,5 +118,49 @@ export const LeadGroup: Story = {
         />
       </StoryProviders>
     );
+  },
+};
+
+// A meeting known only by its date shows that date and no time: its stored noon
+// is no hour anyone said.
+export const DayMeeting: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/evidence": () =>
+        jsonResponse({
+          context: reportingStoryEvaluation.context,
+          metric: "meetings_held",
+          rows: [
+            {
+              key: "meeting",
+              source_type: "activity",
+              source_id: "00000000-0000-4000-8000-000000000031",
+              label: "Trade fair",
+              value: 1,
+              occurred_at: "2026-09-06T12:00:00Z",
+              occurred_precision: "day",
+              restricted: false,
+            },
+          ],
+          truncated: false,
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ReportingEvidenceDrawer
+          evaluation={reportingStoryEvaluation}
+          reference={{ metric: "meetings_held", context_id: "interval" }}
+          onClose={() => {}}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    const cell = await dialog.findByText(
+      formatDate("2026-09-06T12:00:00Z", "en", UTC_ZONE),
+    );
+    await expect(cell.textContent).not.toMatch(/\d:\d/);
   },
 };

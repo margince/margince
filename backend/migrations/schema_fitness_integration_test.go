@@ -207,6 +207,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"contract.deal_id":                    "gated: auth.EnsureLinkTarget via ensureLinksVisible in createContractTx AND UpdateContract, plus ensureLinksShareCompany (ADR-0109 §8)",
 	"contract.project_id":                 "gated: the same pair as contract.deal_id — ensureLinksVisible then ensureLinksShareCompany, on create and on patch",
 	"lead.project_id":                     "gated: auth.EnsureLinkTarget in CreateLead/UpdateLead (H1)",
+	"lead.company_id":                     "gated: auth.EnsureLinkTarget in LinkLeadCompany, the one writer that names a company; UpdateLead only clears it",
 	"suggestion_dismissal.company_id":     "gated: auth.EnsureVisible in company360.Service.DismissSuggestion, inside the same transaction as the insert — dismissing advice about an account the caller cannot read would confirm it exists",
 	"company_dossier.company_id":          "gated: the dossier is assembled only after companydossier.Service.Get runs the caller's OWN sidecar reads, and contacts.ListCompanyProfileFields opens with auth.Require + ensureCompanyReadable — a company the caller cannot read has no dossier written for it, and the row is keyed on that same caller",
 	"company_growth_fit.company_id":       "gated: same path as company_dossier — the assessment is written only after the caller's own gated sidecar reads succeed, and the row is keyed on that caller",

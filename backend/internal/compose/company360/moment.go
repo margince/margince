@@ -207,11 +207,12 @@ func (said momentCopy) accountClaimCard(now time.Time, claim contacts.CompanyCom
 	activity := openapi_types.UUID(claim.ActivityID)
 	observed := claim.OccurredAt
 	evidence := []crmcontracts.ContactMomentEvidence{{
-		Type:       crmcontracts.ContactMomentEvidenceTypeActivity,
-		Id:         &activity,
-		Label:      claim.Body,
-		Snippet:    &claim.SourceQuote,
-		ObservedAt: &observed,
+		Type:              crmcontracts.ContactMomentEvidenceTypeActivity,
+		Id:                &activity,
+		Label:             claim.Body,
+		Snippet:           &claim.SourceQuote,
+		ObservedAt:        &observed,
+		ObservedPrecision: new(crmcontracts.OccurredPrecision(claim.Precision)),
 	}}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            momentKey("moment:account_promise_claim", openapi_types.UUID(claim.ID)),

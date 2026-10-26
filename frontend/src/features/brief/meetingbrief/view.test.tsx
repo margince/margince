@@ -36,7 +36,6 @@ function mount(
         onOpenRecord={onOpenRecord}
         titleId="t"
         onClose={() => {}}
-        formatWhen={() => "24 June, 15:00"}
       />
     </StoryProviders>,
   );

@@ -11,13 +11,13 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
+import type { HistoryValueCtx } from "../../lib/historyvalues";
 import { useViewerId } from "../../lib/session";
 import {
   TIMELINE_FILTERS,
   type TimelineFilter,
 } from "../../lib/timelinefilter";
 import { changeTimeline, useFieldHistory } from "./history";
-import type { HistoryValueCtx } from "./historyvalues";
 
 // A record's History, for every record page. All is what was said: threads,
 // mail, calls, meetings, notes and tasks. Field changes stand under Changes

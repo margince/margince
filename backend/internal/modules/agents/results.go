@@ -313,8 +313,11 @@ type ContextItem struct {
 	// that needs a timezone (tools_commitments.go says the same of due dates),
 	// so a reader converts to the acting user's zone — whoami reports it —
 	// before saying "on the 13th".
-	OccurredAt *time.Time        `json:"occurred_at,omitempty"`
-	Evidence   []ContextEvidence `json:"evidence"`
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+	// OccurredPrecision is "day" when only OccurredAt's date is known; absent
+	// on an instant. A day's date is its UTC date, so it is named unconverted.
+	OccurredPrecision string            `json:"occurred_precision,omitempty"`
+	Evidence          []ContextEvidence `json:"evidence"`
 }
 
 // ContextSection groups items by what they are — recent activity, open tasks,

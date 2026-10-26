@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { toBoardDeal } from "./boarddeal";
 import type { CompanyNaming } from "./dealcompanymarks";
@@ -24,29 +24,31 @@ function deal(overrides: Partial<Deal>): Deal {
 }
 
 describe("toBoardDeal", () => {
-  // The wire's last_email reaches the card as a span and a direction, or the
-  // board would date every deal's mail as "just now" — the same copy-across
-  // rule the close date holds.
-  it("carries when mail last moved and which way", () => {
-    const tenDaysAgo = new Date(Date.now() - 10 * 86_400_000).toISOString();
+  // The wire's last_email reaches the card with the instant its age is
+  // measured from, or the board would date every deal's mail as "just now".
+  it("carries when mail last moved, how precisely, and which way", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-15T12:00:00Z"));
     const card = toBoardDeal(
-      deal({ last_email: { occurred_at: tenDaysAgo, direction: "outbound" } }),
+      deal({
+        last_email: {
+          occurred_at: "2026-09-05T12:00:00Z",
+          occurred_precision: "day",
+          direction: "outbound",
+        },
+      }),
       noCompany,
     );
-    expect(card.lastEmail?.direction).toBe("outbound");
-    expect(Math.round((card.lastEmail?.agoMs ?? 0) / 86_400_000)).toBe(10);
+    vi.useRealTimers();
+    expect(card.lastEmail).toEqual({
+      at: "2026-09-05T12:00:00Z",
+      precision: "day",
+      measuredAt: Date.parse("2026-09-15T12:00:00Z"),
+      direction: "outbound",
+    });
   });
 
-  // A mail stamped a few seconds into the reader's future is clock skew, not
-  // a negative age; a deal nobody mailed about states no mail line at all.
-  it("floors a future instant at zero and leaves an unmailed deal blank", () => {
-    const ahead = new Date(Date.now() + 5_000).toISOString();
-    expect(
-      toBoardDeal(
-        deal({ last_email: { occurred_at: ahead, direction: null } }),
-        noCompany,
-      ).lastEmail,
-    ).toEqual({ agoMs: 0, direction: null });
+  it("leaves a deal nobody mailed about without a mail line", () => {
     expect(toBoardDeal(deal({}), noCompany).lastEmail).toBeNull();
   });
 });

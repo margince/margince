@@ -193,10 +193,13 @@ func TestThePublishedParticipantMirrorsTheCoreOne(t *testing.T) {
 	// `ChannelUserID` is `Account`. Renaming either side for a word would be a
 	// change at a published surface, so the map is where the pairing lives.
 	//
-	// Every core field pairs, so there is no waiver map. Role is published under
-	// a NARROWER vocabulary rather than not at all — extension.ParticipantRoles
-	// omits the core's `bcc`, because a bcc line exists only on the SENDER's own
-	// copy of a message and a unit hands over one it RECEIVED. The values it
+	// Every core field pairs but Declined, a calendar guest's own answer that only
+	// the core's calendar mappers read. A unit's roster is never an attested guest
+	// list, so it binds no seat whatever it says.
+	//
+	// Role is published under a NARROWER vocabulary rather than not at all.
+	// extension.ParticipantRoles omits the core's `bcc`. A bcc line exists only on
+	// the SENDER's own copy, and a unit hands over one it RECEIVED. The values it
 	// does publish are held equal to the core's by
 	// TestEveryPublishedRoleIsTheCoresOwn.
 	publishedName := map[string]string{
@@ -206,6 +209,9 @@ func TestThePublishedParticipantMirrorsTheCoreOne(t *testing.T) {
 		"Role":          "Role",
 	}
 	for field := range core.Fields() {
+		if field.Name == "Declined" {
+			continue
+		}
 		want, paired := publishedName[field.Name]
 		if !paired {
 			t.Errorf("connector.MessageParticipant.%s has no published name in this walk — a party field the core stores and a unit cannot state. Publish it and pair it here, or waive it", field.Name)

@@ -29,6 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
@@ -163,11 +164,11 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		folded AS (
 		    SELECT t.user_id, t.contact_id,
 		           max(a.occurred_at) AS last_at,
-		           max(a.occurred_at) FILTER (WHERE a.direction = 'inbound')  AS last_inbound_at,
-		           max(a.occurred_at) FILTER (WHERE a.direction = 'outbound') AS last_outbound_at,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`) AS count_90d,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'inbound')  AS in_90d,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'outbound') AS out_90d,
+		           max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("t.contact_id", "a")+`)  AS last_inbound_at,
+		           max(a.occurred_at) FILTER (WHERE `+graphWeWrote+`) AS last_outbound_at,
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`) AS count_90d,
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+relstrength.TheyWroteSQL("t.contact_id", "a")+`)  AS in_90d,
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+graphWeWrote+`) AS out_90d,
 		           count(DISTINCT `+graphInteractionUnit+`) AS count_total
 		      FROM target t
 		      JOIN activity_participant up
@@ -363,6 +364,10 @@ var graphInteractionUnit = relstrength.InteractionUnitSQL("a")
 // meeting is no edge's evidence, and never its last_at.
 var graphCountedActivity = relstrength.InteractionCountsSQL("a")
 
+// graphWeWrote is relstrength's outbound side; the inbound side also needs the
+// contact as sender, so a colleague's reply on the thread is not theirs.
+var graphWeWrote = relstrength.WeWroteSQL("a")
+
 func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
 	// Exclusive of the incremental writers, in the order they take their locks:
@@ -384,11 +389,11 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		     count_90d, in_count_90d, out_count_90d, count_total, computed_at)
 		SELECT up.user_id, pp.contact_id,
 		       max(a.occurred_at),
-		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound'),
-		       max(a.occurred_at) FILTER (WHERE a.direction = 'outbound'),
-		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`),
-		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'inbound'),
-		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+` AND a.direction = 'outbound'),
+		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("pp.contact_id", "a")+`),
+		       max(a.occurred_at) FILTER (WHERE `+graphWeWrote+`),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+relstrength.TheyWroteSQL("pp.contact_id", "a")+`),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+` AND `+graphWeWrote+`),
 		       count(DISTINCT `+graphInteractionUnit+`),
 		       now()
 		  FROM activity_participant up
@@ -416,7 +421,7 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at)
 		SELECT pa.contact_id, pb.contact_id,
 		       max(a.occurred_at),
-		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`),
+		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`),
 		       count(DISTINCT `+graphInteractionUnit+`),
 		       now()
 		  FROM activity_participant pa

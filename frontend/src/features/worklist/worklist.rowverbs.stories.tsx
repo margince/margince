@@ -93,6 +93,7 @@ function Verb({
 
 function taskRow(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "01a05500-0000-7000-8000-0000000000t1",
     source: "task",
     category: "tasks",
@@ -112,6 +113,7 @@ function taskRow(): WorklistItem {
 
 function waitingRow(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "01a05500-0000-7000-8000-0000000000a1",
     source: "customer_waiting",
     category: "customer_waiting",
@@ -136,6 +138,7 @@ function waitingRow(): WorklistItem {
 
 function meetingOutcomeRow(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "01a05500-0000-7000-8000-0000000000m1",
     source: "meeting_outcome",
     category: "meetings",
