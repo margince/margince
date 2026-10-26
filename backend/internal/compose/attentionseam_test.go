@@ -229,8 +229,8 @@ func asQuiet(edges ...search.InteractionEdge) []search.QuietContact {
 // A silence older than the suggestion ceiling leaves the lane, counted from
 // the touch the row prints, while one a day inside it stays.
 func TestAQuietRelationshipPastTheCeilingLeavesTheLane(t *testing.T) {
-	// The decided rule: silent for longer than 180 days leaves. Exactly 180
-	// days stays a suggestion; 181 does not.
+	// The decided rule: silent for longer than 180 days leaves. Day 180 stays
+	// a suggestion; day 181 does not.
 	inside, past := ids.NewV7(), ids.NewV7()
 	owner := ids.NewV7()
 	atCeiling := readInstantForDecay.AddDate(0, 0, -quietSuggestionCeilingDays)

@@ -141,16 +141,12 @@ type attentionDecay struct {
 	now   func() time.Time
 }
 
-// quietSuggestionCeilingDays is how long after the last qualifying touch a
-// quiet relationship stays a suggestion. A silence longer than this leaves the
-// Worklist, and the contact's own page still shows it. A silence of exactly
-// this many days is still a suggestion. A first mailbox import must not turn
-// years of history into a morning of follow-ups.
+// quietSuggestionCeilingDays: a silence longer than this leaves the Worklist;
+// the contact's page still shows it. Day 180 stays, day 181 leaves.
 const quietSuggestionCeilingDays = 180
 
-// quietCeilingFrom is the instant a last touch must be after to keep the
-// relationship a suggestion: one day past the ceiling, so day 180 stays and
-// day 181 leaves. The candidate read and the survivor check share it.
+// quietCeilingFrom is the candidate read's prefilter, one day loose so no day
+// 180 is lost to the time of day. quietSurvivors decides from the day count.
 func quietCeilingFrom(now time.Time) time.Time {
 	return now.AddDate(0, 0, -(quietSuggestionCeilingDays + 1))
 }
@@ -293,10 +289,6 @@ func quietSurvivors(
 	for _, row := range changed {
 		byContact[row.ContactID.UUID] = row
 	}
-	// A touch must be after the day past the ceiling: exactly 180 days of
-	// silence is a suggestion, 181 is not. The candidate read uses the same
-	// bound (Lapsed's TouchedAfter).
-	ceiling := quietCeilingFrom(now)
 	lapsed := make([]attention.QuietRelationship, 0, len(changed))
 	for _, found := range quiet {
 		edge := found.Edge
@@ -308,7 +300,8 @@ func quietSurvivors(
 			if change.Kind != relstrength.ChangeWentQuiet {
 				continue
 			}
-			if !change.At.After(ceiling) {
+			// Calendar days in the installation zone, the derivation's own unit.
+			if change.Days > quietSuggestionCeilingDays {
 				break
 			}
 			lapsed = append(lapsed, attention.QuietRelationship{

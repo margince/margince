@@ -274,7 +274,7 @@ func TestAStopReadsBackPerReaderAndClearsOnResume(t *testing.T) {
 }
 
 // The decided rule: a relationship silent for longer than 180 days leaves the
-// Worklist. A silence of exactly 180 days is still a suggestion; 181 is not.
+// Worklist. A silence of 180 days is still a suggestion; 181 is not.
 func TestTheQuietCeilingKeepsDayOneHundredEightyAndDropsTheDayAfter(t *testing.T) {
 	e := integration.Setup(t)
 	atCeiling := e.SeedContact(t, "Silent 180 Days", &e.Rep1)
@@ -328,5 +328,32 @@ func TestAFutureMeetingIsNotATouch(t *testing.T) {
 	got := quietLaneFor(t, e, e.Rep1, attention.TasksMine, ids.UUID{})
 	if len(got) != 1 || got[0].ContactID != contact {
 		t.Fatalf("the lane = %+v, want the contact still quiet: a future meeting is not a touch", got)
+	}
+}
+
+// The boundary counts calendar days, not 24-hour spans. A last touch at 10:00
+// on the 181st calendar day before a 09:00 read is under 181 x 24 hours ago.
+// It is still a silence longer than 180 days.
+func TestTheQuietCeilingCountsCalendarDaysNotHours(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Silent 181 Calendar Days", &e.Rep1)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 181)
+	owner := integration.OwnerConn(t)
+	defer func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing fixture connection: %v", err)
+		}
+	}()
+	// Move the contact's latest touch one hour later in the day.
+	if _, err := owner.Exec(context.Background(), `
+		UPDATE activity SET occurred_at = occurred_at + interval '1 hour'
+		 WHERE id IN (SELECT activity_id FROM activity_link WHERE contact_id = $1)
+		   AND occurred_at = (SELECT max(a.occurred_at) FROM activity a
+		                        JOIN activity_link l ON l.activity_id = a.id WHERE l.contact_id = $1)`,
+		contact); err != nil {
+		t.Fatal(err)
+	}
+	if got := quietLaneFor(t, e, e.Rep1, attention.TasksMine, ids.UUID{}); len(got) != 0 {
+		t.Fatalf("the lane = %+v, want nothing: 181 calendar days is longer than 180", got)
 	}
 }
