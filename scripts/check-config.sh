@@ -24,11 +24,19 @@ if [[ ! -f "$config" ]]; then
   echo "FAIL: $config does not exist. Run 'make dev' once to create it, or name a file with CONFIG=<path>." >&2
   exit 1
 fi
-args=(--config "$config")
-[[ -n "$config_file" ]] && args+=(--config-file "$config_file")
-[[ -n "$env_file" && -f "$env_file" ]] && args+=(--env-file "$env_file")
-# A DSN in the env file is the one a start would use, so it is checked as is.
-if [[ -z "${MARGINCE_DSN:-}" ]] && ! { [[ -n "$env_file" && -f "$env_file" ]] && grep -q '^MARGINCE_DSN=.' "$env_file"; }; then
+if [[ -n "${ENV_FILE:-}" && ! -f "$env_file" ]]; then
+  echo "FAIL: ENV_FILE=$env_file does not exist." >&2
+  exit 1
+fi
+[[ -f "$env_file" ]] || env_file=""
+# A layer left out is passed as an empty flag: an absent one would let
+# MARGINCE_CONFIG_FILE or MARGINCE_ENV_FILE choose a file instead.
+args=(--config "$config" "--config-file=$config_file" "--env-file=$env_file")
+# Any MARGINCE_DSN assignment, even an empty one, keeps the placeholder out, so
+# the DSN a start would read is the one checked. A loose match can only make
+# the check stricter, never let a broken DSN pass.
+if [[ -z "${MARGINCE_DSN+set}" ]] &&
+  ! { [[ -n "$env_file" ]] && grep -Eq '^[[:space:]]*(export[[:space:]]+)?MARGINCE_DSN[[:space:]]*=' "$env_file"; }; then
   args+=(--dsn postgres://localhost/check)
 fi
 
