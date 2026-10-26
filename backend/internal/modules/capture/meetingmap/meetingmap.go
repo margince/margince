@@ -88,15 +88,17 @@ type Event struct {
 
 // Actor is one organizer or attendee. The address resolves the counterparty
 // and the internal test. Room marks a booked room or device, in each vendor's
-// terms. Declined is this attendee's own no, which decides what their row grants.
+// terms. Response is this attendee's own answer as a connector.Response
+// constant, or "" when the provider stated none; a no decides what their row grants.
 type Actor struct {
 	Email string
 	// Name is what the invitation called this party, or "" when the provider
 	// named nobody. It is the only full name an attendee-only contact ever
 	// gets: a contact minted from a bare invitation address is otherwise named
 	// by the local part of their own email.
-	Name           string
-	Room, Declined bool
+	Name     string
+	Response string
+	Room     bool
 }
 
 // Meeting is the classified result of reading one event against the connected
@@ -178,17 +180,24 @@ func (m Meeting) Participants() connector.Parties { return m.participants }
 // common case for a meeting somebody scheduled and then attended: organizing is
 // the stronger statement about their part in it.
 func meetingParties(ev Event) connector.Parties {
-	seen := map[string]bool{}
+	seen := map[string]int{}
 
 	var out []connector.MessageParticipant
 	add := func(actor Actor, role string) {
 		address := strings.ToLower(strings.TrimSpace(actor.Email))
-		if address == "" || seen[address] {
+		if at, listed := seen[address]; listed {
+			// An organizer listed again as an attendee answers there.
+			if out[at].Response == "" {
+				out[at].Response = actor.Response
+			}
 			return
 		}
-		seen[address] = true
+		if address == "" {
+			return
+		}
+		seen[address] = len(out)
 		out = append(out, connector.MessageParticipant{
-			Email: address, Role: role, DisplayName: strings.TrimSpace(actor.Name), Declined: actor.Declined,
+			Email: address, Role: role, DisplayName: strings.TrimSpace(actor.Name), Response: actor.Response,
 		})
 	}
 	add(ev.Organizer, connector.ParticipantRoleOrganizer)

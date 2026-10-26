@@ -1994,6 +1994,9 @@ export const en = {
   "history.field.guests_added": "Guests added from the calendar",
   "history.field.guest_links_added": "Guests linked from the calendar",
   "history.field.guests_retired": "Guests removed by the calendar",
+  "history.field.guest_answers_changed":
+    "Guest answers updated from the calendar",
+  "history.field.guests_left_out": "Guests not listed",
   "history.field.relinked_emails": "Email addresses moved over",
   "history.field.relinked_phones": "Phone numbers moved over",
   "history.field.relinked_relationships": "Relationships moved over",
@@ -3973,6 +3976,11 @@ export const en = {
     "This meeting is booked in a calendar, so it needs a time as well as a date.",
   "activity.detail.when": "When",
   "activity.detail.attendees": "Attendees",
+  "activity.detail.response.declined": "Declined",
+  "activity.detail.response.tentative": "Maybe",
+  "activity.detail.response.needsAction": "No answer",
+  "activity.detail.guestsLeftOut_one": "and {count} more guest not listed",
+  "activity.detail.guestsLeftOut_other": "and {count} more guests not listed",
   "activity.detail.colleagues": "Colleagues",
   "activity.detail.filedUnder": "Filed under",
   "email.detail.bccWithheld":

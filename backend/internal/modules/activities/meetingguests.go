@@ -16,20 +16,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// maxListedGuests bounds one meeting's guest list: a roster at the party cap,
-// and as many again that members or other calendars added beside it.
-const maxListedGuests = 2 * connector.MaxParticipants
+// maxListedGuests bounds one meeting's guest list. It holds a roster at the
+// party cap, as many again from members or other calendars, and a crowd's guests.
+const maxListedGuests = 2*connector.MaxParticipants + connector.MaxGuestsPastCap
 
 // guestRow is one participant row a meeting's guest list is built from.
 type guestRow struct {
 	address, invitationName string
+	response                *string
 	contactID               *ids.UUID
 	// readable holds the contact's name when the reader may read that contact.
 	readable *string
 }
 
-// attachGuests fills guests on a meeting read whole. A guest is listed unless
-// they hold a seat or a contact link the reader sees already shows them.
+// attachGuests fills guests, the answers of the seats and contacts shown, and
+// the count a crowd leaves out on a meeting read whole. A guest is listed
+// unless they hold a seat or a contact link the reader sees already shows them.
 func attachGuests(ctx context.Context, tx pgx.Tx, a *crmcontracts.Activity) error {
 	if a.Kind != crmcontracts.ActivityKindMeeting {
 		return nil
@@ -43,6 +45,9 @@ func attachGuests(ctx context.Context, tx pgx.Tx, a *crmcontracts.Activity) erro
 		if link.EntityType == crmcontracts.ActivityLinkEntityType(linkEntityContact) {
 			shown[ids.UUID(link.EntityId)] = true
 		}
+	}
+	if err := attachAttendeeResponses(ctx, tx, a, shown); err != nil {
+		return err
 	}
 	seen := map[string]bool{}
 	guests := []crmcontracts.MeetingGuest{}
@@ -60,6 +65,11 @@ func attachGuests(ctx context.Context, tx pgx.Tx, a *crmcontracts.Activity) erro
 		}
 	}
 	a.Guests = &guests
+	var leftOut int
+	if err := tx.QueryRow(ctx, `SELECT guests_left_out FROM activity WHERE id = $1`, a.Id).Scan(&leftOut); err != nil {
+		return fmt.Errorf("activities: reading how many guests a meeting leaves out: %w", err)
+	}
+	a.GuestsLeftOut = &leftOut
 	return nil
 }
 
@@ -67,6 +77,10 @@ func attachGuests(ctx context.Context, tx pgx.Tx, a *crmcontracts.Activity) erro
 // the invitation named them, and a row naming nothing they may see is left out.
 func (row guestRow) guest() (crmcontracts.MeetingGuest, bool) {
 	var out crmcontracts.MeetingGuest
+	if row.response != nil {
+		response := crmcontracts.MeetingResponse(*row.response)
+		out.Response = &response
+	}
 	if row.address != "" {
 		address := row.address
 		out.Address = &address
@@ -93,7 +107,7 @@ func readGuestRows(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]guest
 		readable = orUnbounded(clause)
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT coalesce(ap.address, ''), coalesce(ap.display_name, ''), ap.contact_id,
+		SELECT coalesce(ap.address, ''), coalesce(ap.display_name, ''), ap.response, ap.contact_id,
 		       CASE WHEN c.id IS NOT NULL AND (%s) THEN c.full_name END
 		  FROM activity_participant ap
 		  LEFT JOIN contact c ON c.id = ap.contact_id AND c.archived_at IS NULL
@@ -105,12 +119,68 @@ func readGuestRows(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]guest
 	}
 	guests, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (guestRow, error) {
 		var g guestRow
-		return g, row.Scan(&g.address, &g.invitationName, &g.contactID, &g.readable)
+		return g, row.Scan(&g.address, &g.invitationName, &g.response, &g.contactID, &g.readable)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the guests on a meeting: %w", err)
 	}
 	return guests, nil
+}
+
+// attachAttendeeResponses fills attendee_responses: the answer each colleague
+// the meeting names, and each contact a link the reader sees shows, gave.
+func attachAttendeeResponses(ctx context.Context, tx pgx.Tx, a *crmcontracts.Activity, shownContacts map[ids.UUID]bool) error {
+	seats := map[ids.UUID]bool{}
+	for _, seat := range derefUUIDs(a.ColleagueIds) {
+		seats[ids.UUID(seat)] = true
+	}
+	if a.HostUserId != nil {
+		seats[ids.UUID(*a.HostUserId)] = true
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT ON (coalesce(user_id, contact_id)) user_id, contact_id, response
+		  FROM activity_participant
+		 WHERE activity_id = $1 AND response IS NOT NULL AND role IN ($2, $3)
+		   AND (user_id IS NOT NULL OR contact_id IS NOT NULL)
+		 ORDER BY coalesce(user_id, contact_id), created_at DESC, id`,
+		a.Id, connector.ParticipantRoleOrganizer, connector.ParticipantRoleAttendee)
+	if err != nil {
+		return fmt.Errorf("activities: reading the answers on a meeting: %w", err)
+	}
+	answers, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.MeetingAttendeeResponse, error) {
+		var userID, contactID *ids.UUID
+		var response string
+		if err := row.Scan(&userID, &contactID, &response); err != nil {
+			return crmcontracts.MeetingAttendeeResponse{}, err
+		}
+		out := crmcontracts.MeetingAttendeeResponse{Response: crmcontracts.MeetingResponse(response)}
+		if userID != nil && seats[*userID] {
+			id := openapi_types.UUID(*userID)
+			out.UserId = &id
+		} else if contactID != nil && userID == nil && shownContacts[*contactID] {
+			id := openapi_types.UUID(*contactID)
+			out.ContactId = &id
+		}
+		return out, nil
+	})
+	if err != nil {
+		return fmt.Errorf("activities: reading the answers on a meeting: %w", err)
+	}
+	shown := make([]crmcontracts.MeetingAttendeeResponse, 0, len(answers))
+	for _, answer := range answers {
+		if answer.UserId != nil || answer.ContactId != nil {
+			shown = append(shown, answer)
+		}
+	}
+	a.AttendeeResponses = &shown
+	return nil
+}
+
+func derefUUIDs(list *[]openapi_types.UUID) []openapi_types.UUID {
+	if list == nil {
+		return nil
+	}
+	return *list
 }
 
 func derefLinks(links *[]crmcontracts.ActivityLink) []crmcontracts.ActivityLink {

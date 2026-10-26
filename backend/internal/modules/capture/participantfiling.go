@@ -63,7 +63,7 @@ var participantRecordsSQL = `
 		  FROM activity_participant ap
 		  JOIN activity a ON a.id = ap.activity_id
 		  JOIN lead ld ON ` + storekit.LeadEmailMatchClause("ld", "ap.address") + `
-		 WHERE ap.activity_id = $1 AND ap.address IS NOT NULL
+		 WHERE ap.activity_id = $1 AND ap.address IS NOT NULL AND NOT ap.past_party_cap
 		   AND ` + storekit.LiveLeadClause("ld") + `
 		   AND ` + storekit.LeadEmailHeldAtClause("ld", "ap.address", "a") + `
 		 GROUP BY ld.id

@@ -13816,6 +13816,30 @@ func (e MeetingPlanUnknownKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingResponse.
+const (
+	MeetingResponseAccepted    MeetingResponse = "accepted"
+	MeetingResponseDeclined    MeetingResponse = "declined"
+	MeetingResponseNeedsAction MeetingResponse = "needs_action"
+	MeetingResponseTentative   MeetingResponse = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the MeetingResponse enum.
+func (e MeetingResponse) Valid() bool {
+	switch e {
+	case MeetingResponseAccepted:
+		return true
+	case MeetingResponseDeclined:
+		return true
+	case MeetingResponseNeedsAction:
+		return true
+	case MeetingResponseTentative:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefFactorsOmitted.
 const (
 	MorningBriefFactorsOmittedWarmth MorningBriefFactorsOmitted = "warmth"
@@ -25177,6 +25201,9 @@ type Activity struct {
 	// AssigneeId Task only.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
+	// AttendeeResponses Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`.
+	AttendeeResponses *[]MeetingAttendeeResponse `json:"attendee_responses,omitempty"`
+
 	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains.
 	Audience *ActivityAudience `json:"audience,omitempty"`
 
@@ -25234,6 +25261,9 @@ type Activity struct {
 
 	// Guests Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
 	Guests *[]MeetingGuest `json:"guests,omitempty"`
+
+	// GuestsLeftOut Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`.
+	GuestsLeftOut *int `json:"guests_left_out,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
@@ -44477,6 +44507,18 @@ type MeResponse struct {
 // MeResponsePassportScopes defines model for MeResponse.Passport.Scopes.
 type MeResponsePassportScopes string
 
+// MeetingAttendeeResponse The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set.
+type MeetingAttendeeResponse struct {
+	// ContactId The contact, one of the contact `links` you see.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+
+	// Response A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+	Response MeetingResponse `json:"response"`
+
+	// UserId The colleague, one of `colleague_ids` or the host.
+	UserId *openapi_types.UUID `json:"user_id,omitempty"`
+}
+
 // MeetingAvailability defines model for MeetingAvailability.
 type MeetingAvailability struct {
 	Slots []struct {
@@ -44598,6 +44640,9 @@ type MeetingGuest struct {
 
 	// DisplayName The contact's name when you may read the contact, else the name the invitation gave, else empty.
 	DisplayName string `json:"display_name"`
+
+	// Response What the guest answered the invitation. Absent when no calendar stated an answer.
+	Response *MeetingResponse `json:"response,omitempty"`
 }
 
 // MeetingInvitation defines model for MeetingInvitation.
@@ -44910,6 +44955,9 @@ type MeetingProposalRequest struct {
 	// VideoCall Add a video call link when the guest books. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
 }
+
+// MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+type MeetingResponse string
 
 // MergeTagsRequest defines model for MergeTagsRequest.
 type MergeTagsRequest struct {
@@ -65043,6 +65091,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "assignee_id")
 	}
 
+	if raw, found := object["attendee_responses"]; found {
+		err = json.Unmarshal(raw, &a.AttendeeResponses)
+		if err != nil {
+			return fmt.Errorf("error reading 'attendee_responses': %w", err)
+		}
+		delete(object, "attendee_responses")
+	}
+
 	if raw, found := object["audience"]; found {
 		err = json.Unmarshal(raw, &a.Audience)
 		if err != nil {
@@ -65201,6 +65257,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'guests': %w", err)
 		}
 		delete(object, "guests")
+	}
+
+	if raw, found := object["guests_left_out"]; found {
+		err = json.Unmarshal(raw, &a.GuestsLeftOut)
+		if err != nil {
+			return fmt.Errorf("error reading 'guests_left_out': %w", err)
+		}
+		delete(object, "guests_left_out")
 	}
 
 	if raw, found := object["host_user_id"]; found {
@@ -65428,6 +65492,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AttendeeResponses != nil {
+		object["attendee_responses"], err = json.Marshal(a.AttendeeResponses)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'attendee_responses': %w", err)
+		}
+	}
+
 	if a.Audience != nil {
 		object["audience"], err = json.Marshal(a.Audience)
 		if err != nil {
@@ -65561,6 +65632,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["guests"], err = json.Marshal(a.Guests)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'guests': %w", err)
+		}
+	}
+
+	if a.GuestsLeftOut != nil {
+		object["guests_left_out"], err = json.Marshal(a.GuestsLeftOut)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'guests_left_out': %w", err)
 		}
 	}
 

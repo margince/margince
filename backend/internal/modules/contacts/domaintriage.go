@@ -236,7 +236,7 @@ func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID
 	var occurred *time.Time
 	err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at)
-		  FROM activity a LEFT JOIN activity_participant ap ON ap.activity_id = a.id
+		  FROM activity a LEFT JOIN activity_participant ap ON ap.activity_id = a.id AND NOT ap.past_party_cap
 		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
 		   AND `+occurredday.BegunSQL("a", "now() + $3::interval")+`
 		   AND (lower(split_part(ap.address, '@', 2)) = $1

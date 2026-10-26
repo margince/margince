@@ -23,7 +23,7 @@ import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatDate } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
@@ -36,6 +36,7 @@ import "../../design-system/emaildetail.css";
 type Activity = components["schemas"]["Activity"];
 type ActivityLink = components["schemas"]["ActivityLink"];
 type MeetingGuest = components["schemas"]["MeetingGuest"];
+type MeetingResponse = components["schemas"]["MeetingResponse"];
 
 // The kinds whose linked contacts were in the room. On a note or a task a
 // linked contact is what the entry is about, so it is filed, not attending.
@@ -173,6 +174,7 @@ function ActivityBody({
   // a contact this reader may not open. The invitation's name stands in.
   const guests = attended ? (activity.guests ?? []) : [];
   const colleagues = colleaguesOf(activity);
+  const answers = answersOf(activity);
   return (
     <div className="emaildetail__body">
       {about}
@@ -197,13 +199,19 @@ function ActivityBody({
             <Badge tone="success">{t("tasks.isDone")}</Badge>
           )}
         </PartyLine>
-        <AttendeesLine attendees={attendees} guests={guests} />
+        <AttendeesLine
+          attendees={attendees}
+          guests={guests}
+          answers={answers}
+          leftOut={activity.guests_left_out}
+        />
         {colleagues.length > 0 && (
           <PartyLine label={t("activity.detail.colleagues")}>
             {colleagues.map((id, index) => (
               <Fragment key={id}>
                 {index > 0 && ", "}
                 <EntityRef kind="user" id={id} />
+                <ResponseBadge response={answers.get(`user:${id}`)} />
               </Fragment>
             ))}
           </PartyLine>
@@ -275,17 +283,28 @@ function CustomFieldLines({ activity }: Readonly<{ activity: Activity }>) {
 function AttendeesLine({
   attendees,
   guests,
+  answers,
+  leftOut = 0,
 }: Readonly<{
   attendees: readonly ActivityLink[];
   guests: readonly MeetingGuest[];
+  answers: ReadonlyMap<string, MeetingResponse>;
+  leftOut?: number;
 }>) {
   const t = useT();
+  const plural = usePlural();
   if (attendees.length + guests.length === 0) {
     return null;
   }
   return (
     <PartyLine label={t("activity.detail.attendees")}>
-      <RecordLinks links={attendees} newTab />
+      {attendees.map((link, index) => (
+        <Fragment key={link.entity_id}>
+          {index > 0 && ", "}
+          <EntityRef kind="contact" id={link.entity_id} newTab />
+          <ResponseBadge response={answers.get(`contact:${link.entity_id}`)} />
+        </Fragment>
+      ))}
       {guests.map((guest, index) => (
         <Fragment key={guest.contact_id ?? guest.address}>
           {attendees.length + index > 0 && ", "}
@@ -296,10 +315,65 @@ function AttendeesLine({
               {guest.display_name || guest.address}
             </span>
           )}
+          <ResponseBadge response={guest.response} />
         </Fragment>
       ))}
+      {leftOut > 0 && (
+        <>
+          {" "}
+          {plural("activity.detail.guestsLeftOut", leftOut, {
+            count: String(leftOut),
+          })}
+        </>
+      )}
     </PartyLine>
   );
+}
+
+// An accepted answer shows nothing: being on the list already says it.
+function ResponseBadge({
+  response,
+}: Readonly<{ response: MeetingResponse | undefined }>) {
+  const t = useT();
+  switch (response) {
+    case "declined":
+      return (
+        <>
+          {" "}
+          <Badge tone="danger">{t("activity.detail.response.declined")}</Badge>
+        </>
+      );
+    case "tentative":
+      return (
+        <>
+          {" "}
+          <Badge tone="warning">
+            {t("activity.detail.response.tentative")}
+          </Badge>
+        </>
+      );
+    case "needs_action":
+      return (
+        <>
+          {" "}
+          <Badge>{t("activity.detail.response.needsAction")}</Badge>
+        </>
+      );
+    default:
+      return null;
+  }
+}
+
+function answersOf(activity: Activity): Map<string, MeetingResponse> {
+  const answers = new Map<string, MeetingResponse>();
+  for (const answer of activity.attendee_responses ?? []) {
+    if (answer.user_id) {
+      answers.set(`user:${answer.user_id}`, answer.response);
+    } else if (answer.contact_id) {
+      answers.set(`contact:${answer.contact_id}`, answer.response);
+    }
+  }
+  return answers;
 }
 
 function colleaguesOf(activity: Activity): string[] {

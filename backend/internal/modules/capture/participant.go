@@ -241,6 +241,7 @@ func stampParties(
 	// per party: a roster may carry an address as well, and the row records
 	// which of each was actually seen rather than picking a winner.
 	accounts := make([]string, 0, len(participants))
+	responses := make([]string, 0, len(participants))
 	// One account is one human, so a roster naming the same one twice
 	// contributes one row. The uniqueness index cannot say that — it separates
 	// two entries that differ by address, which is right for mail and wrong
@@ -309,7 +310,8 @@ func stampParties(
 		accounts = append(accounts, account)
 		roles = append(roles, p.Role)
 		names = append(names, name)
-		binds = append(binds, roster.bindSeats && !p.Declined)
+		responses = append(responses, p.Response)
+		binds = append(binds, roster.bindSeats && !p.Declined())
 	}
 	// Nobody recordable, which is not the same as no parties offered: a roster
 	// of accounts on a record naming no transport arrives here and leaves
@@ -365,19 +367,19 @@ func stampParties(
 	// kept somebody else's account — one row naming two contacts, and an erasure
 	// keyed on either of them reaching a record about the other.
 	return insertFurtherParticipants(ctx, tx, kind, partyListIsAttested,
-		[]any{activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider, storedDomainsOf(addresses), binds, roster.seat})
+		[]any{activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider, storedDomainsOf(addresses), binds, roster.seat, responses})
 }
 
-// insertFurtherParticipants writes stampParties' ten arguments and counts the rows.
+// insertFurtherParticipants writes stampParties' eleven arguments and counts the rows.
 func insertFurtherParticipants(ctx context.Context, tx pgx.Tx, kind string, partyListIsAttested bool, args []any) (int, error) {
 	seatMatch, err := calendarSeatMatch(ctx, tx, kind, partyListIsAttested, &args)
 	if err != nil {
 		return 0, err
 	}
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name, address_domain_folded, roster_seat)
-		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name, inp.domain_folded, $10::uuid
-		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[], $8::text[], $9::bool[]) AS inp(address, role, display_name, account, domain_folded, bind)
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name, address_domain_folded, roster_seat, response)
+		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name, inp.domain_folded, $10::uuid, NULLIF(inp.response, '')
+		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[], $8::text[], $9::bool[], $11::text[]) AS inp(address, role, display_name, account, domain_folded, bind, response)
 		  LEFT JOIN app_user u
 		         ON $4 AND inp.bind AND inp.address <> '' AND `+seatMatch+`
 		  LEFT JOIN LATERAL (

@@ -137,6 +137,8 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["guests_added", "history.field.guests_added"],
   ["guest_links_added", "history.field.guest_links_added"],
   ["guests_retired", "history.field.guests_retired"],
+  ["guest_answers_changed", "history.field.guest_answers_changed"],
+  ["guests_left_out", "history.field.guests_left_out"],
   ["relinked_emails", "history.field.relinked_emails"],
   ["relinked_phones", "history.field.relinked_phones"],
   ["relinked_relationships", "history.field.relinked_relationships"],

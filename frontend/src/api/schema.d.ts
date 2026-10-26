@@ -34739,6 +34739,27 @@ export interface components {
              * @description The contact this guest is. Present only when you may read that contact.
              */
             contact_id?: string;
+            /** @description What the guest answered the invitation. Absent when no calendar stated an answer. */
+            response?: components["schemas"]["MeetingResponse"];
+        };
+        /**
+         * @description A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+         * @enum {string}
+         */
+        MeetingResponse: "accepted" | "declined" | "tentative" | "needs_action";
+        /** @description The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set. */
+        MeetingAttendeeResponse: {
+            /**
+             * Format: uuid
+             * @description The colleague, one of `colleague_ids` or the host.
+             */
+            user_id?: string;
+            /**
+             * Format: uuid
+             * @description The contact, one of the contact `links` you see.
+             */
+            contact_id?: string;
+            response: components["schemas"]["MeetingResponse"];
         };
         /**
          * @description A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
@@ -34815,6 +34836,10 @@ export interface components {
             readonly colleague_ids?: string[];
             /** @description Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`. */
             readonly guests?: components["schemas"]["MeetingGuest"][];
+            /** @description Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`. */
+            readonly attendee_responses?: components["schemas"]["MeetingAttendeeResponse"][];
+            /** @description Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`. */
+            readonly guests_left_out?: number;
             /**
              * @description inbound/outbound for email/call; null for note/task.
              * @enum {string|null}

@@ -2064,6 +2064,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.guests_added": "Gäste aus dem Kalender ergänzt",
   "history.field.guest_links_added": "Gäste aus dem Kalender verknüpft",
   "history.field.guests_retired": "Gäste vom Kalender entfernt",
+  "history.field.guest_answers_changed":
+    "Antworten der Gäste aus dem Kalender aktualisiert",
+  "history.field.guests_left_out": "Nicht aufgeführte Gäste",
   "history.field.relinked_emails": "E-Mail-Adressen übernommen",
   "history.field.relinked_phones": "Telefonnummern übernommen",
   "history.field.relinked_relationships": "Beziehungen übernommen",
@@ -3969,6 +3972,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Termin ist in einem Kalender gebucht und braucht deshalb eine Uhrzeit, nicht nur ein Datum.",
   "activity.detail.when": "Wann",
   "activity.detail.attendees": "Teilnehmende",
+  "activity.detail.response.declined": "Abgesagt",
+  "activity.detail.response.tentative": "Vielleicht",
+  "activity.detail.response.needsAction": "Keine Antwort",
+  "activity.detail.guestsLeftOut_one":
+    "und {count} weiterer Gast, nicht aufgeführt",
+  "activity.detail.guestsLeftOut_other":
+    "und {count} weitere Gäste, nicht aufgeführt",
   "activity.detail.colleagues": "Teammitglieder",
   "activity.detail.filedUnder": "Abgelegt unter",
   "email.detail.bccWithheld":
