@@ -63,10 +63,10 @@ func (e *dedupeEnv) openQuestionDomains(ctx context.Context, t *testing.T) []str
 	return out
 }
 
-// TestAnOpenQuestionReachesTheOwnerWhoseMailRaisedIt is the lane's premise:
+// TestAnOpenQuestionReachesItsDirectRecipient is the lane's premise:
 // the rep the mail was addressed to is asked. Without this read an open
 // question sits on an admin screen addressed to nobody.
-func TestAnOpenQuestionReachesTheOwnerWhoseMailRaisedIt(t *testing.T) {
+func TestAnOpenQuestionReachesItsDirectRecipient(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "anna@unjudged.test", "Anna Example", "unjudged.test")

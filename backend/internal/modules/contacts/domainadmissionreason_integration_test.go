@@ -171,8 +171,8 @@ func TestAListedCompanyNameIsWithheldWithItsID(t *testing.T) {
 	}
 }
 
-// The open question a name twin leaves reaches its owner with the same sentence
-// the operator's list gives it once nobody owns it.
+// The open question a name twin leaves reaches its decider with the same
+// sentence the operator's list gives it.
 func TestANameTwinQuestionTellsItsOwnerWhy(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

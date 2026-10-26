@@ -89,15 +89,9 @@ func TestTheDomainListCarriesTheQuestionsNobodyOwns(t *testing.T) {
 	}
 }
 
-// A deactivated owner's open question stays on this list. Deactivation takes
-// away the personal queue that was also carrying it.
-//
-// This is the case the column alone cannot see. Deactivating a seat keeps the
-// app_user row and revokes its sessions, so owner_id still names somebody and
-// that somebody can no longer sign in. The per-owner queue matches `owner_id =
-// $1` for the calling human, so the question is served to nobody: not to the
-// departed owner, who cannot authenticate, and not to any colleague. Nothing
-// re-asks either — the withholding cleared the retry cursor.
+// A deactivated owner's open question stays on this list, before and after the
+// deactivation. The list carries every open question, so a seat leaving cannot
+// take one off it.
 func TestADeactivatedOwnersQuestionReachesTheOperatorsList(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
