@@ -87,6 +87,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithProfileVerdictReader(profileverdicts.MergeReader(InstallationDB(pool))).
 		WithFeedbackCarryReader(ai.NewFeedbackStore(InstallationDB(pool))).
 		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
+		WithExtensions(ExtensionData()).
 		WithShareRequests(contactShareRequests(pool)).
 		WithInstallationRenamer(installationRenamer(pool))
 }
@@ -474,8 +475,8 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 // confirmation lane's all-three-or-none rule.
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
-		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision)).
-		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
+		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithExtensions(ExtensionData())).
+		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool), ExtensionData())).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)
 		})).

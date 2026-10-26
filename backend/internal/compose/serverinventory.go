@@ -148,8 +148,8 @@ type Server struct {
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers
 	automaticWorkHandlers
-	// The composed-extension inventory (handlers_extensions.go): stateless, it reads
-	// boot-written accessors, so it is embedded as the zero value.
+	// The composed-extension inventory (handlers_extensions.go): boot-written
+	// accessors plus the install ledger, which it reads through the pool.
 	extensionsHandlers
 	// The transport directory (handlers_channelproviders.go): stateless, embedded the same way.
 	channelProvidersHandlers

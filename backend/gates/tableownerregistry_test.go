@@ -356,6 +356,11 @@ var tableOwners = map[string]string{
 	// the one thing this table exists to be. platform/extsecrets is
 	// therefore a walked root below, so the ownership really is enforced.
 	"extension_secret": "internal/platform/extsecrets",
+	// What retention and legal hold know about the rows of an extension's
+	// tables. extprivacy reads and writes those tables on the declarations, and
+	// these two rows name a row by table and id, so one package writes both.
+	"extension_legal_hold":  "internal/platform/extprivacy",
+	"extension_expired_row": "internal/platform/extprivacy",
 	// search
 	"embedding":           "internal/modules/search",
 	"embed_store_binding": "internal/modules/search",

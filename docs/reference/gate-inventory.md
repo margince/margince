@@ -299,6 +299,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `errtaxonomy_test.go` | H2 | Every error sentinel must have a verdict, on every surface. |
 | `eventtypeownership_test.go` | H3 | One module owns an event type. |
 | `extensioncapabilitycensus_test.go` | H2 | Every capability the extension tier publishes must have a live unit declaring it. |
+| `extensionprivacycensus_test.go` | H2 | Every table an extension's migrations create must carry a privacy declaration, and every declaration must name a table the migrations create. |
+| `extensionregistrywiring_test.go` | H2 | Every place that erases, exports or merges is handed the extension registry. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
 | `forecastscopeauthority_test.go` | H2 | Every forecasting store entry point that records against a scope asks whether its caller answers for that scope. |
 | `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |

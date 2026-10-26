@@ -88,7 +88,7 @@ func (w *suppressionJournalWorker) exportWorkspace(ctx context.Context, workspac
 	// The system principal, bound here rather than inherited: a queue carries
 	// no actor, and ExportSuppressions is gated on the contact delete grant.
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), suppressionJournalActor)
-	eraser := privacy.NewEraser(InstallationDB(w.pool)).WithCountry(identity.CountryForDecision).WithBlobstore(w.blob)
+	eraser := privacy.NewEraser(InstallationDB(w.pool)).WithCountry(identity.CountryForDecision).WithBlobstore(w.blob).WithExtensions(ExtensionData())
 	written, err := eraser.ExportSuppressions(ctx)
 	if err != nil {
 		return err

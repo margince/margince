@@ -128,6 +128,7 @@ func newCSVWriters(
 			WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
 			WithGrantCarrier(identity.NewServiceFor(db)).
+			WithExtensions(ExtensionData()).
 			WithShareRequests(contactShareRequests(db.Pool())).
 			WithInstallationRenamer(installationRenamer(db.Pool())),
 		deals:            dealsStoreOver(db),

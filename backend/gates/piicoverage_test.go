@@ -498,6 +498,7 @@ var sarAssemblyFiles = []string{
 	"internal/modules/privacy/sarreporting.go",
 	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/sar.go",
+	"internal/modules/privacy/sarrows.go",
 	"internal/modules/privacy/sarsections.go",
 	// What this installation CONCLUDED about the subject's correspondence —
 	// what their replies meant, and what ours did about what they asked. Its

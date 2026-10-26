@@ -3,9 +3,9 @@
 
 package compose
 
-// The boot step that records what this binary composed. Both halves are facts
-// derived from the same registered extension set, so they are one step rather
-// than two a role could wire half of.
+// The boot step that records what this binary composed and installs what is new.
+// The facts derive from the same registered extension set, so they are one step
+// rather than several a role could wire part of.
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -31,10 +32,16 @@ import (
 // anything: server assembly loads the transport directory FROM the rows written
 // here.
 func RecordComposition(
-	ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, exts []extension.Extension,
+	ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, log *slog.Logger, exts []extension.Extension,
 ) error {
 	if err := ObserveExtensionInventory(ctx, pool, log, exts); err != nil {
 		return fmt.Errorf("compose: recording the composed extension set: %w", err)
+	}
+	if err := VerifyExtensionPrivacy(ctx, pool, exts); err != nil {
+		return fmt.Errorf("compose: checking the extensions' privacy declarations: %w", err)
+	}
+	if err := ActivateExtensions(ctx, pool, vault, log, exts, ComposedVerbs()); err != nil {
+		return err
 	}
 	if err := ReconcileChannelProviders(ctx, pool); err != nil {
 		return fmt.Errorf("compose: registering this binary's channel vocabulary: %w", err)

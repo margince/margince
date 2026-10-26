@@ -30,6 +30,7 @@ type contactErasureCounts struct {
 	activitiesRedacted          int
 	activitiesRestricted        int
 	channelIdentitiesSuppressed int
+	extensionRowsCleared        int
 }
 
 // Evidence keys of the account the tombstone carries beside its named counts.
@@ -88,6 +89,7 @@ func tombstoneContactErasure(ctx context.Context, tx pgx.Tx, subject ids.Contact
 		"ai_payloads_purged": counts.aiPayloadsPurged, "activities_redacted": counts.activitiesRedacted,
 		"activities_restricted":         counts.activitiesRestricted,
 		"channel_identities_suppressed": counts.channelIdentitiesSuppressed,
+		"extension_rows_cleared":        counts.extensionRowsCleared,
 		evidenceKeyRows:                 account.Rows, evidenceKeyUncounted: account.Uncounted,
 	})
 	if err != nil {

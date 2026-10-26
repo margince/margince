@@ -39,6 +39,14 @@ SELECT format('CREATE ROLE margince_owner LOGIN PASSWORD %L', :'owner_pw')
 WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'margince_owner')
 \gexec
 
+-- The role a unit's own SQL runs as (Runtime.Tx). Cluster-level, so it is made
+-- here beside the other roles. The core migration that grants it the ext schema
+-- refuses to run while it is missing, and Tx refuses to run without it.
+SELECT 'CREATE ROLE ext_runtime NOLOGIN'
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ext_runtime')
+\gexec
+GRANT ext_runtime TO margince_app;
+
 -- Normalize the security-critical attributes UNCONDITIONALLY. The NOT EXISTS
 -- guards above skip a role that already exists, so a pre-existing margince_app /
 -- margince_owner could otherwise retain SUPERUSER or BYPASSRLS and silently

@@ -60,7 +60,8 @@ func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
 		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
 		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
 			introductions.NewStore(InstallationDB(pool), time.Now)).
-		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool)))
+		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
+		WithExtensions(ExtensionData())
 }
 
 // contactsEnsurer adapts the contacts module's auto-create engine onto

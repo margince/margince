@@ -1530,6 +1530,7 @@ migrate <up|down> --dsn <owner-dsn> [--steps n]
 migrate reset-password --dsn <owner-dsn> --email <user-email>
 migrate <recreate-db|drop-db|db-exists> --dsn <owner-maintenance-dsn> --name <db> [--template <db>]
 migrate workspace-exists --dsn <owner-dsn>
+migrate extension-settings --dsn <owner-dsn>
 migrate drill-start --dsn <owner-dsn> --by <name> --restored-to <time> [--note <text>]
 migrate drill-finish --dsn <owner-dsn> --drill <id> --outcome <passed|failed> [--note <text>]
 ```
@@ -1538,6 +1539,12 @@ migrate drill-finish --dsn <owner-dsn> --drill <id> --outcome <passed|failed> [-
 workspace (the tenant, not a company record). It takes no `--name`; it asks about the database the
 DSN names. A deployment asks before the api starts, to know whether it still needs a bootstrap
 credential.
+
+`extension-settings` stores the settings that the composed extensions declare in their `settings.json`,
+under the keys `ext_<name>.<key>`. Each hyphen in the unit name becomes `_` (`finance-demo` becomes
+`ext_finance_demo`). A key that already has a value is kept, so you can run it on every release. It prints one
+line per unit with the counts stored and kept. If any file is wrong, it stores nothing.
+[Add an extension](../how-to/add-an-extension.md#ship-the-units-settings-in-a-file) shows the file.
 
 `scripts/deploy/api-entrypoint.sh` writes the `bootstrap_admin` password file only while the answer
 is `false`. Bootstrap values are used once, and the secret may be deleted once the workspace exists.

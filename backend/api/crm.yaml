@@ -22327,6 +22327,7 @@ paths:
       summary: Place a legal hold on a record. Requires a stated reason; audited.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
+        - { name: table, in: query, required: false, description: 'The extension table of the row. Required when entityType is extension, refused otherwise.', schema: { type: string, maxLength: 63 } }
       requestBody:
         required: true
         content:
@@ -22355,6 +22356,7 @@ paths:
       summary: Lift a legal hold. Requires a stated reason; audited.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
+        - { name: table, in: query, required: false, description: 'The extension table of the row. Required when entityType is extension, refused otherwise.', schema: { type: string, maxLength: 63 } }
       requestBody:
         required: true
         content:
@@ -54880,9 +54882,16 @@ components:
     ComposedExtension:
       type: object
       additionalProperties: false
-      required: [name, version, description, rbac_objects, routes, jobs]
+      required: [name, version, description, status, rbac_objects, routes, jobs]
       description: One enabled extension unit and what it contributes to this binary.
       properties:
+        status:
+          type: string
+          enum: [ready, pending]
+          description: >-
+            `ready` once boot finished the unit's install step at this version: its declared
+            settings stored and its objects granted to the admin role. `pending` until then, which
+            also covers an installation that is not bootstrapped yet.
         name:
           type: string
           description: >-
@@ -58576,7 +58585,9 @@ components:
         What happens to a record past its window. One action per policy row — a ladder is separate
         rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
         `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
-      enum: [archive, anonymize, erase]
+        `expire` acts on a row an extension owns: it deletes the row, or clears the personal
+        columns the extension declared. It destroys data, so the posture suppresses it too.
+      enum: [archive, anonymize, erase, expire]
 
     RetentionPolicy:
       type: object
@@ -58699,7 +58710,9 @@ components:
       # an activity is held TRANSITIVELY, through whichever of these it is
       # filed under, because a hold on a subject must cover the evidence and
       # holding the evidence separately would let the two disagree.
-      enum: [contact, company, deal, lead, project]
+      # `extension` is a row of a table an extension owns; the table is named
+      # in the `table` query parameter of the place and lift calls.
+      enum: [contact, company, deal, lead, project, extension]
     HeldRecord:
       type: object
       # What a hold is preserving, named well enough to recognise and no more.

@@ -13,6 +13,7 @@ package privacy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -56,6 +58,9 @@ type SARPackage struct {
 	Attachments         []map[string]any `json:"attachments"`
 	Consent             []map[string]any `json:"consent"`
 	ConsentEvents       []map[string]any `json:"consent_events"`
+	// The declared personal columns of extension rows that name the contact, a
+	// lead twin or one of their activities.
+	ExtensionData []map[string]any `json:"extension_data"`
 	// The deterministic thing on the record that made business correspondence
 	// lawful, which the consent state alone does not say.
 	ConsentQualifyingEvents []map[string]any `json:"consent_qualifying_events"`
@@ -217,7 +222,17 @@ type SARPackage struct {
 // AssembleSAR builds the package. It is a privileged read: the caller must be
 // a human holding the contact.delete grant (the same trust level erasure needs)
 // over an unbounded row scope — see the checks below.
+//
+// It serves no extension table. Production callers use AssembleSARWithExtensions.
 func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) (SARPackage, error) {
+	return AssembleSARWithExtensions(ctx, db, contactID, extprivacy.Registry{})
+}
+
+// AssembleSARWithExtensions is AssembleSAR that also serves the declared
+// personal columns of the extension tables the registry names.
+func AssembleSARWithExtensions(
+	ctx context.Context, db *database.DB, contactID ids.ContactID, registry extprivacy.Registry,
+) (SARPackage, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return SARPackage{}, err
 	}
@@ -296,11 +311,15 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		if err := appendActivityCustomValues(ctx, tx, pkg.Activities); err != nil {
 			return err
 		}
+		// A failed read ends the transaction through the joined error below, so
+		// no audit entry outlives an export that did not finish.
+		var extensionErr error
+		pkg.ExtensionData, extensionErr = exportExtensionRows(ctx, tx, registry, contactID, leads, pkg.Activities)
 
 		_, err = storekit.Audit(ctx, tx, "export", "contact", contactID.UUID, nil, map[string]any{
 			"kind": "sar", "activities": len(pkg.Activities), "raw_rows": len(pkg.RawCapture),
 		})
-		return err
+		return errors.Join(extensionErr, err)
 	})
 	return pkg, err
 }
@@ -338,55 +357,6 @@ type sarSection struct {
 	// than rebuilding them in SQL, so the export and the erasure cannot come to
 	// different conclusions about which rows are the subject's.
 	args []any
-}
-
-// rowMaps runs one query and returns each row as column→value.
-func rowMaps(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]map[string]any, error) {
-	rows, err := tx.Query(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []map[string]any{}
-	for rows.Next() {
-		values, err := rows.Values()
-		if err != nil {
-			return nil, err
-		}
-		row := make(map[string]any, len(values))
-		for i, field := range rows.FieldDescriptions() {
-			row[field.Name] = readableValue(values[i])
-		}
-		out = append(out, row)
-	}
-	return out, rows.Err()
-}
-
-// readableValue renders one column value as the document's reader needs it.
-//
-// A uuid column arrives from pgx as [16]byte, and encoding/json has one
-// rendering for a byte ARRAY: sixteen numbers. Nothing is lost — the bytes are
-// the id — but the document this builds is what a data subject receives under
-// Art. 15, and `[1,160,94,189,…]` is not something a contact can read, act on,
-// or quote back when they dispute it.
-//
-// Fixed HERE rather than at the two columns that showed it, because those two
-// are not a property of those columns: every map-shaped section is built by
-// this loop, so the next uuid column added to any of the twenty-six arrives
-// with the same defect. TestTheSubjectAccessPackageIsReadable holds it.
-//
-// Anything else is passed through untouched. This is a rendering decision about
-// one Go type that JSON has no good answer for, not a place to reinterpret what
-// the database returned — a uuid[] column would arrive as [][16]byte and want
-// the same treatment, and gets it in the change that adds one rather than as an
-// arm nothing exercises.
-//
-//craft:ignore naked-any a column value IS any by construction — pgx's rows.Values() returns []any, and this rewrites one of those in place. A concrete parameter would mean deciding the column's type before reading it, which is the thing the caller cannot do.
-func readableValue(value any) any {
-	if raw, isUUID := value.([16]byte); isUUID {
-		return ids.UUID(raw).String()
-	}
-	return value
 }
 
 // subjectReach reads the two things beyond a contact id that identify the

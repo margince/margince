@@ -124,7 +124,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// answers "can a reply leave this installation" from the same set; the
 	// write is an idempotent upsert, so whichever role boots second changes
 	// nothing.
-	if err := compose.RecordComposition(ctx, pool, logger, boot.extensions); err != nil {
+	if err := compose.RecordComposition(ctx, pool, vault, logger, boot.extensions); err != nil {
 		return err
 	}
 

@@ -30,6 +30,12 @@ var ErrRuntimeExpired = errors.New("extension: this runtime belongs to a call th
 // is an errors.Is check rather than a sentinel the extension has to guess.
 var ErrNoRows = errors.New("extension: the query matched no rows")
 
+// ErrCoreTableRefused reports that a statement on Tx reached for a table the
+// unit does not own. A unit's SQL runs as a database role that holds only unit
+// tables. Core records are reached through Tx.Core() and the read doors, which
+// carry the authorization, the audit row and the event that raw SQL cannot.
+var ErrCoreTableRefused = errors.New("extension: Tx runs SQL on the unit's own tables only; reach core records through Tx.Core()")
+
 // Runtime is the capability handle a governed tool is invoked with. It is the
 // only way an extension reaches anything the core OFFERS at run time: the
 // Extension value a unit's New() returns is inert declaration and holds no
@@ -233,31 +239,28 @@ type Caller struct {
 // it. If the product ever becomes multi-tenant the column returns to CORE first
 // and the tier follows it, in that order.
 //
-// WHAT IS NOT WALLED, therefore:
-//   - the CORE's tables. This runs on the shared application role, so a unit's
-//     SQL can address any table that role can.
-//   - OTHER UNITS' tables. Every unit's migration grants the same application
-//     role DML on its own ext_<name>_* tables, so unit A can read, rewrite or
-//     delete unit B's rows.
-//   - extension_secret. The wall around it is structural in Go — every read and
-//     write goes through platform/extsecrets, which closes over the invoking
-//     unit's namespace — so the namespacing Secrets enforces at the PORT is
-//     reachable around it through these three verbs. And because a unit runs
-//     in-process it can also read the keyvault root key from the environment and
-//     decrypt the ciphertext directly. "Sovereign inside its namespace,
-//     powerless outside it" is a property of polite units, not of this
-//     transaction.
+// Verbs only on the core's tables. Each statement runs as one shared database
+// role, ext_runtime, that holds DML on schema ext and nothing on public. A
+// statement naming a core table (extension_secret included) is refused by the
+// database with ErrCoreTableRefused. Core records are reached through Tx.Core()
+// and the read doors, the verbs that authorize, audit and announce. The role is
+// the same for every unit. Core and Record run as the application role,
+// outside the switch.
 //
-// All three are the same missing thing — a per-unit database ROLE, which would
-// bound a unit by grant rather than by convention — and all three are inside the
-// trusted-unit threat model above. That role is grant containment on its own
-// argument; the tenant isolation it was once expected to also carry is not a
-// property this schema has to lose. A static gate does
-// refuse the first two where it can SEE them —
-// backend/gates/extensionsqlscope_test.go reads the SQL a unit's source spells
-// out and holds it to that unit's own ext_<name>_* tables — but a scanner is
-// defence against mistakes by construction: it reads text, and this seam takes
-// whatever string a unit assembles.
+// What is not walled, therefore:
+//   - other units' tables. They live in schema ext and ext_runtime holds DML on
+//     all of it, so unit A can read, rewrite or delete unit B's rows.
+//   - the process itself. A unit runs in-process, so it can read the keyvault
+//     root key from the environment and decrypt the ciphertext directly. The
+//     database lets the session user switch to any role it may use, so a
+//     statement can set its own role back (a DO block, set_config('role', ...)).
+//     A statement that ends in another role is caught and its transaction is
+//     rolled back. One that switches away and back inside itself is not seen.
+//     The role stops a mistake, not a unit that means harm.
+//
+// extensionsqlscope_test.go in backend/gates stays as the early warning. It
+// holds the SQL a unit's source spells out to that unit's own ext_<name>_*
+// tables, before a test ever runs.
 //
 // args is ...any because SQL arguments are genuinely heterogeneous — a
 // statement's parameters are whatever its placeholders are — and every

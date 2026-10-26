@@ -44,9 +44,12 @@
 //     SQL verbs stay for the unit's OWN tables, which is what they were always
 //     the right shape for.
 //
-//     What remains unstable is their REACH: a unit's SQL runs on the shared
-//     application role today, and narrowing it to a per-unit database role
-//     (issue #628) is a change every unit's SQL feels. And Record is OFFERED,
+//     A unit's SQL reaches its own tables only: it runs as a database role
+//     that holds nothing on the core's tables, and a statement naming one is
+//     refused with ErrCoreTableRefused. That is the direction for a unit from
+//     outside the first-party set as well: verbs only, no raw SQL on core
+//     tables, and no database role per unit. What remains unstable is the reach
+//     BETWEEN units, which one shared role still leaves open. And Record is OFFERED,
 //     not enforced — a unit may still write its tables and record nothing — so
 //     a later release that makes recording mandatory would be felt by any unit
 //     that had not adopted it.
@@ -83,6 +86,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension/compliancedocs"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/privacy"
 	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
@@ -249,6 +253,12 @@ type Extension struct {
 	// unit's own Jurisdictions.
 	SubjectRights []subjectrights.Rules
 
+	// Privacy declares, for every table the unit owns, which core record its
+	// rows belong to, which columns are personal data and the retention class.
+	// The boot refuses a unit whose schema holds a table this leaves out. It
+	// refuses a changed declaration that kept its Version.
+	Privacy []privacy.Table
+
 	// Documents are the compliance documents the unit ships for its
 	// jurisdictions. The admin page serves the selected jurisdiction's set.
 	Documents []compliancedocs.Document
@@ -401,6 +411,13 @@ type Extension struct {
 	// a shape check and a proof — not a hole a hostile unit is being trusted
 	// not to walk through, because such a unit has better roads.
 	Migrations fs.FS
+
+	// Settings holds the unit's own settings as a SettingsFile at its root,
+	// which a unit supplies with `//go:embed settings.json`. Boot, or an
+	// operator running `migrate extension-settings`, stores each key once under
+	// the unit's namespace. A key that already has a value keeps it, so a repeat
+	// seed changes nothing and never undoes a later edit.
+	Settings fs.FS
 
 	// FailureClasses are the ways this unit's background jobs fail, named in
 	// the unit's own vocabulary, each with what an operator does about it.

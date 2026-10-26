@@ -16,9 +16,10 @@ import (
 // binds it with no exception path. Connecting as the owner at runtime would
 // silently disable every row-level policy in the schema.
 const (
-	ownerRole    = "margince_owner"
-	appRole      = "margince_app"
-	databaseName = "margince"
+	ownerRole      = "margince_owner"
+	appRole        = "margince_app"
+	extRuntimeRole = "ext_runtime"
+	databaseName   = "margince"
 )
 
 // cluster is how the launcher TALKS to a running database.
@@ -113,6 +114,21 @@ func (c cluster) ensureSchema() error {
 		if err := c.execSQL("postgres", "CREATE ROLE "+appRole+" LOGIN"+c.appRoleOptions); err != nil {
 			return fmt.Errorf("create the %s role: %w", appRole, err)
 		}
+	}
+
+	// The role a unit's own SQL runs as; the runtime role may switch to it and
+	// back. Idempotent: CREATE ROLE is guarded and a repeated GRANT is a no-op.
+	exists, err = c.queryBool(fmt.Sprintf("SELECT EXISTS (SELECT FROM pg_roles WHERE rolname = '%s')", extRuntimeRole))
+	if err != nil {
+		return fmt.Errorf("check for the %s role: %w", extRuntimeRole, err)
+	}
+	if !exists {
+		if err := c.execSQL("postgres", "CREATE ROLE "+extRuntimeRole+" NOLOGIN"); err != nil {
+			return fmt.Errorf("create the %s role: %w", extRuntimeRole, err)
+		}
+	}
+	if err := c.execSQL("postgres", "GRANT "+extRuntimeRole+" TO "+appRole); err != nil {
+		return fmt.Errorf("let %s switch to %s: %w", appRole, extRuntimeRole, err)
 	}
 
 	exists, err = c.queryBool(fmt.Sprintf("SELECT EXISTS (SELECT FROM pg_database WHERE datname = '%s')", databaseName))

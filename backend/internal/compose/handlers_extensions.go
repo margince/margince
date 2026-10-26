@@ -20,9 +20,12 @@ package compose
 // the wrong direction for a value that is fixed at build time.
 
 import (
+	"context"
 	"net/http"
 	"slices"
 	"strings"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -31,10 +34,17 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// extensionsHandlers serves the inventory. It holds NO state: every value it
-// reports is process-level and already recorded by the boot, so a field here
-// would be a second copy that could go stale against the accessors.
-type extensionsHandlers struct{}
+// extensionsHandlers serves the inventory. The boot already recorded everything
+// it reports except each unit's install state, which it reads per request.
+type extensionsHandlers struct {
+	activated func(context.Context) (map[string]string, error)
+}
+
+func newExtensionsHandlers(pool *pgxpool.Pool) extensionsHandlers {
+	return extensionsHandlers{activated: func(ctx context.Context) (map[string]string, error) {
+		return ActivatedExtensions(ctx, pool)
+	}}
+}
 
 // ListExtensions (GET /v1/extensions). Gated on extension_access.read.
 //
@@ -52,12 +62,17 @@ type extensionsHandlers struct{}
 //
 // Agents never reach it at all: the operation is `x-agent-access: human-only`,
 // enforced by the generated policy table before this runs.
-func (extensionsHandlers) ListExtensions(w http.ResponseWriter, r *http.Request) {
+func (h extensionsHandlers) ListExtensions(w http.ResponseWriter, r *http.Request) {
 	if err := auth.Require(r.Context(), "extension_access", principal.ActionRead); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	units := composedExtensionInventory(ComposedExtensions(), ComposedVerbs(), servedExtensionJobs())
+	activated, err := h.activated(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	units := composedExtensionInventory(ComposedExtensions(), ComposedVerbs(), servedExtensionJobs(), activated)
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ExtensionDirectory{Extensions: units})
 }
 
@@ -70,13 +85,18 @@ func (extensionsHandlers) ListExtensions(w http.ResponseWriter, r *http.Request)
 // `[]` on the wire says "this unit contributes none", while `null` says nothing
 // at all — and "contributes no RBAC objects" is the common, correct answer for a
 // unit that owns no records.
-func composedExtensionInventory(exts []extension.Extension, verbs []extension.Verb, jobs []composedJob) []crmcontracts.ComposedExtension {
+func composedExtensionInventory(exts []extension.Extension, verbs []extension.Verb, jobs []composedJob, activated map[string]string) []crmcontracts.ComposedExtension {
 	out := make([]crmcontracts.ComposedExtension, 0, len(exts))
 	for _, e := range exts {
+		status := crmcontracts.ComposedExtensionStatusPending
+		if activated[string(e.Name)] == string(e.Version) {
+			status = crmcontracts.ComposedExtensionStatusReady
+		}
 		out = append(out, crmcontracts.ComposedExtension{
 			Name:        string(e.Name),
 			Version:     string(e.Version),
 			Description: string(e.Description),
+			Status:      status,
 			RbacObjects: unitRbacObjects(e.Name, verbs),
 			Routes:      unitRoutes(e.Name, verbs),
 			Jobs:        unitJobs(e.Name, jobs),

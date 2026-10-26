@@ -29,7 +29,7 @@ The 2 tables owned by `privacy`, as the migrations build them. [Back to the enti
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `action` | `text` | yes | One of `archive`, `anonymize`, `erase`. |
+| `action` | `text` | yes | One of `archive`, `anonymize`, `erase`, `expire`. |
 | `category` | `text` |  | The scope's finer category, or null for a bare object-type policy. |
 | `enabled` | `boolean`, default `true` | yes | A disabled policy is preserved and inert, which is the way to pause a rule without losing its window. |
 | `lawful_basis` | `text` |  | The Art. 6 basis this window is argued from, for the auditor reading the row. |
@@ -38,7 +38,7 @@ The 2 tables owned by `privacy`, as the migrations build them. [Back to the enti
 
 **Rules**
 
-- `retention_policy_action_check`: `CHECK ((action = ANY (ARRAY['archive', 'anonymize', 'erase'])))`
+- `retention_policy_action_check`: `CHECK ((action = ANY (ARRAY['archive', 'anonymize', 'erase', 'expire'])))`
 - `retention_policy_retain_days_check`: `CHECK (((retain_days >= 1) AND (retain_days <= 36500)))`
 - `retention_policy_unique`: `UNIQUE NULLS NOT DISTINCT (object_type, category)`
 

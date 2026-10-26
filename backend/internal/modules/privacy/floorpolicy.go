@@ -21,10 +21,12 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // CountryReader answers the installation's selected jurisdiction inside the
@@ -39,6 +41,14 @@ func (e *Eraser) WithCountry(country CountryReader) *Eraser {
 	clone := *e
 	clone.country = country
 	return &clone
+}
+
+// WithExtensions gives the retention service's eraser the extension tables to
+// clear.
+func (s *RetentionService) WithExtensions(r extprivacy.Registry) *RetentionService {
+	out := *s
+	out.eraser = s.eraser.WithExtensions(r)
+	return &out
 }
 
 // WithCountry is the retention service's spelling: its selectors, and the
@@ -80,6 +90,11 @@ func (s *RetentionService) refuseIfShieldedNow(ctx context.Context, tx pgx.Tx, i
 // hangs off must not destroy the correspondence below its floor.
 func (e *Eraser) erasableUnderFloor(ctx context.Context, tx pgx.Tx, subject ids.ContactID) (FloorPolicy, error) {
 	if err := requireErasableContact(ctx, tx, subject); err != nil {
+		return FloorPolicy{}, err
+	}
+	// Asked up front, so a refusal arrives before the cascade changes anything.
+	// clearExtensionRows asks again for the leads and activities it finds later.
+	if err := refuseHeldExtensionRows(ctx, tx, e.extensions, map[extdecl.RecordKind][]ids.UUID{extdecl.Contact: {subject.UUID}}); err != nil {
 		return FloorPolicy{}, err
 	}
 	return ResolveFloorPolicy(ctx, tx, e.country)
@@ -212,12 +227,17 @@ func CorrespondenceFloorOf(code jurisdiction.Code) (jurisdiction.RetentionClass,
 // correspondenceClassOf is a pack's commercial-correspondence class, or the
 // zero class when it declares none.
 func correspondenceClassOf(pack jurisdiction.Pack) jurisdiction.RetentionClass {
+	return classOf(pack, jurisdiction.CommercialCorrespondence)
+}
+
+// classOf is a pack's class of that name, or the zero class when it declares none.
+func classOf(pack jurisdiction.Pack, name jurisdiction.RetentionClassName) jurisdiction.RetentionClass {
 	retention := pack.Retention()
 	if retention == nil {
 		return jurisdiction.RetentionClass{}
 	}
 	for _, class := range retention.Classes() {
-		if class.Name == jurisdiction.CommercialCorrespondence {
+		if class.Name == name {
 			return class
 		}
 	}

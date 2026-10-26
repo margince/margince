@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // MergeLead folds one open lead into another (ADR-0118/A169 §2: "merging two
@@ -69,6 +70,9 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		return crmcontracts.Lead{}, err
 	}
 	if err := refuseWebsiteLeadNotYetTold(ctx, tx, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if err := s.refuseMergeWithDependents(ctx, tx, extdecl.Lead, sourceID.UUID); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	src, tgt, err := mergePair(ctx, tx, entityLead, sourceID, targetID, nil, readLeadMergeState)

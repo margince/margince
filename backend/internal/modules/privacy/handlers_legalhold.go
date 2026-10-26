@@ -8,6 +8,7 @@ package privacy
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -65,25 +66,25 @@ func (h Handlers) ListLegalHolds(w http.ResponseWriter, r *http.Request, params 
 // (POST /retention/legal-holds/{entityType}/{recordId}/place).
 func (h Handlers) PlaceLegalHold(w http.ResponseWriter, r *http.Request,
 	entityType crmcontracts.HeldEntityType, recordID openapi_types.UUID,
-	_ crmcontracts.PlaceLegalHoldParams,
+	params crmcontracts.PlaceLegalHoldParams,
 ) {
-	h.setHold(w, r, entityType, recordID, true)
+	h.setHold(w, r, entityType, recordID, params.Table, true)
 }
 
 // LiftLegalHold implements
 // (POST /retention/legal-holds/{entityType}/{recordId}/lift).
 func (h Handlers) LiftLegalHold(w http.ResponseWriter, r *http.Request,
 	entityType crmcontracts.HeldEntityType, recordID openapi_types.UUID,
-	_ crmcontracts.LiftLegalHoldParams,
+	params crmcontracts.LiftLegalHoldParams,
 ) {
-	h.setHold(w, r, entityType, recordID, false)
+	h.setHold(w, r, entityType, recordID, params.Table, false)
 }
 
 // setHold is both decisions. They differ only in the direction, and a second
 // spelling of the refusal and the reason check is how the two would come to
 // disagree about what a stated reason is.
 func (h Handlers) setHold(w http.ResponseWriter, r *http.Request,
-	entityType crmcontracts.HeldEntityType, recordID openapi_types.UUID, held bool,
+	entityType crmcontracts.HeldEntityType, recordID openapi_types.UUID, table *string, held bool,
 ) {
 	reason, ok := decodeStatedReason(w, r)
 	if !ok {
@@ -93,9 +94,20 @@ func (h Handlers) setHold(w http.ResponseWriter, r *http.Request,
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
-	if err := h.holds.SetLegalHold(
-		r.Context(), string(entityType), ids.UUID(recordID), held, reason.String(),
-	); err != nil {
+	// A table name rides only an extension row; on any other record it would be
+	// silently ignored, so it is refused.
+	isExtension := entityType == crmcontracts.HeldEntityTypeExtension
+	if isExtension != (table != nil) {
+		httperr.Write(w, r, fmt.Errorf("the table parameter goes with the extension entity type and no other: %w", apperrors.ErrInvalidArgument))
+		return
+	}
+	var err error
+	if isExtension {
+		err = h.setExtensionHold(r.Context(), *table, ids.UUID(recordID), held, reason.String())
+	} else {
+		err = h.holds.SetLegalHold(r.Context(), string(entityType), ids.UUID(recordID), held, reason.String())
+	}
+	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

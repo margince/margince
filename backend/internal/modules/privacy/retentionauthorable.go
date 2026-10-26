@@ -20,8 +20,8 @@ func SupportsRetentionAction(objectType, action string) bool {
 // a refusal can name the alternatives instead of leaving the caller to guess at
 // a set the contract's two independent enums do not express.
 func ActionsForScope(objectType string) []string {
-	out := make([]string, 0, 3)
-	for _, action := range []string{actionAnonymize, actionArchive, actionErase} {
+	out := make([]string, 0, 4)
+	for _, action := range []string{actionAnonymize, actionArchive, actionErase, actionExpire} {
 		if SupportsRetentionAction(objectType, action) {
 			out = append(out, action)
 		}

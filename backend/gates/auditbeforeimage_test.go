@@ -220,7 +220,7 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 
 	// The one site no static reading could ever judge, and the reason the
 	// chokepoint is not optional.
-	"internal/modules/privacy/retentionactions.go:apply": "the verb is a column of the policy row being applied, read at run time; retention_policy_action_check admits only archive, anonymize and erase, so this site cannot reach update at all",
+	"internal/modules/privacy/retentionactions.go:applyAction": "the verb is a column of the policy row being applied, read at run time; retention_policy_action_check admits only archive, anonymize, erase and expire, so this site cannot reach update at all",
 })
 
 // directAuditLogWriters: files that send their own INSERT into audit_log rather

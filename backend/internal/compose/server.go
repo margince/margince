@@ -200,6 +200,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// read rather than answer anything at all.
 		jobHealthHandlers:             jobHealthHandlers{pool: pool},
 		captureHealthHandlers:         captureHealthHandlers{pool: pool, now: utcNow},
+		extensionsHandlers:            newExtensionsHandlers(pool),
 		extensionIngestHealthHandlers: extensionIngestHealthHandlers{pool: pool, now: utcNow},
 		automaticWorkHandlers:         automaticWorkHandlers{pool: pool, now: utcNow},
 		recoveryHealthHandlers: recoveryHealthHandlers{
@@ -233,7 +234,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// controller placing a litigation hold, which reads as "no such record"
 		// rather than as "this installation cannot hold one".
 		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), StoredConfig(pool)).WithLocks(loadedLocks).
-			WithCountry(identity.CountryForDecision).
+			WithCountry(identity.CountryForDecision).WithExtensions(ExtensionData()).
 			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
 			WithLegalHoldWriter(NewLegalHoldSeam(pool)).
 			WithRecordLabeler(newAttentionNames(InstallationDB(pool))),

@@ -1,3 +1,5 @@
+defacl ext objtype=S acl=ext_runtime=rU/margince_owner
+defacl ext objtype=r acl=ext_runtime=arwd/margince_owner
 defacl public objtype=r acl=margince_app=arwd/margince_owner
 public.activity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity.activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
@@ -4153,6 +4155,12 @@ public.event_outbox.seq bigint NOT NULL gen=- def=-
 public.event_outbox.stream text NOT NULL gen=- def=-
 public.event_outbox_pkey CREATE UNIQUE INDEX event_outbox_pkey ON public.event_outbox USING btree (id)
 public.event_outbox_seq_seq acl=- rls=false force=false
+public.extension_expired_row acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.extension_expired_row.expired_at timestamp with time zone NOT NULL gen=- def=now()
+public.extension_expired_row.extension_expired_row_pkey PRIMARY KEY (table_name, row_id)
+public.extension_expired_row.row_id uuid NOT NULL gen=- def=-
+public.extension_expired_row.table_name text NOT NULL gen=- def=-
+public.extension_expired_row_pkey CREATE UNIQUE INDEX extension_expired_row_pkey ON public.extension_expired_row USING btree (table_name, row_id)
 public.extension_ingest_refusal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.extension_ingest_refusal.day date NOT NULL gen=- def=-
 public.extension_ingest_refusal.extension_ingest_refusal_class CHECK ((refusal = ANY (ARRAY['key'::text, 'activity'::text, 'addresses'::text, 'counterparty'::text, 'participants'::text, 'size'::text])))
@@ -4165,6 +4173,12 @@ public.extension_ingest_refusal.refused bigint NOT NULL gen=- def=-
 public.extension_ingest_refusal.unit text NOT NULL gen=- def=-
 public.extension_ingest_refusal_day_idx CREATE INDEX extension_ingest_refusal_day_idx ON public.extension_ingest_refusal USING btree (day DESC, unit)
 public.extension_ingest_refusal_pkey CREATE UNIQUE INDEX extension_ingest_refusal_pkey ON public.extension_ingest_refusal USING btree (unit, refusal, day)
+public.extension_legal_hold acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.extension_legal_hold.extension_legal_hold_pkey PRIMARY KEY (table_name, row_id)
+public.extension_legal_hold.placed_at timestamp with time zone NOT NULL gen=- def=now()
+public.extension_legal_hold.row_id uuid NOT NULL gen=- def=-
+public.extension_legal_hold.table_name text NOT NULL gen=- def=-
+public.extension_legal_hold_pkey CREATE UNIQUE INDEX extension_legal_hold_pkey ON public.extension_legal_hold USING btree (table_name, row_id)
 public.extension_secret acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.extension_secret.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.extension_secret.extension_name text NOT NULL gen=- def=-
@@ -6862,7 +6876,7 @@ public.retention_policy.id uuid NOT NULL gen=- def=uuidv7()
 public.retention_policy.lawful_basis text gen=- def=-
 public.retention_policy.object_type text NOT NULL gen=- def=-
 public.retention_policy.retain_days integer NOT NULL gen=- def=-
-public.retention_policy.retention_policy_action_check CHECK ((action = ANY (ARRAY['archive'::text, 'anonymize'::text, 'erase'::text])))
+public.retention_policy.retention_policy_action_check CHECK ((action = ANY (ARRAY['archive'::text, 'anonymize'::text, 'erase'::text, 'expire'::text])))
 public.retention_policy.retention_policy_pkey PRIMARY KEY (id)
 public.retention_policy.retention_policy_retain_days_check CHECK (((retain_days >= 1) AND (retain_days <= 36500)))
 public.retention_policy.retention_policy_unique UNIQUE NULLS NOT DISTINCT (object_type, category)
@@ -8759,5 +8773,5 @@ public.workspace_email_domain.workspace_email_domain_pkey PRIMARY KEY (domain)
 public.workspace_email_domain.workspace_email_domain_source_check CHECK ((source = ANY (ARRAY['admin'::text, 'mailbox'::text])))
 public.workspace_email_domain_pkey CREATE UNIQUE INDEX workspace_email_domain_pkey ON public.workspace_email_domain USING btree (domain)
 public.workspace_pkey CREATE UNIQUE INDEX workspace_pkey ON public.workspace USING btree (id)
-schema ext acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner
+schema ext acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner,ext_runtime=U/margince_owner
 schema public acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner

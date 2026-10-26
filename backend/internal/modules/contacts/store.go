@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -87,6 +88,10 @@ type Store struct {
 	// grantCarrier moves the shares on a retiring record; nil refuses a merge
 	// that would strand one (grantcarry.go).
 	grantCarrier GrantCarrier
+	// extensions declares the extension tables whose rows depend on a record; a
+	// merge of a record they name is refused (mergedependents.go).
+	extensions extprivacy.Registry
+
 	// shareRequests files the request a held address raises; nil asks nobody.
 	shareRequests ShareRequests
 	// renameInstallation keeps the installation's name on the anchor's display

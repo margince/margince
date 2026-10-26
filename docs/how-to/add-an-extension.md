@@ -436,9 +436,21 @@ Custom fields are refused,
 not dropped. Plan the grants too. Filing needs the caller to hold your unit's object and the core `activity`
 one, and nothing declares that pair yet.
 
-**Your SQL names only your own tables**, in your tests too. `rt.Tx()` runs on the shared `margince_app` role,
-so a statement that names `contact` would work. So `TestExtensionSQLNamesOnlyTheUnitsOwnTables`
-(`backend/gates/extensionsqlscope_test.go`) reads **every `.go` file your unit ships**. It follows the string
+**Your SQL names only your own tables**, in your tests too. `rt.Tx()` runs each statement as the `ext_runtime`
+database role, which holds the `ext` schema and nothing on core tables. A statement that names `contact` is
+refused with `extension.ErrCoreTableRefused`. Reach core records through `tx.Core()`, the read calls and `Ingest`.
+
+Each call takes one statement. A string of statements, such as `RESET ROLE; DELETE ...`, is refused.
+
+`ErrCoreTableRefused` also appears when the role holds no rights on one of your own tables. That happens when a
+role other than the migrate role (`margince_owner`) created the table, because only its tables get the rights
+by default. A missing `ext_runtime` role shows as a different error that starts with
+`compose: confining the unit's SQL`. Fix a missing role with `make db-init`. Fix missing rights by applying
+your migrations as the migrate role.
+
+The role is the same for every unit, so your SQL can still name another unit's `ext` table. Do not.
+`TestExtensionSQLNamesOnlyTheUnitsOwnTables`
+(`backend/gates/extensionsqlscope_test.go`) tells you earlier: it reads **every `.go` file your unit ships**. It follows the string
 values that a table name is written through in most cases, and refuses a table outside `ext.ext_<name>_…`.
 
 A unit
@@ -463,6 +475,66 @@ tables the earlier files created, and it is still its own file.
 limits the page is a full scan. It also sorts every row the unit has ever written. That is no problem at the size a
 unit starts at, and it is at the size it reaches.
 
+## Declare the personal data in your tables
+
+Every table the unit creates needs one entry in the `Privacy` field. The core's eraser, subject export and
+merge check read it. Your unit never runs an erasure of its own, and never writes the audit entry for one.
+
+```go
+Privacy: []privacy.Table{{
+	Name:      "ext_<name>_note",
+	Links:     []privacy.Link{{Column: "activity_id", Record: privacy.Activity}},
+	Personal:  []string{"body"},
+	Retention: jurisdiction.CommercialCorrespondence,
+	AgeColumn: "created_at",
+}},
+```
+
+| Field | What to put in it |
+|---|---|
+| `Links` | The columns that hold the id of a core record: `contact`, `lead`, `company` or `activity`. |
+| `Personal` | The columns the core clears on erasure and serves in a subject export. See [what clearing does](#what-clearing-does). |
+| `Retention` | One of the core's own classes. A unit cannot add one. |
+| `AgeColumn` | Optional. A `timestamptz`, `timestamp` or `date` column that dates each row. Without it the retention sweep never touches the table. |
+
+A table with an `AgeColumn` needs a `uuid` column named `id`, like one with personal columns. The boot refuses
+a missing column, or one that is not a time.
+
+A retention policy for the table makes the core delete each row past its window and its class floor. It clears
+the personal columns instead when the table has any. A legal hold on a row stops that, and stops an erasure that
+would clear the row. Your unit writes none of this. See
+[legal hold on an extension row](../explanation/privacy-and-consent.md#legal-hold-on-an-extension-row).
+
+A row belongs to a subject when one of its links names the subject. Erasure and export find rows by
+`contact`, `lead` or `activity`. A `company` link only feeds the merge check, so a table with personal columns
+needs one of the other three.
+
+A table with no `Links` and no `Personal` columns declares that it holds no personal data. A table with
+personal columns needs a `uuid` column named `id`.
+
+### What clearing does
+
+A column that can hold NULL (no value) is set to NULL. A column that must hold a value is set to the empty
+value of its type:
+
+| Column type | Cleared to |
+|---|---|
+| `text`, `varchar` | `''` |
+| `bytea` (binary data) | an empty `bytea` |
+| `jsonb` | `{}` |
+| Any other type | The boot refuses it |
+
+A `CHECK` that refuses the empty value fails the erasure. So let a personal column hold NULL.
+
+The core, not the unit, writes the audit entry. It writes one `anonymize` entry and one event for each row it
+clears.
+
+At start-up the core compares the declaration with the migrated schema and refuses to boot on a mismatch.
+Once the installation is set up, it also records a hash of the declaration against the unit's `Version`.
+A changed declaration then needs a new version. `TestEveryExtensionTableHasAPrivacyDeclaration` checks the schema
+half from source. [Privacy and
+consent](../explanation/privacy-and-consent.md#extension-tables) says what core does with a declaration.
+
 ## Own secrets
 
 Declare what you will use, then reach it through the `Runtime`:
@@ -477,6 +549,51 @@ key, err := rt.Secrets().Get(ctx, "signing") // errors.Is(err, extension.ErrSecr
 
 A declaration grants and stores nothing; it is a request written in the manifest. Keys are your unit's own bare
 names, and the core keeps them apart from other units. No method takes another unit's name.
+
+## Ship the unit's settings in a file
+
+Put the unit's settings in `settings.json` at the unit's root, as one JSON object of key to value, and embed it:
+
+```go
+//go:embed settings.json
+var settings embed.FS
+
+// in New():
+Settings: settings,
+```
+
+Keys use lower-case letters, digits and `_`, and start with a letter. The first boot of a new unit
+version stores them (see [What boot does for a new unit](#what-boot-does-for-a-new-unit)). An operator can
+also run `margince-migrate extension-settings --dsn <owner-dsn>` before that boot, with no signed-in member.
+Core stores each key as `ext_<name>.<key>`, where each hyphen in the unit name becomes `_`: unit
+`finance-demo`, key `vat_rate` is stored as `ext_finance_demo.vat_rate`. A key that already has a value is
+kept, so you can run it again and it never undoes a later edit.
+
+The unit's own code cannot read these values yet. It has no `Runtime` call for them, and its database role
+cannot reach the `setting` table. Today the seed only stores them in core.
+Nothing is stored if any unit's file is wrong. [Configuration](../reference/configuration.md#cmdmigrate-schema-migrations)
+lists the command.
+
+## What boot does for a new unit
+
+There is no install command. Adding the folder, running `make composition` and `make check` is the whole
+install, and the next boot of the API or worker does the set-up. Once per unit version, in the first
+installation boot after bootstrap, it:
+
+| Step | What it does |
+|---|---|
+| Settings | Stores the keys of `settings.json` that have no value yet. |
+| Rights | Gives the `admin` role full access to each RBAC object the unit's operations declare. An object the role already holds an entry for is left as the admin set it. Each grant writes a `role` row in `audit_log`. |
+| Ready | Records `extension.activated` in `system_log`. The Extensions page in settings shows **Ready** for the unit while the recorded version matches the composed one, and **Setting up** otherwise. |
+
+A boot of the same version again writes nothing. Other roles get a unit's rights only when an admin grants
+them on the Extensions page.
+
+A unit that was installed and is no longer composed is taken out on the next boot. Core deletes every secret
+the unit held, at workspace and user scope, and the vault drops what it sealed. Core then records
+`extension.removed`.
+
+The service-member identity a unit could act as is not part of this step yet.
 
 ## Own a screen: `frontend/`
 
@@ -1205,5 +1322,6 @@ under `extensions/`. You must run the `rm -rf` after it. `git rm` takes the trac
 names the folder left behind if you miss this step.
 
 No core file or core test needs an edit. Removing it *turns the unit off* (routes answer 404, the list leaves
-the unit out, migrations skip it), but it does **not erase**. The unit's tables and rows, its `extension_secret`
-rows and any grants of its RBAC objects inside `role.permissions` all stay. There is no tool to erase them.
+the unit out, migrations skip it), but it does **not erase data**. The unit's tables and rows and any grants of
+its RBAC objects inside `role.permissions` stay. There is no tool to erase them. Its secrets do not stay: the
+next boot revokes them (see [What boot does for a new unit](#what-boot-does-for-a-new-unit)).

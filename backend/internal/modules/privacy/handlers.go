@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -79,6 +80,12 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 // blobstore rather than only where an object store exists.
 func (h Handlers) WithRawCapturePurger(purge RawCapturePurger) Handlers {
 	h.eraser = h.eraser.WithRawCapturePurger(purge)
+	return h
+}
+
+// WithExtensions gives the controller's release the extension tables to clear.
+func (h Handlers) WithExtensions(r extprivacy.Registry) Handlers {
+	h.eraser = h.eraser.WithExtensions(r)
 	return h
 }
 

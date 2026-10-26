@@ -78,6 +78,7 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithProfileVerdictReader(profileverdicts.MergeReader(db)).
 			WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
 			WithGrantCarrier(identity.NewServiceFor(db)).
+			WithExtensions(ExtensionData()).
 			WithShareRequests(contactShareRequests(pool)).
 			WithInstallationRenamer(installationRenamer(pool)),
 		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),

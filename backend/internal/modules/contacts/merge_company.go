@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // MergeCompany merges company source→target and returns the
@@ -88,6 +89,9 @@ func (s *Store) mergeCompanyTx(
 		return crmcontracts.Company{}, err
 	}
 	if err := companyMergeAllowed(ctx, tx, sourceID, targetID); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	if err := s.refuseMergeWithDependents(ctx, tx, extdecl.Company, sourceID.UUID); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	employersBefore, err := primaryEmployersOf(ctx, tx, sourceID)

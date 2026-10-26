@@ -12,12 +12,16 @@ package crmhello
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"log/slog"
 
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 )
+
+//go:embed settings.json
+var settings embed.FS
 
 // New returns the unit's declaration. hello_ping in api/crm.yaml has no Tools
 // entry: a contract-only request reaches the manifest and serves
@@ -33,6 +37,7 @@ func New() extension.Extension {
 			{Name: "note_deal_change", Events: []string{"deal.updated"}, Handle: noteDealChange},
 		},
 		SystemReads: []extension.SystemRead{extension.SystemReadDeals},
+		Settings:    settings,
 		Panels: []extension.Panel{
 			{Slot: extension.SlotDealPanel, Export: "DealHello", Object: "ext_crm_hello_ping"},
 		},

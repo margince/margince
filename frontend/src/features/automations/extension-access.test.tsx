@@ -74,6 +74,7 @@ const EXTENSIONS = {
       version: "0.3.1",
       description:
         "Notes a rep can attach to a record, with their own signing key.",
+      status: "ready",
       rbac_objects: ["ext_notes_note", "ext_notes_signing_key"],
       // One entry per OPERATION, sorted by path then method, exactly as the
       // server composes it: /ext/notes/{id} carries both a GET and a DELETE,
@@ -94,6 +95,7 @@ const EXTENSIONS = {
       // the case the card renders compactly.
       description:
         "Statutory retention floors the core applies. Registers nothing.",
+      status: "pending",
       rbac_objects: [],
       routes: [],
       jobs: [],
@@ -105,6 +107,7 @@ const EXTENSIONS = {
       name: "stale",
       version: "2.0.0",
       description: "A unit this bundle predates.",
+      status: "ready",
       rbac_objects: [],
       routes: [],
       jobs: [],
@@ -384,6 +387,16 @@ describe("ExtensionAccessCard", () => {
     expect(within(unit).getAllByRole("table")).toEqual([notesMatrix()]);
     expect(roleHeads("ext_notes_note")).toEqual(["Admin", "Rep"]);
     expect(roleHeads("ext_notes_signing_key")).toEqual(["Admin", "Rep"]);
+  });
+
+  it("tells an operator which units finished their install step", async () => {
+    vi.stubGlobal("fetch", backend([]));
+    render(<ExtensionAccessCard />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeTruthy());
+
+    // notes and stale are ready in the fixture, quiet is still setting up.
+    expect(screen.getAllByText("Ready")).toHaveLength(2);
+    expect(screen.getAllByText("Setting up")).toHaveLength(1);
   });
 
   it("links to the page of a unit the SPA registry resolves, naming the unit in the link", async () => {

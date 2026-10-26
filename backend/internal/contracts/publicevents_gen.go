@@ -416,6 +416,7 @@ const (
 	RetentionAppliedAnonymize PublicEventRetentionAppliedAction = "anonymize"
 	RetentionAppliedArchive   PublicEventRetentionAppliedAction = "archive"
 	RetentionAppliedErase     PublicEventRetentionAppliedAction = "erase"
+	RetentionAppliedExpire    PublicEventRetentionAppliedAction = "expire"
 )
 
 // Valid indicates whether the value is a known member of the PublicEventRetentionAppliedAction enum.
@@ -426,6 +427,8 @@ func (e PublicEventRetentionAppliedAction) Valid() bool {
 	case RetentionAppliedArchive:
 		return true
 	case RetentionAppliedErase:
+		return true
+	case RetentionAppliedExpire:
 		return true
 	default:
 		return false
@@ -2292,9 +2295,9 @@ type PublicEventRelationshipNudgeDecided struct {
 // PublicEventRelationshipNudgeDecidedAction What was decided. The undo, `restored`, is carried rather than inferred from a row going quiet. A decision withdrawn is itself a decision. A consumer counting how often reps put relationships down has to see it happen.
 type PublicEventRelationshipNudgeDecidedAction string
 
-// PublicEventRetentionApplied Payload for retention.applied. A retention or erasure action ran against one record. Four emit sites have four different runtime subjects. The embed-call sweep acts on ai_call. The voice-learning-signal content sweep acts on voice_learning_signal. A workspace's configured retention policy acts on its object type (activity | deal | lead | contact | ai_call_payload). Art. 17 erasure acts on a contact. None is fixed enough for this schema to name, so this is a dynamic-entity event (contract `x-entity-type: dynamic`). The generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. The policy and reason fields are a union across the sites. Both telemetry sweeps set neither, the policy-driven sweep sets only policy, and Art. 17 erasure sets only reason.
+// PublicEventRetentionApplied Payload for retention.applied. A retention or erasure action ran against one record. Four emit sites have four different runtime subjects. The embed-call sweep acts on ai_call. The voice-learning-signal content sweep acts on voice_learning_signal. A workspace's configured retention policy acts on its object type (activity | deal | lead | contact | ai_call_payload | an extension table). Art. 17 erasure acts on a contact. None is fixed enough for this schema to name, so this is a dynamic-entity event (contract `x-entity-type: dynamic`). The generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. The policy and reason fields are a union across the sites. Both telemetry sweeps set neither, the policy-driven sweep sets only policy, and Art. 17 erasure sets only reason.
 type PublicEventRetentionApplied struct {
-	// Action The action that ran. It is a closed set, so a subscriber can switch on it exhaustively. That is the reason for closing it. An open field leaves a consumer to branch on values nobody defined, or to drop what it does not recognise. A silent drop looks the same as no event. The `retention_policy.action` column carries the same three under a CHECK, and a gate holds the two spellings together. Restriction is no fourth action here. It emits retention.restricted, whose own action is a different closed set.
+	// Action The action that ran. It is a closed set, so a subscriber can switch on it exhaustively. That is the reason for closing it. An open field leaves a consumer to branch on values nobody defined, or to drop what it does not recognise. A silent drop looks the same as no event. The `retention_policy.action` column carries the same four under a CHECK, and a gate holds the two spellings together. `expire` is a retention rule acting on a row an extension owns: the row is deleted, or its personal columns are cleared. Restriction is no fourth action here. It emits retention.restricted, whose own action is a different closed set.
 	Action PublicEventRetentionAppliedAction `json:"action"`
 
 	// Policy The retention policy that drove this action (absent for the fixed embed-call sweep and for Art. 17 erasure, neither of which is policy-configured).
@@ -2304,7 +2307,7 @@ type PublicEventRetentionApplied struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
-// PublicEventRetentionAppliedAction The action that ran. It is a closed set, so a subscriber can switch on it exhaustively. That is the reason for closing it. An open field leaves a consumer to branch on values nobody defined, or to drop what it does not recognise. A silent drop looks the same as no event. The `retention_policy.action` column carries the same three under a CHECK, and a gate holds the two spellings together. Restriction is no fourth action here. It emits retention.restricted, whose own action is a different closed set.
+// PublicEventRetentionAppliedAction The action that ran. It is a closed set, so a subscriber can switch on it exhaustively. That is the reason for closing it. An open field leaves a consumer to branch on values nobody defined, or to drop what it does not recognise. A silent drop looks the same as no event. The `retention_policy.action` column carries the same four under a CHECK, and a gate holds the two spellings together. `expire` is a retention rule acting on a row an extension owns: the row is deleted, or its personal columns are cleared. Restriction is no fourth action here. It emits retention.restricted, whose own action is a different closed set.
 type PublicEventRetentionAppliedAction string
 
 // PublicEventRetentionRestricted Payload for retention.restricted — a statutory retention obligation changed what may be done with one record (A165/ADR-0114). Its own event type rather than a widening of retention.applied, because `restrict` carries an obligation on the SUBSCRIBER that no existing action does: the record survives in storage and must not survive in a projection. Adding it to retention.applied would have changed the meaning of a field subscribers already parse, which the versioning rule forbids within a major.

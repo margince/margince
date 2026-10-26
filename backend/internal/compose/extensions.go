@@ -221,21 +221,8 @@ func validateExtensionSet(exts []extension.Extension) error {
 	financeProviders := make(map[string]extension.Name)
 	oauthApps := make(map[string]extension.Name)
 	for _, e := range exts {
-		if err := e.Name.Validate(); err != nil {
-			return fmt.Errorf("compose: %w", err)
-		}
-		if seen[e.Name] {
-			return fmt.Errorf("compose: extension %q composed twice — the enabled set under extensions/ carries one directory per unit", e.Name)
-		}
-		seen[e.Name] = true
-		if err := reserveNamespace(e.Name, namespaces); err != nil {
+		if err := preflightIdentity(e, seen, namespaces); err != nil {
 			return err
-		}
-		if err := e.Version.Validate(); err != nil {
-			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
-		}
-		if err := e.Description.Validate(); err != nil {
-			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
 		}
 		if err := preflightJurisdictions(e, packCodes); err != nil {
 			return err
@@ -247,6 +234,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 			return err
 		}
 		if err := preflightDocuments(e); err != nil {
+			return err
+		}
+		if err := preflightPrivacy(e); err != nil {
 			return err
 		}
 		if err := preflightTools(e); err != nil {

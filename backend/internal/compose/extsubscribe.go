@@ -81,13 +81,11 @@ func (c ComposedSubscription) Group() (kevents.Group, error) {
 // WHAT A DELIVERY RUNS AS. There is nobody behind it, so the actor is the
 // system principal — the same one every core bus consumer writes under — and
 // the Runtime is minted unattended, which shuts the core port. Those two facts
-// belong together: PrincipalSystem is a principal auth.Require does not check,
-// so without the port's refusal the governed door would stand open to a caller
-// nothing checks. It is not a containment claim about core TABLES — Tx's three
-// SQL verbs run on the shared application role here as everywhere else, which
-// runtime.go states in the open and issue #628 tracks. The unit's own tables
-// stay writable, auditable and publishable, which is what reacting to a fact
-// consists of.
+// belong together. auth.Require does not check PrincipalSystem, so without the
+// port's refusal the governed door would stand open to a caller nothing checks.
+// Core tables are out of reach of Tx's SQL verbs here as everywhere else. The
+// unit's own tables stay writable, auditable and publishable, which is what
+// reacting to a fact consists of.
 //
 // The correlation id CARRIES THROUGH from the triggering event and the event
 // itself becomes the causation, so a fact, the reaction to it, and whatever the

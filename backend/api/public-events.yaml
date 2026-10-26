@@ -3469,7 +3469,8 @@ components:
         subjects. The embed-call sweep acts on ai_call. The
         voice-learning-signal content sweep acts on voice_learning_signal. A
         workspace's configured retention policy acts on its object type
-        (activity | deal | lead | contact | ai_call_payload). Art. 17 erasure
+        (activity | deal | lead | contact | ai_call_payload | an extension
+        table). Art. 17 erasure
         acts on a contact. None is fixed enough for this schema to name, so
         this is a dynamic-entity event (contract `x-entity-type: dynamic`).
         The generated EntityType() is unused, and each emit site supplies its
@@ -3482,23 +3483,26 @@ components:
       properties:
         action:
           type: string
-          enum: [archive, anonymize, erase]
-          # Named explicitly: these three generate `Archive`, `Anonymize` and
-          # `Erase`, which crm.yaml's RetentionAction already holds — and a
-          # collision there silently renames THAT enum's constants and breaks
-          # modules with no connection to this one.
+          enum: [archive, anonymize, erase, expire]
+          # Named explicitly: these four generate `Archive`, `Anonymize`,
+          # `Erase` and `Expire`, which crm.yaml's RetentionAction already
+          # holds — and a collision there silently renames THAT enum's
+          # constants and breaks modules with no connection to this one.
           x-enum-varnames:
             - RetentionAppliedArchive
             - RetentionAppliedAnonymize
             - RetentionAppliedErase
+            - RetentionAppliedExpire
           description: >-
             The action that ran. It is a closed set, so a subscriber can
             switch on it exhaustively. That is the reason for closing it. An
             open field leaves a consumer to branch on values nobody defined,
             or to drop what it does not recognise. A silent drop looks the
             same as no event. The `retention_policy.action` column carries the
-            same three under a CHECK, and a gate holds the two spellings
-            together. Restriction is no fourth action here. It emits
+            same four under a CHECK, and a gate holds the two spellings
+            together. `expire` is a retention rule acting on a row an
+            extension owns: the row is deleted, or its personal columns are
+            cleared. Restriction is no fourth action here. It emits
             retention.restricted, whose own action is a different closed set.
         policy:
           type: string

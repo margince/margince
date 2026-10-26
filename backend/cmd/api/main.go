@@ -104,7 +104,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// no workspace to record against; BEFORE the server is assembled, which
 	// loads the transport directory from the rows this writes. boot.go holds the
 	// phase and the order inside it.
-	if err := recordBootFacts(ctx, pool, logger, extensions); err != nil {
+	if err := recordBootFacts(ctx, pool, vault, logger, extensions); err != nil {
 		return err
 	}
 

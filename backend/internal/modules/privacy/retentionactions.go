@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // retentionExecutor applies one action to one record inside the pass's audited
@@ -44,7 +45,9 @@ type retentionExecutor func(s *RetentionService, ctx context.Context, tx pgx.Tx,
 // contact/erase is registered with a NIL executor: it owns its own transaction
 // (the Art. 17 cascade is ~30 statements plus object-store deletes), so apply
 // dispatches it before opening one. Nil means "runs outside the transaction",
-// never "unsupported" — membership is the key, not the value.
+// never "unsupported": membership is the key, not the value. So is
+// extension/expire. Its table is the policy's category, which an executor's
+// signature does not carry, so apply hands it the policy.
 var retentionActions = map[string]retentionExecutor{
 	"report_edition/erase":  (*RetentionService).eraseReportEdition,
 	"contact/erase":         nil,
@@ -57,6 +60,7 @@ var retentionActions = map[string]retentionExecutor{
 	"lead/anonymize":        (*RetentionService).anonymizeLead,
 	"lead/archive":          (*RetentionService).archiveLead,
 	"contact/anonymize":     (*RetentionService).anonymizeContact,
+	"extension/expire":      nil,
 }
 
 // The executors. Named methods rather than closures in the table above, because
@@ -81,8 +85,20 @@ func (s *RetentionService) anonymizeContact(ctx context.Context, tx pgx.Tx, id i
 	return anonymizeContactRecord(ctx, tx, id, s.eraser)
 }
 
-// apply runs ONE action on ONE record in one audited transaction.
+// apply runs one action on one record in one audited transaction. An extension
+// row linked to the record may be under legal hold. The action then rolls back
+// whole and the record is kept, as for a hold on the record itself.
 func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id ids.UUID) error {
+	err := s.applyAction(ctx, pol, id)
+	if errors.Is(err, errExtensionRowHeld) {
+		s.log.Info("retention: an extension row linked to this record is under legal hold, record kept",
+			"policy", pol.ID, "record", id)
+		return nil
+	}
+	return err
+}
+
+func (s *RetentionService) applyAction(ctx context.Context, pol retentionPolicy, id ids.UUID) error {
 	pair := pol.ObjectType + "/" + pol.Action
 	executor, supported := retentionActions[pair]
 	if !supported {
@@ -91,6 +107,9 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 		// selecting a record. Kept because an unsupported pair must never be
 		// mistaken for a completed action.
 		return fmt.Errorf("retention: no executor for %s", pair)
+	}
+	if pol.ObjectType == extensionObjectType {
+		return s.expireExtensionRow(ctx, pol, id)
 	}
 	if executor == nil {
 		return s.eraser.EraseContact(ctx, id, "retention")
@@ -215,6 +234,9 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 	}
 	if err == nil {
 		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
+	}
+	if err == nil {
+		_, err = clearExtensionRows(ctx, tx, eraser.extensions, "retention", map[extdecl.RecordKind][]ids.UUID{extdecl.Contact: {id}})
 	}
 	return err
 }

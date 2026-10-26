@@ -17,6 +17,7 @@ package privacy
 import (
 	"context"
 	"fmt"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 
 	"github.com/jackc/pgx/v5"
 
@@ -200,9 +201,16 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err != nil {
 			return err
 		}
+		cleared, err := clearExtensionRows(ctx, tx, e.extensions, reason, map[extdecl.RecordKind][]ids.UUID{
+			extdecl.Contact: {subject.UUID}, extdecl.Lead: leadsWiped, extdecl.Activity: activitiesRedacted,
+		})
+		if err != nil {
+			return err
+		}
 		erased, err = certifyErasure(ctx, tx, subject, reason, identities, e.uncountedArms(), contactErasureCounts{
 			emailsSuppressed: len(emails), rawRowsPurged: rawPurged, aiPayloadsPurged: aiPayloadsPurged,
 			activitiesRedacted: len(activitiesRedacted), activitiesRestricted: len(activitiesHeld),
+			extensionRowsCleared: cleared,
 		})
 		return err
 	})

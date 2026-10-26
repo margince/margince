@@ -6433,6 +6433,24 @@ func (e CompanyVatCheckStatus) Valid() bool {
 	}
 }
 
+// Defines values for ComposedExtensionStatus.
+const (
+	ComposedExtensionStatusPending ComposedExtensionStatus = "pending"
+	ComposedExtensionStatusReady   ComposedExtensionStatus = "ready"
+)
+
+// Valid indicates whether the value is a known member of the ComposedExtensionStatus enum.
+func (e ComposedExtensionStatus) Valid() bool {
+	switch e {
+	case ComposedExtensionStatusPending:
+		return true
+	case ComposedExtensionStatusReady:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ComputedFieldKind.
 const (
 	ComputedFieldKindCount          ComputedFieldKind = "count"
@@ -11229,11 +11247,12 @@ func (e HealthDimensionReasonCode) Valid() bool {
 
 // Defines values for HeldEntityType.
 const (
-	HeldEntityTypeCompany HeldEntityType = "company"
-	HeldEntityTypeContact HeldEntityType = "contact"
-	HeldEntityTypeDeal    HeldEntityType = "deal"
-	HeldEntityTypeLead    HeldEntityType = "lead"
-	HeldEntityTypeProject HeldEntityType = "project"
+	HeldEntityTypeCompany   HeldEntityType = "company"
+	HeldEntityTypeContact   HeldEntityType = "contact"
+	HeldEntityTypeDeal      HeldEntityType = "deal"
+	HeldEntityTypeExtension HeldEntityType = "extension"
+	HeldEntityTypeLead      HeldEntityType = "lead"
+	HeldEntityTypeProject   HeldEntityType = "project"
 )
 
 // Valid indicates whether the value is a known member of the HeldEntityType enum.
@@ -11244,6 +11263,8 @@ func (e HeldEntityType) Valid() bool {
 	case HeldEntityTypeContact:
 		return true
 	case HeldEntityTypeDeal:
+		return true
+	case HeldEntityTypeExtension:
 		return true
 	case HeldEntityTypeLead:
 		return true
@@ -16533,6 +16554,7 @@ const (
 	RetentionActionAnonymize RetentionAction = "anonymize"
 	RetentionActionArchive   RetentionAction = "archive"
 	RetentionActionErase     RetentionAction = "erase"
+	RetentionActionExpire    RetentionAction = "expire"
 )
 
 // Valid indicates whether the value is a known member of the RetentionAction enum.
@@ -16543,6 +16565,8 @@ func (e RetentionAction) Valid() bool {
 	case RetentionActionArchive:
 		return true
 	case RetentionActionErase:
+		return true
+	case RetentionActionExpire:
 		return true
 	default:
 		return false
@@ -34076,9 +34100,15 @@ type ComposedExtension struct {
 	// Routes The unit's published operations, one entry per method+path pair. Sorted by path then method. A bare path would under-report the surface — one path serving GET and DELETE is two capabilities to an operator auditing what a unit can do, and collapsing them hides the destructive one behind the harmless one.
 	Routes []ComposedExtensionRoute `json:"routes"`
 
+	// Status `ready` once boot finished the unit's install step at this version: its declared settings stored and its objects granted to the admin role. `pending` until then, which also covers an installation that is not bootstrapped yet.
+	Status ComposedExtensionStatus `json:"status"`
+
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
 	Version string `json:"version"`
 }
+
+// ComposedExtensionStatus `ready` once boot finished the unit's install step at this version: its declared settings stored and its objects granted to the admin role. `pending` until then, which also covers an installation that is not bootstrapped yet.
+type ComposedExtensionStatus string
 
 // ComposedExtensionRoute One published extension operation.
 type ComposedExtensionRoute struct {
@@ -36946,6 +36976,8 @@ type CreateRetentionPolicyRequest struct {
 	// Action What happens to a record past its window. One action per policy row — a ladder is separate
 	// rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
 	// `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
+	// `expire` acts on a row an extension owns: it deletes the row, or clears the personal
+	// columns the extension declared. It destroys data, so the posture suppresses it too.
 	Action      RetentionAction `json:"action"`
 	Enabled     *bool           `json:"enabled,omitempty"`
 	LawfulBasis *string         `json:"lawful_basis,omitempty"`
@@ -49109,6 +49141,8 @@ type RestrictedRecord struct {
 // RetentionAction What happens to a record past its window. One action per policy row — a ladder is separate
 // rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
 // `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
+// `expire` acts on a row an extension owns: it deletes the row, or clears the personal
+// columns the extension declared. It destroys data, so the posture suppresses it too.
 type RetentionAction string
 
 // RetentionFloorPolicy The correspondence floor in force. With no jurisdiction selected it is the strictest floor
@@ -49137,6 +49171,8 @@ type RetentionPolicy struct {
 	// Action What happens to a record past its window. One action per policy row — a ladder is separate
 	// rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
 	// `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
+	// `expire` acts on a row an extension owns: it deletes the row, or clears the personal
+	// columns the extension declared. It destroys data, so the posture suppresses it too.
 	Action RetentionAction `json:"action"`
 
 	// Category The scope's finer category, or null for a bare object-type policy.
@@ -53146,6 +53182,8 @@ type UpdateRetentionPolicyRequest struct {
 	// Action What happens to a record past its window. One action per policy row — a ladder is separate
 	// rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
 	// `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
+	// `expire` acts on a row an extension owns: it deletes the row, or clears the personal
+	// columns the extension declared. It destroys data, so the posture suppresses it too.
 	Action      *RetentionAction `json:"action,omitempty"`
 	Enabled     *bool            `json:"enabled,omitempty"`
 	LawfulBasis *string          `json:"lawful_basis,omitempty"`
@@ -62102,6 +62140,9 @@ type ListLegalHoldsParams struct {
 
 // LiftLegalHoldParams defines parameters for LiftLegalHold.
 type LiftLegalHoldParams struct {
+	// Table The extension table of the row. Required when entityType is extension, refused otherwise.
+	Table *string `form:"table,omitempty" json:"table,omitempty"`
+
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -62126,6 +62167,9 @@ type LiftLegalHoldParams struct {
 
 // PlaceLegalHoldParams defines parameters for PlaceLegalHold.
 type PlaceLegalHoldParams struct {
+	// Table The extension table of the row. Required when entityType is extension, refused otherwise.
+	Table *string `form:"table,omitempty" json:"table,omitempty"`
+
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -115571,6 +115615,19 @@ func (siw *ServerInterfaceWrapper) LiftLegalHold(w http.ResponseWriter, r *http.
 	// Parameter object where we will unmarshal all parameters from the context
 	var params LiftLegalHoldParams
 
+	// ------------- Optional query parameter "table" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "table", r.URL.Query(), &params.Table, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "table"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "table", Err: err})
+		}
+		return
+	}
+
 	headers := r.Header
 
 	// ------------- Optional header parameter "Idempotency-Key" -------------
@@ -115635,6 +115692,19 @@ func (siw *ServerInterfaceWrapper) PlaceLegalHold(w http.ResponseWriter, r *http
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params PlaceLegalHoldParams
+
+	// ------------- Optional query parameter "table" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "table", r.URL.Query(), &params.Table, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "table"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "table", Err: err})
+		}
+		return
+	}
 
 	headers := r.Header
 

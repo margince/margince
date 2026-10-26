@@ -28,8 +28,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 329 |
-| Columns | 3884 |
+| Tables | 331 |
+| Columns | 3890 |
 | Foreign keys | 546 |
 | Owning areas | 36 |
 
@@ -118,7 +118,7 @@ erDiagram
 | [knowledge](knowledge.md) | 3 |
 | [migration](migration.md) | 2 |
 | [notices](notices.md) | 3 |
-| [platform](platform.md) | 13 |
+| [platform](platform.md) | 15 |
 | [privacy](privacy.md) | 2 |
 | [projects](projects.md) | 3 |
 | [reporting](reporting.md) | 12 |
@@ -293,7 +293,9 @@ erDiagram
 | [`embedding`](search.md#embedding) | search | 7 | 0 |
 | [`erasure_suppression`](privacy.md#erasure_suppression) | privacy | 3 | 0 |
 | [`event_outbox`](platform.md#event_outbox) | platform | 6 | 0 |
+| [`extension_expired_row`](platform.md#extension_expired_row) | platform | 3 | 0 |
 | [`extension_ingest_refusal`](compose.md#extension_ingest_refusal) | compose | 6 | 0 |
+| [`extension_legal_hold`](platform.md#extension_legal_hold) | platform | 3 | 0 |
 | [`extension_secret`](platform.md#extension_secret) | platform | 7 | 0 |
 | [`federated_identity`](identity.md#federated_identity) | identity | 6 | 0 |
 | [`field_mask`](identity.md#field_mask) | identity | 6 | 0 |

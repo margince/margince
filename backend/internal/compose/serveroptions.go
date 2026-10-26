@@ -130,7 +130,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		// object store has no restore, and disclosing the stanza instead would
 		// answer Art. 15 with an address the subject cannot resolve.
 		s.consentHandlers = s.WithSubjectAccessAssembler(
-			newSubjectAccessAssembler(InstallationDB(pool)).withBlobstore(store))
+			newSubjectAccessAssembler(InstallationDB(pool), ExtensionData()).withBlobstore(store))
 		s.captureConfig.Blob = store
 		s.activitiesHandlers = s.activitiesHandlers.WithBlobstore(store)
 		s.dealsHandlers = s.dealsHandlers.WithBlobstore(store)
@@ -140,7 +140,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		s.knowledgeHandlers = knowledgeWithBlobstore(s.knowledgeHandlers, store)
 		// Erasure must reach the attachment bytes, not only the rows, so the
 		// DSR erase path gets a blob-aware eraser (Art. 17).
-		s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithBlobstore(store))
+		s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithBlobstore(store).WithExtensions(ExtensionData()))
 		// The controller's release on the retention surface is an erasure too,
 		// and reaches the same bytes.
 		s.privacyHandlers = s.privacyHandlers.WithBlobstore(store)

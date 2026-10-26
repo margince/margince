@@ -16,6 +16,9 @@ A superuser ignores every grant, so **both** runtime roles must be neither a sup
 worker with table grants only. The baseline migration grants to `margince_app` only when the role
 already exists, which is why the bootstrap creates it first.
 
+The SQL of an extension runs as a third role, `ext_runtime`, which nobody connects as. It holds the `ext`
+schema and nothing on core tables, so an extension cannot read or write a core table with raw SQL.
+
 ## One host
 
 The api and the web tier are two services, but they must sit under one host, because these things
