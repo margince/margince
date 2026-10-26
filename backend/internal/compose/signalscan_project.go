@@ -110,7 +110,7 @@ func WriteProjectQuietSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Gh
 			Kind:        kindProjectGoneQuiet,
 			CompanyID:   project.CompanyID,
 			ProjectID:   project.ProjectID,
-			Summary:     fmt.Sprintf(said.projectQuiet, project.Name, days),
+			Summary:     fmt.Sprintf(said.projectQuiet, project.Name, projects.DefaultProjectQuietDays),
 			Severity:    severityWarn,
 			Fingerprint: fingerprintOf(kindProjectGoneQuiet, project.ProjectID.String(), project.QuietSince.UTC().Format(time.RFC3339Nano)),
 			Audit: map[string]any{
