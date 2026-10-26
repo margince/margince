@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -365,4 +366,47 @@ func TestMergingTheLinkedCompanyAwayMovesTheLead(t *testing.T) {
 		t.Errorf("the merge moved the lead with %d audit row(s) and %d lead.updated event(s), want 1 and 1",
 			a-audits, ev-events)
 	}
+}
+
+func TestTheLeadListWithholdsALinkedCompanyTheReaderCannotOpen(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	ownerCtx := e.linker(e.owner, principal.RowScopeOwn)
+	company := e.linkCompany(ownerCtx, t, "Quiet Holdings")
+	lead := e.linkLead(ownerCtx, t, e.owner, "kim@quiet.test", "Quiet Holdings")
+	if _, err := e.store.LinkLeadCompany(ownerCtx, lead, company); err != nil {
+		t.Fatalf("link: %v", err)
+	}
+	if _, err := e.store.UpdateCompany(ownerCtx, company, UpdateCompanyInput{Visibility: new("owner")}); err != nil {
+		t.Fatalf("make the company private: %v", err)
+	}
+	teammateCtx := e.linker(e.teammate, principal.RowScopeTeam)
+	// The default order reads the work queue and a named sort reads the page;
+	// both must withhold the company.
+	for name, sort := range map[string]*string{"work queue": nil, "sorted page": new("full_name")} {
+		t.Run(name, func(t *testing.T) {
+			if got := listedCompanyID(ownerCtx, t, e.store, lead, sort); got == nil || ids.UUID(*got) != company.UUID {
+				t.Fatalf("the owner's row: company_id = %v, want %s", got, company)
+			}
+			if got := listedCompanyID(teammateCtx, t, e.store, lead, sort); got != nil {
+				t.Errorf("the teammate's row: company_id = %v, want it withheld", *got)
+			}
+		})
+	}
+}
+
+// listedCompanyID lists leads as ctx's reader and returns the company id the
+// row for lead carries.
+func listedCompanyID(ctx context.Context, t *testing.T, store *Store, lead ids.LeadID, sort *string) *openapi_types.UUID {
+	t.Helper()
+	rows, _, err := store.ListLeads(ctx, ListLeadsInput{Sort: sort})
+	if err != nil {
+		t.Fatalf("list leads: %v", err)
+	}
+	for _, row := range rows {
+		if ids.UUID(row.Id) == lead.UUID {
+			return row.CompanyId
+		}
+	}
+	t.Fatalf("lead %s is not on the reader's list", lead)
+	return nil
 }

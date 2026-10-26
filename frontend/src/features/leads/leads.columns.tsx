@@ -15,6 +15,7 @@ import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import type { useLocale, useT } from "../../i18n";
 import { type LeadOrigin, originLabelFor } from "../../lib/leadorigins";
+import { LeadCompanyName } from "./leadcompany";
 import { openTaskCountLabel } from "./leadopentasks";
 import {
   SlaBadge,
@@ -58,10 +59,13 @@ export function leadColumns(
     {
       key: "company",
       header: t("create.companyName"),
-      // The full name on hover: the table ellipsizes every cell alike.
+      // The full name on hover: the table ellipsizes every cell alike. A linked
+      // company's link names itself, so the typed name could only contradict it.
       cell: (lead: Lead) => (
-        <span title={lead.company_name ?? undefined}>
-          {lead.company_name ?? ""}
+        <span
+          title={lead.company_id ? undefined : (lead.company_name ?? undefined)}
+        >
+          <LeadCompanyName lead={lead} />
         </span>
       ),
       sort: "company_name",

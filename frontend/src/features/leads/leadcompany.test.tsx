@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { LeadCompany } from "./leadcompany";
+import { LeadCompany, useLeadCompanyName } from "./leadcompany";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -137,5 +137,27 @@ describe("LeadCompany", () => {
       relationship: [],
     });
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("useLeadCompanyName", () => {
+  function Name({ of }: Readonly<{ of: Lead }>) {
+    return <output>{useLeadCompanyName(of)}</output>;
+  }
+
+  it("names a linked company by its own name, not the typed one", async () => {
+    stubServer();
+    render(<Name of={{ ...lead, company_id: "c-7" }} />);
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe(
+        "Nordwind Holding SE",
+      ),
+    );
+  });
+
+  it("names an unlinked company by the typed name", () => {
+    stubServer();
+    render(<Name of={lead} />);
+    expect(screen.getByRole("status").textContent).toBe("Nordwind Logistik");
   });
 });
