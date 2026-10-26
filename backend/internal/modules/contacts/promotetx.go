@@ -34,6 +34,9 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 	if err != nil {
 		return PromoteOutcome{}, err
 	}
+	if err := refuseMovedCompany(ctx, tx, id, company); err != nil {
+		return PromoteOutcome{}, err
+	}
 	lead, err := promotableLead(ctx, tx, id, in)
 	if err != nil {
 		return PromoteOutcome{}, err

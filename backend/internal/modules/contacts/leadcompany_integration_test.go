@@ -6,8 +6,8 @@
 package contacts
 
 // A lead's company link over a real Postgres. These cover the offer a read
-// makes, and the confirm that writes the link, the contact and the employment.
-// They also cover what an edit of the company name and a promotion do to it.
+// makes, and the confirm that writes the link and nothing else. They also
+// cover what an edit of the company name and a promotion do to it.
 
 import (
 	"context"
@@ -25,8 +25,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// linker binds one user with every grant a link needs, at one row scope.
+// linker binds one user with the grants a link and the promotion after it use, at one row scope.
 func (e *privacyEnv) linker(user ids.UUID, scope principal.RowScope) context.Context {
+	return e.linkerWith(user, scope, map[string]principal.ObjectGrant{
+		"contact":      {Create: true, Read: true, Update: true},
+		"company":      {Create: true, Read: true, Update: true},
+		"lead":         {Create: true, Read: true, Update: true},
+		"relationship": {Create: true, Read: true, Update: true},
+	})
+}
+
+func (e *privacyEnv) linkerWith(user ids.UUID, scope principal.RowScope, grants map[string]principal.ObjectGrant) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
@@ -34,12 +43,7 @@ func (e *privacyEnv) linker(user ids.UUID, scope principal.RowScope) context.Con
 		TeamIDs: []ids.UUID{e.team},
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
-			Objects: map[string]principal.ObjectGrant{
-				"contact":      {Create: true, Read: true, Update: true},
-				"company":      {Create: true, Read: true, Update: true},
-				"lead":         {Create: true, Read: true, Update: true},
-				"relationship": {Create: true, Read: true, Update: true},
-			},
+			Objects:  grants,
 			RowScope: scope,
 		},
 	})
@@ -114,7 +118,40 @@ func (e *privacyEnv) linkAudits(ctx context.Context, t *testing.T, lead ids.Lead
 	return n
 }
 
-func TestLinkingALeadWritesTheCompanyTheContactAndTheEmployment(t *testing.T) {
+// employments counts the live employment edges at a company.
+func (e *privacyEnv) employments(ctx context.Context, t *testing.T, company ids.CompanyID) int {
+	t.Helper()
+	var n int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*) FROM relationship WHERE company_id = $1 AND `+employment.LiveSlotSQL("")+``,
+			company).Scan(&n)
+	}); err != nil {
+		t.Fatalf("count employments: %v", err)
+	}
+	return n
+}
+
+// eventTypesOf lists the type of every outbox event one request emitted.
+func (e *privacyEnv) eventTypesOf(ctx context.Context, t *testing.T, correlation ids.UUID) []string {
+	t.Helper()
+	var types []string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT envelope->>'type' FROM event_outbox
+			 WHERE envelope->'trace'->>'correlation_id' = $1::text ORDER BY seq`, correlation)
+		if err != nil {
+			return err
+		}
+		types, err = pgx.CollectRows(rows, pgx.RowTo[string])
+		return err
+	}); err != nil {
+		t.Fatalf("read the request's events: %v", err)
+	}
+	return types
+}
+
+func TestLinkingALeadWritesOnlyTheCompany(t *testing.T) {
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.linkCompany(ctx, t, "Acme Rocket GmbH")
@@ -127,10 +164,16 @@ func TestLinkingALeadWritesTheCompanyTheContactAndTheEmployment(t *testing.T) {
 	if offered.CompanyMatch == nil || ids.UUID(offered.CompanyMatch.Id) != company.UUID {
 		t.Fatalf("company_match = %+v, want the company the name spells with other case and spacing", offered.CompanyMatch)
 	}
+	contactsBefore := e.contactsHolding(ctx, t, "lena@acme-rocket.test")
+	audits, events, _ := e.leadTrail(ctx, t, lead)
 
-	linked, err := e.store.LinkLeadCompany(ctx, lead, company)
+	correlation := ids.NewV7()
+	linked, err := e.store.LinkLeadCompany(principal.WithCorrelationID(ctx, correlation), lead, company)
 	if err != nil {
 		t.Fatalf("link: %v", err)
+	}
+	if got := e.eventTypesOf(ctx, t, correlation); len(got) != 1 || got[0] != "lead.updated" {
+		t.Errorf("the link emitted %v, want exactly one lead.updated", got)
 	}
 	if linked.CompanyId == nil || ids.UUID(*linked.CompanyId) != company.UUID {
 		t.Errorf("company_id = %v, want %s", linked.CompanyId, company)
@@ -138,15 +181,15 @@ func TestLinkingALeadWritesTheCompanyTheContactAndTheEmployment(t *testing.T) {
 	if linked.Status != offered.Status || linked.ArchivedAt != nil || linked.PromotedContactId != nil {
 		t.Errorf("the link promoted the lead: status %s -> %s, archived %v", offered.Status, linked.Status, linked.ArchivedAt)
 	}
-	contacts := e.contactsHolding(ctx, t, "lena@acme-rocket.test")
-	if len(contacts) != 1 {
-		t.Fatalf("contacts holding the lead's address = %d, want 1", len(contacts))
+	a, ev, _ := e.leadTrail(ctx, t, lead)
+	if a != audits+1 || ev != events+1 || e.linkAudits(ctx, t, lead) != 1 {
+		t.Errorf("the link wrote %d audit row(s) and %d lead.updated event(s), want 1 and 1", a-audits, ev-events)
 	}
-	if !e.employed(ctx, t, contacts[0], company) {
-		t.Error("the new contact holds no employment at the linked company")
+	if got := e.contactsHolding(ctx, t, "lena@acme-rocket.test"); len(got) != len(contactsBefore) {
+		t.Errorf("contacts holding the lead's address: %d before the link, %d after", len(contactsBefore), len(got))
 	}
-	if n := e.linkAudits(ctx, t, lead); n != 1 {
-		t.Errorf("audit rows recording the link = %d, want 1", n)
+	if n := e.employments(ctx, t, company); n != 0 {
+		t.Errorf("employments at the linked company = %d, want 0", n)
 	}
 	again, err := e.store.GetLead(ctx, lead, storekit.LiveOnly)
 	if err != nil {
@@ -157,7 +200,7 @@ func TestLinkingALeadWritesTheCompanyTheContactAndTheEmployment(t *testing.T) {
 	}
 }
 
-func TestLinkingALeadLandsOnTheContactItsEmailAlreadyNames(t *testing.T) {
+func TestLinkingALeadLeavesTheContactItsEmailNamesAlone(t *testing.T) {
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.linkCompany(ctx, t, "Boreal Freight")
@@ -169,21 +212,43 @@ func TestLinkingALeadLandsOnTheContactItsEmailAlreadyNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	contact := ids.From[ids.ContactKind](ids.UUID(existing.Id))
 	lead := e.linkLead(ctx, t, e.owner, "lena@boreal.test", "Boreal Freight")
+	before, err := e.store.GetContact(ctx, contact, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := e.store.LinkLeadCompany(ctx, lead, company); err != nil {
 		t.Fatalf("link: %v", err)
 	}
-	contacts := e.contactsHolding(ctx, t, "lena@boreal.test")
-	if len(contacts) != 1 || contacts[0].UUID != ids.UUID(existing.Id) {
-		t.Fatalf("contacts holding the address = %v, want only the existing %s", contacts, existing.Id)
+	after, err := e.store.GetContact(ctx, contact, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !e.employed(ctx, t, contacts[0], company) {
-		t.Error("the existing contact holds no employment at the linked company")
+	if *after.Version != *before.Version {
+		t.Errorf("the contact's version moved from %d to %d", *before.Version, *after.Version)
 	}
-	// A second confirm keeps the one employment rather than refusing on it.
-	if _, err := e.store.LinkLeadCompany(ctx, lead, company); err != nil {
-		t.Errorf("linking again: %v", err)
+	if e.employed(ctx, t, contact, company) {
+		t.Error("the link gave the existing contact an employment at the company")
+	}
+}
+
+func TestALinkNeedsOnlyLeadUpdateAndCompanyRead(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	company := e.linkCompany(e.linker(e.owner, principal.RowScopeOwn), t, "Echo Freight")
+	ctx := e.linkerWith(e.owner, principal.RowScopeOwn, map[string]principal.ObjectGrant{
+		"lead":    {Create: true, Read: true, Update: true},
+		"company": {Read: true},
+	})
+	lead := e.linkLead(ctx, t, e.owner, "eve@echo.test", "Echo Freight")
+
+	linked, err := e.store.LinkLeadCompany(ctx, lead, company)
+	if err != nil {
+		t.Fatalf("link without contact or relationship grants: %v", err)
+	}
+	if linked.CompanyId == nil || ids.UUID(*linked.CompanyId) != company.UUID {
+		t.Errorf("company_id = %v, want %s", linked.CompanyId, company)
 	}
 }
 
@@ -245,18 +310,13 @@ func TestPromotingALinkedLeadCarriesTheEmployment(t *testing.T) {
 	if _, err := e.store.LinkLeadCompany(ctx, lead, company); err != nil {
 		t.Fatalf("link: %v", err)
 	}
-	// A new address matches no contact, so the promotion creates one, and only
-	// the carry can give that contact its employment.
-	if _, err := e.store.UpdateLead(ctx, lead, UpdateLeadInput{Email: new("sam.new@delta.test")}); err != nil {
-		t.Fatal(err)
-	}
 
 	promoted, err := e.store.QualifyLead(ctx, lead, PromoteLeadInput{Trigger: string(TriggerHumanQualify)})
 	if err != nil {
 		t.Fatalf("promote: %v", err)
 	}
 	if promoted.Merged {
-		t.Fatal("the promotion merged; the fixture meant it to create a contact")
+		t.Fatal("the promotion merged; the link made a contact it should not have")
 	}
 	contact := ids.From[ids.ContactKind](ids.UUID(promoted.Contact.Id))
 	if !e.employed(ctx, t, contact, company) {
@@ -409,4 +469,87 @@ func listedCompanyID(ctx context.Context, t *testing.T, store *Store, lead ids.L
 	}
 	t.Fatalf("lead %s is not on the reader's list", lead)
 	return nil
+}
+
+func TestPromotingALeadWhoseCompanyMergedAwayEmploysAtTheSurvivor(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	ctx := e.linker(e.owner, principal.RowScopeAll)
+	retired := e.linkCompany(ctx, t, "Mike Metals")
+	survivor := e.linkCompany(ctx, t, "Mike Metals Group")
+	lead := e.linkLead(ctx, t, e.owner, "m@mike.test", "Mike Metals")
+	if _, err := e.store.LinkLeadCompany(ctx, lead, retired); err != nil {
+		t.Fatalf("link: %v", err)
+	}
+	if _, err := e.store.MergeCompany(ctx, retired, survivor, nil); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+
+	promoted, err := e.store.QualifyLead(ctx, lead, PromoteLeadInput{Trigger: string(TriggerHumanQualify)})
+	if err != nil {
+		t.Fatalf("promote: %v", err)
+	}
+	contact := ids.From[ids.ContactKind](ids.UUID(promoted.Contact.Id))
+	if !e.employed(ctx, t, contact, survivor) {
+		t.Error("the promoted contact holds no employment at the merge survivor")
+	}
+	if e.employed(ctx, t, contact, retired) {
+		t.Error("the promoted contact was employed at the merged-away company")
+	}
+}
+
+// mergeAudit reads the after side of the merge audit row on the surviving lead.
+func (e *privacyEnv) mergeAudit(ctx context.Context, t *testing.T, survivor ids.LeadID) map[string]any {
+	t.Helper()
+	var after map[string]any
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT after FROM audit_log
+			 WHERE entity_type = 'lead' AND entity_id = $1 AND action = 'merge'`, survivor).Scan(&after)
+	}); err != nil {
+		t.Fatalf("read the survivor's merge audit: %v", err)
+	}
+	return after
+}
+
+func TestALeadMergeCarriesTheLosersCompanyLinkFillOnly(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	ctx := e.linker(e.owner, principal.RowScopeOwn)
+	november := e.linkCompany(ctx, t, "November Tools")
+	oscar := e.linkCompany(ctx, t, "Oscar Paper")
+
+	unlinked := e.linkLead(ctx, t, e.owner, "n1@november.test", "November Tools")
+	loser := e.linkLead(ctx, t, e.owner, "n2@november.test", "November Tools")
+	if _, err := e.store.LinkLeadCompany(ctx, loser, november); err != nil {
+		t.Fatalf("link the loser: %v", err)
+	}
+	correlation := ids.NewV7()
+	merged, err := e.store.MergeLead(principal.WithCorrelationID(ctx, correlation), loser, unlinked)
+	if err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	if merged.CompanyId == nil || ids.UUID(*merged.CompanyId) != november.UUID {
+		t.Errorf("survivor company_id = %v, want the loser's %s", merged.CompanyId, november)
+	}
+	if got := e.mergeAudit(ctx, t, unlinked)["company_id"]; got != november.String() {
+		t.Errorf("the survivor's merge audit records company_id %v, want %s", got, november)
+	}
+	if got := e.eventTypesOf(ctx, t, correlation); len(got) != 1 || got[0] != "lead.merged" {
+		t.Errorf("the merge emitted %v, want one lead.merged", got)
+	}
+
+	keeper := e.linkLead(ctx, t, e.owner, "o1@oscar.test", "Oscar Paper")
+	if _, err := e.store.LinkLeadCompany(ctx, keeper, oscar); err != nil {
+		t.Fatalf("link the keeper: %v", err)
+	}
+	other := e.linkLead(ctx, t, e.owner, "o2@oscar.test", "November Tools")
+	if _, err := e.store.LinkLeadCompany(ctx, other, november); err != nil {
+		t.Fatalf("link the second loser: %v", err)
+	}
+	kept, err := e.store.MergeLead(ctx, other, keeper)
+	if err != nil {
+		t.Fatalf("merge into a linked survivor: %v", err)
+	}
+	if kept.CompanyId == nil || ids.UUID(*kept.CompanyId) != oscar.UUID {
+		t.Errorf("a linked survivor's company_id = %v, want its own %s", kept.CompanyId, oscar)
+	}
 }

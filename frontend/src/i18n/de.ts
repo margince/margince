@@ -16966,8 +16966,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkConfirm": "Unternehmen verknüpfen",
   "lead.company.linkOpens":
     "Der Unternehmensname dieses Leads öffnet dann {name}.",
-  "lead.company.linkContact":
-    "Dieser Lead wird als Kontakt bei {name} angelegt. Sein Status ändert sich nicht.",
+  "lead.company.linkOnQualify":
+    "Es wird noch kein Kontakt angelegt. Wenn du diesen Lead qualifizierst, wird er ein Kontakt bei {name}.",
   "lead.timeline.received": "{at} · eingegangen",
   "lead.timeline.weReplied": "Du hast geantwortet",
   "lead.timeline.repliedIn": "{at} · in {span}",

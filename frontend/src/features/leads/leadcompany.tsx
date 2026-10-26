@@ -19,8 +19,8 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 
 type Lead = components["schemas"]["Lead"];
 
-// The offer to link the one company the lead's name matched, with the dialog
-// that says both things the link does before it writes.
+// The offer to link the one company the lead's name matched. Its dialog says
+// what the link does, and that the contact waits for qualifying.
 function LinkCompanyOffer({
   lead,
   match,
@@ -70,21 +70,11 @@ function LinkCompanyOffer({
           {t("lead.company.linkOpens", { name: match.name })}
         </p>
         <p className="t-body">
-          {t("lead.company.linkContact", { name: match.name })}
+          {t("lead.company.linkOnQualify", { name: match.name })}
         </p>
       </ConfirmModal>
     </>
   );
-}
-
-// Every grant the link's writes ask for: the lead, the contact it lands on,
-// and the employment edge between that contact and the company.
-function useMayLinkCompany(): boolean {
-  const lead = useCanWrite("lead", "update");
-  const contactCreate = useCanWrite("contact", "create");
-  const contactUpdate = useCanWrite("contact", "update");
-  const relationship = useCanWrite("relationship", "create");
-  return lead && contactCreate && contactUpdate && relationship;
 }
 
 // The company a lead names, without the offer: what a list row or a board card
@@ -111,7 +101,7 @@ export function LeadCompany({
   lead,
   nameShown = false,
 }: Readonly<{ lead: Lead; nameShown?: boolean }>): ReactNode {
-  const mayLink = useMayLinkCompany();
+  const mayLink = useCanWrite("lead", "update");
   if (lead.company_id) {
     return nameShown ? null : <LeadCompanyName lead={lead} />;
   }

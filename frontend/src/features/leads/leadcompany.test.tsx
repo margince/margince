@@ -32,9 +32,7 @@ const lead: Lead = {
 
 const LINK_GRANTS: GrantSpec = {
   lead: ["read", "update"],
-  contact: ["read", "create", "update"],
   company: ["read"],
-  relationship: ["create"],
 };
 
 const match = { id: "c-9", name: "Nordwind Logistik GmbH" };
@@ -93,7 +91,7 @@ describe("LeadCompany", () => {
     expect(screen.queryByText("Nordwind Logistik")).toBeNull();
   });
 
-  it("offers the matched company and says both things the link does", async () => {
+  it("offers the matched company and says the contact waits for qualifying", async () => {
     const posted = stubServer();
     render(<LeadCompany lead={{ ...lead, company_match: match }} />);
     expect(screen.getByText("Nordwind Logistik")).toBeTruthy();
@@ -107,7 +105,7 @@ describe("LeadCompany", () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "This lead is added as a contact at Nordwind Logistik GmbH. Its status does not change.",
+        "No contact is created now. When you qualify this lead, it becomes a contact at Nordwind Logistik GmbH.",
       ),
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Link company" }));
@@ -130,11 +128,11 @@ describe("LeadCompany", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("offers no link to a reader without the relationship grant", () => {
+  it("offers no link to a reader without lead update", () => {
     stubServer();
     render(<LeadCompany lead={{ ...lead, company_match: match }} />, {
       ...LINK_GRANTS,
-      relationship: [],
+      lead: ["read"],
     });
     expect(screen.queryByRole("button")).toBeNull();
   });

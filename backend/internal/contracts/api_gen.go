@@ -42836,10 +42836,10 @@ type Lead struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// CompanyId The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company.
+	// CompanyId The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company. The link adds no contact; converting the lead makes it a contact employed there.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 
-	// CompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+	// CompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
 	CompanyMatch *LeadCompanyMatch `json:"company_match,omitempty"`
 
 	// CompanyName Free text, as captured or typed. It names the company until a human links one (`company_id`).
@@ -42979,7 +42979,7 @@ type LeadStatus string
 // LeadStatusSetBy Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.
 type LeadStatusSetBy string
 
-// LeadCompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+// LeadCompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
 type LeadCompanyMatch struct {
 	Id openapi_types.UUID `json:"id"`
 
@@ -77707,7 +77707,7 @@ type ServerInterface interface {
 	// Draft an email to this lead, grounded in their record.
 	// (POST /leads/{id}/draft-email)
 	DraftLeadEmail(w http.ResponseWriter, r *http.Request, id Id)
-	// Link a lead to a company, and add the lead as a contact there.
+	// Link a lead to a company.
 	// (POST /leads/{id}/link-company)
 	LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id)
 	// List current and superseded human-provided qualification signals.
@@ -82165,7 +82165,7 @@ func (_ Unimplemented) DraftLeadEmail(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Link a lead to a company, and add the lead as a contact there.
+// Link a lead to a company.
 // (POST /leads/{id}/link-company)
 func (_ Unimplemented) LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)

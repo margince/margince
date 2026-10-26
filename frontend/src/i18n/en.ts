@@ -16892,8 +16892,8 @@ export const en = {
   "lead.company.linkTitle": "Link this lead to {name}?",
   "lead.company.linkConfirm": "Link company",
   "lead.company.linkOpens": "The company name on this lead then opens {name}.",
-  "lead.company.linkContact":
-    "This lead is added as a contact at {name}. Its status does not change.",
+  "lead.company.linkOnQualify":
+    "No contact is created now. When you qualify this lead, it becomes a contact at {name}.",
   "lead.timeline.received": "{at} · received",
   "lead.timeline.weReplied": "You replied",
   "lead.timeline.repliedIn": "{at} · in {span}",

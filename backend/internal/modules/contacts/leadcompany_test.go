@@ -20,8 +20,7 @@ func TestEveryRequiredLeadCompanyBodyIDIsNamedWhenAbsent(t *testing.T) {
 	ctx := principal.WithActor(principal.WithCorrelationID(context.Background(), ids.NewV7()), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{RoleKeys: []string{"rep"}, Objects: map[string]principal.ObjectGrant{
-			"lead": {Update: true}, "contact": {Create: true, Update: true}, "company": {Read: true},
-			"relationship": {Create: true},
+			"lead": {Update: true}, "company": {Read: true},
 		}, RowScope: principal.RowScopeAll},
 	})
 	_, err := (&Store{}).LinkLeadCompany(ctx, ids.From[ids.LeadKind](ids.NewV7()), ids.CompanyID{})

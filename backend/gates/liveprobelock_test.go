@@ -76,14 +76,9 @@ var unlockedLiveWrites = gatekit.Waive(withPromotionEdgeWriters(map[string]strin
 	"internal/modules/contacts:Store.applyEmploymentEpisode":  "private import helper reached only after ApplyEmploymentImport holds the live contact row for this transaction; the contact lock covers the applied-field support and its relationship. The census reads callees rather than callers, so this declaration relies on the parent's held lock",
 	"internal/modules/contacts:Store.applyEmploymentEvidence": "private iteration inside ApplyEmploymentImport's transaction, after HoldWritableLive; every evidence item has the same locked contact. The census cannot propagate a caller's held lock down into this helper",
 
-	"internal/modules/contacts:Store.QuickCapture":      "quick capture creates the contact and its phone in one transaction, then attaches the employer edge whose probe puts this function here. The subject did not exist outside this transaction when the probe ran, so no erasure can be in flight against it",
-	"internal/modules/contacts:Store.quickCaptureInTx":  "the same capture running inside a caller's transaction, reached only from QuickCapture and creating the same contact before writing its socials",
-	"internal/modules/contacts:Store.LinkLeadCompany":   leadCompanyLinkReason,
-	"internal/modules/contacts:Store.linkLeadCompanyTx": leadCompanyLinkReason,
+	"internal/modules/contacts:Store.QuickCapture":     "quick capture creates the contact and its phone in one transaction, then attaches the employer edge whose probe puts this function here. The subject did not exist outside this transaction when the probe ran, so no erasure can be in flight against it",
+	"internal/modules/contacts:Store.quickCaptureInTx": "the same capture running inside a caller's transaction, reached only from QuickCapture and creating the same contact before writing its socials",
 }))
-
-// leadCompanyLinkReason is why a lead's company link reaches the live probe.
-const leadCompanyLinkReason = "reaches the live probe only through the employment edge the link attaches, which probes the contact it hangs on and takes lockContactForAttach on it. The contact_phone it writes belongs to a contact this transaction either created or locked through lockContactThenLead before the merge wrote to it, so no erasure can commit between the probe and the write"
 
 // promotionEdgeReason is why the writers below reach the live probe. A lead's
 // promotion seats its contact on the deal it opened, through the writer a deal's
