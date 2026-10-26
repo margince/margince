@@ -117,8 +117,10 @@ func TestATakenOverPromiseKeepsOneTaskWhenALaterReadingNamesItsPromiser(t *testi
 		t.Fatalf("taking the promise over: %v", err)
 	}
 
-	// The later reading names Robin, and a replay reads it again.
+	// The later reading names Robin and quotes only part of the sentence, and
+	// a replay reads it again.
 	named := r.reading(contract, &r.e.Rep1)
+	named.Quote = "send the signed contract"
 	for range 2 {
 		r.dispatchOnce(t, named)
 		if got := r.tasks(t); got != r.e.Rep2.String() {

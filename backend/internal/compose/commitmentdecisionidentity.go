@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -115,9 +116,9 @@ func (d *CommitmentDispatcher) resolvedWorkBefore(ctx context.Context, tx pgx.Tx
 // while no seat was named for it. The takeover's task is keyed on the unnamed
 // form an earlier reading gave the promise. A later reading that names the
 // promiser keys the promise apart, and must not write a second task beside the
-// one the taker holds. The taken claim must be on the same message, the same
-// recipient and the same quoted words. Two promises the earlier reading could
-// not tell apart already shared one claim.
+// one the taker holds. The taken claim must be on the same message and the
+// same recipient, and its locator names the same sentence. Two promises the
+// earlier reading could not tell apart already shared one claim.
 func (d *CommitmentDispatcher) takenUnderEarlierAttribution(ctx context.Context, tx pgx.Tx, c Commitment) (bool, error) {
 	if c.Span == "" || c.Seat == nil || c.Theirs != nil {
 		return false, nil
@@ -135,9 +136,9 @@ func (d *CommitmentDispatcher) takenUnderEarlierAttribution(ctx context.Context,
 	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM conversation_claim c
 		 WHERE c.source_activity_id = $1 AND c.kind = 'commitment_ours'
 		   AND c.taken_by_user_id IS NOT NULL AND c.task_activity_id IS NOT NULL
-		   AND c.evidence_fingerprint = ANY($2) AND c.source_quote = $3
-		   AND ($4::uuid IS NULL OR c.contact_id = $4))`,
-		c.SourceActivityID, earlierUnnamedLocators(c), c.Quote, recipient).Scan(&taken)
+		   AND c.evidence_fingerprint = ANY($2)
+		   AND ($3::uuid IS NULL OR c.contact_id = $3))`,
+		c.SourceActivityID, earlierUnnamedLocators(c), recipient).Scan(&taken)
 	if err != nil {
 		return false, fmt.Errorf("compose: reading whether the promise was taken over: %w", err)
 	}
@@ -148,6 +149,21 @@ func (d *CommitmentDispatcher) takenUnderEarlierAttribution(ctx context.Context,
 // promises, so neither writes a task the other cannot see.
 func lockPromiseSource(ctx context.Context, tx pgx.Tx, source ids.UUID) error {
 	return storekit.LockWriteIdentity(ctx, tx, "commitment_source", source.String())
+}
+
+// lockPromiseSources takes the source lock for every message a reading may
+// file promises from, in one order, before the reading locks any row. Every
+// writer then takes this lock before row locks, and none waits on the other
+// in a cycle.
+func lockPromiseSources(ctx context.Context, tx pgx.Tx, sources []ids.UUID) error {
+	ordered := slices.Clone(sources)
+	slices.SortFunc(ordered, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) })
+	for _, source := range slices.Compact(ordered) {
+		if err := lockPromiseSource(ctx, tx, source); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // earlierUnnamedLocators are the locators the promise had while no seat was

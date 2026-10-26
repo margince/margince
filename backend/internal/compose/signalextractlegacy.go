@@ -118,6 +118,9 @@ func (x *SignalExtractor) convertLegacyCommitment(ctx context.Context, legacy le
 		}
 	}
 	return database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
+		if err := lockPromiseSources(ctx, tx, []ids.UUID{legacy.cited}); err != nil {
+			return err
+		}
 		// Settled FIRST: a human who dismissed the signal while the model was
 		// reading has answered it, and what the reading found is not filed.
 		moved, err := signals.AcknowledgeTx(ctx, tx, legacy.signal, signals.ResolutionSourceCommitmentRule)

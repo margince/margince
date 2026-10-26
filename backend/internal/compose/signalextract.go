@@ -317,6 +317,9 @@ func (x *SignalExtractor) commitReading(
 ) (int, bool, error) {
 	raised, complete, read := 0, true, false
 	if err := database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
+		if err := lockPromiseSources(ctx, tx, threadMessageIDs(thread)); err != nil {
+			return err
+		}
 		// The conversation can be made private, or reach another account,
 		// while the model reads it. Every event is filed against the audience
 		// the rule gives it now. A conversation it no longer reads gets
@@ -479,4 +482,13 @@ func extractShapeValid(thread settledThread) ai.Validator {
 		}
 		return nil
 	}
+}
+
+// threadMessageIDs lists the messages a reading of the thread may cite.
+func threadMessageIDs(thread settledThread) []ids.UUID {
+	out := make([]ids.UUID, 0, len(thread.Messages))
+	for _, message := range thread.Messages {
+		out = append(out, message.ID)
+	}
+	return out
 }
