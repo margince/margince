@@ -76,6 +76,10 @@ curl -X POST http://localhost:8080/v1/users/service-members/<id>/archive \
 
 The member is deactivated and archived, and `user.deactivated` is published. The answer is `204`. An id that is not a live service member, including one already archived, answers `404`. The row and its secret stay, so the audit trail still names something real.
 
+## No MCP tools yet
+
+An admin manages a service member on the Users screen or over REST. No MCP tool does it. The agent tool list has a fixed token budget and sits near its ceiling, so each new tool costs budget the other tools need. An agent's request also carries no admin identity, so a tool would have to check the rights of the human who granted the agent access. The tools are left out until the budget allows them. Archiving stays human-only either way.
+
 ## How to read this page
 
 The table lists what is true of every service member. The diagram shows the path from declaring a member to a landed record, and the one way the path ends.
