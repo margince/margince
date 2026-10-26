@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -43,7 +42,7 @@ func (EvidenceAuthorshipArgs) InsertOpts() river.InsertOpts {
 func newEvidenceAuthorshipWorker(pool *pgxpool.Pool, log *slog.Logger) *evidenceAuthorshipWorker {
 	db := InstallationDB(pool)
 	return &evidenceAuthorshipWorker{
-		deals:    deals.NewStore(db, installseam.Deals()),
+		deals:    deals.NewStore(db, DealsInstallation()),
 		own:      ownDomainReader{store: capture.NewOwnDomainStore(db)},
 		identity: identity.NewService(pool),
 		log:      log,
@@ -62,7 +61,7 @@ func (w *evidenceAuthorshipWorker) Work(ctx context.Context, _ *river.Job[Eviden
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	corrected, err := w.deals.ReconcileEvidenceAuthorship(principal.SystemActing(wsCtx, evidenceAuthorshipActor), w.own)
+	corrected, err := w.deals.ReconcileEvidenceAuthorship(principal.SystemActing(wsCtx, evidenceAuthorshipActor), w.own, deals.EvidenceAuthorshipScope{})
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

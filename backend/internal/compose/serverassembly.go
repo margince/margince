@@ -275,7 +275,10 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	// which rebuilds the sync over the vault it brings.
 	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, log, s.priceCatalogues))
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool), budgetFullUsers, aiDeferredWork(pool))}
-	s.ownDomainHandlers = ownDomainHandlers{store: capture.NewOwnDomainStore(InstallationDB(pool))}
+	s.ownDomainHandlers = ownDomainHandlers{
+		store:    capture.NewOwnDomainStore(InstallationDB(pool)),
+		evidence: deals.NewStore(InstallationDB(pool), DealsInstallation()), log: log,
+	}
 	// The installation's own identity and reporting basis (ADR-0090/A135):
 	// name, reporting zone, base currency — the last of which locks once a
 	// deal has converted against it (ADR-0085 §7).

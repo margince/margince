@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -92,7 +93,8 @@ const assuranceSubjectsSQL = `
 		             WHERE e.criterion_id = c.id
 		               AND e.deal_id = d.id
 		               AND e.met
-		               AND e.refuted_at IS NULL)) AS unmet_exit_criteria
+		               AND e.refuted_at IS NULL
+		               AND %[4]s)) AS unmet_exit_criteria
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE d.archived_at IS NULL AND d.status = 'open'
@@ -136,7 +138,8 @@ func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, err
 		return nil, err
 	}
 	query := fmt.Sprintf(assuranceSubjectsSQL, activities.CurrentTaskClause("a", now, identities, arg),
-		occurredday.BegunSQL("a", "now()"), relstrength.MeetingAheadSQL("a", "$2"))
+		occurredday.BegunSQL("a", "now()"), relstrength.MeetingAheadSQL("a", "$2"),
+		deals.SettlingEvidenceSQL("c", "e"))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)

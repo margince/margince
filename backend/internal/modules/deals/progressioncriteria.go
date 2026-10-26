@@ -6,6 +6,7 @@ package deals
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -35,7 +36,33 @@ func (s *Store) ValidateProgressionCriteriaTx(ctx context.Context, tx pgx.Tx, ch
 	if err != nil {
 		return err
 	}
-	return matchProgressionCriteria(change.Criteria, current)
+	if err := matchProgressionCriteria(change.Criteria, current); err != nil {
+		return err
+	}
+	return refuseUnsettledProgressionCriteria(ctx, tx, change)
+}
+
+// refuseUnsettledProgressionCriteria holds every criterion the card calls met
+// to the ledger as it stands now. A claim refuted since, or judged our own
+// side's word on a buyer milestone since, leaves the card stale.
+func refuseUnsettledProgressionCriteria(ctx context.Context, tx pgx.Tx, change StageProgressionChange) error {
+	for _, criterion := range change.Criteria {
+		if !criterion.Met {
+			continue
+		}
+		var settled bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal_stage_evidence e
+			  JOIN stage_exit_criterion c ON c.id = e.criterion_id
+			 WHERE e.deal_id = $1 AND e.criterion_id = $2 AND e.met AND e.refuted_at IS NULL
+			   AND `+SettlingEvidenceSQL("c", "e")+`)`,
+			change.DealID.UUID, criterion.CriterionID.UUID).Scan(&settled); err != nil {
+			return fmt.Errorf("deals: rereading a met criterion's evidence: %w", err)
+		}
+		if !settled {
+			return apperrors.ErrVersionSkew
+		}
+	}
+	return nil
 }
 
 func matchProgressionCriteria(proposed []ProposedCriterion, current []crmcontracts.StageExitCriterion) error {

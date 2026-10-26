@@ -288,3 +288,23 @@ func SettlesBuyerMilestone(kind CriterionKind, side AuthorSide) bool {
 	}
 	return side == AuthorBuyer
 }
+
+// allCriterionKinds lists the criterion kinds ParseCriterionKind admits.
+var allCriterionKinds = []CriterionKind{
+	CriterionBuyerConfirmed, CriterionEventHeld, CriterionDocumentSigned,
+	CriterionRoleIdentified, CriterionTermsAccepted, CriterionCustom, CriterionLegalReviewed,
+}
+
+// SettlingEvidenceSQL is SettlesBuyerMilestone as a condition over a criterion
+// alias and an evidence alias, for a reader that counts settled criteria in
+// SQL. It is built from BuyerMilestone, so the two cannot name different kinds.
+func SettlingEvidenceSQL(criterion, evidence string) string {
+	var buyerKinds []string
+	for _, kind := range allCriterionKinds {
+		if kind.BuyerMilestone() {
+			buyerKinds = append(buyerKinds, "'"+string(kind)+"'")
+		}
+	}
+	return "(" + criterion + ".kind NOT IN (" + strings.Join(buyerKinds, ", ") + ") OR " +
+		evidence + ".author_side = '" + string(AuthorBuyer) + "')"
+}

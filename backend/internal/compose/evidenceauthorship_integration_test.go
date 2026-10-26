@@ -11,7 +11,11 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,15 +27,18 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type authorshipFixture struct {
 	*integration.Env
-	t      *testing.T
-	dealID ids.DealID
-	crit   map[string]ids.ExitCriterionID
-	own    *capture.OwnDomainStore
+	t       *testing.T
+	dealID  ids.DealID
+	stageID ids.StageID
+	crit    map[string]ids.ExitCriterionID
+	own     *capture.OwnDomainStore
 }
 
 func newAuthorshipFixture(t *testing.T) *authorshipFixture {
@@ -50,11 +57,12 @@ func newAuthorshipFixture(t *testing.T) *authorshipFixture {
 		t.Fatal(err)
 	}
 	stageID := ids.From[ids.StageKind](ids.UUID(stage.Id))
-	f := &authorshipFixture{Env: e, t: t, crit: map[string]ids.ExitCriterionID{}, own: capture.NewOwnDomainStore(e.DB())}
+	f := &authorshipFixture{Env: e, t: t, stageID: stageID, crit: map[string]ids.ExitCriterionID{}, own: capture.NewOwnDomainStore(e.DB())}
 	for key, kind := range map[string]deals.CriterionKind{
 		"budget": deals.CriterionBuyerConfirmed, "terms": deals.CriterionTermsAccepted, "notes": deals.CriterionCustom,
 	} {
-		c, err := e.Deals.CreateStageExitCriterion(ctx, deals.CreateCriterionInput{StageID: stageID, Key: key, Label: key, Kind: string(kind)})
+		required := key == "budget"
+		c, err := e.Deals.CreateStageExitCriterion(ctx, deals.CreateCriterionInput{StageID: stageID, Key: key, Label: key, Kind: string(kind), Required: &required})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -76,7 +84,8 @@ func (f *authorshipFixture) inboundMail(sender string) ids.UUID {
 			clocktest.Now(f.t).Add(-time.Hour)).Scan(&id); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'from')`, id, sender); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, address, address_domain_folded, role) VALUES ($1, $2, $3, 'from')`,
+			id, sender, owndomain.OfAddress(sender)); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, deal_id) VALUES ($1, 'deal', $2)`, id, f.dealID.UUID)
@@ -205,5 +214,100 @@ func TestStageEvidenceFollowsAnOwnDomainAddedAndRemoved(t *testing.T) {
 	}
 	if got := f.corrections(other) + f.corrections(refuted); got != 0 {
 		t.Errorf("unaffected claims carry %d correction rows", got)
+	}
+}
+
+// budgetCard is a stage-move card that calls the budget criterion met, as the
+// proposer stages it.
+func (f *authorshipFixture) budgetCard() deals.StageProgressionChange {
+	f.t.Helper()
+	change := deals.StageProgressionChange{DealID: f.dealID, FromStageID: f.stageID, ToStageID: f.stageID}
+	rows, err := integration.OwnerConn(f.t).Query(context.Background(),
+		`SELECT id, key, label, required, version FROM stage_exit_criterion WHERE stage_id = $1 AND archived_at IS NULL`, f.stageID.UUID)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var c deals.ProposedCriterion
+		var id ids.UUID
+		if err := rows.Scan(&id, &c.Key, &c.Label, &c.Required, &c.Version); err != nil {
+			f.t.Fatal(err)
+		}
+		c.CriterionID, c.Met = ids.From[ids.ExitCriterionKind](id), c.Key == "budget"
+		change.Criteria = append(change.Criteria, c)
+	}
+	return change
+}
+
+func (f *authorshipFixture) cardStands(change deals.StageProgressionChange) error {
+	f.t.Helper()
+	return database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+		return f.Deals.ValidateProgressionCriteriaTx(f.Admin(), tx, change)
+	})
+}
+
+// unmetForAssurance is the count of required criteria the assurance pass
+// finds unmet on the fixture deal.
+func (f *authorshipFixture) unmetForAssurance() int {
+	f.t.Helper()
+	var unmet int
+	if err := database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+		subjects, err := AssuranceSubjects(f.Admin(), tx)
+		for _, s := range subjects {
+			if s.DealID == f.dealID.UUID.String() {
+				unmet = s.UnmetExitCriteria
+			}
+		}
+		return err
+	}); err != nil {
+		f.t.Fatal(err)
+	}
+	return unmet
+}
+
+func TestAnAdminDomainChangeCorrectsEvidenceAtOnceAndStalesTheCard(t *testing.T) {
+	f := newAuthorshipFixture(t)
+	fromBuyer := f.inboundMail("cfo@buyer-corp.test")
+	budget := f.claim(fromBuyer, "budget")
+	card := f.budgetCard()
+	if err := f.cardStands(card); err != nil {
+		t.Fatalf("the card on buyer evidence is refused before any change: %v", err)
+	}
+	if got := f.unmetForAssurance(); got != 0 {
+		t.Fatalf("assurance counts %d unmet criteria before any change, want 0", got)
+	}
+	// The stage policy reads evidence of an archived activity too.
+	f.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, fromBuyer)
+
+	h := ownDomainHandlers{store: f.own, evidence: f.Deals, log: slog.New(slog.DiscardHandler)}
+	rec := httptest.NewRecorder()
+	h.CreateWorkspaceEmailDomain(rec, httptest.NewRequest(http.MethodPost, "/v1/capture/email-domains",
+		strings.NewReader(`{"domain":"buyer-corp.test"}`)).WithContext(f.Admin()))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("adding the domain answered %d: %s", rec.Code, rec.Body)
+	}
+	// No pass has run: the request itself corrected the claim.
+	if got := f.stored(budget); got != string(deals.AuthorSeller) {
+		t.Errorf("right after the domain was added the claim is %s, want seller", got)
+	}
+	if err := f.cardStands(card); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a card resting on our own mail still stands: %v", err)
+	}
+	if got := f.unmetForAssurance(); got != 1 {
+		t.Errorf("assurance counts %d unmet criteria, want the budget criterion our own mail cannot settle", got)
+	}
+
+	rec = httptest.NewRecorder()
+	h.DeleteWorkspaceEmailDomain(rec, httptest.NewRequest(http.MethodDelete, "/v1/capture/email-domains/buyer-corp.test", nil).
+		WithContext(f.Admin()), "buyer-corp.test")
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("removing the domain answered %d: %s", rec.Code, rec.Body)
+	}
+	if got := f.stored(budget); got != string(deals.AuthorBuyer) {
+		t.Errorf("right after the domain was removed the claim is %s, want buyer", got)
+	}
+	if err := f.cardStands(card); err != nil {
+		t.Errorf("the card on restored buyer evidence is refused: %v", err)
 	}
 }
