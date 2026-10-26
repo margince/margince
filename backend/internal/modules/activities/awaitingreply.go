@@ -238,11 +238,13 @@ func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent string) string {
 
 // sentByReaderSQL is true when the reader sent the mail on alias a. Sent and
 // captured mail stamp the sender as the seat. Mail logged by hand names one of
-// the reader's addresses.
+// the reader's addresses. A seat row the legacy backfill guessed for bare
+// mail does not stand (auth.ParticipantStandsSQL), so its seat owes no reply.
 func sentByReaderSQL(reader, addresses string) string {
 	return `EXISTS (SELECT 1 FROM activity_participant me
 	   WHERE me.activity_id = a.id AND me.role = 'from'
-	     AND (me.user_id = ` + reader + ` OR lower(me.address) = ANY(` + addresses + `::text[])))`
+	     AND (me.user_id = ` + reader + ` OR lower(me.address) = ANY(` + addresses + `::text[]))
+	     AND ` + auth.ParticipantStandsSQL("me", "a") + `)`
 }
 
 // awaitingRepliesSQL: every rule sits before the cap.

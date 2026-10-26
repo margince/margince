@@ -39,14 +39,15 @@ type resolved struct {
 
 // Config holds the values Load resolved from the boot sources.
 type Config struct {
-	reg      *Registry
-	values   map[string]resolved
-	trace    []string
-	tracing  bool
-	warnings []string
-	files    Files
-	db       *settings.Store
-	sealer   *Sealer
+	reg       *Registry
+	values    map[string]resolved
+	trace     []string
+	tracing   bool
+	warnings  []string
+	elsewhere []string
+	files     Files
+	db        *settings.Store
+	sealer    *Sealer
 }
 
 // Load resolves every setting and returns all faults joined, so an operator
@@ -92,6 +93,7 @@ func loadSources(reg *Registry, src Sources) (*Config, error) {
 		cfg.values[s.Key()] = r
 	}
 	cfg.warnings = undeclared(names, layers)
+	cfg.elsewhere = readElsewhere(reg, names, layers)
 	if src.Faults != nil {
 		faults = append(faults, src.Faults(cfg)...)
 	}

@@ -106,7 +106,8 @@ and the binaries resolve every flag from a `MARGINCE_*` env fallback. Set at lea
 
 The annotated env template is [`.env.example`](../../.env.example). To check the configuration before a
 rollout, and to see which settings the app shows as locked, read
-[change-a-setting.md](change-a-setting.md).
+[change-a-setting.md](change-a-setting.md). Check it with the api and the worker: each checks only
+the settings it reads.
 
 Do **not** set `MARGINCE_ENV=dev` in a deployed environment. It decides which license authorities are
 honoured, and lets the installation run with no license (see

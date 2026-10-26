@@ -30,6 +30,27 @@ func TestCheckConfigPassesAValidConfigurationWithoutADatabase(t *testing.T) {
 	}
 }
 
+// Only the worker reads job_drain_window. The api check names it as one the
+// worker must check, instead of calling the whole file valid.
+func TestCheckConfigNamesAWorkerSettingItDoesNotCheck(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "margince.yaml")
+	mustWrite(t, path, "version: 1\nworkspace:\n  name: Acme\n  base_currency: EUR\njob_drain_window: soon\n")
+	var out strings.Builder
+	checked, err := checkAPIConfig([]string{"--check-config", "--config", path, "--dsn", testDSN}, nil, &out)
+	if !checked || err != nil {
+		t.Fatalf("checked %v, err %v; the api reads no worker setting, so it has no fault to report", checked, err)
+	}
+	for _, want := range []string{
+		"config: not checked here, another program reads it: job_drain_window (base_file " + path + ")",
+		"config: valid for this program; the 1 setting(s) another program reads need its own --check-config",
+	} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("the check output lacks %q:\n%s", want, out.String())
+		}
+	}
+}
+
 // The bootstrap roots fault in the same report as the settings, so one run
 // names every fault in the file.
 func TestCheckConfigReportsBootstrapAndSettingFaultsTogether(t *testing.T) {
