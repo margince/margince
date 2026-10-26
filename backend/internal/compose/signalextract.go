@@ -203,11 +203,11 @@ func focusedReading(thread settledThread, events []extractedEvent) (settledThrea
 // asRead is a reply as the server reads it. Each message label becomes its
 // message id. A focused reading keeps only promises on focus messages: asked
 // to look again, a model also finds needs the words do not state.
-func (payload extractPayload) asRead(thread settledThread) extractPayload {
-	if payload.Events == nil {
-		return payload
+func (p extractPayload) asRead(thread settledThread) extractPayload {
+	if p.Events == nil {
+		return p
 	}
-	events := slices.Clone(*payload.Events)
+	events := slices.Clone(*p.Events)
 	for i := range events {
 		events[i].MessageID = thread.messageID(events[i].MessageID)
 		events[i].RestatedMessageID = thread.messageID(events[i].RestatedMessageID)
@@ -219,8 +219,8 @@ func (payload extractPayload) asRead(thread settledThread) extractPayload {
 			})
 		})
 	}
-	payload.Events = &events
-	return payload
+	p.Events = &events
+	return p
 }
 
 // keepFirstReading commits the first reading when the second was refused. The

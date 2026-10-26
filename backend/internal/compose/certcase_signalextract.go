@@ -280,15 +280,12 @@ func (c *signalExtractCase) Run(ctx context.Context, completer aitasks.Completer
 func (c *signalExtractCase) secondReading(
 	ctx context.Context, completer aitasks.Completer, trace aitasks.Trace,
 ) (aitasks.Trace, error) {
-	var first extractPayload
-	if json.Unmarshal([]byte(ai.Unfence(trace.Output)), &first) != nil {
-		return trace, nil
-	}
-	if first = first.asRead(c.thread); validateExtractEnvelope(first, c.thread) != "" {
-		return trace, nil
-	}
-	focused, ok := focusedReading(c.thread, first.events())
+	first, ok := readableReply(trace.Output, c.thread)
 	if !ok {
+		return trace, nil
+	}
+	focused, more := focusedReading(c.thread, first.events())
+	if !more {
 		return trace, nil
 	}
 	req := extractRequest(focused, string(textlang.English))
@@ -297,11 +294,8 @@ func (c *signalExtractCase) secondReading(
 	if err != nil {
 		return trace, fmt.Errorf("signal_extract/thread_events: the second reading: %w", err)
 	}
-	var second extractPayload
-	if json.Unmarshal([]byte(ai.Unfence(resp.Text)), &second) != nil {
-		return trace, nil
-	}
-	if second = second.asRead(focused); validateExtractEnvelope(second, focused) != "" {
+	second, answered := readableReply(resp.Text, focused)
+	if !answered {
 		return trace, nil
 	}
 	// The joined answer cites messages by label, as the model's own replies do.
@@ -317,6 +311,17 @@ func (c *signalExtractCase) secondReading(
 	}
 	trace.Output = string(served)
 	return trace, nil
+}
+
+// readableReply is a reply read as the engine reads it, and whether the engine
+// would accept it.
+func readableReply(text string, thread settledThread) (extractPayload, bool) {
+	var payload extractPayload
+	if json.Unmarshal([]byte(ai.Unfence(text)), &payload) != nil {
+		return payload, false
+	}
+	payload = payload.asRead(thread)
+	return payload, validateExtractEnvelope(payload, thread) == ""
 }
 
 // Evaluate applies the engine's own checks in the engine's own order — parse,
