@@ -386,3 +386,49 @@ func TestArchivingTheSourceTakesItsDerivedWorkAway(t *testing.T) {
 		t.Errorf("the manager's team day still holds %v after the source was archived", rowIDs(team))
 	}
 }
+
+// A message captured a second time is the same message corrected, not a new
+// one. The work read out of it is updated in place.
+//
+// Capture keys on the external identity. A provider re-sending a message with
+// its body filled in must not leave the day holding one obligation twice.
+func TestCorrectedSourceContentLeavesOneRowOfWork(t *testing.T) {
+	o := setupOwed(t)
+	readers := o.day(t)
+	o.contact(t, "Buyer", "buyer@customer.example")
+	id := ids.NewV7().String() + "@customer.example"
+	sent := o.now.Add(-time.Hour)
+	first := o.capture(t, owedMail{
+		from: "buyer@customer.example", to: o.seat, subject: "Proposal for the integration project",
+		body: "Please send the proposal.", at: sent, messageID: id,
+	})
+	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), first, "commitment"); err != nil {
+		t.Fatal(err)
+	}
+	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
+	before := rowIDs(o.page(readers.rep1, t, "mine", o.now))
+	if len(before) != 1 {
+		t.Fatalf("the first capture left %v on the day, want one request", before)
+	}
+
+	// The same message again, with the body the provider truncated the first time.
+	second := o.capture(t, owedMail{
+		from: "buyer@customer.example", to: o.seat, subject: "Proposal for the integration project",
+		body: "Please send the proposal for our integration project, with the rollout timeline.",
+		at:   sent, messageID: id,
+	})
+	if second != first {
+		t.Fatalf("the corrected message filed as %s, want the first message %s corrected", second, first)
+	}
+	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
+
+	after := rowIDs(o.page(readers.rep1, t, "mine", o.now))
+	if !slices.Equal(after, before) {
+		t.Errorf("after the correction the day holds %v, want the same one row %v", after, before)
+	}
+	tasks := o.e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = $1
+		AND source_activity_id = $2`, activities.EmailRequestTaskSource, first)
+	if tasks != 1 {
+		t.Errorf("%d request tasks name the corrected message, want one", tasks)
+	}
+}
