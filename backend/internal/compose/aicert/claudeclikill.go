@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The build tag is explicit because only GOOS filename suffixes are implicit,
-// and "unix" is not one of them.
-//go:build !windows
-
 package aicert
 
 import (

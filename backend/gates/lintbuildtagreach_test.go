@@ -90,31 +90,22 @@ func skipForeignTree(name string) bool {
 // pass that only builds still answers the type-error question, which is why it
 // is counted at all.
 //
-// goBuildOnly marks a pass whose recipe is `go build`, which never compiles a
-// _test.go. Without it the model and its own diagnostic disagree: a
-// windows-only TEST file would report as "compiled but analysed by nothing"
-// when in truth nothing compiles it either.
-//
 // cgo mirrors what the recipe sets, because MatchFile reads it for the `cgo`
 // build tag. It is pinned per pass rather than inherited from the host, so the
 // gate's verdict is the merge gate's and not the verdict of whichever machine
 // happens to run it — a developer without a C toolchain would otherwise get a
 // different answer from CI about the same file.
 type compilingPass struct {
-	name        string
-	goos        string
-	tags        []string
-	analyses    bool
-	goBuildOnly bool
-	cgo         bool
+	name     string
+	goos     string
+	tags     []string
+	analyses bool
+	cgo      bool
 }
 
 // admits reports whether this pass compiles the named file, asked of go/build so
 // that no rule about constraints is restated here.
 func (p compilingPass) admits(dir, name string) (bool, error) {
-	if p.goBuildOnly && strings.HasSuffix(name, "_test.go") {
-		return false, nil
-	}
 	ctx := build.Default
 	ctx.GOOS = p.goos
 	// The runner and every machine this gate runs on are 64-bit. A file
@@ -141,14 +132,6 @@ func mergeGatePasses(t *testing.T) []compilingPass {
 	t.Helper()
 	passes := []compilingPass{
 		{name: "untagged (`make build`, `make vet`, `make test`, and `make lint-modules` outside backend/)", goos: "linux", analyses: true, cgo: true},
-		// `go build` never compiles a _test.go, so this row covers non-test
-		// files only — goBuildOnly is what makes that true of the code and not
-		// only of this comment. It is listed at all because a windows-only
-		// PRODUCTION file would otherwise report as unread when that
-		// cross-compile does read it.
-		//
-		// cgo off, mirroring the recipe's own `CGO_ENABLED=0`.
-		{name: "the windows/amd64 cross-compile of non-test files (`make build`)", goos: "windows", goBuildOnly: true},
 		{name: "the integration shards (`make test-integration`)", goos: "linux", tags: []string{"integration"}, cgo: true},
 	}
 	for _, path := range lintConfigs {
@@ -162,22 +145,12 @@ func mergeGatePasses(t *testing.T) []compilingPass {
 }
 
 // unreadFiles ratifies a file the merge gate does not fully read, with what that
-// costs. Every entry is platform-constrained, and that is not a coincidence:
-// golangci runs at ONE GOOS, so a file selected by a different one cannot be
-// linted by it at any tag setting. These are the files this repository builds for
-// a platform its gate does not run on.
-//
-// The list is worth reading as a whole rather than entry by entry. It is the
-// standing cost of compiling for Windows from a Linux merge gate. The census
-// saw it only once it read filename constraints, and no linter has opened any
-// line of it. The wider count, including the
-// `//go:build !integration` files this gate cannot help with, is issue #2920.
-var unreadFiles = gatekit.Waive(map[string]string{
-	// Backend, cross-compiled for windows by `make build` and linted by nothing.
-	"backend/internal/platform/blobstore/fs_sync_windows.go": "the windows half of a file-sync primitive: `make build` cross-compiles it so a type error is caught, but golangci runs at the host GOOS and never opens it — so gosec, depguard and revive have never read this syscall-adjacent code, and its unix sibling is the only half they judge",
-	"backend/internal/compose/aicert/claudecli_windows.go":   "the windows half of the cert lane's CLI kill: a no-op that leaves exec's default kill, so the cost is only that a lint finding in one empty function would go unseen",
-	"backend/internal/platform/ownedfile/owned_windows.go":   "the windows half of the owned-file primitive, cross-compiled and unlinted for the reason its blobstore sibling above states — the cost is that a permissions or error-handling defect here is caught only by review",
-})
+// costs. It is empty: every Go file in the tree is compiled and linted at the
+// one GOOS the merge gate runs. A file selected by another GOOS, or by a tag no
+// golangci config carries, has to argue for itself here. The wider count,
+// including the `//go:build !integration` files this gate cannot help with, is
+// issue #2920.
+var unreadFiles = gatekit.Waive(map[string]string{})
 
 func TestEveryGoFileIsCompiledAndAnalysedBySomePass(t *testing.T) {
 	t.Parallel()
