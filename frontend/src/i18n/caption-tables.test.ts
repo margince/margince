@@ -20,7 +20,9 @@ const SENTENCE = new RegExp(
   String.raw`^(?:[A-Z][a-z]+[,;:]?|\{\w+\})(?: ${WORD})*(?: ${LOWER})(?: ${WORD})*[.…!?]?$`,
 );
 // One word is a caption when it says what is going on: "Thinking", "Failed".
-// A one-word noun is not caught, since a wire name or a product has its shape.
+// The shape also fits nouns ("String", "Seed"), so a one-word state counts
+// only in a table that already holds a sentence: a table of captions.
+// Blind spot: a table of one-word states alone.
 const STATE_WORD = /^[A-Z][a-z]+(?:ing|ed)[.…]?$/;
 
 function unwrapped(node: ts.Expression): ts.Expression {
@@ -29,18 +31,31 @@ function unwrapped(node: ts.Expression): ts.Expression {
     : node;
 }
 
-/** The sentences a module's top-level object and array tables hold. */
-function captionsIn(path: string, text: string): string[] {
+/** The strings a table holds, at any depth, in source order. */
+function stringsIn(table: ts.Node): string[] {
   const found: string[] = [];
   const collect = (node: ts.Node): void => {
-    if (
-      ts.isStringLiteralLike(node) &&
-      (SENTENCE.test(node.text) || STATE_WORD.test(node.text))
-    ) {
+    if (ts.isStringLiteralLike(node)) {
       found.push(node.text);
     }
     ts.forEachChild(node, collect);
   };
+  collect(table);
+  return found;
+}
+
+/** A table's captions: its sentences, and its one-word states beside them. */
+function captionsOf(table: ts.Node): string[] {
+  const strings = stringsIn(table);
+  const captionTable = strings.some((text) => SENTENCE.test(text));
+  return strings.filter(
+    (text) => SENTENCE.test(text) || (captionTable && STATE_WORD.test(text)),
+  );
+}
+
+/** The captions a module's top-level object and array tables hold. */
+function captionsIn(path: string, text: string): string[] {
+  const found: string[] = [];
   for (const statement of parseSource(path, text).statements) {
     if (!ts.isVariableStatement(statement)) continue;
     for (const declaration of statement.declarationList.declarations) {
@@ -50,7 +65,7 @@ function captionsIn(path: string, text: string): string[] {
         ts.isObjectLiteralExpression(table) ||
         ts.isArrayLiteralExpression(table)
       ) {
-        collect(table);
+        found.push(...captionsOf(table));
       }
     }
   }
@@ -83,6 +98,15 @@ describe("the caption-table finder, over planted modules", () => {
         `const SAID = { typing: "{name} is typing", busy: "Thinking", wait: "Loading deals…", end: "Failed." };`,
       ),
     ).toEqual(["{name} is typing", "Thinking", "Loading deals…", "Failed."]);
+  });
+
+  it("passes a table of type names that only look like states", () => {
+    expect(
+      captionsIn(
+        "/app/src/types.ts",
+        `export const TYPES = { string: "String", thing: "Thing", seed: "Seed", embedded: "Embedded" };`,
+      ),
+    ).toEqual([]);
   });
 
   it("passes catalog keys, product names and text inside a function", () => {
