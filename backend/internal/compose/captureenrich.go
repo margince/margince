@@ -24,7 +24,6 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
-	"time"
 	"unicode"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -379,51 +378,13 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 // and a bare constant is how two unrelated passes come to hold one key.
 const enrichPassLock = "capture_signature_enrich_pass"
 
-// holdThePass takes the pass's advisory lock, and answers a release for it.
-//
-// SESSION-scoped, on a connection held for the pass, because the pass is many
-// transactions — the candidate read, one apply per contact, the watermark — and
-// a transaction lock would be gone before the first model call. That also makes
-// the release crash-safe in the way a lease row is not: a worker that dies
-// drops its connection, and Postgres drops the lock with it, where a `held_until`
-// column would keep the next pass out until the clock caught up.
-//
-// TRY, not wait. A pass that queued behind another would wake to the candidate
-// set the holder had just emptied and spend a slot proving it, and on a
-// contended installation the queue itself is what would grow.
+// holdThePass takes the pass's session lock. A worker that dies drops its
+// connection and Postgres drops the lock with it. A `held_until` column would
+// keep the next pass out until the clock caught up.
 func (e *CaptureEnricher) holdThePass(ctx context.Context) (bool, func(), error) {
-	conn, err := e.pool.Acquire(ctx)
-	if err != nil {
-		return false, nil, fmt.Errorf("taking a connection for the enrich pass lock: %w", err)
-	}
-	var held bool
-	if err := conn.QueryRow(ctx,
-		`SELECT pg_try_advisory_lock(hashtextextended($1, 0))`, enrichPassLock).Scan(&held); err != nil {
-		conn.Release()
-		return false, nil, fmt.Errorf("taking the enrich pass lock: %w", err)
-	}
-	if !held {
-		conn.Release()
-		return false, nil, nil
-	}
-	return true, func() {
-		// Released on a context of its own: the pass's may already be cancelled
-		// — a worker timeout is exactly when the lock most needs dropping — and
-		// an unlock that never ran would hold this installation's passes out
-		// until the connection was recycled.
-		unlockCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), enrichUnlockTimeout)
-		defer cancel()
-		if _, err := conn.Exec(unlockCtx,
-			`SELECT pg_advisory_unlock(hashtextextended($1, 0))`, enrichPassLock); err != nil {
-			e.log.WarnContext(ctx, "signature enrich: releasing the pass lock", "err", err)
-		}
-		conn.Release()
-	}, nil
+	release, held, err := holdSessionLock(ctx, e.pool, enrichPassLock, e.log)
+	return held, release, err
 }
-
-// enrichUnlockTimeout bounds the release, which runs after the pass is over and
-// must not become the reason a worker hangs.
-const enrichUnlockTimeout = 5 * time.Second
 
 // signatureNamesContact asks whether the block a field was read from names the
 // contact it is about to be written to.

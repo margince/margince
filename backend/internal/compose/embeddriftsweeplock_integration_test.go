@@ -1,0 +1,106 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package compose
+
+// The drift sweep has no timeout, so River's rescuer never reaches a row a
+// killed worker left running. The session lock is what keeps two sweeps apart,
+// and what lets the next sweep close the dead row.
+
+import (
+	"context"
+	"log/slog"
+	"testing"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
+
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/knowledge"
+	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+)
+
+func seedSweepRow(ctx context.Context, t *testing.T, pool *pgxpool.Pool, state string) int64 {
+	t.Helper()
+	var id int64
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO river_job (state, kind, queue, priority, args, tags, errors, max_attempts, attempt, created_at, scheduled_at)
+		VALUES ($1::river_job_state, $2, 'default', 1, '{}'::jsonb, '{}'::varchar(255)[], '{}'::jsonb[], 3, 1, now(), now())
+		RETURNING id`, state, EmbedDriftSweepArgs{}.Kind()).Scan(&id); err != nil {
+		t.Fatalf("seeding a %s sweep row: %v", state, err)
+	}
+	return id
+}
+
+func sweepRowState(ctx context.Context, t *testing.T, pool *pgxpool.Pool, id int64) string {
+	t.Helper()
+	var state string
+	if err := pool.QueryRow(ctx, `SELECT state::text FROM river_job WHERE id = $1`, id).Scan(&state); err != nil {
+		t.Fatalf("reading sweep row %d: %v", id, err)
+	}
+	return state
+}
+
+func TestADriftSweepWhoseWorkerDiedDoesNotBlockTheNextOrLeaveItsRowRunning(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := context.Background()
+	w := &embedDriftSweepWorker{
+		pool:     e.Pool,
+		store:    search.NewStore(InstallationDB(e.Pool)),
+		corpora:  knowledge.NewStore(InstallationDB(e.Pool)).WithBlobstore(blobstore.NewMemory()),
+		embedder: &gatedEmbedder{},
+		log:      slog.Default(),
+	}
+	identity, _ := w.embedder.EmbedIdentity()
+	if err := w.store.SeedBinding(ctx, identity); err != nil {
+		t.Fatalf("seeding the binding marker: %v", err)
+	}
+	dead := seedSweepRow(ctx, t, e.Pool, "running")
+	own := seedSweepRow(ctx, t, e.Pool, "running")
+	run := func() error {
+		return w.Work(ctx, &river.Job[EmbedDriftSweepArgs]{JobRow: &rivertype.JobRow{ID: own, Kind: EmbedDriftSweepArgs{}.Kind()}})
+	}
+
+	release, held, err := holdSessionLock(ctx, e.Pool, embedDriftSweepLock, slog.Default())
+	if err != nil || !held {
+		t.Fatalf("taking the lock: held=%v err=%v", held, err)
+	}
+	t.Cleanup(release)
+	if err := run(); err != nil {
+		t.Fatalf("a sweep against a live holder: %v", err)
+	}
+	if got := sweepRowState(ctx, t, e.Pool, dead); got != "running" {
+		t.Fatalf("a sweep against a live holder closed the other row, now %s; the holder may be alive", got)
+	}
+
+	var killed int
+	if err := e.Pool.QueryRow(ctx, `
+		SELECT count(*) FROM (
+		  SELECT pg_terminate_backend(pid) FROM pg_locks
+		  WHERE locktype = 'advisory' AND granted
+		    AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended($1, 0)
+		) AS ended`, embedDriftSweepLock).Scan(&killed); err != nil || killed != 1 {
+		t.Fatalf("ending the holder's connection: ended=%d err=%v", killed, err)
+	}
+
+	if err := run(); err != nil {
+		t.Fatalf("a sweep after the holder died: %v", err)
+	}
+	if got := sweepRowState(ctx, t, e.Pool, dead); got != "discarded" {
+		t.Errorf("the dead worker's row is %s, want discarded", got)
+	}
+	if got := sweepRowState(ctx, t, e.Pool, own); got != "running" {
+		t.Errorf("the sweep's own row is %s, want running until River finishes it", got)
+	}
+}
+
+func TestADriftSweepTickNamesNoUniquenessSoADeadRowCannotAbsorbIt(t *testing.T) {
+	opts := periodicInsertOpts(EmbedDriftSweepArgs{})
+	if opts.UniqueOpts.ByArgs || len(opts.UniqueOpts.ByState) != 0 {
+		t.Errorf("the drift sweep tick dedupes over %v, so a dead running row would absorb every later tick", opts.UniqueOpts.ByState)
+	}
+}
