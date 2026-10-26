@@ -5904,7 +5904,7 @@ export const en = {
   "files.delete": "Delete",
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
-    "The file is removed from this deal, and from any Deal Room sharing it.",
+    "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room.",
   "files.showHidden": "Show hidden files",
   "files.hideHidden": "Hide hidden files",
   "dealfiles.col.file": "File",
@@ -10473,6 +10473,9 @@ export const en = {
   "room.docs.add": "Add to room",
   "room.docs.upload": "Upload a file",
   "room.docs.remove": "Remove {title} from the room",
+  "room.docs.lapsed": "Buyers do not see this",
+  "room.docs.lapsedNote":
+    "The file is no longer in this deal’s Files area: it was deleted, hidden, or its email was unlinked. Remove it from the room.",
   "room.docs.group.commercial": "Commercial",
   "room.docs.group.legal": "Legal",
   "room.docs.group.security_privacy": "Security and privacy",

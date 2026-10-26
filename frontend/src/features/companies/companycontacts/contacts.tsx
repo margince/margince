@@ -9,6 +9,7 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../../components/listquery";
+import { QuickCaptureAction } from "../../../components/quickcapture";
 import { Badge } from "../../../design-system/atoms";
 import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
@@ -81,11 +82,18 @@ export const ENGAGEMENT_LABELS: Record<
   untried: "co.reach.untried",
 };
 
+function companyContactsListKey(companyId: string): string {
+  return `company-contacts:${companyId}`;
+}
+
 export function CompanyContactsList({
   companyId,
   bandSlot,
+  mayCreate = false,
 }: Readonly<{
   companyId: string;
+  /** Whether the reader may write the company, and so file a new contact under it. */
+  mayCreate?: boolean;
   /**
    * Drawn above the table, inside this component, so the band's doors can
    * narrow the list without the two sharing state through the screen. It
@@ -140,7 +148,7 @@ export function CompanyContactsList({
   );
 
   const state = useListQuery<CompanyContact>({
-    key: `company-contacts:${companyId}`,
+    key: companyContactsListKey(companyId),
     // The server's own order, which is the recommendation. Naming a sort here
     // would make the page open on an alphabet and bury the contact who answered.
     initialSort: "",
@@ -159,6 +167,19 @@ export function CompanyContactsList({
         unit="unit.contacts"
         searchable
         showArchivedToggle={false}
+        action={
+          mayCreate ? (
+            // Keyed by the company: the page is reused across companies, and
+            // an open form must not file its contact under the last one.
+            <QuickCaptureAction
+              key={companyId}
+              company={{
+                id: companyId,
+                listKey: companyContactsListKey(companyId),
+              }}
+            />
+          ) : undefined
+        }
         // The colleague-by-contact comparison, kept as the diagnostic it is
         // rather than a headline: it answers "where are we thin across the
         // team", which a reader asks after choosing somebody, not before.

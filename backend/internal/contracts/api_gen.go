@@ -37877,13 +37877,19 @@ type DealRoomDocument struct {
 	// key never carries a display string. Not configurable, not AI-assigned — the
 	// contact adding the document picks. A plain string rather than an inline enum
 	// for the reason `DealRoomParticipantCapability` gives.
-	GroupKey  DealRoomDocumentGroup `json:"group_key"`
-	Id        openapi_types.UUID    `json:"id"`
-	Position  int                   `json:"position"`
-	RoomId    openapi_types.UUID    `json:"room_id"`
-	Source    string                `json:"source"`
-	Title     string                `json:"title"`
-	UpdatedAt time.Time             `json:"updated_at"`
+	GroupKey DealRoomDocumentGroup `json:"group_key"`
+	Id       openapi_types.UUID    `json:"id"`
+	Position int                   `json:"position"`
+
+	// ReachesBuyer Whether this entry's file is still in the deal's Files area. False once the file was
+	// deleted on the deal, hidden from it, or its message unlinked or narrowed; the entry
+	// stays in the room until the seller removes it. Whether the room itself is open to its
+	// buyer is the room's own state, not this field.
+	ReachesBuyer *bool              `json:"reaches_buyer,omitempty"`
+	RoomId       openapi_types.UUID `json:"room_id"`
+	Source       string             `json:"source"`
+	Title        string             `json:"title"`
+	UpdatedAt    time.Time          `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -70117,6 +70123,14 @@ func (a *DealRoomDocument) UnmarshalJSON(b []byte) error {
 		delete(object, "position")
 	}
 
+	if raw, found := object["reaches_buyer"]; found {
+		err = json.Unmarshal(raw, &a.ReachesBuyer)
+		if err != nil {
+			return fmt.Errorf("error reading 'reaches_buyer': %w", err)
+		}
+		delete(object, "reaches_buyer")
+	}
+
 	if raw, found := object["room_id"]; found {
 		err = json.Unmarshal(raw, &a.RoomId)
 		if err != nil {
@@ -70232,6 +70246,11 @@ func (a DealRoomDocument) MarshalJSON() ([]byte, error) {
 	object["position"], err = json.Marshal(a.Position)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'position': %w", err)
+	}
+
+	object["reaches_buyer"], err = json.Marshal(a.ReachesBuyer)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'reaches_buyer': %w", err)
 	}
 
 	object["room_id"], err = json.Marshal(a.RoomId)

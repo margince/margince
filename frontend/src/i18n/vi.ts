@@ -5689,7 +5689,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "files.delete": "Xóa",
   "files.deleteTitle": "Xóa {name}?",
   "files.deleteBody":
-    "Tệp sẽ bị gỡ khỏi deal này và khỏi mọi Deal Room đang chia sẻ tệp.",
+    "Tệp sẽ bị gỡ khỏi deal này và bên mua sẽ không còn thấy tệp trong bất kỳ Deal Room nào. Mục trong Deal Room vẫn còn cho đến khi bạn gỡ nó.",
   "files.showHidden": "Hiển thị tệp đã ẩn",
   "files.hideHidden": "Thôi hiển thị tệp đã ẩn",
   "dealfiles.col.file": "Tệp",
@@ -10115,6 +10115,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "room.docs.add": "Thêm vào Deal Room",
   "room.docs.upload": "Tải tệp lên",
   "room.docs.remove": "Gỡ {title} khỏi Deal Room",
+  "room.docs.lapsed": "Bên mua không thấy tệp này",
+  "room.docs.lapsedNote":
+    "Tệp không còn trong khu vực Tệp của deal này: tệp đã bị xóa, bị ẩn hoặc email chứa tệp đã bị gỡ liên kết. Hãy gỡ tệp khỏi Deal Room.",
   "room.docs.group.commercial": "Thương mại",
   "room.docs.group.legal": "Pháp lý",
   "room.docs.group.security_privacy": "Bảo mật và quyền riêng tư",

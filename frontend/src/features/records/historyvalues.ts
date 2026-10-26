@@ -1,6 +1,11 @@
+import {
+  EMAIL_TYPE_LABEL,
+  PHONE_TYPE_LABEL,
+} from "../../format/contactchannels";
 import { formatDateTime, formatMoneyOrAbsent } from "../../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { type Locale, translate } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { isUuid } from "../../lib/uuid";
 
 // A history value read the way the rest of the record page reads it.
@@ -66,6 +71,50 @@ function asJsonArray(value: string): unknown[] | undefined {
   return Array.isArray(parsed) ? parsed : undefined;
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function channelKind(
+  labels: Readonly<Record<string, MessageKey>>,
+  kind: unknown,
+  locale: Locale,
+): string | undefined {
+  if (typeof kind !== "string" || !Object.hasOwn(labels, kind)) {
+    return undefined;
+  }
+  const key = labels[kind];
+  return key === undefined ? undefined : translate(locale, key);
+}
+
+function withKind(value: string, kind: string | undefined): string {
+  return kind === undefined ? value : `${value} (${kind})`;
+}
+
+// One entry of a stored list. Phones, emails and domains are stored as rows,
+// and a row read through String() prints "[object Object]".
+function listItem(item: unknown, locale: Locale): string {
+  if (!isPlainObject(item)) {
+    return String(item);
+  }
+  if (typeof item.phone === "string") {
+    return withKind(
+      item.phone,
+      channelKind(PHONE_TYPE_LABEL, item.phone_type, locale),
+    );
+  }
+  if (typeof item.email === "string") {
+    return withKind(
+      item.email,
+      channelKind(EMAIL_TYPE_LABEL, item.email_type, locale),
+    );
+  }
+  if (typeof item.domain === "string") {
+    return item.domain;
+  }
+  return JSON.stringify(item);
+}
+
 // Currency/locale/zone/name-resolution for turning a stored history value
 // into what it means.
 export type HistoryValueCtx = Readonly<{
@@ -114,7 +163,7 @@ export function historyValue(
   if (items !== undefined) {
     return items.length === 0
       ? translate(ctx.locale, "history.emptyList")
-      : items.map((item) => String(item)).join(", ");
+      : items.map((item) => listItem(item, ctx.locale)).join(", ");
   }
   if (isUuid(value)) {
     // Left EXACTLY as stored when the resolver cannot name it — a shortened

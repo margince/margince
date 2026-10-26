@@ -48,6 +48,8 @@ function serve({
   risks = [] as Risk[],
   sectionsOmitted = [] as string[],
   writer = "model" as "model" | "deterministic",
+  reasons = ["Nobody sent the times.", "That was three weeks ago."],
+  blocker = undefined as string | undefined,
 }) {
   vi.stubGlobal(
     "fetch",
@@ -63,12 +65,12 @@ function serve({
             verdict: {
               standing,
               because: {
-                sentences: [
-                  { text: "Nobody sent the times.", evidence: [] },
-                  { text: "That was three weeks ago.", evidence: [] },
-                ],
+                sentences: reasons.map((text) => ({ text, evidence: [] })),
               },
             },
+            ...(blocker === undefined
+              ? {}
+              : { blocker: { sentences: [{ text: blocker, evidence: [] }] } }),
             generated_at: "2026-08-24T00:00:00Z",
             generated_by: writer,
           }),
@@ -230,6 +232,25 @@ describe("Deal360 leads with the call", () => {
     await screen.findByText("Blocked");
     const rest = await screen.findByText("That was three weeks ago.");
     expect(rest.closest("details.deal360-fold")).not.toBeNull();
+  });
+
+  it("draws no fold when nothing would sit behind it", async () => {
+    serve({ standing: "live", reasons: ["Nobody sent the times."] });
+    renderCard();
+    await screen.findByText("They asked for slots.");
+    expect(document.querySelector("details.deal360-fold")).toBeNull();
+    expect(screen.queryByText("Read full brief")).toBeNull();
+  });
+
+  it("draws the fold for a blocker alone", async () => {
+    serve({
+      standing: "blocked",
+      reasons: ["Nobody sent the times."],
+      blocker: "Legal holds the contract.",
+    });
+    renderCard();
+    const blocker = await screen.findByText("Legal holds the contract.");
+    expect(blocker.closest("details.deal360-fold")).not.toBeNull();
   });
 
   it("renders a standing this build does not know rather than dropping it", async () => {

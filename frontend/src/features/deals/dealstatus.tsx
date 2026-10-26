@@ -259,6 +259,8 @@ function Briefing({
   // request and the two cannot disagree about what is wrong with the deal.
   const coverage = useDealSignals(dealId);
   const because = card.verdict?.because.sentences ?? [];
+  const rest = because.length > 1 ? { sentences: because.slice(1) } : undefined;
+  const folded = [card.blocker, card.buyer, rest].some(hasSentences);
   return (
     // What has happened and where that leaves things, in prose with its
     // sources. The blocker, the buyer and the rest of the reasoning sit behind
@@ -287,32 +289,38 @@ function Briefing({
         onOpenEmail={onOpenEmail}
         lead
       />
-      <details className="deal360-fold">
-        <summary>{t("deal360.readFull")}</summary>
-        <Section
-          heading={t("deal360.blocker")}
-          section={card.blocker}
-          onOpenRecord={openCitation}
-          onOpenEmail={onOpenEmail}
-          tone="warning"
-        />
-        <Section
-          heading={t("deal360.buyer")}
-          section={card.buyer}
-          onOpenRecord={openCitation}
-          onOpenEmail={onOpenEmail}
-        />
-        {/* Its first line is already the verdict's sentence. */}
-        {because.length > 1 ? (
+      {folded ? (
+        <details className="deal360-fold">
+          <summary>{t("deal360.readFull")}</summary>
           <Section
-            section={{ sentences: because.slice(1) }}
+            heading={t("deal360.blocker")}
+            section={card.blocker}
+            onOpenRecord={openCitation}
+            onOpenEmail={onOpenEmail}
+            tone="warning"
+          />
+          <Section
+            heading={t("deal360.buyer")}
+            section={card.buyer}
             onOpenRecord={openCitation}
             onOpenEmail={onOpenEmail}
           />
-        ) : null}
-      </details>
+          {/* Its first line is already the verdict's sentence. */}
+          <Section
+            section={rest}
+            onOpenRecord={openCitation}
+            onOpenEmail={onOpenEmail}
+          />
+        </details>
+      ) : null}
     </Panel>
   );
+}
+
+function hasSentences(
+  section: DealStatusCardSection | undefined,
+): section is DealStatusCardSection {
+  return section !== undefined && section.sentences.length > 0;
 }
 
 // Section renders one headed block, and renders NOTHING when the server sent
@@ -336,7 +344,7 @@ function Section({
   // written reading on a record does.
   lead?: boolean;
 }>) {
-  if (!section || section.sentences.length === 0) {
+  if (!hasSentences(section)) {
     return null;
   }
   return (

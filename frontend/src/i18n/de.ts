@@ -5842,7 +5842,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "files.delete": "Löschen",
   "files.deleteTitle": "{name} löschen?",
   "files.deleteBody":
-    "Die Datei wird aus diesem Deal entfernt und aus jedem Deal Room, der sie teilt.",
+    "Die Datei wird aus diesem Deal entfernt, und die Käuferseite sieht sie in keinem Deal Room mehr. Der Eintrag im Raum bleibt, bis du ihn entfernst.",
   "files.showHidden": "Ausgeblendete Dateien anzeigen",
   "files.hideHidden": "Ausgeblendete Dateien verbergen",
   "dealfiles.col.file": "Datei",
@@ -10404,6 +10404,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "room.docs.add": "Zum Raum hinzufügen",
   "room.docs.upload": "Datei hochladen",
   "room.docs.remove": "{title} aus dem Raum entfernen",
+  "room.docs.lapsed": "Für die Käuferseite nicht sichtbar",
+  "room.docs.lapsedNote":
+    "Die Datei ist nicht mehr im Dateibereich dieses Deals, weil sie gelöscht oder ausgeblendet oder ihre E-Mail getrennt wurde. Entferne sie aus dem Raum.",
   "room.docs.group.commercial": "Kaufmännisches",
   "room.docs.group.legal": "Rechtliches",
   "room.docs.group.security_privacy": "Sicherheit und Datenschutz",

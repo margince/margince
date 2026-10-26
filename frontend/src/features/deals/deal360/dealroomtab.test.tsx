@@ -292,6 +292,7 @@ describe("inviting from the setup list", () => {
                 group_key: "legal",
                 title: "MSA redline",
                 filename: "msa-redline.docx",
+                reaches_buyer: true,
                 position: 0,
                 source: "manual",
                 created_at: AT,

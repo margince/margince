@@ -224,3 +224,50 @@ func TestAWithheldMailFileCannotBePutInADealRoom(t *testing.T) {
 		t.Fatalf("adding a withheld file to the room = %d, want 404", status)
 	}
 }
+
+// The seller's list keeps an entry whose file was deleted on the deal, so the
+// seller can remove it. It also says the buyer no longer gets that file.
+func TestTheSellersListSaysWhichEntriesStillReachTheBuyer(t *testing.T) {
+	blob := blobstore.NewMemory()
+	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+	var roomRow AnyMap
+	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID, nil, nil, &roomRow); status != http.StatusOK {
+		t.Fatalf("room = %d", status)
+	}
+	dealID, _ := roomRow["deal_id"].(string)
+	_, kept := captureFileOnEmail(t, e, blob, dealID)
+	_, deleted := captureFileOnEmail(t, e, blob, dealID)
+	entryOf := map[string]string{}
+	for _, attachmentID := range []string{kept, deleted} {
+		var doc AnyMap
+		if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
+			"attachment_id": attachmentID, "group_key": "legal", "source": "manual",
+		}, nil, &doc); status != http.StatusCreated {
+			t.Fatalf("add file to the room = %d %v", status, doc)
+		}
+		entryOf[attachmentID], _ = doc["id"].(string)
+	}
+	if status := e.Call(t, "DELETE", "/v1/attachments/"+deleted, nil, nil, nil); status >= http.StatusMultipleChoices {
+		t.Fatalf("delete the file on the deal = %d", status)
+	}
+
+	var sellerDocs AnyMap
+	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID+"/documents", nil, nil, &sellerDocs); status != http.StatusOK {
+		t.Fatalf("seller documents = %d", status)
+	}
+	reaches := map[string]any{}
+	list, _ := sellerDocs["data"].([]any)
+	for _, raw := range list {
+		doc, _ := raw.(map[string]any)
+		id, _ := doc["id"].(string)
+		reaches[id] = doc["reaches_buyer"]
+	}
+	if got := reaches[entryOf[kept]]; got != true {
+		t.Errorf("the live file's entry reads reaches_buyer=%v, want true", got)
+	}
+	if got, listed := reaches[entryOf[deleted]]; !listed || got != false {
+		t.Errorf("the deleted file's entry reads reaches_buyer=%v (listed %v), want false and still listed", got, listed)
+	}
+}

@@ -91,6 +91,40 @@ describe("historyValue", () => {
     );
   });
 
+  it("renders stored phone, email and domain rows by their value", () => {
+    expect(
+      historyValue(
+        "phones",
+        '[{"phone":"+15551234567","phone_type":"work"},{"phone":"+15559876543","phone_type":"mobile"}]',
+        ctx(),
+      ),
+    ).toBe("+15551234567 (Work), +15559876543 (Mobile)");
+    expect(
+      historyValue(
+        "emails",
+        '[{"email":"ada@example.com","email_type":"personal","is_primary":true}]',
+        ctx(),
+      ),
+    ).toBe("ada@example.com (Personal)");
+    expect(
+      historyValue(
+        "domains",
+        '[{"domain":"example.com","is_primary":true}]',
+        ctx(),
+      ),
+    ).toBe("example.com");
+  });
+
+  it("renders a row of an unknown shape as its JSON, never as [object Object]", () => {
+    const shown = historyValue(
+      "links",
+      '[{"label":"Site","rank":2,"nested":{"x":1}}]',
+      ctx(),
+    );
+    expect(shown).toBe('{"label":"Site","rank":2,"nested":{"x":1}}');
+    expect(shown).not.toContain("[object Object]");
+  });
+
   it("renders an empty JSON array as the catalog's word for nothing set", () => {
     expect(historyValue("tags", "[]", ctx())).toBe("None set");
   });
