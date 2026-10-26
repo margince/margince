@@ -159,6 +159,9 @@ function ActivityBody({
   const filed = attended
     ? links.filter((link) => link.entity_type !== "contact")
     : links;
+  // An outside guest who is not a contact yet has no record to link to, so the
+  // invitation's own name for them stands in.
+  const guests = attended ? (activity.guests ?? []) : [];
   const colleagues = colleaguesOf(activity);
   return (
     <div className="emaildetail__body">
@@ -183,9 +186,17 @@ function ActivityBody({
             <Badge tone="success">{t("tasks.isDone")}</Badge>
           )}
         </PartyLine>
-        {attendees.length > 0 && (
+        {attendees.length + guests.length > 0 && (
           <PartyLine label={t("activity.detail.attendees")}>
             <RecordLinks links={attendees} newTab />
+            {guests.map((guest, index) => (
+              <Fragment key={guest.address}>
+                {attendees.length + index > 0 && ", "}
+                <span title={guest.address}>
+                  {guest.display_name || guest.address}
+                </span>
+              </Fragment>
+            ))}
           </PartyLine>
         )}
         {colleagues.length > 0 && (

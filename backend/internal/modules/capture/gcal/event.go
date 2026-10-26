@@ -194,6 +194,11 @@ func ParticipantsOf(raw []byte, owner string) (connector.Parties, error) {
 	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
 }
 
+// RecordOf maps one stored event resource to the record live capture writes.
+func RecordOf(raw []byte, owner string) (connector.NormalizedRecord, error) {
+	return meetingmap.RecordOf(raw, owner, connectorName, decodeEvent)
+}
+
 // SettlementOf answers what one stored event resource settles as, for the
 // backfill that closes meetings captured before the RSVP was read.
 func SettlementOf(raw []byte, owner string) (meetingmap.Settlement, error) {

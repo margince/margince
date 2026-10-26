@@ -47412,6 +47412,14 @@ components:
           format: date-time
           description: The renewing message's source time when the decision was recorded.
 
+    MeetingGuest:
+      type: object
+      description: One guest on a meeting's invitation who is not a contact or a colleague seat yet.
+      required: [address, display_name]
+      properties:
+        address: { type: string, description: The address the invitation named them by. }
+        display_name: { type: string, description: 'The name the invitation gave them, or empty when it gave none.' }
+
     Activity:
       type: object
       description: |
@@ -47505,6 +47513,15 @@ components:
             blind copy. Filled
             wherever one activity is answered whole (its read, its update); a list leaves it out.
             Withheld with the content, so it is absent whenever `content_state` is `withheld`.
+        guests:
+          type: array
+          readOnly: true
+          items: { $ref: '#/components/schemas/MeetingGuest' }
+          description: >-
+            Meeting only: the guests on the invitation who are neither a contact nor a colleague
+            seat yet, by the address the invitation named. A guest who is a contact is in `links`,
+            and a colleague is in `colleague_ids`. Filled wherever one activity is answered whole;
+            a list leaves it out. Withheld with the content, like `colleague_ids`.
         direction: { type: [string, 'null'], enum: [null, inbound, outbound], description: 'inbound/outbound for email/call; null for note/task.' }
         email_summary:
           allOf: [{ $ref: '#/components/schemas/EmailSummary' }]

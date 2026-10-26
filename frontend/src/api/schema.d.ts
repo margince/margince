@@ -34546,6 +34546,13 @@ export interface components {
              */
             renewed_at?: string;
         };
+        /** @description One guest on a meeting's invitation who is not a contact or a colleague seat yet. */
+        MeetingGuest: {
+            /** @description The address the invitation named them by. */
+            address: string;
+            /** @description The name the invitation gave them, or empty when it gave none. */
+            display_name: string;
+        };
         /**
          * @description A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
          *     **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
@@ -34619,6 +34626,8 @@ export interface components {
             readonly host_user_id?: string | null;
             /** @description The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`. */
             readonly colleague_ids?: string[];
+            /** @description Meeting only: the guests on the invitation who are neither a contact nor a colleague seat yet, by the address the invitation named. A guest who is a contact is in `links`, and a colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`. */
+            readonly guests?: components["schemas"]["MeetingGuest"][];
             /**
              * @description inbound/outbound for email/call; null for note/task.
              * @enum {string|null}

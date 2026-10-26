@@ -601,6 +601,9 @@ type Activity struct {
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
+	// Guests Meeting only: the guests on the invitation who are neither a contact nor a colleague seat yet, by the address the invitation named. A guest who is a contact is in `links`, and a colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
+	Guests *[]MeetingGuest `json:"guests,omitempty"`
+
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *string `json:"host_user_id,omitempty"`
 	Id         string  `json:"id"`
@@ -1035,6 +1038,15 @@ type EmailSummaryDirection string
 // the question cannot be answered honestly — an unanswerable move is not a claim.
 type EmailSummaryMove string
 
+// MeetingGuest One guest on a meeting's invitation who is not a contact or a colleague seat yet.
+type MeetingGuest struct {
+	// Address The address the invitation named them by.
+	Address string `json:"address"`
+
+	// DisplayName The name the invitation gave them, or empty when it gave none.
+	DisplayName string `json:"display_name"`
+}
+
 // OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
 type OccurredPrecision string
 
@@ -1269,6 +1281,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'email_summary': %w", err)
 		}
 		delete(object, "email_summary")
+	}
+
+	if raw, found := object["guests"]; found {
+		err = json.Unmarshal(raw, &a.Guests)
+		if err != nil {
+			return fmt.Errorf("error reading 'guests': %w", err)
+		}
+		delete(object, "guests")
 	}
 
 	if raw, found := object["host_user_id"]; found {
@@ -1622,6 +1642,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["email_summary"], err = json.Marshal(a.EmailSummary)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'email_summary': %w", err)
+		}
+	}
+
+	if a.Guests != nil {
+		object["guests"], err = json.Marshal(a.Guests)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'guests': %w", err)
 		}
 	}
 

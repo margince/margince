@@ -1993,6 +1993,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.merged_from_id": "Gộp vào từ",
   "history.field.merged_into_id": "Đã gộp vào",
   "history.field.filled": "Các trường được điền thêm",
+  "history.field.guests_added": "Khách được thêm từ lịch",
+  "history.field.guest_links_added": "Khách được liên kết từ lịch",
   "history.field.relinked_emails": "Địa chỉ email đã chuyển sang",
   "history.field.relinked_phones": "Số điện thoại đã chuyển sang",
   "history.field.relinked_relationships": "Mối quan hệ đã chuyển sang",
