@@ -32,7 +32,13 @@ const recoverableMailBodyScope = `FROM activity a ` + mailOriginalJoin + `
    AND a.restricted_at IS NULL AND a.archived_at IS NULL AND a.body IS NOT NULL
    AND rc.payload IS NOT NULL AND ` + capturedByMailConnector
 
-func restoreMailBodiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+// walkUUIDBatch runs one data-task page over locked rows. The query selects
+// the page with the @page_after and @page_limit arguments it is given. Every
+// scanned row advances the cursor; apply reports whether it wrote one.
+func walkUUIDBatch[T any](
+	ctx context.Context, tx pgx.Tx, in datatask.BatchIn, query string,
+	idOf func(T) ids.UUID, apply func(context.Context, pgx.Tx, T) (bool, error),
+) (datatask.BatchOut, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -40,29 +46,33 @@ func restoreMailBodiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn)
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, a.version, a.body, rc.payload `+recoverableMailBodyScope+`
-		AND a.id > @recoverable_after ORDER BY a.id LIMIT @recoverable_limit FOR UPDATE OF a`,
-		pgx.NamedArgs{"recoverable_after": after, "recoverable_limit": in.Limit})
+	rows, err := tx.Query(ctx, query, pgx.NamedArgs{"page_after": after, "page_limit": in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	candidates, err := pgx.CollectRows(rows, pgx.RowToStructByPos[recoverableMailBody])
+	candidates, err := pgx.CollectRows(rows, pgx.RowToStructByPos[T])
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
 	scanned := make([]ids.UUID, 0, len(candidates))
 	changed := 0
 	for _, candidate := range candidates {
-		scanned = append(scanned, candidate.ID)
-		restored, err := restoreMailBody(ctx, tx, candidate)
+		scanned = append(scanned, idOf(candidate))
+		written, err := apply(ctx, tx, candidate)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
-		if restored {
+		if written {
 			changed++
 		}
 	}
 	return datatask.AdvanceUUID(in, scanned, changed)
+}
+
+func restoreMailBodiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+	return walkUUIDBatch(ctx, tx, in, `SELECT a.id, a.version, a.body, rc.payload `+recoverableMailBodyScope+`
+		AND a.id > @page_after ORDER BY a.id LIMIT @page_limit FOR UPDATE OF a`,
+		func(c recoverableMailBody) ids.UUID { return c.ID }, restoreMailBody)
 }
 
 // restoreMailBody writes the body the original yields, when the stored one is
@@ -77,10 +87,16 @@ func restoreMailBody(ctx context.Context, tx pgx.Tx, candidate recoverableMailBo
 	if !ok {
 		return false, nil
 	}
-	restored, threadKey, err := activities.RestoreMailBodyTx(ctx, tx, activities.MailBodyRestoration{
+	return writeMailRestoration(ctx, tx, activities.MailBodyRestoration{
 		Activity: candidate.ID, Version: candidate.Version, StoredBody: candidate.Body,
 		Body: body, Completeness: string(completeness),
 	})
+}
+
+// writeMailRestoration is the one write every mail restoration takes, so a
+// conversation read from replaced text is made due again by each of them.
+func writeMailRestoration(ctx context.Context, tx pgx.Tx, restoration activities.MailBodyRestoration) (bool, error) {
+	restored, threadKey, err := activities.RestoreMailBodyTx(ctx, tx, restoration)
 	if err != nil || !restored || threadKey == nil {
 		return restored, err
 	}
