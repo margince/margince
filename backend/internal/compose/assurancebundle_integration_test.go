@@ -142,6 +142,47 @@ func TestTheBundledTaskReadsInItsAssigneesLanguage(t *testing.T) {
 	}
 }
 
+// An owner whose seat is gone by the time the task is minted costs the task its
+// assignee, not its existence: it lands unassigned, worded in the base language.
+func TestATaskWhoseOwnerSeatIsGoneLandsUnassigned(t *testing.T) {
+	e := setupAssuranceJob(t)
+	if err := e.run(t); err != nil {
+		t.Fatalf("the first check: %v", err)
+	}
+	first := e.bundledTasks(t)
+	if len(first) != 1 {
+		t.Fatalf("the first pass minted %d task(s), want 1", len(first))
+	}
+	if _, err := e.Pool.Exec(context.Background(),
+		`UPDATE activity SET archived_at = now() WHERE id = $1`, first[0].id); err != nil {
+		t.Fatalf("archiving the first task so the next pass mints: %v", err)
+	}
+	run, err := e.latestRun(t)
+	if err != nil {
+		t.Fatalf("reading the first run: %v", err)
+	}
+
+	ghost := ids.NewV7()
+	_, err = e.runWithFindings(t, func(ctx context.Context, tx pgx.Tx, _ ids.UUID) ([]assurance.Exception, error) {
+		found, err := bundleableFindings(ctx, tx, run.ID)
+		for i := range found {
+			found[i].OwnerID = &ghost
+		}
+		return found, err
+	})
+	if err != nil {
+		t.Fatalf("a pass whose owner seat is gone failed: %v", err)
+	}
+
+	tasks := e.bundledTasks(t)
+	if len(tasks) != 1 || tasks[0].assignee != nil {
+		t.Fatalf("after the owner's seat went, the open tasks are %+v, want one unassigned", tasks)
+	}
+	if want := bundleTaskSubject(textlang.English, tasks[0].findings); tasks[0].subject != want {
+		t.Errorf("the unassigned task is titled %q, want the base language's %q", tasks[0].subject, want)
+	}
+}
+
 // A SECOND pass mints a second task, and that is the design rather than a leak.
 //
 // The cycle is the run, so tomorrow night is a new cycle and a finding still

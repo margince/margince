@@ -61,13 +61,14 @@ var bundleTaskWords = struct{ One, Many langcopy.Phrase }{
 // so the task reads in the words of whoever it lands with.
 func bundleTaskLanguage(ctx context.Context, tx pgx.Tx, assignee *ids.UserID) (textlang.Lang, error) {
 	if assignee != nil {
-		return seatLanguage(ctx, tx, assignee.UUID)
+		lang, err := seatLanguage(ctx, tx, assignee.UUID)
+		// A seat gone since the scan is refused by the write as not found, and
+		// that refusal is what sends the task to the unassigned queue.
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return lang, err
+		}
 	}
-	base, err := identity.LanguageOf(ctx, tx)
-	if err != nil || !textlang.Known(base) {
-		return textlang.English, err
-	}
-	return textlang.Lang(base), nil
+	return identity.BaseLanguageForRecord(ctx, tx), nil
 }
 
 // taskStillOpenTx holds the task for the rest of the caller's transaction and
