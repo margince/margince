@@ -59,8 +59,8 @@ var voiceDraftPerms = principal.Permissions{
 // sampleSpanOpen returns how one sample's span begins in THIS call's prompt, up
 // to its id value.
 //
-// A marker-SHAPED pattern is not the boundary: writing samples are the user's
-// own prose and reach the prompt byte for byte, so a sample containing
+// A marker-shaped pattern is not the boundary. Writing samples are the user's
+// prose and reach the prompt byte for byte. A sample containing
 // `<untrusted-<nonce> id="…"` would be read as a span the builder never
 // opened. The marker the system prompt declares is the only one that counts.
 func sampleSpanOpen(system string) (string, bool) {

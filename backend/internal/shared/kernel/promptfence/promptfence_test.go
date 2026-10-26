@@ -275,10 +275,9 @@ func markerIn(t *testing.T, f promptfence.Fence) string {
 	return marker
 }
 
-// The author of this text is a model, and a model does not do byte equality.
-// The nonce is letters, so a case-variant of the marker is one an author who has
-// read it can emit and an exact-match pass would carry straight into the
-// cumulative transcript. Every ASCII-case rendering is neutralised.
+// The author of this text is a model, which does not do byte equality. It can
+// emit a case-variant of the marker it has read, and an exact-match pass would
+// carry that into the transcript. Every ASCII-case rendering is neutralised.
 func TestWrapAuthoredNeutralisesCaseVariantsOfTheMarker(t *testing.T) {
 	f := promptfence.New()
 	marker := markerIn(t, f)
@@ -326,9 +325,8 @@ func mixCase(s string) string {
 	return string(b)
 }
 
-// A prompt that fences a message and also names the message's id must not give
-// the model two ids to choose between: the tag name shares no shape with the
-// UUIDs the product mints, so it cannot be copied in their place.
+// The tag name shares no shape with the UUIDs the product mints, so a model
+// cannot copy it in place of a fenced message's id.
 func TestNonceIsNotShapedLikeAnID(t *testing.T) {
 	marker := markerIn(t, promptfence.New())
 	if _, err := ids.Parse(strings.TrimPrefix(marker, "untrusted-")); err == nil {

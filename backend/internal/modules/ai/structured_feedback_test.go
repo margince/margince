@@ -156,11 +156,10 @@ func TestValidatorFeedbackStaysPlainWhenNoBoundaryIsDeclared(t *testing.T) {
 // guarantees. Echoing plainly there is the fail-OPEN combination, so the echo is
 // dropped instead.
 //
-// The fixture has to be marker-SHAPED to reach the branch under test —
-// markerPattern accepts either case while FromMarker demands the lowercase
-// nonce it mints, so an upper-case nonce passes the first and fails the second.
-// A string like "not-a-marker" never gets past MarkerIn and would assert a
-// branch it does not execute.
+// The fixture must be marker-shaped to reach the branch under test.
+// markerPattern accepts either case and FromMarker demands lowercase, so an
+// upper-case nonce passes the first and fails the second. "not-a-marker" never
+// gets past MarkerIn.
 func TestFeedbackWithAMarkerThatCouldNotHaveBeenMintedIsDropped(t *testing.T) {
 	malformed := "untrusted-" + strings.Repeat("A", 26)
 	req := model.Request{

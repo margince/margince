@@ -65,19 +65,18 @@ const markerPrefix = "untrusted-"
 type Fence struct{ nonce string }
 
 // nonceBody is the shape of a nonce: 128 random bits as 26 lowercase base32
-// characters. It is deliberately NOT id-shaped. A prompt that fences a message
-// and also carries that message's id (a UUID) invites the model to cite the tag
-// name in place of the id when the two look alike, so the nonce shares no
-// alphabet-and-dash shape with any id the product mints.
+// characters. It is not id-shaped. A model asked to cite a fenced message's id
+// copies the tag name when the two look alike. So the nonce shares no shape with
+// any id the product mints.
 const nonceBody = `[a-z2-7]{26}`
 
-// markerName is the name a prompt may DECLARE: the minted shape with either
-// case, so a declared marker [FromMarker] refuses is still seen as declared.
+// markerName is the name a prompt may declare: the minted shape in either case.
+// A declared marker [FromMarker] refuses must still read as declared.
 const markerName = markerPrefix + `[a-zA-Z2-7]{26}`
 
 var nonceShape = regexp.MustCompile(`^` + nonceBody + `$`)
 
-// New mints a fresh boundary from crypto/rand — unpredictable to anyone who has
+// New mints a fresh boundary from crypto/rand, unpredictable to anyone who has
 // not been shown the prompt.
 func New() Fence { return Fence{nonce: markerPrefix + strings.ToLower(rand.Text())} }
 
@@ -114,31 +113,23 @@ func (f Fence) WrapAttr(attr, value, data string) string {
 	return f.openAttr(attr, value) + data + f.Close()
 }
 
-// WrapAuthored bounds text whose author has SEEN this marker — the model's own
-// rejected output, fed back on a §5.2 retry — and neutralises the marker inside
-// it first.
+// WrapAuthored bounds text whose author has seen this marker (the model's own
+// rejected output, fed back on a retry) and neutralises the marker inside it.
 //
-// [Fence.Wrap] cannot be used there. Its contract is the scope rule above: the
-// text it bounds must have been written before the marker could leak. A model
-// that was shown the marker in the prompt that produced this very output has had
-// it leak by construction, so wrapping that output in the same fence declares a
-// boundary its author can close at will.
+// [Fence.Wrap] cannot be used there. Its contract is that the bounded text was
+// written before the marker could leak. A model shown the marker has had it leak
+// by construction. Wrapping its output in the same fence would let its author
+// close the span at will.
 //
-// Editing the data is the thing this package otherwise refuses to do, and the
-// difference is that the alphabet here is CLOSED. Recognising a forgery is a
-// losing game because a sender picks from the whole of Unicode and need only
-// find what a matcher misses. This marker's own alphabet is fixed and known —
-// a lowercase ASCII prefix and a base32 nonce — so the renderings of it are
-// enumerable rather than open-ended, and removal can cover all of them.
+// Editing the data is what this package otherwise refuses to do. It is safe here
+// because the marker's alphabet is closed. A lowercase ASCII prefix and a base32
+// nonce mean every rendering of it can be enumerated.
 //
-// The consumer, though, is a model, which is the one component that does not do
-// byte equality. Exact removal is therefore not enough: the nonce is letters, so
-// </UNTRUSTED-ABCD…> survives an exact-match pass while reading, to a model
-// that was shown the marker one turn earlier, as the boundary it was told about
-// — and markerPattern already treats upper case as marker-shaped. So removal
-// folds ASCII case. That is complete over the case renderings of a marker whose
-// characters are all ASCII, which is the claim; it is NOT a promise about every
-// string a model might read as equivalent, and no blocklist could be.
+// The reader is a model, which does not do byte equality. An upper-case variant
+// of the marker survives an exact-match pass and still reads as the boundary it
+// was told about, so removal folds ASCII case. That is complete over the case
+// renderings of an all-ASCII marker. It is not a promise about every string a
+// model might read as equivalent, and no blocklist could be.
 func (f Fence) WrapAuthored(text string) string {
 	return f.Wrap(replaceASCIIFold(text, f.name(), canonicalMarker))
 }
@@ -223,11 +214,9 @@ func (f Fence) Rule(kind string) string {
 		f.name(), kind)
 }
 
-// markerPattern matches a marker of this package's shape, upper case included:
-// a prompt that declares a marker [FromMarker] refuses is still declaring a
-// boundary, and callers must see that rather than read it as none. It reads a prompt to
-// find the boundary that prompt DECLARES; it never decides whether text is a
-// boundary, which is the mistake this package exists to avoid.
+// markerPattern matches a marker of this package's shape, upper case included.
+// It reads a prompt to find the boundary that prompt declares. It never decides
+// whether text is a boundary, which is the mistake this package exists to avoid.
 var markerPattern = regexp.MustCompile(`<(` + markerName + `)>`)
 
 // markerNamePattern matches a marker's name wherever it appears: in an opening
@@ -285,9 +274,8 @@ func FromMarker(marker string) (Fence, bool) {
 // key, a certification stamp) via [Canonicalize], and a marker removed from text
 // whose author was shown it via [Fence.WrapAuthored].
 //
-// It is deliberately not marker-shaped for the second use: [MarkerIn] needs 26
-// characters where this has five, so a placeholder left in a prompt that IS sent
-// can never be read back as a boundary.
+// It is not marker-shaped: [MarkerIn] needs 26 characters where this has five.
+// A placeholder left in a prompt that is sent is never read as a boundary.
 const canonicalMarker = "untrusted-fence"
 
 // Canonicalize replaces the boundary a prompt declares with a fixed placeholder,
@@ -304,13 +292,10 @@ func Canonicalize(declaringPrompt, text string) string {
 	return strings.ReplaceAll(text, marker, canonicalMarker)
 }
 
-// ReplaceNonces replaces the nonce of every marker-shaped name in text with
-// placeholder, whichever call minted it, and keeps the prefix. [Canonicalize]
-// covers the one boundary a prompt declares; a prompt that QUOTES another
-// request (a judge shown the prompt it grades) carries that request's marker
-// too, and a per-call nonce left in hashed material makes two renderings of the
-// same prompt hash apart. It is for hashing only: it edits the text, so its
-// output is never sent to a model.
+// ReplaceNonces swaps the nonce of every marker in text for placeholder and keeps
+// the prefix. [Canonicalize] covers only the boundary a prompt declares. A prompt
+// that quotes another request, such as a judge shown the prompt it grades, also
+// carries that request's marker. For hashing only, never for text sent to a model.
 func ReplaceNonces(text, placeholder string) string {
 	return markerNamePattern.ReplaceAllString(text, markerPrefix+placeholder)
 }
