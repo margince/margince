@@ -276,11 +276,7 @@ export function ContactPageV2({
               onBriefMeeting={openBrief}
               onAction={runAction}
               onOpenEmail={setOpenEmail}
-              onWrite={
-                writeRefusalId === undefined
-                  ? () => openComposer("")
-                  : undefined
-              }
+              onWrite={() => openComposer("")}
               refusedReasonId={refusedReasonId}
             />
             {/* One drawer over the record. The timeline's rows and the rail's

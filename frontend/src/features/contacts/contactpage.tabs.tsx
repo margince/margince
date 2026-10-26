@@ -2,6 +2,7 @@ import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { CONTACT_TABS, type ContactTab } from "../../lib/contacttab";
+import { useWriteRefusal } from "./contactactions";
 import { ContactDealsTab } from "./contactdeals";
 import { Employers } from "./contactemployers";
 import { ContactFilesTab, useContactFiles } from "./contactfiles";
@@ -98,7 +99,8 @@ export function ContactTabPanel({
   // The page's one action loop, which every moment action opens through. It
   // serves the tab whose moment carries a verb: the Meetings tab's agenda button.
   onAction?: (action: ContactMomentAction) => void;
-  // Opens the page's composer, absent while the page refuses this reader mail.
+  // Opens the page's composer. The Network tab drops it while the header's
+  // Email verb is refused, so the map offers no write the header would not.
   onWrite?: () => void;
   // The page's one sentence about why this contact takes no changes, for
   // the tab whose verb writes the record: the upload on Documents.
@@ -120,7 +122,7 @@ export function ContactTabPanel({
         // the relationship tab's first question.
         <div className="record-stack">
           <Employers view={view} />
-          <ContactNetworkTab
+          <NetworkTab
             contactId={contactId}
             view={view}
             onOpenEmail={onOpenEmail}
@@ -154,4 +156,17 @@ export function ContactTabPanel({
     default:
       return null;
   }
+}
+
+function NetworkTab({
+  onWrite,
+  ...tab
+}: Readonly<{
+  contactId: string;
+  view: Contact360;
+  onOpenEmail?: (activityId: string) => void;
+  onWrite?: () => void;
+}>) {
+  const refused = useWriteRefusal(tab.view) !== undefined;
+  return <ContactNetworkTab {...tab} onWrite={refused ? undefined : onWrite} />;
 }
