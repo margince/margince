@@ -39,6 +39,7 @@ const BASE: Activity = {
   body: "Können wir Dienstag sprechen?",
   audience: "workspace",
   content_state: "available",
+  writable: true,
   version: 3,
 };
 
