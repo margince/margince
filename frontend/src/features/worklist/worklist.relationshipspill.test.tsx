@@ -31,7 +31,7 @@ const QUIET_ROW = {
 };
 const DELIVERY_ROW = {
   id: "bounce-1",
-  source: "delivery" as const,
+  source: "bounce" as const,
   category: "system" as const,
   level: 2,
   consequence: "customer_never_received" as const,
