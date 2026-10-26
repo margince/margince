@@ -90,13 +90,21 @@ func (s *Store) authorshipSweepPlace(ctx context.Context) (ids.UUID, error) {
 	return *after, nil
 }
 
-// storeAuthorshipSweepPlaceTx records the position, and clears it on a short
-// page so the next run starts at the first row rather than past the tail.
-func storeAuthorshipSweepPlaceTx(ctx context.Context, tx pgx.Tx, after ids.UUID, scanned int) error {
-	var place *ids.UUID
-	if scanned >= evidenceAuthorshipBatch && !after.IsZero() {
-		place = &after
+// authorshipPlaceAfter is the position to keep once a page is done. A full page
+// leaves the last row behind, and a short one clears the place.
+//
+// Nil means start again at the first row. A page shorter than the batch is the
+// tail, so keeping its last row would park the pass past the end.
+func authorshipPlaceAfter(after ids.UUID, scanned int) *ids.UUID {
+	if scanned < evidenceAuthorshipBatch || after.IsZero() {
+		return nil
 	}
+	return &after
+}
+
+// storeAuthorshipSweepPlaceTx records the position the page leaves behind.
+func storeAuthorshipSweepPlaceTx(ctx context.Context, tx pgx.Tx, after ids.UUID, scanned int) error {
+	place := authorshipPlaceAfter(after, scanned)
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO deal_authorship_sweep_cursor (singleton, after_evidence_id, updated_at)
 		VALUES (true, $1, now())
