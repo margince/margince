@@ -52,6 +52,7 @@ export function OpenActivityDrawer({
   zone,
   onClose,
   activity,
+  about,
 }: Readonly<{
   activityId: string | null;
   /** The record's timezone, which the page owns. */
@@ -60,6 +61,9 @@ export function OpenActivityDrawer({
   /** The answer of a live read the host already holds, so the drawer does not
    *  read the activity a second time. Absent, the drawer reads it. */
   activity?: Activity;
+  /** What the host opened it for, drawn above the activity: a worklist row
+   *  says what it asks of the reader. */
+  about?: ReactNode;
 }>) {
   const [shown, setShown] = useState<string | null>(activityId);
   if (activityId !== null && activityId !== shown) {
@@ -75,6 +79,7 @@ export function OpenActivityDrawer({
       zone={zone}
       onClose={onClose}
       given={activity?.id === shown ? activity : undefined}
+      about={about}
     />
   );
 }
@@ -85,12 +90,14 @@ function ActivityDetail({
   zone,
   onClose,
   given,
+  about,
 }: Readonly<{
   activityId: string;
   open: boolean;
   zone: string;
   onClose: () => void;
   given?: Activity;
+  about?: ReactNode;
 }>) {
   const t = useT();
   const titleId = useId();
@@ -116,7 +123,7 @@ function ActivityDetail({
       </DrawerHead>
       <DrawerBody>
         {activity ? (
-          <ActivityBody activity={activity} zone={zone} />
+          <ActivityBody activity={activity} zone={zone} about={about} />
         ) : (
           <SurfaceState
             state={
@@ -141,7 +148,8 @@ function ActivityDetail({
 function ActivityBody({
   activity,
   zone,
-}: Readonly<{ activity: Activity; zone: string }>) {
+  about,
+}: Readonly<{ activity: Activity; zone: string; about?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
   const [opened, setOpened] = useState<string | null>(null);
@@ -162,6 +170,7 @@ function ActivityBody({
   const colleagues = colleaguesOf(activity);
   return (
     <div className="emaildetail__body">
+      {about}
       <div className="emaildetail__parties">
         <PartyLine label={t("activity.detail.when")}>
           {formatActivityWhen(

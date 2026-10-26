@@ -18,6 +18,7 @@ import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 import { TaskDetailModal } from "./taskdetailmodal";
 import { rowHref } from "./worklist.copy";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
+import { WorklistWhy } from "./worklist.why";
 
 // Task and meeting row ids are activity ids; other lanes must name their activity explicitly.
 export function rowActivityId(item: WorklistItem): string | undefined {
@@ -69,6 +70,7 @@ export function useRowSource(item: WorklistItem): Readonly<{
       ) : (
         <SourceDrawer
           activityId={opened}
+          item={item}
           onClose={() => setOpened(null)}
           onReplySent={() =>
             void client.invalidateQueries({ queryKey: worklistKey })
@@ -110,10 +112,12 @@ function OpenTaskSource({
  */
 function SourceDrawer({
   activityId,
+  item,
   onClose,
   onReplySent,
 }: Readonly<{
   activityId: string;
+  item: WorklistItem;
   onClose: () => void;
   onReplySent: () => void;
 }>) {
@@ -135,6 +139,7 @@ function SourceDrawer({
         zone={zone}
         onClose={onClose}
         activity={read.data}
+        about={<WorklistWhy item={item} answer />}
       />
     </>
   );

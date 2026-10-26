@@ -33,3 +33,22 @@ export function TaskDetailModal({
     </>
   );
 }
+
+/**
+ * A meeting opened from the row that asks for its outcome: the meeting itself,
+ * under what the row asks and the row's own verbs.
+ */
+export function MeetingDetailModal({
+  item,
+  onClose,
+}: Readonly<{ item: WorklistItem; onClose: () => void }>) {
+  const zone = useRecordZone();
+  return (
+    <OpenActivityDrawer
+      activityId={item.id}
+      zone={zone}
+      onClose={onClose}
+      about={<WorklistWhy item={item} answer />}
+    />
+  );
+}

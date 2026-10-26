@@ -15847,6 +15847,61 @@ export const en = {
   "worklist.why.reasons": "Reasons",
   "worklist.why.consequence": "If nothing is done",
   "worklist.why.detail": "Detail",
+  "worklist.ask.approval":
+    "An agent proposed a change and is waiting for a decision. Approve it or turn it down.",
+  "worklist.ask.dedupe_candidate":
+    "These two records look like the same one. Merge them, or keep both.",
+  "worklist.ask.deal_suggestion":
+    "A conversation looks like a new deal. Create the deal, or dismiss the suggestion.",
+  "worklist.ask.tag_suggestion":
+    "A tag was suggested for this record. Apply it, or dismiss the suggestion.",
+  "worklist.ask.task":
+    "This task is open. Do the work and mark it done, or move it to another day.",
+  "worklist.ask.brief_item":
+    "The overnight review flagged this deal. Act on it, set it aside, or dismiss it.",
+  "worklist.ask.conversation_claim":
+    "You committed to this in a conversation. Do it, then mark it done.",
+  "worklist.ask.customer_waiting":
+    "A customer wrote and nobody has answered yet. Reply to them.",
+  "worklist.ask.lead_response":
+    "This lead is waiting for a first answer. Get in touch before its response time runs out.",
+  "worklist.ask.deal_at_risk":
+    "This deal shows signs of slipping. Open it and plan the next step.",
+  "worklist.ask.meeting": "This meeting is coming up. Open it to prepare.",
+  "worklist.ask.relationship_decay":
+    "Nobody has been in touch with this contact for a while. Get in touch, or set it aside for a month.",
+  "worklist.ask.failed_approval":
+    "An action you approved did not run. Check what happened, then acknowledge it.",
+  "worklist.ask.dsr":
+    "A privacy request has a legal deadline. Open it and answer it in time.",
+  "worklist.ask.notice_case":
+    "A privacy notice is owed to this contact. Send it, ask them to confirm their details, or end the duty.",
+  "worklist.ask.capture_health":
+    "A mailbox stopped capturing mail. Reconnect it so its mail is captured again.",
+  "worklist.ask.domain_question":
+    "Margince cannot tell what this domain belongs to. Create a company for it, keep it as a vendor, or exclude it.",
+  "worklist.ask.ai_work_health":
+    "An AI task keeps failing. Check its AI provider in Settings.",
+  "worklist.ask.bounce":
+    "An email could not be delivered. Check the address, then send it again.",
+  "worklist.ask.undelivered":
+    "An email was not sent. Open it to see why, then send it again.",
+  "worklist.ask.automation_run":
+    "An automation failed. Check the cause, then run it again.",
+  "worklist.ask.notice":
+    "Something changed that you should know about. Read it, then acknowledge it.",
+  "worklist.ask.introduction_request":
+    "A colleague asks you to introduce them to a contact. Accept or decline the request.",
+  "worklist.ask.meeting_outcome":
+    "This meeting is over and nothing records how it went. Record what came of it, or mark it canceled if it did not take place.",
+  "worklist.ask.weekly_commitment":
+    "You planned this for the week. Do the work, or move it in your weekly plan.",
+  "worklist.ask.awaiting_reply":
+    "You wrote last and nobody has replied. Send a follow-up.",
+  "worklist.ask.meeting_follow_up":
+    "Nothing was sent after this meeting. Send the attendees a follow-up.",
+  "worklist.ask.batch":
+    "Several routine decisions that read alike are grouped here. Review them together.",
   "worklist.consequence.buyer_waits": "The buyer keeps waiting.",
   "worklist.consequence.promise_breaks": "A commitment is broken.",
   "worklist.consequence.deal_drifts": "The deal keeps drifting.",

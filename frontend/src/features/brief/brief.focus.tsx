@@ -26,7 +26,6 @@ import {
   whenText,
 } from "../worklist/worklist.copy";
 import { eyebrowKeyFor } from "../worklist/worklist.eyebrow";
-import { hasDetails } from "../worklist/worklist.pane";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { WorklistRow } from "../worklist/worklist.row";
 import { contactHref } from "../worklist/worklist.row.captions";
@@ -66,19 +65,13 @@ export function Triage({
       frame.focus();
     }
   };
-  // A meeting gets the door too. Its subject is the activity, not a contact,
-  // so the pane alone would leave it with no way through.
-  const context =
-    onContext &&
-    (hasDetails(lead) ||
-      lead.source === "task" ||
-      lead.source === "meeting_outcome");
   // A task row's id is its activity's, so the card reads the task it shows.
   const task = useActivity(lead.id, lead.source === "task").data;
   const cardVerbs =
-    context || task ? (
+    onContext || task ? (
       <>
-        {context && (
+        {/* Every row opens on what it asks and why it is here. */}
+        {onContext && (
           <Button variant="ghost" onClick={() => onContext(lead)}>
             {t("brief.focus.context")}
           </Button>
