@@ -11,9 +11,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A release correction re-files old mail by writing one activity_relink audit
-// row per message, under the actor system:datatask:<task id> and with the
-// step's run id as batch_id. Read as ordinary lines, a large run looks like
+// A release correction re-files old mail. It writes one activity_relink audit
+// row per message, under the actor system:datatask:<task id>, with the step's
+// run id as batch_id. Read as ordinary lines, a large run looks like
 // hundreds of things done for the reader, "by Margince", with no reason.
 
 const relinkTask = "system:datatask:example/mail_refiled"
@@ -34,8 +34,8 @@ func TestOneCorrectionRunIsOneMaintenanceLineBesideARealOutcome(t *testing.T) {
 	for i := range 3000 {
 		entries = append(entries, relinkRow(run, now.Add(-time.Duration(i)*time.Second)))
 	}
-	// A real piece of work for the reader, older than every relink, so a page
-	// that showed relinks first and cut at its limit would lose it.
+	// A real piece of work for the reader, older than every relink. A page that
+	// showed relinks first and cut at its limit would lose it.
 	filing := auditRow("link-reconcile", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", now.Add(-2*time.Hour))
 	entries = append(entries, filing)
 
@@ -95,7 +95,7 @@ func TestTwoRunsOfOneCorrectionAreTwoLines(t *testing.T) {
 }
 
 // A row a data task wrote before batches were stamped still folds into one
-// bounded line, still reads as a correction, and claims no run of its own.
+// bounded line. It still reads as a correction, and claims no run of its own.
 func TestALegacyCorrectionRowWithoutARunStillFoldsAsMaintenance(t *testing.T) {
 	now := clocktest.Now(t)
 	a, b := relinkRow(ids.NewV7(), now), relinkRow(ids.NewV7(), now.Add(-time.Second))
