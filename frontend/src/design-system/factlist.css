@@ -74,8 +74,14 @@
   padding: 0;
   border-top: none;
 }
+/* A term one word longer than its column, as German compounds are, breaks
+   at a syllable inside it rather than running into its value. `hyphens`
+   reads the document's `lang`, which the i18n provider sets. */
 .factlist-flat .factlist-term {
   color: var(--textSecondary);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 .factlist-flat .factlist-value {
   overflow: hidden;
