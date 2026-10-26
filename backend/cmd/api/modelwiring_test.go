@@ -147,12 +147,10 @@ embeddings: {provider: gemini, model: gemini-embedding-001, dimensions: 8}
 
 // A STORED binding outranks --ai-fake, and nothing else in this package says so.
 //
-// The desktop launcher leans on exactly this: it passes --ai-fake on every boot
-// so a fresh install's AI surfaces answer instead of reading as broken, and it
-// relies on a binding the user sets in Settings -> AI overriding that without a
-// restart. Were the precedence the other way round, the launcher would pin every
-// desktop installation to canned answers and the settings screen would look
-// broken while being obeyed.
+// An installation started with --ai-fake answers from canned text until its
+// admin binds a model in Settings -> AI. That binding must win without a
+// restart. With the precedence reversed, the flag would pin the installation to
+// canned answers. The settings screen would then look broken while obeyed.
 func TestBoundRoutingOutranksTheFakeBrain(t *testing.T) {
 	cfg := fakeRouting(t)
 	_, state, profile, _, err := modelPathFor(

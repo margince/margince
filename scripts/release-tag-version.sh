@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# The release tag IS the version. It names the build, both desktop bundles, the
-# release page and the ref a D13 deployment will pin to, and it is what a user
-# quotes in a bug report. Nothing derives it from anything else, so a malformed
-# tag is refused here or it is shipped.
+# The release tag IS the version. It names the build, the release page and the
+# ref a D13 deployment will pin to, and it is what a user quotes in a bug
+# report. Nothing derives it from anything else, so a malformed tag is refused
+# here or it is shipped.
 #
 # WHAT IT READS: one argument. No git, no network, no environment — so its own
 # test can plant a tag and judge the answer.

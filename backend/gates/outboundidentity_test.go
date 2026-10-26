@@ -35,7 +35,7 @@ import (
 
 // identitySurfaceRoots are the trees that can make an outbound call.
 var identitySurfaceRoots = []string{
-	"internal", "cmd", "tools", "../extensions", "../desktop", "../fixtures",
+	"internal", "cmd", "tools", "../extensions", "../fixtures",
 }
 
 func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {

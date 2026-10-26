@@ -40,7 +40,6 @@ var processSpawners = gatekit.Waive(map[string]string{
 	"internal/compose/aicert":      "the cert lane's claude_cli judge runs `claude -p`, a subscription-billed CLI a product process must never reach",
 	"internal/compose/integration": "a benchmark record reads the host's CPU and memory through sysctl, in the integration-tagged harness only",
 	"tools/gen-composition":        "the composition generator asks GOROOT's go for the module graph at build time, never at runtime",
-	"../desktop/launcher":          "the desktop launcher supervises Postgres and the API as child processes, which is the whole of its job",
 })
 
 // harnessSourceFile is one parsed non-test Go file and the directory it sits in.

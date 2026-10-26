@@ -290,22 +290,19 @@ func unauthoredDir(name string) bool {
 }
 
 // claimedTrees are the hand-written Go trees this rule covers. The backend
-// module is one tree, not all of them: extensions/, fixtures/, cli/ and
-// desktop/ are separate modules a `./...` from here never reaches, and a claim
-// made in one is a claim made in this product.
+// module is one tree, not all of them. extensions/, fixtures/ and cli/ are
+// separate modules a `./...` from here never reaches. A claim made in one is a
+// claim made in this product.
 //
 // mustHaveClaims is what stops a root passing by scanning nothing — an
 // aggregate count cannot, because backend/ alone would carry it forever while a
 // unit tree silently escaped the sweep.
 //
 // Only backend/ carries it, and the rest are named with the reason they cannot.
-// Measured when this landed: backend 636, extensions 5, desktop 1, cli 0,
-// fixtures 0. A tree with none today is not a tree with none forever — that is
-// exactly why it is swept — but requiring extensions/ to hold one would make
-// the vanilla lane fail for shipping no units, and requiring desktop/ to hold
-// one would make DELETING its single claim a failure rather than the
-// improvement it would be. A root that does not exist at all is still caught,
-// by the walk error.
+// Measured when this landed: backend 636, extensions 5, cli 0, fixtures 0. A
+// tree with none today may hold one tomorrow, which is why it is swept.
+// Requiring extensions/ to hold one would fail the vanilla lane for shipping no
+// units. A root that does not exist at all is still caught, by the walk error.
 type claimedTree struct {
 	root           string
 	mustHaveClaims bool
@@ -315,7 +312,6 @@ var claimedTrees = []claimedTree{
 	{root: ".", mustHaveClaims: true},
 	{root: "../extensions"},
 	{root: "../fixtures"},
-	{root: "../desktop"},
 	// The repo-root tool modules. Small and outside the Go workspace on
 	// purpose, which is exactly why they are swept: a module nobody's lane
 	// compiles is the one where a claim can be written and never read again.

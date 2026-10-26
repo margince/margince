@@ -385,12 +385,10 @@ func TestAKeyInTheEnvironmentReadsAsConfiguredOnAnInstallationThatHasBoundNothin
 
 // A declared binding reaches an installation that was created without one.
 //
-// `seeds.ai_routing` used to be consumed only inside the creating transaction.
-// That is every installation EXCEPT the ones that matter here: the desktop
-// bundles ship a database, so their company was created on the build
-// machine and the recipient's declaration was read by nothing. They set a
-// provider key, and their AI surfaces answered from the offline fake with the
-// one screen that looks like the fix naming the file that was already ignored.
+// Consumed only inside the creating transaction, `seeds.ai_routing` would reach
+// no installation whose company already exists. Its operator sets a provider
+// key, and the AI surfaces answer from the offline fake. The one screen that
+// looks like the fix names the file that was ignored.
 //
 // Insert-only, so the two halves of the claim are one test: it plants a binding
 // where there is none, and it does not touch one that exists.

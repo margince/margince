@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.."
 out="${SLOP_TREND_DIR:-.tmp/slop-trend}"
 prev="${1:-}"
 # The trees the comment gate and the stats ratchet read, so the three agree.
-paths=(backend extensions fixtures desktop frontend tools)
+paths=(backend extensions fixtures frontend tools)
 # Translation catalogues are data: thousands of string lines that would dilute
 # every ratio without saying anything about the code.
 skip='frontend/src/i18n/[a-z]{2}(-[A-Z]{2})?\.ts$'

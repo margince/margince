@@ -45,9 +45,6 @@ in `frontend/vite.config.ts` (`/v1`, `/setup`, `/oauth`, `/mcp`, `/.well-known`,
 routes them, rather than the way the dev server does. `/mcp` and `/mcp/…` go to the network as they
 are. `/mcp-apps/…` is shipped files, so a failed page request there gets the offline page.
 
-The desktop launcher keeps its own copy of the list (`apiPrefixes` in `desktop/launcher/web.go`).
-`frontend/vite-proxy.test.ts` fails when that copy and the proxy keys disagree.
-
 The worker does **not** use `navigation preload`. With it on, the browser requests every page in
 scope before the worker decides, including the ones the worker then leaves alone. A page request
 left alone is then fetched a second time. That is two GETs of an address that may carry a one-use
@@ -91,8 +88,7 @@ The nginx server still sends `Cache-Control: no-cache` for `/sw.js` and `/manife
 any shared cache between it and the browser. It answers a missing one with 404 rather than the app
 shell. A browser refuses an HTML page as a worker script, and keeps the worker it has. The offline
 page and its script stay in the cache for a year as files that never change, which their names by
-hash make safe. The desktop launcher (`desktop/launcher/web.go`) serves these files with no cache
-headers of its own and needs none, for the same reason.
+hash make safe.
 
 The build's own tests load the worker it writes into a stand-in for the scope it runs in, and run
 it: `frontend/scripts/vite-pwa.test.ts`.
@@ -106,8 +102,8 @@ both themes.
 
 Its script is the one thing it loads. The site's content security policy allows no script written
 inside the page, so the script is a file of its own under `/assets/`. The worker answers it from the
-cache it installed it into. The browser's HTTP cache is not enough: `vite preview` and the desktop
-launcher send no cache headers, and any browser may drop an entry.
+cache it installed it into. The browser's HTTP cache is not enough: `vite preview` sends no cache
+headers, and any browser may drop an entry.
 
 The script shares the app's code rather than copying it. `startTheme()` from
 `frontend/src/lib/theme.ts` sets the stored theme, so a `light` or `dark` theme the reader set holds
@@ -232,6 +228,4 @@ None of these ships today, and each needs its own decision before it ships:
 
 - [frontend-architecture.md](frontend-architecture.md): the app this worker serves, and the gates
   that hold it.
-- [desktop-distribution.md](desktop-distribution.md): the other way Margince is served, on the local
-  machine.
 - [deploy-margince.md](../how-to/deploy-margince.md): the nginx and ingress setup the headers above live in.

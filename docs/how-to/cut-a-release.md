@@ -70,16 +70,16 @@ git push origin v1.0.0
 ```
 
 `release-tag.yml` then checks the tag, the draft and the blockers, and refuses a commit that
-`merge-attest` judged bad. It builds the macOS and Windows bundles, and creates the release with both
-bundles on it.
+`merge-attest` judged bad. It then creates the release: your notes, the list of changes, and a link to
+[deploy-margince.md](deploy-margince.md) for the install.
 
 A plain `v1.0.0` ships. A tag with an added part, such as `v1.0.0-rc.1`, goes out as a **pre-release**.
 So a build for tests does not become the default file to get on the release page. To tag a candidate
 deploys nothing, because a tag moves no branch.
 
-A run that fails before the release job leaves nothing behind. A run that ends early in that job can
-leave a release with only some of its files. For that reason the lane runs one run at a time, and does
-not cancel a run. So check the releases page before you decide nothing happened. Either way, fix the
+A run that fails before the release job leaves nothing behind. The lane runs one run at a time, and does
+not cancel a run, so no run is cut off while it writes the release. Still, check the releases page before
+you decide nothing happened. Either way, fix the
 tree, delete the tag, and tag again:
 
 ```sh
@@ -87,8 +87,8 @@ git push --delete origin v1.0.0 && git tag -d v1.0.0
 git tag -a v1.0.0 -m "..." && git push origin v1.0.0
 ```
 
-It is safe to run a failed run again after the release was created. The publish step replaces the files
-and the notes on the release. Run **all** jobs again. To run only the failed jobs again leaves the job
+It is safe to run a failed run again after the release was created. The publish step replaces the notes
+on the release. Run **all** jobs again. To run only the failed jobs again leaves the job
 that read the tag not run. GitHub drops the values of a job that did not run, so the publish has no
 version to name anything after. It refuses, and says so.
 
@@ -101,7 +101,7 @@ Two kinds of release live here, and they carry different versions:
 | Trigger | a `v*` tag | started by hand |
 | Version | `v1.0.0` (semver) | `YYYY.edition.bugfix`: today `1970.<run>`, a stand-in pinned to the year 1970 |
 | Publishes to | the GitHub release page | the dist service at `dist.test.margince.com` |
-| Carries | both desktop bundles | the patch of changes, SBOMs, role images |
+| Carries | the notes and a link to the install steps | the patch of changes, SBOMs, role images |
 
 The version form of the dist service does not accept a `v` prefix, so the two lanes use different names.
 
@@ -126,15 +126,3 @@ That has two results:
 base is the old tip of the push. With no old tip either (a run started by hand, or a new branch), it is
 `HEAD~1`. Then the patch of that release covers one commit. Only a checkout where none of these exists
 makes no patch. `make test-release-patch-base` runs the steps publish, skip, publish.
-
-## To build a bundle without releasing anything
-
-Start a desktop lane directly. Each one takes a `ref`, and uploads its bundle as a file of the run. The
-Windows lane uploads the folder itself, and the macOS lane uploads a `tar` file. That is because an upload
-of a run file drops the mark that lets a file run, and `tar` keeps it:
-
-```sh
-gh workflow run desktop-macos.yml --ref main
-```
-
-A build you start this way names itself after the commit, because no lane gave it a version.
