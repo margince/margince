@@ -59,7 +59,8 @@ const mailAllowed: ContactConsentGuardEntry = {
   purpose_class: "business_correspondence",
   channel: "email",
   verdict: "allowed",
-  reason: "she wrote to you on 11 August",
+  reason: "they said you may write to them",
+  reason_code: "said_we_may_write",
 };
 
 // The header's writing verb, once the reads it depends on have arrived: the
@@ -133,7 +134,9 @@ const mailBlocked: ContactConsentGuardEntry = {
   purpose_class: "marketing",
   channel: "email",
   verdict: "blocked",
-  reason: "opt-out recorded 12 July",
+  reason:
+    "they objected to marketing, and an objection overrides every other basis",
+  reason_code: "suppressed_objection",
 };
 
 describe("what the day's work says it could not read", () => {
@@ -762,7 +765,8 @@ describe("the consent panel names the purpose behind each answer", () => {
     purpose_class: "business_correspondence",
     channel: "email",
     verdict: "allowed",
-    reason: "she wrote to you on 1 June",
+    reason: "they said you may write to them",
+    reason_code: "said_we_may_write",
   };
   const newsletter: ContactConsentGuardEntry = {
     purpose_key: "newsletter",
@@ -771,6 +775,7 @@ describe("the consent panel names the purpose behind each answer", () => {
     channel: "email",
     verdict: "unknown",
     reason: "no consent recorded",
+    reason_code: "no_consent",
   };
 
   it("answers per purpose rather than once for the whole transport", async () => {
@@ -803,12 +808,13 @@ describe("the consent panel names the purpose behind each answer", () => {
       purpose_class: "marketing",
       channel: "email",
       verdict: "blocked",
-      reason: "they asked us to stop on 12 July",
+      reason: "they asked you to stop, and a rep recorded it",
+      reason_code: "suppressed_subject_request",
     };
     mount("research", view, [objected, correspondence]);
 
     expect(
-      await screen.findByText("they asked us to stop on 12 July"),
+      await screen.findByText("They asked you to stop, and a rep recorded it"),
     ).not.toBeNull();
   });
 
@@ -819,7 +825,7 @@ describe("the consent panel names the purpose behind each answer", () => {
     mount("research", view, [newsletter, correspondence]);
 
     expect(
-      await screen.findByText("she wrote to you on 1 June"),
+      await screen.findByText("They said you may write to them"),
     ).not.toBeNull();
   });
 });

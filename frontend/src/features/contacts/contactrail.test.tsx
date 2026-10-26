@@ -777,7 +777,8 @@ describe("the consent rail's transport row", () => {
         purpose_class: "marketing",
         channel: "email",
         verdict: "allowed",
-        reason: "They opted in on 3 March.",
+        reason: "they gave consent, with the confirmation on file",
+        reason_code: "consent_confirmed",
       },
     ],
   };

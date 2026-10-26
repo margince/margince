@@ -226,7 +226,8 @@ describe("consent and channels", () => {
         purpose_class: "business_correspondence",
         channel: "email",
         verdict: "allowed",
-        reason: "she wrote to you on 15 Aug",
+        reason: "they said you may write to them",
+        reason_code: "said_we_may_write",
       },
     ],
   };
@@ -297,7 +298,7 @@ describe("consent and channels", () => {
     expect(rail.queryByText("No address on file")).toBeNull();
     // The column states the verdict; the reason behind it is the Research
     // tab's consent panel's to give.
-    expect(rail.queryByText("she wrote to you on 15 Aug")).toBeNull();
+    expect(rail.queryByText("They said you may write to them")).toBeNull();
   });
 
   it("gives each purpose's reason on the Research tab's consent panel", async () => {
@@ -311,7 +312,9 @@ describe("consent and channels", () => {
       />,
     );
 
-    expect(await screen.findByText("she wrote to you on 15 Aug")).toBeTruthy();
+    expect(
+      await screen.findByText("They said you may write to them"),
+    ).toBeTruthy();
     expect(screen.getByText("Allowed")).toBeTruthy();
   });
 });
