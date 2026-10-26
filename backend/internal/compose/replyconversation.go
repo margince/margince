@@ -43,7 +43,7 @@ func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts
 	now, zone := d.envelope.Now(), d.envelope.Zone(ctx)
 	thread := replyThread{anchor: draftcore.Conversation([]crmcontracts.Activity{anchor}, nil, now, zone, 1)}
 	if anchor.ThreadKey != nil && strings.TrimSpace(*anchor.ThreadKey) != "" {
-		rows, err := d.threadRows(ctx, *anchor.ThreadKey, addressee)
+		rows, err := d.threadRows(ctx, anchor, addressee)
 		if err != nil {
 			return replyThread{}, err
 		}
@@ -59,12 +59,14 @@ func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts
 // threadRows is the thread's newest page, newest first. When the thread is
 // longer, the addressee's newest mail follows the page. So their own words
 // still decide the language of a long thread.
-func (d replyDrafter) threadRows(ctx context.Context, threadKey, addressee string) ([]crmcontracts.Activity, error) {
+func (d replyDrafter) threadRows(ctx context.Context, anchor crmcontracts.Activity, addressee string) ([]crmcontracts.Activity, error) {
 	limit, kind, now := replyEvidenceRows, string(crmcontracts.ActivityKindEmail), d.envelope.Now()
-	// ConversationAsOf keeps a row dated after the drafting instant out of the
-	// prompt and out of the language evidence.
+	anchorID := ids.UUID(anchor.Id)
+	// A thread key is read from headers its sender writes, so it can name another
+	// correspondence; ConversationOf keeps only rows shared with the anchor's correspondent.
 	in := activities.ListActivitiesInput{
-		ThreadKey: &threadKey, Kind: &kind, Limit: &limit, WrittenByHuman: true, ConversationAsOf: &now,
+		ThreadKey: anchor.ThreadKey, ConversationOf: &anchorID, Kind: &kind, Limit: &limit,
+		WrittenByHuman: true, ConversationAsOf: &now,
 	}
 	rows, page, err := d.store.ListActivities(ctx, in)
 	if err != nil {

@@ -44,6 +44,21 @@ func replyLangMail(t *testing.T, e *integration.Env, direction string, with ids.
 	return row
 }
 
+// replyLangCopiedMail logs one inbound email on the "angebot" thread, linked to
+// both contacts. It is from "anne@kunde.test" with "dietmar@kunde.test" on Cc.
+func replyLangCopiedMail(t *testing.T, e *integration.Env, from, copied ids.UUID, body string, offset time.Duration) {
+	t.Helper()
+	at, subject, direction := replyLangStart.Add(offset), "Angebot", "inbound"
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Body: &body, ThreadKey: "angebot",
+		Direction: &direction, OccurredAt: &at, Source: "manual",
+		EmailFrom: "anne@kunde.test", EmailCc: []string{"dietmar@kunde.test"},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: from}, {EntityType: "contact", EntityID: copied}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // replyLangContact is a contact Rep1 owns, reachable at one address.
 func replyLangContact(t *testing.T, e *integration.Env, name, email string) ids.UUID {
 	t.Helper()
@@ -115,15 +130,15 @@ func TestTheStoredLanguageHoldsWhenTheAddresseeWroteNothing(t *testing.T) {
 	}
 }
 
-// longReplyThread is a thread whose only German is the addressee's first mail,
-// older than a full page of English mail from a copied colleague.
+// longReplyThread is a thread whose only German is the addressee's first mail.
+// A full page of English mail that copies them comes after it, from a colleague.
 func longReplyThread(t *testing.T, e *integration.Env) (oldest, anchor crmcontracts.Activity) {
 	t.Helper()
 	addressee := replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
 	colleague := replyLangContact(t, e, "Anne Kollegin", "anne@kunde.test")
 	oldest = replyLangMail(t, e, "inbound", addressee, replyLangGerman, 0)
 	for i := range replyEvidenceRows + 1 {
-		replyLangMail(t, e, "inbound", colleague, replyLangEnglish, time.Duration(i+1)*time.Minute)
+		replyLangCopiedMail(t, e, colleague, addressee, replyLangEnglish, time.Duration(i+1)*time.Minute)
 	}
 	anchor = replyLangMail(t, e, "inbound", addressee, "ok", 2*time.Hour)
 	return oldest, anchor

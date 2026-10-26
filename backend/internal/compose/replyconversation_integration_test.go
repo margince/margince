@@ -22,13 +22,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
+// replyCorrespondent is who the logged reply threads are with; a thread row
+// reaches the reply only when it shares a correspondent with the anchor.
+const replyCorrespondent = "buyer@customer.test"
+
 func logReplyMessage(ctx context.Context, t *testing.T, e *integration.Env, thread, subject, body string, offset time.Duration) crmcontracts.Activity {
 	t.Helper()
 	at := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC).Add(offset)
 	direction := "outbound"
 	row, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, ThreadKey: thread,
-		Direction: &direction, OccurredAt: &at, Source: "manual",
+		Direction: &direction, OccurredAt: &at, Source: "manual", CounterpartyEmail: replyCorrespondent,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -154,7 +158,7 @@ func TestAnOldInboundMessageStillDecidesTheReplyLanguageBehindManyNewerOutboundO
 	german := "Vielen Dank für das Angebot, wir prüfen es mit unserem Team und melden uns nächste Woche bei Ihnen zurück."
 	if _, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &german, ThreadKey: "angebot",
-		Direction: &inbound, OccurredAt: &at, Source: "manual",
+		Direction: &inbound, OccurredAt: &at, Source: "manual", CounterpartyEmail: replyCorrespondent,
 	}); err != nil {
 		t.Fatal(err)
 	}

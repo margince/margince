@@ -243,6 +243,11 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		where = append(where, sprintf(`EXISTS (SELECT 1 FROM activity_participant sent
 		          WHERE sent.activity_id = a.id AND sent.role = 'from' AND sent.contact_id = $%d)`, arg(*in.SentBy)))
 	}
+	if in.ConversationOf != nil {
+		where = append(where, sprintf(`EXISTS (SELECT 1 FROM activity conversation_anchor
+		          WHERE conversation_anchor.id = $%d AND %s)`,
+			arg(*in.ConversationOf), sharedCorrespondentSQL("a", "conversation_anchor")))
+	}
 	if in.Query != nil && *in.Query != "" {
 		// subject + body are the two human-readable columns a human would
 		// recognize an item by. The wildcard is escaped, so a caller typing %
@@ -291,5 +296,5 @@ func occurredWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
 		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
-		in.SentBy != nil || in.RemindersDue || len(in.CustomFilters) > 0
+		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.CustomFilters) > 0
 }

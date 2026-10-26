@@ -49,7 +49,10 @@ type ListActivitiesInput struct {
 	ThreadKey        *string
 	// SentBy narrows to messages this contact is the From participant of, so a
 	// reply can read the addressee's mail a long thread's page cut off.
-	SentBy          *ids.UUID
+	SentBy *ids.UUID
+	// ConversationOf keeps only the rows of this message's thread that share a
+	// correspondent with it (correspondence.SharedCorrespondentSQL), before the limit.
+	ConversationOf  *ids.UUID
 	IncludeArchived bool
 	// AssigneeID is the work queue's narrowing: the OPEN tasks one contact
 	// holds, which is what the contract declares the parameter to mean and
