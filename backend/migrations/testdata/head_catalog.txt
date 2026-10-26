@@ -8701,6 +8701,7 @@ public.weekly_review_scorecard.has_lead_block boolean NOT NULL gen=- def=-
 public.weekly_review_scorecard.id uuid NOT NULL gen=- def=uuidv7()
 public.weekly_review_scorecard.lead_advanced integer gen=- def=-
 public.weekly_review_scorecard.lead_answered_in_target integer gen=- def=-
+public.weekly_review_scorecard.lead_arrived integer gen=- def=-
 public.weekly_review_scorecard.lead_breached integer gen=- def=-
 public.weekly_review_scorecard.lead_disqualified integer gen=- def=-
 public.weekly_review_scorecard.lead_promoted integer gen=- def=-
