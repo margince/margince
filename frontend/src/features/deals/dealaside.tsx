@@ -229,7 +229,7 @@ function registrationRows(
   return [
     row(
       "source",
-      "history.field.source",
+      "deal.recordedBy",
       provenanceLabel(
         provenanceOf(
           deal.captured_by,

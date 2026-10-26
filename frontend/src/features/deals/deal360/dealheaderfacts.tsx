@@ -144,7 +144,7 @@ export function DealRecordRows({
           </FieldRow>
         )}
       <ClosingRow deal={deal} />
-      <FieldRow label={t("history.field.source")}>
+      <FieldRow label={t("deal.recordedBy")}>
         <Popover
           label={
             <ProvenanceTag

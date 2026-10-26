@@ -277,9 +277,9 @@ describe("DealScreen — edit, archive (A3)", () => {
       }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Change via partner" }),
+      await screen.findByRole("button", { name: "Change Referring partner" }),
     );
-    await user.click(screen.getByLabelText("via partner"));
+    await user.click(screen.getByLabelText("Referring partner"));
     expect(
       await screen.findByRole("option", { name: "Northgate Partners" }),
     ).toBeTruthy();

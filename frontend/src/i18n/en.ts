@@ -4690,7 +4690,7 @@ export const en = {
     "This deal has no signed contract with its file attached. Say how it was won, then confirm.",
   "deals.winReason": "How was it won?",
   "deals.winReasonPick": "Pick how it was won",
-  "deals.winReasonImported": "Imported from another system",
+  "deals.winReasonImported": "Not recorded (imported)",
   "deals.winReasonPurchaseOrder": "On a purchase order",
   "deals.winReasonVerbal": "Verbally, in person or by phone",
   "deals.winReasonRenewalByEmail": "Renewed by email",
@@ -4703,7 +4703,8 @@ export const en = {
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
   "deal.ownerUnassign": "Unassign",
-  "deal.partnerCompany": "via partner",
+  "deal.partnerCompany": "Referring partner",
+  "deal.recordedBy": "Recorded by",
   // A reference the reader may not read, on a surface with no room for the
   // mask glyph: a Kanban card's company line, and the one entry a withheld
   // picker offers. Both have to say WHICH thing is withheld, because a card

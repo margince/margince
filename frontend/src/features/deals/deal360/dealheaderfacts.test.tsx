@@ -11,7 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FieldGrid } from "../../../design-system/fieldgrid";
 import { UTC_ZONE } from "../../../format/timezone";
-import { LocaleProvider, translate } from "../../../i18n";
+import { type Locale, LocaleProvider, translate } from "../../../i18n";
 import { en } from "../../../i18n/en";
 import { closeWords, DealRecordRows, DealSubtitle } from "./dealheaderfacts";
 
@@ -44,13 +44,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function show(node: React.ReactNode) {
+function show(node: React.ReactNode, locale: Locale = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{node}</LocaleProvider>
+      <LocaleProvider initial={locale}>{node}</LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -318,6 +318,31 @@ describe("the details rows say where a deal stands and how it closed", () => {
       screen.getByText("Logged in HubSpot by Mutaz Suleiman"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Typed by/)).not.toBeInTheDocument();
+  });
+
+  // "Source" is the channel a deal came through, so who recorded it has its own
+  // label. The system it was logged in reads as its maker spells it.
+  it("labels who recorded the deal apart from its source, naming the system as its maker does", () => {
+    show(
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            stage_id: "st-1",
+            source: "hubspot",
+            captured_by: "human:u-importer",
+            author: { display_name: "Mutaz Suleiman", via: "hubspot" },
+          }}
+          stages={stages}
+          locale="vi"
+        />
+      </FieldGrid>,
+      "vi",
+    );
+    expect(screen.getByText("Người ghi nhận")).toBeInTheDocument();
+    expect(screen.queryByText("Nguồn")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Mutaz Suleiman đã ghi nhận trong HubSpot"),
+    ).toBeInTheDocument();
   });
 });
 
