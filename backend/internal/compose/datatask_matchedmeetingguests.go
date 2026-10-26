@@ -31,8 +31,8 @@ func matchedMeetingGuestsDataTask(pool *pgxpool.Pool) datatask.Task {
 	db := InstallationDB(pool)
 	authority := identity.NewService(pool)
 	return datatask.Task{
-		ID: "core/1792990000_matched_meeting_guests", Version: 1,
-		Title: "Adding calendar guests to matched meetings", Requires: []string{"core/1792986616"},
+		ID: "core/1792998483_matched_meeting_guests", Version: 1,
+		Title: "Adding calendar guests to matched meetings", Requires: []string{"core/1792998482"},
 		Steps: []datatask.Step{{
 			Name: "add_calendar_guests", Limit: 100, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
