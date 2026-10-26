@@ -227,10 +227,19 @@ func readHeldActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archive
 func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
 	args := []any{id}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	content, err := auth.ActivityAudienceArm(ctx, "a", arg)
+	audience, err := auth.ActivityAudienceArm(ctx, "a", arg)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	// Content answers to availability as well as audience. readActivity's own
+	// DISCOVER gate folds restricted_at in, so this adds nothing there.
+	//
+	// readHeldActivity skips that gate, so this term is what withholds there.
+	// Without it, write authority over a held row's audience reads that row's
+	// text back from a write.
+	//
+	// The hold says no principal reads restricted content.
+	content := "(" + audience + ") AND " + auth.ActivityAvailableClause("a")
 	q := `SELECT ` + activityColumns(content) + ` FROM activity a WHERE a.id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND a.archived_at IS NULL`
