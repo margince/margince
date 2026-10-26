@@ -3,7 +3,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useId, useRef } from "react";
+import { type ReactNode, useId, useRef } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
@@ -38,6 +38,7 @@ import { useTaskContact } from "../lib/taskcontact";
 import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
 import { TaskNextSteps } from "./tasknextsteps";
+import { taskOriginKey } from "./taskorigin";
 import { refetchAfterWrite } from "./taskwritefollowup";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
@@ -308,6 +309,7 @@ export function TaskDetailDialog({
   onClose,
   update,
   onOpenSource,
+  why,
 }: Readonly<{
   activityId: string;
   // An archived company takes no new activity, so the verbs below would only
@@ -317,6 +319,8 @@ export function TaskDetailDialog({
   onClose: () => void;
   update: ReturnType<typeof useTaskUpdate>;
   onOpenSource: (id: string) => void;
+  // Why the task is on the list it was opened from, which only that list knows.
+  why?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -324,6 +328,7 @@ export function TaskDetailDialog({
   const titleId = useId();
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
+  const origin = task ? taskOriginKey(task) : null;
   // The fetched activity carries the server's per-row answer, so the dialog
   // decides for every host whether its changes would be admitted.
   const rowWritable = useCanWriteRecord("activity", task);
@@ -356,6 +361,7 @@ export function TaskDetailDialog({
           <ErrorLine error={query.error} />
           {task && (
             <div className="form-stack">
+              {origin && <p className="t-body">{t(origin)}</p>}
               {/* Markdown, as the timeline draws the same body. */}
               {task.body && (
                 <div className="t-body task-detail-body">
@@ -400,6 +406,7 @@ export function TaskDetailDialog({
                   <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
                 )}
               </div>
+              {why}
               <TaskNextSteps
                 task={task}
                 className="form-actions task-detail-actions"

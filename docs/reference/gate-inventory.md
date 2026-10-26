@@ -110,6 +110,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendschedulinglimits_test.go` | H3 | The Meetings settings screen stops a title or a location at the contract's length before the request is sent. |
 | `frontendsendpermissionreasons_test.go` | H3 | The composer has its own sentence for every code the send engine refuses with, and no other. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve whatever it offered. |
+| `frontendtaskorigins_test.go` | H3 | Every automatic task source has a sentence in the browser saying what made the task. |
 | `frontendunitspellings_test.go` | H3 | The browser and the server must read a unit's spelling as the same key. |
 | `frontendvendorservices_test.go` | H3 | Which calendar belongs beside which mailbox is answered on both sides of the wire, and the two answers must be the same pairs. |
 | `goversionpins_test.go` | H3 | One Go version, pinned in several places, and they have to agree. |

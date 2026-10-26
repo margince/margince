@@ -6376,6 +6376,24 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.isOpen": "Open",
   "tasks.logged": "Logged",
+  "tasks.origin.no_activity_reminder":
+    "Created by the no-activity reminder: nothing was logged on this record for its set number of days. Get in touch, then mark the task done.",
+  "tasks.origin.check_in_cadence":
+    "Created by the check-in reminder: this record had no contact for its set number of days. Get in touch, then mark the task done.",
+  "tasks.origin.lead_sla":
+    "Created because this lead had no answer within its response time. Answer the lead, then mark the task done.",
+  "tasks.origin.lead_qualify":
+    "Created because this lead stayed open without a decision. Qualify the lead or close it.",
+  "tasks.origin.assurance":
+    "Created by the nightly forecast check: inputs on this deal need attention. The deal page lists them.",
+  "tasks.origin.overnight_reconcile":
+    "Created from a follow-up that the overnight review proposed and someone approved.",
+  "tasks.origin.commitment":
+    "Created from a commitment read out of a conversation.",
+  "tasks.origin.email_request": "Created from a request in an email.",
+  "tasks.origin.which_deal":
+    "Created because a captured email fits more than one open deal. Choose the deal it belongs to.",
+  "tasks.origin.system": "Created by an automation, not typed by a colleague.",
 
   "analytics.sub":
     "Open deals only, converted to {currency}, unweighted and weighted",
@@ -15807,6 +15825,25 @@ export const en = {
   "worklist.pane.never": "Never",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
+  "worklist.why.title": "Why this needs attention",
+  "worklist.why.reasons": "Reasons",
+  "worklist.why.consequence": "If nothing is done",
+  "worklist.why.detail": "Detail",
+  "worklist.consequence.buyer_waits": "The buyer keeps waiting.",
+  "worklist.consequence.promise_breaks": "A commitment is broken.",
+  "worklist.consequence.deal_drifts": "The deal keeps drifting.",
+  "worklist.consequence.deal_slips_past_close":
+    "The deal slips past its close date.",
+  "worklist.consequence.meeting_unprepared": "The meeting starts unprepared.",
+  "worklist.consequence.task_slips": "The task slips past its due date.",
+  "worklist.consequence.work_blocked": "Work that waits on this stays blocked.",
+  "worklist.consequence.customer_never_received":
+    "The customer never gets the message.",
+  "worklist.consequence.you_believe_it_happened":
+    "An approved action stays undone while it looks done.",
+  "worklist.consequence.legal_deadline_missed": "A legal deadline is missed.",
+  "worklist.consequence.mailbox_blind": "Mail stops being captured.",
+  "worklist.consequence.data_drifts": "Records go out of date.",
   "worklist.band.now": "Now",
   "worklist.dueGroup.tomorrow": "Due tomorrow",
   "worklist.dueGroup.this_week": "Due this week",

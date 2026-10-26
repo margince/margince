@@ -267,6 +267,7 @@ function PersonalMorning({
       {linkedTask && (
         <TaskDetailModal
           activityId={linkedTask}
+          item={linkedRow}
           readOnly={!linkedRow?.actions.includes("complete")}
           update={update}
           onClose={() => replaceDial(TASK_PARAM, undefined)}
@@ -275,6 +276,7 @@ function PersonalMorning({
       {context && opensActivity ? (
         <TaskDetailModal
           activityId={context.id}
+          item={context}
           readOnly={!context.actions.includes("complete")}
           update={update}
           onClose={() => setSelected("")}
