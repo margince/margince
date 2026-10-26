@@ -16267,8 +16267,8 @@ export interface paths {
          *     stay private, now to the new owner; an active member keeps theirs. A record the caller may not change stays with the member and is counted
          *     in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
          *     owner (an active human seat that can write, inside the caller's write scope), else `422`
-         *     with `code: owner_not_assignable` and nothing moves. Tasks, automations and deal-room
-         *     stewardships are not moved.
+         *     with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
+         *     caller may not change stays with the member. Automations and deal-room stewardships are not moved.
          */
         post: operations["handOverUserWork"];
         delete?: never;
@@ -33624,6 +33624,8 @@ export interface components {
             company: number;
             deal: number;
             project: number;
+            /** @description Open tasks assigned to the member. */
+            task: number;
         };
         UserHandover: {
             owned: components["schemas"]["HandoverCounts"];

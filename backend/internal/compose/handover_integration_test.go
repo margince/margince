@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -35,7 +36,36 @@ func ownerOf(t *testing.T, e *integration.Env, table string, id ids.UUID) ids.UU
 	return owner
 }
 
-// A departed rep's leads, contacts, company, deal and project all move to the
+// assignedTask writes a task assigned to a rep through the activity writer.
+func assignedTask(t *testing.T, e *integration.Env, subject string, assignee ids.UUID, done bool) ids.UUID {
+	t.Helper()
+	to := ids.From[ids.UserKind](assignee)
+	row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, Source: "manual", AssigneeID: &to,
+	})
+	if err != nil {
+		t.Fatalf("logging task %q: %v", subject, err)
+	}
+	id := ids.UUID(row.Id)
+	if done {
+		finished := true
+		if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](id), activities.UpdateActivityInput{IsDone: &finished}); err != nil {
+			t.Fatalf("completing task %q: %v", subject, err)
+		}
+	}
+	return id
+}
+
+func assigneeOf(t *testing.T, e *integration.Env, task ids.UUID) ids.UUID {
+	t.Helper()
+	assignee, err := ids.Parse(e.WsScalar(t, `SELECT assignee_id::text FROM activity WHERE id = $1`, task))
+	if err != nil {
+		t.Fatalf("read the assignee of task %s: %v", task, err)
+	}
+	return assignee
+}
+
+// A departed rep's leads, contacts, company, deal, project and open tasks all move to the
 // colleague named, each through its own owner-change write. Another rep's deal
 // stays where it is. Nothing the admin can see is left behind.
 func TestAHandoverMovesEverythingADepartedColleagueOwned(t *testing.T) {
@@ -53,6 +83,9 @@ func TestAHandoverMovesEverythingADepartedColleagueOwned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seed project: %v", err)
 	}
+	openTask := assignedTask(t, e, "Call BAER back", e.Rep1, false)
+	assignedTask(t, e, "Sent last week", e.Rep1, true)
+	foreignTask := assignedTask(t, e, "Rep3's call", e.Rep3, false)
 	deactivate(t, e, e.Rep1)
 	seam := handoverSeamFor(e)
 
@@ -60,7 +93,7 @@ func TestAHandoverMovesEverythingADepartedColleagueOwned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("count what the departed rep owns: %v", err)
 	}
-	want := crmcontracts.HandoverCounts{Lead: 2, Contact: 2, Company: 1, Deal: 1, Project: 1}
+	want := crmcontracts.HandoverCounts{Lead: 2, Contact: 2, Company: 1, Deal: 1, Project: 1, Task: 1}
 	if owned != want {
 		t.Fatalf("owned = %+v, want %+v", owned, want)
 	}
@@ -88,6 +121,16 @@ func TestAHandoverMovesEverythingADepartedColleagueOwned(t *testing.T) {
 	}
 	if got := ownerOf(t, e, "deal", foreignDeal); got != e.Rep3 {
 		t.Errorf("another rep's deal moved to %s", got)
+	}
+	if got := assigneeOf(t, e, openTask); got != e.Rep2 {
+		t.Errorf("the open task is assigned to %s, want the colleague it was handed to", got)
+	}
+	if got := assigneeOf(t, e, foreignTask); got != e.Rep3 {
+		t.Errorf("another rep's task moved to %s", got)
+	}
+	if n := e.WsCount(t,
+		`SELECT count(*) FROM activity WHERE kind = 'task' AND is_done AND assignee_id = $1`, e.Rep1); n != 1 {
+		t.Errorf("finished tasks left with the departed rep = %d, want 1: history stays", n)
 	}
 	if n := e.WsCount(t,
 		`SELECT count(*) FROM audit_log WHERE entity_type = 'deal' AND entity_id = $1

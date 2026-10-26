@@ -11798,6 +11798,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.deals_other": "{count} deal",
   "users.handover.projects_one": "{count} dự án",
   "users.handover.projects_other": "{count} dự án",
+  "users.handover.tasks_one": "{count} việc cần làm đang mở",
+  "users.handover.tasks_other": "{count} việc cần làm đang mở",
   "users.removeMfa": "Gỡ đăng nhập hai bước",
   "users.removeMfaConfirmTitle": "Gỡ đăng nhập hai bước của {name}?",
   "users.removeMfaConfirmBody":

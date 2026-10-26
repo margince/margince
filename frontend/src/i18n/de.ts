@@ -12153,6 +12153,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.deals_other": "{count} Deals",
   "users.handover.projects_one": "{count} Projekt",
   "users.handover.projects_other": "{count} Projekte",
+  "users.handover.tasks_one": "{count} offene Aufgabe",
+  "users.handover.tasks_other": "{count} offene Aufgaben",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",
   "users.removeMfaConfirmTitle": "Zweistufige Anmeldung für {name} entfernen?",
   "users.removeMfaConfirmBody":

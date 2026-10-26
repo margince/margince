@@ -12179,6 +12179,8 @@ export const en = {
   "users.handover.deals_other": "{count} deals",
   "users.handover.projects_one": "{count} project",
   "users.handover.projects_other": "{count} projects",
+  "users.handover.tasks_one": "{count} open task",
+  "users.handover.tasks_other": "{count} open tasks",
   "users.removeMfa": "Remove two-step sign-in",
   "users.removeMfaConfirmTitle": "Remove two-step sign-in for {name}?",
   "users.removeMfaConfirmBody":

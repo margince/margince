@@ -40509,6 +40509,9 @@ type HandoverCounts struct {
 	Deal    int `json:"deal"`
 	Lead    int `json:"lead"`
 	Project int `json:"project"`
+
+	// Task Open tasks assigned to the member.
+	Task int `json:"task"`
 }
 
 // HealthDimension One named part of the relationship's health, with the reason for its rating.
