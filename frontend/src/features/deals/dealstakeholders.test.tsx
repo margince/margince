@@ -11,10 +11,9 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider, translate } from "../../i18n";
+import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RelationshipsTab } from "../records/relationshiprows";
-import { AddRelationshipAction } from "../records/relationships";
 
 // A deal's stakeholders were readable on three surfaces — the rail's seats, the
 // committee map, the coverage findings — and writable on none: the edge was
@@ -187,44 +186,6 @@ describe("the stakeholders on a deal", () => {
     // The deal is the anchor, so no company travels: an endpoint shape the
     // rel_*_shape CHECKs refuse earns a 422 rather than a row.
     expect(posted[0]).not.toHaveProperty("company_id");
-  });
-
-  // The committee's gap offers its missing seat. The reader reads the role in
-  // their own words; the server counts the seat by its key.
-  it("opens a missing seat's role in the reader's words and seats it by its key", async () => {
-    const user = setup();
-    const posted: unknown[] = [];
-    stubFetch([], (body) => posted.push(body));
-    render(
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
-        <LocaleProvider initial="vi">
-          <AddRelationshipAction
-            scope={{ deal_id: DEAL }}
-            seatRole="champion"
-          />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
-
-    await user.click(await screen.findByTestId("add-relationship"));
-    const dialog = within(screen.getByRole("dialog"));
-    expect(dialog.getByLabelText(translate("vi", "rel.role"))).toHaveValue(
-      translate("vi", "co.roleLabel.champion"),
-    );
-    await user.type(
-      dialog.getByPlaceholderText(translate("vi", "merge.searchPlaceholder")),
-      "mai",
-    );
-    settleSearch();
-    await user.click(await dialog.findByRole("button", { name: "Mai Trần" }));
-    await user.click(screen.getByTestId("add-relationship-submit"));
-
-    await waitFor(() => expect(posted.length).toBe(1));
-    expect(posted[0]).toMatchObject({ role: "champion" });
   });
 
   it("says nobody is on the deal rather than nothing at all", async () => {

@@ -3,6 +3,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { LocaleProvider, translate } from "../../i18n";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import {
@@ -230,5 +231,50 @@ describe("adding a relationship", () => {
       company_id: "o-9",
       started_at: "2026-03-02",
     });
+  });
+
+  // The committee's gap offers its missing seat. The reader reads the role in
+  // their own words; the server counts the seat by its key.
+  it("opens a missing seat's role in the reader's words and seats it by its key", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, advanceTimeDelta: 5 });
+    const posted: unknown[] = [];
+    stubWithSession(
+      {
+        "GET /contacts": () =>
+          jsonResponse({
+            data: [{ id: "p-9", full_name: "Mai Trần" }],
+            page: { next_cursor: null },
+          }),
+        "POST /relationships": (body) => {
+          posted.push(body);
+          return jsonResponse({ ...baseRel({}), id: "rel-new" }, 201);
+        },
+      },
+      { relationship: ["read", "create"] },
+    );
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderWithQueryClient(
+      <LocaleProvider initial="vi">
+        <AddRelationshipAction scope={dealScope} seatRole="champion" />
+      </LocaleProvider>,
+    );
+
+    await user.click(screen.getByTestId("add-relationship"));
+    const dialog = within(screen.getByRole("dialog"));
+    expect(
+      dialog.getByRole("textbox", { name: translate("vi", "rel.role") }),
+    ).toHaveProperty("value", translate("vi", "co.roleLabel.champion"));
+    await user.type(
+      dialog.getByPlaceholderText(translate("vi", "merge.searchPlaceholder")),
+      "mai",
+    );
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+    await user.click(await dialog.findByRole("button", { name: "Mai Trần" }));
+    await user.click(screen.getByTestId("add-relationship-submit"));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ role: "champion" });
   });
 });
