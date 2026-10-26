@@ -45,9 +45,9 @@ Margince asks for fewer links between records than most CRM products.
 
 Many users get two of these wrong.
 
-**A deal does not need a company.** Name, pipeline, stage and source are required. Value, company and expected close date are not. Value and currency go together: you cannot give one without the other. A deal with no value has no currency either. Qualifying a lead creates a deal with no company at all, because a lead has no company to link.
+**A deal does not need a company.** Name, pipeline, stage and source are required. Value, company and expected close date are not. Value and currency go together: you cannot give one without the other. A deal with no value has no currency either. Qualifying a lead creates a deal with no company, also for a lead linked to a company.
 
-**A lead has no company record behind it.** A lead's company is plain text, not a link to a company record, so imported leads do not create half-filled companies in your CRM.
+A lead's company is plain text until you link it, so imported leads do not create half-filled companies in your CRM. When only one company you can open has the name the lead names, the lead page offers **Link to** that company. Linking makes the company name on the lead open the company. It also adds the lead as a contact at that company, or uses the contact that already has the lead's email. The lead stays open with the status it had. If you later change the lead's company to a name that is not the linked company, the link is removed.
 
 ## Contacts
 

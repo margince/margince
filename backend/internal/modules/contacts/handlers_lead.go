@@ -202,6 +202,20 @@ func (h Handlers) PromoteLead(w http.ResponseWriter, r *http.Request, id crmcont
 	})
 }
 
+// LinkLeadCompany serves POST /leads/{id}/link-company.
+func (h Handlers) LinkLeadCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.LinkLeadCompanyRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	out, err := h.store.LinkLeadCompany(r.Context(), pathID[ids.LeadKind](id), ids.From[ids.CompanyKind](ids.UUID(req.CompanyId)))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // GetLeadSettings serves GET /leads/settings.
 func (h Handlers) GetLeadSettings(w http.ResponseWriter, r *http.Request) {
 	out, err := h.store.GetLeadSettings(r.Context())

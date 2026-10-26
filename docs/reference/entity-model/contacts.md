@@ -6,7 +6,7 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-44 columns · primary key `(id)` · referenced by 47 foreign keys
+44 columns · primary key `(id)` · referenced by 48 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1142,13 +1142,14 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-40 columns · primary key `(id)` · referenced by 18 foreign keys
+41 columns · primary key `(id)` · referenced by 18 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `candidate_company_key` | `text` |  | Loose key for ABM routing without creating a company. |
-| `company_name` | `text` |  | Free text; there is no foreign key to a company. |
+| `company_id` | `uuid` |  | The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. |
+| `company_name` | `text` |  | Free text, as captured or typed. |
 | `disqualify_note` | `text` |  |  |
 | `disqualify_reason_id` | `uuid` |  | Set by DELETE /leads/{id} with a reason; null on an open lead. |
 | `email` | `text` |  | Lowercased; lead-internal dedupe key. |
@@ -1191,6 +1192,7 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `disqualify_reason_id` | `lead_disqualify_reason` | the parent cannot be deleted while this row points at it |
 | `from_contact_id` | `contact` | deleting the parent keeps this row and clears the link |
 | `merged_into_id` | `lead` | deleting the parent keeps this row and clears the link |
@@ -1220,6 +1222,7 @@ The 48 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `idx_lead_candidate_company`: `btree (candidate_company_key) WHERE ((candidate_company_key IS NOT NULL) AND (archived_at IS NULL))`
+- `idx_lead_company`: `btree (company_id) WHERE (company_id IS NOT NULL)`
 - `idx_lead_disqualify_reason`: `btree (disqualify_reason_id) WHERE (disqualify_reason_id IS NOT NULL)`
 - `idx_lead_email_trgm`: `gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)`
 - `idx_lead_from_contact`: `btree (from_contact_id) WHERE (from_contact_id IS NOT NULL)`

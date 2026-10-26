@@ -7152,7 +7152,8 @@ export interface paths {
         /**
          * Create a lead.
          * @description With name + email returns 201 + stable UUID; round-trips on GET (features/01 §6.1).
-         *     `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
+         *     `company_name` is FREE TEXT; a company link (`company_id`) is set only by a human through
+         *     `POST /leads/{id}/link-company`, never on create. Lead-internal exact-email
          *     dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
          *     for idempotent re-import. A `project_id` that names no project the caller can read
          *     answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
@@ -7328,6 +7329,46 @@ export interface paths {
          *     floor on `promote_lead`.
          */
         post: operations["promoteLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/link-company": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link a lead to a company, and add the lead as a contact there.
+         * @description The confirm action behind `company_match`: a human says this lead belongs to this
+         *     company. One transaction sets `company_id`, makes sure the lead has a contact, and makes
+         *     sure that contact has a current employment at the company.
+         *
+         *     The contact is found the way promotion finds it: a live contact holding the lead's email
+         *     is used, otherwise one is created from the lead, and either way its
+         *     `converted_from_lead_id` names this lead when it named none. The lead is NOT promoted:
+         *     its status, owner and place on the lead list stay as they were, and a later promotion
+         *     lands on the same contact. An employment that already exists is kept, not duplicated.
+         *
+         *     The caller needs `lead:update`, `contact:create`, `contact:update`, `company:read` and
+         *     `relationship:create`; a missing grant answers `403` before anything is read. A company
+         *     the caller cannot open answers `404`, as a missing one does. A company that is not the
+         *     lead's current `company_match` answers `422` naming `company_id` with code
+         *     `not_the_lead_match`: the lead's company name changed, a second company of that name
+         *     appeared, or the id was never offered. Repeating a link that already holds changes
+         *     nothing and answers the lead as it is. A lead with neither name nor email answers
+         *     `422` with code `identity_required`; one that is promoted or disqualified answers `404`.
+         */
+        post: operations["linkLeadCompany"];
         delete?: never;
         options?: never;
         head?: never;
@@ -36238,7 +36279,7 @@ export interface components {
              */
             attachment_ids?: string[];
         };
-        /** @description A thin, segregated prospect. Mirrors the `lead` table. NO company FK. */
+        /** @description A thin, segregated prospect. Mirrors the `lead` table. */
         Lead: {
             /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
             readonly legal_hold?: boolean;
@@ -36256,13 +36297,19 @@ export interface components {
             /** @description Normalized LinkedIn profile URL; the exact-match dedupe key. */
             linkedin_url?: string | null;
             title?: string | null;
-            /** @description Free text; there is no foreign key to a company. */
+            /** @description Free text, as captured or typed. It names the company until a human links one (`company_id`). */
             company_name?: string | null;
+            /**
+             * Format: uuid
+             * @description The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company.
+             */
+            readonly company_id?: string | null;
+            company_match?: components["schemas"]["LeadCompanyMatch"];
             /** @description Loose key for ABM routing without creating a company. */
             candidate_company_key?: string | null;
             /**
              * Format: uuid
-             * @description The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no company_id, only candidate_company_key, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
+             * @description The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm: a lead's company_id is an optional link a human confirms, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
              */
             project_id?: string | null;
             /**
@@ -36454,7 +36501,7 @@ export interface components {
             candidate_company_key?: string | null;
             /**
              * Format: uuid
-             * @description The body of work this lead belongs to; carries no same-company guard (a lead has no company).
+             * @description The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.
              */
             project_id?: string | null;
             /**
@@ -36492,6 +36539,20 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** @description A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise. */
+        LeadCompanyMatch: {
+            /** Format: uuid */
+            id: string;
+            /** @description The company's display name. */
+            name: string;
+        };
+        LinkLeadCompanyRequest: {
+            /**
+             * Format: uuid
+             * @description The company to link. The caller must be able to open it.
+             */
+            company_id: string;
+        };
         PromoteLeadRequest: {
             /**
              * @description The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
@@ -36511,7 +36572,7 @@ export interface components {
          * @description Open a deal in the same transaction as the promotion. Omit both ids to use the
          *     default pipeline's first open stage; a pipeline alone takes its first open stage; a
          *     stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-         *     and its company is left unset (a lead has no company). The deal's id lands
+         *     and its company is left unset, also for a lead linked to a company. The deal's id lands
          *     on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
          */
         QualifyDealRequest: {
@@ -62290,6 +62351,38 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    linkLeadCompany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkLeadCompanyRequest"];
+            };
+        };
+        responses: {
+            /** @description The lead as linked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lead"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     qualifyLead: {

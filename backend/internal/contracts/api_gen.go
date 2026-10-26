@@ -38537,7 +38537,7 @@ type DemoteLeadResponse struct {
 	// ContactId The contact the promotion had produced or merged into.
 	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
-	// Lead A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
+	// Lead A thin, segregated prospect. Mirrors the `lead` table.
 	Lead Lead `json:"lead"`
 
 	// Unwind `reversed` — the promotion had created a contact, which is now archived and the
@@ -42540,7 +42540,7 @@ type KnowledgeDocumentList struct {
 //   - `complete`: every live passage carries a vector under the model bound now.
 type KnowledgeEmbedState string
 
-// Lead A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
+// Lead A thin, segregated prospect. Mirrors the `lead` table.
 type Lead struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -42554,7 +42554,13 @@ type Lead struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// CompanyName Free text; there is no foreign key to a company.
+	// CompanyId The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// CompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+	CompanyMatch *LeadCompanyMatch `json:"company_match,omitempty"`
+
+	// CompanyName Free text, as captured or typed. It names the company until a human links one (`company_id`).
 	CompanyName    *string   `json:"company_name,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 	DisqualifyNote *string   `json:"disqualify_note,omitempty"`
@@ -42616,7 +42622,7 @@ type Lead struct {
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
 
-	// ProjectId The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no company_id, only candidate_company_key, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
+	// ProjectId The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm: a lead's company_id is an optional link a human confirms, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
 	ProjectId  *openapi_types.UUID `json:"project_id,omitempty"`
 	PromotedAt *time.Time          `json:"promoted_at,omitempty"`
 
@@ -42690,6 +42696,14 @@ type LeadStatus string
 
 // LeadStatusSetBy Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.
 type LeadStatusSetBy string
+
+// LeadCompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+type LeadCompanyMatch struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Name The company's display name.
+	Name string `json:"name"`
+}
 
 // LeadDisqualifyReason defines model for LeadDisqualifyReason.
 type LeadDisqualifyReason struct {
@@ -43392,6 +43406,12 @@ type LifecyclePreviewEvidenceScope string
 
 // LinkFinanceSourceCustomerRequest defines model for LinkFinanceSourceCustomerRequest.
 type LinkFinanceSourceCustomerRequest struct {
+	CompanyId openapi_types.UUID `json:"company_id"`
+}
+
+// LinkLeadCompanyRequest defines model for LinkLeadCompanyRequest.
+type LinkLeadCompanyRequest struct {
+	// CompanyId The company to link. The caller must be able to open it.
 	CompanyId openapi_types.UUID `json:"company_id"`
 }
 
@@ -46889,7 +46909,7 @@ type PromoteLeadRequest struct {
 	// Deal Open a deal in the same transaction as the promotion. Omit both ids to use the
 	// default pipeline's first open stage; a pipeline alone takes its first open stage; a
 	// stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-	// and its company is left unset (a lead has no company). The deal's id lands
+	// and its company is left unset, also for a lead linked to a company. The deal's id lands
 	// on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
 	Deal *QualifyDealRequest `json:"deal,omitempty"`
 
@@ -47350,7 +47370,7 @@ type PutOnboardingStateRequestStep string
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
 // default pipeline's first open stage; a pipeline alone takes its first open stage; a
 // stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-// and its company is left unset (a lead has no company). The deal's id lands
+// and its company is left unset, also for a lead linked to a company. The deal's id lands
 // on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
 type QualifyDealRequest struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
@@ -53119,7 +53139,7 @@ type UpdateLeadRequest struct {
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
 
-	// ProjectId The body of work this lead belongs to; carries no same-company guard (a lead has no company).
+	// ProjectId The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
 	// Score Manual human score override (formulas §3.1, AC-S1). Omit to keep the computed lead-local score. Setting it REQUIRES `score_override_reason`; passing null clears the override and resumes recompute.
@@ -64220,6 +64240,9 @@ type DemoteLeadJSONRequestBody = DemoteLeadRequest
 // DraftLeadEmailJSONRequestBody defines body for DraftLeadEmail for application/json ContentType.
 type DraftLeadEmailJSONRequestBody = DraftSteering
 
+// LinkLeadCompanyJSONRequestBody defines body for LinkLeadCompany for application/json ContentType.
+type LinkLeadCompanyJSONRequestBody = LinkLeadCompanyRequest
+
 // SetLeadManualSignalJSONRequestBody defines body for SetLeadManualSignal for application/json ContentType.
 type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest
 
@@ -70865,6 +70888,22 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "captured_by")
 	}
 
+	if raw, found := object["company_id"]; found {
+		err = json.Unmarshal(raw, &a.CompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_id': %w", err)
+		}
+		delete(object, "company_id")
+	}
+
+	if raw, found := object["company_match"]; found {
+		err = json.Unmarshal(raw, &a.CompanyMatch)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_match': %w", err)
+		}
+		delete(object, "company_match")
+	}
+
 	if raw, found := object["company_name"]; found {
 		err = json.Unmarshal(raw, &a.CompanyName)
 		if err != nil {
@@ -71292,6 +71331,20 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 	object["captured_by"], err = json.Marshal(a.CapturedBy)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
+	}
+
+	if a.CompanyId != nil {
+		object["company_id"], err = json.Marshal(a.CompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
+		}
+	}
+
+	if a.CompanyMatch != nil {
+		object["company_match"], err = json.Marshal(a.CompanyMatch)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_match': %w", err)
+		}
 	}
 
 	if a.CompanyName != nil {
@@ -77138,6 +77191,9 @@ type ServerInterface interface {
 	// Draft an email to this lead, grounded in their record.
 	// (POST /leads/{id}/draft-email)
 	DraftLeadEmail(w http.ResponseWriter, r *http.Request, id Id)
+	// Link a lead to a company, and add the lead as a contact there.
+	// (POST /leads/{id}/link-company)
+	LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id)
 	// List current and superseded human-provided qualification signals.
 	// (GET /leads/{id}/manual-signals)
 	ListLeadManualSignals(w http.ResponseWriter, r *http.Request, id Id)
@@ -81566,6 +81622,12 @@ func (_ Unimplemented) DemoteLead(w http.ResponseWriter, r *http.Request, id Id,
 // Draft an email to this lead, grounded in their record.
 // (POST /leads/{id}/draft-email)
 func (_ Unimplemented) DraftLeadEmail(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Link a lead to a company, and add the lead as a contact there.
+// (POST /leads/{id}/link-company)
+func (_ Unimplemented) LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -107463,6 +107525,38 @@ func (siw *ServerInterfaceWrapper) DraftLeadEmail(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// LinkLeadCompany operation middleware
+func (siw *ServerInterfaceWrapper) LinkLeadCompany(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LinkLeadCompany(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLeadManualSignals operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadManualSignals(w http.ResponseWriter, r *http.Request) {
 
@@ -123667,6 +123761,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads/{id}/draft-email", wrapper.DraftLeadEmail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/link-company", wrapper.LinkLeadCompany)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/manual-signals", wrapper.ListLeadManualSignals)

@@ -16286,6 +16286,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.figure.booked": "Đã đặt",
   "lead.figure.respondedIn": "Sau {span}",
   "lead.figure.notLinked": "Chưa liên kết với công ty",
+  "lead.figure.linked": "Công ty đã liên kết",
+  "lead.company.linkOffer": "Liên kết với {name}",
+  "lead.company.linkTitle": "Liên kết lead này với {name}?",
+  "lead.company.linkConfirm": "Liên kết công ty",
+  "lead.company.linkOpens": "Tên công ty trên lead này sẽ mở {name}.",
+  "lead.company.linkContact":
+    "Lead này được thêm làm liên hệ tại {name}. Trạng thái của lead không đổi.",
   "lead.timeline.received": "{at} · đã nhận",
   "lead.timeline.weReplied": "Bạn đã trả lời",
   "lead.timeline.repliedIn": "{at} · sau {span}",

@@ -16747,6 +16747,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.figure.booked": "Gebucht",
   "lead.figure.respondedIn": "In {span}",
   "lead.figure.notLinked": "Mit keinem Unternehmen verknüpft",
+  "lead.figure.linked": "Verknüpftes Unternehmen",
+  "lead.company.linkOffer": "Mit {name} verknüpfen",
+  "lead.company.linkTitle": "Diesen Lead mit {name} verknüpfen?",
+  "lead.company.linkConfirm": "Unternehmen verknüpfen",
+  "lead.company.linkOpens":
+    "Der Unternehmensname dieses Leads öffnet dann {name}.",
+  "lead.company.linkContact":
+    "Dieser Lead wird als Kontakt bei {name} angelegt. Sein Status ändert sich nicht.",
   "lead.timeline.received": "{at} · eingegangen",
   "lead.timeline.weReplied": "Du hast geantwortet",
   "lead.timeline.repliedIn": "{at} · in {span}",

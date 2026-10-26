@@ -24,6 +24,7 @@ import {
 } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import type { Locale, Translator } from "../../i18n";
+import { routeHash } from "../../lib/router";
 import { movesLastActivity } from "./lastactivity";
 import { promoteEligible, scoreFactorLabel } from "./leadpresentation";
 import { scoreTone } from "./leadpresentation.board";
@@ -239,7 +240,26 @@ export type LeadFigure = Readonly<{
   value: string;
   detail?: string;
   tone?: ReadingTone;
+  // The record the figure names, when it names one.
+  href?: string;
 }>;
+
+// The company figure opens the company once a human linked it, and says it is
+// not linked while the name is only typed.
+function companyFigureLink(
+  lead: Lead,
+  t: Translator,
+): Pick<LeadFigure, "detail" | "href"> {
+  if (lead.company_id) {
+    return {
+      detail: t("lead.figure.linked"),
+      href: routeHash({ screen: "companies", id: lead.company_id }),
+    };
+  }
+  return lead.company_name?.trim()
+    ? { detail: t("lead.figure.notLinked") }
+    : {};
+}
 
 /** The four cells under the timeline: first response, last touch, the next
  *  booked meeting, and the company the lead named. */
@@ -262,10 +282,7 @@ export function leadFigures(
       key: "company",
       label: t("lead.readings.company"),
       value: lead.company_name?.trim() || t("lead.readings.noCompany"),
-      // Free text on the lead, never a link: a lead has no company record.
-      detail: lead.company_name?.trim()
-        ? t("lead.figure.notLinked")
-        : undefined,
+      ...companyFigureLink(lead, t),
     },
   ];
 }

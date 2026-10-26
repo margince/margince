@@ -15,6 +15,7 @@ import { addedViaFor } from "../../lib/leadorigins";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { activityMarks } from "../../lib/standingmarks";
+import { LeadCompany } from "./leadcompany";
 import { useLeadStatusChanges } from "./leadhistory";
 import type { Lead, LeadWriter } from "./leads";
 import { LeadStepper } from "./leads.stepper";
@@ -151,7 +152,14 @@ export function LeadHowItStands({
               key={figure.key}
               label={figure.label}
               value={figure.value}
-              detail={figure.detail}
+              detail={
+                figure.key === "company" && lead.company_match ? (
+                  <LeadCompany lead={lead} nameShown />
+                ) : (
+                  figure.detail
+                )
+              }
+              href={figure.href}
               tone={figure.tone ? statTone(figure.tone) : undefined}
             />
           ))}

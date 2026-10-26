@@ -147,8 +147,6 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       }
       name={leadIdentityName(lead) || t("lead.unnamed")}
       identity={lead.id}
-      // A lead carries no company FK, so unlike the contact's subtitle the
-      // company here is never a link.
       nameBadge={<LeadSubtitle lead={lead} />}
       // A reader has to know this is a prospect and not a contact before they
       // read anything else about them.
