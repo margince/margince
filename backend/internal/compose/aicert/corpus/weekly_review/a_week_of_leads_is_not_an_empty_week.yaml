@@ -17,7 +17,7 @@ fixture:
     brief_items_acted: 0
     brief_items_dismissed: 0
     leads_routed: 6
-    leads_answered_in_target: 5
+    leads_first_responses_recorded_by_close: 5
     leads_breached: 1
     meetings_held: 3
     meetings_with_next_step: 2
@@ -27,14 +27,14 @@ expect:
   answer:
     must_mention: []
     # The failure this case exists for: reading a row of zeroed DEAL counts as
-    # an empty week. This rep answered five of six new leads inside the target
+    # an empty week. This rep gave five of six new leads a first response by the close
     # and sat in three meetings — a full week by any reading, and the one shape
     # an SDR's week most often takes. Calling it quiet tells them their work
     # did not count.
     must_not_mention: ["quiet", "nothing happened", "uneventful", "slow week"]
   bands: { certified_min: 70, degraded_min: 50, floor: 40 }
   rubric: >
-    The week held real work: six leads routed, five answered inside the target,
+    The week held real work: six leads routed, five with a first response recorded by the close,
     one missed, three meetings held and two of them producing a next step. A
     good sentence says what was done — the lead responses, the meetings, or
     both. It must not call the week quiet or empty, because the deal counts

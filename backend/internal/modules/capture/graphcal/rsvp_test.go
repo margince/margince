@@ -78,3 +78,43 @@ func TestADeclinedInvitationSettlesAsACancellation(t *testing.T) {
 		t.Fatalf("Settle() = %v, want the declined meeting closed", got)
 	}
 }
+
+// Each attendee's status.response reaches the party list in the connector's words.
+func TestEachAttendeesAnswerIsMappedOffTheirStatus(t *testing.T) {
+	t.Parallel()
+	attendee := func(address, response string) map[string]any {
+		return map[string]any{"type": "required", "emailAddress": map[string]string{"address": address},
+			"status": map[string]string{"response": response}}
+	}
+	raw, err := json.Marshal(map[string]any{
+		"id": "evt-answers", "subject": "Review", "isCancelled": false,
+		"start":          map[string]string{"dateTime": "2026-03-04T09:00:00.0000000", "timeZone": "UTC"},
+		"organizer":      map[string]any{"emailAddress": map[string]string{"address": "client@acme.test"}},
+		"responseStatus": map[string]string{"response": "accepted"},
+		"attendees": []map[string]any{
+			attendee("yes@acme.test", "accepted"), attendee("no@acme.test", "declined"),
+			attendee("maybe@acme.test", "tentativelyAccepted"), attendee("unread@acme.test", "notResponded"),
+			attendee("none@acme.test", "none"), attendee("odd@acme.test", "somethingNew"),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	parties, err := ParticipantsOf(raw, rsvpOwner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, p := range parties.Participants {
+		got[p.Email] = p.Response
+	}
+	want := map[string]string{
+		"yes@acme.test": "accepted", "no@acme.test": "declined", "maybe@acme.test": "tentative",
+		"unread@acme.test": "needs_action", "none@acme.test": "needs_action", "odd@acme.test": "", "client@acme.test": "",
+	}
+	for address, response := range want {
+		if got[address] != response {
+			t.Errorf("%s answered %q, want %q", address, got[address], response)
+		}
+	}
+}

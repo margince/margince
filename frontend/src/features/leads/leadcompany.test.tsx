@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { LeadCompany } from "./leadcompany";
+import { LeadCompany, useLeadCompanyName } from "./leadcompany";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -32,9 +32,7 @@ const lead: Lead = {
 
 const LINK_GRANTS: GrantSpec = {
   lead: ["read", "update"],
-  contact: ["read", "create", "update"],
   company: ["read"],
-  relationship: ["create"],
 };
 
 const match = { id: "c-9", name: "Nordwind Logistik GmbH" };
@@ -93,7 +91,7 @@ describe("LeadCompany", () => {
     expect(screen.queryByText("Nordwind Logistik")).toBeNull();
   });
 
-  it("offers the matched company and says both things the link does", async () => {
+  it("offers the matched company and says the contact waits for qualifying", async () => {
     const posted = stubServer();
     render(<LeadCompany lead={{ ...lead, company_match: match }} />);
     expect(screen.getByText("Nordwind Logistik")).toBeTruthy();
@@ -107,7 +105,7 @@ describe("LeadCompany", () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        "This lead is added as a contact at Nordwind Logistik GmbH. Its status does not change.",
+        "No contact is created now. When you qualify this lead, it becomes a contact at Nordwind Logistik GmbH.",
       ),
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Link company" }));
@@ -130,12 +128,34 @@ describe("LeadCompany", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("offers no link to a reader without the relationship grant", () => {
+  it("offers no link to a reader without lead update", () => {
     stubServer();
     render(<LeadCompany lead={{ ...lead, company_match: match }} />, {
       ...LINK_GRANTS,
-      relationship: [],
+      lead: ["read"],
     });
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("useLeadCompanyName", () => {
+  function Name({ of }: Readonly<{ of: Lead }>) {
+    return <output>{useLeadCompanyName(of)}</output>;
+  }
+
+  it("names a linked company by its own name, not the typed one", async () => {
+    stubServer();
+    render(<Name of={{ ...lead, company_id: "c-7" }} />);
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe(
+        "Nordwind Holding SE",
+      ),
+    );
+  });
+
+  it("names an unlinked company by the typed name", () => {
+    stubServer();
+    render(<Name of={lead} />);
+    expect(screen.getByRole("status").textContent).toBe("Nordwind Logistik");
   });
 });

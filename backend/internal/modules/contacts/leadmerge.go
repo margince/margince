@@ -64,6 +64,10 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		commsauthz.LeadStopSubject(targetID)); err != nil {
 		return crmcontracts.Lead{}, err
 	}
+	company, err := lockLeadCompanyBeforeLead(ctx, tx, sourceID)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	_, tgtLock, err := storekit.LockPair(ctx, tx, entityLead, sourceID.UUID, targetID.UUID)
 	if err != nil {
 		return crmcontracts.Lead{}, err
@@ -89,6 +93,9 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	}
 	p := buildLeadSurvivorshipPatch(tgt, src)
 	if err := carryWorkedFromContact(ctx, tx, p, sourceID, targetID); err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if err := carryLeadCompanyLink(ctx, tx, p, tgt, src, company); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if !p.Empty() {
@@ -270,5 +277,53 @@ func carryWorkedFromContact(ctx context.Context, tx pgx.Tx, p *storekit.Patch, s
 		return err
 	}
 	p.Set("from_contact_id", nil, source.UUID)
+	return nil
+}
+
+// lockedCompany is the company a lead merge locked before its leads, and
+// whether it was live then.
+type lockedCompany struct {
+	id   *ids.CompanyID
+	live bool
+}
+
+// lockLeadCompanyBeforeLead locks the company the loser is linked to before any
+// lead row, the order a company merge takes when it moves linked leads.
+func lockLeadCompanyBeforeLead(ctx context.Context, tx pgx.Tx, sourceID ids.LeadID) (lockedCompany, error) {
+	company, err := leadLinkedCompany(ctx, tx, sourceID)
+	if err != nil || company == nil {
+		return lockedCompany{}, err
+	}
+	live, err := companyIsLive(ctx, tx, *company)
+	if err != nil {
+		return lockedCompany{}, err
+	}
+	return lockedCompany{id: company, live: live}, nil
+}
+
+// carryLeadCompanyLink gives the survivor the loser's company link, fill-only.
+// It does so only when the survivor has none and its name still names that
+// company. A loser relinked since the lock answers a conflict.
+func carryLeadCompanyLink(ctx context.Context, tx pgx.Tx, p *storekit.Patch, target, source crmcontracts.Lead, locked lockedCompany) error {
+	var sourceCompany *ids.CompanyID
+	if source.CompanyId != nil {
+		id := ids.From[ids.CompanyKind](ids.UUID(*source.CompanyId))
+		sourceCompany = &id
+	}
+	if !sameCompany(sourceCompany, locked.id) {
+		return apperrors.ErrConflict
+	}
+	if target.CompanyId != nil || locked.id == nil || !locked.live {
+		return nil
+	}
+	name := target.CompanyName
+	if name == nil {
+		name = source.CompanyName
+	}
+	named, err := namesCompany(ctx, tx, *locked.id, name)
+	if err != nil || !named {
+		return err
+	}
+	p.Set(leadCompanyIDColumn, nil, locked.id.UUID)
 	return nil
 }

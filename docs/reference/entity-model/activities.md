@@ -6,7 +6,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-67 columns · primary key `(id)` · referenced by 38 foreign keys
+68 columns · primary key `(id)` · referenced by 38 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -32,6 +32,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `due_at` | `timestamp with time zone` |  | Task only. |
 | `duration_seconds` | `integer` |  | Meeting/call only. |
 | `foreign_link` | `boolean` |  |  |
+| `guests_left_out` | `integer`, default `0` | yes | Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. |
 | `has_calendar_part` | `boolean`, default `false` | yes |  |
 | `host_user_id` | `uuid` |  | Meeting only: the member of this company who held it. |
 | `inbound_sender_authenticated` | `boolean`, default `false` | yes |  |
@@ -104,6 +105,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_direction_check`: `CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound', 'outbound']))))`
 - `activity_done_at`: `CHECK (((is_done = false) OR (done_at IS NOT NULL)))`
 - `activity_exact_booking_duration`: `CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))`
+- `activity_guests_left_out_check`: `CHECK ((guests_left_out >= 0))`
 - `activity_language_check`: `CHECK (((language IS NULL) OR (language = ANY (ARRAY['de', 'en', 'vi']))))`
 - `activity_meeting_host`: `CHECK (((host_user_id IS NULL) OR (kind = 'meeting')))`
 - `activity_meeting_no_overlap`: `EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC', occurred_at), (timezone('UTC', occurred_at) + (( CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)::double precision * '00:00:01'::interval)), '[)') WITH &&) WHERE (((kind = 'meeting') AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled')))`
@@ -413,7 +415,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_participant
 
-11 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -424,6 +426,8 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `channel_user_id` | `text` |  |  |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `display_name` | `text` |  |  |
+| `past_party_cap` | `boolean`, default `false` | yes |  |
+| `response` | `text` |  | One of `accepted`, `declined`, `tentative`, `needs_action`. |
 | `role` | `text` | yes | One of `from`, `to`, `cc`, `bcc`, `attendee`, `organizer`. |
 | `roster_seat` | `uuid` |  | Points at `app_user.id`. |
 | `user_id` | `uuid` |  | Points at `app_user.id`. |
@@ -441,6 +445,8 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 **Rules**
 
 - `activity_participant_identity`: `CHECK (((user_id IS NOT NULL) OR (contact_id IS NOT NULL) OR (address IS NOT NULL) OR (channel_user_id IS NOT NULL)))`
+- `activity_participant_past_party_cap_unresolved`: `CHECK (((NOT past_party_cap) OR ((user_id IS NULL) AND (contact_id IS NULL))))`
+- `activity_participant_response_check`: `CHECK ((response = ANY (ARRAY['accepted', 'declined', 'tentative', 'needs_action'])))`
 - `activity_participant_role_check`: `CHECK ((role = ANY (ARRAY['from', 'to', 'cc', 'bcc', 'attendee', 'organizer'])))`
 
 **Indexes**

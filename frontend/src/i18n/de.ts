@@ -1688,9 +1688,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.week.leads_one": "{count} Lead zugewiesen.",
   "brief.week.leads_other": "{count} Leads zugewiesen.",
   "brief.week.responses_one":
-    "{count} Lead innerhalb der Zielzeit beantwortet.",
+    "{count} Lead bis Wochenende erstmals beantwortet.",
   "brief.week.responses_other":
-    "{count} Leads innerhalb der Zielzeit beantwortet.",
+    "{count} Leads bis Wochenende erstmals beantwortet.",
   "brief.week.lost_one": "{count} Deal verloren.",
   "brief.week.lost_other": "{count} Deals verloren.",
   "brief.row.details": "Details",
@@ -2064,6 +2064,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.guests_added": "Gäste aus dem Kalender ergänzt",
   "history.field.guest_links_added": "Gäste aus dem Kalender verknüpft",
   "history.field.guests_retired": "Gäste vom Kalender entfernt",
+  "history.field.guest_answers_changed":
+    "Antworten der Gäste aus dem Kalender aktualisiert",
+  "history.field.guests_left_out": "Nicht aufgeführte Gäste",
   "history.field.relinked_emails": "E-Mail-Adressen übernommen",
   "history.field.relinked_phones": "Telefonnummern übernommen",
   "history.field.relinked_relationships": "Beziehungen übernommen",
@@ -3969,6 +3972,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Termin ist in einem Kalender gebucht und braucht deshalb eine Uhrzeit, nicht nur ein Datum.",
   "activity.detail.when": "Wann",
   "activity.detail.attendees": "Teilnehmende",
+  "activity.detail.response.declined": "Abgesagt",
+  "activity.detail.response.tentative": "Vielleicht",
+  "activity.detail.response.needsAction": "Keine Antwort",
+  "activity.detail.guestsLeftOut_one":
+    "und {count} weiterer Gast, nicht aufgeführt",
+  "activity.detail.guestsLeftOut_other":
+    "und {count} weitere Gäste, nicht aufgeführt",
   "activity.detail.colleagues": "Teammitglieder",
   "activity.detail.filedUnder": "Abgelegt unter",
   "email.detail.bccWithheld":
@@ -5256,9 +5266,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.scorecard.advancedBasis":
     "Jeder Wechsel zählt: ein Lead mit zwei Phasenwechseln zählt doppelt",
   "brief.weekly.scorecard.answeredInTarget": "Antworten nach der Zielzeit",
-  "brief.weekly.scorecard.answeredDetail":
-    "In der Zielzeit beantwortet: {count}",
-  "brief.weekly.scorecard.allInTarget": "Alle in der Zielzeit beantwortet",
+  "brief.weekly.scorecard.noArrivals": "Diese Woche kam kein Lead an",
+  "brief.weekly.scorecard.unanswered":
+    "Ohne erfasste erste Antwort bis Wochenende: {count} von {total}",
+  "brief.weekly.scorecard.allResponded":
+    "Erste Antwort bis Wochenende erfasst: alle {total}",
+  "brief.weekly.scorecard.respondedNoCohort":
+    "Erste Antwort bis Wochenende erfasst: {count}. Eingänge wurden für diese Woche nicht erfasst",
   "brief.weekly.scorecard.meetingsHeld": "Als stattgefunden markiert",
   "brief.weekly.scorecard.meetingsBasis":
     "Gebucht: {booked} · Nicht erschienen: {noShow}",
@@ -16952,8 +16966,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkConfirm": "Unternehmen verknüpfen",
   "lead.company.linkOpens":
     "Der Unternehmensname dieses Leads öffnet dann {name}.",
-  "lead.company.linkContact":
-    "Dieser Lead wird als Kontakt bei {name} angelegt. Sein Status ändert sich nicht.",
+  "lead.company.linkOnQualify":
+    "Es wird noch kein Kontakt angelegt. Wenn du diesen Lead qualifizierst, wird er ein Kontakt bei {name}.",
   "lead.timeline.received": "{at} · eingegangen",
   "lead.timeline.weReplied": "Du hast geantwortet",
   "lead.timeline.repliedIn": "{at} · in {span}",

@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import type { ListColumn } from "../../design-system/listtable";
 import { LocaleProvider, useT } from "../../i18n";
@@ -46,18 +47,36 @@ function Cell({
   return <div data-testid="cell">{column.cell(row)}</div>;
 }
 
-function renderCell(columnKey: string, row?: Lead): ListColumn<Lead> {
+// The cell sits in a clickable row, as the table draws it. A test can then see
+// whether a click inside the cell also opened the row.
+function renderCell(
+  columnKey: string,
+  row?: Lead,
+  onRow: () => void = () => undefined,
+): ListColumn<Lead> {
   let found: ListColumn<Lead> | undefined;
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   render(
-    <LocaleProvider initial="en">
-      <Cell columnKey={columnKey} onColumn={(c) => (found = c)} row={row} />
-    </LocaleProvider>,
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: a stand-in for the table row's own click */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: a stand-in for the table row's own click */}
+        <div onClick={onRow}>
+          <Cell columnKey={columnKey} onColumn={(c) => (found = c)} row={row} />
+        </div>
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
   if (!found) throw new Error("column not rendered");
   return found;
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("the lead table's columns", () => {
   it("count open tasks in the singular for one and the plural for the rest", () => {
@@ -73,6 +92,35 @@ describe("the lead table's columns", () => {
     const column = renderCell("company");
     expect(column.sort).toBe("company_name");
     expect(screen.getByTestId("cell").textContent).toBe("Northwind Traders");
+  });
+
+  it("open a linked company under its own name, without opening the row", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ id: "c-7", display_name: "Northwind Holding" }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+      ),
+    );
+    const onRow = vi.fn();
+    renderCell("company", { ...lead, company_id: "c-7" }, onRow);
+    const link = await screen.findByRole("link", { name: "Northwind Holding" });
+    expect(link.getAttribute("href")).toContain("c-7");
+    expect(document.querySelector('[title="Northwind Traders"]')).toBeNull();
+    fireEvent.click(link);
+    expect(onRow).not.toHaveBeenCalled();
+  });
+
+  it("show an unlinked company as plain text, with its name on hover", () => {
+    renderCell("company");
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByTestId("cell").textContent).toBe("Northwind Traders");
+    expect(
+      document.querySelector('[title="Northwind Traders"]'),
+    ).not.toBeNull();
   });
 
   it("no longer trail the company after the name as a caption", () => {

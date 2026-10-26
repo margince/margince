@@ -124,6 +124,14 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 // timing reads only those, here and in the reporting catalog.
 const NonImportedLeadSQL = "NOT starts_with(COALESCE(l.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
 
+// leadArrivedInWeekSQL is the week's lead cohort under alias l, with the
+// window bound at positions 1 and 2. A lead is in it when it arrived in the
+// window, is not archived and no import wrote it. Both the weekly counts and
+// the frozen scorecard read it, so they describe the same leads.
+const leadArrivedInWeekSQL = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
+		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
+		      AND l.archived_at IS NULL AND ` + NonImportedLeadSQL
+
 // Both the weekly counts and the funnel scorecard use the arrival cohort and
 // the same closing instant. A missing breach stamp does not prove an SLA target.
 const (
@@ -156,22 +164,20 @@ func countWeekLeads(
 		return 0, 0, 0, err
 	}
 	scope = orUnbounded(scope)
-	// One window expression, three counts over it.
-	const arrived = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d AND ` + NonImportedLeadSQL
+	// One cohort, three counts over it.
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
 		  (SELECT count(*) FROM lead l
-		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
-		      AND `+arrived+` AND (%[4]s)),
+		    WHERE l.owner_id = $%[3]d
+		      AND `+leadArrivedInWeekSQL+` AND (%[4]s)),
 		  (SELECT count(*) FROM lead l
-		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
-		      AND `+arrived+`
+		    WHERE l.owner_id = $%[3]d
+		      AND `+leadArrivedInWeekSQL+`
 		      AND `+responseRecordedInWeekSQL+`
 		      AND (%[4]s)),
 		  (SELECT count(*) FROM lead l
-		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
-		      AND `+arrived+`
+		    WHERE l.owner_id = $%[3]d
+		      AND `+leadArrivedInWeekSQL+`
 		      AND `+breachRecordedInWeekSQL+` AND (%[4]s))`,
 		startPos, endPos, userPos, scope), args...).
 		Scan(&routed, &answered, &breached)

@@ -12,6 +12,7 @@ public.activity.activity_day_holds_no_host_slot CHECK (((occurred_precision = 'i
 public.activity.activity_direction_check CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound'::text, 'outbound'::text]))))
 public.activity.activity_done_at CHECK (((is_done = false) OR (done_at IS NOT NULL)))
 public.activity.activity_exact_booking_duration CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))
+public.activity.activity_guests_left_out_check CHECK ((guests_left_out >= 0))
 public.activity.activity_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE SET NULL (host_user_id)
 public.activity.activity_invitation_sender_fkey FOREIGN KEY (invitation_sender) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_kind_fkey FOREIGN KEY (kind) REFERENCES activity_kind(kind)
@@ -75,6 +76,7 @@ public.activity.done_at timestamp with time zone gen=- def=-
 public.activity.due_at timestamp with time zone gen=- def=-
 public.activity.duration_seconds integer gen=- def=-
 public.activity.foreign_link boolean gen=- def=-
+public.activity.guests_left_out integer NOT NULL gen=- def=0
 public.activity.has_calendar_part boolean NOT NULL gen=- def=false
 public.activity.host_user_id uuid gen=- def=-
 public.activity.id uuid NOT NULL gen=- def=uuidv7()
@@ -350,7 +352,9 @@ public.activity_participant.activity_id uuid NOT NULL gen=- def=-
 public.activity_participant.activity_participant_activity_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.activity_participant.activity_participant_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.activity_participant.activity_participant_identity CHECK (((user_id IS NOT NULL) OR (contact_id IS NOT NULL) OR (address IS NOT NULL) OR (channel_user_id IS NOT NULL)))
+public.activity_participant.activity_participant_past_party_cap_unresolved CHECK (((NOT past_party_cap) OR ((user_id IS NULL) AND (contact_id IS NULL))))
 public.activity_participant.activity_participant_pkey PRIMARY KEY (id)
+public.activity_participant.activity_participant_response_check CHECK ((response = ANY (ARRAY['accepted'::text, 'declined'::text, 'tentative'::text, 'needs_action'::text])))
 public.activity_participant.activity_participant_role_check CHECK ((role = ANY (ARRAY['from'::text, 'to'::text, 'cc'::text, 'bcc'::text, 'attendee'::text, 'organizer'::text])))
 public.activity_participant.activity_participant_roster_seat_fkey FOREIGN KEY (roster_seat) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity_participant.activity_participant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
@@ -361,6 +365,8 @@ public.activity_participant.contact_id uuid gen=- def=-
 public.activity_participant.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_participant.display_name text gen=- def=-
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
+public.activity_participant.past_party_cap boolean NOT NULL gen=- def=false
+public.activity_participant.response text gen=- def=-
 public.activity_participant.role text NOT NULL gen=- def=-
 public.activity_participant.roster_seat uuid gen=- def=-
 public.activity_participant.settlement_evidence_share CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_participant()
@@ -7701,7 +7707,7 @@ public.team_weekly_review.team_weekly_review_money_names_its_currency CHECK (((b
 public.team_weekly_review.team_weekly_review_name_present CHECK ((btrim(team_name) <> ''::text))
 public.team_weekly_review.team_weekly_review_pkey PRIMARY KEY (id)
 public.team_weekly_review.team_weekly_review_quality_tallies CHECK ((((proposals_accepted IS NULL) OR (proposals_accepted >= 0)) AND ((proposals_rejected IS NULL) OR (proposals_rejected >= 0)) AND ((auto_change_reversals IS NULL) OR (auto_change_reversals >= 0))))
-public.team_weekly_review.team_weekly_review_subsets CHECK (((meetings_with_next_step <= meetings_held) AND (commitments_kept <= commitments_due) AND ((leads_answered_in_target + leads_breached) <= leads_routed)))
+public.team_weekly_review.team_weekly_review_subsets CHECK (((meetings_with_next_step <= meetings_held) AND (commitments_kept <= commitments_due) AND (leads_answered_in_target <= leads_routed) AND (leads_breached <= leads_routed)))
 public.team_weekly_review.uq_team_weekly_review_team_week UNIQUE (team_id, local_week_start)
 public.team_weekly_review_coverage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team_weekly_review_coverage.absent text gen=- def=-
@@ -8701,6 +8707,7 @@ public.weekly_review_scorecard.has_lead_block boolean NOT NULL gen=- def=-
 public.weekly_review_scorecard.id uuid NOT NULL gen=- def=uuidv7()
 public.weekly_review_scorecard.lead_advanced integer gen=- def=-
 public.weekly_review_scorecard.lead_answered_in_target integer gen=- def=-
+public.weekly_review_scorecard.lead_arrived integer gen=- def=-
 public.weekly_review_scorecard.lead_breached integer gen=- def=-
 public.weekly_review_scorecard.lead_disqualified integer gen=- def=-
 public.weekly_review_scorecard.lead_promoted integer gen=- def=-
@@ -8712,6 +8719,7 @@ public.weekly_review_scorecard.weekly_review_id uuid NOT NULL gen=- def=-
 public.weekly_review_scorecard.weekly_review_scorecard_counts_nonnegative CHECK (((COALESCE(lead_advanced, 0) >= 0) AND (COALESCE(lead_disqualified, 0) >= 0) AND (COALESCE(lead_promoted, 0) >= 0) AND (COALESCE(lead_answered_in_target, 0) >= 0) AND (COALESCE(lead_breached, 0) >= 0) AND (COALESCE(meetings_booked, 0) >= 0) AND (COALESCE(meetings_held, 0) >= 0) AND (COALESCE(meetings_no_show, 0) >= 0) AND (COALESCE(meetings_partial_history, 0) >= 0) AND (COALESCE(deal_advances, 0) >= 0) AND (COALESCE(deal_regressions, 0) >= 0) AND (COALESCE(deal_median_days_in_stage, 0) >= 0) AND (COALESCE(deal_with_next_step, 0) >= 0) AND (COALESCE(deal_open, 0) >= 0) AND (COALESCE(deal_multi_threaded, 0) >= 0) AND (COALESCE(deal_close_date_sound, 0) >= 0) AND (COALESCE(deal_forecast_up, 0) >= 0) AND (COALESCE(deal_forecast_down, 0) >= 0)))
 public.weekly_review_scorecard.weekly_review_scorecard_deal_block_shape CHECK ((((NOT (has_deal_block IS DISTINCT FROM true)) = (deal_advances IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_regressions IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_with_next_step IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_open IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_multi_threaded IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_close_date_sound IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_forecast_up IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_forecast_down IS NOT NULL))))
 public.weekly_review_scorecard.weekly_review_scorecard_lead_block_shape CHECK ((((NOT (has_lead_block IS DISTINCT FROM true)) = (lead_advanced IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_disqualified IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_promoted IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_answered_in_target IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_breached IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_booked IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_held IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_no_show IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_partial_history IS NOT NULL))))
+public.weekly_review_scorecard.weekly_review_scorecard_lead_cohort_fits CHECK (((lead_arrived IS NULL) OR ((lead_arrived >= 0) AND has_lead_block AND (lead_answered_in_target <= lead_arrived) AND (lead_breached <= lead_arrived))))
 public.weekly_review_scorecard.weekly_review_scorecard_median_needs_block CHECK (((deal_median_days_in_stage IS NULL) OR (NOT (has_deal_block IS DISTINCT FROM true))))
 public.weekly_review_scorecard.weekly_review_scorecard_one_per_review UNIQUE (weekly_review_id)
 public.weekly_review_scorecard.weekly_review_scorecard_pkey PRIMARY KEY (id)

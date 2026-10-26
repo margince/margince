@@ -36,6 +36,9 @@ type MeetingRoster struct {
 	// Complete says the provider listed every guest. Only a complete roster may
 	// retire a row; a partial copy or an older stored one only adds.
 	Complete bool
+	// Current says this is the calendar's copy as of now, so its answers replace
+	// the stored ones. A stored original only fills an answer no row holds.
+	Current bool
 }
 
 // rosterStamp says which calendar roster writes the rows, if any, and whether a
@@ -45,13 +48,17 @@ type rosterStamp struct {
 	bindSeats bool
 }
 
-// LaterGuests is what SettleMeetingRosterTx changed on one meeting.
+// LaterGuests is what SettleMeetingRosterTx changed on one meeting. LeftOut is
+// how many outside guests past the cap the meeting does not name.
 type LaterGuests struct {
-	Added, Retired, Links int
+	Added, Retired, Links, Answered, LeftOut int
+	leftOutMoved                             bool
 }
 
 // Changed reports whether the meeting's guests moved.
-func (g LaterGuests) Changed() bool { return g.Added > 0 || g.Retired > 0 || g.Links > 0 }
+func (g LaterGuests) Changed() bool {
+	return g.Added > 0 || g.Retired > 0 || g.Links > 0 || g.Answered > 0 || g.leftOutMoved
+}
 
 // stampBirthParties writes a new activity's further parties. A calendar's
 // rows carry the seat whose roster listed them, so a later sync can settle them.
@@ -65,7 +72,14 @@ func stampBirthParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec co
 		rosterStamp{seat: roster, bindSeats: true}); err != nil {
 		return err
 	}
-	_, err := stampSeatsPastCap(ctx, tx, id, fields.Kind, attested, rec.WithheldParties, roster)
+	if _, err := stampSeatsPastCap(ctx, tx, id, fields.Kind, attested, rec.WithheldParties, roster); err != nil {
+		return err
+	}
+	crowd, err := stampGuestsPastCap(ctx, tx, id, fields.Kind, attested, rec.WithheldParties, roster)
+	if err != nil || crowd.leftOut == 0 {
+		return err
+	}
+	_, err = recordGuestsLeftOut(ctx, tx, id, crowd.leftOut)
 	return err
 }
 
@@ -92,16 +106,11 @@ func SettleMeetingRosterTx(
 	if err != nil || !open {
 		return LaterGuests{}, err
 	}
-	retired, err := retireOffTheRoster(ctx, tx, activityID, roster, listed)
+	settled, resolvable, err := settleRosterRows(ctx, tx, activityID, roster, listed, !narrowed)
 	if err != nil {
 		return LaterGuests{}, err
 	}
-	added, err := addFromTheRoster(ctx, tx, activityID, roster, !narrowed)
-	if err != nil {
-		return LaterGuests{}, err
-	}
-	settled := LaterGuests{Added: added, Retired: retired}
-	if added > 0 {
+	if resolvable > 0 {
 		if settled.Links, err = fileMeetingUnderGuests(decider, tx, activityID, roster.Seat); err != nil {
 			return LaterGuests{}, err
 		}
@@ -112,12 +121,44 @@ func SettleMeetingRosterTx(
 	// Counts only: an address in an audit image would outlive an erasure of the row.
 	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "activity", activityID.UUID, map[string]any{
 		"guests_added": settled.Added, "guests_retired": settled.Retired, "guest_links_added": settled.Links,
+		"guest_answers_changed": settled.Answered, "guests_left_out": settled.LeftOut,
 	}, evidence)
 	if err != nil {
 		return LaterGuests{}, fmt.Errorf("capture: auditing the guests settled on a meeting: %w", err)
 	}
 	// The interaction graph refolds the meeting's participants on this event.
 	return settled, storekit.EmitEvent(ctx, tx, auditID, activityID.UUID, crmcontracts.PublicEventActivityUpdated{})
+}
+
+// settleRosterRows retires who left, adds who joined, names a crowd's outside
+// guests and records each answer. resolvable counts the added rows a link may follow.
+func settleRosterRows(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, roster MeetingRoster, listed []connector.MessageParticipant, bindSeats bool,
+) (LaterGuests, int, error) {
+	retired, err := retireOffTheRoster(ctx, tx, activityID, roster, listed)
+	if err != nil {
+		return LaterGuests{}, 0, err
+	}
+	resolvable, err := addFromTheRoster(ctx, tx, activityID, roster, bindSeats)
+	if err != nil {
+		return LaterGuests{}, 0, err
+	}
+	seat := roster.Seat
+	crowd, err := stampGuestsPastCap(ctx, tx, activityID, meetingKind, true, roster.Parties.Withheld, &seat)
+	if err != nil {
+		return LaterGuests{}, 0, err
+	}
+	answered, err := settleAnswers(ctx, tx, activityID, roster, listed)
+	if err != nil {
+		return LaterGuests{}, 0, err
+	}
+	moved, err := recordGuestsLeftOut(ctx, tx, activityID, crowd.leftOut)
+	if err != nil {
+		return LaterGuests{}, 0, err
+	}
+	return LaterGuests{
+		Added: resolvable + crowd.written, Retired: retired, Answered: answered, LeftOut: crowd.leftOut, leftOutMoved: moved,
+	}, resolvable, nil
 }
 
 // audienceNarrowedByAMember answers whether a member narrowed the meeting's
@@ -146,7 +187,7 @@ func retireOffTheRoster(
 	for _, p := range listed {
 		address := strings.ToLower(strings.TrimSpace(p.Email))
 		addresses = append(addresses, address)
-		if p.Declined {
+		if p.Declined() {
 			declined = append(declined, address)
 		}
 	}
@@ -177,7 +218,7 @@ func addFromTheRoster(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	}
 	var guests int
 	if err := tx.QueryRow(ctx, `
-		SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND role IN ($2, $3)`,
+		SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND role IN ($2, $3) AND NOT past_party_cap`,
 		activityID, connector.ParticipantRoleOrganizer, connector.ParticipantRoleAttendee).Scan(&guests); err != nil {
 		return 0, fmt.Errorf("capture: counting a meeting's guests: %w", err)
 	}
@@ -191,7 +232,7 @@ func addFromTheRoster(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 			case !known && budget > 0:
 				budget--
 				out = append(out, p)
-			case known && bare && bindSeats && !p.Declined:
+			case known && bare && bindSeats && !p.Declined():
 				out = append(out, p)
 			}
 		}
@@ -287,6 +328,7 @@ func (s *Sink) stampLaterGuests(ctx context.Context, tx pgx.Tx, id ids.ActivityI
 		Seat:     actorUserID(ctx),
 		Parties:  connector.Parties{Participants: rec.Participants, Withheld: rec.WithheldParties},
 		Complete: !rec.PartiesIncomplete,
+		Current:  true,
 	}
 	settled, err := SettleMeetingRosterTx(ctx, ctx, tx, id, roster, nil)
 	if err != nil || settled.Added == 0 || s.nameParticipants == nil || !namesSomebody(rec.Participants) {

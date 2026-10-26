@@ -161,9 +161,9 @@ describe("weekSentence — what the closed week says about itself", () => {
     ],
     [
       { leads_answered_in_target: 1 },
-      "1 lead answered within target.",
+      "1 lead got a first response by week close.",
       { leads_answered_in_target: 3 },
-      "3 leads answered within target.",
+      "3 leads got a first response by week close.",
     ],
     [
       { leads_routed: 1 },

@@ -224,6 +224,21 @@ describe("leadFigures", () => {
     expect(figures[2].detail).toBe("Depot demo");
   });
 
+  it("names a linked company by the name it goes by now", () => {
+    const figures = leadFigures(
+      lead({ company_name: "Weber Logistik", company_id: "c-7" }),
+      [],
+      ctx,
+      false,
+      "Weber Holding SE",
+    );
+    expect(figures[3]).toMatchObject({
+      key: "company",
+      value: "Weber Holding SE",
+    });
+    expect(figures[3].href).toContain("c-7");
+  });
+
   it("reads last touch off what has happened, never the meeting still ahead", () => {
     const figures = leadFigures(
       lead({ last_activity_at: "2026-08-15T09:00:00Z" }),

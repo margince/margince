@@ -281,7 +281,7 @@ func (s *Store) ContactsOwedACohortRepair(ctx context.Context, limit int) ([]ids
 				SELECT pe.contact_id
 				  FROM activity_participant ap
 				  JOIN contact_email pe ON lower(pe.email) = ap.address AND pe.archived_at IS NULL
-				 WHERE ap.contact_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL
+				 WHERE ap.contact_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL AND NOT ap.past_party_cap
 				   AND NOT EXISTS (
 				       SELECT 1 FROM activity_participant other
 				        WHERE other.activity_id = ap.activity_id

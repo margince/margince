@@ -141,11 +141,15 @@ type attentionDecay struct {
 	now   func() time.Time
 }
 
-// quietSuggestionCeilingDays is how long after the last qualifying touch a
-// quiet relationship stays a suggestion. Past it the contact leaves the
-// Worklist and its own page still shows the silence. A first mailbox import
-// must not turn years of history into a morning of follow-ups.
+// quietSuggestionCeilingDays: a silence longer than this leaves the Worklist;
+// the contact's page still shows it. Day 180 stays, day 181 leaves.
 const quietSuggestionCeilingDays = 180
+
+// quietCeilingFrom is the candidate prefilter, two days loose for time of day
+// and DST; quietSurvivors decides from the calendar day count.
+func quietCeilingFrom(now time.Time) time.Time {
+	return now.AddDate(0, 0, -(quietSuggestionCeilingDays + 2))
+}
 
 func (d attentionDecay) Lapsed(
 	ctx context.Context, scope attention.TaskScope, owner ids.UUID,
@@ -159,7 +163,8 @@ func (d attentionDecay) Lapsed(
 	// installation zone, so it can reach QuietDays before the instant does.
 	read := search.QuietRead{
 		QuietBefore:  now.AddDate(0, 0, -(relstrength.QuietDays - 1)),
-		TouchedAfter: now.AddDate(0, 0, -quietSuggestionCeilingDays),
+		TouchedAfter: quietCeilingFrom(now),
+		AsOf:         now,
 		Limit:        decayCandidateCap,
 		// Contacts this reader set aside, and senders capture judged
 		// personal, an advisor or noise, are removed before the cap. Each
@@ -233,7 +238,7 @@ func (d attentionDecay) quietPage(
 	for _, found := range quiet {
 		candidates = append(candidates, ids.From[ids.ContactKind](found.Edge.ContactID))
 	}
-	touched, err := contact360.LastTouchFor(ctx, tx, candidates, contact360.AssembleOptions{})
+	touched, err := contact360.LastTouchFor(ctx, tx, candidates, contact360.AssembleOptions{AsOf: now})
 	if err != nil {
 		return quietPageResult{}, err
 	}
@@ -284,7 +289,6 @@ func quietSurvivors(
 	for _, row := range changed {
 		byContact[row.ContactID.UUID] = row
 	}
-	ceiling := now.AddDate(0, 0, -quietSuggestionCeilingDays)
 	lapsed := make([]attention.QuietRelationship, 0, len(changed))
 	for _, found := range quiet {
 		edge := found.Edge
@@ -296,7 +300,8 @@ func quietSurvivors(
 			if change.Kind != relstrength.ChangeWentQuiet {
 				continue
 			}
-			if !change.At.After(ceiling) {
+			// Calendar days in the installation zone, the derivation's own unit.
+			if change.Days > quietSuggestionCeilingDays {
 				break
 			}
 			lapsed = append(lapsed, attention.QuietRelationship{

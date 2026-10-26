@@ -7374,25 +7374,24 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Link a lead to a company, and add the lead as a contact there.
+         * Link a lead to a company.
          * @description The confirm action behind `company_match`: a human says this lead belongs to this
-         *     company. One transaction sets `company_id`, makes sure the lead has a contact, and makes
-         *     sure that contact has a current employment at the company.
+         *     company. One transaction sets `company_id`, with the lead's audit row and its
+         *     `lead.updated` event, and writes nothing else.
          *
-         *     The contact is found the way promotion finds it: a live contact holding the lead's email
-         *     is used, otherwise one is created from the lead, and either way its
-         *     `converted_from_lead_id` names this lead when it named none. The lead is NOT promoted:
-         *     its status, owner and place on the lead list stay as they were, and a later promotion
-         *     lands on the same contact. An employment that already exists is kept, not duplicated.
+         *     Someone is a lead or a contact, never both, so the link creates no contact and no
+         *     employment. The lead is NOT promoted: its status, owner and place on the lead list stay as
+         *     they were. The lead becomes a contact at the linked company when it is converted:
+         *     promotion gives the contact it creates or merges into a current employment there.
          *
-         *     The caller needs `lead:update`, `contact:create`, `contact:update`, `company:read` and
-         *     `relationship:create`; a missing grant answers `403` before anything is read. A company
-         *     the caller cannot open answers `404`, as a missing one does. A company that is not the
-         *     lead's current `company_match` answers `422` naming `company_id` with code
-         *     `not_the_lead_match`: the lead's company name changed, a second company of that name
-         *     appeared, or the id was never offered. Repeating a link that already holds changes
-         *     nothing and answers the lead as it is. A lead with neither name nor email answers
-         *     `422` with code `identity_required`; one that is promoted or disqualified answers `404`.
+         *     The caller needs `lead:update` and `company:read`; a missing grant answers `403` before
+         *     anything is read. A company the caller cannot open answers `404`, as a missing one does.
+         *     A company that is not the lead's current `company_match` answers `422` naming
+         *     `company_id` with code `not_the_lead_match`: the lead's company name changed, a second
+         *     company of that name appeared, or the id was never offered. Repeating a link that already
+         *     holds changes nothing and answers the lead as it is. A lead with neither name nor email
+         *     answers `422` with code `identity_required`; one that is promoted or disqualified answers
+         *     `404`.
          */
         post: operations["linkLeadCompany"];
         delete?: never;
@@ -34739,6 +34738,27 @@ export interface components {
              * @description The contact this guest is. Present only when you may read that contact.
              */
             contact_id?: string;
+            /** @description What the guest answered the invitation. Absent when no calendar stated an answer. */
+            response?: components["schemas"]["MeetingResponse"];
+        };
+        /**
+         * @description A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+         * @enum {string}
+         */
+        MeetingResponse: "accepted" | "declined" | "tentative" | "needs_action";
+        /** @description The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set. */
+        MeetingAttendeeResponse: {
+            /**
+             * Format: uuid
+             * @description The colleague, one of `colleague_ids` or the host.
+             */
+            user_id?: string;
+            /**
+             * Format: uuid
+             * @description The contact, one of the contact `links` you see.
+             */
+            contact_id?: string;
+            response: components["schemas"]["MeetingResponse"];
         };
         /**
          * @description A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
@@ -34815,6 +34835,10 @@ export interface components {
             readonly colleague_ids?: string[];
             /** @description Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`. */
             readonly guests?: components["schemas"]["MeetingGuest"][];
+            /** @description Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`. */
+            readonly attendee_responses?: components["schemas"]["MeetingAttendeeResponse"][];
+            /** @description Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`. */
+            readonly guests_left_out?: number;
             /**
              * @description inbound/outbound for email/call; null for note/task.
              * @enum {string|null}
@@ -36497,7 +36521,7 @@ export interface components {
             company_name?: string | null;
             /**
              * Format: uuid
-             * @description The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company.
+             * @description The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company. The link adds no contact; converting the lead makes it a contact employed there.
              */
             readonly company_id?: string | null;
             company_match?: components["schemas"]["LeadCompanyMatch"];
@@ -36735,7 +36759,7 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
-        /** @description A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise. */
+        /** @description A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise. */
         LeadCompanyMatch: {
             /** Format: uuid */
             id: string;
@@ -46617,6 +46641,18 @@ export interface components {
             advanced: number;
             disqualified: number;
             promoted: number;
+            /**
+             * @description The week's lead cohort: leads that arrived in the window (dated by when they were
+             *     routed, or created when nobody routed them), are not archived, and no import wrote.
+             *     `answered_in_target` and `breached` are both counted from exactly these leads, so
+             *     `arrived - answered_in_target` is the leads with no first response recorded by the
+             *     close. Do not subtract `breached` too: a late answer is in both.
+             *
+             *     Null, or absent from an older server, on a week frozen before the cohort was
+             *     recorded. Such a week cannot say how many leads went unanswered, and a reader shows
+             *     that as unknown, never as zero and never as every lead answered.
+             */
+            arrived?: number | null;
             /** @description Leads arriving this week with a first response recorded before the week closed, including late responses. Breaches are counted separately. This is not an SLA success rate. */
             answered_in_target: number;
             breached: number;
@@ -46819,7 +46855,8 @@ export interface components {
             learnings?: components["schemas"]["WeeklyReviewLearnings"];
             /**
              * @description How WELL the week went, as against what happened in it — the counts beside this say
-             *     forty leads arrived, this says twelve were answered inside the target.
+             *     forty leads arrived, this says twelve had a first response recorded by the close. It
+             *     does not say a target was met.
              *
              *     ABSENT on a review written before scorecards existed. Each of its two blocks is
              *     independently absent too, and absent is NOT zero: a rep who carried no leads did not

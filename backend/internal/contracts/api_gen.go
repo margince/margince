@@ -13816,6 +13816,30 @@ func (e MeetingPlanUnknownKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingResponse.
+const (
+	MeetingResponseAccepted    MeetingResponse = "accepted"
+	MeetingResponseDeclined    MeetingResponse = "declined"
+	MeetingResponseNeedsAction MeetingResponse = "needs_action"
+	MeetingResponseTentative   MeetingResponse = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the MeetingResponse enum.
+func (e MeetingResponse) Valid() bool {
+	switch e {
+	case MeetingResponseAccepted:
+		return true
+	case MeetingResponseDeclined:
+		return true
+	case MeetingResponseNeedsAction:
+		return true
+	case MeetingResponseTentative:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefFactorsOmitted.
 const (
 	MorningBriefFactorsOmittedWarmth MorningBriefFactorsOmitted = "warmth"
@@ -25177,6 +25201,9 @@ type Activity struct {
 	// AssigneeId Task only.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
+	// AttendeeResponses Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`.
+	AttendeeResponses *[]MeetingAttendeeResponse `json:"attendee_responses,omitempty"`
+
 	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains.
 	Audience *ActivityAudience `json:"audience,omitempty"`
 
@@ -25234,6 +25261,9 @@ type Activity struct {
 
 	// Guests Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
 	Guests *[]MeetingGuest `json:"guests,omitempty"`
+
+	// GuestsLeftOut Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`.
+	GuestsLeftOut *int `json:"guests_left_out,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
@@ -42806,10 +42836,10 @@ type Lead struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// CompanyId The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company.
+	// CompanyId The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. Null until then, and null again when an edit of `company_name` no longer names the linked company. Withheld when the reader cannot open that company. The link adds no contact; converting the lead makes it a contact employed there.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 
-	// CompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+	// CompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
 	CompanyMatch *LeadCompanyMatch `json:"company_match,omitempty"`
 
 	// CompanyName Free text, as captured or typed. It names the company until a human links one (`company_id`).
@@ -42949,7 +42979,7 @@ type LeadStatus string
 // LeadStatusSetBy Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.
 type LeadStatusSetBy string
 
-// LeadCompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
+// LeadCompanyMatch A company the lead's `company_name` names exactly, offered for a human to confirm. Confirming sets `company_id` and creates no contact. Sent only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live company the reader can open carries that name, compared without case and with runs of spaces folded to one. Absent otherwise.
 type LeadCompanyMatch struct {
 	Id openapi_types.UUID `json:"id"`
 
@@ -44477,6 +44507,18 @@ type MeResponse struct {
 // MeResponsePassportScopes defines model for MeResponse.Passport.Scopes.
 type MeResponsePassportScopes string
 
+// MeetingAttendeeResponse The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set.
+type MeetingAttendeeResponse struct {
+	// ContactId The contact, one of the contact `links` you see.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+
+	// Response A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+	Response MeetingResponse `json:"response"`
+
+	// UserId The colleague, one of `colleague_ids` or the host.
+	UserId *openapi_types.UUID `json:"user_id,omitempty"`
+}
+
 // MeetingAvailability defines model for MeetingAvailability.
 type MeetingAvailability struct {
 	Slots []struct {
@@ -44598,6 +44640,9 @@ type MeetingGuest struct {
 
 	// DisplayName The contact's name when you may read the contact, else the name the invitation gave, else empty.
 	DisplayName string `json:"display_name"`
+
+	// Response What the guest answered the invitation. Absent when no calendar stated an answer.
+	Response *MeetingResponse `json:"response,omitempty"`
 }
 
 // MeetingInvitation defines model for MeetingInvitation.
@@ -44910,6 +44955,9 @@ type MeetingProposalRequest struct {
 	// VideoCall Add a video call link when the guest books. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
 }
+
+// MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+type MeetingResponse string
 
 // MergeTagsRequest defines model for MergeTagsRequest.
 type MergeTagsRequest struct {
@@ -54646,7 +54694,8 @@ type WeeklyReview struct {
 	Prior *WeeklyReviewPrior `json:"prior,omitempty"`
 
 	// Scorecard How WELL the week went, as against what happened in it — the counts beside this say
-	// forty leads arrived, this says twelve were answered inside the target.
+	// forty leads arrived, this says twelve had a first response recorded by the close. It
+	// does not say a target was met.
 	//
 	// ABSENT on a review written before scorecards existed. Each of its two blocks is
 	// independently absent too, and absent is NOT zero: a rep who carried no leads did not
@@ -54981,8 +55030,19 @@ type WeeklyScorecardLeadBlock struct {
 
 	// AnsweredInTarget Leads arriving this week with a first response recorded before the week closed, including late responses. Breaches are counted separately. This is not an SLA success rate.
 	AnsweredInTarget int `json:"answered_in_target"`
-	Breached         int `json:"breached"`
-	Disqualified     int `json:"disqualified"`
+
+	// Arrived The week's lead cohort: leads that arrived in the window (dated by when they were
+	// routed, or created when nobody routed them), are not archived, and no import wrote.
+	// `answered_in_target` and `breached` are both counted from exactly these leads, so
+	// `arrived - answered_in_target` is the leads with no first response recorded by the
+	// close. Do not subtract `breached` too: a late answer is in both.
+	//
+	// Null, or absent from an older server, on a week frozen before the cohort was
+	// recorded. Such a week cannot say how many leads went unanswered, and a reader shows
+	// that as unknown, never as zero and never as every lead answered.
+	Arrived      *int `json:"arrived,omitempty"`
+	Breached     int  `json:"breached"`
+	Disqualified int  `json:"disqualified"`
 
 	// MeetingsBooked Meetings that BECAME booked this week, read from the meeting's transition history and
 	// never from its current status. A meeting booked Monday and held Friday counts in both
@@ -65031,6 +65091,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "assignee_id")
 	}
 
+	if raw, found := object["attendee_responses"]; found {
+		err = json.Unmarshal(raw, &a.AttendeeResponses)
+		if err != nil {
+			return fmt.Errorf("error reading 'attendee_responses': %w", err)
+		}
+		delete(object, "attendee_responses")
+	}
+
 	if raw, found := object["audience"]; found {
 		err = json.Unmarshal(raw, &a.Audience)
 		if err != nil {
@@ -65189,6 +65257,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'guests': %w", err)
 		}
 		delete(object, "guests")
+	}
+
+	if raw, found := object["guests_left_out"]; found {
+		err = json.Unmarshal(raw, &a.GuestsLeftOut)
+		if err != nil {
+			return fmt.Errorf("error reading 'guests_left_out': %w", err)
+		}
+		delete(object, "guests_left_out")
 	}
 
 	if raw, found := object["host_user_id"]; found {
@@ -65416,6 +65492,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AttendeeResponses != nil {
+		object["attendee_responses"], err = json.Marshal(a.AttendeeResponses)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'attendee_responses': %w", err)
+		}
+	}
+
 	if a.Audience != nil {
 		object["audience"], err = json.Marshal(a.Audience)
 		if err != nil {
@@ -65549,6 +65632,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["guests"], err = json.Marshal(a.Guests)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'guests': %w", err)
+		}
+	}
+
+	if a.GuestsLeftOut != nil {
+		object["guests_left_out"], err = json.Marshal(a.GuestsLeftOut)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'guests_left_out': %w", err)
 		}
 	}
 
@@ -77617,7 +77707,7 @@ type ServerInterface interface {
 	// Draft an email to this lead, grounded in their record.
 	// (POST /leads/{id}/draft-email)
 	DraftLeadEmail(w http.ResponseWriter, r *http.Request, id Id)
-	// Link a lead to a company, and add the lead as a contact there.
+	// Link a lead to a company.
 	// (POST /leads/{id}/link-company)
 	LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id)
 	// List current and superseded human-provided qualification signals.
@@ -82075,7 +82165,7 @@ func (_ Unimplemented) DraftLeadEmail(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Link a lead to a company, and add the lead as a contact there.
+// Link a lead to a company.
 // (POST /leads/{id}/link-company)
 func (_ Unimplemented) LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)

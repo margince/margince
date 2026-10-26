@@ -15,7 +15,7 @@ import { addedViaFor } from "../../lib/leadorigins";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { activityMarks } from "../../lib/standingmarks";
-import { LeadCompany } from "./leadcompany";
+import { LeadCompany, useLeadCompanyName } from "./leadcompany";
 import { useLeadStatusChanges } from "./leadhistory";
 import type { Lead, LeadWriter } from "./leads";
 import { LeadStepper } from "./leads.stepper";
@@ -63,6 +63,7 @@ export function LeadHowItStands({
   const ctx: ReadingContext = { t, locale, zone, record, asOf };
   const changes = useLeadStatusChanges(lead);
   const explain = useLeadScore(lead);
+  const companyName = useLeadCompanyName(lead);
   const verdict = leadStanding(lead, t, locale, zone, record);
   const factors =
     explain.isSuccess && explain.data.explained
@@ -147,6 +148,7 @@ export function LeadHowItStands({
             thread.activities,
             ctx,
             thread.isSuccess && !thread.hasNextPage,
+            companyName,
           ).map((figure) => (
             <StatCard
               key={figure.key}

@@ -1644,9 +1644,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.week.leads_one": "Đã giao {count} lead.",
   "brief.week.leads_other": "Đã giao {count} lead.",
   "brief.week.responses_one":
-    "Đã trả lời {count} lead trong thời hạn mục tiêu.",
+    "Đã phản hồi lần đầu {count} lead trước khi kết thúc tuần.",
   "brief.week.responses_other":
-    "Đã trả lời {count} lead trong thời hạn mục tiêu.",
+    "Đã phản hồi lần đầu {count} lead trước khi kết thúc tuần.",
   "brief.week.lost_one": "Thua {count} deal.",
   "brief.week.lost_other": "Thua {count} deal.",
   "brief.row.details": "Chi tiết",
@@ -1997,6 +1997,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.guests_added": "Khách được thêm từ lịch",
   "history.field.guest_links_added": "Khách được liên kết từ lịch",
   "history.field.guests_retired": "Khách bị lịch xóa",
+  "history.field.guest_answers_changed": "Phản hồi của khách được cập nhật từ lịch",
+  "history.field.guests_left_out": "Khách không được liệt kê",
   "history.field.relinked_emails": "Địa chỉ email đã chuyển sang",
   "history.field.relinked_phones": "Số điện thoại đã chuyển sang",
   "history.field.relinked_relationships": "Mối quan hệ đã chuyển sang",
@@ -3856,6 +3858,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cuộc họp này đã được đặt trong lịch, nên cần có giờ chứ không chỉ có ngày.",
   "activity.detail.when": "Thời gian",
   "activity.detail.attendees": "Người tham dự",
+  "activity.detail.response.declined": "Từ chối",
+  "activity.detail.response.tentative": "Có thể",
+  "activity.detail.response.needsAction": "Chưa trả lời",
+  "activity.detail.guestsLeftOut_one": "và {count} khách khác không được liệt kê",
+  "activity.detail.guestsLeftOut_other": "và {count} khách khác không được liệt kê",
   "activity.detail.colleagues": "Đồng nghiệp",
   "activity.detail.filedUnder": "Xếp vào",
   "email.detail.bccWithheld":
@@ -5116,8 +5123,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.scorecard.advancedBasis":
     "Đếm số lần chuyển; một lead chuyển 2 giai đoạn tính 2 lần",
   "brief.weekly.scorecard.answeredInTarget": "Trả lời quá hạn",
-  "brief.weekly.scorecard.answeredDetail": "{count} đã trả lời trong hạn",
-  "brief.weekly.scorecard.allInTarget": "Tất cả đều được trả lời đúng hạn",
+  "brief.weekly.scorecard.noArrivals": "Không có khách hàng tiềm năng nào đến trong tuần này",
+  "brief.weekly.scorecard.unanswered": "Chưa ghi nhận phản hồi đầu tiên trước khi kết thúc tuần: {count} trên {total}",
+  "brief.weekly.scorecard.allResponded": "Đã ghi nhận phản hồi đầu tiên trước khi kết thúc tuần: tất cả {total}",
+  "brief.weekly.scorecard.respondedNoCohort": "Đã ghi nhận phản hồi đầu tiên trước khi kết thúc tuần: {count}. Số khách hàng tiềm năng đến trong tuần này không được ghi nhận",
   "brief.weekly.scorecard.meetingsHeld": "Cuộc họp đã diễn ra",
   "brief.weekly.scorecard.meetingsBasis":
     "{booked} đã đặt lịch · {noShow} khách không đến",
@@ -16459,8 +16468,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkTitle": "Liên kết lead này với {name}?",
   "lead.company.linkConfirm": "Liên kết công ty",
   "lead.company.linkOpens": "Tên công ty trên lead này sẽ mở {name}.",
-  "lead.company.linkContact":
-    "Lead này được thêm làm liên hệ tại {name}. Trạng thái của lead không đổi.",
+  "lead.company.linkOnQualify":
+    "Chưa có liên hệ nào được tạo. Khi bạn xác nhận lead này đủ điều kiện, lead sẽ trở thành liên hệ tại {name}.",
   "lead.timeline.received": "{at} · đã nhận",
   "lead.timeline.weReplied": "Bạn đã trả lời",
   "lead.timeline.repliedIn": "{at} · sau {span}",

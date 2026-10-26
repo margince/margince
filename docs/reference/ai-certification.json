@@ -28932,7 +28932,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 45,
           "passed": 45,
@@ -28945,17 +28945,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -28968,7 +28975,7 @@
           },
           "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
@@ -28981,17 +28988,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -29003,7 +29017,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 45,
           "passed": 45,
@@ -29016,17 +29030,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -29039,7 +29060,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
@@ -29052,17 +29073,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -29074,7 +29102,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 36,
           "passed": 35,
@@ -29087,17 +29115,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -29109,7 +29144,7 @@
           },
           "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 45,
           "passed": 45,
@@ -29122,17 +29157,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -29144,7 +29186,7 @@
           },
           "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 24,
           "passed": 23,
@@ -29157,17 +29199,24 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -29179,7 +29228,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 45,
           "passed": 45,
@@ -29192,17 +29241,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -29214,7 +29270,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 45,
           "passed": 45,
@@ -29227,17 +29283,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -29249,7 +29312,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 36,
           "passed": 36,
@@ -29262,17 +29325,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -29284,7 +29354,7 @@
           },
           "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 18,
           "passed": 18,
@@ -29297,17 +29367,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -29319,7 +29396,7 @@
           },
           "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 45,
           "passed": 45,
@@ -29332,17 +29409,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         },
@@ -29354,7 +29438,7 @@
           },
           "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 30,
           "passed": 30,
@@ -29367,17 +29451,24 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+          "stale_reason": "5 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_deal_named_like_an_instruction_is_read_as_a_name, a_quiet_week_is_reported_as_quiet_rather_than_dressed_up, a_week_of_leads_and_meetings_is_described_rather_than_called_quiet, a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet, the_sentence_leads_with_what_changed_not_with_a_count",
           "stale_cause": {
+            "case_changed": [
+              "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet"
+            ],
             "prompt_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ],
             "grader_changed": [
+              "a_deal_named_like_an_instruction_is_read_as_a_name",
               "a_quiet_week_is_reported_as_quiet_rather_than_dressed_up",
               "a_week_of_leads_and_meetings_is_described_rather_than_called_quiet",
-              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet"
+              "a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet",
+              "the_sentence_leads_with_what_changed_not_with_a_count"
             ]
           }
         }

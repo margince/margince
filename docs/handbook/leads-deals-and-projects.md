@@ -48,7 +48,7 @@ status** ladder. Margince itself only ever moves it forward.
 
 ### How do I qualify a lead or convert it into a deal?
 To qualify a lead in Margince, open the lead and choose **Qualify**; tick **Also open a deal** to create a deal in the same step.
-1. Check the **Contact** preview: "Qualifying creates a new contact." or "Qualifying merges into the existing contact".
+1. Check the **Contact** preview: "Qualifying creates a new contact." or "Qualifying merges into the existing contact". A lead linked to a company you can open gives that contact a job link there.
 2. For a deal, tick **Also open a deal** and set **Pipeline**, **Stage**, **Deal name** and, if you like, **Amount**.
 3. Read **Why** and add an **Evidence note (optional)**.
 4. Choose **Qualify**, or **Qualify and open deal**.

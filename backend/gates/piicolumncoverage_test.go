@@ -173,6 +173,7 @@ var erasureColumnBaseline = map[string][]string{
 		"source_system",
 	},
 	"activity_participant": {
+		"response",
 		"role",
 	},
 	"approval": {

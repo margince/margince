@@ -265,8 +265,8 @@ func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, contactID id
 }
 
 // ensureEmployment gives a contact a live employment at a company, unless it
-// already holds one there. The vCard import, the lead's company link and its
-// promotion write the edge through here.
+// already holds one there. The vCard import and a lead's promotion write the
+// edge through here.
 func (s *Store) ensureEmployment(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, companyID ids.CompanyID, role, source string) error {
 	held, err := holdsLiveEmployment(ctx, tx, contactID, companyID)
 	if err != nil || held {
