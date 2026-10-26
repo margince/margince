@@ -114,8 +114,8 @@ func TestAPromiseLeftOutOfTheFirstReadingIsReadOnItsOwn(t *testing.T) {
 	if !strings.Contains(line, conv.promise.String()) || !strings.Contains(line, conv.followup.String()) || strings.Contains(line, conv.need.String()) {
 		t.Errorf("the focus must be the two messages no event cited: %s", line)
 	}
-	if strings.Contains(brain.requests[1].Messages[0].Content, conv.need.String()) {
-		t.Error("the second reading still sends the message whose only finding was the new need")
+	if !strings.Contains(brain.requests[1].Messages[0].Content, "Already recorded, so report none of it again: new_opportunity in "+conv.need.String()) {
+		t.Error("the second reading is not told that the new need is recorded")
 	}
 }
 
@@ -203,9 +203,7 @@ func TestAMessageAnEarlierPassJudgedIsNotReadAgain(t *testing.T) {
 func TestARefusedFocusedReadingKeepsTheThreadDue(t *testing.T) {
 	e := Setup(t)
 	conv := seedPromiseThread(t, e, e.SeedCompany(t, "Acme", &e.Rep1), "thread-refused")
-	brain := &scriptedBrain{replies: []string{
-		eventsReply(t, needEvent(conv.need)), eventsReply(t, needEvent(conv.need)),
-	}}
+	brain := &scriptedBrain{replies: []string{eventsReply(t, needEvent(conv.need)), "not json"}}
 
 	extractPass(t, e, brain)
 

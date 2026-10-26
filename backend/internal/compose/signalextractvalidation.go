@@ -6,10 +6,8 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
-	"slices"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
@@ -35,12 +33,6 @@ func validateExtractEnvelope(payload extractPayload, thread settledThread) strin
 		}
 		if !supplied[event.MessageID] {
 			return fmt.Sprintf("event cites message %q, which was not in the conversation",
-				clampToken(event.MessageID))
-		}
-		if len(thread.Focus) > 0 && !slices.ContainsFunc(thread.Focus, func(id ids.UUID) bool {
-			return id.String() == event.MessageID || id.String() == event.RestatedMessageID
-		}) {
-			return fmt.Sprintf("event cites message %q, which is outside the messages this reading is for",
 				clampToken(event.MessageID))
 		}
 		if strings.TrimSpace(event.Summary) == "" {

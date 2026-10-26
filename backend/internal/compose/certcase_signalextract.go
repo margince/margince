@@ -295,7 +295,10 @@ func (c *signalExtractCase) secondReading(
 		return trace, fmt.Errorf("signal_extract/thread_events: the second reading: %w", err)
 	}
 	var second extractPayload
-	if json.Unmarshal([]byte(ai.Unfence(resp.Text)), &second) != nil || validateExtractEnvelope(second, focused) != "" {
+	if json.Unmarshal([]byte(ai.Unfence(resp.Text)), &second) != nil {
+		return trace, nil
+	}
+	if second = second.inFocus(focused); validateExtractEnvelope(second, focused) != "" {
 		return trace, nil
 	}
 	both := append(first.events(), second.events()...)
@@ -324,6 +327,7 @@ func (c *signalExtractCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: fmt.Sprintf("unparseable model output: %v", err),
 		}
 	}
+	payload = payload.inFocus(c.thread)
 	if msg := validateExtractPayload(payload, c.thread); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
@@ -340,6 +344,7 @@ func (c *signalExtractCase) AnswerConfidence(trace aitasks.Trace) (low, high flo
 	if err := json.Unmarshal([]byte(ai.Unfence(trace.Output)), &payload); err != nil {
 		return 0, 0, false
 	}
+	payload = payload.inFocus(c.thread)
 	var confidences []float64
 	for _, event := range payload.events() {
 		if event.Kind == extractKindCommitment && event.Meaning.withheldOutcome() == "" {

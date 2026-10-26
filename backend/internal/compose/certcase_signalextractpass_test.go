@@ -71,7 +71,7 @@ func TestACertifiedReadingRunsTheWholePassTheProductRuns(t *testing.T) {
 		served   []int
 		withNeed bool
 	}{
-		"a promise the first reading left out is read again without the new need": {
+		"a promise the first reading left out is read again beside the recorded need": {
 			unreported, []func(*signalExtractCase) string{needOn(2), promiseOn(1)}, 2, []int{2, 1}, false,
 		},
 		"a refused second reply leaves the first reading": {
@@ -99,8 +99,9 @@ func TestACertifiedReadingRunsTheWholePassTheProductRuns(t *testing.T) {
 				t.Fatalf("the pass made %d calls and traced %d, want %d", len(brain.requests), len(trace.Requests), tc.calls)
 			}
 			need := c.numbered[1].ID.String()
-			if last := brain.requests[len(brain.requests)-1].Messages[0].Content; tc.calls == 2 && strings.Contains(last, need) {
-				t.Error("the second reading still sends the message whose only finding was the new need")
+			if last := brain.requests[len(brain.requests)-1].Messages[0].Content; tc.calls == 2 &&
+				!strings.Contains(last, "Already recorded, so report none of it again: new_opportunity in "+need) {
+				t.Error("the second reading is not told that the new need is recorded")
 			}
 			var served extractPayload
 			if err := json.Unmarshal([]byte(trace.Output), &served); err != nil && !tc.withNeed {

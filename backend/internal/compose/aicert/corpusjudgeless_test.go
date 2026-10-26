@@ -390,6 +390,10 @@ func emptyAnswerProofs() map[string]judgelessProof {
 			correct: noEvent, wrong: event("commitment_made", 1, "I will send the standard and enterprise pricing by Friday."),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
+		"a_focused_reading_sees_the_receipt_beside_a_new_need": {
+			correct: noEvent, wrong: event("commitment_made", 1, "I will send you the edited recording"),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
 		"a_focused_reading_does_not_reopen_a_kept_promise": {
 			correct: noEvent, wrong: event("commitment_made", 1, "I will send you the edited recording"),
 			wantWrong: aitasks.OutcomeWrongAnswer,

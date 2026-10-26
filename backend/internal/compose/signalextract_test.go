@@ -9,6 +9,8 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -369,30 +371,39 @@ func TestExtractRequestNamesTheFocusAndLowersTheCap(t *testing.T) {
 	}
 }
 
-func TestAFocusedReplyMustCiteAFocusMessageAndStayInTheRemainingCap(t *testing.T) {
+func TestAFocusedReplyKeepsOnlyFocusEventsAndStaysInTheRemainingCap(t *testing.T) {
 	focus, background := ids.NewV7(), ids.NewV7()
 	thread := settledThread{
 		Messages: []threadMessage{{ID: focus}, {ID: background}},
 		Focus:    []ids.UUID{focus}, EventCap: 1,
 	}
-	event := func(message, restated ids.UUID) extractedEvent {
+	event := func(message, restated ids.UUID) string {
 		restatedID := ""
 		if !restated.IsZero() {
 			restatedID = restated.String()
 		}
-		return extractedEvent{Kind: "commitment_made", MessageID: message.String(), RestatedMessageID: restatedID, Summary: "s", Confidence: 0.9}
+		return fmt.Sprintf(`{"kind":"commitment_made","message_id":%q,"restated_message_id":%q,"summary":"s","confidence":0.9}`,
+			message, restatedID)
 	}
 	for name, tc := range map[string]struct {
-		events []extractedEvent
+		events []string
+		kept   int
 		refuse bool
 	}{
-		"cites the focus":                  {[]extractedEvent{event(focus, ids.UUID{})}, false},
-		"renews from the focus":            {[]extractedEvent{event(background, focus)}, false},
-		"cites only context":               {[]extractedEvent{event(background, ids.UUID{})}, true},
-		"passes the cap left by the first": {[]extractedEvent{event(focus, ids.UUID{}), event(focus, ids.UUID{})}, true},
+		"cites the focus":                  {[]string{event(focus, ids.UUID{})}, 1, false},
+		"renews from the focus":            {[]string{event(background, focus)}, 1, false},
+		"cites only context":               {[]string{event(background, ids.UUID{})}, 0, false},
+		"passes the cap left by the first": {[]string{event(focus, ids.UUID{}), event(focus, ids.UUID{})}, 2, true},
 	} {
-		msg := validateExtractEnvelope(extractPayload{Events: &tc.events}, thread)
-		if (msg != "") != tc.refuse {
+		var payload extractPayload
+		if err := json.Unmarshal([]byte(`{"events":[`+strings.Join(tc.events, ",")+`]}`), &payload); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		payload = payload.inFocus(thread)
+		if got := len(payload.events()); got != tc.kept {
+			t.Errorf("%s: kept %d events, want %d", name, got, tc.kept)
+		}
+		if msg := validateExtractEnvelope(payload, thread); (msg != "") != tc.refuse {
 			t.Errorf("%s: refusal %q, want refusal=%v", name, msg, tc.refuse)
 		}
 	}
@@ -426,56 +437,30 @@ func TestUnjudgedMessagesAreTheOnesThisPassReadsFirstAndNoEventCites(t *testing.
 	}
 }
 
-func TestASecondReadingLeavesOutOnlyTheMessagesWhoseOnlyFindingWasANewNeed(t *testing.T) {
-	promise, need, promised, ended, followup := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+func TestASecondReadingSendsEveryMessageAndWhatTheFirstRecorded(t *testing.T) {
+	promise, need, thanks := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	thread := settledThread{Messages: []threadMessage{
-		{ID: promise}, {ID: need}, {ID: promised}, {ID: ended}, {ID: followup},
+		{ID: promise, Direction: "outbound", Body: "I will send the recording."},
+		{ID: need, Direction: "inbound", Body: "Thanks, got it. We would also like the beta."},
+		{ID: thanks, Direction: "outbound", Body: "Glad it arrived."},
 	}}
-	cases := map[string]struct {
-		first []extractedEvent
-		sent  []ids.UUID
-	}{
-		"a new need is left out, a promise stays": {
-			[]extractedEvent{
-				{Kind: extractKindOpportunity, MessageID: need.String()},
-				{Kind: extractKindCommitment, MessageID: promised.String()},
-			},
-			[]ids.UUID{promise, promised, ended, followup},
-		},
-		"a message that also ends the agreement stays": {
-			[]extractedEvent{
-				{Kind: extractKindOpportunity, MessageID: ended.String()},
-				{Kind: "contract_ended", MessageID: ended.String()},
-			},
-			[]ids.UUID{promise, need, promised, ended, followup},
-		},
-		"a message a renewal names stays": {
-			[]extractedEvent{
-				{Kind: extractKindOpportunity, MessageID: need.String()},
-				{Kind: extractKindCommitment, MessageID: followup.String(), RestatedMessageID: need.String()},
-			},
-			[]ids.UUID{promise, need, promised, ended, followup},
-		},
+	first := []extractedEvent{{Kind: extractKindOpportunity, MessageID: need.String()}}
+
+	focused, ok := focusedReading(thread, first)
+	if !ok {
+		t.Fatal("a first reading with room left must lead to a second one")
 	}
-	for name, c := range cases {
-		t.Run(name, func(t *testing.T) {
-			focused, ok := focusedReading(thread, c.first)
-			if !ok {
-				t.Fatal("a first reading with room left must lead to a second one")
-			}
-			sent := make([]ids.UUID, len(focused.Messages))
-			for i, m := range focused.Messages {
-				sent[i] = m.ID
-			}
-			if !slices.Equal(sent, c.sent) {
-				t.Errorf("the second reading sends %v, want %v", sent, c.sent)
-			}
-			if len(thread.Messages) != 5 {
-				t.Errorf("the first reading's conversation was changed: %d messages", len(thread.Messages))
-			}
-			if focused.EventCap != extractMaxEvents-len(c.first) {
-				t.Errorf("the second reading may report %d events, want %d", focused.EventCap, extractMaxEvents-len(c.first))
-			}
-		})
+	if len(focused.Messages) != 3 {
+		t.Errorf("the second reading sends %d messages, want all 3: the receipt shows the promise kept", len(focused.Messages))
+	}
+	if !slices.Equal(focused.Focus, []ids.UUID{promise, thanks}) {
+		t.Errorf("the second reading is for %v, want the uncited messages", focused.Focus)
+	}
+	if focused.EventCap != extractMaxEvents-len(first) {
+		t.Errorf("the second reading may report %d events, want %d", focused.EventCap, extractMaxEvents-len(first))
+	}
+	content := extractRequest(focused, string(textlang.English)).Messages[0].Content
+	if !strings.Contains(content, "Already recorded, so report none of it again: new_opportunity in "+need.String()+".") {
+		t.Errorf("the second reading is not told what the first recorded:\n%s", content)
 	}
 }

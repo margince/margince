@@ -135,6 +135,9 @@ type settledThread struct {
 	// events it may report. The rest of Messages is context. Empty is the
 	// ordinary reading.
 	Focus []ids.UUID
+	// Recorded is what the first reading of the pass found, which the second
+	// reading is told so it reports none of it again.
+	Recorded []extractedEvent
 	// EventCap is how many events this reading may report; zero is
 	// extractMaxEvents. The second reading gets what the first left.
 	EventCap int

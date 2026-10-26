@@ -187,30 +187,32 @@ func (x *SignalExtractor) askFocusedReading(
 }
 
 // focusedReading is the conversation the second reading sends, or false when
-// there is none to send. It leaves out each message whose only finding was a
-// new need. A model shown a promise and a later new need reports the need and
-// drops the promise. A message with a promise or an ending stays, because it
-// is what shows a later message keeping, renewing or voiding a promise.
+// there is none to send. Every message stays, because a later one may show a
+// promise kept, renewed or withdrawn. The first reading's events travel as
+// recorded, so a new need it found does not stand in for a promise it missed.
 func focusedReading(thread settledThread, events []extractedEvent) (settledThread, bool) {
 	focus := unjudgedMessages(thread, events)
 	if len(events) == 0 || len(events) >= extractMaxEvents || len(focus) == 0 {
 		return settledThread{}, false
 	}
-	needOnly, kept := map[string]bool{}, map[string]bool{}
-	for _, event := range events {
-		if event.Kind == extractKindOpportunity {
-			needOnly[event.MessageID] = true
-			continue
-		}
-		kept[event.MessageID], kept[event.RestatedMessageID] = true, true
-	}
 	focused := thread
-	focused.Messages = slices.DeleteFunc(slices.Clone(thread.Messages), func(m threadMessage) bool {
-		id := m.ID.String()
-		return needOnly[id] && !kept[id]
-	})
-	focused.Focus, focused.EventCap = focus, extractMaxEvents-len(events)
+	focused.Focus, focused.Recorded, focused.EventCap = focus, events, extractMaxEvents-len(events)
 	return focused, true
+}
+
+// inFocus drops a focused reading's events that cite no focus message: the
+// first reading already judged that message.
+func (payload extractPayload) inFocus(thread settledThread) extractPayload {
+	if len(thread.Focus) == 0 || payload.Events == nil {
+		return payload
+	}
+	inFocus := slices.DeleteFunc(slices.Clone(*payload.Events), func(event extractedEvent) bool {
+		return !slices.ContainsFunc(thread.Focus, func(id ids.UUID) bool {
+			return id.String() == event.MessageID || id.String() == event.RestatedMessageID
+		})
+	})
+	payload.Events = &inFocus
+	return payload
 }
 
 // keepFirstReading commits the first reading when the second was refused. The
@@ -444,6 +446,7 @@ func (x *SignalExtractor) askReading(ctx context.Context, thread settledThread) 
 	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
 		return nil, fmt.Errorf("%w: unparseable model output: %w", errRefusedReading, err)
 	}
+	payload = payload.inFocus(thread)
 	if msg := validateExtractEnvelope(payload, thread); msg != "" {
 		return nil, fmt.Errorf("%w: %s", errRefusedReading, msg)
 	}
@@ -460,6 +463,7 @@ func extractShapeValid(thread settledThread) ai.Validator {
 		if err := json.Unmarshal([]byte(ai.Unfence(text)), &payload); err != nil {
 			return fmt.Errorf("output is not the required JSON shape: %w", err)
 		}
+		payload = payload.inFocus(thread)
 		if msg := validateExtractEnvelope(payload, thread); msg != "" {
 			return errors.New(msg)
 		}
