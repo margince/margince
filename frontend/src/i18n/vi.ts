@@ -5258,7 +5258,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.suggestions.review": "Xem các cơ hội được gợi ý",
   "brief.suggestions.empty": "Không có cơ hội được gợi ý trong bản tin này.",
   "brief.suggestions.notAnnotated": "Đã xếp hạng cho hôm nay. Bản rà soát qua đêm chưa viết đánh giá cho các cơ hội này.",
-  "brief.suggestions.nothingToAdd": "Đã xếp hạng cho hôm nay. Bản rà soát qua đêm không có gì bổ sung về các cơ hội này.",
+  "brief.suggestions.noAssessment": "Đã xếp hạng cho hôm nay. Bản rà soát qua đêm không để lại đánh giá nào bạn có thể đọc cho các cơ hội này.",
   "brief.agenda.summary": "{agenda}",
   "brief.agenda.customer_waiting_one": "{count} yêu cầu của khách hàng",
   "brief.agenda.customer_waiting_other": "{count} yêu cầu của khách hàng",

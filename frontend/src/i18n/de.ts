@@ -5399,8 +5399,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Prüfe die Ergebnisse und plane deine nächsten Schritte.",
   "brief.suggestions.review": "Deal-Vorschläge ansehen",
   "brief.suggestions.empty": "Keine Deal-Vorschläge in diesem Morgenbericht.",
-  "brief.suggestions.notAnnotated": "Für heute priorisiert. Die nächtliche Prüfung hat zu diesen Deals noch keine Einschätzung geschrieben.",
-  "brief.suggestions.nothingToAdd": "Für heute priorisiert. Die nächtliche Prüfung hat zu diesen Deals nichts zu ergänzen.",
+  "brief.suggestions.notAnnotated":
+    "Für heute priorisiert. Die nächtliche Prüfung hat zu diesen Deals noch keine Einschätzung geschrieben.",
+  "brief.suggestions.noAssessment":
+    "Für heute priorisiert. Die nächtliche Prüfung hat zu diesen Deals keine Einschätzung hinterlassen, die du lesen kannst.",
   "brief.agenda.summary": "{agenda}",
   "brief.agenda.customer_waiting_one": "{count} Kundenanfrage",
   "brief.agenda.customer_waiting_other": "{count} Kundenanfragen",

@@ -5429,8 +5429,10 @@ export const en = {
   "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.suggestions.review": "Review deal suggestions",
   "brief.suggestions.empty": "No deal suggestions in this brief.",
-  "brief.suggestions.notAnnotated": "Ranked for today. The overnight review has not written an assessment for these deals yet.",
-  "brief.suggestions.nothingToAdd": "Ranked for today. The overnight review found nothing to add about these deals.",
+  "brief.suggestions.notAnnotated":
+    "Ranked for today. The overnight review has not written an assessment for these deals yet.",
+  "brief.suggestions.noAssessment":
+    "Ranked for today. The overnight review left no assessment you can read for these deals.",
   "brief.agenda.summary": "{agenda}",
   "brief.agenda.customer_waiting_one": "{count} customer request",
   "brief.agenda.customer_waiting_other": "{count} customer requests",

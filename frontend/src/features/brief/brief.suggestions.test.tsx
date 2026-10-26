@@ -142,9 +142,11 @@ it("says no assessment was written yet when no pass annotated the run, and draws
   expect(
     await screen.findByText(en["brief.suggestions.notAnnotated"]),
   ).toBeTruthy();
-  expect(screen.queryByText(en["brief.suggestions.nothingToAdd"])).toBeNull();
+  expect(screen.queryByText(en["brief.suggestions.noAssessment"])).toBeNull();
   // Both ranked deals stay reachable while the annotation is pending.
-  expect(await screen.findByRole("link", { name: "Acme rollout" })).toBeTruthy();
+  expect(
+    await screen.findByRole("link", { name: "Acme rollout" }),
+  ).toBeTruthy();
   expect(screen.getByRole("link", { name: "Globex renewal" })).toBeTruthy();
   // And none of them is drawn as a recommendation heading with nothing under it.
   expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
@@ -153,7 +155,7 @@ it("says no assessment was written yet when no pass annotated the run, and draws
   ).toBeNull();
 });
 
-it("says the pass had nothing to add when it ran and wrote no finding", async () => {
+it("says the pass left no readable assessment when it ran and wrote no finding", async () => {
   const user = userEvent.setup();
   stubApi({
     "GET /brief": () =>
@@ -163,10 +165,12 @@ it("says the pass had nothing to add when it ran and wrote no finding", async ()
   render(<BriefSuggestions />);
   await user.click(screen.getByText(en["brief.suggestions.review"]));
   expect(
-    await screen.findByText(en["brief.suggestions.nothingToAdd"]),
+    await screen.findByText(en["brief.suggestions.noAssessment"]),
   ).toBeTruthy();
   expect(screen.queryByText(en["brief.suggestions.notAnnotated"])).toBeNull();
-  expect(await screen.findByRole("link", { name: "Globex renewal" })).toBeTruthy();
+  expect(
+    await screen.findByRole("link", { name: "Globex renewal" }),
+  ).toBeTruthy();
   expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
 });
 
@@ -185,7 +189,13 @@ it("shows a real finding as a suggestion and lists the deal the pass said nothin
               rank: 1,
               finding: "Buyer asked for the security review before signing.",
             },
-            { ...ranked.items[0], id: "i-2", deal_id: "d-2", rank: 2, finding: null },
+            {
+              ...ranked.items[0],
+              id: "i-2",
+              deal_id: "d-2",
+              rank: 2,
+              finding: null,
+            },
           ],
         }),
       ),
@@ -196,8 +206,10 @@ it("shows a real finding as a suggestion and lists the deal the pass said nothin
   const heading = await screen.findByRole("heading", { level: 3 });
   expect(heading.textContent).toBe("Acme rollout");
   expect(screen.getByText(/security review before signing/)).toBeTruthy();
-  expect(screen.getByText(en["brief.suggestions.nothingToAdd"])).toBeTruthy();
-  expect(await screen.findByRole("link", { name: "Globex renewal" })).toBeTruthy();
+  expect(screen.getByText(en["brief.suggestions.noAssessment"])).toBeTruthy();
+  expect(
+    await screen.findByRole("link", { name: "Globex renewal" }),
+  ).toBeTruthy();
   expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(1);
 });
 
@@ -210,7 +222,86 @@ it("drops a deal the reader may no longer open from the quiet list as well", asy
   });
   const { container } = render(<BriefSuggestions />);
   await user.click(screen.getByText(en["brief.suggestions.review"]));
-  expect(await screen.findByRole("link", { name: "Globex renewal" })).toBeTruthy();
+  expect(
+    await screen.findByRole("link", { name: "Globex renewal" }),
+  ).toBeTruthy();
   await waitFor(() => expect(screen.getAllByRole("link")).toHaveLength(1));
   expect(container.textContent).not.toContain("d-1");
+});
+
+// A finding of only whitespace is no assessment. The annotation contract does
+// not refuse one. It must not become a heading with an empty line under it.
+it.each(["", "   \n\t "])(
+  "treats a blank finding %j as no assessment",
+  async (blank) => {
+    const user = userEvent.setup();
+    stubApi({
+      "GET /brief": () =>
+        jsonResponse(
+          twoDeals({
+            annotated_at: "2026-10-26T01:10:00Z",
+            items: [
+              {
+                ...ranked.items[0],
+                id: "i-1",
+                deal_id: "d-1",
+                rank: 1,
+                finding: blank,
+              },
+            ],
+          }),
+        ),
+      ...DEALS,
+    });
+    render(<BriefSuggestions />);
+    await user.click(screen.getByText(en["brief.suggestions.review"]));
+    expect(
+      await screen.findByText(en["brief.suggestions.noAssessment"]),
+    ).toBeTruthy();
+    expect(
+      await screen.findByRole("link", { name: "Acme rollout" }),
+    ).toBeTruthy();
+    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+  },
+);
+
+// The line names "these deals". When the reader may open none of them, there
+// is no list for it to describe, and it must not stand over an empty one.
+it("draws no quiet line when every deal under it is one the reader may no longer open", async () => {
+  const user = userEvent.setup();
+  const calls = stubApi({
+    "GET /brief": () => jsonResponse(twoDeals({ annotated_at: null })),
+    "GET /deals/d-1": () => jsonResponse({}, 404),
+    "GET /deals/d-2": () => jsonResponse({}, 404),
+  });
+  const { container } = render(<BriefSuggestions />);
+  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  await waitFor(() =>
+    expect(
+      calls.filter((call) => call.path.startsWith("/deals/")),
+    ).toHaveLength(2),
+  );
+  await waitFor(() =>
+    expect(screen.queryByText(en["brief.suggestions.notAnnotated"])).toBeNull(),
+  );
+  expect(container.querySelector("li")).toBeNull();
+  expect(screen.queryByRole("link")).toBeNull();
+});
+
+it("lists the findingless deals in rank order under their caption", async () => {
+  const user = userEvent.setup();
+  stubApi({
+    "GET /brief": () => jsonResponse(twoDeals({ annotated_at: null })),
+    ...DEALS,
+  });
+  render(<BriefSuggestions />);
+  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  const list = await screen.findByRole("list", {
+    name: en["brief.suggestions.notAnnotated"],
+  });
+  await waitFor(() =>
+    expect(
+      Array.from(list.querySelectorAll("a")).map((a) => a.textContent),
+    ).toEqual(["Acme rollout", "Globex renewal"]),
+  );
 });

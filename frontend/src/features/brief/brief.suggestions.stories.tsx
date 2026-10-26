@@ -59,8 +59,8 @@ export const StoredRunDark: Story = {
 };
 export const StoredRunPhone: Story = { ...StoredRun, tags: ["uat-phone"] };
 
-// A run no overnight pass has annotated: the ranked deals stay reachable as a
-// plain list under the line that says no assessment was written yet.
+// A run no overnight pass has annotated. The ranked deals stay reachable as a
+// plain list, under the line that says no assessment was written yet.
 export const NotAnnotated: Story = {
   decorators: [
     (Story) => {
