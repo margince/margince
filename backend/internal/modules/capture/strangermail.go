@@ -129,10 +129,9 @@ func senderWasStrangerTx(ctx context.Context, tx pgx.Tx, sender string, before t
 	return !corresponded, err
 }
 
-// addressSpellings is an address as stored columns may hold it: lowercased as
-// typed, and every spelling of its domain mailidentity.AddressSpellings gives
-// (the IDNA form and the Unicode form). A unicode domain may be stored either
-// way, and a punycode one too.
+// addressSpellings is an address as stored columns may hold it. That is the
+// address lowercased as typed, plus each mailidentity.AddressSpellings form:
+// IDNA and Unicode. A stored domain may use either.
 func addressSpellings(address string) []string {
 	spellings := []string{correspondence.Fold(address)}
 	for _, spelling := range mailidentity.AddressSpellings(address) {
