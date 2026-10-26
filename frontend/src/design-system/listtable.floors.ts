@@ -9,8 +9,8 @@ import type { SizedColumn } from "./listtable.layout";
 
 /**
  * The ink width of a cell's text plus its padding. Text, not boxes: a box that
- * gives way to its cell would report the cell back, and the floor would only
- * ever hold the column where it already stands.
+ * gives way to its cell reports the cell's width back. The floor would then
+ * hold the column where it already stands.
  */
 function inkWidth(cell: HTMLTableCellElement): number {
   const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);

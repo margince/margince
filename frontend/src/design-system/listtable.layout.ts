@@ -85,8 +85,8 @@ export function widthWorthAdopting(
 }
 
 /**
- * A column's size, raised to its floor: the widest figure a numeric column
- * holds, measured, so a figure is never cut short to fit a share.
+ * A column's size, raised to its floor. The floor is the widest figure a
+ * numeric column holds, so no figure is cut short to fit a share.
  */
 function boundsOf(column: SizedColumn, floors: Widths): ColumnSize {
   const size = sizeOf(column);

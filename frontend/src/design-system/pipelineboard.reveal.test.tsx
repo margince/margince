@@ -168,8 +168,8 @@ describe("PipelineBoard search off screen", () => {
   });
 });
 
-// No board takes the search as a prop: the list it is drawn in hands it over,
-// so a screen that adds a searchable board cannot leave the note out.
+// No board takes the search as a prop. The list it is drawn in hands it over,
+// so no screen can leave the note out.
 describe("a board drawn as a searchable list's body", () => {
   function listBody(search: { value: string; answered: string }) {
     return (

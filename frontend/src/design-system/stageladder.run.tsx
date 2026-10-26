@@ -11,9 +11,9 @@ import { type ClippedEdges, useClippedEdges } from "./scrollregion";
 import type { StageStep } from "./stageladder";
 
 /**
- * The scrolling row of open stages that both shapes of `StageLadder` draw: it
- * comes to rest on the current stage, and a clipped end fades and carries a
- * button that pages the row that way. `children` is the list of stages.
+ * The scrolling row of open stages that both shapes of `StageLadder` draw. It
+ * comes to rest on the current stage. A clipped end fades and carries a button
+ * that pages the row that way. `children` is the list of stages.
  */
 export function LadderRun({
   label,
@@ -25,8 +25,8 @@ export function LadderRun({
   children: ReactNode;
 }>) {
   const runRef = useRef<HTMLDivElement>(null);
-  // A refused ladder holds no rung that takes focus, so a run past its edge
-  // needs its own keyboard stop; the hook gives one only while it overflows.
+  // A refused ladder holds no rung that takes focus, so an overflowing run
+  // needs its own keyboard stop. The hook gives one only while it overflows.
   const region = useScrollRegion(runRef, label);
   const settleOn = restingStage(steps);
   useLayoutEffect(() => {
@@ -39,9 +39,8 @@ export function LadderRun({
       scroller.scrollLeft = 0;
       return;
     }
-    // Measured against the scroller's own box, so no ancestor has to be
-    // positioned; the browser clamps past either end, so a ladder that fits
-    // stays where it is.
+    // Measured against the scroller's own box, so no ancestor needs a position.
+    // The browser clamps past either end, so a ladder that fits stays put.
     const rungBox = rung.getBoundingClientRect();
     const runBox = scroller.getBoundingClientRect();
     scroller.scrollLeft +=

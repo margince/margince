@@ -271,9 +271,8 @@ function BoardLayout<Record extends BoardRecord>({
   const { locale } = useLocale();
   const sections = useRef(new Map<string, HTMLElement>());
   const board = useRef<HTMLDivElement>(null);
-  // The search the cards answer, from the list the board is drawn in. When no
-  // column holding a card shows, the board scrolls the first into view and
-  // says where the matches are, or a search matching off screen reads as empty.
+  // The search the cards answer, from the list the board is drawn in. With no
+  // match in view, the board scrolls to the first and says where they are.
   const revealKey = useContext(AnsweredSearch);
   const matches = revealKey ? matchingColumns(columns) : [];
   const offScreen = useOffScreenMatches(
