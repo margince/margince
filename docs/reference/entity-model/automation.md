@@ -16,7 +16,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | `key` | `text` | yes | The catalog type this instance is built from. |
 | `name` | `text` | yes |  |
 | `origin` | `text`, default `'catalog'::text` | yes | One of `catalog`, `agent_authored`. |
-| `owner_id` | `uuid` |  | Points at `app_user.id`. |
+| `owner_id` | `uuid` |  | The member the rule runs as. |
 | `params` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `paused_reason` | `text` |  | Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. |
 | `tier` | `text`, default `'confirmation_required'::text` | yes | One of `auto_execute`, `confirmation_required`. |
