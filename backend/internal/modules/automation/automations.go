@@ -339,8 +339,8 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 		if err != nil {
 			return err
 		}
-		beforeAudit := map[string]any{"name": before.Name, "enabled": before.Enabled, "params": json.RawMessage(before.Params)}
-		afterAudit := map[string]any{"name": a.Name, "enabled": a.Enabled, "params": json.RawMessage(a.Params)}
+		beforeAudit := map[string]any{"name": before.Name, auditEnabled: before.Enabled, "params": json.RawMessage(before.Params)}
+		afterAudit := map[string]any{"name": a.Name, auditEnabled: a.Enabled, "params": json.RawMessage(a.Params)}
 		if in.OwnerID != nil {
 			beforeAudit[keyOwnerID], afterAudit[keyOwnerID] = before.OwnerID, a.OwnerID
 		}
