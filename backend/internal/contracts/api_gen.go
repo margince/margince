@@ -19858,6 +19858,69 @@ func (e UserStatus) Valid() bool {
 	}
 }
 
+// Defines values for VCardImportFieldAction.
+const (
+	VCardImportFieldActionVCardImportFieldActionImported  VCardImportFieldAction = "imported"
+	VCardImportFieldActionVCardImportFieldActionKept      VCardImportFieldAction = "kept"
+	VCardImportFieldActionVCardImportFieldActionNotInCard VCardImportFieldAction = "not_in_card"
+	VCardImportFieldActionVCardImportFieldActionReplaced  VCardImportFieldAction = "replaced"
+)
+
+// Valid indicates whether the value is a known member of the VCardImportFieldAction enum.
+func (e VCardImportFieldAction) Valid() bool {
+	switch e {
+	case VCardImportFieldActionVCardImportFieldActionImported:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionKept:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionNotInCard:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionReplaced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VCardImportFieldField.
+const (
+	VCardImportFieldFieldVCardImportFieldFieldAddress     VCardImportFieldField = "address"
+	VCardImportFieldFieldVCardImportFieldFieldCompanyName VCardImportFieldField = "company_name"
+	VCardImportFieldFieldVCardImportFieldFieldEmail       VCardImportFieldField = "email"
+	VCardImportFieldFieldVCardImportFieldFieldLinkedin    VCardImportFieldField = "linkedin"
+	VCardImportFieldFieldVCardImportFieldFieldMobilePhone VCardImportFieldField = "mobile_phone"
+	VCardImportFieldFieldVCardImportFieldFieldName        VCardImportFieldField = "name"
+	VCardImportFieldFieldVCardImportFieldFieldPhone       VCardImportFieldField = "phone"
+	VCardImportFieldFieldVCardImportFieldFieldTitle       VCardImportFieldField = "title"
+	VCardImportFieldFieldVCardImportFieldFieldWebsite     VCardImportFieldField = "website"
+)
+
+// Valid indicates whether the value is a known member of the VCardImportFieldField enum.
+func (e VCardImportFieldField) Valid() bool {
+	switch e {
+	case VCardImportFieldFieldVCardImportFieldFieldAddress:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldCompanyName:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldEmail:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldLinkedin:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldMobilePhone:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldName:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldPhone:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldTitle:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldWebsite:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for VCardImportResultOutcome.
 const (
 	VCardImportResultOutcomeVCardImportResultOutcomeCreated     VCardImportResultOutcome = "created"
@@ -53647,6 +53710,40 @@ type UserSessionList struct {
 	Sessions []UserSession `json:"sessions"`
 }
 
+// VCardImportField One field of a card, and what the import did with it.
+type VCardImportField struct {
+	// Action `imported` — the record now holds the card's value. `replaced` — the card's value
+	// took the place of a different one, which is kept in `superseded_value` for the
+	// restore. `kept` — the card stated a value and the record kept its own: a human
+	// corrected the field, a newer statement already stands, the number could not be read,
+	// or it is a matched contact's name or an email address, which the import does not add
+	// to a contact who already exists. `not_in_card` — the card states nothing here.
+	Action VCardImportFieldAction `json:"action"`
+
+	// Field The field, named as `POST /contacts/{id}/profile-fields/{field}/restore` names it
+	// where that endpoint has one. `name` and `email` have no profile field. A mobile number
+	// reports as `mobile_phone` and every other number as `phone`; both restore as `phone`.
+	// A field appears once per value, so a card with two addresses reports two `email` rows.
+	Field VCardImportFieldField `json:"field"`
+
+	// Value The value the card stated. Absent for `not_in_card`.
+	Value *string `json:"value,omitempty"`
+}
+
+// VCardImportFieldAction `imported` — the record now holds the card's value. `replaced` — the card's value
+// took the place of a different one, which is kept in `superseded_value` for the
+// restore. `kept` — the card stated a value and the record kept its own: a human
+// corrected the field, a newer statement already stands, the number could not be read,
+// or it is a matched contact's name or an email address, which the import does not add
+// to a contact who already exists. `not_in_card` — the card states nothing here.
+type VCardImportFieldAction string
+
+// VCardImportFieldField The field, named as `POST /contacts/{id}/profile-fields/{field}/restore` names it
+// where that endpoint has one. `name` and `email` have no profile field. A mobile number
+// reports as `mobile_phone` and every other number as `phone`; both restore as `phone`.
+// A field appears once per value, so a card with two addresses reports two `email` rows.
+type VCardImportFieldField string
+
 // VCardImportReport One entry per card in the file, in the order the file listed them.
 type VCardImportReport struct {
 	Results []VCardImportResult `json:"results"`
@@ -53657,6 +53754,12 @@ type VCardImportResult struct {
 	// ContactId The contact created or updated, or — for `needs_review` — the candidate the card resembles.
 	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
+	// Fields What the import did with each field of this card, read from the writer's own
+	// decisions. Present for `created` and `updated`, and absent for every other outcome,
+	// since those write nothing. `importCardPhoto` shares this schema and never sends it:
+	// a card read from a photo is a proposal, and nothing is written.
+	Fields *[]VCardImportField `json:"fields,omitempty"`
+
 	// FullName The name the card stated, so a reader can find the row it came from.
 	FullName string `json:"full_name"`
 
@@ -53664,7 +53767,8 @@ type VCardImportResult struct {
 	Index int `json:"index"`
 
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
-	// between them. `updated` — an exact match, filled only where the record was empty.
+	// between them. `updated` — an exact match: what the card states replaces an older value, which
+	// stays in `superseded_value`, and a field a human corrected stands.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 	// `skipped` — the card states no name, carries a sending system's address, or matches a
@@ -53676,7 +53780,8 @@ type VCardImportResult struct {
 }
 
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
-// between them. `updated` — an exact match, filled only where the record was empty.
+// between them. `updated` — an exact match: what the card states replaces an older value, which
+// stays in `superseded_value`, and a field a human corrected stands.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 // `skipped` — the card states no name, carries a sending system's address, or matches a

@@ -38,45 +38,56 @@ const cardOwnedContactAddress = `SELECT address_line1, address_line2, address_ci
 
 // fillAddressFromCard writes the card's address parts onto a matched contact,
 // with the audit evidence a later card reads to know the address is a card's.
-func fillAddressFromCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) error {
+// It reports what it did, or an empty action when the card states no address.
+func fillAddressFromCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry, corrected bool) (VCardFieldAction, error) {
 	stated := vcardRecordAddress(entry)
-	if stated == nil {
-		return nil
+	switch {
+	case stated == nil:
+		return "", nil
+	case corrected:
+		return VCardFieldKept, nil
 	}
 	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
-		return err
+		return "", err
 	}
 	if err := auth.EnsureWritableLive(ctx, tx, entityContact, contactID.UUID); err != nil {
-		return err
+		return "", err
 	}
 	lock, err := storekit.LockRow(ctx, tx, entityContact, contactID.UUID, storekit.LiveOnly)
 	if err != nil {
-		return err
+		return "", err
 	}
 	var current crmcontracts.Address
 	var replaceable bool
 	if err := tx.QueryRow(ctx, cardOwnedContactAddress, contactID, vcardSource).Scan(
 		&current.Line1, &current.Line2, &current.City, &current.Region,
 		&current.PostalCode, &current.Country, &replaceable); err != nil {
-		return fmt.Errorf("contacts: reading the address a card would replace: %w", err)
+		return "", fmt.Errorf("contacts: reading the address a card would replace: %w", err)
 	}
 	if !replaceable {
-		return nil
+		return VCardFieldKept, nil
 	}
+	held := addressOrNil(current) != nil
 	p := storekit.NewPatch()
 	if err := setAddress(p, &current, stated, storekit.AuditTrail{}); err != nil {
-		return err
+		return "", err
 	}
 	if len(p.Moved()) == 0 {
-		return nil
+		return VCardFieldImported, nil
 	}
 	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-		return fmt.Errorf("contacts: writing a card's address: %w", err)
+		return "", fmt.Errorf("contacts: writing a card's address: %w", err)
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", entityContact, contactID.UUID,
 		p.Before(), p.After(), map[string]any{auditKeySource: vcardSource, auditKeySourceRef: vcardSource})
 	if err != nil {
-		return err
+		return "", err
 	}
-	return storekit.EmitEvent(ctx, tx, auditID, contactID.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: p.After()})
+	if err := storekit.EmitEvent(ctx, tx, auditID, contactID.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: p.After()}); err != nil {
+		return "", err
+	}
+	if held {
+		return VCardFieldReplaced, nil
+	}
+	return VCardFieldImported, nil
 }

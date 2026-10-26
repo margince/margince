@@ -15,7 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// MergeReader keeps native merge previews under the same verdict visibility as profile reads.
+// MergeReader keeps merge previews and the card import under the same verdict
+// ruling as profile reads.
 func MergeReader(db *database.DB) contacts.ProfileVerdictReader {
 	store := ai.NewFeedbackStore(db)
 	return func(ctx context.Context, tx pgx.Tx, contact ids.UUID, assertions []contacts.MergeProfileAssertion) ([]contacts.MergeProfileValue, error) {

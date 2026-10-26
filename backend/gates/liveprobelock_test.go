@@ -74,12 +74,10 @@ var unlockedLiveWrites = gatekit.Waive(withPromotionEdgeWriters(map[string]strin
 	"internal/modules/contacts:Store.applyEmploymentEpisode":  "private import helper reached only after ApplyEmploymentImport holds the live contact row for this transaction; the contact lock covers the applied-field support and its relationship. The census reads callees rather than callers, so this declaration relies on the parent's held lock",
 	"internal/modules/contacts:Store.applyEmploymentEvidence": "private iteration inside ApplyEmploymentImport's transaction, after HoldWritableLive; every evidence item has the same locked contact. The census cannot propagate a caller's held lock down into this helper",
 
-	"internal/modules/contacts:Store.QuickCapture":            "quick capture creates the contact and its phone in one transaction, then attaches the employer edge whose probe puts this function here. The subject did not exist outside this transaction when the probe ran, so no erasure can be in flight against it",
-	"internal/modules/contacts:Store.quickCaptureInTx":        "the same capture running inside a caller's transaction, reached only from QuickCapture and creating the same contact before writing its socials",
-	"internal/modules/contacts:Store.CreateFromVCardReviewTx": "a reviewed card accepted into a new contact: CreateContactTx mints the row and its socials, and the employer attach that follows is what reaches the probe. The subject is this transaction's own creation, so there is no concurrent erasure to lose a race to",
-	"internal/modules/contacts:Store.LinkLeadCompany":         leadCompanyLinkReason,
-	"internal/modules/contacts:Store.linkLeadCompanyTx":       leadCompanyLinkReason,
-	"internal/modules/contacts:Store.createFromCard":          "the import arm for a card nobody matched. The probe it carries is of the card's SOURCE MESSAGE rather than of a subject, and the erasure-cleared tables it inserts into — contact_email, contact_phone, contact_social — all belong to the contact CreateContactTx mints in this same transaction, so no erasure can be holding them. It does read pre-existing rows (manualDedupeContact can reference another contact, employerByName can resolve an existing company), but the tables those writes touch — dedupe_candidate, relationship, company — are not ones erasure deletes",
+	"internal/modules/contacts:Store.QuickCapture":      "quick capture creates the contact and its phone in one transaction, then attaches the employer edge whose probe puts this function here. The subject did not exist outside this transaction when the probe ran, so no erasure can be in flight against it",
+	"internal/modules/contacts:Store.quickCaptureInTx":  "the same capture running inside a caller's transaction, reached only from QuickCapture and creating the same contact before writing its socials",
+	"internal/modules/contacts:Store.LinkLeadCompany":   leadCompanyLinkReason,
+	"internal/modules/contacts:Store.linkLeadCompanyTx": leadCompanyLinkReason,
 }))
 
 // leadCompanyLinkReason is why a lead's company link reaches the live probe.

@@ -27502,7 +27502,8 @@ export interface components {
             full_name: string;
             /**
              * @description `created` — nobody matched, so the card became a contact, their company and the edge
-             *     between them. `updated` — an exact match, filled only where the record was empty.
+             *     between them. `updated` — an exact match: what the card states replaces an older value, which
+             *     stays in `superseded_value`, and a field a human corrected stands.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
              *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
              *     `skipped` — the card states no name, carries a sending system's address, or matches a
@@ -27517,6 +27518,36 @@ export interface components {
             contact_id?: string | null;
             /** @description Why a card was skipped, in words a reader can act on. */
             reason?: string | null;
+            /**
+             * @description What the import did with each field of this card, read from the writer's own
+             *     decisions. Present for `created` and `updated`, and absent for every other outcome,
+             *     since those write nothing. `importCardPhoto` shares this schema and never sends it:
+             *     a card read from a photo is a proposal, and nothing is written.
+             */
+            fields?: components["schemas"]["VCardImportField"][];
+        };
+        /** @description One field of a card, and what the import did with it. */
+        VCardImportField: {
+            /**
+             * @description The field, named as `POST /contacts/{id}/profile-fields/{field}/restore` names it
+             *     where that endpoint has one. `name` and `email` have no profile field. A mobile number
+             *     reports as `mobile_phone` and every other number as `phone`; both restore as `phone`.
+             *     A field appears once per value, so a card with two addresses reports two `email` rows.
+             * @enum {string}
+             */
+            field: "name" | "email" | "phone" | "mobile_phone" | "title" | "company_name" | "address" | "linkedin" | "website";
+            /** @description The value the card stated. Absent for `not_in_card`. */
+            value?: string;
+            /**
+             * @description `imported` — the record now holds the card's value. `replaced` — the card's value
+             *     took the place of a different one, which is kept in `superseded_value` for the
+             *     restore. `kept` — the card stated a value and the record kept its own: a human
+             *     corrected the field, a newer statement already stands, the number could not be read,
+             *     or it is a matched contact's name or an email address, which the import does not add
+             *     to a contact who already exists. `not_in_card` — the card states nothing here.
+             * @enum {string}
+             */
+            action: "imported" | "replaced" | "kept" | "not_in_card";
         };
         /**
          * @description One address on a contact, as a writer supplies it. One schema for create and update,
