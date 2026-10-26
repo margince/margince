@@ -53,6 +53,9 @@ type ListActivitiesInput struct {
 	// ConversationOf keeps only the rows of this message's correspondence
 	// (SameCorrespondenceSQL), before the limit.
 	ConversationOf *ids.UUID
+	// ConversationDeliveredTo is the address a reply to ConversationOf goes to.
+	// An unproven message joins its thread only for a reply to its own counterparty.
+	ConversationDeliveredTo *string
 	// conversationDomain is ConversationOf's company domain, set by the
 	// store in the read's own transaction (correspondenceDomainTx).
 	conversationDomain string

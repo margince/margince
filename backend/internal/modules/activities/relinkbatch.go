@@ -409,7 +409,7 @@ func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in Reli
 func liveConversationMembers(ctx context.Context, tx pgx.Tx, anchor ids.ActivityID, domain string) ([]ids.ActivityID, error) {
 	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a, activity anchor
 		 WHERE anchor.id = $1 AND a.archived_at IS NULL AND a.restricted_at IS NULL
-		   AND (a.id = anchor.id OR `+SameCorrespondenceSQL("a", "anchor", "$2::text")+`)
+		   AND (a.id = anchor.id OR `+SameCorrespondenceSQL("a", "anchor", "$2::text", "")+`)
 		 ORDER BY a.id`, anchor, domain)
 	if err != nil {
 		return nil, fmt.Errorf("enumerate conversation: %w", err)

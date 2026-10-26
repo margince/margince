@@ -39,11 +39,11 @@ func (t replyThread) addresseeEvidence(addressee string) []string {
 }
 
 // The selected message remains separate so a newer turn cannot become the reply target.
-func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts.Activity, addressee string) (replyThread, error) {
+func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts.Activity, delivery activities.ReplyAddressee) (replyThread, error) {
 	now, zone := d.envelope.Now(), d.envelope.Zone(ctx)
 	thread := replyThread{anchor: draftcore.Conversation([]crmcontracts.Activity{anchor}, nil, now, zone, 1)}
 	if anchor.ThreadKey != nil && strings.TrimSpace(*anchor.ThreadKey) != "" {
-		rows, err := d.threadRows(ctx, anchor, addressee)
+		rows, err := d.threadRows(ctx, anchor, delivery)
 		if err != nil {
 			return replyThread{}, err
 		}
@@ -59,14 +59,15 @@ func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts
 // threadRows is the thread's newest page, newest first. When the thread is
 // longer, the addressee's newest mail follows the page. So their own words
 // still decide the language of a long thread.
-func (d replyDrafter) threadRows(ctx context.Context, anchor crmcontracts.Activity, addressee string) ([]crmcontracts.Activity, error) {
+func (d replyDrafter) threadRows(ctx context.Context, anchor crmcontracts.Activity, delivery activities.ReplyAddressee) ([]crmcontracts.Activity, error) {
+	addressee := delivery.ContactID
 	limit, kind, now := replyEvidenceRows, string(crmcontracts.ActivityKindEmail), d.envelope.Now()
 	anchorID := ids.UUID(anchor.Id)
 	// A thread key is read from headers its sender writes, so it can name another
 	// correspondence; ConversationOf keeps only rows shared with the anchor's correspondent.
 	in := activities.ListActivitiesInput{
-		ThreadKey: anchor.ThreadKey, ConversationOf: &anchorID, Kind: &kind, Limit: &limit,
-		WrittenByHuman: true, ConversationAsOf: &now,
+		ThreadKey: anchor.ThreadKey, ConversationOf: &anchorID, ConversationDeliveredTo: &delivery.Address,
+		Kind: &kind, Limit: &limit, WrittenByHuman: true, ConversationAsOf: &now,
 	}
 	rows, page, err := d.store.ListActivities(ctx, in)
 	if err != nil {

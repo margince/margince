@@ -19,24 +19,34 @@ import (
 )
 
 // SameCorrespondenceSQL is the test that row belongs to anchor's correspondence.
-// A thread key is read from headers a sender writes, so it is not enough. Anchor
-// must be proven (correspondence.ProvenSQL), or it binds no other row. Row must
-// be on anchor's thread and be one of two kinds of mail:
-//   - our own mail to anchor's counterparty or to anyone at its company domain;
-//   - mail from that counterparty or company domain whose sender was
-//     authenticated.
+// A thread key is read from headers a sender writes, so it is not enough. Row
+// must be on anchor's thread, and:
+//   - when anchor is proven (correspondence.ProvenSQL), row is our attested mail
+//     to anchor's counterparty or its company domain, or authenticated mail from
+//     them;
+//   - when anchor is unproven, row is any mail with anchor's exact counterparty,
+//     and, when deliveredTo is set, only if the reply goes to that counterparty.
 //
 // companyDomain is a placeholder holding CorrespondenceDomainTx's answer. An
-// empty answer turns the company arm off. Aliases are compile-time literals.
-func SameCorrespondenceSQL(row, anchor, companyDomain string) string {
+// empty answer turns the company arm off. deliveredTo is a placeholder holding
+// the folded address a reply is sent to, or "" when nothing is sent. Aliases
+// are compile-time literals.
+func SameCorrespondenceSQL(row, anchor, companyDomain, deliveredTo string) string {
 	sameParty := row + `.counterparty_email = ` + anchor + `.counterparty_email`
 	sameCompany := `(` + companyDomain + ` <> '' AND EXISTS (SELECT 1 FROM activity_participant counterparty
           WHERE counterparty.activity_id = ` + row + `.id AND lower(counterparty.address) = ` + row + `.counterparty_email
             AND ` + owndomain.CoversSQL("counterparty.address_domain_folded", companyDomain) + `))`
+	proven := `coalesce(` + correspondence.ProvenSQL(anchor) + `, false)`
+	unproven := `NOT ` + proven + ` AND ` + sameParty
+	if deliveredTo != "" {
+		unproven += ` AND ` + anchor + `.counterparty_email = ` + deliveredTo
+	}
 	return `(` + correspondence.ThreadSQL(row, anchor) + `
-     AND coalesce(` + anchor + `.counterparty_email, '') <> '' AND ` + correspondence.ProvenSQL(anchor) + `
-     AND (` + correspondence.OurOutboundSQL(row) + ` OR ` + correspondence.AuthenticatedInboundSQL(row) + `)
-     AND (` + sameParty + ` OR ` + sameCompany + `))`
+     AND coalesce(` + anchor + `.counterparty_email, '') <> ''
+     AND ((` + proven + `
+           AND (` + correspondence.OurOutboundSQL(row) + ` OR ` + correspondence.AuthenticatedInboundSQL(row) + `)
+           AND (` + sameParty + ` OR ` + sameCompany + `))
+       OR (` + unproven + `)))`
 }
 
 // CorrespondenceDomainTx is the company domain a counterparty's correspondence
@@ -105,4 +115,13 @@ func (s *Store) correspondenceDomainTx(ctx context.Context, tx pgx.Tx, anchor id
 func (h Handlers) WithConsumerMail(read ConsumerMailReader) Handlers {
 	h.store = h.store.WithConsumerMail(read)
 	return h
+}
+
+// deliveredToSQL binds a reply's folded delivery address, or answers "" when
+// the read sends nothing.
+func deliveredToSQL(address *string, arg func(any) int) string {
+	if address == nil {
+		return ""
+	}
+	return sprintf("$%d::text", arg(correspondence.Fold(*address)))
 }

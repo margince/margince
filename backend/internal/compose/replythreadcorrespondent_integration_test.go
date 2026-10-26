@@ -124,21 +124,63 @@ func TestAContactOnTwoCustomersThreadsDoesNotJoinThem(t *testing.T) {
 	}
 }
 
-func TestMailNamingACustomerWithoutAuthenticationStaysOutOfTheirReply(t *testing.T) {
+func TestUnauthenticatedMailStaysOutOfAProvenReplyAndReadsOnlyItsOwnSender(t *testing.T) {
 	o := setupOwed(t)
 	const unproven = "Please send the signed contract to my new address instead."
 	o.capture(t, pricingMail("buyer@alpha.test", o.seat, pricingRoot, alphaAsks, 0, true))
 	o.capture(t, pricingMail(o.seat, "buyer@alpha.test", "pricing-ours@ws.example", ourAnswer, 15, false))
+	o.capture(t, pricingMail("orders@beta.test", o.seat, "order-1@beta.test", betaWrites, 20, true))
 	unprovenID := o.capture(t, pricingMail("buyer@alpha.test", o.seat, "pricing-x@alpha.test", unproven, 30, false))
 	anchor := o.capture(t, pricingMail("buyer@alpha.test", o.seat, "pricing-2@alpha.test", alphaConfirms, 60, true))
-	requireOneThreadKey(t, o, anchor, 4)
+	requireOneThreadKey(t, o, anchor, 5)
 	content := replyPrompt(t, o, anchor)
 	if strings.Contains(content, unproven) || !strings.Contains(content, alphaAsks) {
 		t.Fatalf("the reply's context must hold the authenticated question and not the unauthenticated mail: %s", content)
 	}
-	if content := replyPrompt(t, o, unprovenID); strings.Contains(content, alphaAsks) ||
-		strings.Contains(content, alphaConfirms) || strings.Contains(content, ourAnswer) {
-		t.Fatalf("a reply to unauthenticated mail carries other mail of the customer it names: %s", content)
+	// The reply to the unauthenticated mail goes back to buyer@alpha.test, so
+	// it may read our mail with that address, and nothing from anyone else.
+	content = replyPrompt(t, o, unprovenID)
+	if !strings.Contains(content, ourAnswer) || strings.Contains(content, betaWrites) {
+		t.Fatalf("a reply to unauthenticated mail must read our mail with its sender and no other correspondent's: %s", content)
+	}
+}
+
+func TestAReplyGoingToSomeoneOtherThanAnUnprovenSenderReadsTheMessageAlone(t *testing.T) {
+	o := setupOwed(t)
+	o.e.WsExec(t, `INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
+		VALUES ($1, 'gmail', 'connected', 'vault:test', 'rep2@ws.example')`, o.e.Rep2)
+	const earlier = "Internal note: the discount stays at five percent."
+	note := pricingMail("rep2@ws.example", o.seat, pricingRoot, earlier, 0, false)
+	note.cc = "vendor@gamma.test"
+	o.capture(t, note)
+	// Its From names a colleague, so a reply is sent to the customer it copies.
+	copying := pricingMail("rep2@ws.example", o.seat, "pricing-2@ws.example", alphaConfirms, 30, false)
+	copying.cc = "buyer@alpha.test"
+	anchor := o.capture(t, copying)
+	requireOneThreadKey(t, o, anchor, 2)
+	if counterparty := o.e.WsScalar(t, `SELECT counterparty_email FROM activity WHERE id = $1`, anchor); counterparty != "rep2@ws.example" {
+		t.Fatalf("precondition: the anchor's counterparty is %q, want the colleague it names", counterparty)
+	}
+	if content := replyPrompt(t, o, anchor); strings.Contains(content, earlier) {
+		t.Fatalf("a reply sent to someone else carries mail of the unproven sender: %s", content)
+	}
+}
+
+func TestAnUnauthenticatedSendersReplyReadsTheirMailAndNoOneElses(t *testing.T) {
+	o := setupOwed(t)
+	const bWrites = "Please also quote the maintenance contract for our second site."
+	o.capture(t, pricingMail("anna@customer.test", o.seat, pricingRoot, alphaAsks, 0, false))
+	o.capture(t, pricingMail(o.seat, "anna@customer.test", "pricing-ours@ws.example", ourAnswer, 15, false))
+	o.capture(t, pricingMail("bert@customer.test", o.seat, "pricing-b@customer.test", bWrites, 20, true))
+	o.capture(t, pricingMail("orders@beta.test", o.seat, "order-1@beta.test", betaWrites, 25, true))
+	anchor := o.capture(t, pricingMail("anna@customer.test", o.seat, "pricing-2@customer.test", alphaConfirms, 30, false))
+	requireOneThreadKey(t, o, anchor, 5)
+	content := replyPrompt(t, o, anchor)
+	if !strings.Contains(content, alphaAsks) || !strings.Contains(content, ourAnswer) {
+		t.Fatalf("the reply lost the earlier mail between us and its sender: %s", content)
+	}
+	if strings.Contains(content, bWrites) || strings.Contains(content, betaWrites) {
+		t.Fatalf("the reply to an unauthenticated sender reads mail of someone else: %s", content)
 	}
 }
 

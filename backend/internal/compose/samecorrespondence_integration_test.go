@@ -63,6 +63,34 @@ func TestMovingAConversationLeavesAnotherCorrespondenceOnItsKeyAlone(t *testing.
 	}
 }
 
+func TestMovingAnUnprovenConversationMovesOnlyItsSendersMail(t *testing.T) {
+	o := setupOwed(t)
+	first := o.capture(t, pricingMail("anna@customer.test", o.seat, pricingRoot, alphaAsks, 0, false))
+	ours := o.capture(t, pricingMail(o.seat, "anna@customer.test", "pricing-ours@ws.example", ourAnswer, 15, false))
+	colleague := o.capture(t, pricingMail("bert@customer.test", o.seat, "pricing-b@customer.test", betaWrites, 20, true))
+	anchor := o.capture(t, pricingMail("anna@customer.test", o.seat, "pricing-2@customer.test", alphaConfirms, 30, false))
+	project := ids.NewV7()
+	company := o.e.SeedCompany(t, "Customer AG", nil)
+	o.e.WsExec(t, `INSERT INTO project (id, name, key, company_id, phase, source, captured_by)
+		VALUES ($1, 'Pricing', 'PRC2', $2, 'delivering', 'manual', 'human:x')`, project, company)
+	mover := o.e.As(o.owner, []ids.UUID{o.e.Team1}, integration.AdminPerms)
+	if _, err := o.e.Activities.RelinkThread(mover, ids.From[ids.ActivityKind](anchor),
+		activities.RelinkActivityInput{EntityType: "project", EntityID: project}); err != nil {
+		t.Fatalf("moving the conversation: %v", err)
+	}
+	filed := func(id ids.UUID) bool {
+		return o.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND project_id = $2`, id, project) == 1
+	}
+	for _, id := range []ids.UUID{first, ours, anchor} {
+		if !filed(id) {
+			t.Errorf("message %s with the sender was not moved", id)
+		}
+	}
+	if filed(colleague) {
+		t.Error("mail from another address at the sender's company moved with an unproven conversation")
+	}
+}
+
 func TestTheExtractionWindowReadsOneCorrespondence(t *testing.T) {
 	for name, resolved := range map[string][]string{
 		"both senders are contacts":   {"buyer@alpha.test", "orders@beta.test"},

@@ -98,7 +98,7 @@ func (s *Store) onThread(ctx context.Context, tx pgx.Tx, anchor ids.ActivityID, 
 		    JOIN activity_participant ap ON ap.activity_id = a.id AND ap.role IN ('from', 'to', 'cc')
 		   WHERE anchor.id = $%d AND a.archived_at IS NULL AND %s
 		     AND ((ap.user_id = %s AND %s) OR lower(ap.address) = ANY(%s)))`,
-		SameCorrespondenceSQL("a", "anchor", fmt.Sprintf("$%d::text", arg(domain))),
+		SameCorrespondenceSQL("a", "anchor", fmt.Sprintf("$%d::text", arg(domain)), ""),
 		arg(anchor), content, me, auth.ParticipantStandsSQL("ap", "a"),
 		mailSeatAddressesSQL(identities, me))
 	var on bool

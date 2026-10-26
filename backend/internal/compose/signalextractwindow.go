@@ -118,7 +118,7 @@ func threadWindow(
 		           -- the pass, and a short window is the right answer to it.
 		           AND `+activities.AutomaticMailContent+`
 		           AND (id = $7 OR EXISTS (SELECT 1 FROM activity window_anchor
-		                 WHERE window_anchor.id = $7 AND `+activities.SameCorrespondenceSQL("activity", "window_anchor", "$8::text")+`))
+		                 WHERE window_anchor.id = $7 AND `+activities.SameCorrespondenceSQL("activity", "window_anchor", "$8::text", "")+`))
 		           -- Null means no bound: the newest window, which is the
 		           -- ordinary case and the one a thread starts from.
 		           --

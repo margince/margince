@@ -75,9 +75,7 @@ func (s *standingEnv) clientToColleague(t *testing.T, threadKey string) ids.UUID
 	t.Helper()
 	id := s.message(t, threadKey, "workspace",
 		threadParty{role: "from", address: clientAddress}, threadParty{role: "to", address: colleagueAddress})
-	// Capture's proof that the client sent it: a thread binds nothing else to an unproven message.
-	s.WsExec(t, `UPDATE activity SET counterparty_email = $2, captured_by = 'connector:gmail', inbound_sender_authenticated = true
-		WHERE id = $1`, id, clientAddress)
+	s.WsExec(t, `UPDATE activity SET counterparty_email = $2 WHERE id = $1`, id, clientAddress)
 	return id
 }
 
