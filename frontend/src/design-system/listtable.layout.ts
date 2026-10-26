@@ -13,9 +13,9 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from "react";
 import { readStoredJson, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { useNumericFloors } from "./listtable.floors";
 
 /**
  * How the table divides its width when the reader has not resized anything.
@@ -289,95 +289,6 @@ function useAvailableWidth(
   return available;
 }
 
-/**
- * The ink width of a cell's text plus its padding. Text, not boxes: a box that
- * gives way to its cell would report the cell back, and the floor would only
- * ever hold the column where it already stands.
- */
-function inkWidth(cell: HTMLTableCellElement): number {
-  const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
-  const range = document.createRange();
-  let left = Number.POSITIVE_INFINITY;
-  let right = Number.NEGATIVE_INFINITY;
-  for (let text = walker.nextNode(); text; text = walker.nextNode()) {
-    range.selectNodeContents(text);
-    const box = range.getBoundingClientRect();
-    if (box.width > 0) {
-      left = Math.min(left, box.left);
-      right = Math.max(right, box.right);
-    }
-  }
-  if (right <= left) {
-    return 0;
-  }
-  const style = getComputedStyle(cell);
-  const padding =
-    Number.parseFloat(style.paddingLeft) +
-    Number.parseFloat(style.paddingRight);
-  return Math.ceil(right - left + padding) + 1;
-}
-
-/** The widest figure each numeric column holds in a rendered table. */
-function numericFloors(
-  table: HTMLTableElement,
-  shown: readonly SizedColumn[],
-): Record<string, number> {
-  const rows = table.tBodies[0]?.rows;
-  const floors: Record<string, number> = {};
-  // Without layout (jsdom) a range has no box, and nothing is raised.
-  if (!rows || typeof Range.prototype.getBoundingClientRect !== "function") {
-    return floors;
-  }
-  shown.forEach((column, index) => {
-    if (!column.numeric) {
-      return;
-    }
-    for (const row of rows) {
-      const cell = row.cells[index];
-      const width = cell ? inkWidth(cell) : 0;
-      if (width > (floors[column.key] ?? 0)) {
-        floors[column.key] = width;
-      }
-    }
-  });
-  return floors;
-}
-
-/**
- * The floors, read on every render and once more after it commits, the way
- * `useClippedEdges` reads its box. Text does not move with its column, so the
- * reading settles; a resize of the table (a font arriving) reads it again.
- */
-function useNumericFloors(
-  shown: readonly SizedColumn[],
-  head: RefObject<HTMLTableElement | null>,
-): Widths {
-  const subscribe = useMemo(() => watchTable(head), [head]);
-  const floors = useSyncExternalStore(
-    subscribe,
-    () =>
-      head.current
-        ? JSON.stringify(numericFloors(head.current, shown))
-        : NO_FLOORS,
-    () => NO_FLOORS,
-  );
-  return useMemo(() => widthsIn(JSON.parse(floors)) ?? {}, [floors]);
-}
-
-const NO_FLOORS = "{}";
-
-function watchTable(head: RefObject<HTMLTableElement | null>) {
-  return (changed: () => void) => {
-    const table = head.current;
-    if (!table || typeof ResizeObserver === "undefined") {
-      return () => undefined;
-    }
-    const observer = new ResizeObserver(changed);
-    observer.observe(table);
-    return () => observer.disconnect();
-  };
-}
-
 /** What a header's grip calls while the reader drags a column edge. */
 export type ColumnResize = Readonly<{
   resizing: boolean;
@@ -450,7 +361,11 @@ export function useColumnWidths(
   };
   const { widths, ...resize } = useResizedWidths(widthsKey, measured);
   const available = useAvailableWidth(refs.scroller, drawsOwnTable);
-  const floors = useNumericFloors(shown, refs.head);
+  const floorsRead = useNumericFloors(shown, refs.head);
+  const floors = useMemo(
+    () => widthsIn(JSON.parse(floorsRead)) ?? {},
+    [floorsRead],
+  );
   return { ...columnLayout(shown, widths, available, floors), ...resize };
 }
 
