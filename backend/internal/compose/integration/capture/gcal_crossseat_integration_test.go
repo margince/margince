@@ -19,10 +19,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// crossSeatUID is the iCal UID of the event every test here reaches again.
+const crossSeatUID = "review@google.com"
+
 // colleagueCalendarMeeting writes a meeting as a colleague's Outlook calendar
 // capture leaves it. It carries their seat's stamp and the provider's guest
 // list, and claims the meeting identity under the event's iCal UID and start.
-func colleagueCalendarMeeting(t *testing.T, e *integration.SearchEnv, colleague ids.UUID, uid string, start time.Time, guests ...string) ids.UUID {
+func colleagueCalendarMeeting(t *testing.T, e *integration.SearchEnv, colleague ids.UUID, start time.Time, guests ...string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	ctx := context.Background()
@@ -40,7 +43,7 @@ func colleagueCalendarMeeting(t *testing.T, e *integration.SearchEnv, colleague 
 	if _, err := e.Owner.Exec(ctx, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, id, colleague); err != nil {
 		t.Fatal(err)
 	}
-	key := activities.MeetingIdentityKey(uid, start.UTC().Format(time.RFC3339))
+	key := activities.MeetingIdentityKey(crossSeatUID, start.UTC().Format(time.RFC3339))
 	if _, err := e.Owner.Exec(ctx, `INSERT INTO activity_identity (identity_kind, identity_key, activity_id, attested_by)
 		VALUES ('meeting', $1, $2, 'connector:graphcal')`, key, id); err != nil {
 		t.Fatal(err)
@@ -63,7 +66,7 @@ func TestAColleaguesStoredMeetingThatNamesThisSeatIsOneMeeting(t *testing.T) {
 			e := env.e
 			colleague := seatFor(t, e, guestColleagueA)
 			start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
-			stored := colleagueCalendarMeeting(t, e, colleague, "review@google.com", start, guestColleagueA, captureOwner, guestKnown)
+			stored := colleagueCalendarMeeting(t, e, colleague, start, guestColleagueA, captureOwner, guestKnown)
 			if bound {
 				if _, err := e.Owner.Exec(context.Background(), `UPDATE activity_participant SET user_id = $1 WHERE activity_id = $2 AND address = $3`,
 					e.Rep1, stored, captureOwner); err != nil {
@@ -98,7 +101,7 @@ func TestAColleaguesStoredMeetingThatDoesNotNameThisSeatStaysItsOwn(t *testing.T
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
-	stored := colleagueCalendarMeeting(t, e, colleague, "review@google.com", start, guestColleagueA, guestKnown)
+	stored := colleagueCalendarMeeting(t, e, colleague, start, guestColleagueA, guestKnown)
 	feed := &calendarFeed{}
 	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, guestList()...))
 	sync := connectFeed(t, env, feed)
@@ -119,7 +122,7 @@ func TestAnotherOccurrenceOfTheSeriesIsNotBound(t *testing.T) {
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
-	colleagueCalendarMeeting(t, e, colleague, "review@google.com", start.AddDate(0, 0, -7), guestColleagueA, captureOwner, guestKnown)
+	colleagueCalendarMeeting(t, e, colleague, start.AddDate(0, 0, -7), guestColleagueA, captureOwner, guestKnown)
 	feed := &calendarFeed{}
 	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, guestList()...))
 	sync := connectFeed(t, env, feed)
@@ -138,7 +141,7 @@ func TestACalendarReplayAfterTheCursorIsDeletedFilesNoSecondMeeting(t *testing.T
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
-	stored := colleagueCalendarMeeting(t, e, colleague, "review@google.com", start, guestColleagueA, captureOwner, guestKnown)
+	stored := colleagueCalendarMeeting(t, e, colleague, start, guestColleagueA, captureOwner, guestKnown)
 	feed := &calendarFeed{}
 	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, guestList()...))
 	sync := connectFeed(t, env, feed)
@@ -165,7 +168,7 @@ func TestAnArchivedStoredMeetingIsNotBoundTo(t *testing.T) {
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
-	stored := colleagueCalendarMeeting(t, e, colleague, "review@google.com", start, guestColleagueA, captureOwner, guestKnown)
+	stored := colleagueCalendarMeeting(t, e, colleague, start, guestColleagueA, captureOwner, guestKnown)
 	if _, err := e.Owner.Exec(context.Background(), `UPDATE activity SET archived_at = now() WHERE id = $1`, stored); err != nil {
 		t.Fatal(err)
 	}
