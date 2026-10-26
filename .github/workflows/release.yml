@@ -15,13 +15,12 @@ name: Release
 # yet, which is what the epoch-pinned 1970.* version says out loud. A release is
 # now a decision somebody makes, which is the only cadence a dispatch can have.
 #
-# The desktop bundles and the GitHub release are NOT here. They belong to
-# release-tag.yml, which runs on a v* tag: a bundle is something a contact
-# downloads and runs, so it is attached to a release page named with a version
-# somebody chose, and that version is a semver tag rather than the
-# YYYY.edition.bugfix string the dist service orders on. Two release kinds, two
-# schemes, one lane each — and only release-tag.yml can create a GitHub release,
-# so a release page cannot appear under two spellings of the same build.
+# The GitHub release is NOT here. It belongs to release-tag.yml, which runs on
+# a v* tag: a release page is named with a version somebody chose, and that
+# version is a semver tag rather than the YYYY.edition.bugfix string the dist
+# service orders on. Two release kinds, two schemes, one lane each — and only
+# release-tag.yml can create a GitHub release, so a release page cannot appear
+# under two spellings of the same build.
 #
 # The flow, in order: draft the release versioned 1970.<build> (the build is
 # this workflow's run number, fitting the constellation YYYY.edition version

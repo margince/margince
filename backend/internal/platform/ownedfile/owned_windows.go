@@ -11,8 +11,7 @@ import (
 )
 
 // OpenNoFollow is zero because Windows has no O_NOFOLLOW. This file is what
-// lets the api compile for it at all — the desktop bundle runs the same
-// binaries a server does.
+// lets the api compile for it at all.
 //
 // Nothing is given up by the omission: O_EXCL carries the refusal, and there
 // was never an O_NOFOLLOW here to drop.

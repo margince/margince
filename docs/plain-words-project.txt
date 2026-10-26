@@ -28,7 +28,6 @@ adapter
 add
 address
 admin
-administrator
 advertise
 advice
 advise
@@ -91,7 +90,6 @@ arrows
 article
 as
 ask
-assemble
 assess
 asset
 assignee
@@ -260,7 +258,6 @@ charts
 check
 checkbox
 checkboxes
-checkout
 chevron
 child
 children
@@ -286,7 +283,6 @@ client
 climbs
 clipboard
 clock
-clone
 close
 closure
 cloud
@@ -332,7 +328,6 @@ connect
 connection
 connector
 consent
-console
 consult
 consultancy
 consume
@@ -343,7 +338,6 @@ context
 continue
 contract
 contrast
-contrib
 contribute
 control
 conversation
@@ -450,7 +444,6 @@ dismiss
 display
 disqualified
 disqualify
-distributable
 do
 doc
 document
@@ -532,7 +525,6 @@ evidence
 example
 except
 exception
-executable
 exempt
 exist
 exit
@@ -832,7 +824,6 @@ last
 late
 later
 latest
-launch
 lavender
 law
 lawful
@@ -941,7 +932,6 @@ meta
 metadata
 meter
 middle
-migrate
 migration
 minute
 mirror
@@ -966,7 +956,6 @@ most
 motion
 mount
 move
-msys
 much
 muddy
 multi
@@ -1183,7 +1172,6 @@ private
 pro
 probe
 problem
-process
 product
 production
 profile
@@ -1274,7 +1262,6 @@ relay
 release
 relink
 reload
-relocatable
 rem
 remote
 remove
@@ -1421,7 +1408,6 @@ sibling
 side
 sidebar
 sideways
-sigint
 sign
 signal
 silence
@@ -1443,7 +1429,6 @@ small
 smooth
 snapshot
 so
-socket
 soft
 software
 sold
@@ -1495,7 +1480,6 @@ status
 statute
 statutory
 stay
-stdlib
 step
 steward
 still
@@ -1526,7 +1510,6 @@ submit
 submits
 success
 such
-suffix
 suggest
 suggestion
 suggestions
@@ -1534,8 +1517,6 @@ suite
 sum
 summary
 superellipse
-supervised
-supervisor
 support
 suppress
 sure
@@ -1608,7 +1589,6 @@ time
 timeline
 timeout
 timers
-timezone
 tint
 tinted
 tints
@@ -1715,7 +1695,6 @@ visible
 visit
 visual
 vocabulary
-vs
 wait
 waive
 walk

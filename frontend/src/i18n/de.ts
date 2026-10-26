@@ -2935,6 +2935,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Ein Verlauf als ein Ereignis sagt zuerst, WAS er ist.
   "timeline.group.thread_other": "{count} Nachrichten",
   "timeline.group.thread_one": "{count} Nachricht",
+  "timeline.group.sides": "{theirs} von der Gegenseite, {ours} von deinem Team",
+  "timeline.automatic.calendar": "Kalendereinladung",
+  "timeline.automatic.sending_system": "Von einem System gesendet",
+  "timeline.automatic.product": "Von Margince gesendet",
   "timeline.group.bulk_other": "an {count} Personen gesendet",
   "timeline.group.bulk_one": "an {count} Person gesendet",
   "timeline.group.expand": "Öffnen",
@@ -5396,6 +5400,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Prüfe die Ergebnisse und plane deine nächsten Schritte.",
   "brief.suggestions.review": "Deal-Vorschläge ansehen",
   "brief.suggestions.empty": "Keine Deal-Vorschläge in diesem Morgenbericht.",
+  "brief.suggestions.notAnnotated":
+    "Für heute priorisiert. Die nächtliche Prüfung hat zu diesen Deals noch keine Einschätzung geschrieben.",
+  "brief.suggestions.noAssessment":
+    "Für heute priorisiert. Die nächtliche Prüfung hat zu diesen Deals keine Einschätzung hinterlassen, die du lesen kannst.",
   "brief.agenda.summary": "{agenda}",
   "brief.agenda.customer_waiting_one": "{count} Kundenanfrage",
   "brief.agenda.customer_waiting_other": "{count} Kundenanfragen",
@@ -7096,6 +7104,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.fact.tools": "Tools",
   "agent.fact.sources": "Quellen",
   "agent.fact.offline": "offline",
+  "agent.fact.sourceOnProvider": "{account} ({provider})",
   "agent.fact.searchIndex": "Suchindex: {model}",
   "agent.fact.noCalls": "Noch keine Modellaufrufe",
   "agent.fact.hidden": "Für deine Rolle ausgeblendet",
@@ -7103,6 +7112,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.line.waiting_one": "{count} Freigabe steht aus",
   "agent.line.waiting_other": "{count} Freigaben stehen aus",
   "agent.line.allClear": "Nichts verlangt nach Aufmerksamkeit",
+  "agent.line.sourcesUnknown":
+    "Verbundene Quellen konnten nicht geprüft werden",
   "agent.line.cannotReach": "{sources} nicht erreichbar",
   "agent.line.runFailed": "Ein Lauf ist fehlgeschlagen",
   "agent.line.runStopped": "Ein Lauf wurde vorzeitig beendet",
@@ -7837,6 +7848,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst bei einem der Datensätze, mit denen diese Zeile verknüpft ist, keine Aktivitäten hinzufügen, daher wird die Zeile übersprungen.",
   "import.reason.activity_held":
     "Diese Aktivität unterliegt einer Aufbewahrungspflicht, daher kann die Zeile sie nicht ändern.",
+  "import.reason.note_repeated":
+    "Diese Notiz wiederholt eine frühere Zeile dieses Imports: dieselben Datensätze, derselbe Text, dieselbe Zeit. Abgelegt wird sie nur einmal.",
   "import.reason.lead_not_found":
     "Kein Lead mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
   "import.reason.lead_not_found_dropped":

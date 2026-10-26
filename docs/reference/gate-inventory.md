@@ -44,7 +44,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `coderabbitpathrules_test.go` | H3 | What .coderabbit.yaml tells the reviewer about backend Go, held against what is true. |
 | `companyindustry_test.go` | H3 | The industry list lives in the contract, the vocabulary owner in the contacts module and its wording in the frontend. |
 | `companyprofilevocabulary_test.go` | H3 | The company-profile vocabulary is spelled in eight places, and widening seven of them without the eighth fails here. |
-| `composedfrontendbuilders_test.go` | H3 | Four builders compile the composed SPA (the make lane, the release image and the desktop bundle on each platform), and every one of them must install the composed workspace before it does. |
+| `composedfrontendbuilders_test.go` | H3 | Two builders compile the composed SPA (the make lane and the release image), and each of them must install the composed workspace before it does. |
 | `configgenerated_test.go` | H3 | The configuration files written from the settings registry are the ones its generator writes now. |
 | `configpresets_test.go` | H3 | Every preset under config/presets/ is a binding the parser accepts. |
 | `consumergroupwiring_test.go` | H3 | Every lane the worker starts is a group the catalog declares. |
@@ -272,8 +272,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
 | `declinedwrite_test.go` | H2 | A conditional by-id write that declines to happen says so. |
 | `deliverysenderonerule_test.go` | H2 | The mail system's own sender names (mailer-daemon, postmaster) are spelled in platform/mailidentity and nowhere else. |
-| `desktopmacosfloor_test.go` | H1 | Every macOS build script pins the bundle's OS floor before it compiles anything. |
 | `detachedwrites_test.go` | H2 | A detached write says what bounds it. |
+| `directionowner_test.go` | H3 | Every reader of exchanges that asks "did they write" or "did we write" asks relstrength.TheyWroteSQL and WeWroteSQL. |
 | `directmailbypass_test.go` | H2 | Who may hand a message straight to the SMTP relay, bypassing comms\_outbound. |
 | `docscodepaths_test.go` | H3 | Every source file a prose page names in backticks still exists. |
 | `docsdescribes_test.go` | H1 | Every explanation and handbook page names the code it describes. |

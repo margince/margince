@@ -26,7 +26,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   comment-budget test-comment-budget comment-density \
   check-extension-modules \
   no-jurisdiction test-no-jurisdiction \
-  pkg-freeze test-desktop-launcher \
+  pkg-freeze \
   test-dev-postgres-container test-e2e-llm-check \
   test-release-version-stamped test-closing-declaration test-release-patch-base \
   test-published-tag test-docs-describing \
@@ -933,7 +933,7 @@ fe-edge-padding:
 ## repository root, where it runs.
 craft-static: test-craft-pin
 	@"$$(./scripts/craft-pin.sh)" static --strict --diff-base origin/main \
-		backend extensions fixtures desktop frontend tools
+		backend extensions fixtures frontend tools
 
 ## craft-review — the OPT-IN model-driven arm of the craftsmanship gate: send
 ## this branch's diff to an external model API and get a reading of what a
@@ -958,27 +958,6 @@ craft-review: test-craft-pin
 ## request to assert on a refusal that never gets that far.
 test-craft-review:
 	@./scripts/test-craft-review.sh
-
-## test-desktop-launcher — the launcher's own suite. It exists because a test
-## lane that cannot reach a module is a test lane that proves nothing about it,
-## and this module hid that longer than any other: desktop/launcher is its own
-## module and deliberately OUTSIDE go.work,
-## since it supervises the shipped binaries as child processes rather than
-## importing them. So `./...` inside backend cannot reach it, the workspace
-## cannot reach it, and the seven test files it already carried ran nowhere —
-## which is indistinguishable from carrying none. The program every desktop user
-## meets first was the one package with no lane.
-##
-## GOWORK=off for the reason its go.mod states: inside a workspace that does not
-## list the module, every package fails to resolve.
-##
-## LAUNCHER_COVER_OUT (optional): also write a coverage profile there. It exists
-## because the product profile CANNOT contain a launcher line — that one is
-## `go test -coverpkg=./...` over the backend module, and this module is not in
-## it — so the number reported for shipped code a user runs was 0% whatever the
-## suite did. A profile of its own is what makes the figure real.
-test-desktop-launcher:
-	GOWORK=off go test -C desktop/launcher -count=1 	  $(if $(LAUNCHER_COVER_OUT),-covermode=atomic -coverprofile=$(abspath $(LAUNCHER_COVER_OUT))) ./...
 
 ## craft-residue — fail if any unresolved CRAFT-FIX/CRAFT-DISPUTE marker was
 ## left in the backend tree (the review-loop residue check, ADR-0045). The CI
@@ -1348,7 +1327,7 @@ comment-density:
 ## comments improving. A run that measures under 10,000 files fails, because a
 ## wrong path would otherwise report a pass. Re-pin with `make comment-stats-pin`
 ## in the change that lowers a number.
-COMMENT_STATS_PATHS := backend extensions fixtures desktop frontend tools
+COMMENT_STATS_PATHS := backend extensions fixtures frontend tools
 comment-stats: test-craft-pin
 	@"$$(./scripts/craft-pin.sh)" stats --min-files 10000 \
 		--baseline scripts/comment-stats-baseline.json $(COMMENT_STATS_PATHS)
@@ -1523,114 +1502,6 @@ pkg-freeze:
 hooks:
 	git config core.hooksPath .githooks
 	@echo "installed: core.hooksPath=.githooks (pre-commit runs gofmt + the license-header gate)"
-
-# --- Desktop build (macOS arm64) ---
-# The self-contained folder a non-technical user runs with no Docker: a
-# custom Postgres+pgvector, the event bus, the three process roles, the SPA,
-# and the launcher that supervises them. Output lands in build/desktop/
-# (ignored). Why it needs its own Postgres, and the update contract the folder
-# layout encodes: docs/explanation/desktop-distribution.md.
-#
-# These targets declare themselves HERE rather than joining the big .PHONY list
-# at the top. make accumulates .PHONY, so the effect is identical — and the
-# shared line is a single line every branch appends to, which makes it conflict
-# on every rebase. A section that declares its own targets beside them cannot
-# collide with a section that does the same.
-.PHONY: desktop desktop-deps desktop-postgres desktop-valkey desktop-app desktop-dist desktop-rebuild desktop-clean
-DESKTOP_STAGE := build/desktop/.stage
-
-## desktop — build the whole desktop folder (build/desktop/margince/).
-## Reuses an already-built Postgres and bus; use desktop-rebuild to force them.
-##
-## Sequential recipe, not a prerequisite list: prerequisites express dependency,
-## and under `make -j` make is free to run independent ones at once — so
-## desktop-dist would start assembling a tree the app stage had not finished
-## staging, and fail intermittently for a reason nothing in the output names.
-## The edges cannot be declared on the stage targets themselves either, because
-## each is documented as doing JUST its own step (`make desktop-dist` assembles
-## and verifies; it does not rebuild the app).
-desktop:
-	@$(MAKE) desktop-deps
-	@$(MAKE) desktop-app
-	@$(MAKE) desktop-dist
-
-## desktop-deps — build Postgres+pgvector and the bus ONLY if they are missing.
-## Compiling Postgres takes ~5 minutes and changes only when its pinned version
-## does, so a routine rebuild of the app must not pay for it.
-desktop-deps:
-	@test -x $(DESKTOP_STAGE)/pgsql/bin/postgres || $(MAKE) desktop-postgres
-	@test -x $(DESKTOP_STAGE)/valkey/valkey-server || $(MAKE) desktop-valkey
-
-## desktop-postgres — build the relocatable Postgres 16 + pgvector + contrib (~5 min).
-## Rerun after bumping the pinned versions in the script.
-desktop-postgres:
-	@bash desktop/build/build-postgres.sh
-
-## desktop-valkey — build the event bus (Valkey, BSD-licensed drop-in for Redis).
-desktop-valkey:
-	@bash desktop/build/build-valkey.sh
-
-## desktop-app — build api/worker/migrate (through build/composition/, so the
-## enabled extensions/ units are linked), the frontend, and the launcher.
-desktop-app:
-	@bash desktop/build/build-app.sh
-
-## desktop-dist — assemble build/desktop/margince/ and verify its signatures.
-desktop-dist:
-	@bash desktop/build/build-dist.sh
-
-## desktop-rebuild — force a full rebuild including Postgres and the bus.
-## Sequential for the same reason as `desktop` above.
-desktop-rebuild:
-	@$(MAKE) desktop-postgres
-	@$(MAKE) desktop-valkey
-	@$(MAKE) desktop-app
-	@$(MAKE) desktop-dist
-
-## desktop-clean — remove all desktop build output (build/desktop/).
-desktop-clean:
-	@rm -rf build/desktop
-	@echo "desktop-clean: removed build/desktop"
-
-# --- Desktop build (Windows x64) ---
-# The same folder for Windows, built by desktop/build/*.ps1. These targets MUST
-# RUN ON WINDOWS: pgvector has no build system other than nmake against MSVC,
-# and Redis needs the MSYS2 toolchain, so neither half cross-builds from macOS.
-# A Windows host is not required to have GNU make either, which is why
-# desktop/build/build-windows.ps1 is the primary entry point and these are the
-# convenience wrapper. Output lands in build/desktop/margince-windows/.
-#
-# Declared here for the same reason the macOS block declares its own: make
-# accumulates .PHONY, and a section that owns its targets cannot conflict with
-# every other branch appending to one shared line.
-.PHONY: desktop-win desktop-win-rebuild desktop-win-postgres desktop-win-bus desktop-win-app desktop-win-dist
-PWSH := pwsh
-DESKTOP_WIN := desktop/build
-
-## desktop-win — build the whole Windows folder (build/desktop/margince-windows/).
-## Reuses an already-staged Postgres and bus; use desktop-win-rebuild to force them.
-desktop-win:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-windows.ps1
-
-## desktop-win-rebuild — force a full rebuild including Postgres and the bus.
-desktop-win-rebuild:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-windows.ps1 -Force
-
-## desktop-win-postgres — stage PostgreSQL 16 + build pgvector against it (needs MSVC).
-desktop-win-postgres:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-postgres.ps1
-
-## desktop-win-bus — build the event bus (Redis 7.2, the last BSD-3 line; needs MSYS2).
-desktop-win-bus:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-bus.ps1
-
-## desktop-win-app — build api/worker/migrate + frontend + launcher for Windows.
-desktop-win-app:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-app.ps1
-
-## desktop-win-dist — assemble build/desktop/margince-windows/ and verify it runs standalone.
-desktop-win-dist:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-dist.ps1
 
 # --- SBOM (software bill of materials, issue #331) ---
 # Repo-wide (backend + frontend + extensions), so it lives at the root, not

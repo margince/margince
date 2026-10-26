@@ -2848,6 +2848,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // says: the reader is scanning for an event, not a sentence.
   "timeline.group.thread_other": "{count} tin nhắn",
   "timeline.group.thread_one": "{count} tin nhắn",
+  "timeline.group.sides": "{theirs} từ phía họ, {ours} từ nhóm của bạn",
+  "timeline.automatic.calendar": "Lời mời lịch",
+  "timeline.automatic.sending_system": "Do hệ thống gửi",
+  "timeline.automatic.product": "Do Margince gửi",
   "timeline.group.bulk_other": "gửi tới {count} người",
   "timeline.group.bulk_one": "gửi tới {count} người",
   "timeline.group.expand": "Mở",
@@ -5254,6 +5258,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Xem lại kết quả và lên kế hoạch cho bước tiếp theo.",
   "brief.suggestions.review": "Xem các cơ hội được gợi ý",
   "brief.suggestions.empty": "Không có cơ hội được gợi ý trong bản tin này.",
+  "brief.suggestions.notAnnotated": "Đã xếp hạng cho hôm nay. Bản rà soát qua đêm chưa viết đánh giá cho các cơ hội này.",
+  "brief.suggestions.noAssessment": "Đã xếp hạng cho hôm nay. Bản rà soát qua đêm không để lại đánh giá nào bạn có thể đọc cho các cơ hội này.",
   "brief.agenda.summary": "{agenda}",
   "brief.agenda.customer_waiting_one": "{count} yêu cầu của khách hàng",
   "brief.agenda.customer_waiting_other": "{count} yêu cầu của khách hàng",
@@ -6890,6 +6896,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.fact.tools": "Công cụ",
   "agent.fact.sources": "Nguồn",
   "agent.fact.offline": "ngoại tuyến",
+  "agent.fact.sourceOnProvider": "{account} ({provider})",
   "agent.fact.searchIndex": "Chỉ mục tìm kiếm: {model}",
   "agent.fact.noCalls": "Chưa có lượt gọi mô hình",
   "agent.fact.hidden": "Bị ẩn với vai trò hiện tại",
@@ -6897,6 +6904,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.line.waiting_one": "{count} phê duyệt đang chờ",
   "agent.line.waiting_other": "{count} phê duyệt đang chờ",
   "agent.line.allClear": "Không có gì cần chú ý",
+  "agent.line.sourcesUnknown": "Không kiểm tra được các nguồn đã kết nối",
   "agent.line.cannotReach": "Không thể kết nối với {sources}",
   "agent.line.runFailed": "Một lần chạy bị lỗi",
   "agent.line.runStopped": "Một lần chạy bị dừng sớm",
@@ -7607,6 +7615,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không thể thêm hoạt động vào một trong các hồ sơ mà hàng này liên kết nên hàng bị bỏ qua.",
   "import.reason.activity_held":
     "Hoạt động này đang bị giữ theo nghĩa vụ lưu trữ nên hàng không thể thay đổi nó.",
+  "import.reason.note_repeated":
+    "Ghi chú này lặp lại một hàng trước đó của lần nhập này: cùng bản ghi, cùng nội dung, cùng thời điểm. Nó chỉ được lưu một lần.",
   "import.reason.lead_not_found":
     "Không có lead nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
   "import.reason.lead_not_found_dropped":

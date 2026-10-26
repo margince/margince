@@ -294,7 +294,9 @@ describe("the timeline tab", () => {
     );
 
     expect(container.querySelectorAll(".tl-thread")).toHaveLength(1);
-    expect(screen.getByText("2 messages")).toBeTruthy();
+    expect(
+      screen.getByText("2 messages · 1 from them, 1 from your team"),
+    ).toBeTruthy();
   });
 
   it("says the section is withheld rather than drawing it empty", () => {

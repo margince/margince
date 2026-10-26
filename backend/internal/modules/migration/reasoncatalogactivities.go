@@ -42,6 +42,7 @@ const (
 	ReasonCompanyLinkOnMeeting         ReasonCode = "company_link_on_meeting"
 	ReasonLinkNotAttachable            ReasonCode = "link_not_attachable"
 	ReasonActivityHeld                 ReasonCode = "activity_held"
+	ReasonNoteRepeated                 ReasonCode = "note_repeated"
 	ReasonLeadNotFound                 ReasonCode = "lead_not_found"
 	ReasonLeadNotFoundDropped          ReasonCode = "lead_not_found_dropped"
 	ReasonDealNotFound                 ReasonCode = "deal_not_found"
@@ -159,6 +160,11 @@ var activityReasons = map[ReasonCode]reasonEntry{
 		textlang.English:    "This activity is held under a retention obligation, so the row cannot change it.",
 		textlang.German:     "Diese Aktivität unterliegt einer Aufbewahrungspflicht, daher kann die Zeile sie nicht ändern.",
 		textlang.Vietnamese: "Hoạt động này đang bị giữ theo nghĩa vụ lưu trữ nên hàng không thể thay đổi nó.",
+	}},
+	ReasonNoteRepeated: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "This note repeats an earlier row of this import: same records, same text, same time. It is filed once.",
+		textlang.German:     "Diese Notiz wiederholt eine frühere Zeile dieses Imports: dieselben Datensätze, derselbe Text, dieselbe Zeit. Abgelegt wird sie nur einmal.",
+		textlang.Vietnamese: "Ghi chú này lặp lại một hàng trước đó của lần nhập này: cùng bản ghi, cùng nội dung, cùng thời điểm. Nó chỉ được lưu một lần.",
 	}},
 	ReasonLeadNotFound: {params: []string{paramRef}, text: map[textlang.Lang]string{
 		textlang.English:    "No lead with “{ref}” in this upload, in an earlier import, or in Margince.",

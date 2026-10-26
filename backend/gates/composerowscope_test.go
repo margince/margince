@@ -84,6 +84,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// collections.RecordTagSuggestionTx, never to a reader. A user sees the
 	// suggestion only through visibleTagSuggestionsQuery, which applies the
 	// record's row scope and each cited activity's content gate.
+	"internal/compose/company360:employeeRoster":   "the account's employees as contacts.CompanyRosterSQL renders them, which composes the edge gate and the contact row scope into the same statement; the ids only decide which activities move the two direction clocks, and none is served",
 	"internal/compose:tagScoutSQL":                 "the tag scout's one read of captured activities that mention a suggestible tag's phrases, under the tag-scout sweep's system principal: every contact and company it names is one a suggestion is filed against, handed to collections.RecordTagSuggestionTx and never to a reader",
 	"internal/compose:raiseFromAnswers":            "the tag scout's model path replays the stored model answers into the contacts and companies the answered activities are filed under, under the tag-scout sweep's system principal, on tagScoutSQL's terms: each record goes to collections.RecordTagSuggestionTx and never to a reader",
 	"internal/modules/projects:LinkPhaseHistoryTx": "the data task that links phase-history rows to their audit rows runs as the system principal and returns only the ids of the history rows it inspected, to page the next batch; it reads no project and serves nothing to a caller",

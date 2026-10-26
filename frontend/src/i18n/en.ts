@@ -2923,6 +2923,10 @@ export const en = {
   // says: the reader is scanning for an event, not a sentence.
   "timeline.group.thread_other": "{count} messages",
   "timeline.group.thread_one": "{count} message",
+  "timeline.group.sides": "{theirs} from them, {ours} from your team",
+  "timeline.automatic.calendar": "Calendar invitation",
+  "timeline.automatic.sending_system": "Sent by a system",
+  "timeline.automatic.product": "Sent by Margince",
   "timeline.group.bulk_other": "sent to {count} people",
   "timeline.group.bulk_one": "sent to {count} person",
   "timeline.group.expand": "Open",
@@ -5426,6 +5430,10 @@ export const en = {
   "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.suggestions.review": "Review deal suggestions",
   "brief.suggestions.empty": "No deal suggestions in this brief.",
+  "brief.suggestions.notAnnotated":
+    "Ranked for today. The overnight review has not written an assessment for these deals yet.",
+  "brief.suggestions.noAssessment":
+    "Ranked for today. The overnight review left no assessment you can read for these deals.",
   "brief.agenda.summary": "{agenda}",
   "brief.agenda.customer_waiting_one": "{count} customer request",
   "brief.agenda.customer_waiting_other": "{count} customer requests",
@@ -7177,6 +7185,7 @@ export const en = {
   "agent.fact.tools": "Tools",
   "agent.fact.sources": "Sources",
   "agent.fact.offline": "offline",
+  "agent.fact.sourceOnProvider": "{account} ({provider})",
   // The two reasons there is no model to name, in the value's own slot.
   "agent.fact.searchIndex": "Search index: {model}",
   "agent.fact.noCalls": "No model calls yet",
@@ -7190,6 +7199,7 @@ export const en = {
   "agent.line.waiting_one": "{count} approval waiting",
   "agent.line.waiting_other": "{count} approvals waiting",
   "agent.line.allClear": "Nothing needs attention",
+  "agent.line.sourcesUnknown": "Could not check your connected sources",
   "agent.line.cannotReach": "Cannot reach {sources}",
   "agent.line.runFailed": "A run failed",
   "agent.line.runStopped": "A run stopped early",
@@ -7908,6 +7918,8 @@ export const en = {
     "You cannot add activities to one of the records this row links to, so the row is skipped.",
   "import.reason.activity_held":
     "This activity is held under a retention obligation, so the row cannot change it.",
+  "import.reason.note_repeated":
+    "This note repeats an earlier row of this import: same records, same text, same time. It is filed once.",
   "import.reason.lead_not_found":
     "No lead with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.lead_not_found_dropped":

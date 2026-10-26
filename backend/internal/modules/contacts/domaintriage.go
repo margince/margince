@@ -36,12 +36,10 @@ const (
 	// company that is emphatically not the sender's employer (live.fr is
 	// Microsoft's), so it must not become their company either.
 	DomainProvider = "provider"
-	// DomainNoSite — nothing identified a company. Whether one nonetheless
-	// EXISTS depends on which path got here, and company_id says which: a
-	// site that could not be read falls to the sender's name and creates the
-	// company when that name does not explain the domain, while a landing page
-	// the classifier read as parked creates nothing. Both are settled, and both
-	// mean the same thing for the next message — stop asking.
+	// DomainNoSite: nothing identified a company. The classifier read the
+	// landing page as parked, and no company is created. A site that could not
+	// be read never lands here: it settles personal when the sender's name
+	// explains the domain, and stays pending otherwise.
 	DomainNoSite = "no_site"
 )
 
