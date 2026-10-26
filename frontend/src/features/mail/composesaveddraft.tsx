@@ -8,22 +8,25 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { ifMatch } from "../../api/version";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { paragraphsFrom } from "../../design-system/richtext";
 import { type Toast, useOwnToast, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import {
-  problemCodeOf,
-  problemMessageOf,
-  throwProblem,
-} from "../../lib/problem";
+import { problemCodeOf, problemMessageOf } from "../../lib/problem";
 import { stripEveryKeyTag } from "../projects/projectrecord";
 import { useAutosave } from "./composeautosave";
-import type { RelinkKind } from "./composerelink";
+import {
+  deleteDraft,
+  draftKey,
+  type MailDraft,
+  readDraft,
+  type SavedDraftAnchor,
+  type SavedDraftFields,
+  savedDraftAnchor,
+  writeDraft,
+} from "./composesaveddraftcalls";
 import { replySubject } from "./replysubject";
 
 // The rep's own unsent message, kept on the server so closing the composer does
@@ -31,77 +34,6 @@ import { replySubject } from "./replysubject";
 // model served, this one is whatever the rep had written when they stepped away.
 
 type Activity = components["schemas"]["Activity"];
-type MailDraft = components["schemas"]["MailDraft"];
-type MailDraftAnchorType = components["schemas"]["MailDraftAnchorType"];
-
-export type SavedDraftAnchor = Readonly<{
-  type: MailDraftAnchorType;
-  id: string;
-}>;
-
-/** The composer's fields as a draft keeps them. */
-export type SavedDraftFields = Readonly<{
-  to: readonly string[];
-  cc: readonly string[];
-  bcc: readonly string[];
-  subject: string;
-  body: string;
-  html: string;
-}>;
-
-// A reply keeps its draft on the message it answers, a new message on the
-// record it was started from. A channel reply keeps none: the draft is a mail's
-// fields, and a chat message has no subject or addressee to hold.
-export function savedDraftAnchor(input: {
-  answering: string | undefined;
-  entityType: RelinkKind;
-  entityId: string;
-  isChannelReply: boolean;
-}): SavedDraftAnchor | null {
-  if (input.isChannelReply) return null;
-  if (input.answering) return { type: "activity", id: input.answering };
-  return input.entityId ? { type: input.entityType, id: input.entityId } : null;
-}
-
-export function draftKey(anchor: SavedDraftAnchor | null) {
-  return ["mail-draft", anchor?.type ?? "", anchor?.id ?? ""] as const;
-}
-
-// A 404 is the ordinary answer: no draft here, or an anchor this reader can no
-// longer see, which the server reports as one thing on purpose.
-export async function readDraft(
-  anchor: SavedDraftAnchor,
-): Promise<MailDraft | null> {
-  const { data, error, response } = await api.GET("/mail-drafts", {
-    params: { query: { anchor_type: anchor.type, anchor_id: anchor.id } },
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throwProblem(error || {});
-  return isMailDraft(data) ? data : null;
-}
-
-// A 200 is read as a draft only when it has a draft's shape, so an answer that
-// is not one (a proxy's page, a fixture's catch-all) restores nothing.
-function isMailDraft(value: MailDraft | undefined): value is MailDraft {
-  return (
-    typeof value?.id === "string" &&
-    typeof value.body === "string" &&
-    typeof value.subject === "string" &&
-    Array.isArray(value.to) &&
-    Array.isArray(value.cc) &&
-    Array.isArray(value.bcc)
-  );
-}
-
-async function deleteDraft(id: string): Promise<void> {
-  const { error, response } = await api.DELETE("/mail-drafts/{id}", {
-    params: { path: { id } },
-  });
-  // Already gone is the outcome the reader asked for.
-  if (!response.ok && response.status !== 404) {
-    throwProblem(error || {});
-  }
-}
 
 /** The words a saved draft puts back in the composer. */
 export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
@@ -145,38 +77,6 @@ export function wroteSomething(
     fields.to.some((address) => address !== defaults.recipient) ||
     (subject !== "" && subject !== defaults.subject.trim())
   );
-}
-
-export type SaveAsk = Readonly<{
-  anchor: SavedDraftAnchor;
-  fields: SavedDraftFields;
-  version: number | undefined;
-  /** Which send this save was asked under; a later send retires it. */
-  sends: number;
-  /** Kept as the reader writes: no toast, and the window stays open. */
-  quiet?: boolean;
-}>;
-
-async function writeDraft(ask: SaveAsk): Promise<MailDraft> {
-  const { data, error, response } = await api.PUT("/mail-drafts", {
-    // No version is a create: the server refuses it 409 when a draft already
-    // exists here, so an unpinned write can never replace one unseen.
-    params: { ...(ask.version === undefined ? {} : ifMatch(ask.version)) },
-    body: {
-      anchor_type: ask.anchor.type,
-      anchor_id: ask.anchor.id,
-      to: [...ask.fields.to],
-      cc: [...ask.fields.cc],
-      bcc: [...ask.fields.bcc],
-      subject: ask.fields.subject,
-      body: ask.fields.body,
-      html_body: ask.fields.html.trim() === "" ? null : ask.fields.html,
-    },
-  });
-  if (!response.ok || !isMailDraft(data)) {
-    throwProblem(error || {});
-  }
-  return data;
 }
 
 // The toast's Delete outlives the composer it came from, so it is a plain call

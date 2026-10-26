@@ -28,7 +28,8 @@ import { useComposeFields } from "./composefields";
 import { useComposeRecords } from "./composefiling";
 import { useRecipientOffer } from "./composerecipientoffer";
 import type { RelinkKind } from "./composerelink";
-import { type SavedDraftFields, useSavedDraft } from "./composesaveddraft";
+import { useSavedDraft } from "./composesaveddraft";
+import type { SavedDraftFields } from "./composesaveddraftcalls";
 import { ScheduleDialog } from "./composeschedule";
 import { useComposeSend } from "./composesend";
 import {
@@ -130,9 +131,8 @@ export type ComposeProps = Readonly<{
    *  fired — "their reply is overdue", "the meeting needs an agenda" — and that
    *  reason shaped nothing until it reached the steer field. */
   intent?: string;
-  /** The verb that opened the composer was an AI one ("Draft reply"), so the
-   *  composer asks for the draft itself rather than offering the same verb a
-   *  second time. Mail only: a channel reply has no drafting. */
+  /** An AI verb ("Draft reply") opened the composer, so it drafts on open
+   *  rather than offering that verb again. Mail only. */
   draftOnOpen?: boolean;
   /** A scheduled message written again. Read when the composer mounts, so the
    *  caller keys the modal on the message. It keeps no saved draft: the
