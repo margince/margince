@@ -170,8 +170,9 @@ describe("the weekly scorecard", () => {
     ).toBeNull();
   });
 
-  // The breach is the reading. Leading with the leads answered in target put
-  // the reassurance in the figure and the actionable number in a footnote.
+  // The breach is the reading. Leading with the leads that had a recorded first
+  // response put the reassurance in the figure and the actionable number in a
+  // footnote.
   it("leads the target row with the breaches, not with the answers", () => {
     render(
       <ScorecardPanel
