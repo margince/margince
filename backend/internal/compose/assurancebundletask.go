@@ -62,8 +62,8 @@ var bundleTaskWords = struct{ One, Many langcopy.Phrase }{
 func bundleTaskLanguage(ctx context.Context, tx pgx.Tx, assignee *ids.UserID) (textlang.Lang, error) {
 	if assignee != nil {
 		lang, err := seatLanguage(ctx, tx, assignee.UUID)
-		// A seat gone since the scan is refused by the write as not found, and
-		// that refusal is what sends the task to the unassigned queue.
+		// The write refuses a seat gone since the scan as not found. That
+		// refusal is what sends the task to the unassigned queue.
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return lang, err
 		}

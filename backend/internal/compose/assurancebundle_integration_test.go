@@ -143,7 +143,7 @@ func TestTheBundledTaskReadsInItsAssigneesLanguage(t *testing.T) {
 }
 
 // An owner whose seat is gone by the time the task is minted costs the task its
-// assignee, not its existence: it lands unassigned, worded in the base language.
+// assignee, not its existence. It lands unassigned, worded in the base language.
 func TestATaskWhoseOwnerSeatIsGoneLandsUnassigned(t *testing.T) {
 	e := setupAssuranceJob(t)
 	if err := e.run(t); err != nil {
