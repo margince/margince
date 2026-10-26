@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -22,17 +23,18 @@ import (
 // it, so this proves the read carries the column the grouping needs.
 func TestEachCorrectionRunIsOneMaintenanceLineOnTheReceipt(t *testing.T) {
 	e := integration.Setup(t)
-	since := time.Now().Add(-time.Hour)
-	const task = "system:datatask:core/1792680000_captured_mail_filed_on_its_deal"
+	now := clocktest.Now(t)
+	since := now.Add(-time.Hour)
+	const task = "system:datatask:example/mail_refiled"
 	seed := func(actor string, batch *ids.UUID, n int, name string) {
 		t.Helper()
 		for i := range n {
 			contact := e.SeedContact(t, fmt.Sprintf("%s %d", name, i), &e.Rep1)
 			if _, err := e.Pool.Exec(context.Background(), `
 				INSERT INTO audit_log (id, occurred_at, action, entity_type, entity_id, actor_type, actor_id, after, batch_id)
-				VALUES (uuidv7(), now() - interval '1 minute', 'update', 'contact', $1, 'system', $2,
+				VALUES (uuidv7(), $4, 'update', 'contact', $1, 'system', $2,
 				        '{"cohort_linked": 0, "cohort_promoted": 1}'::jsonb, $3)`,
-				contact, actor, batch); err != nil {
+				contact, actor, batch, now.Add(-time.Minute)); err != nil {
 				t.Fatalf("seeding %s: %v", name, err)
 			}
 		}
@@ -42,7 +44,7 @@ func TestEachCorrectionRunIsOneMaintenanceLineOnTheReceipt(t *testing.T) {
 	seed(task, &second, 2, "Second run")
 	seed("link-reconcile", nil, 1, "Ordinary filing")
 
-	receipt, err := newMagicService(e.Pool, approvalsServiceWithEffects(e.Pool), time.Now).
+	receipt, err := newMagicService(e.Pool, approvalsServiceWithEffects(e.Pool), func() time.Time { return now }).
 		Read(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms), &since, 20)
 	if err != nil {
 		t.Fatalf("reading the receipt: %v", err)

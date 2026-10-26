@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -15,7 +16,7 @@ import (
 // step's run id as batch_id. Read as ordinary lines, a large run looks like
 // hundreds of things done for the reader, "by Margince", with no reason.
 
-const relinkTask = "system:datatask:core/1792680000_captured_mail_filed_on_its_deal"
+const relinkTask = "system:datatask:example/mail_refiled"
 
 func relinkRow(run ids.UUID, at time.Time) entry {
 	subject := "Re: rollout plan"
@@ -27,7 +28,7 @@ func relinkRow(run ids.UUID, at time.Time) entry {
 }
 
 func TestOneCorrectionRunIsOneMaintenanceLineBesideARealOutcome(t *testing.T) {
-	now := time.Now()
+	now := clocktest.Now(t)
 	run := ids.NewV7()
 	var entries []entry
 	for i := range 3000 {
@@ -70,7 +71,7 @@ func TestOneCorrectionRunIsOneMaintenanceLineBesideARealOutcome(t *testing.T) {
 }
 
 func TestTwoRunsOfOneCorrectionAreTwoLines(t *testing.T) {
-	now := time.Now()
+	now := clocktest.Now(t)
 	first, second := ids.NewV7(), ids.NewV7()
 	entries := []entry{
 		relinkRow(first, now), relinkRow(first, now.Add(-time.Second)),
@@ -96,7 +97,7 @@ func TestTwoRunsOfOneCorrectionAreTwoLines(t *testing.T) {
 // A row a data task wrote before batches were stamped still folds into one
 // bounded line, still reads as a correction, and claims no run of its own.
 func TestALegacyCorrectionRowWithoutARunStillFoldsAsMaintenance(t *testing.T) {
-	now := time.Now()
+	now := clocktest.Now(t)
 	a, b := relinkRow(ids.NewV7(), now), relinkRow(ids.NewV7(), now.Add(-time.Second))
 	a.BatchID, b.BatchID = nil, nil
 	lines, _ := linesOf(unmasked(t), []entry{a, b}, nil, 50)
@@ -111,7 +112,7 @@ func TestALegacyCorrectionRowWithoutARunStillFoldsAsMaintenance(t *testing.T) {
 // The detail a correction line opens to is that run's records and no other's:
 // the count and the list are one answer.
 func TestACorrectionLineOpensToItsOwnRunOnly(t *testing.T) {
-	now := time.Now()
+	now := clocktest.Now(t)
 	first, second := ids.NewV7(), ids.NewV7()
 	mine := []entry{relinkRow(first, now), relinkRow(first, now.Add(-time.Second))}
 	other := relinkRow(second, now.Add(-time.Minute))
@@ -130,7 +131,7 @@ func TestACorrectionLineOpensToItsOwnRunOnly(t *testing.T) {
 // mark, even when its rows carry a batch.
 func TestABatchAloneDoesNotMakeALineMaintenance(t *testing.T) {
 	run := ids.NewV7()
-	filing := auditRow("link-reconcile", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", time.Now())
+	filing := auditRow("link-reconcile", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", clocktest.Now(t))
 	filing.BatchID = &run
 	line, _, ok := lineOf(unmasked(t), filing)
 	if !ok {
