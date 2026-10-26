@@ -58,7 +58,7 @@ func (s *RetentionService) eraseRawCapture(ctx context.Context, tx pgx.Tx, id id
 		return err
 	}
 	floorCurrent, floorCarried := floor.sqlArgs()
-	tag, err := tx.Exec(ctx, `DELETE FROM raw_capture r WHERE r.id = $1 AND `+rawCaptureUnshielded(2, 3),
+	tag, err := tx.Exec(ctx, `DELETE FROM raw_capture rc WHERE rc.id = $1 AND `+rawCaptureUnshielded(2, 3),
 		id, floorCurrent, floorCarried)
 	if err == nil && tag.RowsAffected() == 0 {
 		return errKeptByFloor
