@@ -814,7 +814,9 @@ describe("the consent panel names the purpose behind each answer", () => {
     mount("research", view, [objected, correspondence]);
 
     expect(
-      await screen.findByText("They asked not to be contacted, and a rep recorded it"),
+      await screen.findByText(
+        "They asked not to be contacted, and a rep recorded it",
+      ),
     ).not.toBeNull();
   });
 
