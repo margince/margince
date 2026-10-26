@@ -56,7 +56,7 @@ func (o *owedEnv) seated(t *testing.T, user ids.UUID) context.Context {
 }
 
 // page reads the reader's Worklist at the clock's instant.
-func (o *owedEnv) page(t *testing.T, reader context.Context, scope string, now time.Time) crmcontracts.Worklist {
+func (o *owedEnv) page(reader context.Context, t *testing.T, scope string, now time.Time) crmcontracts.Worklist {
 	t.Helper()
 	feed := newAttentionService(o.e.Pool, approvals.NewService(o.e.DB()), func() time.Time { return now })
 	page, err := feed.Worklist(reader, scope, "all", ids.Nil, 100, "")
@@ -85,7 +85,7 @@ func rowOf(page crmcontracts.Worklist, id string) (crmcontracts.WorklistItem, bo
 }
 
 // taskFor is a task the rep logs for themselves, with their own authority.
-func (o *owedEnv) taskFor(t *testing.T, rep context.Context, subject string, due time.Time) string {
+func (o *owedEnv) taskFor(rep context.Context, t *testing.T, subject string, due time.Time) string {
 	t.Helper()
 	actor, _ := principal.Actor(rep)
 	user := ids.From[ids.UserKind](actor.UserID)
@@ -103,16 +103,16 @@ func (o *owedEnv) taskFor(t *testing.T, rep context.Context, subject string, due
 func TestEachReaderSeesTheWorkThatIsTheirs(t *testing.T) {
 	o := setupOwed(t)
 	readers := o.day(t)
-	first := o.taskFor(t, readers.rep1, "Send the pricing sheet", dayNow.Add(2*time.Hour))
-	second := o.taskFor(t, readers.rep2, "Book the onsite visit", dayNow.Add(3*time.Hour))
+	first := o.taskFor(readers.rep1, t, "Send the pricing sheet", dayNow.Add(2*time.Hour))
+	second := o.taskFor(readers.rep2, t, "Book the onsite visit", dayNow.Add(3*time.Hour))
 
-	if got := rowIDs(o.page(t, readers.rep1, "mine", dayNow)); !slices.Equal(got, []string{first}) {
+	if got := rowIDs(o.page(readers.rep1, t, "mine", dayNow)); !slices.Equal(got, []string{first}) {
 		t.Errorf("rep 1's day holds %v, want only their task %s", got, first)
 	}
-	if got := rowIDs(o.page(t, readers.rep2, "mine", dayNow)); !slices.Equal(got, []string{second}) {
+	if got := rowIDs(o.page(readers.rep2, t, "mine", dayNow)); !slices.Equal(got, []string{second}) {
 		t.Errorf("rep 2's day holds %v, want only their task %s", got, second)
 	}
-	team := rowIDs(o.page(t, readers.manager, "team", dayNow))
+	team := rowIDs(o.page(readers.manager, t, "team", dayNow))
 	want := []string{first, second}
 	slices.Sort(want)
 	if !slices.Equal(team, want) {
@@ -125,13 +125,13 @@ func TestEachReaderSeesTheWorkThatIsTheirs(t *testing.T) {
 func TestADayPassingMovesTheSameTaskToOverdue(t *testing.T) {
 	o := setupOwed(t)
 	readers := o.day(t)
-	task := o.taskFor(t, readers.rep1, "Send the pricing sheet", dayNow.Add(2*time.Hour))
+	task := o.taskFor(readers.rep1, t, "Send the pricing sheet", dayNow.Add(2*time.Hour))
 
-	before, ok := rowOf(o.page(t, readers.rep1, "mine", dayNow), task)
+	before, ok := rowOf(o.page(readers.rep1, t, "mine", dayNow), task)
 	if !ok || before.DueGroup == nil || *before.DueGroup != crmcontracts.WorklistItemDueGroupWorklistDueGroupToday {
 		t.Fatalf("before the day passed the task reads %+v, want due today", before.DueGroup)
 	}
-	page := o.page(t, readers.rep1, "mine", dayNow.AddDate(0, 0, 2))
+	page := o.page(readers.rep1, t, "mine", dayNow.AddDate(0, 0, 2))
 	after, ok := rowOf(page, task)
 	if !ok || after.DueGroup == nil || *after.DueGroup != crmcontracts.WorklistItemDueGroupWorklistDueGroupOverdue {
 		t.Errorf("two days later the task reads %+v, want overdue", after.DueGroup)
@@ -149,9 +149,11 @@ func TestACapturedRequestIsTheOwnersAndSurvivesAReplay(t *testing.T) {
 	readers := o.day(t)
 	o.contact(t, "Buyer", "buyer@customer.example")
 	subject := "Proposal for the integration project"
-	mail := owedMail{from: "buyer@customer.example", to: o.seat, subject: subject,
+	mail := owedMail{
+		from: "buyer@customer.example", to: o.seat, subject: subject,
 		body: "Please send the proposal for our integration project.", at: o.now.Add(-time.Hour),
-		messageID: ids.NewV7().String() + "@customer.example"}
+		messageID: ids.NewV7().String() + "@customer.example",
+	}
 	message := o.capture(t, mail)
 	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), message, "commitment"); err != nil {
 		t.Fatal(err)
@@ -160,7 +162,7 @@ func TestACapturedRequestIsTheOwnersAndSurvivesAReplay(t *testing.T) {
 	request := o.e.WsScalar(t, `SELECT id::text FROM activity WHERE source_system = $1 AND source_activity_id = $2 AND archived_at IS NULL`,
 		activities.EmailRequestTaskSource, message)
 
-	owner := o.page(t, readers.rep1, "mine", o.now)
+	owner := o.page(readers.rep1, t, "mine", o.now)
 	if got := rowIDs(owner); !slices.Equal(got, []string{request}) {
 		t.Errorf("the owner's day holds %v, want the request task %s", got, request)
 	}
@@ -175,7 +177,7 @@ func TestACapturedRequestIsTheOwnersAndSurvivesAReplay(t *testing.T) {
 			t.Error("the request offers the owner no action")
 		}
 	}
-	colleague := o.page(t, readers.rep2, "mine", o.now)
+	colleague := o.page(readers.rep2, t, "mine", o.now)
 	if _, ok := rowOf(colleague, request); ok {
 		t.Error("the colleague's day holds the owner's request")
 	}
@@ -187,7 +189,7 @@ func TestACapturedRequestIsTheOwnersAndSurvivesAReplay(t *testing.T) {
 
 	o.capture(t, mail)
 	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
-	if got := rowIDs(o.page(t, readers.rep1, "mine", o.now)); !slices.Equal(got, []string{request}) {
+	if got := rowIDs(o.page(readers.rep1, t, "mine", o.now)); !slices.Equal(got, []string{request}) {
 		t.Errorf("after a replay the owner's day holds %v, want the same request task", got)
 	}
 	if n := o.e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = $1 AND source_activity_id = $2`,
