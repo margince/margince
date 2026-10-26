@@ -222,7 +222,7 @@ make ai-probe ARGS='run --scenario ../.tmp/aitask/s.yaml --ai-fake --dump-reques
 
 # Paths inside ARGS='…' are relative to backend/ (the root Makefile delegates
 # with -C backend); your own shell is in the repo root, so diff has no ../.
-nonce='s/untrusted-[0-9a-f-]{36}/untrusted-NONCE/g'
+nonce='s/untrusted-[a-z2-7]{26}/untrusted-NONCE/g'
 diff <(sed -E "$nonce" .tmp/aitask/before/*.request.json) \
      <(sed -E "$nonce" .tmp/aitask/after/*.request.json)
 ```

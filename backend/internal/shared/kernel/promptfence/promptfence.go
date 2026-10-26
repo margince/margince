@@ -71,6 +71,10 @@ type Fence struct{ nonce string }
 // alphabet-and-dash shape with any id the product mints.
 const nonceBody = `[a-z2-7]{26}`
 
+// markerName is the name a prompt may DECLARE: the minted shape with either
+// case, so a declared marker [FromMarker] refuses is still seen as declared.
+const markerName = markerPrefix + `[a-zA-Z2-7]{26}`
+
 var nonceShape = regexp.MustCompile(`^` + nonceBody + `$`)
 
 // New mints a fresh boundary from crypto/rand — unpredictable to anyone who has
@@ -224,11 +228,11 @@ func (f Fence) Rule(kind string) string {
 // boundary, and callers must see that rather than read it as none. It reads a prompt to
 // find the boundary that prompt DECLARES; it never decides whether text is a
 // boundary, which is the mistake this package exists to avoid.
-var markerPattern = regexp.MustCompile(`<(` + markerPrefix + `[a-zA-Z2-7]{26})>`)
+var markerPattern = regexp.MustCompile(`<(` + markerName + `)>`)
 
 // markerNamePattern matches a marker's name wherever it appears: in an opening
 // tag, a closing tag or prose.
-var markerNamePattern = regexp.MustCompile(markerPrefix + `[a-zA-Z2-7]{26}`)
+var markerNamePattern = regexp.MustCompile(markerName)
 
 // MarkerIn returns the marker a system prompt declares, if it declares one.
 //

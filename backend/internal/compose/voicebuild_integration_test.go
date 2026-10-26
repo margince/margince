@@ -61,7 +61,7 @@ var voiceDraftPerms = principal.Permissions{
 //
 // A marker-SHAPED pattern is not the boundary: writing samples are the user's
 // own prose and reach the prompt byte for byte, so a sample containing
-// `<untrusted-<36 chars> id="…"` would be read as a span the builder never
+// `<untrusted-<nonce> id="…"` would be read as a span the builder never
 // opened. The marker the system prompt declares is the only one that counts.
 func sampleSpanOpen(system string) (string, bool) {
 	marker, ok := promptfence.MarkerIn(system)
