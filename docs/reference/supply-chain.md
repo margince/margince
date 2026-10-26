@@ -194,15 +194,18 @@ SBOM does not list them, and this check does not see them.
 ### Code embedded inside a dependency
 
 A dependency's own license says nothing about compiled code it carries. A
-`.wasm` is a build output, so syft reads the license of the module that ships it
-and never the license of the source it was built from. `go-pdfium` is the live
-case: the module is MIT, and the 5.7MB `pdfium.wasm` it embeds is built from
-PDFium, which upstream states as Apache-2.0.
+`.wasm` is a build output. So syft reads the license of the module that ships
+it, and never the license of the source it was built from.
 
-`make embedded-binary-licenses` refuses an embedded binary that
-[`embedded-binaries.txt`](../../embedded-binaries.txt) does not declare, a
-declaration whose license the allow list above does not carry, and an entry the
-build no longer carries.
+`go-pdfium` is the live case. That module is MIT, and the 5.7MB `pdfium.wasm` it
+embeds is built from a C++ library whose own license upstream states as
+Apache-2.0.
+
+`make embedded-binary-licenses` reads
+[`embedded-binaries.txt`](../../embedded-binaries.txt), and refuses three
+things. An embedded binary that file does not declare. A declaration whose
+license the allow list above does not carry. An entry the build no longer
+carries.
 
 Its corpus is the packages `go list -json -deps ./cmd/...` reports, with the
 files each one embeds, so a new dependency is covered the day it is added. A
