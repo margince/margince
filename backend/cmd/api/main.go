@@ -45,7 +45,7 @@ func main() {
 	defer stop()
 
 	if err := start(ctx, os.Args[1:], os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, "api:", err)
+		fmt.Fprintln(os.Stderr, config.RoleAPI.Refusal(err))
 		os.Exit(1)
 	}
 }
