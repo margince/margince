@@ -59,7 +59,7 @@ const mailAllowed: ContactConsentGuardEntry = {
   purpose_class: "business_correspondence",
   channel: "email",
   verdict: "allowed",
-  reason: "they said you may write to them",
+  reason: "they agreed to be written to",
   reason_code: "said_we_may_write",
 };
 
@@ -765,7 +765,7 @@ describe("the consent panel names the purpose behind each answer", () => {
     purpose_class: "business_correspondence",
     channel: "email",
     verdict: "allowed",
-    reason: "they said you may write to them",
+    reason: "they agreed to be written to",
     reason_code: "said_we_may_write",
   };
   const newsletter: ContactConsentGuardEntry = {
@@ -808,13 +808,13 @@ describe("the consent panel names the purpose behind each answer", () => {
       purpose_class: "marketing",
       channel: "email",
       verdict: "blocked",
-      reason: "they asked you to stop, and a rep recorded it",
+      reason: "they asked not to be contacted, and a rep recorded it",
       reason_code: "suppressed_subject_request",
     };
     mount("research", view, [objected, correspondence]);
 
     expect(
-      await screen.findByText("They asked you to stop, and a rep recorded it"),
+      await screen.findByText("They asked not to be contacted, and a rep recorded it"),
     ).not.toBeNull();
   });
 
@@ -825,7 +825,7 @@ describe("the consent panel names the purpose behind each answer", () => {
     mount("research", view, [newsletter, correspondence]);
 
     expect(
-      await screen.findByText("They said you may write to them"),
+      await screen.findByText("They agreed to be written to"),
     ).not.toBeNull();
   });
 });

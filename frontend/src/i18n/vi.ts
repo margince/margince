@@ -2756,7 +2756,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.reason.contract_notice":
     "Thông báo tài khoản và hợp đồng không cần đồng ý",
   "consent.reason.no_call_path": "Chưa thiết lập cách gọi điện",
-  "consent.reason.said_we_may_write": "Họ đã đồng ý để bạn viết cho họ",
+  "consent.reason.said_we_may_write": "Họ đã đồng ý nhận thư",
   "consent.reason.unconfirmed_double_opt_in":
     "Đã ghi nhận đồng ý nhưng chưa được xác nhận lần hai",
   "consent.reason.no_connection":
@@ -6181,7 +6181,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tin nhắn có liên kết hủy đăng ký chỉ gửi cho một người nhận mỗi lần, vì liên kết đó gắn với sự đồng ý của riêng người nhận đó. Gửi riêng cho từng người nhận, không dùng Cc.",
   "compose.multiRecipientWarning":
     "Mục đích này thêm liên kết hủy đăng ký, nên tin nhắn gửi cho nhiều hơn một người nhận sẽ bị từ chối. Gửi riêng cho từng người nhận, không dùng Cc.",
-  "compose.relinkTitle": "Chuyển hoạt động này sang hồ sơ khác",
+  "compose.relinkTitle": "Liên kết hoạt động với hồ sơ khác",
   "compose.relinkTarget": "Tìm liên hệ, công ty, deal, lead hoặc dự án",
   "compose.relinkNoVersion":
     "Hoạt động này thiếu thông tin phiên bản khi tải, nên không thể liên kết lại. Mở lại rồi thử lại.",

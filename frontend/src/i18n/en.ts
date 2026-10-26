@@ -2820,14 +2820,14 @@ export const en = {
   "consent.reason.suppressed_restricted":
     "A statutory restriction is recorded against writing to them",
   "consent.reason.suppressed_subject_request":
-    "They asked you to stop, and a rep recorded it",
+    "They asked not to be contacted, and a rep recorded it",
   "consent.reason.suppressed_hard_bounce": "Their address does not accept mail",
   "consent.reason.suppressed":
     "A suppression is recorded against writing to them",
   "consent.reason.contract_notice":
     "Account and contract notices need no consent",
   "consent.reason.no_call_path": "No call path is set up",
-  "consent.reason.said_we_may_write": "They said you may write to them",
+  "consent.reason.said_we_may_write": "They agreed to be written to",
   "consent.reason.unconfirmed_double_opt_in":
     "Consent was recorded but never confirmed by the double opt-in",
   "consent.reason.no_connection":
@@ -14386,7 +14386,7 @@ export const en = {
   "contact.enriched.source.capture_enrich": "their email signature",
   "contact.enriched.source.site_read": "their company website",
   "contact.enriched.source.vcard_import": "an imported vCard",
-  "contact.enriched.source.contact_research": "research you accepted",
+  "contact.enriched.source.contact_research": "accepted research",
   "contact.enriched.source.human_restore": "a restored earlier value",
   "contact.enriched.source.other": "a captured source",
   "contact.enriched.undo": "Undo",

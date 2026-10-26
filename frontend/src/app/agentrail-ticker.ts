@@ -328,6 +328,7 @@ export function useAgentTicker(): readonly TickerLine[] {
 
     return () => {
       announced.clear();
+      setLines([]);
       stop();
       stopWrites();
       for (const timer of timers) {
