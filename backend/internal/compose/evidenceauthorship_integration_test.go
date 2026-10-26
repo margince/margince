@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type authorshipFixture struct {
@@ -341,5 +342,65 @@ func TestACardIsJudgedAgainstTheDomainsAsTheyStandEvenBeforeThePass(t *testing.T
 	}
 	if err := stands(); !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Errorf("a card resting on mail from a domain now ours still stands: %v", err)
+	}
+}
+
+// A run cut short by the job timeout leaves its place behind, so the next one
+// carries on from there. Without that a ledger longer than one run's reach
+// never gets past its own prefix.
+func TestTheAuthorshipPassCarriesOnFromWhereItStopped(t *testing.T) {
+	f := newAuthorshipFixture(t)
+	first := f.claim(f.inboundMail("cfo@buyer-corp.test"), "budget")
+	second := f.claim(f.inboundMail("ops@buyer-corp.test"), "notes")
+	if first.String() > second.String() {
+		first, second = second, first
+	}
+	if _, err := f.own.Add(f.Admin(), "Buyer-Corp.test"); err != nil {
+		t.Fatal(err)
+	}
+	// Stand where a cut-short run would have: the first row behind us.
+	f.WsExec(t, `INSERT INTO deal_authorship_sweep_cursor (singleton, after_evidence_id)
+		VALUES (true, $1)`, first)
+
+	f.runPass()
+
+	if n := f.corrections(first); n != 0 {
+		t.Errorf("the row behind the place was judged %d time(s), want none", n)
+	}
+	if n := f.corrections(second); n != 1 {
+		t.Errorf("the row ahead of the place was judged %d time(s), want once", n)
+	}
+	// The page was short, so the place clears and the next run starts over.
+	if at := f.WsScalar(t, `SELECT coalesce(after_evidence_id::text, 'cleared')
+		FROM deal_authorship_sweep_cursor`); at != "cleared" {
+		t.Errorf("the pass stopped at %s after a short page, want it cleared", at)
+	}
+}
+
+// An admin's domain change answers for that domain alone. So it must not move
+// the place the hourly pass keeps, which would step that pass over every row
+// between the two.
+func TestAScopedRunLeavesTheHourlyPlaceAlone(t *testing.T) {
+	f := newAuthorshipFixture(t)
+	held := f.claim(f.inboundMail("cfo@buyer-corp.test"), "budget")
+	f.WsExec(t, `INSERT INTO deal_authorship_sweep_cursor (singleton, after_evidence_id)
+		VALUES (true, $1)`, held)
+	if _, err := f.own.Add(f.Admin(), "Buyer-Corp.test"); err != nil {
+		t.Fatal(err)
+	}
+
+	// The scope an own-domain change runs under, as the handler sets it.
+	ctx := principal.SystemActing(f.Admin(), evidenceAuthorshipActor)
+	if _, err := f.Deals.ReconcileEvidenceAuthorship(ctx, ownDomainReader{store: f.own},
+		deals.EvidenceAuthorshipScope{Domain: "buyer-corp.test"}); err != nil {
+		t.Fatalf("judging one domain's evidence again: %v", err)
+	}
+
+	if n := f.corrections(held); n != 1 {
+		t.Fatalf("the scoped run judged the row %d time(s), want once", n)
+	}
+	at := f.WsScalar(t, `SELECT coalesce(after_evidence_id::text, 'cleared') FROM deal_authorship_sweep_cursor`)
+	if at != held.String() {
+		t.Errorf("the scoped run moved the place to %s, want it left at %s", at, held)
 	}
 }

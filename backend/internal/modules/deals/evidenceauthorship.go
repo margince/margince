@@ -41,7 +41,17 @@ func (s *Store) ReconcileEvidenceAuthorship(ctx context.Context, own OwnDomainRe
 	}
 	scope.Domain = owndomain.Fold(scope.Domain)
 	corrected := 0
+	// Only the unscoped pass keeps its place. A scoped run answers for one
+	// changed domain, so letting it move the shared position would step the
+	// hourly pass over the rows between.
+	keepsPlace := scope.Domain == ""
 	var after ids.UUID
+	if keepsPlace {
+		var err error
+		if after, err = s.authorshipSweepPlace(ctx); err != nil {
+			return 0, err
+		}
+	}
 	for {
 		var scanned int
 		err := s.Tx(ctx, func(tx pgx.Tx) error {
@@ -49,7 +59,10 @@ func (s *Store) ReconcileEvidenceAuthorship(ctx context.Context, own OwnDomainRe
 			var changed int
 			scanned, changed, after, err = reconcileEvidenceAuthorshipTx(ctx, tx, own, scope, after)
 			corrected += changed
-			return err
+			if err != nil || !keepsPlace {
+				return err
+			}
+			return storeAuthorshipSweepPlaceTx(ctx, tx, after, scanned)
 		})
 		if err != nil {
 			return corrected, err
@@ -59,6 +72,40 @@ func (s *Store) ReconcileEvidenceAuthorship(ctx context.Context, own OwnDomainRe
 			return corrected + withdrawn, err
 		}
 	}
+}
+
+// authorshipSweepPlace is where the last unscoped run stopped. A run cut short
+// by the job timeout resumes from there instead of reading its prefix again.
+func (s *Store) authorshipSweepPlace(ctx context.Context) (ids.UUID, error) {
+	var after *ids.UUID
+	if err := s.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			`SELECT after_evidence_id FROM deal_authorship_sweep_cursor`).Scan(&after)
+	}); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, fmt.Errorf("deals: reading where the authorship pass stopped: %w", err)
+	}
+	if after == nil {
+		return ids.UUID{}, nil
+	}
+	return *after, nil
+}
+
+// storeAuthorshipSweepPlaceTx records the position, and clears it on a short
+// page so the next run starts at the first row rather than past the tail.
+func storeAuthorshipSweepPlaceTx(ctx context.Context, tx pgx.Tx, after ids.UUID, scanned int) error {
+	var place *ids.UUID
+	if scanned >= evidenceAuthorshipBatch && !after.IsZero() {
+		place = &after
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO deal_authorship_sweep_cursor (singleton, after_evidence_id, updated_at)
+		VALUES (true, $1, now())
+		ON CONFLICT (singleton) DO UPDATE
+		   SET after_evidence_id = EXCLUDED.after_evidence_id, updated_at = EXCLUDED.updated_at`,
+		place); err != nil {
+		return fmt.Errorf("deals: storing where the authorship pass stopped: %w", err)
+	}
+	return nil
 }
 
 type activityEvidence struct {
