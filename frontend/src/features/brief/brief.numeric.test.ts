@@ -109,3 +109,19 @@ it("keeps a partly recorded figure's number with its start date", () => {
   });
   expect(figures.commitments).toEqual({ kind: "measured" });
 });
+
+it("says why an unreadable figure is missing from its status", () => {
+  const withheld = weeklyNumericStatus(unavailableWeeklyNumbers).figures.won;
+  expect(figureReading(withheld, { value: "0" }, place)).toEqual({
+    value: en["reporting.unavailable"],
+    detail: en["reporting.withheld"],
+  });
+  const failed = weeklyNumericStatus({
+    ...unavailableWeeklyNumbers,
+    bookings_coverage: { status: "failed", withheld: false, reason: "x" },
+  }).figures.won;
+  expect(figureReading(failed, { value: "0" }, place)).toEqual({
+    value: en["reporting.unavailable"],
+    detail: en["reporting.status.failed"],
+  });
+});
