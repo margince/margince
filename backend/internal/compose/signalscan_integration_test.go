@@ -55,7 +55,7 @@ func TestAGhostedSignalCountsCalendarDaysInTheInstallationZone(t *testing.T) {
 	if want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).ghostedThread, ghostedThresholdDays); summary != want {
 		t.Errorf("summary = %q, want %q", summary, want)
 	}
-	if days := signalDaysSilent(t, e, company, kindGhostedThread); days != 15 {
+	if days := signalDaysSilent(t, company, kindGhostedThread); days != 15 {
 		t.Errorf("the scan recorded %d days silent, want 15", days)
 	}
 }
@@ -99,7 +99,7 @@ func TestAGhostedSignalCountsADayMailFromItsDate(t *testing.T) {
 	if want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).ghostedThread, ghostedThresholdDays); summary != want {
 		t.Errorf("summary = %q, want %q", summary, want)
 	}
-	if days := signalDaysSilent(t, e, company, kindGhostedThread); days != 15 {
+	if days := signalDaysSilent(t, company, kindGhostedThread); days != 15 {
 		t.Errorf("the scan recorded %d days silent, want 15", days)
 	}
 }
@@ -166,7 +166,7 @@ func TestTheDigestAndTheSignalCountAQuietProjectInTheSameCalendarDays(t *testing
 	if want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).projectQuiet, "ERP rollout", projects.DefaultProjectQuietDays); summary != want {
 		t.Errorf("signal summary = %q, want %q", summary, want)
 	}
-	if days := signalDaysSilent(t, e, project.UUID, kindProjectGoneQuiet); days != 45 {
+	if days := signalDaysSilent(t, project.UUID, kindProjectGoneQuiet); days != 45 {
 		t.Errorf("the scan recorded %d days quiet, want 45", days)
 	}
 }
@@ -174,7 +174,7 @@ func TestTheDigestAndTheSignalCountAQuietProjectInTheSameCalendarDays(t *testing
 // signalDaysSilent is the day count the scan recorded when it raised the
 // signal. The stored summary carries no age, so the audit row is where the
 // count the scan measured can be read.
-func signalDaysSilent(t *testing.T, e *integration.Env, subject ids.UUID, kind string) int {
+func signalDaysSilent(t *testing.T, subject ids.UUID, kind string) int {
 	t.Helper()
 	var days int
 	if err := integration.OwnerConn(t).QueryRow(context.Background(), `
