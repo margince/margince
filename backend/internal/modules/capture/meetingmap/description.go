@@ -17,6 +17,10 @@ import (
 // plain text, and rendering it would drop the bracketed value.
 var htmlTag = regexp.MustCompile(`(?is)<!--.*?-->|</?(?:` + htmlElements + `)(?:\s[^<>]*)?/?>`)
 
+// cutOpeningTag matches a known opening tag that an older stored-body cut
+// left unfinished at the very end, marked by the cut's ellipsis.
+var cutOpeningTag = regexp.MustCompile(`(?is)<(?:` + htmlElements + `)(?:\s[^<>]*)?…$`)
+
 const htmlElements = `a|abbr|b|blockquote|body|br|button|center|code|div|em|font|h[1-6]|head|hr|html|i|img|li|ol|p|pre|s|small|span|strike|strong|style|script|sub|sup|table|tbody|td|th|thead|tr|u|ul`
 
 // descriptionText is the text a reader sees for a calendar description. Google
@@ -36,11 +40,23 @@ func descriptionText(desc string) string {
 // false when the stored description has no tags or renders to itself.
 func RerenderStoredBody(stored string) (body string, changed bool) {
 	header, desc, found := strings.Cut(stored, "\n\n")
-	if !found || !htmlTag.MatchString(desc) {
+	if !found {
+		return stored, false
+	}
+	var text string
+	switch {
+	case htmlTag.MatchString(desc):
+		text = descriptionText(desc)
+	case cutOpeningTag.MatchString(desc):
+		// The cut fell inside the first tag, so no tag is whole. The renderer
+		// still reads the text before it.
+		rendered, _ := htmltext.Render(desc)
+		text = strings.TrimSpace(rendered)
+	default:
 		return stored, false
 	}
 	body = header
-	if text := descriptionText(desc); text != "" {
+	if text != "" {
 		body = header + "\n\n" + text
 	}
 	body = textcut.BytesMarked(credentialmask.MaskText(body), MaxBodyLen, "…")

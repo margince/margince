@@ -58,3 +58,12 @@ func TestAStoredBodyWithoutTagsIsLeftAlone(t *testing.T) {
 		}
 	}
 }
+
+func TestABodyCutInsideItsFirstTagIsRendered(t *testing.T) {
+	t.Parallel()
+	stored := "Organizer: host@rerender.test\n\nBring the contract<p class=\"no…"
+	got, changed := RerenderStoredBody(stored)
+	if !changed || strings.Contains(got, "<p") || !strings.HasPrefix(got, "Organizer: host@rerender.test\n\nBring the contract") {
+		t.Fatalf("rerendered %q (changed %v), want the text before the cut tag", got, changed)
+	}
+}
