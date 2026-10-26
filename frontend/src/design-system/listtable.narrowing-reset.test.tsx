@@ -29,7 +29,7 @@ function Grid({
         unit="rows"
         page={page}
         onPage={onPage}
-        search={{ value: search, onChange: () => undefined }}
+        search={{ value: search, answered: search, onChange: () => undefined }}
       />
     </LocaleProvider>
   );

@@ -176,7 +176,7 @@ function Surface({
       rowKey={(row) => row.id}
       unit="companies"
       action={noAction ? undefined : <Button>New company</Button>}
-      search={{ value: search, onChange: setSearch }}
+      search={{ value: search, answered: search, onChange: setSearch }}
       sort={{ value: sort, onChange: setSort }}
       chips={chips}
       chosen={chosen}

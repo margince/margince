@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
-import { Fragment, useRef } from "react";
+import { Fragment, useContext, useRef } from "react";
 import {
   formatDate,
   formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
+import { AnsweredSearch } from "./answeredsearch";
 import { Button, OptionCount } from "./atoms";
 import { Callout } from "./callout";
 import "./composed.css";
@@ -173,12 +174,6 @@ export type BoardMoneyColumn = BoardColumn<BoardDeal> & {
 type BoardHandlers<Record extends BoardRecord> = {
   countLabel?: (count: number) => string;
   /**
-   * The search the cards answer. When it changes and no column holding a card
-   * shows, the board scrolls the first into view and says where the matches
-   * are. Otherwise a search matching only an off-screen stage reads as empty.
-   */
-  revealKey?: string;
-  /**
    * Fold or unfold one column. Given only by a board that has a collapsed
    * column. Without it the head is inert text, so a board with no such column
    * grows no button a reader can press to no effect.
@@ -265,7 +260,6 @@ function MoneyNotes({
 function BoardLayout<Record extends BoardRecord>({
   columns,
   renderCard,
-  revealKey,
   countLabel,
   columnExtras,
   columnDropHandlers,
@@ -277,6 +271,10 @@ function BoardLayout<Record extends BoardRecord>({
   const { locale } = useLocale();
   const sections = useRef(new Map<string, HTMLElement>());
   const board = useRef<HTMLDivElement>(null);
+  // The search the cards answer, from the list the board is drawn in. When no
+  // column holding a card shows, the board scrolls the first into view and
+  // says where the matches are, or a search matching off screen reads as empty.
+  const revealKey = useContext(AnsweredSearch);
   const matches = revealKey ? matchingColumns(columns) : [];
   const offScreen = useOffScreenMatches(
     board,

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useLayoutEffect, useRef } from "react";
 import { expect, within } from "storybook/test";
 import { lastEmailAgo } from "../testing/dealmail";
+import { AnsweredSearch } from "./answeredsearch";
 import { Button, SegmentedControl } from "./atoms";
 import { ListSurface } from "./listsurface";
 import {
@@ -443,12 +444,13 @@ const offScreenMatchColumns: BoardMoneyColumn[] = boardColumns.map(
 export const SearchMatchesOffScreen: Story = {
   render: () => (
     <div style={{ inlineSize: 640 }}>
-      <PipelineBoard
-        columns={offScreenMatchColumns}
-        cardHref={(d) => `#/deals/${d.id}`}
-        zone="Europe/Berlin"
-        revealKey="umbrella"
-      />
+      <AnsweredSearch.Provider value="umbrella">
+        <PipelineBoard
+          columns={offScreenMatchColumns}
+          cardHref={(d) => `#/deals/${d.id}`}
+          zone="Europe/Berlin"
+        />
+      </AnsweredSearch.Provider>
     </div>
   ),
   play: async ({ canvasElement }) => {
@@ -463,12 +465,13 @@ export const SearchMatchesOffScreenInSurface: Story = {
   render: () => (
     <div style={{ inlineSize: 640 }}>
       <ListSurface count="1 deal">
-        <PipelineBoard
-          columns={offScreenMatchColumns}
-          cardHref={(d) => `#/deals/${d.id}`}
-          zone="Europe/Berlin"
-          revealKey="umbrella"
-        />
+        <AnsweredSearch.Provider value="umbrella">
+          <PipelineBoard
+            columns={offScreenMatchColumns}
+            cardHref={(d) => `#/deals/${d.id}`}
+            zone="Europe/Berlin"
+          />
+        </AnsweredSearch.Provider>
       </ListSurface>
     </div>
   ),

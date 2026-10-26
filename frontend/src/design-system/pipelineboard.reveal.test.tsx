@@ -3,6 +3,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider } from "../i18n";
+import { AnsweredSearch } from "./answeredsearch";
+import { ListTable } from "./listtable";
 import {
   type BoardColumn,
   type BoardRecord,
@@ -87,12 +89,13 @@ afterEach(() => {
 function board(revealKey?: string, locale: Locale = "en", stages = columns) {
   return (
     <LocaleProvider initial={locale}>
-      <PipelineBoard
-        variant="plain"
-        columns={stages}
-        renderCard={(record) => <span>{record.name}</span>}
-        revealKey={revealKey}
-      />
+      <AnsweredSearch.Provider value={revealKey}>
+        <PipelineBoard
+          variant="plain"
+          columns={stages}
+          renderCard={(record) => <span>{record.name}</span>}
+        />
+      </AnsweredSearch.Provider>
     </LocaleProvider>
   );
 }
@@ -159,6 +162,44 @@ describe("PipelineBoard search off screen", () => {
 
   it("leaves the board where it is without a search", async () => {
     render(board(undefined));
+    await Promise.resolve();
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(scrolled).toEqual([]);
+  });
+});
+
+// No board takes the search as a prop: the list it is drawn in hands it over,
+// so a screen that adds a searchable board cannot leave the note out.
+describe("a board drawn as a searchable list's body", () => {
+  function listBody(search: { value: string; answered: string }) {
+    return (
+      <LocaleProvider initial="en">
+        <ListTable<BoardRecord>
+          rows={[]}
+          columns={[]}
+          rowKey={(row) => row.id}
+          unit="deals"
+          search={{ ...search, onChange: () => undefined }}
+          body={
+            <PipelineBoard
+              variant="plain"
+              columns={columns}
+              renderCard={(record) => <span>{record.name}</span>}
+            />
+          }
+        />
+      </LocaleProvider>
+    );
+  }
+
+  it("says where the matches are for the search the rows answer", async () => {
+    render(listBody({ value: "fraunhofer", answered: "fraunhofer" }));
+    const hint = await screen.findByRole("status");
+    expect(hint.textContent).toContain("3 results in Closed Won");
+  });
+
+  it("waits for the typing to settle before it looks", async () => {
+    render(listBody({ value: "fraunhofer", answered: "" }));
     await Promise.resolve();
     expect(screen.queryByRole("status")).toBeNull();
     expect(scrolled).toEqual([]);
