@@ -1761,7 +1761,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.privacy_request_proof_expiry":
     "Dọn dẹp bằng chứng yêu cầu quyền riêng tư",
   "systemJob.waiting_horizon_refresh": "Đo thời gian phản hồi",
-  "systemJob.evidence_authorship": "Kiểm tra người viết bằng chứng giao dịch",
+  "systemJob.evidence_authorship": "Kiểm tra bên viết bằng chứng giao dịch",
   "systemJob.meeting_delivery": "Gửi lời mời trên lịch",
   "systemJob.merge": "Gộp hồ sơ",
   "systemJob.notice_case_open": "Tiếp nhận yêu cầu về quyền riêng tư",
