@@ -26,17 +26,20 @@ import (
 
 var cohortMeetingAt = time.Date(2026, 9, 3, 14, 30, 0, 0, time.UTC)
 
+// cohortGuest is the attendee every cohort meeting invites.
+const cohortGuest = "guest@cohort.test"
+
 // syncedMeeting writes a meeting the way capture leaves it before the attendee
 // is a contact. It is connector-captured, the attendee is an address on a
 // participant row, and nothing links it. With no counterparty, capture holds
 // it for its participants until a link files it.
-func syncedMeeting(t *testing.T, e *integration.Env, address string) ids.UUID {
+func syncedMeeting(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, source_system, source_id, audience, audience_reason)
 		VALUES ($1, 'meeting', 'Quarterly review', $2, 'gcal:seed', 'connector:gcal', 'gcal', $3, 'participants', $4)`,
 		id, cohortMeetingAt, "cohort-"+id.String(), activities.ReasonNoCounterparty)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'attendee')`, id, address)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'attendee')`, id, cohortGuest)
 	e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id, posture_at_import) VALUES ($1, $2, NULL)`, id, e.Rep1)
 	return id
 }
@@ -81,8 +84,8 @@ func owedRepair(t *testing.T, e *integration.Env, contact ids.ContactID) bool {
 
 func TestTheCohortRepairLeavesAMeetingAMemberRefiledElsewhere(t *testing.T) {
 	e := integration.Setup(t)
-	meeting := syncedMeeting(t, e, "guest@cohort.test")
-	guest := cohortContact(t, e, "Guest Attendee", "guest@cohort.test")
+	meeting := syncedMeeting(t, e)
+	guest := cohortContact(t, e, "Guest Attendee", cohortGuest)
 	other := cohortContact(t, e, "Other Contact", "other@cohort.test")
 	repairCohort(t, e, guest)
 	if !meetingFiledUnder(t, e, meeting, guest) {
@@ -118,10 +121,10 @@ func TestTheCohortRepairLeavesAMeetingAMemberRefiledElsewhere(t *testing.T) {
 
 func TestTheCohortRepairLeavesArchivedAndFullMeetingsAlone(t *testing.T) {
 	e := integration.Setup(t)
-	archived := syncedMeeting(t, e, "guest@cohort.test")
+	archived := syncedMeeting(t, e)
 	e.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, archived)
-	full := syncedMeeting(t, e, "guest@cohort.test")
-	guest := cohortContact(t, e, "Guest Attendee", "guest@cohort.test")
+	full := syncedMeeting(t, e)
+	guest := cohortContact(t, e, "Guest Attendee", cohortGuest)
 	for i := range 25 {
 		filler := ids.From[ids.ContactKind](e.SeedContact(t, "Filler "+string(rune('A'+i)), &e.Rep1))
 		e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, full, filler.UUID)
@@ -140,7 +143,7 @@ func TestTheCohortRepairLeavesArchivedAndFullMeetingsAlone(t *testing.T) {
 
 func TestARepairedMeetingReadsAsItsAudienceSays(t *testing.T) {
 	e := integration.Setup(t)
-	meeting := syncedMeeting(t, e, "guest@cohort.test")
+	meeting := syncedMeeting(t, e)
 	colleague := e.As(e.Rep2, []ids.UUID{e.Team2}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}, "activity": {Read: true}},
@@ -157,7 +160,7 @@ func TestARepairedMeetingReadsAsItsAudienceSays(t *testing.T) {
 	if readsContent() {
 		t.Fatal("a colleague reads a held meeting's content before the repair")
 	}
-	guest := cohortContact(t, e, "Guest Attendee", "guest@cohort.test")
+	guest := cohortContact(t, e, "Guest Attendee", cohortGuest)
 	repairCohort(t, e, guest)
 	if !meetingFiledUnder(t, e, meeting, guest) {
 		t.Fatal("the repair did not file the meeting under its attendee")
