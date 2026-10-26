@@ -227,7 +227,7 @@ func TestTwoReadingsTogetherKeepTheEventCap(t *testing.T) {
 	conv := seedPromiseThread(t, e, e.SeedCompany(t, "Acme", &e.Rep1), "thread-cap")
 	brain := &scriptedBrain{replies: []string{
 		eventsReply(t, needEvent(conv.need), needEvent(conv.followup)),
-		eventsReply(t, needEvent(conv.promise), needEvent(conv.promise)),
+		eventsReply(t, promiseEvent(e, conv.promise), promiseEvent(e, conv.promise)),
 	}}
 
 	extractPass(t, e, brain)
@@ -244,7 +244,7 @@ func TestAConversationMadePrivateDuringTheSecondReadingFilesNoSharedSignal(t *te
 	e := Setup(t)
 	conv := seedPromiseThread(t, e, e.SeedCompany(t, "Acme", &e.Rep1), "thread-private")
 	brain := &scriptedBrain{replies: []string{
-		eventsReply(t, needEvent(conv.need)), eventsReply(t, needEvent(conv.followup)),
+		eventsReply(t, needEvent(conv.need)), eventsReply(t, promiseEvent(e, conv.promise)),
 	}}
 	brain.onCall = func(call int) {
 		if call == 2 {
@@ -254,7 +254,7 @@ func TestAConversationMadePrivateDuringTheSecondReadingFilesNoSharedSignal(t *te
 
 	extractPass(t, e, brain)
 
-	if got := e.WsCount(t, `SELECT count(*) FROM signal WHERE kind='new_opportunity' AND visibility='owner' AND owner_id=$1`, e.Rep1); got != 2 {
+	if got := e.WsCount(t, `SELECT count(*) FROM signal WHERE visibility='owner' AND owner_id=$1`, e.Rep1); got != 2 {
 		t.Errorf("%d signals are private to the member, want both", got)
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM signal WHERE visibility<>'owner'`); got != 0 {

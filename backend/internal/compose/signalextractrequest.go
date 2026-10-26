@@ -36,6 +36,9 @@ to send pricing") is commitment evidence even without the original utterance. Ci
 identify the reported promiser; do not invent the missing original or attribute it to the reporter.
 A bare reminder or reference to an absent promise, without stating who owes what, is not enough.
 Do not count both an original promise and a report of it as separate commitments.
+When our side tells a contact that we, or a named colleague, will do a specific thing at a set time,
+such as running a demo on the 5th at 10:00, that is a commitment_made our side owes, even when it
+reads like a meeting notice. An invitation from their side is not our promise.
 When later words explicitly renew the promise or its deadline, also give restated_message_id and
 restated_quote from that later message. Resolve its deadline against that later message date.
 Only a distinct later message from the same side can renew a promise.
@@ -104,7 +107,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		for i, id := range thread.Focus {
 			focus[i] = id.String()
 		}
-		fmt.Fprintf(&prompt, "Report only events stated in these messages: %s. The other messages are context, for example to see that a promise was kept or renewed.\n",
+		fmt.Fprintf(&prompt, "Report only commitment_made events stated in these messages: %s. A first reading already read them and reported nothing from them, so report only a promise their words state outright; an empty list is the usual answer. The other messages are context, for example to see that a promise was kept or renewed.\n",
 			strings.Join(focus, ", "))
 		recorded := make([]string, len(thread.Recorded))
 		for i, event := range thread.Recorded {
@@ -130,7 +133,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			`that name alone cannot select a reference: leave it empty even if one is a colleague and another is external. `+
 			`Only that participant's exact address in the quoted clause may resolve that tie. Never choose the first match. `+
 			`When the words name a colleague other than the writer as the one who will act and that colleague is not on the message, use "". Never put the writer in their place. `+
-			`Still report that commitment_made, with promiser_ref "": our side telling a contact that a named colleague will do a specific thing, such as running a demo on a set day, is a promise our side owes. `+
+			`Still report that commitment_made, with promiser_ref "". `+
 			`Never invent a reference. `+
 			`"quote" is the words of that message the event is stated in, copied exactly; `+
 			`for "commitment_made" it is the clause the promise is made in, one promise per event. `+

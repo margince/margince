@@ -58,7 +58,7 @@ type scriptedBrain struct {
 	requests []model.Request
 }
 
-const focusedReadingMarker = "Report only events stated in these messages"
+const focusedReadingMarker = "Report only commitment_made events stated in these messages"
 
 func (b *scriptedBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	b.calls++

@@ -357,13 +357,13 @@ func TestExtractRequestNamesTheFocusAndLowersTheCap(t *testing.T) {
 		{ID: second, Direction: "inbound", Subject: "Re: Recording", Body: "Thanks."},
 	}}
 	plain := extractRequest(thread, string(textlang.English)).Messages[0].Content
-	if strings.Contains(plain, "Report only events stated in") || !strings.Contains(plain, "at most 3") {
+	if strings.Contains(plain, "Report only commitment_made events stated in") || !strings.Contains(plain, "at most 3") {
 		t.Fatalf("an ordinary reading must not carry a focus or a lowered cap:\n%s", plain)
 	}
 
 	thread.Focus, thread.EventCap = []ids.UUID{first}, 2
 	focused := extractRequest(thread, string(textlang.English)).Messages[0].Content
-	if !strings.Contains(focused, "Report only events stated in these messages: "+first.String()+".") {
+	if !strings.Contains(focused, "Report only commitment_made events stated in these messages: "+first.String()+".") {
 		t.Errorf("the focus is not named:\n%s", focused)
 	}
 	if strings.Contains(focused, "messages: "+first.String()+", "+second.String()) || !strings.Contains(focused, "at most 2") {
@@ -393,6 +393,7 @@ func TestAFocusedReplyKeepsOnlyFocusEventsAndStaysInTheRemainingCap(t *testing.T
 		"cites the focus":                  {[]string{event(focus, ids.UUID{})}, 1, false},
 		"renews from the focus":            {[]string{event(background, focus)}, 1, false},
 		"cites only context":               {[]string{event(background, ids.UUID{})}, 0, false},
+		"reports a need on the focus":      {[]string{strings.Replace(event(focus, ids.UUID{}), "commitment_made", "new_opportunity", 1)}, 0, false},
 		"passes the cap left by the first": {[]string{event(focus, ids.UUID{}), event(focus, ids.UUID{})}, 2, true},
 	} {
 		var payload extractPayload

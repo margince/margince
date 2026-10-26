@@ -4793,7 +4793,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `signal_extract` / `thread_events`
 
-`system 4,944 B (~1,236 tok)`: rules 4,672 B · boundary 272 B · after boundary 0 B · **cacheable 94%**
+`system 5,222 B (~1,305 tok)`: rules 4,950 B · boundary 272 B · after boundary 0 B · **cacheable 94%**
 
 <details><summary>system prompt</summary>
 
@@ -4819,6 +4819,9 @@ to send pricing") is commitment evidence even without the original utterance. Ci
 identify the reported promiser; do not invent the missing original or attribute it to the reporter.
 A bare reminder or reference to an absent promise, without stating who owes what, is not enough.
 Do not count both an original promise and a report of it as separate commitments.
+When our side tells a contact that we, or a named colleague, will do a specific thing at a set time,
+such as running a demo on the 5th at 10:00, that is a commitment_made our side owes, even when it
+reads like a meeting notice. An invitation from their side is not our promise.
 When later words explicitly renew the promise or its deadline, also give restated_message_id and
 restated_quote from that later message. Resolve its deadline against that later message date.
 Only a distinct later message from the same side can renew a promise.

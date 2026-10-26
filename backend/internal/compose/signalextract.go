@@ -200,14 +200,15 @@ func focusedReading(thread settledThread, events []extractedEvent) (settledThrea
 	return focused, true
 }
 
-// inFocus drops a focused reading's events that cite no focus message: the
-// first reading already judged that message.
+// inFocus keeps a focused reading's promises on its focus messages. The second
+// reading looks for a promise the first missed; asked to look again, a model
+// also finds needs and endings that the words do not state.
 func (payload extractPayload) inFocus(thread settledThread) extractPayload {
 	if len(thread.Focus) == 0 || payload.Events == nil {
 		return payload
 	}
 	inFocus := slices.DeleteFunc(slices.Clone(*payload.Events), func(event extractedEvent) bool {
-		return !slices.ContainsFunc(thread.Focus, func(id ids.UUID) bool {
+		return event.Kind != extractKindCommitment || !slices.ContainsFunc(thread.Focus, func(id ids.UUID) bool {
 			return id.String() == event.MessageID || id.String() == event.RestatedMessageID
 		})
 	})
