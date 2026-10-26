@@ -100,12 +100,12 @@ func floorWindowEnd(currentArg, carriedArg int) string {
 		windowEndUnder(currentArg), carriedArg, windowEndUnder(carriedArg))
 }
 
-// rawCaptureUnshielded keeps the provider original, aliased `r`, of an activity
+// rawCaptureUnshielded keeps the provider original, aliased `rc`, of an activity
 // the floor shields. A held message keeps its original as evidence, the same
 // as it keeps its row.
 func rawCaptureUnshielded(currentArg, carriedArg int) string {
 	return `NOT EXISTS (SELECT 1 FROM activity a
-		  WHERE a.source_system = r.source_system AND a.source_id = r.source_id
+		  WHERE ` + rawCaptureLink + `
 		    AND ` + handelsbriefShielded(currentArg, carriedArg) + `)`
 }
 

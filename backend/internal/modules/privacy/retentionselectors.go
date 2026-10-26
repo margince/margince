@@ -100,14 +100,12 @@ var retentionSelectors = map[string]string{
 	// the `(source_system, source_id)` tombstone against a replay — the same
 	// reasoning capture's own purge states.
 	//
-	// WHAT IT DOES NOT REACH: an original with no activity row at all, which an
-	// internal-only drop leaves behind. There the raw_capture row IS the
-	// tombstone, and deleting it would let a replay re-ingest a message the
-	// pipeline already judged. Those need the trace to carry the tombstone
-	// before they can be aged, which is not this stage's to invent.
-	"raw_capture/": `SELECT r.id FROM raw_capture r
-		JOIN activity a ON a.source_system = r.source_system AND a.source_id = r.source_id
-		WHERE r.received_at < now() - make_interval(days => $1)
+	// It does not reach an original no activity was read from, such as a lead's
+	// or a channel update that never became a message. With no activity there is
+	// no floor or hold to ask, so the stage leaves the row.
+	"raw_capture/": `SELECT rc.id FROM raw_capture rc
+		JOIN activity a ON ` + rawCaptureLink + `
+		WHERE rc.received_at < now() - make_interval(days => $1)
 		  AND a.archived_at IS NULL
 		  ` + correspondenceFloorPredicate(3, 4) + `
 		  AND NOT EXISTS (SELECT 1 FROM activity_link l

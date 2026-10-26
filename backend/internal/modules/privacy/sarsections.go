@@ -189,24 +189,6 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 // `a`) own content travels: only workspace-audience mail.
 const sarContentDisclosed = `a.audience = 'workspace'`
 
-// sarRawCaptureLink correlates one raw_capture row to the activities read from
-// it, and is spelled once because the clause below asks it four times — twice
-// to decide disclosure and twice to withhold the payload on the same answer.
-// Four copies of a disclosure predicate is four chances for one of them to
-// drift, on the surface where a drift is a disclosure.
-//
-// The link column first, the natural key only where there is no link: the two
-// mean different things for every provider but mail, and reading the key on a
-// linked row would judge it by a redelivery id.
-//
-// Held by: TestTheSARRawCaptureCorrelationIsSpelledOnce
-// (backend/gates/sarrawcapturelink_test.go), which cuts this declaration out
-// of the file and fails on anything left that still correlates the two tables.
-const sarRawCaptureLink = `(a.raw_capture_id = rc.id
-		         OR (a.raw_capture_id IS NULL
-		             AND a.source_system = rc.source_system
-		             AND a.source_id = rc.source_id))`
-
 // sarConsentSections gather the per-purpose consent state and the proof log
 // behind it — what the subject agreed to, and every change of mind on record.
 func sarConsentSections(pkg *SARPackage) []sarSection {
@@ -394,14 +376,14 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// NOT EXISTS.
 		{&pkg.RawCapture, `SELECT rc.source_system, rc.source_id, rc.received_at,
 		       (EXISTS (SELECT 1 FROM activity a
-		                 WHERE ` + sarRawCaptureLink + ` AND ` + sarContentDisclosed + `)
+		                 WHERE ` + rawCaptureLink + ` AND ` + sarContentDisclosed + `)
 		        AND NOT EXISTS (SELECT 1 FROM activity a
-		                         WHERE ` + sarRawCaptureLink + ` AND NOT ` + sarContentDisclosed + `)
+		                         WHERE ` + rawCaptureLink + ` AND NOT ` + sarContentDisclosed + `)
 		       ) AS content_disclosed,
 		       CASE WHEN EXISTS (SELECT 1 FROM activity a
-		                          WHERE ` + sarRawCaptureLink + ` AND ` + sarContentDisclosed + `)
+		                          WHERE ` + rawCaptureLink + ` AND ` + sarContentDisclosed + `)
 		             AND NOT EXISTS (SELECT 1 FROM activity a
-		                              WHERE ` + sarRawCaptureLink + ` AND NOT ` + sarContentDisclosed + `)
+		                              WHERE ` + rawCaptureLink + ` AND NOT ` + sarContentDisclosed + `)
 		            THEN rc.payload END AS payload
 		   FROM raw_capture rc
 		   WHERE EXISTS (SELECT 1 FROM contact_email pe WHERE pe.contact_id = $1
