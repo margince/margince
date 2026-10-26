@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/analyticsquery backend/internal/compose/weekly -->
 # Performance and saved sales reports
 
 ## Where do I start my sales review?

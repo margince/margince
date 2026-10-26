@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // RetractSignatureFieldsTx removes the profile fields one message's signature
@@ -110,7 +111,7 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 		rows, err := tx.Query(ctx, `
 			SELECT f.id FROM contact_profile_field f
 			  JOIN activity a ON a.id = `+sourceRefActivityID+`
-			 WHERE f.source = $1 AND NOT `+SenderPredicate("f.contact_id", "a"), enrichSource)
+			 WHERE f.source = $1 AND NOT `+relstrength.SenderSQL("f.contact_id", "a"), enrichSource)
 		if err != nil {
 			return fmt.Errorf("contacts: finding misattributed signature fields: %w", err)
 		}
@@ -136,7 +137,7 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 		if _, err := tx.Exec(ctx, `
 			DELETE FROM contact_signature_enrich_state st
 			 USING activity a
-			 WHERE st.activity_id = a.id AND NOT `+SenderPredicate("st.contact_id", "a")); err != nil {
+			 WHERE st.activity_id = a.id AND NOT `+relstrength.SenderSQL("st.contact_id", "a")); err != nil {
 			return fmt.Errorf("contacts: reopening the misread signature watermarks: %w", err)
 		}
 		return nil

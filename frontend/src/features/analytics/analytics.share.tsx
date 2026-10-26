@@ -43,12 +43,15 @@ export function ForecastShareActions({
 }: Readonly<{ target: string; scope: AnalyticsScope; snapshotId?: string }>) {
   const canList = useCan("forecast", "create");
   const canIssue = useCanWrite("forecast", "create");
+  // Closing a link needs no population; issuing one names it, so a scope the
+  // server marks as not assertable withholds Share view only.
+  const canShareScope = writableScope(scope) != null;
   if (!canList) {
     return null;
   }
   return (
     <div className="analytics-share-actions">
-      {canIssue && (
+      {canIssue && canShareScope && (
         <ShareViewButton
           target={target}
           scope={scope}

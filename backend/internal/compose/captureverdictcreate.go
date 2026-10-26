@@ -326,7 +326,7 @@ func (e *CounterpartyVerdictEngine) correctRefusedVerdict(ctx context.Context, t
 func (e *CounterpartyVerdictEngine) createVendorPitchContact(
 	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty,
 ) (string, error) {
-	corresponds, err := e.pending.CorrespondsWith(ctx, tx, row.Email)
+	corresponds, err := capture.WorkspaceCorrespondsTx(ctx, tx, row.Email)
 	if err != nil {
 		return "", err
 	}

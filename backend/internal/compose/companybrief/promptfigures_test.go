@@ -20,6 +20,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -207,26 +208,40 @@ func TestAWithheldDealsSectionSendsNoLostCount(t *testing.T) {
 	}
 }
 
-// Who sent a message is recorded as its direction, and the brief is told who
-// spoke rather than left to guess; a row with no direction names nobody.
+// Who wrote a message comes from the author projection, never from its
+// direction. On an account page nobody is "them". A row with no author names
+// nobody.
 func TestATimelineMessageCarriesWhoSentIt(t *testing.T) {
-	inbound, outbound := crmcontracts.ActivityDirectionInbound, crmcontracts.ActivityDirectionOutbound
+	inbound := crmcontracts.ActivityDirectionInbound
 	occurredAt := time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)
+	pia, carla := "Pia Sender", "Carla"
 	view := crmcontracts.Company360{
 		Company: crmcontracts.Company{DisplayName: "Nordwind AG"},
 		Activities: &crmcontracts.ActivityListResponse{Data: []crmcontracts.Activity{
+			{
+				Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail, Direction: &inbound, OccurredAt: occurredAt,
+				Voice: &crmcontracts.ActivityVoice{Author: &crmcontracts.ActivityAuthor{Kind: crmcontracts.ActivityAuthorKindContactRecord, DisplayName: &pia}},
+			},
+			{
+				Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail, Direction: &inbound, OccurredAt: occurredAt,
+				Voice: &crmcontracts.ActivityVoice{Author: &crmcontracts.ActivityAuthor{Kind: crmcontracts.ActivityAuthorKindColleague, DisplayName: &carla}},
+			},
+			{
+				Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail, Direction: &inbound, OccurredAt: occurredAt,
+				Voice: &crmcontracts.ActivityVoice{Author: &crmcontracts.ActivityAuthor{Kind: crmcontracts.ActivityAuthorKindColleague, DisplayName: &carla, IsReader: true}},
+			},
 			{Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail, Direction: &inbound, OccurredAt: occurredAt},
-			{Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindEmail, Direction: &outbound, OccurredAt: occurredAt},
-			{Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindNote, OccurredAt: occurredAt},
 		}},
 	}
 	recent := FromView(view).Recent
-	if len(recent) != 3 {
-		t.Fatalf("the assembled input carries %d recent rows, want 3", len(recent))
+	if len(recent) != 4 {
+		t.Fatalf("the assembled input carries %d recent rows, want 4", len(recent))
 	}
-	for i, want := range []string{"them", "you", ""} {
-		if recent[i].Speaker != want {
-			t.Errorf("row %d speaker = %q, want %q", i, recent[i].Speaker, want)
+	wants := []*contactbrief.Speaker{{Kind: "contact", Name: "Pia Sender"}, {Kind: "colleague", Name: "Carla"}, {Kind: "you"}, nil}
+	for i, want := range wants {
+		got := recent[i].Speaker
+		if (got == nil) != (want == nil) || (got != nil && *got != *want) {
+			t.Errorf("row %d speaker = %+v, want %+v", i, got, want)
 		}
 	}
 }

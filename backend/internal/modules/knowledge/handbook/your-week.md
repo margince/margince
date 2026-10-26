@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/brief/brief.weekly.tsx frontend/src/features/brief/brief.weekly.scorecard.tsx frontend/src/features/brief/brief.plan.tsx frontend/src/features/worklist/brief.teamplan.tsx backend/internal/compose/weekly backend/internal/modules/weeklyplan -->
 # Your week
 
 The **Weekly** view of **Home** looks back on a closed week and plans the next one. The day,

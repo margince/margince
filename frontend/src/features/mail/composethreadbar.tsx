@@ -146,7 +146,7 @@ export function ThreadBar({
         disabled={disabled}
         label={
           <>
-            {answering ? (
+            {thread.replying ? (
               <Reply aria-hidden="true" />
             ) : (
               <SquarePen aria-hidden="true" />
@@ -167,6 +167,11 @@ export function ThreadBar({
                 </>
               )}
             </span>
+            {answering && thread.answeringWhen && (
+              <span className="compose-threadbar-when">
+                {thread.answeringWhen}
+              </span>
+            )}
             <span className="compose-threadbar-action">
               {t(answering ? "compose.threadChange" : "compose.threadContinue")}
             </span>

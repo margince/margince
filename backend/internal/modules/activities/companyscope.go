@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -122,7 +123,8 @@ var companyArms = `FROM activity_link l
 		    LEFT JOIN deal d ON d.id = l.deal_id
 		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
 		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
-		      AND ` + employment.InPlaceAtSQL("r", "la.occurred_at")
+		      AND ` + employment.InPlaceAtSQL("r", "la.occurred_at") + `
+		      AND ` + relationshipmark.ContactNotMarkedSQL("r.contact_id")
 
 // participantEmployerArm is the READER's fourth arm: the employer of somebody
 // who is on the event as a participant rather than as a link.
@@ -150,6 +152,7 @@ var participantEmployerArm = `EXISTS (
 		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
 		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
 		        AND ` + employment.InPlaceAtSQL("emp", "a.occurred_at") + `
+		        AND ` + relationshipmark.ContactNotMarkedSQL("emp.contact_id") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 
 // participantEntry is where companyReach's participant branch starts: every
@@ -158,7 +161,8 @@ var participantEmployerArm = `EXISTS (
 var participantEntry = `SELECT a.id, e0.company_id FROM relationship e0
 		    JOIN activity_participant p0 ON p0.contact_id = e0.contact_id
 		    JOIN activity a ON a.id = p0.activity_id
-		    WHERE e0.company_id = %s AND e0.kind = 'employment' AND `
+		    WHERE e0.company_id = %s AND e0.kind = 'employment'
+		      AND ` + relationshipmark.ContactNotMarkedSQL("e0.contact_id") + ` AND `
 
 // activityReachesCompany is the walk as a PREDICATE, for a query that aliases
 // activity as a. operand is what each arm compares its company id against: a

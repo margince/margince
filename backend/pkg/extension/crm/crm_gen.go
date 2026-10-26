@@ -213,6 +213,30 @@ func (e ActivityAudience) Valid() bool {
 	}
 }
 
+// Defines values for ActivityAuthorKind.
+const (
+	ActivityAuthorKindColleague     ActivityAuthorKind = "colleague"
+	ActivityAuthorKindContactRecord ActivityAuthorKind = "contact_record"
+	ActivityAuthorKindMachine       ActivityAuthorKind = "machine"
+	ActivityAuthorKindUnresolved    ActivityAuthorKind = "unresolved"
+)
+
+// Valid indicates whether the value is a known member of the ActivityAuthorKind enum.
+func (e ActivityAuthorKind) Valid() bool {
+	switch e {
+	case ActivityAuthorKindColleague:
+		return true
+	case ActivityAuthorKindContactRecord:
+		return true
+	case ActivityAuthorKindMachine:
+		return true
+	case ActivityAuthorKindUnresolved:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -282,6 +306,36 @@ func (e ActivityReferenceKind) Valid() bool {
 	case Note:
 		return true
 	case Task:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityVoiceContactRole.
+const (
+	ActivityVoiceContactRoleAddressee ActivityVoiceContactRole = "addressee"
+	ActivityVoiceContactRoleAttendee  ActivityVoiceContactRole = "attendee"
+	ActivityVoiceContactRoleAuthor    ActivityVoiceContactRole = "author"
+	ActivityVoiceContactRoleCc        ActivityVoiceContactRole = "cc"
+	ActivityVoiceContactRoleOrganizer ActivityVoiceContactRole = "organizer"
+	ActivityVoiceContactRoleOther     ActivityVoiceContactRole = "other"
+)
+
+// Valid indicates whether the value is a known member of the ActivityVoiceContactRole enum.
+func (e ActivityVoiceContactRole) Valid() bool {
+	switch e {
+	case ActivityVoiceContactRoleAddressee:
+		return true
+	case ActivityVoiceContactRoleAttendee:
+		return true
+	case ActivityVoiceContactRoleAuthor:
+		return true
+	case ActivityVoiceContactRoleCc:
+		return true
+	case ActivityVoiceContactRoleOrganizer:
+		return true
+	case ActivityVoiceContactRoleOther:
 		return true
 	default:
 		return false
@@ -1319,16 +1373,16 @@ func (e SignalEvidenceSourceType) Valid() bool {
 
 // Defines values for SignalResolutionOutcome.
 const (
-	SignalResolutionOutcomeDismissed SignalResolutionOutcome = "dismissed"
-	SignalResolutionOutcomeResolved  SignalResolutionOutcome = "resolved"
+	Dismissed SignalResolutionOutcome = "dismissed"
+	Resolved  SignalResolutionOutcome = "resolved"
 )
 
 // Valid indicates whether the value is a known member of the SignalResolutionOutcome enum.
 func (e SignalResolutionOutcome) Valid() bool {
 	switch e {
-	case SignalResolutionOutcomeDismissed:
+	case Dismissed:
 		return true
-	case SignalResolutionOutcomeResolved:
+	case Resolved:
 		return true
 	default:
 		return false
@@ -1427,13 +1481,16 @@ type Activity struct {
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
 
-	// Links One activity may link to >1 entity (contact + deal).
+	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
-	MeetingStatus *ActivityMeetingStatus  `json:"meeting_status,omitempty"`
-	OccurredAt    time.Time               `json:"occurred_at"`
-	Raw           *map[string]interface{} `json:"raw,omitempty"`
+	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
+	OccurredAt    time.Time              `json:"occurred_at"`
+
+	// OffersEmail Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
+	OffersEmail bool                    `json:"offers_email"`
+	Raw         *map[string]interface{} `json:"raw,omitempty"`
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
@@ -1457,7 +1514,13 @@ type Activity struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version              *RowVersion            `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty"`
+
+	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
+	Voice *ActivityVoice `json:"voice,omitempty"`
+
+	// Writable Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -1489,6 +1552,23 @@ type ActivityMeetingStatus string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
+
+// ActivityAuthor One author, named by the record that identifies them.
+type ActivityAuthor struct {
+	Address     *string `json:"address,omitempty"`
+	ContactId   *string `json:"contact_id,omitempty"`
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// IsReader The author is the signed-in caller.
+	IsReader bool `json:"is_reader"`
+
+	// Kind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+	Kind   ActivityAuthorKind `json:"kind"`
+	UserId *string            `json:"user_id,omitempty"`
+}
+
+// ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+type ActivityAuthorKind string
 
 // ActivityFollowUpTask defines model for ActivityFollowUpTask.
 type ActivityFollowUpTask struct {
@@ -1545,6 +1625,21 @@ type ActivityReferenceContentState string
 
 // ActivityReferenceKind What KIND of activity it is, so a client dispatches on it: an email opens the drawer, a task opens the task detail, anything else opens the activity itself.
 type ActivityReferenceKind string
+
+// ActivityVoice Who wrote an activity, read from what is recorded on it, and the part the
+// page's contact had in it. Every surface that names a speaker reads this
+// rather than guessing from `direction`: a mail that came in was not
+// necessarily written by the contact whose page shows it.
+type ActivityVoice struct {
+	// Author Who wrote it: the `from` party of a message, the organizer of a meeting, the seat or imported author of a note, call or task. Null when nothing recorded names an author, which a reader shows as no author rather than a guess.
+	Author *ActivityAuthor `json:"author,omitempty"`
+
+	// ContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+	ContactRole *ActivityVoiceContactRole `json:"contact_role,omitempty"`
+}
+
+// ActivityVoiceContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+type ActivityVoiceContactRole string
 
 // Address Structured postal address.
 type Address struct {
@@ -2743,6 +2838,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_at")
 	}
 
+	if raw, found := object["offers_email"]; found {
+		err = json.Unmarshal(raw, &a.OffersEmail)
+		if err != nil {
+			return fmt.Errorf("error reading 'offers_email': %w", err)
+		}
+		delete(object, "offers_email")
+	}
+
 	if raw, found := object["raw"]; found {
 		err = json.Unmarshal(raw, &a.Raw)
 		if err != nil {
@@ -2821,6 +2924,22 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'version': %w", err)
 		}
 		delete(object, "version")
+	}
+
+	if raw, found := object["voice"]; found {
+		err = json.Unmarshal(raw, &a.Voice)
+		if err != nil {
+			return fmt.Errorf("error reading 'voice': %w", err)
+		}
+		delete(object, "voice")
+	}
+
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
 	}
 
 	if len(object) != 0 {
@@ -3049,6 +3168,11 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
 	}
 
+	object["offers_email"], err = json.Marshal(a.OffersEmail)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'offers_email': %w", err)
+	}
+
 	if a.Raw != nil {
 		object["raw"], err = json.Marshal(a.Raw)
 		if err != nil {
@@ -3112,6 +3236,20 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Voice != nil {
+		object["voice"], err = json.Marshal(a.Voice)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'voice': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
 		}
 	}
 

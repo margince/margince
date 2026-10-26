@@ -196,9 +196,8 @@ func (v Version) Validate() error {
 // knows the answer, so the declaration is where it has to come from.
 type Description string
 
-// Validate requires a non-empty, single-line printable sentence. The bound is
-// the same one Version keeps and for the same reason: this string is rendered
-// verbatim to an operator and written into the unit manifest.
+// Validate requires a non-empty, single-line printable sentence. The
+// Extensions settings page shows it to an operator as written.
 func (d Description) Validate() error {
 	if strings.TrimSpace(string(d)) == "" {
 		return errors.New("extension description is empty — the access screen lists the unit by it")

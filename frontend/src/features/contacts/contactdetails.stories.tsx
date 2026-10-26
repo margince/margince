@@ -96,16 +96,26 @@ const boughtFixture: components["schemas"]["Contact"] = {
     },
   ],
   bought_fields: [
-    { target: "title", provider: "surfe", applied_at: "2026-06-02T12:00:00Z" },
+    {
+      target: "title",
+      provider: "surfe",
+      applied_at: "2026-06-02T12:00:00Z",
+      paid: true,
+      trigger: "manual",
+    },
     {
       target: "linkedin",
       provider: "surfe",
       applied_at: "2026-06-02T12:00:00Z",
+      paid: true,
+      trigger: "manual",
     },
     {
       target: "email:e-bought",
       provider: "surfe",
       applied_at: "2026-06-02T12:00:00Z",
+      paid: true,
+      trigger: "manual",
     },
   ],
 };
@@ -197,6 +207,8 @@ const longFixture: components["schemas"]["Contact"] = {
       target: "email:e-1",
       provider: "surfe",
       applied_at: "2026-06-02T12:00:00Z",
+      paid: true,
+      trigger: "manual",
     },
   ],
 };

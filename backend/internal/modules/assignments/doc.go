@@ -15,7 +15,7 @@
 // record, and writing one needs write access to it. That is why a caller who
 // cannot see the parent gets 404 rather than an empty list.
 //
-// Tables owned: record_assignment, record_role.
+// Tables owned: docs/reference/entity-model/assignments.md.
 //
 // Imports shared + platform + the generated contract only; never a sibling
 // module. The parent-visibility checks are ports bound at the composition root.

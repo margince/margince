@@ -11,6 +11,7 @@ import type { components } from "../../api/schema";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { meFixture } from "../../testing/mefixture";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -162,6 +163,11 @@ export function stubRoutes(
       sent.push({ key, body, headers, query: url.searchParams });
       const override = overrides[key];
       if (override) return override();
+      if (key === "GET /me") {
+        return jsonResponse(
+          meFixture({ allow: { activity: ["read", "update"] } }),
+        );
+      }
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse(NO_VOICE_PROFILE);
       if (isPreviewDoor(url.pathname)) {
@@ -174,6 +180,8 @@ export function stubRoutes(
 }
 
 export const activity202: Activity = {
+  offers_email: false,
+  writable: true,
   id: "act-1",
   kind: "email",
   subject: "Re: Q3",

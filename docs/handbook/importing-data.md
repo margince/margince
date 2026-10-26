@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/import backend/internal/modules/migration backend/internal/modules/contacts/creatededupe.go backend/internal/modules/contacts/deduperecheck.go backend/internal/modules/contacts/dedupescan.go -->
 # Importing data
 
 **Data import** brings companies, contacts, prospects, deals and activities into Margince from CSV files. You find it in Settings, in the **Data** group. Only an admin or ops user can import. Nothing is written until you read the test run and choose to import.

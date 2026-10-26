@@ -522,3 +522,56 @@ describe("the contact's files tab", () => {
     expect(url.searchParams.get("entity_id")).toBe("p-42");
   });
 });
+
+describe("a file a mail carried, on the contact's files tab", () => {
+  const MAIL_FILE = attachment({
+    id: "f-mail",
+    entity_type: "activity",
+    entity_id: "m-1",
+    filename: "order.pdf",
+    source: "imap",
+    category: "email_attachment",
+  });
+  const ORIGIN = {
+    activity_id: "m-1",
+    kind: "email",
+    subject: "Signed order",
+    occurred_at: "2026-08-01T08:00:00Z",
+    sender: { address: "bea@buyer.example", display_name: "Bea Buyer" },
+  };
+
+  it("names the mail it came with and opens that mail", async () => {
+    stub({
+      data: [{ ...MAIL_FILE, origin: ORIGIN }],
+      page: { has_more: false },
+    });
+    const onOpenEmail = vi.fn();
+    show(<ContactFilesTab contactId="p-1" onOpenEmail={onOpenEmail} />);
+
+    const origin = await screen.findByRole("button", {
+      name: "From Bea Buyer · Signed order",
+    });
+    await userEvent.setup().click(origin);
+    expect(onOpenEmail).toHaveBeenCalledWith("m-1");
+  });
+
+  it("names nothing about a mail the server sent no origin for", async () => {
+    stub({ data: [MAIL_FILE], page: { has_more: false } });
+    show(<ContactFilesTab contactId="p-1" onOpenEmail={vi.fn()} />);
+
+    await screen.findByRole("link", { name: "order.pdf" });
+    expect(screen.queryByText(/^From /)).toBeNull();
+    expect(screen.queryByText(/Signed order/)).toBeNull();
+  });
+
+  it("leaves an upload's row with its name alone", async () => {
+    stub({
+      data: [attachment({ id: "f-1", entity_id: "p-1", filename: "cv.pdf" })],
+      page: { has_more: false },
+    });
+    show(<ContactFilesTab contactId="p-1" onOpenEmail={vi.fn()} />);
+
+    const name = await screen.findByRole("link", { name: "cv.pdf" });
+    expect(name.closest(".contact-file")?.textContent).toBe("cv.pdf");
+  });
+});

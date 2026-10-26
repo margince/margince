@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/compose/companycontextprompt.go backend/internal/compose/companycontextrollout.go backend/api/ai-tasks.yaml backend/internal/modules/contacts/siteread.go backend/internal/modules/contacts/companyfact.go frontend/src/features/onboarding/onboarding-conversation frontend/src/features/onboarding/onboarding-gate.tsx frontend/src/features/companies/company-context.tsx -->
 # Company context: cold-start onboarding and governed AI grounding
 
 One installation serves one company, and Margince keeps a confirmed, lasting picture of that company:

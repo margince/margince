@@ -243,7 +243,7 @@ func (s *Sink) finishNewActivity(
 	// owner is known — every consumer downstream sees an activity whose
 	// captured_by reads `connector:gmail` and cannot recover the human behind
 	// it. The participant rows are the record of that fact.
-	if err := stampMessageEnds(ctx, tx, id, actorUserID(ctx), fields, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, actorUserID(ctx), fields, rec); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// Everyone else who was in it — the CCs, the meeting's organizer and
@@ -329,7 +329,7 @@ func (s *Sink) finishNewActivity(
 			return counterpartyDecision{}, err
 		}
 	}
-	if err := limitLinkLessAudience(ctx, tx, id, rec, decision, derivedLinks); err != nil {
+	if err := limitLinkLessAudience(ctx, tx, id, rec, fields.Kind, decision, derivedLinks); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// This mailbox's own record of having imported the message, and the
@@ -456,12 +456,13 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), nullableString(rec.ThreadKey), nullableString(correspondence.Fold(rec.Counterparty.Email)),
 		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.DetectFirst(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
 		fields.judged.foreignLink, fields.judged.senderWasStranger, inboundSenderAuthenticated(rec, fields), string(fields.BodyCompleteness.stored()), senderIsMachine(rec, fields),
+		nullableID(fields.InvitationFromSeat),
 	}
 	placeholders := make([]string, len(args))
 	for i := range args {
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 	}
-	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine)
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,invitation_sender)
  VALUES (` + strings.Join(placeholders, ",") + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
 }

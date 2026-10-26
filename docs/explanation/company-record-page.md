@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/compose/company360 backend/internal/compose/companybrief backend/internal/compose/companyscan backend/internal/compose/jobs_accountscan.go backend/internal/modules/contacts/companylogo.go frontend/src/features/companies frontend/src/features/records/record360 backend/api/crm.yaml -->
 # The company record page: one gated read, text per viewer, named gaps
 
 The account page a rep opens on a company. It shows who works there, what is open, what moved, and what
@@ -512,7 +513,8 @@ Graph details beyond the card (the strength model, the warm intro resolver, our 
 ## View state is not record fact
 
 Three tables behind this page live in a `compose` subpackage each, and all three are written **without an audit
-row or outbox event**. This is the ruling for saved views, gated by `backend/gates/tableownership_test.go`:
+row or outbox event**. This is the ruling for saved views. The waivers in `backend/gates/moduleaudits_test.go` hold the missing
+audit row, and `backend/gates/tableownerregistry_test.go` names each owner:
 
 | Table | Owner | What it is |
 |---|---|---|

@@ -13,9 +13,9 @@ import type { MessageKey } from "../../i18n/en";
 import type { Transport } from "../../lib/contacttransports";
 import { useVoiceProfile } from "../../lib/voice-profile";
 import {
-  colleagueMailboxesOf,
   useComposeThread,
   useConversationNames,
+  windowTitle,
 } from "./composeanchor";
 import {
   AttachAction,
@@ -39,11 +39,11 @@ import {
 } from "./composetarget";
 import { ThreadBar } from "./composethreadbar";
 import { useVoiceDraft } from "./composevoicedraft";
-import { replySubject } from "./replysubject";
 import type { EditSeed } from "./schedulededit";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
 import {
+  ComposeAbout,
   ComposeBody,
   ComposeFoot,
   ComposeFrame,
@@ -78,30 +78,6 @@ function sendWording(
     };
   }
   return { title: "compose.sendConfirmTitle", body: "compose.sendBody" };
-}
-
-// The window's name: the subject as typed, or what the message answers, or
-// whom a new one is to. A channel reply keeps the send's own title.
-function windowTitle(
-  input: Readonly<{
-    isChannelReply: boolean;
-    wordingTitle: string;
-    answering: string | undefined;
-    anchorSubject: string | null | undefined;
-    subject: string;
-    recordName: string | undefined;
-    t: ReturnType<typeof useT>;
-  }>,
-): string {
-  const { t } = input;
-  if (input.isChannelReply) return input.wordingTitle;
-  if (input.subject.trim()) return input.subject.trim();
-  if (input.answering) {
-    return replySubject(input.anchorSubject?.trim() || t("email.noSubject"));
-  }
-  return input.recordName
-    ? t("compose.newEmailTo", { name: input.recordName })
-    : t("compose.newEmail");
 }
 
 /** What a surface hands the composer: where it writes from, and what to. */
@@ -164,6 +140,8 @@ export type ComposeProps = Readonly<{
   // close, and only then: a caller whose own reading of the record depends on
   // what was sent re-asks on this, and not on a cancel that changed nothing.
   onSent?: () => void;
+  /** The control the reader pressed, which gets focus back on close. */
+  openedFrom?: HTMLElement;
 }>;
 
 /**
@@ -221,6 +199,7 @@ export function ComposeWindow({
   open,
   onClose,
   onSent,
+  openedFrom,
 }: ComposeProps) {
   const t = useT();
   // A shut composer asks for nothing it does not share with the page behind it.
@@ -263,6 +242,7 @@ export function ComposeWindow({
   const thread = useComposeThread({
     open,
     answering,
+    rowKind: answering === activityId ? kind : undefined,
     isChannelReply,
     entityType,
     entityId,
@@ -286,12 +266,14 @@ export function ComposeWindow({
   const projectId = records.projectFiling.projectId;
   const { settle } = offer;
   const { restoreSaved } = fields;
+  const { adoptSavedSubject } = records.projectFiling;
   const restoreFields = useCallback(
     (saved: SavedDraftFields) => {
       settle();
       restoreSaved(saved);
+      adoptSavedSubject(saved.subject);
     },
-    [settle, restoreSaved],
+    [settle, restoreSaved, adoptSavedSubject],
   );
   const savedDraft = useSavedDraft({
     where: {
@@ -370,7 +352,7 @@ export function ComposeWindow({
   const title = windowTitle({
     isChannelReply,
     wordingTitle: t(wording.title),
-    answering,
+    replying: thread.replying,
     anchorSubject: thread.anchorActivity?.subject,
     subject: fields.subject,
     recordName: records.recordName,
@@ -388,9 +370,17 @@ export function ComposeWindow({
       {open && (
         <ComposeFrame
           title={title}
+          aside={
+            <ComposeAbout
+              kind={entityType}
+              id={entityId}
+              name={records.recordName}
+            />
+          }
           onClose={savedDraft.requestClose}
           closeDisabled={sendPending}
           bodyId={bodyId}
+          openedFrom={openedFrom}
         >
           {!isChannelReply && (
             <ThreadBar
@@ -412,10 +402,8 @@ export function ComposeWindow({
                 transports={transports}
                 onTransportChange={changeTransport}
                 staleThread={staleThread}
-                colleagueSeats={colleagueMailboxesOf(
-                  offer.mailboxes,
-                  names.viewerId,
-                )}
+                answering={thread.replying ? answering : undefined}
+                viewerId={names.viewerId}
                 nameOf={names.nameOf}
                 activityId={activityId}
                 records={records}
@@ -428,7 +416,7 @@ export function ComposeWindow({
                 bodyId={bodyId}
                 fields={fields}
                 mail={!isChannelReply}
-                replying={Boolean(answering)}
+                replying={thread.replying}
                 earlier={
                   answering && (
                     <EarlierMessages messages={thread.conversation.messages} />
@@ -465,8 +453,12 @@ export function ComposeWindow({
               contactOf={records.contactOf}
               contactId={contactId}
               bodyKey={wording.body}
-              permission={(override) => (
-                <SendPermission {...send.permission} override={override} />
+              permission={(override, picksReason) => (
+                <SendPermission
+                  {...send.permission}
+                  override={override}
+                  picksReason={picksReason}
+                />
               )}
             />
           </div>

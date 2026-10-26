@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -161,6 +162,11 @@ func (s *Store) readyDealCreate(ctx context.Context, in CreateDealInput) (bornDe
 	// state no edit could have reached.
 	if err := moneyPairError(in.AmountMinor, in.ExpectedArrMinor, in.Currency); err != nil {
 		return bornDeal{}, err
+	}
+	if in.Currency != nil {
+		if err := values.RequireAssignableCurrency(*in.Currency); err != nil {
+			return bornDeal{}, err
+		}
 	}
 	if err := amountSetError(in.AmountMinor); err != nil {
 		return bornDeal{}, err

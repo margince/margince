@@ -62,6 +62,7 @@ func readWords(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
 	sincePos := arg(now.AddDate(0, 0, -scanWindowDays))
+	nowPos := arg(now)
 	charsPos := arg(scanBodyChars)
 	capPos := arg(scanMessages)
 	scope, err := auth.ActivityContentClause(ctx, "a", arg)
@@ -82,7 +83,7 @@ func readWords(
 		 ORDER BY a.occurred_at DESC, a.id DESC
 		 LIMIT $%[4]d`,
 		activities.CompanyLinkedActivityExists(companyPos), sincePos, charsPos, capPos, scope,
-		relstrength.InteractionCountsSQL("a")), args...)
+		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))), args...)
 	if err != nil {
 		return nil, fmt.Errorf("companyscan: reading the account's exchanges: %w", err)
 	}

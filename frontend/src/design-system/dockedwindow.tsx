@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { useT } from "../i18n";
+import { useFocusHandoff } from "./focushandoff";
 import { Heading } from "./heading";
 import { IconAction } from "./iconaction";
 import "./dockedwindow.css";
@@ -43,15 +44,27 @@ function clamp(value: number, low: number, high: number) {
  */
 export function DockedWindow({
   title,
+  aside,
   state,
   onStateChange,
   onClose,
   closeDisabled,
   initialFocusTo,
+  openedFrom,
   children,
 }: Readonly<{
   /** Names the window and its folded bar; a heading, not a dialog title row. */
   title: string;
+  /**
+   * What the title names, beside it: the record this window's work belongs to.
+   *
+   * In the bar rather than in the content. The content is a writing surface
+   * with a floor under it, and a row above the fields comes out of that floor.
+   *
+   * The folded bar does not carry it: that bar is one button, and a link inside
+   * a button is markup no reader can use.
+   */
+  aside?: ReactNode;
   state: DockState;
   onStateChange: (next: DockState) => void;
   onClose: () => void;
@@ -59,6 +72,8 @@ export function DockedWindow({
   closeDisabled?: boolean;
   /** The control focus lands on when the window first opens. */
   initialFocusTo?: () => HTMLElement | null;
+  /** The control that opened the window, which gets focus back on close. */
+  openedFrom?: HTMLElement;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -87,9 +102,23 @@ export function DockedWindow({
     () => globalThis.matchMedia?.(SHEET).matches ?? false,
   );
   const focusFirst = useRef(initialFocusTo);
+  // The pressed control, else where focus was: Safari does not focus a clicked
+  // button. Closing hands focus back there instead of to the page body.
+  const opener = useRef(openedFrom ?? null);
   useEffect(() => {
+    const before = document.activeElement;
+    if (
+      !opener.current &&
+      before instanceof HTMLElement &&
+      before !== document.body
+    ) {
+      opener.current = before;
+    }
     (focusFirst.current?.() ?? box.current)?.focus();
   }, []);
+  useFocusHandoff(box, () =>
+    opener.current?.isConnected ? opener.current : null,
+  );
   // A narrower glass pulls a slid window back into view. The breakpoint that
   // makes it a sheet is read again too, so neither waits for another render.
   useEffect(() => {
@@ -149,11 +178,14 @@ export function DockedWindow({
   });
   const lift = (event: PointerEvent<HTMLDivElement>) => {
     const node = box.current;
-    // The bar's own buttons keep their press; only its open field slides.
+    // The bar's own controls keep their press; only its open field slides.
+    // Links as well as buttons: capturing the pointer retargets the click at
+    // the bar, and a reference beside the title could not be followed.
     if (
       !node ||
       sheet ||
-      (event.target instanceof Element && event.target.closest("button"))
+      (event.target instanceof Element &&
+        event.target.closest("button, a[href]"))
     ) {
       return;
     }
@@ -225,6 +257,7 @@ export function DockedWindow({
           <Heading as="h2" size="xsmall" id={titleId} className="docked-title">
             {title}
           </Heading>
+          {aside}
           <IconAction
             label={t("common.minimize")}
             icon={<Minus aria-hidden="true" />}

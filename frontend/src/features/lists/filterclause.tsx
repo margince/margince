@@ -15,13 +15,11 @@ import type { MessageKey } from "../../i18n/en";
 import {
   fieldLabel,
   groupFields,
-  offerableFields,
   type VocabularyField,
 } from "../../lib/filterdata";
 import {
   type FilterOp,
   isGroup,
-  isRadiusOperand,
   type Leaf,
   type LeafValue,
   type Node,
@@ -30,7 +28,7 @@ import {
   replaceNode,
 } from "../../lib/segmentpredicate";
 import { ownLeaf } from "./filterproposal";
-import { operatorKey, radiusText } from "./filtersentence";
+import { operatorKey } from "./filtersentence";
 import { ValueControl } from "./filtervalue";
 
 /**
@@ -74,7 +72,8 @@ function labelledInOrder(
 
 /** A new clause starts on the vocabulary's first field, a reader picks from there. */
 export function firstClause(fields: readonly VocabularyField[]): Node {
-  const first = offerableFields(fields)[0];
+  // A place is a poor start for a blank clause, so a distance field comes last.
+  const first = fields.find((f) => f.type !== "distance") ?? fields[0];
   if (!first) {
     // A resource with no filterable field cannot happen through this screen —
     // the vocabulary read 404s rather than answering an empty set — but the tree
@@ -139,13 +138,7 @@ export function ClauseRow({
     }
   }, [arrived]);
   const chosen = fields.find((f) => f.name === field);
-  const { core, custom } = groupFields(
-    // A distance clause already in the tree keeps its field so the row can
-    // name it. No other distance field is offered.
-    chosen?.type === "distance"
-      ? [...offerableFields(fields), chosen]
-      : offerableFields(fields),
-  );
+  const { core, custom } = groupFields(fields);
   const fieldOptions: SelectOption[] = [
     ...labelledInOrder(core, t, locale),
     ...labelledInOrder(custom, t, locale),
@@ -212,21 +205,18 @@ export function ClauseRow({
         }
         aria-label={t("filters.operator")}
       />
-      {isRadiusOperand(value) ? (
-        <span>{radiusText(value, t, locale)}</span>
-      ) : (
-        <ValueControl
-          type={chosen?.type ?? "text"}
-          references={chosen?.references}
-          options={chosen?.options}
-          currency={chosen?.currency}
-          op={op}
-          value={value}
-          onChange={(nextValue) =>
-            edit((found) => ({ ...found, value: nextValue }))
-          }
-        />
-      )}
+      <ValueControl
+        type={chosen?.type ?? "text"}
+        references={chosen?.references}
+        options={chosen?.options}
+        currency={chosen?.currency}
+        field={chosen?.name}
+        op={op}
+        value={value}
+        onChange={(nextValue) =>
+          edit((found) => ({ ...found, value: nextValue }))
+        }
+      />
       {proposed && <Badge tone="ai">{t("filters.proposed")}</Badge>}
       <Button
         variant="ghost"

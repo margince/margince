@@ -39,13 +39,19 @@ func replayCtx(e *integration.Env) context.Context {
 }
 
 // seedReplayableMail records an activity and the stored original behind it, the
-// way capture would have.
+// way capture would have for Rep1's gmail mailbox.
 func seedReplayableMail(t *testing.T, e *integration.Env, sourceID, raw string) ids.UUID {
+	t.Helper()
+	return seedReplayableMailStamped(t, "connector:gmail:"+e.Rep1.String(), sourceID, raw)
+}
+
+// seedReplayableMailStamped is seedReplayableMail with captured_by spelled out.
+func seedReplayableMailStamped(t *testing.T, capturedBy, sourceID, raw string) ids.UUID {
 	t.Helper()
 	owner := integration.OwnerConn(t)
 	id := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source_system, source_id, source, captured_by)
 		VALUES ($1, 'email', 'Q3 terms', '2026-08-01T09:00:00Z', 'inbound',
-		        'gmail', '`+sourceID+`', 'gmail:`+sourceID+`', 'connector:gmail')`)
+		        'gmail', '`+sourceID+`', 'gmail:`+sourceID+`', '`+capturedBy+`')`)
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO raw_capture (source_system, source_id, payload)
 		VALUES ('gmail', $1, to_jsonb($2::text))`, sourceID, raw); err != nil {
@@ -101,6 +107,30 @@ func TestReplayRecordsNoOwnerWhenTheMailboxIsUnknown(t *testing.T) {
 	}
 	if outcome != replayNoOwner {
 		t.Errorf("outcome = %q, want %q", outcome, replayNoOwner)
+	}
+}
+
+// A bare `connector:gmail` stamp names no mailbox. The provider's only
+// connection is not read as its owner. The pass records no owner and parses
+// nothing.
+func TestReplayRecordsNoOwnerForABareStampDespiteOneConnection(t *testing.T) {
+	e := integration.Setup(t)
+	bare := seedReplayableMailStamped(t, "connector:gmail", "msg-bare", ccMessage)
+	if _, err := integration.OwnerConn(t).Exec(context.Background(), `INSERT INTO capture_connection
+		(id, provider, user_id, scopes, status, auth, account_label)
+		VALUES ($1, 'gmail', $2, '{}', 'connected', ''::bytea, 'owner@myco.example')`,
+		ids.NewV7(), e.Rep1); err != nil {
+		t.Fatalf("seeding the only gmail connection: %v", err)
+	}
+
+	if _, err := replayParticipantsBatch(replayCtx(e), e.Pool, 10, slog.Default()); err != nil {
+		t.Fatalf("replayParticipantsBatch: %v", err)
+	}
+	if outcome, _ := replayOutcome(t, bare); outcome != replayNoOwner {
+		t.Errorf("outcome = %q, want %q: the only connection was read as the mailbox owner", outcome, replayNoOwner)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1`, bare); got != 0 {
+		t.Errorf("%d participant rows written for mail with no proven owner", got)
 	}
 }
 

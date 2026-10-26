@@ -27,6 +27,7 @@ const AS_OF = "2026-08-13T12:00:00Z";
 
 function activity(over: Partial<Activity>): Activity {
   return {
+    offers_email: false,
     id: "a",
     kind: "email",
     occurred_at: "2026-08-01T09:00:00Z",
@@ -318,21 +319,30 @@ describe("the next step", () => {
   });
 });
 
+const buyer = {
+  author: { kind: "contact_record", display_name: "Dana", is_reader: false },
+} as const;
+
 it("finds the buyer's newest message, never one of ours", () => {
   const newest = lastInbound([
     activity({
       id: "in1",
       direction: "inbound",
+      voice: buyer,
       occurred_at: "2026-07-01T00:00:00Z",
     }),
     activity({
       id: "in2",
       direction: "inbound",
+      voice: buyer,
       occurred_at: "2026-08-01T00:00:00Z",
     }),
     activity({
       id: "out",
       direction: "outbound",
+      voice: {
+        author: { kind: "colleague", display_name: "Rep", is_reader: true },
+      },
       occurred_at: "2026-08-05T00:00:00Z",
     }),
   ]);
@@ -344,6 +354,7 @@ it("passes over an inbound row the server says no human wrote", () => {
     activity({
       id: "human",
       direction: "inbound",
+      voice: buyer,
       occurred_at: "2026-07-01T00:00:00Z",
     }),
     activity({
@@ -360,4 +371,88 @@ it("passes over an inbound row the server says no human wrote", () => {
     }),
   ]);
   expect(newest?.id).toBe("human");
+});
+
+// A colleague's invitation and a system notice arrive inbound; neither is the
+// buyer speaking.
+it("does not count an inbound row a colleague or a machine wrote", () => {
+  const newest = lastInbound([
+    activity({
+      id: "buyer",
+      direction: "inbound",
+      voice: buyer,
+      occurred_at: "2026-07-01T00:00:00Z",
+    }),
+    activity({
+      id: "colleague-invite",
+      direction: "inbound",
+      voice: {
+        author: { kind: "colleague", display_name: "Carla", is_reader: false },
+      },
+      occurred_at: "2026-08-01T00:00:00Z",
+    }),
+    activity({
+      id: "notice",
+      direction: "inbound",
+      voice: {
+        author: {
+          kind: "machine",
+          address: "noreply@tool.example",
+          is_reader: false,
+        },
+      },
+      occurred_at: "2026-08-02T00:00:00Z",
+    }),
+    activity({
+      id: "withheld",
+      direction: "inbound",
+      occurred_at: "2026-08-03T00:00:00Z",
+    }),
+  ]);
+  expect(newest?.id).toBe("buyer");
+});
+
+// An imported note naming a historical author and an upcoming meeting an
+// outsider organised are not the buyer writing.
+it("does not count a note or a meeting as the buyer's last word", () => {
+  const outsider = {
+    author: { kind: "unresolved", display_name: "Old CRM", is_reader: false },
+  } as const;
+  const newest = lastInbound([
+    activity({
+      id: "buyer",
+      kind: "email",
+      direction: "inbound",
+      voice: buyer,
+      occurred_at: "2026-07-01T00:00:00Z",
+    }),
+    activity({
+      id: "imported-note",
+      kind: "note",
+      voice: outsider,
+      occurred_at: "2026-08-01T00:00:00Z",
+    }),
+    activity({
+      id: "future-meeting",
+      kind: "meeting",
+      direction: "inbound",
+      voice: outsider,
+      occurred_at: "2026-12-01T00:00:00Z",
+    }),
+    activity({
+      id: "unknown-sender",
+      kind: "email",
+      direction: "inbound",
+      voice: {
+        author: {
+          kind: "unresolved",
+          address: "x@else.example",
+          is_reader: false,
+        },
+      },
+      occurred_at: "2026-07-15T00:00:00Z",
+    }),
+  ]);
+  // A sender not on record who mailed in still counts.
+  expect(newest?.id).toBe("unknown-sender");
 });

@@ -121,6 +121,11 @@ func (s *Store) RevertCorrection(
 		if err != nil {
 			return err
 		}
+		// The deal row lock comes after the correction lock, the order
+		// restoreCorrectedFields already takes, and before the write check.
+		if _, err := storekit.LockRow(ctx, tx, dealTable, correction.DealID.UUID, storekit.LiveOnly); err != nil {
+			return err
+		}
 		if err := auth.EnsureWritable(ctx, tx, dealTable, correction.DealID.UUID); err != nil {
 			return err
 		}

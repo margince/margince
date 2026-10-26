@@ -385,3 +385,44 @@ it("renders a recorded introduction without a reason or any verb", async () => {
   expect(screen.queryByText(en["contact.intro.answerAction"])).toBeNull();
   expect(screen.queryByText(en["contact.intro.withdrawAction"])).toBeNull();
 });
+
+// A failed read keeps the card: no card at all would read as no asks.
+it("says the asks could not be read and reads them again on retry", async () => {
+  let reads = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const path = typeof input === "string" ? input : (input as Request).url;
+      if (path.includes("/intro-requests")) {
+        reads += 1;
+        return reads === 1
+          ? new Response(
+              JSON.stringify({ title: "Unavailable", status: 503 }),
+              {
+                status: 503,
+                headers: { "content-type": "application/problem+json" },
+              },
+            )
+          : new Response(JSON.stringify({ data: [ask()] }), {
+              status: 200,
+              headers: { "content-type": "application/json" },
+            });
+      }
+      return new Response(JSON.stringify({ user: { id: VIEWER } }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }),
+  );
+  renderCard();
+
+  expect(await screen.findByText(en["contact.intro.asksFailed"])).toBeTruthy();
+  await userEvent.click(
+    screen.getByRole("button", { name: en["common.retry"] }),
+  );
+  expect(
+    await screen.findByText(en["contact.intro.stateRequested"]),
+  ).toBeTruthy();
+  expect(reads).toBe(2);
+  expect(screen.queryByText(en["contact.intro.asksFailed"])).toBeNull();
+});

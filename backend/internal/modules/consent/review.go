@@ -225,7 +225,11 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 		if err != nil {
 			return fmt.Errorf("consent: reading the review: %w", err)
 		}
-		return json.Unmarshal(payload, &out.Refusals)
+		if err := json.Unmarshal(payload, &out.Refusals); err != nil {
+			return err
+		}
+		out.State = openStateFor(out.State, out.Refusals)
+		return nil
 	})
 	return out, err
 }
@@ -275,6 +279,16 @@ func stateFor(refusals []RefusedRecipient) string {
 	return ReviewNeedsContext
 }
 
+// openStateFor derives an open review's state from its refusals on every read.
+// A row stored before the answerable list narrowed may still say needs_context
+// for a refusal RecordContext now refuses. Closed states are returned as stored.
+func openStateFor(stored string, refusals []RefusedRecipient) string {
+	if (stored != ReviewNeedsContext && stored != ReviewNeedsRepair) || len(refusals) == 0 {
+		return stored
+	}
+	return stateFor(refusals)
+}
+
 // answerableByContext reports whether evidence could still make this send
 // lawful.
 //
@@ -283,16 +297,18 @@ func stateFor(refusals []RefusedRecipient) string {
 // offers no argument — the safe direction, because the alternative is a form
 // inviting a rep to argue with a withdrawal.
 //
-// It reads the remedy table (commsauthz.RemediesFor) for what an answer
-// can resolve. Today that is no evidence, a purpose key nothing defines, and a
-// claim the record contradicts. Somebody who was on the call can answer these.
+// The review state, HeldSubjectsForReview and RecordContext all ask this
+// function. So the work item never offers an answer the store then refuses.
+// A statement is stored as a qualifying event, which only no_compatible_evidence
+// reads. Other reasons declare RemedyAnswer (commsauthz.RemediesFor). They need
+// an answer request this store cannot take yet, and join here when it can.
 //
 // Everything else is about the SUBJECT or the ADDRESS and no context repairs
 // it. An objection, a restriction, a withdrawal and a subject request are the
 // subject's own instruction; a hard bounce is a dead mailbox; a frequency cap
 // is a fact about volume that time answers rather than evidence.
 func answerableByContext(reasonCode string) bool {
-	return commsauthz.HasRemedy(reasonCode, commsauthz.RemedyAnswer)
+	return reasonCode == commsauthz.ReasonNoEvidence
 }
 
 // initiatingSeat reads the human this send belongs to, or the zero id for a
@@ -431,7 +447,11 @@ func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, er
 			return fmt.Errorf("consent: reading the review: %w", err)
 		}
 		out.InitiatedBy = seat
-		return json.Unmarshal(payload, &out.Refusals)
+		if err := json.Unmarshal(payload, &out.Refusals); err != nil {
+			return err
+		}
+		out.State = openStateFor(out.State, out.Refusals)
+		return nil
 	})
 	return out, err
 }

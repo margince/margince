@@ -38,7 +38,54 @@ function Harness({ onClose = vi.fn() }: Readonly<{ onClose?: () => void }>) {
   );
 }
 
+// The verb that opened the window gets focus back when it closes.
+function Opener() {
+  const [from, setFrom] = useState<HTMLElement | null>(null);
+  return (
+    <LocaleProvider initial="en">
+      <button type="button" onClick={(event) => setFrom(event.currentTarget)}>
+        Write email
+      </button>
+      {from && (
+        <DockedWindow
+          title="Re: Budget"
+          state="open"
+          onStateChange={() => undefined}
+          onClose={() => setFrom(null)}
+          openedFrom={from}
+        >
+          <input aria-label="Words" />
+        </DockedWindow>
+      )}
+    </LocaleProvider>
+  );
+}
+
 describe("a window docked beside the page", () => {
+  it("hands focus back to the verb that opened it when it closes", async () => {
+    const user = userEvent.setup();
+    render(<Opener />);
+    const verb = screen.getByRole("button", { name: "Write email" });
+    await user.click(verb);
+    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(
+      true,
+    );
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(verb);
+  });
+
+  // Safari does not focus a button it clicks; the press still names the verb.
+  it("hands focus back to the pressed verb the click never focused", async () => {
+    const user = userEvent.setup();
+    render(<Opener />);
+    const verb = screen.getByRole("button", { name: "Write email" });
+    fireEvent.click(verb);
+    expect(document.activeElement).not.toBe(verb);
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(document.activeElement).toBe(verb);
+  });
+
   it("is a dialog that leaves the page behind it in reach", async () => {
     const user = userEvent.setup();
     render(<Harness />);
@@ -104,17 +151,44 @@ describe("a window docked beside the page", () => {
     fireEvent.pointerUp(bar, { pointerId: 1 });
   });
 
+  it("keeps a press on a link in the title bar from sliding the window", () => {
+    // The slide captures the pointer, which retargets the click at the bar.
+    // A reference beside the title could not be followed while only buttons
+    // were spared. Nothing in the bar was a link until one was put there.
+    //
+    // Asserted on the press, not on the margin a slide would set. This DOM has
+    // no setPointerCapture, so a press reaching the slide leaves no mark to
+    // read. Leaving the event uncancelled is what the guard does.
+    render(
+      <LocaleProvider initial="en">
+        <DockedWindow
+          title="Re: Budget"
+          aside={<a href="#/contacts/c-1">Anna Weber</a>}
+          state="open"
+          onStateChange={vi.fn()}
+          onClose={vi.fn()}
+        >
+          <input aria-label="Words" />
+        </DockedWindow>
+      </LocaleProvider>,
+    );
+    const followed = fireEvent.pointerDown(
+      screen.getByRole("link", { name: "Anna Weber" }),
+      { clientX: 600, pointerId: 1 },
+    );
+
+    expect(followed).toBe(true);
+  });
+
   it("keeps a press on the title bar's buttons from sliding the window", () => {
     render(<Harness />);
-    const bar = titleBar();
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Expand" }), {
-      clientX: 600,
-      pointerId: 1,
-    });
-    fireEvent.pointerMove(bar, { clientX: 480, pointerId: 1 });
+    const pressed = fireEvent.pointerDown(
+      screen.getByRole("button", { name: "Expand" }),
+      { clientX: 600, pointerId: 1 },
+    );
 
-    expect(screen.getByRole("dialog").style.marginInlineEnd).toBe("");
+    expect(pressed).toBe(true);
   });
 
   it("comes back into view when the glass narrows under a slid window", () => {

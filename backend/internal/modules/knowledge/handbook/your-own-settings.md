@@ -1,13 +1,13 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings:
 **Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**,
 **Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
 Capture activity also carries one card that holds for the whole company: the
-company's rules for what capture keeps out, beside your own. Connections only
-shows the company's email sharing rule, on a row marked **Whole company**, and changes
-nothing for anyone else.
+company's rules for what capture keeps out, beside your own. Connections only shows the company's
+email sharing rule, on a row marked **Whole company**, and changes nothing for anyone else.
 
 For everything else, see [Settings](settings.md).
 
@@ -389,7 +389,7 @@ default each row names the sender and a short subject. If your installation
 turned this off, the page says so above the rows.
 
 **Senders.** Every address your mailbox brought in, what was decided about
-each, and your own answer where there is one. Only you see this list.
+each, and your own answer where there is one. Only you see this list. **Exclude** on a sender destroys their mail. Margince still receives what they send later, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored.
 
 ### Why did an email not show up in Margince?
 To find out why an email did not show up in Margince, open Settings → **Capture activity** and look in **Messages** for the last 24 hours.

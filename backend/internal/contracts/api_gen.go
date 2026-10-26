@@ -427,6 +427,30 @@ func (e ActivityAudience) Valid() bool {
 	}
 }
 
+// Defines values for ActivityAuthorKind.
+const (
+	ActivityAuthorKindColleague     ActivityAuthorKind = "colleague"
+	ActivityAuthorKindContactRecord ActivityAuthorKind = "contact_record"
+	ActivityAuthorKindMachine       ActivityAuthorKind = "machine"
+	ActivityAuthorKindUnresolved    ActivityAuthorKind = "unresolved"
+)
+
+// Valid indicates whether the value is a known member of the ActivityAuthorKind enum.
+func (e ActivityAuthorKind) Valid() bool {
+	switch e {
+	case ActivityAuthorKindColleague:
+		return true
+	case ActivityAuthorKindContactRecord:
+		return true
+	case ActivityAuthorKindMachine:
+		return true
+	case ActivityAuthorKindUnresolved:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -541,6 +565,36 @@ func (e ActivityReviewTemplateOutcome) Valid() bool {
 	case ActivityReviewTemplateOutcomeLost:
 		return true
 	case ActivityReviewTemplateOutcomeWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityVoiceContactRole.
+const (
+	ActivityVoiceContactRoleAddressee ActivityVoiceContactRole = "addressee"
+	ActivityVoiceContactRoleAttendee  ActivityVoiceContactRole = "attendee"
+	ActivityVoiceContactRoleAuthor    ActivityVoiceContactRole = "author"
+	ActivityVoiceContactRoleCc        ActivityVoiceContactRole = "cc"
+	ActivityVoiceContactRoleOrganizer ActivityVoiceContactRole = "organizer"
+	ActivityVoiceContactRoleOther     ActivityVoiceContactRole = "other"
+)
+
+// Valid indicates whether the value is a known member of the ActivityVoiceContactRole enum.
+func (e ActivityVoiceContactRole) Valid() bool {
+	switch e {
+	case ActivityVoiceContactRoleAddressee:
+		return true
+	case ActivityVoiceContactRoleAttendee:
+		return true
+	case ActivityVoiceContactRoleAuthor:
+		return true
+	case ActivityVoiceContactRoleCc:
+		return true
+	case ActivityVoiceContactRoleOrganizer:
+		return true
+	case ActivityVoiceContactRoleOther:
 		return true
 	default:
 		return false
@@ -25002,13 +25056,16 @@ type Activity struct {
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
 
-	// Links One activity may link to >1 entity (contact + deal).
+	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
-	MeetingStatus *ActivityMeetingStatus  `json:"meeting_status,omitempty"`
-	OccurredAt    time.Time               `json:"occurred_at"`
-	Raw           *map[string]interface{} `json:"raw,omitempty"`
+	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
+	OccurredAt    time.Time              `json:"occurred_at"`
+
+	// OffersEmail Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
+	OffersEmail bool                    `json:"offers_email"`
+	Raw         *map[string]interface{} `json:"raw,omitempty"`
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
@@ -25032,7 +25089,13 @@ type Activity struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version              *RowVersion            `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty"`
+
+	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
+	Voice *ActivityVoice `json:"voice,omitempty"`
+
+	// Writable Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -25064,6 +25127,23 @@ type ActivityMeetingStatus string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
+
+// ActivityAuthor One author, named by the record that identifies them.
+type ActivityAuthor struct {
+	Address     *string             `json:"address,omitempty"`
+	ContactId   *openapi_types.UUID `json:"contact_id,omitempty"`
+	DisplayName *string             `json:"display_name,omitempty"`
+
+	// IsReader The author is the signed-in caller.
+	IsReader bool `json:"is_reader"`
+
+	// Kind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+	Kind   ActivityAuthorKind  `json:"kind"`
+	UserId *openapi_types.UUID `json:"user_id,omitempty"`
+}
+
+// ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+type ActivityAuthorKind string
 
 // ActivityFollowUpTask defines model for ActivityFollowUpTask.
 type ActivityFollowUpTask struct {
@@ -25173,6 +25253,21 @@ type ActivityReviewTemplateOutcome string
 type ActivityReviewTemplateListResponse struct {
 	Data []ActivityReviewTemplate `json:"data"`
 }
+
+// ActivityVoice Who wrote an activity, read from what is recorded on it, and the part the
+// page's contact had in it. Every surface that names a speaker reads this
+// rather than guessing from `direction`: a mail that came in was not
+// necessarily written by the contact whose page shows it.
+type ActivityVoice struct {
+	// Author Who wrote it: the `from` party of a message, the organizer of a meeting, the seat or imported author of a note, call or task. Null when nothing recorded names an author, which a reader shows as no author rather than a guess.
+	Author *ActivityAuthor `json:"author,omitempty"`
+
+	// ContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+	ContactRole *ActivityVoiceContactRole `json:"contact_role,omitempty"`
+}
+
+// ActivityVoiceContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+type ActivityVoiceContactRole string
 
 // AddConsumerMailDomainRequest defines model for AddConsumerMailDomainRequest.
 type AddConsumerMailDomainRequest struct {
@@ -26272,6 +26367,17 @@ type AiHealth struct {
 	WindowHours int `json:"window_hours"`
 }
 
+// AiLaneNeedingAKey One saved binding whose vendor needs a key that is not held.
+type AiLaneNeedingAKey struct {
+	// KeyEnv The environment variable that would supply the key, named so an operator can act without looking it up.
+	KeyEnv string `json:"key_env"`
+
+	// Lane The lane the binding sits on, named as the router names it: a tier name, `embed` or `decide`.
+	Lane     string  `json:"lane"`
+	Model    *string `json:"model,omitempty"`
+	Provider string  `json:"provider"`
+}
+
 // AiModelRate One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
 type AiModelRate struct {
 	CacheReadPerMtok  string             `json:"cache_read_per_mtok"`
@@ -26862,10 +26968,13 @@ type AiStatus struct {
 	DeferredWork         []AiDeferredWork `json:"deferred_work"`
 	DeferredWorkCoverage string           `json:"deferred_work_coverage"`
 	Features             []AiFeatureRoute `json:"features"`
-	ObservedAt           time.Time        `json:"observed_at"`
-	RoutingVersion       string           `json:"routing_version"`
-	TaskContractHash     string           `json:"task_contract_hash"`
-	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
+
+	// LanesNeedingAKey The saved bindings that cannot run, because the vendor they name holds no key. The router keeps serving whatever it served before such a save, so without this the screen names a model that is not answering.
+	LanesNeedingAKey *[]AiLaneNeedingAKey `json:"lanes_needing_a_key,omitempty"`
+	ObservedAt       time.Time            `json:"observed_at"`
+	RoutingVersion   string               `json:"routing_version"`
+	TaskContractHash string               `json:"task_contract_hash"`
+	UnusedTiers      *[]string            `json:"unused_tiers,omitempty"`
 }
 
 // AiTask AI task key from the task catalog, used to localize its display name.
@@ -27278,6 +27387,9 @@ type AnalyticsSchema struct {
 
 // AnalyticsScope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 type AnalyticsScope struct {
+	// Assertable Whether this caller may record a forecast call or issue a share about this population. Absent from a server that predates the field; a screen then offers the controls and the write route decides.
+	Assertable *bool `json:"assertable,omitempty"`
+
 	// Id The team or contact measured. Absent for workspace and managed_teams, which name no single subject.
 	Id *openapi_types.UUID `json:"id,omitempty"`
 
@@ -27841,7 +27953,7 @@ type Attachment struct {
 	// Checksum sha256 of the bytes, for integrity/dedupe.
 	Checksum *string `json:"checksum,omitempty"`
 
-	// CompanyId The account this file rolls up to, kept as a read path rather than a second parent. Visibility stays the primary parent's, and this is maintained on relink and merge so a file follows the record it belongs to.
+	// CompanyId The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
 	CompanyId   *openapi_types.UUID `json:"company_id,omitempty"`
 	ContentType *string             `json:"content_type,omitempty"`
 
@@ -27855,6 +27967,9 @@ type Attachment struct {
 	EntityType AttachmentEntityType `json:"entity_type"`
 	Filename   string               `json:"filename"`
 	Id         openapi_types.UUID   `json:"id"`
+
+	// Origin The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail.
+	Origin *AttachmentOrigin `json:"origin,omitempty"`
 
 	// Pinned Held at the top of the account's library. An assertion by a human, like the state.
 	Pinned *bool  `json:"pinned,omitempty"`
@@ -27935,6 +28050,22 @@ type AttachmentExtractionAcceptResponse struct {
 type AttachmentListResponse struct {
 	Data []Attachment `json:"data"`
 	Page PageInfo     `json:"page"`
+}
+
+// AttachmentOrigin The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail.
+type AttachmentOrigin struct {
+	// ActivityId The mail to open.
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Kind The activity kind the file arrived with: email, message.
+	Kind string `json:"kind"`
+
+	// OccurredAt When the mail was sent or received.
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// Sender One address on a message, resolved to a contact or a seat when it is one.
+	Sender  *EmailParty `json:"sender,omitempty"`
+	Subject *string     `json:"subject,omitempty"`
 }
 
 // AttachmentReadStarted The reading `readAttachmentForFields` started, or the one already in flight it joined.
@@ -29695,10 +29826,13 @@ type BlockedDomainListResponse struct {
 // the events read from a conversation) is read only from a `complete` mail body.
 type BodyCompleteness string
 
-// BoughtField One value on a contact that a data provider's purchase wrote and still owns.
+// BoughtField One value on a contact that a data provider's run wrote and still owns.
 type BoughtField struct {
-	// AppliedAt When the purchase wrote it.
+	// AppliedAt When the run wrote it.
 	AppliedAt time.Time `json:"applied_at"`
+
+	// Paid True when a seat started the run and it spent credits. A value from an automatic run is never paid, because automatic runs take only free categories.
+	Paid bool `json:"paid"`
 
 	// Provider A licensed data provider registered in THIS installation; the domain/run contract
 	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
@@ -29709,8 +29843,17 @@ type BoughtField struct {
 	// live set.
 	Provider Provider `json:"provider"`
 
-	// Target Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the purchase wrote is bought.
+	// RequestedBy The seat that started the run. Set only when `trigger` is `manual`.
+	RequestedBy *openapi_types.UUID `json:"requested_by,omitempty"`
+
+	// Target Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the run wrote is the provider's.
 	Target string `json:"target"`
+
+	// Trigger What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+	// contact that existed before the provider was connected, or that no run has covered
+	// yet; like the other automatic triggers it buys only the categories that cost
+	// nothing.
+	Trigger ProviderRunTrigger `json:"trigger"`
 }
 
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
@@ -34539,7 +34682,7 @@ type Contact struct {
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
 
-	// BoughtFields Which of this contact's values a data provider's purchase put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete bought data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company.
+	// BoughtFields Which of this contact's values a data provider's run put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete provider data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company.
 	BoughtFields *[]BoughtField `json:"bought_fields,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
@@ -35352,10 +35495,14 @@ type ContactNetwork struct {
 	// later replies they alone receive may be missing here. Information only: a seat
 	// listed here is not a route in, owns no work and may not send. An invited seat
 	// appears here and never in `colleagues`. At most ten are returned, most recent
-	// first.
-	CaptureGaps []ContactCaptureGap       `json:"capture_gaps"`
-	Colleagues  []ContactNetworkColleague `json:"colleagues"`
-	ContactId   openapi_types.UUID        `json:"contact_id"`
+	// first; `capture_gaps_total` counts them all.
+	CaptureGaps []ContactCaptureGap `json:"capture_gaps"`
+
+	// CaptureGapsTotal How many colleagues meet the `capture_gaps` condition in all. When it is larger
+	// than the length of `capture_gaps`, the list names only the most recent of them.
+	CaptureGapsTotal int                       `json:"capture_gaps_total"`
+	Colleagues       []ContactNetworkColleague `json:"colleagues"`
+	ContactId        openapi_types.UUID        `json:"contact_id"`
 }
 
 // ContactNetworkColleague One colleague's own relationship with this contact.
@@ -43320,7 +43467,10 @@ type ListClauseVerdict struct {
 
 	// Linked For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none.
 	Linked *[]ListLinkedValue `json:"linked,omitempty"`
-	Op     *string            `json:"op,omitempty"`
+
+	// LinkedTruncated The record holds more linked values than `linked` lists; absent when the list is complete.
+	LinkedTruncated *bool   `json:"linked_truncated,omitempty"`
+	Op              *string `json:"op,omitempty"`
 
 	// Operand The clause's value as the filter states it.
 	Operand interface{} `json:"operand,omitempty"`
@@ -43373,6 +43523,9 @@ type ListFieldValue struct {
 
 	// Linked For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then.
 	Linked *[]ListLinkedValue `json:"linked,omitempty"`
+
+	// LinkedTruncated The record holds more linked values than `linked` lists; absent when the list is complete.
+	LinkedTruncated *bool `json:"linked_truncated,omitempty"`
 
 	// Value The value as text, as the explanation states it; null when the record holds none.
 	Value *string `json:"value,omitempty"`
@@ -46988,18 +47141,18 @@ type ProviderRunState string
 // populated for that kind (PI-DDL-2).
 type ProviderRunSubjectKind string
 
-// ProviderRunTrigger What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
-// contact that existed before the provider was connected, or that no run has covered
-// yet; like the other automatic triggers it buys only the categories that cost
-// nothing.
-type ProviderRunTrigger string
-
 // ProviderRunReservation defines model for ProviderRunReservation.
 type ProviderRunReservation struct {
 	ActualCredits   *int   `json:"actual_credits,omitempty"`
 	Pool            string `json:"pool"`
 	ReservedCredits int    `json:"reserved_credits"`
 }
+
+// ProviderRunTrigger What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+// contact that existed before the provider was connected, or that no run has covered
+// yet; like the other automatic triggers it buys only the categories that cost
+// nothing.
+type ProviderRunTrigger string
 
 // ProviderSpend A bounded consumption series: the current month plus a small number of prior
 // months, so the connection read stays one round trip.
@@ -47137,7 +47290,7 @@ type QuickCaptureContactRequest struct {
 	FullName string               `json:"full_name"`
 	Phone    *string              `json:"phone,omitempty"`
 
-	// ProfileUrl The public profile this was read from. Stored, never fetched.
+	// ProfileUrl The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field.
 	ProfileUrl *string `json:"profile_url,omitempty"`
 
 	// Role What they do at that employer, when it differs from `title`.
@@ -48010,11 +48163,25 @@ type ReplaceChannelTokenRequest struct {
 // ReplyRecipient Who a reply to a message is addressed to: one contact, resolved from the
 // message's participants by role.
 //
+// A call, meeting, note or task is written about a contact, not replied to. Its
+// `address` comes from its links alone, never its participants: the reachable
+// address of its one live linked contact the caller may read. Links to companies,
+// deals and other records do not count. Two or more such contacts, none, a contact
+// without an address, a shared mailbox, a seat's login or a colleague's address
+// answer empty, and so does a task the product filed itself. None of these kinds has
+// a conversation to join: each answers `viewer_on_conversation` true, `mailbox_user_ids`
+// empty and `deal_owner_user_id` null. `POST /activities/{id}/draft-email` fills its
+// `to` by the same rule.
+//
 // One contact rather than a list. A reply is written to somebody, and a group
 // thread degrades to the most likely counterparty rather than to nobody.
 type ReplyRecipient struct {
-	// Address Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
+	// Address Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. A written-about row follows its own rule, above. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
 	Address string `json:"address"`
+
+	// DealOwnerUserId The owner of the deal this message is filed under, for the client to name through its roster. Null when the message is filed under no deal the caller may read, or that deal has no owner. A deal the caller cannot read answers null, the same as no deal.
+	// With several readable deals, an open deal comes before a won or lost one, and then the deal the message was filed under most recently. That is the deal the conversation is about now.
+	DealOwnerUserId *openapi_types.UUID `json:"deal_owner_user_id"`
 
 	// FirstName What a greeting uses. Split server-side rather than in a prompt: a model asked to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call.
 	FirstName string `json:"first_name"`
@@ -48026,6 +48193,10 @@ type ReplyRecipient struct {
 	// A label of where the message arrived, never a grant. It is answered only to a caller who may already read the message's content, and a seat named here is named because their credential delivered the row.
 	// Empty is an answer: a hand-logged activity was typed rather than delivered, and a row whose recorded provenance names no seat this company still holds resolves to nobody. Always an array, never null.
 	MailboxUserIds []openapi_types.UUID `json:"mailbox_user_ids"`
+
+	// ViewerOnConversation Whether the caller already belongs to this conversation, so a composer can say when a reply comes from somebody the contact has not been writing with. A label, never a grant: it never refuses a send.
+	// True when either holds. The caller is on the thread: one of their own addresses, or their seat, is the From, To or Cc of the message or of another message in its thread that they may read. Their addresses are their login, the addresses they declared and their connected mailboxes; an address another seat holds on equal or stronger evidence is not theirs. Or the caller is on the team of a deal the message is filed under: its owner, assigned to it, or a member of a team assigned to it. A deal counts only when the caller may read it, so the answer never shows that a hidden deal exists.
+	ViewerOnConversation bool `json:"viewer_on_conversation"`
 }
 
 // ReportBlock One element of a report. What fields are legal is decided by `kind`.
@@ -49635,6 +49806,8 @@ type SendAuthorizationPreviewRecipient struct {
 	// opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
 	// offered an override on those would render a button that cannot achieve what it
 	// promises, and the rep would type a justification the staging gate then ignores.
+	// A recorded reason lifts one category, so a refusal that resolved to no single
+	// category, such as `unknown_purpose`, answers false.
 	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
 
 	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule
@@ -64617,6 +64790,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "occurred_at")
 	}
 
+	if raw, found := object["offers_email"]; found {
+		err = json.Unmarshal(raw, &a.OffersEmail)
+		if err != nil {
+			return fmt.Errorf("error reading 'offers_email': %w", err)
+		}
+		delete(object, "offers_email")
+	}
+
 	if raw, found := object["raw"]; found {
 		err = json.Unmarshal(raw, &a.Raw)
 		if err != nil {
@@ -64695,6 +64876,22 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'version': %w", err)
 		}
 		delete(object, "version")
+	}
+
+	if raw, found := object["voice"]; found {
+		err = json.Unmarshal(raw, &a.Voice)
+		if err != nil {
+			return fmt.Errorf("error reading 'voice': %w", err)
+		}
+		delete(object, "voice")
+	}
+
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
 	}
 
 	if len(object) != 0 {
@@ -64923,6 +65120,11 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
 	}
 
+	object["offers_email"], err = json.Marshal(a.OffersEmail)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'offers_email': %w", err)
+	}
+
 	if a.Raw != nil {
 		object["raw"], err = json.Marshal(a.Raw)
 		if err != nil {
@@ -64986,6 +65188,20 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Voice != nil {
+		object["voice"], err = json.Marshal(a.Voice)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'voice': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
 		}
 	}
 

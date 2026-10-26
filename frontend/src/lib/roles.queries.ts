@@ -13,6 +13,7 @@ import { ifMatch } from "../api/version";
 import type { SelectOption } from "../design-system/select";
 import type { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { ANALYTICS_CONTEXT_KEY } from "./analyticskeys";
 import {
   isVersionSkewOf,
   problemCodeOf,
@@ -143,6 +144,7 @@ function refreshReadersOfRoles(client: QueryClient) {
     client.invalidateQueries({ queryKey: ["access-preview"] }),
     client.invalidateQueries({ queryKey: ASSIGNABLE_ROLES_KEY }),
     client.invalidateQueries({ queryKey: ["me"] }),
+    client.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY }),
     client.invalidateQueries({ queryKey: ["users-admin"] }),
     client.invalidateQueries({ queryKey: ["users"] }),
   ]);

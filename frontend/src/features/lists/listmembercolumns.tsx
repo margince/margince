@@ -76,7 +76,7 @@ function useFilterColumns(list: List): ListColumn<MemberRow>[] {
           return <span className="t-caption">{t("lists.members.hidden")}</span>;
         }
         if (held?.linked !== undefined) {
-          return linkedText(held.linked, t);
+          return linkedText(held.linked, t, held.linked_truncated);
         }
         if (held?.value == null) {
           return "—";

@@ -6,7 +6,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-65 columns · primary key `(id)` · referenced by 38 foreign keys
+66 columns · primary key `(id)` · referenced by 38 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -35,6 +35,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `has_calendar_part` | `boolean`, default `false` | yes |  |
 | `host_user_id` | `uuid` |  | Meeting only: the member of this company who held it. |
 | `inbound_sender_authenticated` | `boolean`, default `false` | yes |  |
+| `invitation_sender` | `uuid` |  | Points at `app_user.id`. |
 | `is_done` | `boolean`, default `false` | yes | Task only. |
 | `kind` | `text` | yes | Points at `activity_kind.kind`. |
 | `language` | `text` |  | What language this message is written in, read from its own text when it was captured. |
@@ -83,6 +84,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `assignee_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `channel_provider` | `channel_provider` | the parent cannot be deleted while this row points at it |
 | `host_user_id` | `app_user` | deleting the parent keeps this row and clears the link |
+| `invitation_sender` | `app_user` | deleting the parent keeps this row and clears the link |
 | `kind` | `activity_kind` | the parent cannot be deleted while this row points at it |
 | `raw_capture_id` | `raw_capture` | deleting the parent keeps this row and clears the link |
 | `sent_by_colleague` | `app_user` | deleting the parent keeps this row and clears the link |
@@ -730,7 +732,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `bytes_withheld` | `boolean`, default `false` | yes | True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. |
 | `category` | `text`, default `'other'::text` | yes | What kind of document this is. |
 | `checksum` | `text` |  | sha256 of the bytes, for integrity/dedupe. |
-| `company_id` | `uuid` |  | The account this file rolls up to, kept as a read path rather than a second parent. |
+| `company_id` | `uuid` |  | The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. |
 | `content_type` | `text` |  |  |
 | `contract_id` | `uuid` |  | The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. |
 | `deal_id` | `uuid` |  |  |

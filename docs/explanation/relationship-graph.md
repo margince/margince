@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go -->
 # The relationship graph: participants, the interaction edge & deal coverage
 
 Margince answers the question *is this account cold* from the real parties to each conversation. It
@@ -92,7 +93,7 @@ The mailbox owner is known **only from the connector principal**. `capture_conne
 user per provider, so the registry stamps the human who granted it on the principal that runs the
 sync. By the time any other module sees the activity, its `captured_by` reads `connector:gmail`. The
 human behind it can no longer be known. That is the agreed reason `capture` writes a table
-`activities` owns. `backend/gates/tableownership_test.go` carries it word for word, and a waiver with
+`activities` owns. `backend/gates/tableownershipwaivers_test.go` carries it word for word, and a waiver with
 no reason, or an out-of-date one, fails the gate.
 
 Capture writes the counterparty as an **address**, not a contact. The tier gate that creates contacts
@@ -532,7 +533,7 @@ See [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
 | Agent-tool seams (`who_knows`, `company_coverage`, `intro_path_to`, `at_risk_relationships`) | `internal/compose/networkseams.go`, `introseams.go`; `internal/modules/agents/tools_network.go` |
 | Erasure of participants, ghosts and edges (one transaction) | `internal/modules/privacy/erasure_graph.go`, `retention_graph.go` |
 | Deactivation deleting a leaving member's network | `internal/modules/identity/users.go` |
-| Cross-store agreements for every table above | `backend/gates/tableownership_test.go` |
+| Cross-store agreements for every table above | `backend/gates/tableownershipwaivers_test.go` |
 | The tables | `backend/migrations/core/0001_baseline.up.sql` (`activity_participant`, `graph_interaction_edge`, `linkedin_connection`, `linkedin_account`) |
 | The REST contract | `backend/api/crm.yaml` (`getContactNetwork`, `getDealCoverage`) |
 | The job contract (schedule, runs per workspace, batch sizes) | `backend/api/jobs.yaml` (`graph_edge_reconcile`, `participant_backfill`, `linkedin_rematch`) |

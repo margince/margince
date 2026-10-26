@@ -168,7 +168,7 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 	var out OwnerIdentity
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if kind == IdentityKindAddress {
-			if err := lockOwnAddressTx(ctx, tx, value); err != nil {
+			if err := storekit.LockSeatAddressClaims(ctx, tx, value); err != nil {
 				return err
 			}
 		}
@@ -213,6 +213,9 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := purgeExpiredWithdrawalsTx(ctx, tx); err != nil {
+			return err
+		}
+		if err := lockIdentityClaimTx(ctx, tx, id, actor.UserID); err != nil {
 			return err
 		}
 		var withdrawn withdrawnIdentity
@@ -393,6 +396,10 @@ func seatLoginAddressTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (string, 
 // that on the ordinary cases and disagree on exactly the ones the claim was
 // made for — a ledger and a gate answering differently about the same address
 // is the shape nobody notices until a record appears.
+//
+// It waits on a row a transition holds. Every transition out of pending or
+// unsure takes the address's check lock first, so none holds a row this
+// claim's lock is blocking.
 func retirePendingForIdentityTx(ctx context.Context, tx pgx.Tx, user ids.UUID, identity OwnerIdentity) error {
 	var covered SelfSet
 	if identity.Kind == IdentityKindDomain {

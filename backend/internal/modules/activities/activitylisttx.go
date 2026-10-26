@@ -44,7 +44,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	// Collected rather than streamed: attachLinks runs a second query on
+	// Collected rather than streamed: AttachLinks runs a second query on
 	// this same transaction, which needs the cursor already closed.
 	type pagedRow struct {
 		activity crmcontracts.Activity
@@ -77,10 +77,16 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if err := WithEmailRowFacts(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if err := attachLinks(ctx, tx, activities); err != nil {
+	if err := AttachLinks(ctx, tx, activities); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	if err := WithOffersEmail(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if err := WithCommitmentAdmissions(ctx, tx, activities); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	if err := StampActivitiesWritable(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if err := withCustomValues(ctx, tx, in.Columns.cols, pageOf(activities)); err != nil {

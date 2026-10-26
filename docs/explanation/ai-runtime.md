@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/api/ai-tasks.yaml backend/internal/modules/ai/router.go backend/internal/modules/ai/decideroute.go backend/internal/modules/ai/budget.go backend/internal/modules/ai/routeplan.go backend/internal/modules/ai/usage.go backend/internal/modules/ai/providerregistry.go backend/internal/compose/jobs_aibudget.go -->
 # The AI runtime: tasks, tiers, routing, and the one gate
 
 How every AI call in Margince is *named*, *routed*, *metered*, *traced*, and *certified*. This is the
@@ -135,8 +136,13 @@ embeddings:    {provider: gemini}
 - **Rungs that reach one API give no failover.** A ladder can bind two or more rungs that use the same
   provider, model and endpoint. A refusal at that API then comes back on every rung. Boot and every saved
   routing document warn once per API and name its tasks. The router's own retry guard uses the same test, and
-  upstream pins and the thinking level are not part of it. The sovereign profile sends every cloud rung to
-  `local_small`, so those ladders have one rung and draw no warning.
+  upstream pins and the thinking level are not part of it.
+- **Sovereign ladders.** The sovereign profile sends every cloud rung to a local tier
+  (`profileLadder` in `routeplan.go`). That is `local_large` when it has a binding, and `local_small`
+  when it has none. When `local_large` has no binding,
+  a ladder of `local_small` and cloud rungs becomes one `local_small` rung and draws no warning. When it has
+  one, `[local_small, cheap_cloud]` becomes `[local_small, local_large]`, two rungs. That pair gets the same
+  check as any other, so it warns only when both rungs reach one API.
 - `/readyz` names the AI state (`configured` | `fake` | `unconfigured`). So an operator reads the gap
   off the boot log, not off a refused call at `3am`.
 - **The models that can serve a task** are the ladder plus its closure under `degrade_to`, and readers

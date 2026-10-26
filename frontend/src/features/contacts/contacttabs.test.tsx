@@ -44,7 +44,7 @@ function activity(
   row: Pick<SectionActivity, "id" | "kind" | "occurred_at"> &
     Partial<SectionActivity>,
 ): SectionActivity {
-  return { is_done: false, ...CAPTURED, ...row };
+  return { offers_email: false, is_done: false, ...CAPTURED, ...row };
 }
 
 // The six tabs beside Overview were placeholders for a release, and the thing
@@ -481,6 +481,33 @@ describe("the deals tab", () => {
     expect(
       screen.queryByRole("heading", { name: "Open deal and buying role" }),
     ).toBeNull();
+  });
+
+  it("words a closed deal's day as when it closed, not as a forecast", async () => {
+    stubWithSession(
+      {
+        "GET /deals/d-1": () =>
+          jsonResponse({
+            ...DEAL_D1,
+            status: "won",
+            closed_at: "2026-08-20T12:00:00Z",
+            expected_close_date: "2026-03-02",
+          } satisfies Deal),
+      },
+      {},
+    );
+    const withCommercial: Contact360 = {
+      ...view,
+      commercial: {
+        deal: { deal_id: "d-1", title: "Fleet renewal 2026" },
+        role: "economic_buyer",
+        committee: [],
+      },
+    };
+    withProviders(<ContactDealsTab view={withCommercial} />);
+    expect(await screen.findByText(/closed 20 Aug/i)).toBeTruthy();
+    expect(screen.queryByText(/closes/i)).toBeNull();
+    expect(screen.queryByText(/2 Mar/)).toBeNull();
   });
 
   // A seat may record no role — the schema requires one only for

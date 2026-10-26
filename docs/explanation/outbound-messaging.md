@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/comms/dispatcher.go backend/internal/modules/comms/store.go backend/internal/modules/comms/storechannel.go backend/internal/modules/comms/gates.go backend/internal/modules/comms/sendseam.go backend/internal/modules/comms/policy.go backend/internal/modules/activities/email.go backend/internal/modules/activities/channelsend.go -->
 # Outbound messaging: the delivery work behind a sent message
 
 `internal/modules/comms` is how Margince sends a message out. It holds the durable record of what was
@@ -76,9 +77,21 @@ it, after the caller has already decided to write.
 
 ## The dispatcher and its gates
 
-One dispatcher try is `Dispatcher.DispatchWithWait`, and the order is authority → what files the
-provider can carry → file check → seat → consent → pace → send. Gates and policies are different
-tools because they state different facts:
+One dispatcher try is `Dispatcher.DispatchWithWait`. It runs in this order:
+
+1. authority (the provider scope);
+2. seat;
+3. the authority the delivery claims;
+4. consent;
+5. what files the provider can carry;
+6. file check;
+7. jurisdiction;
+8. pace;
+9. retry limit;
+10. send.
+
+Gates and policies are different tools because
+they state different facts:
 
 - **A gate says never.** Waiting never repairs a revoked grant, so gates are written into the code,
   fixed, and not something you set.
@@ -265,15 +278,16 @@ The text at the end of the mail uses the language of the message above it. That 
 the body, then the subject, then the installation's own language, then English. Nothing records the
 recipient's own choice. The pages a link opens carry a language switch, which is the way back.
 
-### Confirm first for agents; a human's own action is its own approval
+### Agents send on their own authority
 
-Both send operations declare `tier: confirmation_required` (🟡) in the contract's `x-mcp-tool`
-extension, and both take an `X-Approval-Token` header. The composition layer's gate for agent actions
-reads that tier off the contract and enforces it **before** the request reaches the handler. An agent
-caller repeats the call with the approval's id in that header once a human approves it. A human
-caller's own call is itself the approval.
-That is the same 🟡 machine the approvals module runs for every other action that asks first; see
-[agent-surface.md](agent-surface.md).
+All three send operations (`sendEmail`, `sendCompanyEmail`, `sendMessage`) declare
+`tier: auto_execute` and `scope: send` in the contract's `x-mcp-tool` extension. The gate for agent
+actions (`auth.Gate.Admit`) checks that scope before the request reaches the handler. A passport
+without `send` is refused there, and nothing is staged for a human to approve.
+
+A passport with `send` acts on the seat, grants and row scope of the human who gave it. So an agent
+can send only what that human could send in the app. See
+[authorization.md](authorization.md#what-a-passport-is).
 
 ### Pace: the policies that wait
 
@@ -560,18 +574,19 @@ sending.
 | The send half of the voice learning work | `backend/internal/modules/ai/voice_sendoutcome.go` |
 | Composition: the stager, the send job, the resolver, the two Gmail scopes | `backend/internal/compose/commsjobs.go`, `comms.go`, `capture.go` |
 | The tables | `comms_outbound` (`backend/migrations/core/0001_baseline.up.sql`, with the `comms_outbound_shape` constraint and the "sending now" mark) |
-| The REST contract | `backend/api/crm.yaml` (`/activities/{id}/send-email`, `/activities/{id}/send-message`) |
+| The REST contract | `backend/api/crm.yaml` (`/activities/{id}/send-email`, `/emails`, `/activities/{id}/send-message`) |
 | The job declaration | `backend/api/jobs.yaml` (`comms_send_email`) |
 
 ## Where to go next
 
-- The way in (the connector seam, the one Sink, the three ways mail comes in):
+- The way in (the connector seam, the one Sink, the five ways records come in):
   [capture-connectors.md](capture-connectors.md).
 - Binding the channel this path replies on: [how-to/connect-telegram.md](../how-to/connect-telegram.md).
 - Connecting a mailbox to send from: [how-to/connect-a-mailbox.md](../how-to/connect-a-mailbox.md).
 - The consent model, the purposes, and erase under GDPR article 17:
   [privacy-and-consent.md](privacy-and-consent.md).
-- The 🟡 confirm-first machine both send actions declare: [agent-surface.md](agent-surface.md).
+- How the gate checks a passport's `send` scope before a send runs:
+  [authorization.md](authorization.md#what-a-passport-is).
 - The write shape and the outbox bus every row here commits through: [write-backbone.md](write-backbone.md).
 - The other governed way out, outbound webhooks: [outbound-webhooks.md](outbound-webhooks.md).
 - What every module owns, `comms` included: [reference/modules.md](../reference/modules.md).

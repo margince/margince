@@ -256,6 +256,7 @@ describe("the figures and the axis", () => {
 
   it("names the last update after the newest filed activity", () => {
     const activity = (id: string, subject: string, at: string) => ({
+      offers_email: false,
       id,
       kind: "note" as const,
       subject,

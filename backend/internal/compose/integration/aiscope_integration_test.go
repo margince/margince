@@ -127,7 +127,7 @@ func TestCompanyBriefScopedToOneProjectWritesFromTheScopedSummaryOnly(t *testing
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	lane := &recordingLane{}
-	svc := briefService(e, lane, "routing-1")
+	svc := briefServiceAt(e, lane, "routing-1", roomFixedNow)
 	company := ids.From[ids.CompanyKind](f.company)
 
 	scoped, err := svc.GetScoped(e.Admin(), company, false, &f.erp)

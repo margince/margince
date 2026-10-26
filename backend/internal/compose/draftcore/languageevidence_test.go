@@ -6,6 +6,7 @@ package draftcore_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -66,5 +67,47 @@ func TestLanguageEvidenceKeepsAnOldInboundMessageBehindManyNewerOutboundOnes(t *
 	got := draftcore.LanguageEvidenceOf(rows, turnsNow)
 	if len(got) == 0 || !strings.HasSuffix(got[0], "their old reply") {
 		t.Errorf("first evidence = %q, want their old inbound reply ahead of newer outbound mail", got)
+	}
+}
+
+func TestLanguageEvidencePrefersTheAddresseesMailOverAnotherParticipants(t *testing.T) {
+	t.Parallel()
+	in := string(crmcontracts.ActivityDirectionInbound)
+	turns := []draftcore.Turn{
+		{Direction: in, SenderID: "cc-colleague", At: turnsNow, Text: "colleague newest"},
+		{Direction: in, SenderID: "addressee", At: turnsNow.Add(-48 * time.Hour), Text: "addressee older"},
+		{Direction: in, At: turnsNow.Add(-24 * time.Hour), Text: "unknown sender"},
+	}
+	got := draftcore.LanguageEvidence(turns, "addressee")
+	want := []string{"addressee older", "colleague newest", "unknown sender"}
+	for i, w := range want {
+		if got[i] != w {
+			t.Errorf("evidence[%d] = %q, want %q", i, got[i], w)
+		}
+	}
+	if first := draftcore.LanguageEvidence(turns, "")[0]; first != "colleague newest" {
+		t.Errorf("with no addressee the newest inbound leads, got %q", first)
+	}
+}
+
+func TestAddresseeEvidenceIsOnlyTheAddresseesOwnTextNewestFirst(t *testing.T) {
+	t.Parallel()
+	in, out := string(crmcontracts.ActivityDirectionInbound), string(crmcontracts.ActivityDirectionOutbound)
+	mail, chat, call := crmcontracts.ActivityKindEmail, crmcontracts.ActivityKindMessage, crmcontracts.ActivityKindCall
+	turns := []draftcore.Turn{
+		{Kind: mail, Direction: in, SenderID: "addressee", At: turnsNow.Add(-72 * time.Hour), Subject: "Pricing", Text: "addressee oldest"},
+		{Kind: mail, Direction: in, SenderID: "cc-colleague", At: turnsNow, Text: "colleague newest"},
+		{Kind: mail, Direction: out, SenderID: "addressee", At: turnsNow, Text: "our mail"},
+		{Kind: chat, Direction: in, SenderID: "addressee", At: turnsNow.Add(-time.Hour), Text: "addressee newest"},
+		{Kind: mail, Direction: in, SenderID: "addressee", At: turnsNow.Add(-2 * time.Hour), Subject: "subject only"},
+		{Kind: call, Direction: in, SenderID: "addressee", At: turnsNow, Text: "the rep's call note", Logged: true},
+	}
+	got := draftcore.AddresseeEvidence(turns, "addressee")
+	want := []string{"addressee newest", "addressee oldest"}
+	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+		t.Errorf("addressee evidence = %q, want %q with no subject and no call note", got, want)
+	}
+	if none := draftcore.AddresseeEvidence(turns, ""); len(none) != 0 {
+		t.Errorf("with no addressee there is no addressee evidence, got %q", none)
 	}
 }

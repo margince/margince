@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"mime/quotedprintable"
 	"strings"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/mailwire"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -25,10 +27,7 @@ const encodedWordLimit = 75
 // keeps each body line within 76 octets.
 func (s SMTP) compose(to, subject, textBody, messageID string) ([]byte, error) {
 	var msg bytes.Buffer
-	fmt.Fprintf(&msg, "From: %s\r\nTo: %s\r\nSubject: %s\r\n", s.FromAddress, to, foldedSubject(subject))
-	if messageID != "" {
-		fmt.Fprintf(&msg, "Message-ID: <%s>\r\n", messageID)
-	}
+	msg.WriteString(s.originHeaders(to, subject, messageID))
 	msg.WriteString(s.privacyHeaders() + "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n" +
 		"Content-Transfer-Encoding: quoted-printable\r\n\r\n")
 	body := quotedprintable.NewWriter(&msg)
@@ -104,14 +103,14 @@ func plainASCII(text string) bool {
 }
 
 func (s SMTP) composeAlternative(to, subject, textBody, htmlBody, messageID string) ([]byte, error) {
+	if messageID == "" {
+		messageID = s.mintMessageID()
+	}
 	if htmlBody == "" {
 		return s.compose(to, subject, textBody, messageID)
 	}
 	var message strings.Builder
-	fmt.Fprintf(&message, "From: %s\r\nTo: %s\r\nSubject: %s\r\n", s.FromAddress, to, foldedSubject(subject))
-	if messageID != "" {
-		fmt.Fprintf(&message, "Message-ID: <%s>\r\n", messageID)
-	}
+	message.WriteString(s.originHeaders(to, subject, messageID))
 	message.WriteString(s.privacyHeaders() + "MIME-Version: 1.0\r\n")
 	body, err := mailwire.SMTPBody(connector.EmailMessage{Body: textBody, HTMLBody: htmlBody, MessageID: messageID})
 	if err != nil {
@@ -119,6 +118,27 @@ func (s SMTP) composeAlternative(to, subject, textBody, htmlBody, messageID stri
 	}
 	message.WriteString(body)
 	return []byte(message.String()), nil
+}
+
+// originHeaders writes the headers every product message carries, in the
+// order RFC 5322 lists them. composeAlternative has already given the message
+// its identity, so no message leaves without a Message-ID.
+func (s SMTP) originHeaders(to, subject, messageID string) string {
+	return fmt.Sprintf("Date: %s\r\nFrom: %s\r\nTo: %s\r\nSubject: %s\r\nMessage-ID: <%s>\r\n",
+		s.now().Format(time.RFC1123Z), s.FromAddress, to, foldedSubject(subject), messageID)
+}
+
+// mintMessageID is a unique identity on the sender's own domain, the same one
+// helloName announces to the relay.
+func (s SMTP) mintMessageID() string {
+	return strings.ReplaceAll(ids.NewV7().String(), "-", "") + "@" + s.helloName()
+}
+
+func (s SMTP) now() time.Time {
+	if s.Now != nil {
+		return s.Now()
+	}
+	return time.Now()
 }
 
 // SendGrid's SMTP filter is per message; other relays ignore the extension.

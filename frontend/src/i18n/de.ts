@@ -2139,7 +2139,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.resolved_category": "Nachrichtenkategorie",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Grund für die Score-Anpassung",
-  "history.field.size_band": "Größe",
+  "history.field.size_band": "Mitarbeitende",
   "history.field.social": "Social-Profile",
   "history.field.source": "Quelle",
   "history.field.origin": "Herkunft",
@@ -2360,6 +2360,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
   "record.notYoursToChange":
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+  "record.actionRefused":
+    "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
   "record.logActivityRefused":
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
@@ -2437,6 +2439,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
   "merge.confirmDetail":
     "{source} mit {target} ({detail}) zusammenführen? {source} wird dabei archiviert.",
+  "merge.targetReadOnly":
+    "Du kannst diesen Datensatz nur lesen, deshalb kann er nicht bleiben.",
   "merge.submit": "Zusammenführen",
 
   "tab.overview": "Übersicht",
@@ -2757,7 +2761,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.viewProspects": "Interessenten",
   "company.filterLifecycleAll": "Jede Phase",
   "company.filterRelTypeAll": "Jeder Typ",
-  "company.filterSizeBandAll": "Jede Größe",
+  "company.filterSizeBandAll": "Jede Mitarbeiterzahl",
   "consent.confirmRecipient": "An {address} senden",
   "consent.guardFailed": "Die Kontakterlaubnis konnte nicht geladen werden.",
   "consent.permissionScope":
@@ -2828,7 +2832,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // die die abgelöste Einstufung mit einem Wert beantworten wollte.
   "company.lifecycle": "Lebenszyklus",
   "company.relationshipTypes": "Beziehungstyp",
-  "company.sizeBand": "Unternehmensgröße",
+  "company.sizeBand": "Mitarbeitende",
+  "company.sizeBandValue": "{band} Mitarbeitende",
   "company.lifecycle.unknown": "Unbekannt",
   "company.lifecycle.target": "Zielunternehmen",
   "company.lifecycle.prospect": "Interessent",
@@ -2906,7 +2911,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.kind.message": "Nachricht",
   "record.details.about": "Überblick",
   "record.details.ownership": "Zuständigkeit",
-  "co.aside.size": "Größe",
+  "co.aside.size": "Mitarbeitende",
   "co.aside.wayIn": "Zugang",
   "record.details.visibleTo": "Sichtbar für",
   "co.aside.visibleEveryone": "Alle",
@@ -3776,7 +3781,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.reason.posture": "Durch deine Einstellung zurückgehalten",
   "compose.reason.workspaceFloor": "Durch das Unternehmen zurückgehalten",
   "compose.reason.noRecord": "Zurückgehalten: kein Datensatz",
-  "compose.reason.pendingVerdict": "Bis zur Einstufung zurückgehalten",
+  "compose.reason.pendingVerdict": "Bis zur Prüfung zurückgehalten",
   "compose.reason.manual": "Privat gehalten",
   "compose.reason.verdict": "Durch Einstufung zurückgehalten",
   "compose.reason.counterparty": "Zurückgehalten: E-Mail mit der Gegenseite",
@@ -3893,6 +3898,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.detail.none": "Diese Aktivität",
   "activity.followUps": "Folgeaufgaben",
   "activity.noFollowUps": "Keine Folgeaufgaben",
+  "activity.notYoursToChange":
+    "Du kannst diese Aktivität nicht ändern. Frage einen Admin nach Bearbeitungsrechten.",
   "activity.files.empty": "Noch keine Dateien an dieser Aktivität.",
   "activity.files.title": "Dateien zu {subject}",
   "activity.followUpOpen": "Offen",
@@ -5590,7 +5597,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.displayName": "Unternehmensname",
   "create.legalName": "Rechtlicher Name",
   "create.industry": "Branche",
-  "create.sizeBand": "Unternehmensgröße",
+  "create.sizeBand": "Mitarbeitende",
   "co.address.summary": "Adresse",
   "co.address.countryMismatch": "Postleitzahl und Ort liegen in {country}",
 
@@ -5687,6 +5694,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "evidence.mark": "gelesen",
 
   "evidence.bought": "gekauft",
+  "evidence.fromProvider": "vom Anbieter",
   "evidence.confirm": "Bestätigen",
   "evidence.correct": "Korrigieren",
   "evidence.save": "Speichern",
@@ -5819,6 +5827,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "files.empty":
     "Noch keine Dateien an diesem Deal. Lade eine Datei hoch oder verknüpfe eine E-Mail mit Anhang.",
   "files.originUnknown": "unbekannter Absendeadresse",
+  "files.origin.mail": "Von {who} · {subject}",
   "files.hiddenBadge": "Ausgeblendet",
   "files.hide": "An diesem Deal ausblenden",
   "files.unhide": "Wieder an diesem Deal anzeigen",
@@ -5969,6 +5978,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.filesTotal_other": "{count} Dateien · {size}",
   "compose.filesLimit": "Bis zu {most} Dateien pro Nachricht.",
   "compose.newEmailTo": "Neue E-Mail an {name}",
+  "compose.filedUnder": "Abgelegt unter",
   "compose.discardMessage": "Entwurf löschen",
   "compose.draftSaving": "Wird gespeichert…",
   "compose.earlierThreads_one": "{count} früherer Thread",
@@ -5995,6 +6005,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newEmail": "Neue E-Mail",
   "compose.replyingTo": "Antwort auf „{subject}“ · {when}",
   "compose.followingUp": "Follow-up zu deiner E-Mail „{subject}“ · {when}",
+  "compose.aboutRow": "Bezug: {subject}",
+  "compose.aboutWhen": "· {when}",
   "compose.draftContextHint":
     "Beschreibe den Zweck. Margince nutzt den Kontext des Datensatzes.",
   "compose.draftEmail": "E-Mail entwerfen",
@@ -6039,6 +6051,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.to": "An",
   "compose.cc": "Cc",
   "compose.subject": "Betreff",
+  "compose.projectKeyInSubject":
+    "Projektschlüssel in den Betreff einfügen (hilft beim Ablegen)",
   "compose.noGroundableRecipient":
     "Noch keine Kontakte bei diesem Unternehmen. Schreibe die Nachricht selbst oder erstelle zuerst einen Kontakt.",
   "compose.draftTo": "Entwurf an",
@@ -6069,12 +6083,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.threadGone":
     "Stattdessen wurde eine neue E-Mail geöffnet, da dieser Thread nicht mehr beantwortet werden kann. Prüfe die Empfangsadresse vor dem Senden.",
   "compose.colleagueMailbox_one":
-    "Diese Nachricht wurde an das Postfach von {names} zugestellt. Deine Antwort wird aus deinem eigenen Postfach unter deinem Namen gesendet.",
+    "Diese E-Mail ist im Postfach von {names} eingegangen. Deine Antwort geht an die Empfangsadressen unten, aus deinem eigenen Postfach und unter deinem Namen.",
   "compose.colleagueMailbox_other":
-    "Diese Nachricht wurde an die Postfächer von {names} zugestellt. Deine Antwort wird aus deinem eigenen Postfach unter deinem Namen gesendet.",
-  "compose.colleagueUnnamed": "ein Teammitglied",
+    "Diese E-Mail ist in den Postfächern von {names} eingegangen. Deine Antwort geht an die Empfangsadressen unten, aus deinem eigenen Postfach und unter deinem Namen.",
+  "compose.notOnThreadTitle": "Du bist nicht an diesem Thread beteiligt",
+  "compose.notOnThread": "Du bist nicht an diesem Thread beteiligt.",
+  "compose.dealOwner": "{owner} ist für diesen Deal verantwortlich.",
+  "compose.colleagueUnnamed": "einem Teammitglied",
   "compose.threadGoneTitle": "Thread kann nicht beantwortet werden",
-  "compose.colleagueMailboxTitle": "An ein Teammitglied zugestellt",
+  "compose.colleagueMailboxTitle":
+    "Diese E-Mail liegt im Postfach eines Teammitglieds",
   "compose.deadRecipientsTitle": "E-Mails an diese Adressen kommen nicht an",
   "compose.attach": "Anhängen",
   "compose.filesOnRecord": "Aus diesem Datensatz anhängen",
@@ -6179,8 +6197,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es lässt sich nicht feststellen, wer die Nachricht erhält, da mehrere Datensätze diese Adresse teilen. Führe die Datensätze zusammen, um das zu lösen.",
   "sendPermission.reason.unconfirmed":
     "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
+  "sendPermission.reason.noMarketingConsent":
+    "Marketing braucht die Einwilligung der empfangenden Person, und keine ist erfasst. Wenn diese Nachricht kein Marketing ist, wähle den passenden Kontaktgrund.",
+  "sendPermission.reason.noMarketingConsentFact":
+    "Marketing braucht die Einwilligung der empfangenden Person, und keine ist erfasst.",
+  "sendPermission.reason.legacyPurpose":
+    "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt. Wähle einen Kontaktgrund, damit Margince sie prüfen kann.",
+  "sendPermission.reason.legacyPurposeFact":
+    "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt.",
+  "sendPermission.reason.unknownPurpose":
+    "Diese Nachricht nennt einen Zweck, den Margince nicht kennt. Wähle einen Kontaktgrund aus der Liste.",
+  "sendPermission.reason.unknownPurposeFact":
+    "Diese Nachricht nennt einen Zweck, den Margince nicht kennt.",
+  "sendPermission.reason.claimContradicts":
+    "Der gewählte Kontaktgrund passt nicht zu diesem Thread. Wähle einen anderen Grund oder lass das Feld leer, damit Margince ihn aus dem Thread liest.",
+  "sendPermission.reason.claimContradictsFact":
+    "Der angegebene Kontaktgrund passt nicht zu diesem Thread.",
   "sendPermission.reason.other":
-    "Diese Nachricht kann nicht gesendet werden, und niemand hier kann das übergehen.",
+    "Diese Nachricht kann so nicht gesendet werden.",
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "E-Mail senden",
   "compose.threadLeave": "Neue E-Mail",
@@ -6377,7 +6411,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.project": "Projektkennung",
   "analytics.field.project_id": "Projekt",
   "analytics.field.quiet_since": "Ruhig seit",
-  "analytics.field.size_band": "Unternehmensgröße",
+  "analytics.field.size_band": "Mitarbeitende",
   "analytics.field.source": "Quelle",
   "analytics.field.origin": "Herkunft",
   "analytics.field.stage_id": "Phase",
@@ -6507,7 +6541,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.quietSince": "Ruhig seit",
   "analytics.nothingQuiet": "Kein Projekt in Umsetzung ist verstummt.",
   "analytics.noProjectsYet":
-    "Noch keine Projekte. Ein gewonnener Deal erstellt ein Projekt.",
+    "Noch keine Projekte. Lege unter Projekte mit „Neues Projekt“ eines an. Ein gewonnener Deal setzt sein Projekt auf „In Umsetzung“.",
   "analytics.coverageSub": "Verbindungsstatus bei der letzten Prüfung.",
   "analytics.covSource": "Quelle",
   "analytics.covState": "Status",
@@ -7721,7 +7755,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.reason.row_key_repeated":
     "Der Wert „{value}“ der Spalte „{column}“ wird bereits in Zeile {line} verwendet. Jede Zeile braucht einen eigenen, weil ein erneuter Import und das Rückgängigmachen die Zeile daran erkennen.",
   "import.reason.size_band_invalid":
-    "Die Größenklasse „{value}“ gehört nicht zu: {allowed}.",
+    "Mitarbeitende „{value}“ gehört nicht zu: {allowed}.",
   "import.reason.tag_created":
     "Kein Tag hatte diesen Namen, daher hat der Import ihn angelegt.",
   "import.reason.tag_name_invalid":
@@ -9101,6 +9135,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiHealth.noCalls": "Keine Modellaufrufe in den letzten {hours} h.",
   "aiHealth.answering": "Antwortet",
   "aiHealth.notAnswering": "Antwortet nicht",
+  "aiHealth.laneNeedsKey":
+    "{provider} hat keinen Schlüssel, daher ist die gespeicherte Bindung nicht aktiv und das vorherige Modell antwortet weiterhin. Setze {env}.",
   "aiHealth.callCounts_one": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "aiHealth.callCounts_other": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "heldThreads.title": "Zurückgehaltene Threads",
@@ -9408,7 +9444,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Die Consumer-Mail-Liste des Workspace (CAP-PARAM-5).
   "consumerMail.title": "Freemail-Domains",
   "consumerMail.sub":
-    "E-Mails von diesen Domains erstellen den Kontakt, aber nie ein Unternehmen. Margince liefert eine Liste mit. Ergänze eine fehlende Domain oder übersteuere einen falschen Eintrag.",
+    "Domains privater Postfächer. E-Mails von diesen Domains erstellen nie ein Unternehmen. Eine Adresse von dort wird sofort zum Kontakt, wenn jemand aus deinem Unternehmen mit ihr E-Mails ausgetauscht oder einen Termin hatte oder eine frühere Entscheidung sie zugelassen hat. Sonst geschieht das erst, wenn Margince die Adresse eingeordnet hat. Margince liefert eine Liste mit. Ergänze eine fehlende Domain oder übersteuere einen falschen Eintrag.",
   "consumerMail.addedTitle": "Hier hinzugefügt",
   "consumerMail.addTitle": "Domain hinzufügen",
   "consumerMail.domainLabel": "Domain",
@@ -14290,6 +14326,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.network.captureGap_other":
     "{names} stehen in den Threads dieses Kontakts und haben kein Postfach verbunden, daher kann spätere Post hier fehlen.",
   "contact.network.captureGapInvited": "{name} (noch nicht angemeldet)",
+  "contact.network.captureGapMore_one":
+    "{names} und {count} weiteres Teammitglied",
+  "contact.network.captureGapMore_other":
+    "{names} und {count} weitere Teammitglieder",
+  "contact.network.captureGapsFailed":
+    "Es konnte nicht gelesen werden, welche Teammitglieder in den Threads dieses Kontakts kein Postfach verbunden haben.",
   "contact.graph.noDirect":
     "Im Unternehmen hat noch niemand mit diesem Kontakt korrespondiert.",
   "contact.graph.sideColumn": "Vorstellungen und Veränderungen",
@@ -14366,6 +14408,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.change.buckets": "{from} → {to}",
   "contact.intro.stripHandoff": "Anfrage zur Vorstellung",
   "contact.intro.handoffNotStarted": "Nicht begonnen",
+  "contact.intro.handoffUnread": "Nicht lesbar",
   "contact.intro.handoffOwner": "Als Nächstes: {name}",
   "contact.intro.ownerColleague": "ein Teammitglied",
   "contact.intro.ownerNobody": "niemand",
@@ -14482,6 +14525,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.answerDeclineHelp":
     "Die Anfrage wird geschlossen. Ergänze bei Bedarf einen Grund.",
   "contact.intro.asksTitle": "Vorstellungen",
+  "contact.intro.asksFailed":
+    "Die Vorstellungen zu diesem Kontakt konnten nicht gelesen werden.",
   "contact.intro.answerAction": "Antworten",
   "contact.intro.completeIntroducedAction": "Als vorgestellt markieren",
   "contact.intro.completeNameDroppedAction": "Namensnennung markieren",
@@ -14534,6 +14579,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.bandBadge.moderate": "Mittel",
   "contact.bandBadge.strong": "Stark",
   "contact.bought.from": "Bei {provider} gekauft",
+  "contact.provider.from": "Von {provider}",
+  "contact.provider.trigger.automatic_create":
+    "Für einen neuen Kontakt ergänzt",
+  "contact.provider.trigger.automatic_import":
+    "Für einen neuen Kontakt ergänzt",
+  "contact.provider.trigger.automatic_backfill": "Vom Nachholabgleich ergänzt",
+  "contact.provider.trigger.scheduled_refresh": "Planmäßig aktualisiert",
+  "contact.provider.trigger.manual": "Angefragt von",
   "contact.network.title": "Teammitglieder, die diesen Kontakt kennen",
 
   "contact.page.loading": "Wird geladen…",
@@ -14636,6 +14689,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du hast keinen Zugriff auf die Deals dieses Kontakts.",
   "contact.commercial.noDeal": "Kein offener Deal.",
   "contact.commercial.closes": "Abschluss {date}",
+  "contact.commercial.closed": "Abgeschlossen {date}",
   "contact.commercial.committee": "Buying Center",
   "contact.commercial.openDeal": "Offener Deal",
 
@@ -14847,7 +14901,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "provider.disconnectConfirm.title": "Diesen Anbieter trennen?",
   "provider.disconnectConfirm.body":
     "Neue Abfragen stoppen sofort, und der Schlüssel wird vernichtet. Gekaufte Daten bleiben an deinen Datensätzen. Das Trennen löscht sie nicht.",
-  "provider.deleteData": "Gekaufte Daten löschen",
+  "provider.deleteData": "Anbieterdaten löschen",
   "provider.deleteDataConfirm.title": "Alle Daten dieses Anbieters löschen?",
   "provider.deleteDataConfirm.impactTitle":
     "Das lässt sich nicht rückgängig machen",
@@ -15035,7 +15089,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.classification": "Klassifizierung",
   "filters.field.company_industry": "Branche des Unternehmens",
   "filters.field.company_lifecycle": "Lebenszyklus des Unternehmens",
-  "filters.field.company_size_band": "Größe des Unternehmens",
+  "filters.field.company_size_band": "Mitarbeitende",
   "filters.field.country": "Ländercode",
   "filters.field.created_at": "Erstellt",
   "filters.field.hosting_provider": "Hosting",
@@ -15077,6 +15131,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.op.atMost": "ist h\u00f6chstens",
   "filters.op.withinRadius": "liegt im Umkreis von",
   "filters.sentence.radiusOf": "{km} km um {place}",
+  "filters.radius.km": "Entfernung (km)",
+  "filters.radius.place": "Ortsname (optional)",
+  "filters.radius.lat": "Breitengrad",
+  "filters.radius.lon": "L\u00e4ngengrad",
   "filters.join.and": "und",
   "filters.join.or": "oder",
   "filters.sentence.clause": "{field} {op} {value}",
@@ -15267,6 +15325,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.why.value": "Aktuell: {value}",
   "lists.why.empty": "leer",
   "lists.why.hidden": "Wert f\u00fcr dich verborgen",
+  "lists.why.moreLinked": "und weitere, nicht angezeigt",
   "lists.why.daysAgo_one": "vor {count} Tag",
   "lists.why.daysAgo_other": "vor {count} Tagen",
   "lists.why.today": "heute",
@@ -16582,9 +16641,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.card.saidEmpty": "Noch kein Gespräch erfasst.",
   "contact.card.theyWrote": "eingehend",
   "contact.card.youWrote": "ausgehend",
-  "contact.card.theyCalled": "eingehend",
-  "contact.card.youCalled": "ausgehend",
   "contact.card.bothSides": "beide Seiten",
+  "contact.card.wroteBy": "{who} schrieb",
+  "contact.card.inCc": "in Kopie",
   "contact.card.awaitingThem": "Wartet auf Antwort",
   "contact.card.noEconomicBuyer":
     "Noch kein wirtschaftlicher Entscheider benannt",

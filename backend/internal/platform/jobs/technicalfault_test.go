@@ -23,6 +23,8 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -58,6 +60,12 @@ func TestATechnicalCauseIsNamedWithoutBeingQuoted(t *testing.T) {
 			Err: syscall.ECONNREFUSED,
 		},
 		class: "connection_refused",
+	}, {
+		// The class says the statement stopped and not why. 57014 covers a
+		// spent budget, an operator's cancel and a client that left.
+		name:  "a statement the server stopped",
+		cause: fmt.Errorf("refreshing the horizon: %w", &pgconn.PgError{Code: "57014"}),
+		class: "statement_stopped",
 	}, {
 		name:  "a job whose work context a stopping worker cancelled",
 		cause: fmt.Errorf("reading the mailbox: %w", context.Canceled),

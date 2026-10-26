@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
 import { unwrap } from "../../lib/problem";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 
@@ -20,8 +21,6 @@ export type AnalyticsSelection = {
   readonly scope: AnalyticsScope;
 };
 
-const CONTEXT_KEY = ["analytics-context"] as const;
-
 /**
  * The caller's frame, read once.
  *
@@ -32,7 +31,7 @@ const CONTEXT_KEY = ["analytics-context"] as const;
  */
 export function useAnalyticsContext() {
   return useQuery({
-    queryKey: CONTEXT_KEY,
+    queryKey: ANALYTICS_CONTEXT_KEY,
     queryFn: async () => {
       return unwrap(await api.GET("/analytics/context", {}));
     },
@@ -99,16 +98,16 @@ export function reportScope(
 /**
  * The scope a WRITE names, or null when the selection cannot be written to.
  *
- * A read may omit the scope and let the server resolve the reader's lens. A
- * write may not: a forecast or a share is an assertion about one named
- * population, and `managed_teams` covers several. Rather than pick one team on
- * the caller's behalf — a narrower claim than the number they are looking at —
- * this returns null and the surface withholds the action.
+ * A write names one population, so it cannot omit the scope the way a read can.
+ * `managed_teams` covers several, and picking one would claim less than the
+ * number on screen. A scope marked `assertable: false` is one the seat may read
+ * and the write routes refuse. Both return null and the surface withholds the
+ * action.
  */
 export function writableScope(
   scope: AnalyticsScope,
 ): { scope_kind: "workspace" | "team" | "owner"; scope_id?: string } | null {
-  if (scope.kind === "managed_teams") {
+  if (scope.kind === "managed_teams" || scope.assertable === false) {
     return null;
   }
   if (scope.kind === "workspace") {

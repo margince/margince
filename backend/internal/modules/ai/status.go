@@ -5,6 +5,7 @@ package ai
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
@@ -55,6 +56,9 @@ func (s *AdminStore) ReadStatus(ctx context.Context) (crmcontracts.AiStatus, err
 		return crmcontracts.AiStatus{}, err
 	}
 	unused := unusedTiers(cfg)
+	// Keyed bindings are resolved here rather than in the router, because the
+	// screen asks what the saved config will do before anything calls it.
+	lanes := lanesNeedingAKey(cfg, KeyLookup(ctx, s.cfg, slog.Default()))
 	version := ""
 	features := visibleFeatureRoutes(ctx, cfg, budget.Band)
 	if auth.Require(ctx, routingSettingsObject, principal.ActionRead) == nil {
@@ -68,6 +72,7 @@ func (s *AdminStore) ReadStatus(ctx context.Context) (crmcontracts.AiStatus, err
 	return crmcontracts.AiStatus{
 		UnusedTiers: &unused, Budget: budget, ObservedAt: budget.ObservedAt, RoutingVersion: version, TaskContractHash: TaskContractHash,
 		Features: features, DeferredWork: deferred, DeferredWorkCoverage: "durable_builds_and_scans",
+		LanesNeedingAKey: &lanes,
 	}, nil
 }
 

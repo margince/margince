@@ -401,10 +401,13 @@ func readDedupeCandidate(ctx context.Context, tx pgx.Tx, id ids.UUID) (DedupeCan
 // pair is a read of them. Two spellings of that rule would eventually disagree,
 // and the one that drifted would be the one leaking a record's existence.
 //
+// A non-nil only keeps just those pair ids, so a write can ask after the pairs
+// it filed itself.
+//
 // The bound is deliberate and small. A create that collided with more than a
 // handful of records has told the caller everything it usefully can; the point
 // is "a human was asked", not an exhaustive listing.
-func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id ids.UUID) ([]DedupeCandidateRow, error) {
+func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id ids.UUID, only []ids.UUID) ([]DedupeCandidateRow, error) {
 	if err := requireDedupeRead(ctx, entityType); err != nil {
 		return nil, err
 	}
@@ -429,6 +432,10 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 	}
 	if visClause != "" {
 		query += " AND " + visClause
+	}
+	if only != nil {
+		args = append(args, only)
+		query += fmt.Sprintf(" AND id = ANY($%d)", len(args))
 	}
 	args = append(args, openCandidatesNamingLimit)
 	query += fmt.Sprintf(" ORDER BY confidence DESC, id DESC LIMIT $%d", len(args))

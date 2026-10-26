@@ -159,6 +159,27 @@ describe("a filter read as one sentence", () => {
     ).toBe("1.500, 20.000");
   });
 
+  it("words an industry code the way the record page does", () => {
+    const industry: VocabularyField = {
+      name: "industry",
+      type: "picklist",
+      operators: ["eq", "in"],
+      custom: false,
+    };
+    const eq = { field: "industry", op: "eq", operand: "healthcare" } as const;
+    expect(clauseWords(eq, [industry], en).operand).toBe("Healthcare");
+    expect(clauseWords(eq, [industry], wordsIn("de")).operand).toBe(
+      "Gesundheitswesen",
+    );
+    expect(
+      clauseWords(
+        { field: "industry", op: "in", operand: ["healthcare", "software"] },
+        [industry],
+        en,
+      ).operand,
+    ).toBe("Healthcare, Software");
+  });
+
   it("marks a value not given yet as a gap rather than ending the clause", () => {
     for (const operand of ["", []]) {
       expect(read(newGroup("and", [newLeaf("country", "in", operand)]))).toBe(

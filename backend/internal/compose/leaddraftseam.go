@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -31,19 +32,20 @@ type leadCorrespondence struct{ store *activities.Store }
 
 // ForLead reads what has been said to this lead, newest first.
 //
-// Bounded to what the draft actually reads. contactdraft.FoldRecent keeps the
-// newest few and the newest inbound message's opening. A larger page would
-// carry the lead's history across the seam for nothing. Only rows a human wrote, filtered before the limit,
-// so notices cannot be quoted as the lead's words or push theirs out.
-func (c leadCorrespondence) ForLead(ctx context.Context, id ids.LeadID) ([]crmcontracts.Activity, error) {
+// Bounded to what contactdraft.FoldRecent keeps. Only rows a human wrote
+// and the draft can read at now are fetched. They are filtered before the limit,
+// so notices, withheld rows and future or called-off meetings cannot push the
+// lead's words out.
+func (c leadCorrespondence) ForLead(ctx context.Context, id ids.LeadID, now time.Time) ([]crmcontracts.Activity, error) {
 	entityType := leadLinkType
 	entityID := ids.UUID(id.UUID)
 	limit := contactdraft.DraftInputActivities
 	rows, _, err := c.store.ListActivities(ctx, activities.ListActivitiesInput{
-		EntityType:     &entityType,
-		EntityID:       &entityID,
-		Limit:          &limit,
-		WrittenByHuman: true,
+		EntityType:       &entityType,
+		EntityID:         &entityID,
+		Limit:            &limit,
+		WrittenByHuman:   true,
+		ConversationAsOf: &now,
 	})
 	if err != nil {
 		return nil, err

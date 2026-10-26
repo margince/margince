@@ -16,7 +16,8 @@ func TestEveryHolderKindRendersTheSharedFileRules(t *testing.T) {
 		"NOT at.bytes_withheld",
 		fmt.Sprintf("< %d", inlineImageCeiling),
 		"a.archived_at IS NULL",
-		"at.entity_type = 'activity'",
+		"mf.entity_type = 'activity'",
+		"UNION ALL",
 	}
 	for _, holder := range []string{holderDeal, holderContact, holderCompany} {
 		sql := documentMembership(holder, 1)

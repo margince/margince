@@ -183,6 +183,7 @@ export function OfferTemplatesAdmin() {
           )}
           {canArchive && (
             <ArchiveAction
+              requires={{ object: "offer_template", action: "delete" }}
               label={t("template.archive")}
               confirmText={t("template.archiveConfirm")}
               archivedMessage={t("record.archiveDone", { name: tpl.name })}

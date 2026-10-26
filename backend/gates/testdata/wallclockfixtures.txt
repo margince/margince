@@ -402,7 +402,7 @@ internal/modules/contacts/occurrenceimage_integration_test.go 1
 internal/modules/contacts/profilefieldprecedence_integration_test.go 1
 internal/modules/contacts/promoteconsent_integration_test.go 1
 internal/modules/contacts/promoteheld_integration_test.go 4
-internal/modules/contacts/strengthasof_integration_test.go 3
+internal/modules/contacts/strengthasof_integration_test.go 2
 internal/modules/contacts/vcardimport_integration_test.go 2
 internal/modules/deals/edgegrant_test.go 5
 internal/modules/deals/fxrates_integration_test.go 2

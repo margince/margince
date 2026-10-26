@@ -108,3 +108,34 @@ func TestSetUpPartnerHandsTheStoreTheTermsAndNoTier(t *testing.T) {
 		t.Errorf("store got %+v", got)
 	}
 }
+
+type deniedReadProvider struct {
+	seamProbeProvider
+	err error
+}
+
+func (p deniedReadProvider) Read(context.Context, datasource.EntityRef) (datasource.Record, error) {
+	return datasource.Record{}, p.err
+}
+
+func TestSetUpPartnerAnswersWithTheWrittenPartnerWhenTheCallerCannotReadIt(t *testing.T) {
+	for _, denial := range []error{apperrors.ErrPermissionDenied, apperrors.ErrNotFound} {
+		companyID := ids.NewV7()
+		tool := setUpPartner{p: deniedReadProvider{err: denial}, partners: &writtenPartnerSetUp{}}
+		args := json.RawMessage(fmt.Sprintf(`{"company_id":%q,"partner_role":"hosting"}`, companyID))
+
+		got, err := tool.Handle(context.Background(), args)
+		if err != nil {
+			t.Fatalf("read denied with %v: Handle err = %v, want the written partner", denial, err)
+		}
+		if string(got) != `{"partner_role":"hosting"}` {
+			t.Errorf("read denied with %v: answer = %s", denial, got)
+		}
+	}
+}
+
+type writtenPartnerSetUp struct{ recordingPartnerSetUp }
+
+func (writtenPartnerSetUp) SetUp(context.Context, ids.UUID, PartnerSetUpFields) (json.RawMessage, error) {
+	return json.RawMessage(`{"partner_role":"hosting"}`), nil
+}

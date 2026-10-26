@@ -30,6 +30,7 @@ function activity(
   over: Partial<Activity> & Pick<Activity, "id" | "kind">,
 ): Activity {
   return {
+    offers_email: false,
     occurred_at: AS_OF,
     is_done: true,
     source: "manual",

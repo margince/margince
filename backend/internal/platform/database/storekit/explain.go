@@ -43,6 +43,8 @@ type ExplainNode struct {
 	// Linked is what a link field holds on the record, named where the reader
 	// may open the row. Value is nil then; an empty link is no value, not hidden.
 	Linked []LinkedValue `json:"linked,omitempty"`
+	// LinkedTruncated says the record holds more linked values than Linked lists.
+	LinkedTruncated bool `json:"linked_truncated,omitempty"`
 	// ValueLabel names the record a reference value points at, when the
 	// reader may open it.
 	ValueLabel *string `json:"value_label,omitempty"`
@@ -290,7 +292,7 @@ func withholdUnseenReferences(ctx context.Context, tx pgx.Tx, leaves []explainLe
 			if err != nil {
 				return fmt.Errorf("explain: %w", err)
 			}
-			leaf.node.Linked = resolveLinked(found, leaf.raw)
+			leaf.node.Linked, leaf.node.LinkedTruncated = capLinked(resolveLinked(found, leaf.raw))
 			continue
 		}
 		if leaf.references == "" || leaf.node.Value == nil {

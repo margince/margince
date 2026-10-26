@@ -22,16 +22,19 @@ func TestStepDownFollowsTheRemainingTouchesAndOnlyForASystemPlacedStatus(t *test
 		touches []leadResponseTouch
 		want    LeadStatus
 		down    bool
+		floor   LeadStatus
 	}{
-		{"no touch left", LeadStatusEngaged, &system, nil, LeadStatusNew, true},
-		{"only our outbound left", LeadStatusEngaged, &system, []leadResponseTouch{outbound}, LeadStatusContacted, true},
-		{"a real reply remains", LeadStatusEngaged, &system, []leadResponseTouch{outbound, reply}, LeadStatusEngaged, false},
-		{"a human placed it", LeadStatusEngaged, &human, nil, "", false},
-		{"no recorded placer", LeadStatusEngaged, nil, nil, "", false},
-		{"already at the earned step", LeadStatusContacted, &system, []leadResponseTouch{outbound}, LeadStatusContacted, false},
-		{"terminal", LeadStatusPromoted, &system, nil, "", false},
+		{"no touch left", LeadStatusEngaged, &system, nil, LeadStatusNew, true, ""},
+		{"only our outbound left", LeadStatusEngaged, &system, []leadResponseTouch{outbound}, LeadStatusContacted, true, ""},
+		{"a real reply remains", LeadStatusEngaged, &system, []leadResponseTouch{outbound, reply}, LeadStatusEngaged, false, ""},
+		{"a human placed it", LeadStatusEngaged, &human, nil, "", false, ""},
+		{"no recorded placer", LeadStatusEngaged, nil, nil, "", false, ""},
+		{"already at the earned step", LeadStatusContacted, &system, []leadResponseTouch{outbound}, LeadStatusContacted, false, ""},
+		{"terminal", LeadStatusPromoted, &system, nil, "", false, ""},
+		{"a human placed contacted before the bounce", LeadStatusEngaged, &system, nil, LeadStatusContacted, true, LeadStatusContacted},
+		{"the human step is already the current one", LeadStatusContacted, &system, nil, LeadStatusContacted, false, LeadStatusContacted},
 	} {
-		got, down := stepDownFor(c.current, c.setBy, c.touches)
+		got, down := stepDownFor(c.current, c.setBy, c.touches, c.floor)
 		if got != c.want || down != c.down {
 			t.Errorf("%s: stepDownFor = (%q, %v), want (%q, %v)", c.name, got, down, c.want, c.down)
 		}

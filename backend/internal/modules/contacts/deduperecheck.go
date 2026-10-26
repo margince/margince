@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/shared/kernel/filedpairs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -392,5 +393,6 @@ func refileArchivedCandidateTx(ctx context.Context, tx pgx.Tx, entityType, leftC
 		}); err != nil {
 		return false, fmt.Errorf("contacts: audit the reopened dedupe candidate: %w", err)
 	}
+	filedpairs.Note(ctx, id)
 	return true, nil
 }

@@ -11,6 +11,7 @@ const asOf = Date.parse("2026-08-20T12:00:00Z");
 
 function row(fields: Partial<Activity>): Activity {
   return {
+    offers_email: false,
     id: "a1",
     kind: "email",
     occurred_at: "2026-08-19T09:00:00Z",

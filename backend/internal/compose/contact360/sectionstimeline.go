@@ -219,18 +219,6 @@ func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool
 	return info, nil
 }
 
-// timelineProjection is the shared select list plus this page's one extra.
-//
-// A function rather than a literal in the query, so the composition is a thing
-// a test can hold: the shared list first and whole, then exactly one column
-// the scan knows to expect last. Read off the query string, a test would be
-// asserting against the WHERE clause and the ORDER BY as well.
-func timelineProjection(contentArm string) string {
-	return activities.ActivityProjection(contentArm) + `,
-		       EXISTS (SELECT 1 FROM activity_link fl
-		                WHERE fl.activity_id = a.id AND fl.contact_id = $%[1]d) AS filed_here`
-}
-
 // readActivities is the shared body of the timeline and next-step reads.
 //
 // What it selects is the activities module's projection, and what it adds is
@@ -240,6 +228,7 @@ func timelineProjection(contentArm string) string {
 // a row off /activities answers, because it is read by the same list and
 // folded by the same scan.
 func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
+	forDraft := opts.WrittenByHumanOnly && order == byRecency
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)
@@ -254,7 +243,14 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	// this contact is still a row on the timeline — date, direction, kind —
 	// with its content withheld (content_state), not a gap the reader
 	// cannot tell from silence.
-	scope, err := activityDiscoverScope(ctx, arg)
+	gate := activityDiscoverScope
+	if forDraft {
+		// A draft reads content, so a row withheld from this reader must leave
+		// before the cap rather than occupy a slot the draft then discards.
+		gate = activityScope
+		extra += " AND " + relstrength.HappenedByNowSQL("a", bind(arg(s.now().UTC())))
+	}
+	scope, err := gate(ctx, arg)
 	if err != nil {
 		return nil, false, err
 	}
@@ -262,16 +258,15 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err != nil {
 		return nil, false, err
 	}
-	// The SELECT list is the activities module's, with this page's one extra
-	// column after it. Everything before the extra is scanned by the shared
-	// projection, so there is no list here to fall behind that one.
+	// The SELECT list and its scan are the activities module's, so there is no
+	// list here to fall behind that one.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT `+timelineProjection(contentArm)+`
+		SELECT `+activities.ActivityProjection(contentArm)+`
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
-		contactPos, fmt.Sprintf(contactReachesActivity, bind(contactPos)),
+		fmt.Sprintf(contactReachesActivity, bind(contactPos)),
 		scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
 	if err != nil {
 		return nil, false, err
@@ -279,7 +274,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	defer rows.Close()
 	out := make([]crmcontracts.Activity, 0, sectionCap)
 	for rows.Next() {
-		a, err := scanTimelineRow(rows, contactID)
+		a, err := activities.ScanActivityRow(rows)
 		if err != nil {
 			return nil, false, err
 		}
@@ -300,7 +295,23 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
+	// A row reaches this page through a Cc or an attendance too, so each row
+	// says which part this contact had in it.
+	if err := activities.WithContactRole(ctx, tx, out, contactID.UUID); err != nil {
+		return nil, false, err
+	}
+	// Every link the caller may see, read the way /activities reads them, so
+	// a row means the same on either page.
+	if err := activities.AttachLinks(ctx, tx, out); err != nil {
+		return nil, false, err
+	}
+	if err := activities.WithOffersEmail(ctx, tx, out); err != nil {
+		return nil, false, err
+	}
 	if err := activities.WithCommitmentAdmissions(ctx, tx, out); err != nil {
+		return nil, false, err
+	}
+	if err := activities.StampActivitiesWritable(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
 	return out, hasMore, nil

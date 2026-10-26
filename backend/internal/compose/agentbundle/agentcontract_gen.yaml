@@ -8344,6 +8344,41 @@ components:
           type: [string, 'null']
           description: >-
             Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
+    ActivityVoice:
+      type: object
+      description: |-
+        Who wrote an activity, read from what is recorded on it, and the part the
+        page's contact had in it. Every surface that names a speaker reads this
+        rather than guessing from `direction`: a mail that came in was not
+        necessarily written by the contact whose page shows it.
+      properties:
+        author:
+          allOf: [{$ref: '#/components/schemas/ActivityAuthor'}]
+          nullable: true
+          description: >-
+            Who wrote it: the `from` party of a message, the organizer of a meeting, the seat or imported author of a note, call or task. Null when nothing recorded names an author, which a reader shows as no author rather than a guess.
+        contact_role:
+          type: string
+          enum: [author, addressee, cc, organizer, attendee, other]
+          description: >-
+            Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+    ActivityAuthor:
+      type: object
+      required: [kind, is_reader]
+      description: One author, named by the record that identifies them.
+      properties:
+        kind:
+          type: string
+          enum: [contact_record, colleague, machine, unresolved]
+          description: >-
+            `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+        display_name: {type: [string, 'null']}
+        address: {type: [string, 'null']}
+        contact_id: {type: [string, 'null'], format: uuid}
+        user_id: {type: [string, 'null'], format: uuid}
+        is_reader:
+          type: boolean
+          description: The author is the signed-in caller.
     EmailSummary:
       type: object
       description: |-
@@ -9430,6 +9465,14 @@ components:
         pool: {type: string}
         reserved_credits: {type: integer, minimum: 0}
         actual_credits: {type: [integer, 'null'], minimum: 0}
+    ProviderRunTrigger:
+      type: string
+      enum: [automatic_create, automatic_import, automatic_backfill, scheduled_refresh, manual]
+      description: |-
+        What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+        contact that existed before the provider was connected, or that no run has covered
+        yet; like the other automatic triggers it buys only the categories that cost
+        nothing.
     ProviderRun:
       type: object
       required: [id, subject_kind, provider, trigger, state, claims_unwritten, connection_version, configuration_snapshot, requested_categories, reservations, created_at, updated_at]
@@ -9447,14 +9490,7 @@ components:
           description: |-
             Populated when `subject_kind` is `contact`, and null otherwise.
         provider: {$ref: '#/components/schemas/Provider'}
-        trigger:
-          type: string
-          enum: [automatic_create, automatic_import, automatic_backfill, scheduled_refresh, manual]
-          description: |-
-            What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
-            contact that existed before the provider was connected, or that no run has covered
-            yet; like the other automatic triggers it buys only the categories that cost
-            nothing.
+        trigger: {$ref: '#/components/schemas/ProviderRunTrigger'}
         state: {type: string, enum: [queued, submitting, in_progress, completed, no_match, skipped, submission_unknown, failed, cancelled]}
         skip_reason:
           type: [string, 'null']
@@ -9671,7 +9707,7 @@ components:
           type: array
           readOnly: true
           description: >-
-            Which of this contact's values a data provider's purchase put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete bought data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company.
+            Which of this contact's values a data provider's run put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete provider data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company.
           items: {$ref: '#/components/schemas/BoughtField'}
         reachability:
           type: array
@@ -9720,15 +9756,24 @@ components:
       additionalProperties: true
     BoughtField:
       type: object
-      description: One value on a contact that a data provider's purchase wrote and still owns.
-      required: [target, provider, applied_at]
+      description: One value on a contact that a data provider's run wrote and still owns.
+      required: [target, provider, applied_at, paid, trigger]
       properties:
         target:
           type: string
           description: >-
-            Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the purchase wrote is bought.
+            Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the run wrote is the provider's.
         provider: {$ref: '#/components/schemas/Provider'}
-        applied_at: {type: string, format: date-time, description: When the purchase wrote it.}
+        applied_at: {type: string, format: date-time, description: When the run wrote it.}
+        paid:
+          type: boolean
+          description: >-
+            True when a seat started the run and it spent credits. A value from an automatic run is never paid, because automatic runs take only free categories.
+        trigger: {$ref: '#/components/schemas/ProviderRunTrigger'}
+        requested_by:
+          type: [string, 'null']
+          format: uuid
+          description: The seat that started the run. Set only when `trigger` is `manual`.
     ContactEmployer:
       type: object
       description: >-
@@ -12104,7 +12149,7 @@ components:
       description: |-
         The colleagues who know this contact, warmest first. Ordering is the answer, not
         a presentation detail: it is who to ask.
-      required: [contact_id, colleagues, capture_gaps]
+      required: [contact_id, colleagues, capture_gaps, capture_gaps_total]
       properties:
         contact_id: {type: string, format: uuid}
         colleagues: {type: array, items: {$ref: '#/components/schemas/ContactNetworkColleague'}}
@@ -12115,8 +12160,14 @@ components:
             later replies they alone receive may be missing here. Information only: a seat
             listed here is not a route in, owns no work and may not send. An invited seat
             appears here and never in `colleagues`. At most ten are returned, most recent
-            first.
+            first; `capture_gaps_total` counts them all.
           items: {$ref: '#/components/schemas/ContactCaptureGap'}
+        capture_gaps_total:
+          type: integer
+          minimum: 0
+          description: |-
+            How many colleagues meet the `capture_gaps` condition in all. When it is larger
+            than the length of `capture_gaps`, the list names only the most recent of them.
     ContactCaptureGap:
       type: object
       description: One colleague on a contact's threads whose mail is not captured.
@@ -14876,8 +14927,13 @@ components:
         **Custom fields**: the values of the workspace's activity custom fields arrive as extra
         top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
         `withheld`.
-      required: [id, kind, occurred_at, source, captured_by, created_at, updated_at]
+      required: [id, kind, occurred_at, source, captured_by, created_at, updated_at, offers_email]
       properties:
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
         commitment_admissions:
           type: array
           readOnly: true
@@ -14953,6 +15009,12 @@ components:
           enum: [product, calendar, sending_system]
           description: >-
             What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+        voice:
+          allOf: [{$ref: '#/components/schemas/ActivityVoice'}]
+          readOnly: true
+          nullable: true
+          description: >-
+            Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
         audience:
           allOf: [{$ref: '#/components/schemas/ActivityAudience'}]
           readOnly: true
@@ -14985,8 +15047,13 @@ components:
             The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
         links:
           type: array
-          description: One activity may link to >1 entity (contact + deal).
+          description: >-
+            Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
           items: {$ref: '#/components/schemas/ActivityLink'}
+        offers_email:
+          type: boolean
+          description: >-
+            Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
         imported_from:
@@ -15324,7 +15391,7 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The account this file rolls up to, kept as a read path rather than a second parent. Visibility stays the primary parent's, and this is maintained on relink and merge so a file follows the record it belongs to.
+            The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
         contract_id:
           type: [string, 'null']
           format: uuid
@@ -15341,9 +15408,26 @@ components:
           readOnly: true
           description: >-
             The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download.
+        origin:
+          $ref: '#/components/schemas/AttachmentOrigin'
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         created_at: {type: string, format: date-time}
+    AttachmentOrigin:
+      type: object
+      readOnly: true
+      description: >-
+        The mail a file came with. Present on a Documents list row whose file hangs off a mail the caller may read; absent on an upload, and absent when the caller may not read the mail.
+      required: [activity_id, kind, occurred_at]
+      properties:
+        activity_id: {type: string, format: uuid, description: The mail to open.}
+        kind: {type: string, description: 'The activity kind the file arrived with: email, message.'}
+        subject: {type: [string, 'null']}
+        occurred_at: {type: string, format: date-time, description: When the mail was sent or received.}
+        sender:
+          $ref: '#/components/schemas/EmailParty'
+          description: >-
+            Who the mail is from, named as the caller may see them: a contact's name only when the caller may see that contact. Absent when capture recorded no sender.
     AttachmentListResponse:
       type: object
       required: [data, page]
@@ -15362,6 +15446,8 @@ components:
         hidden: {type: boolean}
         origin:
           $ref: '#/components/schemas/DealDocumentOrigin'
+          description: >-
+            Deprecated: read attachment.origin, which names the mail's sender rather than its counterparty and is gated like every Documents list. Kept for older clients.
     DealDocumentOrigin:
       type: object
       description: Where a captured file came from. Present for a file that arrived with a message linked to the deal; absent for a file uploaded on the deal.
@@ -15412,8 +15498,17 @@ components:
       description: |-
         Who a reply to a message is addressed to: one contact, resolved from the
         message's participants by role.
-      required: [full_name, first_name, address, mailbox_user_ids]
+      required: [full_name, first_name, address, mailbox_user_ids, viewer_on_conversation, deal_owner_user_id]
       properties:
+        viewer_on_conversation:
+          type: boolean
+          description: >-
+            Whether the caller already belongs to this conversation, so a composer can say when a reply comes from somebody the contact has not been writing with. A label, never a grant: it never refuses a send.
+        deal_owner_user_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The owner of the deal this message is filed under, for the client to name through its roster. Null when the message is filed under no deal the caller may read, or that deal has no owner. A deal the caller cannot read answers null, the same as no deal.
         mailbox_user_ids:
           type: array
           uniqueItems: true
@@ -15430,7 +15525,7 @@ components:
         address:
           type: string
           description: >-
-            Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
+            Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. A written-about row follows its own rule, above. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
     CommunicationEvidence:
       type: object
       description: |-
@@ -16700,6 +16795,7 @@ components:
           maxItems: 50
           items: {$ref: '#/components/schemas/ListLinkedValue'}
           description: 'For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then.'
+        linked_truncated: {type: boolean, description: 'The record holds more linked values than `linked` lists; absent when the list is complete.'}
     ListLinkedValue:
       type: object
       required: [value, hidden]
@@ -16769,6 +16865,7 @@ components:
           maxItems: 50
           items: {$ref: '#/components/schemas/ListLinkedValue'}
           description: 'For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none.'
+        linked_truncated: {type: boolean, description: 'The record holds more linked values than `linked` lists; absent when the list is complete.'}
     ListMemberExplanation:
       type: object
       required: [list_id, entity_id, list_type, member]

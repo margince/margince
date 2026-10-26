@@ -21,6 +21,7 @@ Getting around Margince, and where to read about it:
 - How do I search, or open the command palette (⌘K)? → [What Margince is](what-margince-is.md)
 - How do I ask the handbook a question, and where is the Ask box? → [What Margince is](what-margince-is.md)
 - What does Margince call an opportunity, an account, a prospect or a quote? → [What Margince is](what-margince-is.md), under Other words for the same thing
+- Something is wrong. How do I report it? → [Report a problem](report-a-problem.md)
 
 Settings in Margince, by page:
 - Where are the settings, and what settings pages are there? → [Settings](settings.md)
@@ -176,6 +177,9 @@ Records, deals and mail in Margince, by page:
 - [Importing data](importing-data.md): what a CSV or a ZIP can bring in, the
   template, and the steps. The test run, the problems that skip a row, deals,
   and importing the same file again. Undo and the limits.
+- [Report a problem](report-a-problem.md): how to tell the Margince team that
+  something is wrong. What to leave out of the mail, and where a security
+  problem goes instead.
 
 ## How this handbook is written
 

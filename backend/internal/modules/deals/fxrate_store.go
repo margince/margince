@@ -281,7 +281,7 @@ func refuseRewritingHistory(ctx context.Context, tx pgx.Tx, from string, effDate
 // needs the base currency and lives in the tx.
 func normalizeFxCurrencyRate(in SetFxRateInput) (from string, err error) {
 	from = strings.ToUpper(strings.TrimSpace(in.FromCurrency))
-	if !values.ValidCurrency(from) {
+	if !values.AssignableCurrency(from) {
 		return "", fxInvalid("from_currency", "fx_rate_currency", "from_currency must be a 3-letter ISO code")
 	}
 	rate := strings.TrimSpace(in.Rate)

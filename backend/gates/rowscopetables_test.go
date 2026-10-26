@@ -358,9 +358,9 @@ const (
 	// THE FIRST RISE, and why it is not a widening anybody should copy.
 	// contacts.RetractMisattributedSignatureFields takes back the profile fields
 	// an earlier build wrote off a message the contact never sent. It is a
-	// repair pass, chosen by DATA — the same SenderPredicate that decides what
-	// may be written decides what may still stand — and run by the enrichment
-	// job's own system principal, which has no seat for a scope to narrow to.
+	// repair pass, chosen by data. The same relstrength.SenderSQL that decides what
+	// may be written decides what may still stand. The enrichment job's own system
+	// principal runs it, and that principal has no seat for a scope to narrow to.
 	// Narrowing it to one caller's rows would leave every other contact wearing
 	// another sender's title while the pass reported success, which is the
 	// storage-limitation shape the privacy sweeps are exempted for.
@@ -577,5 +577,9 @@ const (
 	// 138: contacts.SignatureFieldSourcesTx pages the signature fields for the
 	// repair data task, as the system actor over the whole workspace. The ids
 	// go only to RetractSignatureFieldsByIDTx, ratified in writesWithoutARowProbe.
-	modulesTierUnscopedCeiling = 138
+	//
+	// 139: contacts.primaryEmployersOf lists every current employee of the
+	// company a merge retires, past the reader's scope, because the merge moves
+	// every edge. The ids go only to the merge's twin re-check; none is returned.
+	modulesTierUnscopedCeiling = 139
 )

@@ -23,21 +23,55 @@ var ErrCounterpartyIsSeat = errors.New("contacts: counterparty address belongs t
 // seat address. Every writer of an inferred employment edge asks it, because a
 // colleague's employer is the workspace and not the company on their mail.
 func contactIsSeatTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (bool, error) {
-	seats, err := storekit.WorkspaceSeatAddresses(ctx, tx)
+	subject := ids.ContactID{UUID: contactID}
+	seats, err := seatContactsTx(ctx, tx, []ids.ContactID{subject})
+	return seats[subject], err
+}
+
+// seatContactsTx is contactIsSeatTx for many contacts at once. It reads the
+// seat set under the shared lock of every address it asks about. An alias
+// claim in flight either commits first and is seen, or waits for this write.
+func seatContactsTx(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID) (map[ids.ContactID]bool, error) {
+	return seatContactsMatchingTx(ctx, tx, contactIDs, func(seats storekit.SeatAddresses, address string) bool {
+		return seats.Covers(address, ids.Nil)
+	})
+}
+
+// seatContactsMatchingTx reads each contact's live addresses, locks them for
+// the check, and reports the contacts holding one that match accepts.
+func seatContactsMatchingTx(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID,
+	match func(storekit.SeatAddresses, string) bool,
+) (map[ids.ContactID]bool, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT contact_id, lower(email) FROM contact_email
+		 WHERE contact_id = ANY($1) AND archived_at IS NULL`, contactIDs)
 	if err != nil {
-		return false, err
+		return nil, fmt.Errorf("contacts: reading addresses to check against the workspace seats: %w", err)
 	}
-	proven := seats.For(ids.Nil)
-	if len(proven) == 0 {
-		return false, nil
+	type held struct {
+		contact ids.ContactID
+		address string
 	}
-	var isSeat bool
-	err = tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM contact_email
-		                WHERE contact_id = $1 AND archived_at IS NULL
-		                  AND lower(email) = ANY($2))`, contactID, proven).Scan(&isSeat)
+	addresses, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (held, error) {
+		var one held
+		return one, row.Scan(&one.contact, &one.address)
+	})
 	if err != nil {
-		return false, fmt.Errorf("contacts: checking whether a contact is a workspace seat: %w", err)
+		return nil, fmt.Errorf("contacts: reading addresses to check against the workspace seats: %w", err)
 	}
-	return isSeat, nil
+	asked := make([]string, len(addresses))
+	for i, one := range addresses {
+		asked[i] = one.address
+	}
+	seats, err := storekit.SeatAddressesFor(ctx, tx, asked...)
+	if err != nil {
+		return nil, err
+	}
+	out := map[ids.ContactID]bool{}
+	for _, one := range addresses {
+		if match(seats, one.address) {
+			out[one.contact] = true
+		}
+	}
+	return out, nil
 }

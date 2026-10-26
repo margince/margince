@@ -404,7 +404,7 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		p.Set("company_name", current.CompanyName, *in.CompanyName)
 	}
 	if in.LinkedInURL != nil {
-		normalized, err := NormalizeLinkedInURL(*in.LinkedInURL)
+		normalized, err := leadLinkedInForUpdate(*in.LinkedInURL, current.LinkedinUrl)
 		if err != nil {
 			return nil, false, err
 		}

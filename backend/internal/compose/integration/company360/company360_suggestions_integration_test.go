@@ -105,6 +105,34 @@ func TestSuggestionsLookPastTheSectionPageCap(t *testing.T) {
 	}
 }
 
+// A reply dated after the read's clock has not arrived yet, so it cannot
+// answer the outbound email and silence the chase.
+func TestAFutureDatedReplyDoesNotAnswerTheOutboundEmail(t *testing.T) {
+	e := integration.Setup(t)
+	svc := company360Service(e)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
+	seedUnansweredOutbound(t, e, company.UUID)
+	reply := integration.SeedIDRow(t, integration.OwnerConn(t), fmt.Sprintf(`INSERT INTO activity (id, kind, direction, subject, occurred_at, created_at, source, captured_by)
+		VALUES ($1, 'email', 'inbound', 'Re: Proposal', '%s', '%s', 'manual', 'human:x')`,
+		company360Clock.Add(30*24*time.Hour).Format(time.RFC3339), company360Clock.Format(time.RFC3339)))
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)
+		VALUES ($1, 'company', $2)`, reply, company.UUID)
+
+	view, err := svc.Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), company)
+	if err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+	if view.Suggestions == nil {
+		t.Fatal("suggestions absent")
+	}
+	for _, suggestion := range *view.Suggestions {
+		if suggestion.Kind == "no_reply" {
+			return
+		}
+	}
+	t.Errorf("a reply dated in the future silenced the no_reply suggestion: %+v", *view.Suggestions)
+}
+
 // The order the rules run in IS the priority the cap applies, and on a full card
 // that order is the whole product decision: what the rep sees when they do not
 // scroll. A contact waiting on us leads; money that stopped moving follows.

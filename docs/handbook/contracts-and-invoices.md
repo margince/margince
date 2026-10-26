@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/projects/contractform.tsx frontend/src/features/projects/contractlifecycle.tsx frontend/src/features/companies/companycontracts.tsx frontend/src/features/companies/companyfinance.tsx frontend/src/features/settings/financesource.tsx backend/internal/modules/contracts backend/internal/modules/finance backend/internal/modules/deals/win_evidence.go -->
 # Contracts and invoices
 
 Contracts and invoices both live on a company's own page in Margince. The

@@ -125,6 +125,9 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 	if in.Replied {
 		p.promoteOnReply(ctx, in, res.ContactID)
 	}
+	if !res.ContactCreated {
+		p.liftVendorMark(ctx, in.Email, res.ContactID)
+	}
 	return capture.EnsureOutcome{
 		ContactCreated: res.ContactCreated,
 		ContactID:      res.ContactID.UUID,
@@ -145,6 +148,21 @@ func (p contactsEnsurer) promoteOnReply(ctx context.Context, in capture.EnsureRe
 	})
 	if err != nil {
 		p.log.ErrorContext(ctx, "capture: publishing a contact on their reply failed",
+			"contact", contactID.String(), "err", err)
+	}
+}
+
+// liftVendorMark clears the automatic vendor mark on a contact that later mail
+// reached, when the workspace now corresponds with the address.
+//
+// Its own transaction and logged, like promoteOnReply: the message is already
+// captured, and LiftVendorMarksWorkspace makes any clearing this one loses.
+func (p contactsEnsurer) liftVendorMark(ctx context.Context, email string, contactID ids.ContactID) {
+	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		return liftVendorMarkTx(ctx, tx, p.store, contactID, email)
+	})
+	if err != nil {
+		p.log.ErrorContext(ctx, "capture: clearing a vendor mark on later mail failed",
 			"contact", contactID.String(), "err", err)
 	}
 }

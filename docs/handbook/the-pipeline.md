@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/deals backend/internal/modules/deals/deal_advance.go backend/internal/modules/deals/pipeline.go backend/internal/modules/deals/stages.go backend/internal/modules/deals/stageprogression.go backend/internal/modules/deals/closedatesweep.go backend/internal/modules/deals/health.go -->
 # The pipeline: how a deal moves
 
 The pipeline in Margince is the ladder of stages every deal moves through. Deals
@@ -388,7 +389,7 @@ it with **Show archived**, find the archive entry in its history and press
 once. You cannot merge two deals.
 
 ### Can I merge two duplicate deals?
-No. Margince has no merge for deals: merging covers contacts and companies only. When one deal was entered twice, keep the best one and archive the other with **More actions** → **Archive deal**. Archiving carries nothing over, so move what you need first. Link its emails to the deal you keep with **Relink**, and note anything else on that deal. Also called: duplicate deal, combine two opportunities.
+No. Margince has no merge for deals: merging covers contacts, companies, and leads from a duplicate pair in the Worklist. When one deal was entered twice, keep the best one and archive the other with **More actions** → **Archive deal**. Archiving carries nothing over, so move what you need first. Link its emails to the deal you keep with **Relink**, and note anything else on that deal. Also called: duplicate deal, combine two opportunities.
 
 ## Partners on a deal
 

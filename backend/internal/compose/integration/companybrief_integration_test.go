@@ -66,13 +66,19 @@ func (l *countingLane) Complete(context.Context, model.Request) (model.Response,
 }
 
 func briefService(e *Env, lane companybrief.Completer, routingVersion string) *companybrief.Service {
+	return briefServiceAt(e, lane, routingVersion, briefClock)
+}
+
+// briefServiceAt reads at the given instant. A brief reads no row dated after
+// its clock, so a fixture whose rows are dated later needs a clock after them.
+func briefServiceAt(e *Env, lane companybrief.Completer, routingVersion string, now time.Time) *companybrief.Service {
 	store := contacts.NewStore(e.DB())
 	view := company360.NewService(e.Pool, store, e.Deals, e.Projects, approvals.NewService(e.DB()),
-		func() time.Time { return briefClock })
+		func() time.Time { return now })
 	// The same store serves both halves of the brief: the 360 for how the
 	// account stands with us, its profile fields for what the company is.
 	return companybrief.NewService(e.Pool, view, store, lane, routingVersion,
-		func() time.Time { return briefClock })
+		func() time.Time { return now })
 }
 
 var briefReaderPerms = principal.Permissions{

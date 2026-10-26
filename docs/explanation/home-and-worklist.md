@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
@@ -139,7 +140,7 @@ mail alike:
 
 - A customer's promise is filed as a claim on their contact and watched. It never becomes a task, since nobody here can do it. `GET /deals/{id}/commitments` lists the open ones for the deal's account.
 - A named colleague's promise becomes their task. At or above `CommitmentTaskConfidence` (0.85) the task is written at once, captured by the extractor's `agent:` principal. Below it the promise is staged as a `commitment_task` proposal.
-- A promise nobody can be named for is proposed to the member the reading belongs to.
+- If no colleague can take the promise as a task, it stays an open claim on the contact. No task or proposal is made. This happens when nobody is named, when the named seat is an agent or has left, or when they may not read the private mail.
 - In private mail, `PrivateTo` keeps the promise with its owner, and the task is readable by its holder alone.
 
 `commitmentmeaning.go` checks what the words ask someone to do before the dispatcher creates work.

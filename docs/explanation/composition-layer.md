@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/compose/server.go backend/internal/compose/serverassembly.go backend/internal/compose/serveroptions.go backend/internal/compose/routes.go backend/internal/compose/installation.go backend/internal/compose/registry.go backend/internal/compose/agentgate.go -->
 # The composition layer
 
 `internal/compose/` is the only layer that knows about more than one module. Modules are all at one level and

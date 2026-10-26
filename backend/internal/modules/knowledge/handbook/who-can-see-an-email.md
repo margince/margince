@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a
@@ -75,7 +76,7 @@ it.
 ### Why is an email hidden from me?
 When an email in Margince shows "This message is not shared with you" or **Withheld**, you were not in its audience. The mailbox that captured it keeps it to the colleagues who were on it.
 
-The most likely reasons: the thread is **Held until classified** and nothing has judged it yet, or its owner set their mailbox to **Always held**. Or the sender or domain is under **Private correspondence**, or an administrator turned **Email sharing** off.
+The most likely reasons: the thread is **Held until checked** and nothing has judged it yet, or its owner set their mailbox to **Always held**. Or the sender or domain is under **Private correspondence**, or an administrator turned **Email sharing** off.
 Only the mailbox owner can open it up, by choosing **Share with the company** on the message. Ask them; an administrator cannot open it for you.
 Also called: email not visible, cannot read email, content for participants only.
 
@@ -97,7 +98,7 @@ A held Margince message carries a reason, so you can see why it is held:
 
 | Reason | What happened |
 |---|---|
-| **Held until classified** | Nothing has judged it yet, and mail nothing has judged is held |
+| **Held until checked** | Nothing has judged it yet, and mail nothing has judged is held |
 | **Held by your setting** | Your mailbox asked for it |
 | **Held by the company** | An administrator turned mail sharing off |
 | **Held by classification** | A model judged the thread and held it |
@@ -109,7 +110,7 @@ A held Margince message carries a reason, so you can see why it is held:
 
 A later verdict clears some of these and not others:
 
-- **Held until classified** clears when a verdict comes in.
+- **Held until checked** clears once Margince has sorted the thread.
 - **Kept private** stays. Only a human's own decision sets it, and nothing
   automatic changes it.
 - **Held: counterparty mail** and **Marked confidential** both win over a later
@@ -128,9 +129,9 @@ it is about a colleague" says what the message is about.
 To change who can read mail captured from your mailbox in Margince, open **Settings → Connections**, open the mailbox, and change **Mail visibility**.
 1. Open the account menu, choose **Settings**, then **Connections**.
 2. Press the arrow at the end of the mailbox's row.
-3. Set **Mail visibility** to **Held until classified**, **Always held** or **Shared with the team**.
-4. When you narrow it, the **Apply to captured mail?** dialog offers **Also narrow captured mail**.
-5. Confirm with **Change mail visibility**.
+3. Set **Mail visibility** to **Held until checked**, **Always held** or **Shared with the team**.
+4. When you narrow it, the row **Apply to captured mail?** shows. Tick **Also narrow captured mail** to narrow mail already captured too.
+5. Press **Save** on the **Unsaved changes** bar.
 
 **Shared with the team** is refused until an administrator allows it for the company.
 Also called: mailbox privacy, mail posture, share my inbox.
@@ -140,7 +141,7 @@ Also called: mailbox privacy, mail posture, share my inbox.
 You set the mailbox posture at **Settings → Connections**, in each mailbox's
 settings, as **Mail visibility**.
 
-**Held until classified** is the default for every new mailbox. A message stays
+**Held until checked** is the default for every new mailbox. A message stays
 with whoever was on it until a model finds the thread to be plain business.
 Nothing is shared before a decision. So a model that is down or out of money
 leaves mail held, not open.

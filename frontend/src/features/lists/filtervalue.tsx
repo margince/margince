@@ -8,6 +8,7 @@ import { SegmentedControl, TextInput } from "../../design-system/atoms";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { Select } from "../../design-system/select";
 import { TokenInput } from "../../design-system/tokeninput";
+import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { useT } from "../../i18n";
 import "./filterbuilder.css";
 import { RosterPartialNote } from "../../components/entityref";
@@ -23,6 +24,7 @@ import {
   type LeafValue,
 } from "../../lib/segmentpredicate";
 import { MoneyControl } from "./filtervalue.money";
+import { RadiusValue } from "./filtervalue.radius";
 import {
   ChosenRecords,
   chosenIDs,
@@ -45,6 +47,7 @@ export function ValueControl({
   onChange,
   label,
   currency,
+  field,
 }: Readonly<{
   type: VocabularyField["type"];
   /** What an id field's values point at, when the vocabulary named one. */
@@ -57,6 +60,8 @@ export function ValueControl({
   value: LeafValue;
   onChange: (next: LeafValue) => void;
   label?: string;
+  /** The vocabulary field being compared, so a coded set can be worded. */
+  field?: string;
 }>) {
   const t = useT();
   const name = label ?? t("filters.value");
@@ -71,6 +76,9 @@ export function ValueControl({
         label={t("filters.existsLabel")}
       />
     );
+  }
+  if (op === "within_radius") {
+    return <RadiusValue value={value} onChange={onChange} label={name} />;
   }
   // A REFERENCE IS ANSWERED BEFORE THE OPERATOR IS, and the order is the whole
   // point. `in` used to win, so every id field's list was a free-text token box
@@ -119,12 +127,14 @@ export function ValueControl({
     // surface exists to prevent: a value outside the set compiles, matches
     // nothing, and reads as a settled answer rather than as a mistake.
     //
-    // The label IS the value. These are the wire words a workspace admin chose,
-    // or a contract enum; inventing display copy here would be a second
-    // vocabulary for a reader to reconcile against what the record page shows.
+    // The label is the value, except for the industry codes, which the record
+    // page words through format/industry.ts and so does this picker.
     return (
       <Select
-        options={options.map((option) => ({ value: option, label: option }))}
+        options={options.map((option) => ({
+          value: option,
+          label: field === INDUSTRY_FIELD ? industryWords(t, option) : option,
+        }))}
         value={typeof value === "string" ? value : ""}
         onChange={onChange}
         placeholder={t("filters.pickValue")}

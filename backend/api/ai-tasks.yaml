@@ -107,9 +107,8 @@
 # gates a merge.
 #
 # frontier sits one rung above premium: the strongest model a deployment is
-# willing to pay for. No task ladder selects it — it is declared so an operator
-# can bind one, and so a task that genuinely needs the top rung has a name to
-# reach for without redefining what premium means for every other task.
+# willing to pay for. signal_extract's ladder selects it. A task that needs the
+# top rung names it, so premium keeps one meaning for every other task.
 tiers: [local_small, cheap_cloud, premium, frontier, local_large]
 
 tasks:

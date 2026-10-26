@@ -196,7 +196,7 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 	if suppressed {
 		return EnsureCounterpartyResult{}, ErrCounterpartySuppressed
 	}
-	seats, err := storekit.WorkspaceSeatAddresses(ctx, tx)
+	seats, err := storekit.SeatAddressesFor(ctx, tx, in.Email)
 	if err != nil {
 		return EnsureCounterpartyResult{}, err
 	}

@@ -151,6 +151,7 @@ const granted: View = {
   activities: {
     data: [
       {
+        offers_email: false,
         id: "a-1",
         kind: "email",
         direction: "inbound",
@@ -327,6 +328,8 @@ const boughtPhone: View = {
         target: "phone:pp-1",
         provider: "surfe",
         applied_at: "2026-06-02T12:00:00Z",
+        paid: true,
+        trigger: "manual",
       },
     ],
   },

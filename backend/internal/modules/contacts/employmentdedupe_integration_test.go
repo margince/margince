@@ -8,6 +8,10 @@ package contacts
 import (
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/kernel/filedpairs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -117,5 +121,100 @@ func TestPromotingAnEmploymentToCurrentPrimaryFilesTheTwin(t *testing.T) {
 
 	if pairs := openCandidatePairs(ctx, t, e, "contact", twin.UUID); len(pairs) != 1 {
 		t.Fatalf("got pairs %+v, want the pair with the contact on file", pairs)
+	}
+}
+
+func TestEmploymentEdgeNotesOnlyThePairItFiled(t *testing.T) {
+	e := setupDedupe(t)
+	acme := mustEmployer(t, e, "Acme Robotics GmbH")
+	onFile := mustContact(t, e, "Marlene Wiesinger")
+	employ(t, e, onFile, acme)
+	twin := mustContact(t, e, "Marlene Wiesingr")
+	ctx, sink := filedpairs.Collect(e.as())
+	company := acme
+
+	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
+		Kind: employmentKind, ContactID: &twin, CompanyID: &company, Source: "manual",
+	}); err != nil {
+		t.Fatalf("employ: %v", err)
+	}
+
+	pairs, err := e.store.OpenCandidatesNaming(e.as(), entityContact, twin.UUID, nil)
+	if err != nil {
+		t.Fatalf("reading the queue: %v", err)
+	}
+	noted := sink.IDs()
+	if len(pairs) != 1 || len(noted) != 1 || noted[0] != pairs[0].ID {
+		t.Fatalf("noted %v, queue has %+v, want the one pair the edge filed", noted, pairs)
+	}
+}
+
+// Two similar-name contacts at different employers are no pair until a company
+// merge puts them at one employer.
+func TestMergingCompaniesFilesTheTwinsItBringsTogether(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	survivor := mustEmployer(t, e, "Acme Robotics GmbH")
+	retired := mustEmployer(t, e, "Acme Robotik GmbH")
+	onFile := mustContact(t, e, "Marlene Wiesinger")
+	employ(t, e, onFile, survivor)
+	twin := mustContact(t, e, "Marlene Wiesingr")
+	employ(t, e, twin, retired)
+	if pairs := openCandidatePairs(ctx, t, e, "contact", twin.UUID); len(pairs) != 0 {
+		t.Fatalf("got %d pairs before the merge, want 0", len(pairs))
+	}
+
+	if _, err := e.store.MergeCompany(ctx, retired, survivor, nil); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+
+	pairs := openCandidatePairs(ctx, t, e, "contact", twin.UUID)
+	if len(pairs) != 1 || pairs[0].OtherID != onFile.String() {
+		t.Fatalf("got pairs %+v, want exactly the pair with the contact on file", pairs)
+	}
+}
+
+// Duplicate scoring reads only the current primary employer, so an ended or a
+// non-primary employment moved by a merge files nothing.
+func TestMergingCompaniesDoesNotRecheckContactsWhoseCurrentEmployerStays(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	survivor := mustEmployer(t, e, "Acme Robotics GmbH")
+	retired := mustEmployer(t, e, "Acme Robotik GmbH")
+	employ(t, e, mustContact(t, e, "Marlene Wiesinger"), survivor)
+	ended := mustContact(t, e, "Marlene Wiesingr")
+	sideRole := mustContact(t, e, "Marlene Wiesinge")
+	past := clocktest.Now(t).AddDate(-1, 0, 0)
+	no := false
+	for _, edge := range []CreateRelationshipInput{
+		{Kind: employmentKind, ContactID: &ended, CompanyID: &retired, Source: "manual", EndedAt: &past},
+		{Kind: employmentKind, ContactID: &sideRole, CompanyID: &retired, Source: "manual", IsCurrentPrimary: &no},
+	} {
+		if _, err := e.store.CreateRelationship(ctx, edge); err != nil {
+			t.Fatalf("employ: %v", err)
+		}
+	}
+
+	primary := mustContact(t, e, "Tobias Hergenhahn")
+	employ(t, e, primary, retired)
+	var listed map[ids.ContactID]ids.CompanyID
+	if err := e.store.tx(ctx, func(tx pgx.Tx) (err error) {
+		listed, err = primaryEmployersOf(ctx, tx, retired)
+		return err
+	}); err != nil {
+		t.Fatalf("listing the primary employees: %v", err)
+	}
+	if len(listed) != 1 || listed[primary] != retired {
+		t.Fatalf("primary employees of the retired company = %v, want only %s", listed, primary)
+	}
+
+	if _, err := e.store.MergeCompany(ctx, retired, survivor, nil); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+
+	for name, contact := range map[string]ids.ContactID{"an ended employment": ended, "a non-primary employment": sideRole} {
+		if pairs := openCandidatePairs(ctx, t, e, "contact", contact.UUID); len(pairs) != 0 {
+			t.Errorf("%s moved by the merge filed %+v, want no pair", name, pairs)
+		}
 	}
 }

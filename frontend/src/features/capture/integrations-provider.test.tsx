@@ -207,7 +207,7 @@ describe("ProviderCard write posture", () => {
     "Read-only: connecting a provider costs money, so only an administrator or operations user can do it.";
   const CONNECT = "Replace API key";
   const DISCONNECT = "Disconnect";
-  const DELETE_DATA = "Delete purchased data";
+  const DELETE_DATA = "Delete provider data";
   const KEY_FIELD = "Replace API key";
   const AUTOMATIC_LOOKUP = en["provider.automaticLookup"];
   // Disconnect and delete-data live behind the overflow, because neither is the

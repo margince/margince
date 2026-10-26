@@ -13,6 +13,7 @@ import {
   displayDay,
   formatNumber,
 } from "../../format/format";
+import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
   type FilterVocabulary,
@@ -124,7 +125,7 @@ function Verdict({
               value:
                 node.linked === undefined
                   ? scalarValueText(node, valueText, t)
-                  : linkedText(node.linked, t),
+                  : linkedText(node.linked, t, node.linked_truncated),
             })}
       </span>
       {clause.note !== undefined && (
@@ -148,20 +149,23 @@ function scalarValueText(
  * What a link field holds on a record.
  * It shows the names of the rows it links, a hidden entry as the hidden word,
  * and an empty link as empty. The member table reads a link cell through this
- * too, so the two screens agree.
+ * too, so the two screens agree. A reading the server cut ends with a note
+ * that more exist.
  */
 export function linkedText(
   linked: readonly ListLinkedValue[],
   t: ReturnType<typeof useT>,
+  truncated = false,
 ): string {
   if (linked.length === 0) {
     return t("lists.why.empty");
   }
-  return linked
+  const shown = linked
     .map((one) =>
       one.hidden ? t("lists.why.hidden") : (one.label ?? one.value),
     )
     .join(", ");
+  return truncated ? `${shown}, ${t("lists.why.moreLinked")}` : shown;
 }
 
 /**
@@ -196,9 +200,24 @@ export function useFieldValueText(
           ? (moneyText(raw, field.currency, locale) ?? raw)
           : t("filters.sentence.pendingValue");
       default:
-        return field?.references === "app_user" ? (users.get(raw) ?? raw) : raw;
+        return plainValueText(name, raw, field, users, t);
     }
   };
+}
+
+// A value with no kind-specific reading: an industry code in the reader's
+// words, a colleague by name, anything else as stored.
+function plainValueText(
+  name: string,
+  raw: string,
+  field: VocabularyField | undefined,
+  users: ReadonlyMap<string, string>,
+  t: ReturnType<typeof useT>,
+): string {
+  if (name === INDUSTRY_FIELD) {
+    return industryWords(t, raw);
+  }
+  return field?.references === "app_user" ? (users.get(raw) ?? raw) : raw;
 }
 
 // The colleague a clause's value names, when its field references one.

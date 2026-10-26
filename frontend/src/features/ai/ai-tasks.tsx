@@ -46,6 +46,7 @@ export function AiTasksCard() {
           rows={status.data.features}
           health={health}
           providers={providers}
+          lanesNeedingAKey={status.data.lanes_needing_a_key}
           canTrace={canDiagnose}
           canManage={canManage}
           onEdit={(row) => setOpened(row.task)}

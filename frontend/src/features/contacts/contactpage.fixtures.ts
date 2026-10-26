@@ -129,6 +129,7 @@ export const populated: View = {
   activities: {
     data: [
       {
+        offers_email: false,
         id: "a-1",
         kind: "email",
         direction: "inbound",
@@ -274,6 +275,7 @@ export const chatConversation: View = {
   activities: {
     data: [
       {
+        offers_email: false,
         id: "a-9",
         kind: "message",
         channel_provider: "zalo_oa",

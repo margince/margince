@@ -33,6 +33,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The subject gives way first, so the date stays beside it on a narrow bar. */
+.compose-threadbar-text:has(+ .compose-threadbar-when) {
+  flex: 0 1 auto;
+}
+.compose-threadbar-when {
+  flex: none;
+  margin-inline-end: auto;
+  white-space: nowrap;
+}
 .compose-threadbar-text > strong {
   font-weight: var(--fontWeightBold);
 }

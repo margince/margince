@@ -77,3 +77,55 @@ func TestContactGraphKeepsSeatsOutOfTheirCompanyLane(t *testing.T) {
 		t.Fatal("a seat's login was drawn as a coworker at another company")
 	}
 }
+
+func agentCoworkerLabels(ctx context.Context, t *testing.T, e *Env, contact ids.UUID) map[string]bool {
+	t.Helper()
+	code, graph := readGraph(ctx, t, e, contact)
+	if code != http.StatusOK {
+		t.Fatalf("graph → %d, want 200", code)
+	}
+	labels := map[string]bool{}
+	for _, n := range graph.Nodes {
+		labels[n.Label] = true
+	}
+	return labels
+}
+
+// A passport agent is read as the user it acts for. That user's typed alias
+// hides the contact from the agent too, and row scope still applies.
+func TestContactGraphReadsAPassportAgentAsItsUser(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
+	anchor := e.SeedContact(t, "Anna Weber", &e.Rep2)
+	typed := seedContactAt(t, e, owner, "Typed Alias", "rep2.home@private.example")
+	hidden := e.SeedContact(t, "Hidden Colleague", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", hidden, e.Rep3)
+	for _, p := range []ids.UUID{anchor, typed, hidden} {
+		SeedIDRow(t, owner, `INSERT INTO relationship
+			(id, kind, contact_id, company_id, source, captured_by)
+			VALUES ($1, 'employment', '`+p.String()+`', '`+company.String()+`', 'manual', 'human:x')`)
+	}
+	rep2 := e.As(e.Rep2, []ids.UUID{e.Team1}, AdminPerms)
+	if _, err := capture.NewOwnerIdentityStore(e.DB()).Add(rep2, capture.IdentityKindAddress, "rep2.home@private.example"); err != nil {
+		t.Fatalf("adding the alias: %v", err)
+	}
+
+	teams := []ids.UUID{e.Team1}
+	asUser := agentCoworkerLabels(e.As(e.Rep2, teams, graphPerms), t, e, anchor)
+	asAgent := agentCoworkerLabels(e.AgentFor(t, e.Rep2, teams, graphPerms), t, e, anchor)
+	if asUser["Typed Alias"] || asAgent["Typed Alias"] {
+		t.Fatalf("user sees %v, passport agent sees %v, want the typed alias hidden from both", asUser, asAgent)
+	}
+	elsewhere := agentCoworkerLabels(e.AgentFor(t, e.Rep1, teams, graphPerms), t, e, anchor)
+	if !elsewhere["Typed Alias"] {
+		t.Fatalf("an agent for another seat sees %v, want the alias drawn", elsewhere)
+	}
+
+	if asUser["Hidden Colleague"] || asAgent["Hidden Colleague"] {
+		t.Fatalf("user sees %v, agent sees %v, want the contact outside row scope hidden from both", asUser, asAgent)
+	}
+	if !asAgent["Anna Weber"] {
+		t.Fatalf("agent sees %v, want the anchor drawn", asAgent)
+	}
+}

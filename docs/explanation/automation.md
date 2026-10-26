@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/automation backend/internal/compose/workflows.go -->
 # Automation: the closed catalog and its trigger runtime
 
 `internal/modules/automation` lets a workspace turn on, and set values for, a **fixed** set of
@@ -18,8 +19,8 @@ An automation is a **handler** (the code) that a workspace turns on as an **inst
 
 ```text
 EVENT TRIGGER                                   CLOCK TRIGGER
-domain write → outbox → relay → Redis           River dispatcher `time_scan`
-  → cg:workflows → WorkflowEngine.HandleEvent      → one `time_scan_workspace` job per workspace
+domain write → outbox → relay → Redis           River fleet job `time_scan`
+  → cg:workflows → WorkflowEngine.HandleEvent      → one pass per live workspace, in that job
         │ once per enabled instance                → ScanWorkspace: stale candidates (ActivityScan seam)
         │                                          → synthesize one workflow.Event per candidate
         └───────────────┬──────────────────────────────────┘
@@ -153,14 +154,14 @@ across workspaces to guard against.
     `Spec().Trigger.EventType` matches. It runs once per **turned on instance** in the event's
     workspace, and the instance's `params` go with the event into `Plan`.
   - `cmd/worker` is the only reader of `cg:workflows`.
-- **Clock triggers** have no event to come in on. The `time_scan` dispatcher lists the fleet and queues
-  one `time_scan_workspace` job per live workspace.
+- **Clock triggers** have no event to come in on. One `time_scan` job runs for the whole fleet. It lists
+  the live workspaces and runs the pass for each one in turn.
   - `TimeScanner.ScanWorkspace` (`timescan.go`) runs the pass for that tenant against an **injected clock**.
     It reads each clock automation's candidates through a seam: `ActivityScan` for handlers on the last
     touch, and `DateFieldScan` for the custom date field of `renewal_reminder`.
   - It makes a `workflow.Event` per candidate, and hands each to `runOne`. A workspace whose pass fails
-    fails its own job row. It does not turn into a log line inside a run that River recorded as
-    completed.
+    does not stop the rest. The job still runs every workspace, then fails and names each one that
+    failed. So a failure never turns into a log line inside a run that River recorded as completed.
 
 ## The occurrence key and the trap it avoids
 

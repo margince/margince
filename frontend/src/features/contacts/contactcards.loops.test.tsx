@@ -184,6 +184,7 @@ describe("the Commitments card's rows", () => {
     view.next_steps = {
       data: [
         {
+          offers_email: false,
           id: "t-1",
           kind: "task",
           subject: "Send the pilot quote",

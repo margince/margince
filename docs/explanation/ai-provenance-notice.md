@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/shared/kernel/draftfloor/contacttext.go backend/internal/modules/signals/intropath.go backend/api/crm.yaml -->
 # The AI provenance notice
 
 The sentence a draft from a model holds to say that a model wrote it. It sits in one place,

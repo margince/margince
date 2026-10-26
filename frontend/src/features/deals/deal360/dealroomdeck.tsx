@@ -6,7 +6,7 @@
 // The tab draws all four; the room's own page draws the notice and the line.
 
 import { DoorOpen } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId } from "react";
 import type { components } from "../../../api/schema";
 import { requireVersion } from "../../../api/version";
 import { RoomStateBadge } from "../../../components/dealroom";
@@ -22,7 +22,6 @@ import { formatDateAbbrev, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { useRecordZone } from "../../../lib/recordzone";
 import { useParticipants, useRoomAttendance } from "../dealroomaccess";
-import { InviteDialog } from "../dealroomaccess.dialogs";
 import { useRoomThreads } from "../dealroomconversation";
 import { useRoomDocuments } from "../dealroomdocuments";
 import { useSaveRoom } from "./dealroommanage";
@@ -154,9 +153,9 @@ export function StateBanner({
 export function RoomSetup({
   room,
   onEditText,
-}: Readonly<{ room: DealRoom; onEditText: () => void }>) {
+  onInvite,
+}: Readonly<{ room: DealRoom; onEditText: () => void; onInvite: () => void }>) {
   const t = useT();
-  const [inviting, setInviting] = useState(false);
   const participants = useParticipants(room.id);
   const documents = useRoomDocuments(room.id);
   const threads = useRoomThreads(room.id);
@@ -170,17 +169,8 @@ export function RoomSetup({
     threads.data.data.length > 0,
   ];
   const doneCount = done.filter(Boolean).length;
-  // The invite dialog stays mounted once the last step is done. Inviting can
-  // be that step, and the dialog is still showing the one-time link then.
-  const invite = (
-    <InviteDialog
-      room={room}
-      open={inviting}
-      onClose={() => setInviting(false)}
-    />
-  );
   if (doneCount === done.length) {
-    return invite;
+    return null;
   }
   const current = done.indexOf(false);
   const stateOf = (i: number) =>
@@ -205,7 +195,7 @@ export function RoomSetup({
             state={stateOf(1)}
             title={t("roomtab.setup.invite")}
             caption={t("roomtab.setup.inviteHint")}
-            action={verb(1, t("access.invite"), () => setInviting(true))}
+            action={verb(1, t("access.invite"), onInvite)}
           />
           <ChecklistStep
             state={stateOf(2)}
@@ -219,7 +209,6 @@ export function RoomSetup({
           />
         </Checklist>
       </PanelBody>
-      {invite}
     </Panel>
   );
 }

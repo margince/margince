@@ -107,9 +107,7 @@ var likeEscapeWaived = gatekit.Waive(map[string]string{
 		"a uuid has no wildcard to escape and the pattern around it is a literal prefix.",
 	"internal/compose/introadvance.go": "the operand is a captured_by prefix the server stamps " +
 		"(`human:`, `connector:`), built from an actor id rather than from anything a caller typed.",
-	"internal/modules/capture/seatstanding.go": "a server-stamped captured_by prefix, as introadvance.",
-	"internal/modules/activities/participantbackfill.go": "the operand is `u.id::text` inside a " +
-		"literal connector prefix, so the only runtime part is a uuid.",
+	"internal/modules/capture/seatstanding.go":         "a server-stamped captured_by prefix, as introadvance.",
 	"internal/modules/activities/lasttouch.go":         "a server-stamped captured_by prefix, as introadvance.",
 	"internal/modules/activities/followupownership.go": "a server-stamped captured_by prefix, as introadvance.",
 	"internal/modules/activities/emailpresentation.go": "the operand is a uuid argument cast to text " +

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../../api/schema";
+import type { components } from "../api/schema";
 
 type Deal = components["schemas"]["Deal"];
 

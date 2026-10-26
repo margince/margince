@@ -169,7 +169,7 @@ func refuseMovedOnTx(ctx context.Context, tx pgx.Tx, w withdrawnIdentity) error 
 // meantime conflicts and is refused.
 func reinstateTx(ctx context.Context, tx pgx.Tx, w withdrawnIdentity) (OwnerIdentity, error) {
 	if w.Kind == IdentityKindAddress {
-		if err := lockOwnAddressTx(ctx, tx, w.Value); err != nil {
+		if err := storekit.LockSeatAddressClaims(ctx, tx, w.Value); err != nil {
 			return OwnerIdentity{}, err
 		}
 	}

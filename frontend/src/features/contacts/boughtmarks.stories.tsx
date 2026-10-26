@@ -2,15 +2,17 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { ContactLink } from "../../design-system/contactlink";
 import { StoryProviders } from "../../testing/story-utils";
-import { BoughtMark, BoughtText } from "./boughtmarks";
+import { type BoughtField, BoughtMark, BoughtText } from "./boughtmarks";
 
 // The two shapes a bought value takes: plain text underlined in place, and a
 // value that is already a control, with the mark beside it rather than inside.
 
-const bought = {
+const bought: BoughtField = {
   target: "phone:ph-1",
   provider: "surfe",
   applied_at: "2026-06-02T12:00:00Z",
+  paid: true,
+  trigger: "manual",
 };
 
 function Marks() {

@@ -177,7 +177,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		       AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
 		      JOIN activity a
 		        ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+`
+		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		     GROUP BY t.user_id, t.contact_id
 		)
 		INSERT INTO graph_interaction_edge AS e
@@ -212,7 +212,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		         FROM activity_participant up
 		         JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		         JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+`
+		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		        WHERE up.user_id = t.user_id AND up.role IN `+interactionRoles+`
 		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`)`,
 		users, contacts); err != nil {
@@ -230,13 +230,8 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 // a Limit emits, so an edge whose last evidence is limited is re-folded away.
 const audienceWorkspaceOnly = ` AND a.audience = 'workspace'`
 
-// liveMemberJoin and laterMemberJoin join app_user on the shared definition of
-// "still works here". laterMemberJoin asks it of a SECOND edge in one
-// statement: has any live colleague spoken to this contact since.
-var (
-	liveMemberJoin  = `JOIN app_user u ON u.id = e.user_id AND ` + workforce.LiveMemberSQL("u")
-	laterMemberJoin = `JOIN app_user lu ON lu.id = later.user_id AND ` + workforce.LiveMemberSQL("lu")
-)
+// liveMemberJoin joins app_user on the shared definition of "still works here".
+var liveMemberJoin = `JOIN app_user u ON u.id = e.user_id AND ` + workforce.LiveMemberSQL("u")
 
 // EdgesForContact answers "who on our team knows this contact".
 //
@@ -399,7 +394,7 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		  FROM activity_participant up
 		  JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		  JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+`
+		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		 WHERE up.user_id IS NOT NULL AND up.role IN `+interactionRoles+`
 		   AND pp.contact_id IS NOT NULL AND pp.role IN `+interactionRoles+`
 		 GROUP BY up.user_id, pp.contact_id`); err != nil {

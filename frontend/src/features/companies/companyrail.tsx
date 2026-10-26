@@ -6,6 +6,7 @@ import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { mapCompanyUpdate } from "../../components/companyform";
 import {
+  formatSizeBand,
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
@@ -251,7 +252,7 @@ function useAboutRows(
       "co.aside.size",
       SIZE_BAND_OPTIONS.map((band) => ({
         value: band,
-        label: band.replace("-", "–"),
+        label: formatSizeBand(t, band),
       })),
     ),
     choice(

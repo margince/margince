@@ -90,6 +90,10 @@ func (s *Store) mergeCompanyTx(
 	if err := companyMergeAllowed(ctx, tx, sourceID, targetID); err != nil {
 		return crmcontracts.Company{}, err
 	}
+	employersBefore, err := primaryEmployersOf(ctx, tx, sourceID)
+	if err != nil {
+		return crmcontracts.Company{}, err
+	}
 	targetIsPartner, err := relinkCompanyAssociations(ctx, tx, sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Company{}, err
@@ -108,6 +112,13 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return crmcontracts.Company{}, err
+	}
+	if err := fileMergedEmployerTwins(ctx, tx, employersBefore, by); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	// A survivor that just inherited the retired record's legal name can now
 	// be the twin of a THIRD company, and resolving one duplicate is no
 	// reason to leave that one unfiled. Only when the name actually moved: a
@@ -121,10 +132,6 @@ func (s *Store) mergeCompanyTx(
 	// it. The genuine third record is never reached, since the walk stops at
 	// the first unfiled rival.
 	if _, renamed := filled[fieldLegalName]; renamed {
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return crmcontracts.Company{}, err
-		}
 		if err := recheckCompanyNameForDuplicates(ctx, tx, targetID, by); err != nil {
 			return crmcontracts.Company{}, err
 		}

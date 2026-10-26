@@ -24140,8 +24140,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24174,8 +24178,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24207,8 +24215,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24241,8 +24253,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24274,8 +24290,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24307,8 +24327,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24340,8 +24364,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24373,8 +24401,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24406,8 +24438,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24439,8 +24475,12 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24472,8 +24512,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24505,8 +24549,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24538,8 +24586,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): brief_names_the_stalled_deal_and_the_last_touch, brief_stays_silent_about_a_withheld_section",
           "stale_cause": {
+            "case_changed": [
+              "brief_names_the_stalled_deal_and_the_last_touch",
+              "brief_stays_silent_about_a_withheld_section"
+            ],
             "prompt_changed": [
               "brief_names_the_stalled_deal_and_the_last_touch",
               "brief_stays_silent_about_a_withheld_section"
@@ -24935,8 +24987,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -24969,8 +25025,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -25002,8 +25062,12 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -25036,8 +25100,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -25069,8 +25137,12 @@
             "invalid": 0,
             "abstained": 2
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -25102,8 +25174,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -25135,8 +25211,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -25168,8 +25248,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -25201,8 +25285,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -25234,8 +25322,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -25267,8 +25359,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -25300,8 +25396,12 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"
@@ -25333,8 +25433,12 @@
             "invalid": 0,
             "abstained": 8
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): contact_brief_reads_what_was_said, contact_brief_stays_silent_about_what_the_reader_may_not_see",
           "stale_cause": {
+            "case_changed": [
+              "contact_brief_reads_what_was_said",
+              "contact_brief_stays_silent_about_what_the_reader_may_not_see"
+            ],
             "prompt_changed": [
               "contact_brief_reads_what_was_said",
               "contact_brief_stays_silent_about_what_the_reader_may_not_see"

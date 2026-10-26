@@ -14,8 +14,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // copiedMail describes one captured mail that copies the subject: who wrote it,
@@ -30,6 +33,11 @@ type copiedMail struct {
 	// mailbox that received the mail.
 	ourRecipient bool
 	capturedBy   string
+	// counterparty is the correspondent the row is filed under; it defaults
+	// to the outside sender every helper here uses.
+	counterparty string
+	// unauthenticated leaves inbound_sender_authenticated false.
+	unauthenticated bool
 }
 
 // capturedMail plants a mail a connector captured. An outside sender writes to
@@ -98,10 +106,15 @@ func (e *resolveEnv) plantCopiedMail(t *testing.T, m copiedMail) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
 	id := ids.NewV7()
+	counterparty := m.counterparty
+	if counterparty == "" {
+		counterparty = "third@party.test"
+	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO activity (id, kind, direction, thread_key, occurred_at, source, captured_by)
-		VALUES ($1, 'email', $2, $3, now() - interval '1 hour', 'gmail', $4)`,
-		id, m.direction, m.threadKey, m.capturedBy); err != nil {
+		INSERT INTO activity (id, kind, direction, thread_key, occurred_at, source, captured_by,
+		                      counterparty_email, counterparty_outbound_attested, inbound_sender_authenticated)
+		VALUES ($1, 'email', $2, $3, now() - interval '1 hour', 'gmail', $4, $5, $2 = 'outbound', $2 = 'inbound' AND NOT $6)`,
+		id, m.direction, m.threadKey, m.capturedBy, counterparty, m.unauthenticated); err != nil {
 		t.Fatalf("planting the captured mail: %v", err)
 	}
 	if _, err := e.owner.Exec(ctx, `
@@ -109,11 +122,11 @@ func (e *resolveEnv) plantCopiedMail(t *testing.T, m copiedMail) ids.UUID {
 		VALUES ($1, $2, $3, $4)`, id, e.contact, e.address, m.subjectRole); err != nil {
 		t.Fatalf("planting the subject participant: %v", err)
 	}
-	author := `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'third@party.test', 'from')`
-	authorArgs := []any{id}
+	author := `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'from')`
+	authorArgs := []any{id, counterparty}
 	if m.ourAuthor {
 		author = `INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'from')`
-		authorArgs = append(authorArgs, e.user)
+		authorArgs = []any{id, e.user}
 	}
 	if _, err := e.owner.Exec(ctx, author, authorArgs...); err != nil {
 		t.Fatalf("planting the author: %v", err)
@@ -141,6 +154,35 @@ func TestACcParticipantOfACapturedThreadMayBeWrittenToAboutThatThread(t *testing
 			}
 			if d.Basis != commsauthz.BasisLegitimateInterests {
 				t.Errorf("basis = %q, want legitimate_interests", d.Basis)
+			}
+		})
+	}
+}
+
+func TestAnOutsiderForgingAThreadWeWroteOnToSomeoneElseEarnsNoStanding(t *testing.T) {
+	cases := map[string]struct{ inbound, ours copiedMail }{
+		"the outsider is not who we wrote to": {
+			inbound: copiedMail{counterparty: "outsider@evil.test"},
+			ours:    copiedMail{counterparty: "third@party.test"},
+		},
+		"the sender is not authenticated": {
+			inbound: copiedMail{unauthenticated: true},
+		},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			c.inbound.threadKey, c.inbound.subjectRole, c.inbound.direction = "thread-we-wrote", "cc", "inbound"
+			c.inbound.ourRecipient, c.inbound.capturedBy = true, "connector:gmail"
+			e.plantCopiedMail(t, c.inbound)
+			c.ours.threadKey, c.ours.subjectRole, c.ours.direction = "thread-we-wrote", "bcc", "outbound"
+			c.ours.ourAuthor, c.ours.capturedBy = true, "connector:gmail"
+			e.plantCopiedMail(t, c.ours)
+
+			d := e.decide(t, commsauthz.Request{ThreadKey: "thread-we-wrote"})
+
+			if d.Verdict == commsauthz.VerdictAllow {
+				t.Fatalf("decision = %+v, want no allow for a forged thread key", d)
 			}
 		})
 	}
@@ -338,5 +380,101 @@ func TestAPurposeNothingDefinesIsStillUnknown(t *testing.T) {
 
 	if d.ReasonCode != commsauthz.ReasonUnknownPurpose {
 		t.Fatalf("reason = %q, want unknown_purpose for an invented purpose key", d.ReasonCode)
+	}
+}
+
+// A send the Cc rule allowed at staging is asked again at transmit, where the
+// request carries no anchor and only the delivery's thread key. It goes while
+// the copying mail stands and is refused once that mail is gone.
+func TestASendTheCcRuleAllowedIsAskedAgainAtTransmit(t *testing.T) {
+	e := setupResolve(t)
+	copying := e.capturedMail(t, "thread-transmit", "cc", true)
+	delivery := e.plantDelivery(t)
+	if _, err := e.owner.Exec(context.Background(), `
+		UPDATE activity SET thread_key = 'thread-transmit'
+		 WHERE id = (SELECT activity_id FROM comms_outbound WHERE id = $1)`, delivery); err != nil {
+		t.Fatalf("filing the delivery on the thread: %v", err)
+	}
+	recipients := []connector.Recipient{{Email: e.address}}
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		set, err := e.gate.AuthorizeStagingTx(e.ctx, tx, delivery, commsauthz.Request{
+			Recipients: recipients, ThreadKey: "thread-transmit", Subject: "Re: s", Body: "b",
+		})
+		if err != nil {
+			return err
+		}
+		if d := set.Decisions[0]; d.Verdict != commsauthz.VerdictAllow || d.Resolved != commsauthz.CategoryReplyToInbound {
+			t.Fatalf("staging decision = %+v, want an allow as reply_to_inbound", d)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("staging the delivery: %v", err)
+	}
+	transmit := func(attempt int) commsauthz.TransmitTicket {
+		ticket, err := e.gate.AuthorizeTransmit(e.ctx, commsauthz.TransmitRequest{
+			DeliveryID: delivery, Attempt: attempt, Recipients: recipients, Subject: "Re: s", Body: "b",
+		})
+		if err != nil {
+			t.Fatalf("authorizing the transmit: %v", err)
+		}
+		return ticket
+	}
+
+	if ticket := transmit(1); !ticket.Allowed {
+		t.Fatalf("a send the Cc rule allowed at staging was refused at transmit: %q", ticket.Reason)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE activity SET archived_at = now() WHERE id = $1`, copying); err != nil {
+		t.Fatalf("archiving the copying mail: %v", err)
+	}
+	if ticket := transmit(2); ticket.Allowed {
+		t.Fatal("a send went out after the evidence for the Cc rule was gone")
+	}
+}
+
+// A relink repoints a participant row to another contact and leaves the
+// captured address. The new contact earns no Cc standing, at staging or at
+// transmit.
+func TestARelinkedCopiedParticipantTransfersNoStanding(t *testing.T) {
+	e := setupResolve(t)
+	e.capturedMail(t, "thread-relink", "cc", true)
+	other := ids.New[ids.ContactKind]()
+	ctx := context.Background()
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Bob Other', 'manual', 'human:x')`, other); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, 'bob@other.test', true, 'manual', 'human:x')`, other); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		UPDATE activity_participant SET contact_id = $1
+		 WHERE contact_id = $2 AND role = 'cc'`, other, e.contact); err != nil {
+		t.Fatalf("relinking the copied participant: %v", err)
+	}
+	relinked := *e
+	relinked.contact, relinked.address = other, "bob@other.test"
+
+	if d := relinked.decide(t, commsauthz.Request{ThreadKey: "thread-relink"}); d.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("staging decision = %+v, want no allow for a relinked contact", d)
+	}
+	delivery := relinked.plantDelivery(t)
+	if _, err := e.owner.Exec(ctx, `
+		UPDATE activity SET thread_key = 'thread-relink'
+		 WHERE id = (SELECT activity_id FROM comms_outbound WHERE id = $1)`, delivery); err != nil {
+		t.Fatal(err)
+	}
+	ticket, err := relinked.gate.AuthorizeTransmit(relinked.ctx, commsauthz.TransmitRequest{
+		DeliveryID: delivery, Attempt: 1, Recipients: []connector.Recipient{{Email: relinked.address}},
+		Subject: "Re: s", Body: "b",
+	})
+	if err != nil {
+		t.Fatalf("authorizing the transmit: %v", err)
+	}
+	if ticket.Allowed {
+		t.Fatal("a relinked contact was allowed at transmit on the old contact's Cc standing")
 	}
 }

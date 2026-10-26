@@ -62,6 +62,7 @@ var companyGate = objectGate{
 // than in the gated set: removing the company condition could only WIDEN the
 // result the caller already sees.
 var predicateCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/sitereadlogo.go:logoUnwornByAnyCompany":                 "the NOT EXISTS that keeps a parked logo key while any company wears it, inside the release UPDATE on site_read. Nothing of a company is selected; removing it could only release more keys",
 	"internal/compose/dealscoutbuyer.go:scoutBuyerSignal":                              "company liveness only narrows verified buyer eligibility; the predicate returns no company fields, and the suggestion or signal reader separately checks the named company",
 	"internal/modules/deals/legalreviewview.go:readPacketNames":                        "names the company of a stored review pack at each open, so no copy outlives an erasure or rename. packetWire shows it only when readReviewerSight says the reader may see that company now",
 	"internal/modules/collections/tagsuggestion.go:tagSuggestionStandsClause":          "whether a tag suggestion still stands: the company appears only inside EXISTS, to ask that it is live and not yet tagged. Nothing is selected; composed into the system-only superseding pass and into the gated visible-suggestions read, where removing it could only show more suggestions",
@@ -97,6 +98,7 @@ var predicateCompanyReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleCompanyReads = gatekit.Waive(map[string]string{
+	"internal/compose/company360/viewbaseline.go:keyVisitsSQL":                  "the visit-mark keying data task, run by KeyVisitsTx behind auth.RequireSystem: `company` appears only in an EXISTS that decides whether a mark's record is gone. It answers user_record_view ids and nothing of a company",
 	"internal/modules/contacts/dedupecompanyevidence.go:readCompanyEvidence":    "the second-fact check of the dedupe ladder's name lane: it reads the subject's and its similar-named rivals' address and stated phone, under the same callers as fuzzyCompany (company writes, the duplicate scan behind newDedupeScanner, Resolve past its company read grant) and the nightly re-check under auth.RequireSystem. What leaves is which rivals stay ranked; no company column reaches any caller",
 	"internal/modules/contacts/dedupecompanyswitchboard.go:switchboardNumbers":  "counts the live companies stating a phone number that two similar-named companies share, so a switchboard links neither. It runs inside the same dedupe ladder as readCompanyEvidence, and only a per-number yes or no leaves it; no company column reaches any caller",
 	"internal/modules/signals/entitykeys.go":                                    "the backfill of the per-type record keys asks only whether the company its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no company column leaves the statement",
@@ -148,6 +150,7 @@ var lifecycleCompanyReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X. rbacgate_test.go's header records being bitten by exactly that.
 var calleeGatedCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/addressrepair.go:unsplitCompanyAddress":            "one company's unsplit address, read by unsplitProposal to split it. Its one caller chain is repairUnsplitCompanyAddress ← RepairUnsplitCompanyAddressesTx, which asks auth.RequireSystem and auth.Require(ctx, entityCompany, read) first",
 	"internal/modules/contacts/unarchive.go":                                      "the un-archive shapes: the company's label and state under FOR UPDATE, and company liveness inside a relationship restore. Read only through RestoreCompanyTx and RestoreContactTx, which ask auth.Require for the delete grant and auth.EnsureWritable on the row first (ensureRestorable)",
 	"internal/compose/magic/undoversion.go":                                       "the version an undo on the magic receipt is sent with, for the restore route's If-Match; no other column. Reached only from magic.Service.Read and LineRecords, and only for a record their done lane already placed through doneForType, which asks auth.Require for the object grant and renders auth.ScopeClauseFor on the same row; the restore write re-asks everything under its own lock",
 	"internal/modules/contacts/company_read.go:readCompany":                       "the shared single-row company read, and the spine every company surface goes through — get, create, update, archive, restore, the merge survivor. Each of those entry points asks auth.Require for the company object and most take a row probe as well; the spine trusts them rather than re-asking inside one transaction. It stamps writability through auth.StampWritable, which is the row half spelled on the way out",
@@ -234,21 +237,15 @@ func readsCompanyTable(filePath string, file *ast.File) bool {
 func TestEveryReaderOfTheCompanyTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 	t.Parallel()
 	files := companyReaderScope.Files(t)
-	gated := companyGate.gatedFunctionsByPackage(t, files)
+	walk := companyGate.walkPackages(t, files)
 	consts := constantTable{}
 
 	var satisfied int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
 		for _, site := range companyGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := parsed.Path
-			if site.function != "" {
-				subject += ":" + site.function
-			}
-			carriesGate := site.holdsGate || callsAGatedHelper(site.calls, gated[pkg])
-			if site.function == "" {
-				carriesGate = site.holdsGate || companyGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
-			}
+			subject := site.subject(parsed.Path)
+			carriesGate := walk.carries(t, companyGate, parsed, site, consts.of(t, pkg))
 			verdict := verdictIn(t, subject, companyVerdicts)
 
 			switch {

@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
 // accountContact is one COWORKER of the contact — another contact at the same
@@ -79,6 +80,22 @@ func (h Reads) addAccountGroup(
 	return dropped, h.addAccountEdges(ctx, tx, contacts, now, out)
 }
 
+// seatViewer is the user whose typed seat aliases this viewer may see: the
+// same UserID row scope keys on. An agent holds it only on a passport whose
+// user is the one it acts for. Any other agent, a connector or the system sees
+// proven seat addresses alone.
+func seatViewer(viewer principal.Principal) ids.UUID {
+	switch viewer.Type {
+	case principal.PrincipalHuman:
+		return viewer.UserID
+	case principal.PrincipalAgent:
+		if viewer.ActsAsItsUser() && viewer.OnBehalfOf == viewer.UserID {
+			return viewer.UserID
+		}
+	}
+	return ids.Nil
+}
+
 // readCompanyContacts finds the other current employees of this contact's
 // employer, row-scoped in the query itself.
 //
@@ -122,7 +139,7 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		return nil, 0, err
 	}
 	viewer, _ := principal.Actor(ctx)
-	seatPos := arg(seats.For(viewer.UserID))
+	seatPos := arg(seats.For(seatViewer(viewer)))
 	limitPos := arg(graphAccountCap)
 
 	// count(*) OVER () rides the same row-scoped predicate as the page, so the
@@ -151,7 +168,7 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		   AND colleague.kind = 'employment'
 		   AND `+employment.IsCurrentSQL("colleague.ended_at")+`
 		   AND colleague.archived_at IS NULL
-		  JOIN contact p ON p.id = colleague.contact_id AND p.archived_at IS NULL
+		  JOIN contact p ON p.id = colleague.contact_id AND p.archived_at IS NULL AND `+relationshipmark.NotMarkedSQL("p")+`
 		 WHERE theirs.contact_id = $%d
 		   AND theirs.kind = 'employment'
 		   AND `+employment.IsCurrentSQL("theirs.ended_at")+`

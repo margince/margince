@@ -68,9 +68,9 @@ record page one ladder. That work is in Step 3 (`composed.css`, `pagezones.css`,
 
 | Width | What changes |
 |---|---|
-| Above 1400px | The full layout: five readings, the 360, two columns `3fr/2fr`. The details panel opens beside the reading at 300px. |
-| Above 1200px, up to 1400px | Readings keep five across at 22px numbers. When the details panel is open, it takes the readings to 21px, and the columns stay two. |
-| Above 720px, up to 1200px | Readings wrap to three, then two per row, and the two columns stack into one. The details panel opens as a **drawer over the page** (`Modal intent="drawer"`, 560px), and never makes the reading smaller. The tab strip scrolls to the side inside its own box (`TableScroll` rule: the page never scrolls to the side). |
+| Above 1400px | The full layout: five readings, the 360, two columns `3fr/2fr`. The details stand in the 340px card on the left, under the record head, always shown. The tabs and the open tab sit on the right. |
+| Above 1200px, up to 1400px | Readings keep five across at 22px numbers, and the columns stay two. |
+| Above 720px, up to 1200px | Readings wrap to three, then two per row, and the two columns stack into one. Under 900px of record row, the details card takes the full width above the tabs and scrolls with the page (`recordview.css`). The tab strip scrolls to the side inside its own box (`TableScroll` rule: the page never scrolls to the side). |
 | 720px and below | The head stacks: mark and name, then facts, then the verbs as **the first base verb + more** only. The head's first verb keeps its outline, and the rest move into `more`. Only a lead's Qualify is filled, as in every other place. Readings sit two per row. The spine scrolls to the side in its own box (`.co-spine-scroll` already does). The map scrolls (`.rmap-scroll` already does), and the rail becomes the phone bar. |
 | 390px | The sweep that exists: no scroll to the side, 44px targets, `--stickyBottomInset`. |
 

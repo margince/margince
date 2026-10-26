@@ -12,12 +12,11 @@ package compose
 // The behaviours that matter, in the order they matter:
 //
 //   - a human-logged activity attributes to the human it names (exact);
-//   - a connector-captured activity attributes to the mailbox owner, which is
-//     the case the whole feature exists for and the one the old captured_by
-//     string-match could never reach;
-//   - with TWO connections for one provider it attributes to NEITHER — a
-//     wrong edge tells someone to ask a colleague who has never met the
-//     contact, which is worse than an absent one;
+//   - a connector-captured activity attributes to the mailbox owner its stamp
+//     names, which is the case the whole feature exists for;
+//   - a bare `connector:gmail` stamp attributes to NOBODY, even with one
+//     connection for the provider — a wrong edge tells someone to ask a
+//     colleague who has never met the contact, and it lets them read the mail;
 //   - the pass is idempotent and terminates: re-running writes nothing, and
 //     it never re-selects an activity it cannot attribute.
 
@@ -121,18 +120,33 @@ func TestTheBackfillAttributesConnectorMailToItsMailboxOwner(t *testing.T) {
 	seedConnection(t, e, e.Rep1)
 
 	// The case the old derivation could never reach: captured_by names the
-	// connector, not a human, so a string-match on 'human:%' found nothing.
-	captured := seedLegacyActivity(t, e, "bf-conn-1", "connector:gmail", "outbound", "pat@counterparty.test")
+	// connector and the seat it acted for, not a human.
+	captured := seedLegacyActivity(t, e, "bf-conn-1", "connector:gmail:"+e.Rep1.String(), "outbound", "pat@counterparty.test")
 	// And one a human logged, which states its user outright.
 	logged := seedLegacyActivity(t, e, "bf-human-1", "human:"+e.Rep1.String(), "outbound", "pat@counterparty.test")
 
 	runBackfill(t, e)
 
 	if got := participantUsers(t, e, captured); len(got) != 1 || got[0] != e.Rep1 {
-		t.Errorf("connector-captured mail attributed to %v, want the single mailbox owner %s", got, e.Rep1)
+		t.Errorf("connector-captured mail attributed to %v, want the mailbox owner its stamp names, %s", got, e.Rep1)
 	}
 	if got := participantUsers(t, e, logged); len(got) != 1 || got[0] != e.Rep1 {
 		t.Errorf("human-logged activity attributed to %v, want %s", got, e.Rep1)
+	}
+}
+
+// A bare stamp names no mailbox. The provider's only connection is not proof:
+// the stamp reads the same once a second seat's connection row is gone.
+func TestTheBackfillLeavesBareStampedMailUnowned(t *testing.T) {
+	e := integration.Setup(t)
+	seedConnection(t, e, e.Rep1)
+	bare := seedLegacyActivity(t, e, "bf-bare-1", "connector:gmail", "inbound", "pat@counterparty.test")
+
+	if wrote := runBackfill(t, e); wrote != 0 {
+		t.Errorf("the backfill wrote %d participant rows for mail whose stamp names no mailbox", wrote)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1`, bare); got != 0 {
+		t.Errorf("bare-stamped mail carries %d participant rows, want none: it has no proven owner", got)
 	}
 }
 
@@ -162,7 +176,7 @@ func TestTheBackfillRefusesToGuessBetweenTwoMailboxes(t *testing.T) {
 func TestTheBackfillIsIdempotentAndTerminates(t *testing.T) {
 	e := integration.Setup(t)
 	seedConnection(t, e, e.Rep1)
-	seedLegacyActivity(t, e, "bf-idem-1", "connector:gmail", "outbound", "pat@counterparty.test")
+	seedLegacyActivity(t, e, "bf-idem-1", "connector:gmail:"+e.Rep1.String(), "outbound", "pat@counterparty.test")
 	// An activity nothing can attribute: no connection matches its provider.
 	// It must be skipped forever rather than re-selected, or the drain loop
 	// above would never end.

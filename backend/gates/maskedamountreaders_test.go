@@ -584,7 +584,7 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	columns := dealMaskedColumns(t)
 	builders := dealAmountBuilderNames(t, columns)
 	files := maskedAmountScope(columns, builders).Files(t)
-	gated := maskGate.gatedFunctionsByPackage(t, files)
+	gated := maskGate.walkPackages(t, files).gated
 	consts := constantTable{}
 
 	var satisfied, inMaskOwner int

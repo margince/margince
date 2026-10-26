@@ -38,10 +38,10 @@ func (a *assembly) installationBaseCurrency() (string, error) {
 	return base, nil
 }
 
-// One assembly uses one language even if the setting changes during its reads.
+// One assembly uses one language, the reader's, even if the setting changes during its reads.
 func (a *assembly) recordLanguage() textlang.Lang {
-	if a.baseLanguage == "" {
-		a.baseLanguage = identity.BaseLanguageForRecord(a.ctx, a.tx)
+	if a.readerLanguage == "" {
+		a.readerLanguage = identity.ReaderLanguageForRecord(a.ctx, a.tx)
 	}
-	return a.baseLanguage
+	return a.readerLanguage
 }

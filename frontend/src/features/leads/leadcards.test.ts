@@ -7,6 +7,7 @@ type Activity = components["schemas"]["Activity"];
 
 function row(extra: Partial<Activity>): Activity {
   return {
+    offers_email: false,
     id: "a1",
     kind: "email",
     direction: "inbound",

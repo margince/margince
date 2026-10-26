@@ -56,6 +56,7 @@ const contact: components["schemas"]["Contact"] = {
 
 function inboundEmail(): Activity {
   return {
+    offers_email: false,
     id: "a-1",
     kind: "email",
     direction: "inbound",

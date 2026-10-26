@@ -1,5 +1,6 @@
 import { Ellipsis, ShieldAlert, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { EntityRef } from "../../components/entityref";
 import { SendMark } from "../../components/sendpermission";
 import { Button, Field } from "../../design-system/atoms";
 import { DockedWindow, type DockState } from "../../design-system/dockedwindow";
@@ -17,6 +18,7 @@ import {
   type CommunicationContext,
   contextOptions,
 } from "../../lib/compose-context";
+import type { RelinkKind } from "../../lib/recordtargets";
 import { useRichTextLabels } from "../../lib/richtextlabels";
 import type { CarriageViolation } from "./carriage";
 import type { Activity, VoiceProfile } from "./compose";
@@ -74,16 +76,63 @@ export function MailSendNotices({
 
 // The composer's window: docked beside the page, at its own size, grown or
 // folded. Each opening starts at its own size.
+/**
+ * The record the message is filed under, as a way back to it.
+ *
+ * The window docks and outlives the page that opened it. A reader who started
+ * from the day's queue or a worklist has the record nowhere on screen.
+ *
+ * Following this costs nothing, so the link opens in place. `EntityRef` offers
+ * `newTab` for a reference inside a dialog, where following it would lose the
+ * draft. The dock makes that not so here.
+ *
+ * It renders the window beside the routed page rather than inside it. A route
+ * change leaves the window mounted, and the words are kept on the server as
+ * they are typed.
+ *
+ * Drawn wherever the composer is, the record's own page included. What sits
+ * behind the window changes while it stays open. A link that came and went with
+ * the page would be the harder of the two to read.
+ *
+ * A folded window shows its bar and not this. That bar is one button, and a
+ * link inside a button is markup no reader can use.
+ */
+export function ComposeAbout({
+  kind,
+  id,
+  name,
+}: Readonly<{
+  kind: RelinkKind;
+  id: string | null | undefined;
+  name: string | undefined;
+}>) {
+  const t = useT();
+  if (!id) {
+    return null;
+  }
+  return (
+    <span className="compose-about">
+      <span className="compose-about-label">{t("compose.filedUnder")}</span>
+      <EntityRef kind={kind} id={id} name={name} />
+    </span>
+  );
+}
+
 export function ComposeFrame({
   title,
+  aside,
   onClose,
   closeDisabled,
   bodyId,
+  openedFrom,
   children,
 }: Readonly<{
   title: string;
+  /** The record the draft files under, named in the bar. */
+  aside?: ReactNode;
   onClose: () => void;
   closeDisabled: boolean;
+  openedFrom?: HTMLElement;
   /** The words' field, where focus lands as the window opens. */
   bodyId: string;
   children: ReactNode;
@@ -92,11 +141,13 @@ export function ComposeFrame({
   return (
     <DockedWindow
       title={title}
+      aside={aside}
       state={state}
       onStateChange={setState}
       onClose={onClose}
       closeDisabled={closeDisabled}
       initialFocusTo={() => document.getElementById(bodyId)}
+      openedFrom={openedFrom}
     >
       {children}
     </DockedWindow>

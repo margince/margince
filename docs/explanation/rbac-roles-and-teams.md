@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/identity/internal/policy/defaults.go backend/internal/platform/auth/rbac.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/tableclass.go backend/internal/platform/auth/writescope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/teams.go backend/internal/modules/identity/grants.go -->
 # Roles, teams, and record sharing
 
 This page goes with [authorization.md](authorization.md). That page says **where** the access check

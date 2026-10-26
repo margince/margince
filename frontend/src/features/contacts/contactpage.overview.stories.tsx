@@ -239,6 +239,7 @@ const foldedActivities: View = {
   activities: {
     data: [
       {
+        offers_email: false,
         id: "a-40",
         kind: "email",
         occurred_at: "2026-08-29T09:15:00Z",
@@ -266,6 +267,7 @@ const foldedActivities: View = {
         },
       },
       {
+        offers_email: false,
         id: "a-41",
         kind: "email",
         occurred_at: "2026-08-27T16:40:00Z",
@@ -286,6 +288,7 @@ const foldedActivities: View = {
         },
       },
       {
+        offers_email: false,
         id: "a-42",
         kind: "note",
         occurred_at: "2026-08-26T11:00:00Z",

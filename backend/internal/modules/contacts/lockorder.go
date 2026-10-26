@@ -11,6 +11,10 @@ package contacts
 //  3. the lane locks: phone, then address base, then name (plain and digraph);
 //  4. new rows, and lead rows.
 //
+// The seat-address locks (storekit.SeatAddressesFor) come before the
+// employment lock and before a capture ledger row a transition writes. Alias
+// writers hold them and wait on no contact row.
+//
 // So a writer holding a lane lock never waits on an existing contact. A create
 // takes the lanes and then writes a new contact. An edit locks its contact and
 // takes the lanes before it writes an address. A provider fill, whose contact
@@ -38,6 +42,23 @@ func lockContactLanes(ctx context.Context, tx pgx.Tx, emails []string, name stri
 		return err
 	}
 	return lockNameLane(ctx, tx, name)
+}
+
+// lockLanesForContacts takes the lanes of several contacts at once, each lane
+// kind sorted across all of them, so the order matches the one-contact case.
+func lockLanesForContacts(ctx context.Context, tx pgx.Tx, subjects []contactSubject) error {
+	var emails, names []string
+	for _, subject := range subjects {
+		emails = append(emails, subject.emails...)
+		names = append(names, subject.name)
+	}
+	if err := storekit.LockSubjectKeys(ctx, tx, nil, emails); err != nil {
+		return err
+	}
+	if err := lockAddressBaseLane(ctx, tx, emails); err != nil {
+		return err
+	}
+	return lockNameLanes(ctx, tx, names...)
 }
 
 // lockLanesAndReview takes the candidate's lane locks and reads the review lanes

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/pkg/extension backend/internal/compose/extensions.go backend/internal/compose/extingress.go backend/internal/compose/extensiontools.go backend/internal/compose/channelprovider.go backend/internal/compose/extledger.go backend/tools/gen-composition scripts/check-pkg-freeze.sh -->
 # Extensibility: the extension tier
 
 The *extension tier* is how a small, closed add-on comes into this product without a change to any file

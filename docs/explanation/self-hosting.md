@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/compose/dbrole.go backend/internal/compose/schemareadiness.go backend/internal/compose/releaseversion.go backend/internal/compose/releasewatch.go backend/cmd/api/mcpapps.go backend/internal/compose/installationcountry.go docker-bake.hcl -->
 # Self-hosting: why a deployment is shaped this way
 
 The steps to run Margince on your own servers are in

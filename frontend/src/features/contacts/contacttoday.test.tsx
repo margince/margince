@@ -85,6 +85,7 @@ const THIN: ContactMoment = {
 };
 
 const OPEN_TASK = {
+  offers_email: false,
   id: "a-9",
   kind: "task",
   subject: "Send the renewal quote",

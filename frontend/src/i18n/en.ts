@@ -2066,7 +2066,7 @@ export const en = {
   "history.field.resolved_category": "Message category",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Score override reason",
-  "history.field.size_band": "Size",
+  "history.field.size_band": "Employees",
   "history.field.social": "Social profiles",
   "history.field.source": "Source",
   "history.field.origin": "Origin",
@@ -2311,6 +2311,8 @@ export const en = {
   "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange":
     "You cannot edit this company. Ask its owner to share it, or an administrator for edit rights.",
+  "record.actionRefused":
+    "Your role does not include this action. Ask an administrator for the right.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
@@ -2384,6 +2386,8 @@ export const en = {
   // The picked record's detail line, so two look-alike names stay apart here too.
   "merge.confirmDetail":
     "Merge {source} into {target} ({detail})? This archives {source}.",
+  "merge.targetReadOnly":
+    "You can only read this record, so it cannot be kept.",
   "merge.submit": "Merge",
 
   "tab.overview": "Overview",
@@ -2737,7 +2741,7 @@ export const en = {
   "list.viewProspects": "Prospects",
   "company.filterLifecycleAll": "Any stage",
   "company.filterRelTypeAll": "Any type",
-  "company.filterSizeBandAll": "Any size",
+  "company.filterSizeBandAll": "Any number of employees",
   "consent.confirmRecipient": "Send to {address}",
   "consent.guardFailed": "Communication permissions could not be loaded.",
   "consent.permissionScope":
@@ -2808,7 +2812,8 @@ export const en = {
   // questions the retired classification answered with one value.
   "company.lifecycle": "Lifecycle",
   "company.relationshipTypes": "Relationship type",
-  "company.sizeBand": "Company size",
+  "company.sizeBand": "Employees",
+  "company.sizeBandValue": "{band} employees",
   "company.lifecycle.unknown": "Unknown",
   "company.lifecycle.target": "Target",
   "company.lifecycle.prospect": "Prospect",
@@ -2893,7 +2898,7 @@ export const en = {
   "co.overview.kind.message": "message",
   "record.details.about": "About",
   "record.details.ownership": "Ownership",
-  "co.aside.size": "Size",
+  "co.aside.size": "Employees",
   "co.aside.wayIn": "Way in",
   "record.details.visibleTo": "Visible to",
   "co.aside.visibleEveryone": "Everyone",
@@ -3771,7 +3776,7 @@ export const en = {
   "compose.reason.posture": "Held by your setting",
   "compose.reason.workspaceFloor": "Held by the company",
   "compose.reason.noRecord": "Held: no record",
-  "compose.reason.pendingVerdict": "Held until classified",
+  "compose.reason.pendingVerdict": "Held until checked",
   "compose.reason.manual": "Kept private",
   "compose.reason.verdict": "Held by classification",
   "compose.reason.counterparty": "Held: counterparty mail",
@@ -3896,6 +3901,8 @@ export const en = {
   "activity.detail.none": "This activity",
   "activity.followUps": "Follow-up tasks",
   "activity.noFollowUps": "No follow-up tasks",
+  "activity.notYoursToChange":
+    "You cannot change this activity. Ask the colleague it belongs to, or an administrator, for edit rights.",
   "activity.files.empty": "No files on this activity yet.",
   "activity.files.title": "Files on {subject}",
   "activity.followUpOpen": "Open",
@@ -5658,7 +5665,7 @@ export const en = {
   "create.displayName": "Company name",
   "create.legalName": "Legal name",
   "create.industry": "Industry",
-  "create.sizeBand": "Company size",
+  "create.sizeBand": "Employees",
   "co.address.summary": "Address",
   "co.address.countryMismatch": "Postal code and city are in {country}",
 
@@ -5753,6 +5760,7 @@ export const en = {
   "evidence.mark": "read",
 
   "evidence.bought": "bought",
+  "evidence.fromProvider": "from provider",
   "evidence.confirm": "Confirm",
   "evidence.correct": "Correct",
   "evidence.save": "Save",
@@ -5881,6 +5889,7 @@ export const en = {
   "files.empty":
     "No files on this deal yet. Upload a file, or link an email with an attachment.",
   "files.originUnknown": "an unknown sender",
+  "files.origin.mail": "From {who} · {subject}",
   "files.hiddenBadge": "Hidden",
   "files.hide": "Hide from this deal",
   "files.unhide": "Show on this deal again",
@@ -6026,6 +6035,7 @@ export const en = {
   "compose.filesTotal_other": "{count} files · {size}",
   "compose.filesLimit": "Up to {most} files per message.",
   "compose.newEmailTo": "New email to {name}",
+  "compose.filedUnder": "Filed under",
   "compose.discardMessage": "Delete draft",
   "compose.draftSaving": "Saving…",
   "compose.earlierThreads_one": "{count} earlier thread",
@@ -6052,6 +6062,8 @@ export const en = {
   "compose.newEmail": "New email",
   "compose.replyingTo": "Replying to “{subject}” · {when}",
   "compose.followingUp": "Following up on your email “{subject}” · {when}",
+  "compose.aboutRow": "About: {subject}",
+  "compose.aboutWhen": "· {when}",
   "compose.draftContextHint":
     "Describe the purpose. Margince uses the record context.",
   "compose.draftEmail": "Draft email",
@@ -6094,6 +6106,7 @@ export const en = {
   "compose.to": "To",
   "compose.cc": "Cc",
   "compose.subject": "Subject",
+  "compose.projectKeyInSubject": "Add project key to subject (helps filing)",
   "compose.noGroundableRecipient":
     "No contacts at this company yet. Write the message manually, or add a contact first.",
   "compose.draftTo": "Draft to",
@@ -6125,12 +6138,15 @@ export const en = {
   "compose.threadGone":
     "That thread can no longer be answered, so a new email was opened instead. Check the recipient before sending.",
   "compose.colleagueMailbox_one":
-    "This message was delivered to the mailbox of {names}. Your reply is sent from your own mailbox, under your name.",
+    "This email came in to {names}’s mailbox. Your reply goes to the recipients below, from your own mailbox and under your name.",
   "compose.colleagueMailbox_other":
-    "This message was delivered to the mailboxes of {names}. Your reply is sent from your own mailbox, under your name.",
+    "This email came in to the mailboxes of {names}. Your reply goes to the recipients below, from your own mailbox and under your name.",
+  "compose.notOnThreadTitle": "You are not on this thread",
+  "compose.notOnThread": "You are not on this thread.",
+  "compose.dealOwner": "{owner} owns this deal.",
   "compose.colleagueUnnamed": "a colleague",
   "compose.threadGoneTitle": "Thread cannot be answered",
-  "compose.colleagueMailboxTitle": "Delivered to a colleague",
+  "compose.colleagueMailboxTitle": "This email is in a colleague’s mailbox",
   "compose.deadRecipientsTitle": "Mail to these addresses bounces",
   "compose.attach": "Attach",
   "compose.filesOnRecord": "Attach from this record",
@@ -6231,8 +6247,23 @@ export const en = {
     "Several records share this address, so the recipient cannot be identified. Merge the records to resolve this.",
   "sendPermission.reason.unconfirmed":
     "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
-  "sendPermission.reason.other":
-    "This message cannot be sent, and no seat here can override that.",
+  "sendPermission.reason.noMarketingConsent":
+    "Marketing needs the recipient’s consent, and none is on record. If this message is not marketing, pick the contact reason that fits.",
+  "sendPermission.reason.noMarketingConsentFact":
+    "Marketing needs the recipient’s consent, and none is on record.",
+  "sendPermission.reason.legacyPurpose":
+    "This message uses an old purpose that nothing on record supports. Pick a contact reason so Margince can check it.",
+  "sendPermission.reason.legacyPurposeFact":
+    "This message uses an old purpose that nothing on record supports.",
+  "sendPermission.reason.unknownPurpose":
+    "This message names a purpose Margince does not know. Pick a contact reason from the list.",
+  "sendPermission.reason.unknownPurposeFact":
+    "This message names a purpose Margince does not know.",
+  "sendPermission.reason.claimContradicts":
+    "The contact reason you picked does not match this thread. Pick another reason, or leave it empty so Margince reads it from the thread.",
+  "sendPermission.reason.claimContradictsFact":
+    "The contact reason given does not match this thread.",
+  "sendPermission.reason.other": "This message cannot be sent as it stands.",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send email",
   "compose.threadLeave": "New email",
@@ -6429,7 +6460,7 @@ export const en = {
   "analytics.field.project": "Project label",
   "analytics.field.project_id": "Project",
   "analytics.field.quiet_since": "Quiet since",
-  "analytics.field.size_band": "Company size",
+  "analytics.field.size_band": "Employees",
   "analytics.field.source": "Source",
   "analytics.field.origin": "Origin",
   "analytics.field.stage_id": "Stage",
@@ -6554,7 +6585,8 @@ export const en = {
   "analytics.overdueCommitments": "Overdue commitments",
   "analytics.quietSince": "Quiet since",
   "analytics.nothingQuiet": "No project in delivery has gone quiet.",
-  "analytics.noProjectsYet": "No projects yet. A won deal creates one.",
+  "analytics.noProjectsYet":
+    "No projects yet. Create one under Projects with New project. A won deal moves its project to Delivering.",
   "analytics.coverageSub": "Connection health from the latest check.",
   "analytics.covSource": "Source",
   "analytics.covState": "State",
@@ -7795,7 +7827,7 @@ export const en = {
   "import.reason.row_key_repeated":
     "The “{column}” value “{value}” is already used by line {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
   "import.reason.size_band_invalid":
-    "Size_band “{value}” is not one of {allowed}.",
+    "Employees “{value}” is not one of {allowed}.",
   "import.reason.tag_created":
     "No tag had this name, so the import created it.",
   "import.reason.tag_name_invalid":
@@ -9158,6 +9190,8 @@ export const en = {
   "aiHealth.noCalls": "No model calls in the last {hours}h.",
   "aiHealth.answering": "Responding",
   "aiHealth.notAnswering": "Not responding",
+  "aiHealth.laneNeedsKey":
+    "{provider} holds no key, so the saved binding is not running and the previous model keeps answering. Set {env}.",
   "aiHealth.callCounts_one": "{count} call, {failures} failed",
   "aiHealth.callCounts_other": "{count} calls, {failures} failed",
   "heldThreads.title": "Held threads",
@@ -9462,7 +9496,7 @@ export const en = {
   // whether a domain can name a company is a fact about the domain.
   "consumerMail.title": "Consumer mail domains",
   "consumerMail.sub":
-    "Mail from these domains creates the contact but never a company. Margince ships a list; add a missing domain or override a wrong one.",
+    "Domains of personal mailboxes. Mail from them never makes a company. The sender becomes a contact at once only if someone at your company has mailed back and forth with them or met them, or an earlier decision let them in. Otherwise they become one once Margince has sorted them. Margince ships a list; add a missing domain or override a wrong one.",
   "consumerMail.addedTitle": "Added here",
   "consumerMail.addTitle": "Add domain",
   "consumerMail.domainLabel": "Domain",
@@ -14235,6 +14269,10 @@ export const en = {
   "contact.network.captureGap_other":
     "{names} are on this contact’s threads and have not connected a mailbox, so later mail may be missing here.",
   "contact.network.captureGapInvited": "{name} (has not signed in yet)",
+  "contact.network.captureGapMore_one": "{names} and {count} more",
+  "contact.network.captureGapMore_other": "{names} and {count} more",
+  "contact.network.captureGapsFailed":
+    "Could not read which colleagues on this contact’s threads lack a connected mailbox.",
   "contact.graph.noDirect":
     "No one in the company has corresponded with this contact.",
   // Names the column beside the graph, for a reader who lands in it from the
@@ -14311,6 +14349,7 @@ export const en = {
   "contact.intro.change.buckets": "{from} → {to}",
   "contact.intro.stripHandoff": "Intro request",
   "contact.intro.handoffNotStarted": "Not started",
+  "contact.intro.handoffUnread": "Could not be read",
   "contact.intro.handoffOwner": "Next: {name}",
   "contact.intro.ownerColleague": "a colleague",
   "contact.intro.ownerNobody": "no one",
@@ -14423,6 +14462,8 @@ export const en = {
   "contact.intro.answerDeclineHelp":
     "The request closes. Add a reason if useful.",
   "contact.intro.asksTitle": "Introductions",
+  "contact.intro.asksFailed":
+    "The introductions for this contact could not be read.",
   "contact.intro.answerAction": "Answer",
   "contact.intro.completeIntroducedAction": "Mark introduced",
   "contact.intro.completeNameDroppedAction": "Mark name used",
@@ -14470,6 +14511,12 @@ export const en = {
   "contact.bandBadge.moderate": "Moderate",
   "contact.bandBadge.strong": "Strong",
   "contact.bought.from": "Bought from {provider}",
+  "contact.provider.from": "From {provider}",
+  "contact.provider.trigger.automatic_create": "Added for a new contact",
+  "contact.provider.trigger.automatic_import": "Added for a new contact",
+  "contact.provider.trigger.automatic_backfill": "Added by the catch-up sweep",
+  "contact.provider.trigger.scheduled_refresh": "Refreshed on schedule",
+  "contact.provider.trigger.manual": "Requested by",
   "contact.network.title": "Colleagues who know this contact",
 
   // The contact record page V2 (ADR-0096). The strip, rail and card words are
@@ -14586,6 +14633,7 @@ export const en = {
     "You do not have access to this contact’s deals.",
   "contact.commercial.noDeal": "No open deal.",
   "contact.commercial.closes": "closes {date}",
+  "contact.commercial.closed": "closed {date}",
   "contact.commercial.committee": "Buying committee",
   "contact.commercial.openDeal": "Open deal",
 
@@ -14798,7 +14846,7 @@ export const en = {
   "provider.disconnectConfirm.title": "Disconnect this provider?",
   "provider.disconnectConfirm.body":
     "New lookups stop immediately and the key is destroyed. Purchased data stays on your records; disconnecting does not delete it.",
-  "provider.deleteData": "Delete purchased data",
+  "provider.deleteData": "Delete provider data",
   "provider.deleteDataConfirm.title": "Delete all data from this provider?",
   "provider.deleteDataConfirm.impactTitle": "This cannot be undone",
   "provider.deleteDataConfirm.impact.values":
@@ -14995,7 +15043,7 @@ export const en = {
   "filters.field.classification": "Classification",
   "filters.field.company_industry": "Company industry",
   "filters.field.company_lifecycle": "Company lifecycle",
-  "filters.field.company_size_band": "Company size",
+  "filters.field.company_size_band": "Employees",
   "filters.field.country": "Country code",
   "filters.field.created_at": "Created",
   "filters.field.hosting_provider": "Hosting",
@@ -15037,6 +15085,10 @@ export const en = {
   "filters.op.atMost": "is at most",
   "filters.op.withinRadius": "is within",
   "filters.sentence.radiusOf": "{km} km of {place}",
+  "filters.radius.km": "Distance (km)",
+  "filters.radius.place": "Place name (optional)",
+  "filters.radius.lat": "Latitude",
+  "filters.radius.lon": "Longitude",
   "filters.join.and": "and",
   "filters.join.or": "or",
   "filters.sentence.clause": "{field} {op} {value}",
@@ -15225,6 +15277,7 @@ export const en = {
   "lists.why.value": "Now: {value}",
   "lists.why.empty": "empty",
   "lists.why.hidden": "Value hidden from you",
+  "lists.why.moreLinked": "and more not shown",
   "lists.why.daysAgo_one": "{count} day ago",
   "lists.why.daysAgo_other": "{count} days ago",
   "lists.why.today": "today",
@@ -16526,9 +16579,9 @@ export const en = {
   "contact.card.saidEmpty": "No conversation captured yet.",
   "contact.card.theyWrote": "they wrote",
   "contact.card.youWrote": "you wrote",
-  "contact.card.theyCalled": "they called",
-  "contact.card.youCalled": "you called",
   "contact.card.bothSides": "both sides",
+  "contact.card.wroteBy": "{who} wrote",
+  "contact.card.inCc": "in Cc",
   "contact.card.awaitingThem": "Waiting on them",
   "contact.card.noEconomicBuyer": "No economic buyer named yet",
   "contact.card.committee_one": "{count} person on the buying committee",

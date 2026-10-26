@@ -20,6 +20,7 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useT } from "../../i18n";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
 import { useMessageAudience } from "../../lib/audienceservice";
+import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import {
@@ -49,18 +50,11 @@ type AudienceMember = components["schemas"]["AudienceMember"];
 // The per-row action cluster the 360 timelines mount in each entry's action
 // slot.
 //
-// Reply, because a send anchored to something that was never mail carries no
-// RFC822 identity to thread against and simply starts a conversation — which is
-// how the backend already reads it. Gating the composer on an email row instead
-// makes a fresh workspace, whose only rows are logged notes, unable to send at
-// all. A `message` row carries the opposite gate: it is withheld, not always
-// offered, when the contact behind it cannot be reached on the transport that
-// carried it (see useChannelReachable).
+// rowAnswer picks the verb: Reply on mail, Write email on any other row the
+// server says it can address (`offers_email`).
 //
-// Relink, because an activity shown on a 360 timeline is by construction already
-// linked to the entity whose timeline renders it, so re-associating it to the
-// right record is always meaningful — and the Activity list payload carries no
-// `links` to gate on regardless. It is offered unconditionally.
+// Relink, because a row on a 360 timeline is already linked to the entity whose
+// timeline renders it. Re-filing it to the right record always means something.
 //
 // It owns the two open states so the timeline mapper stays presentational.
 //
@@ -81,29 +75,28 @@ export function TimelineActions({
 }>) {
   const t = useT();
   const [relink, setRelink] = useState(false);
+  const writable = useCanWriteRecord("activity", activity);
   return (
     <>
-      {activity.kind === "task" ? (
-        activity.content_state !== "withheld" && (
-          <MoveButton
-            move={{
-              action: "open_task",
-              arguments: { activity_id: activity.id },
-            }}
-            taskRefreshKeys={taskWriteKeys(entityType, entityId)}
-          />
-        )
-      ) : (
-        <ChannelReplyAction
-          activityId={activity.id}
-          kind={activity.kind}
-          channelProvider={activity.channel_provider ?? undefined}
-          entityType={entityType}
-          entityId={entityId}
-          contactId={contactId}
-          contentWithheld={activity.content_state === "withheld"}
+      {activity.kind === "task" && activity.content_state !== "withheld" && (
+        <MoveButton
+          move={{
+            action: "open_task",
+            arguments: { activity_id: activity.id },
+          }}
+          taskRefreshKeys={taskWriteKeys(entityType, entityId)}
         />
       )}
+      <ChannelReplyAction
+        activityId={activity.id}
+        kind={activity.kind}
+        offersEmail={activity.offers_email}
+        channelProvider={activity.channel_provider ?? undefined}
+        entityType={entityType}
+        entityId={entityId}
+        contactId={contactId}
+        contentWithheld={activity.content_state === "withheld"}
+      />
       {activity.invitation_status && activity.content_state !== "withheld" && (
         <Button
           onClick={() =>
@@ -115,7 +108,12 @@ export function TimelineActions({
       )}
       {extra?.(activity)}
       <ActivityFilesAction activity={activity} />
-      <Button onClick={() => setRelink(true)}>{t("compose.relink")}</Button>
+      <Button
+        onClick={() => setRelink(true)}
+        reason={writable ? undefined : t("activity.notYoursToChange")}
+      >
+        {t("compose.relink")}
+      </Button>
       {/* Every row on a project's timeline is filed under that project, so this
           is the one surface where taking the filing back is always meaningful. */}
       {entityType === "project" && (
@@ -183,6 +181,7 @@ export function AudienceAction({
   entityId: string;
 }>) {
   const t = useT();
+  const writable = useCanWriteRecord("activity", activity);
   const [open, setOpen] = useState(false);
   const current: ActivityAudience = activity.audience ?? "workspace";
   const [choice, setChoice] = useState<ActivityAudience>(current);
@@ -203,7 +202,7 @@ export function AudienceAction({
     invalidate: () => entityTimelineKeys(entityType, entityId),
     onSettled: () => setOpen(false),
   });
-  if (activity.content_state === "withheld") {
+  if (activity.content_state === "withheld" || !writable) {
     return null;
   }
   // A DERIVED audience is not this dialog's to change, and offering it anyway

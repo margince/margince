@@ -194,6 +194,7 @@ func changeInputs(
 		now.AddDate(0, 0, -relStrengthWindowDays),
 		asOf,
 		asOf.AddDate(0, 0, -relStrengthWindowDays),
+		now,
 	}
 	foldWithin := ""
 	if within != nil {
@@ -217,7 +218,7 @@ func changeInputs(
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'outbound')
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		 WHERE `+strengthCounts+` AND a.archived_at IS NULL`+
+		 WHERE `+strengthCountsAt(5)+` AND a.archived_at IS NULL`+
 		auth.AudienceWorkspaceOnly("a")+foldWithin,
 		foldArgs...,
 	).Scan(

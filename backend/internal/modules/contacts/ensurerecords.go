@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/filedpairs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -134,6 +135,7 @@ func recordDedupeCandidate(ctx context.Context, tx pgx.Tx, entityType string, a,
 	}); err != nil {
 		return false, fmt.Errorf("contacts: audit the dedupe candidate: %w", err)
 	}
+	filedpairs.Note(ctx, candidateID)
 	return true, nil
 }
 

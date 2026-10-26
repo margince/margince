@@ -41,3 +41,10 @@ func Valid(m Mark) bool {
 func NotMarkedSQL(alias string) string {
 	return fmt.Sprintf("%s.relationship_mark IS NULL", alias)
 }
+
+// ContactNotMarkedSQL is the predicate that the contact whose id is the SQL
+// expression idExpr carries no mark. It is for a join that holds a contact id
+// and no contact row. The expression is compile-time SQL, never request input.
+func ContactNotMarkedSQL(idExpr string) string {
+	return fmt.Sprintf("EXISTS (SELECT 1 FROM contact mk WHERE mk.id = %s AND %s)", idExpr, NotMarkedSQL("mk"))
+}

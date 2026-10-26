@@ -121,6 +121,7 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 	"internal/modules/signals/entitykeys.go":                                    "the backfill of the per-type record keys asks only whether the deal its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no deal column leaves the statement",
 	"internal/modules/weeklyplan/linkedkeys.go":                                 "the backfill of the per-type record keys asks only whether the deal its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no deal column leaves the statement",
 	"internal/compose/extsystemread.go:readDealSummary":                         "an extension unit's system read of one deal (Runtime.Deals().Get). It runs as the delivery's or tick's PrincipalSystem and answers only on an unattended Runtime: systemRead refuses it with ErrAttendedRead on any invocation a caller could receive the answer from. A unit that shows the deal to a colleague asks Authority().CanRead, which is auth.VisibleTo under that colleague's own grants",
+	"internal/compose/extsystemread.go:dealResponsibleQuery":                    "the statement readDealResponsible runs, in that same unattended system read: only user ids and an owner flag leave it",
 	"internal/compose/extsystemread.go:readDealResponsible":                     "the same unattended system read for the colleagues a deal names (Runtime.Deals().Responsible): the deal is read for its existence and its owner_id, and only user ids leave the statement. Refused on an attended Runtime by systemRead",
 	"internal/modules/privacy/reportingquestions.go:heldQuestionSource":         "Retention lifecycle checks legal holds on every record behind a kept question answer before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
@@ -238,21 +239,15 @@ func readsDealTable(filePath string, file *ast.File) bool {
 func TestEveryReaderOfTheDealTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 	t.Parallel()
 	files := dealReaderScope.Files(t)
-	gated := dealGate.gatedFunctionsByPackage(t, files)
+	walk := dealGate.walkPackages(t, files)
 	consts := constantTable{}
 
 	var satisfied int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
 		for _, site := range dealGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := parsed.Path
-			if site.function != "" {
-				subject += ":" + site.function
-			}
-			carriesGate := site.holdsGate || callsAGatedHelper(site.calls, gated[pkg])
-			if site.function == "" {
-				carriesGate = site.holdsGate || dealGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
-			}
+			subject := site.subject(parsed.Path)
+			carriesGate := walk.carries(t, dealGate, parsed, site, consts.of(t, pkg))
 			verdict := verdictIn(t, subject, dealVerdicts)
 
 			switch {

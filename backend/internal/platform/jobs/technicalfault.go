@@ -36,6 +36,7 @@ import (
 	"slices"
 	"syscall"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -66,6 +67,18 @@ var technicalFaults = []technicalFault{
 		class:    "interrupted",
 		sentence: "the job's work was cancelled before it finished",
 		remedy:   "At a worker shutdown, nothing to do: the attempt is retried. A job interrupted at every shutdown runs longer than the worker's drain window, and the window (with the termination grace period around it) is what to raise. A job cancelled on purpose stays cancelled.",
+	},
+	{
+		// After isInterrupted, so a job cancelled under a live statement keeps
+		// its own class. A statement the server stopped reaches here either way.
+		match:    isStatementStopped,
+		class:    "statement_stopped",
+		sentence: "the database stopped a statement before it answered",
+		remedy: "Most often the work is too much for one statement. No job binds its own " +
+			"budget, so the ceiling that stopped it is the pool's statement_timeout: narrow the " +
+			"statement, or bind the job's own with database.BoundStatement. An operator " +
+			"cancelling a backend reads the same way, and so does a worker's own shutdown " +
+			"reaching the server first.",
 	},
 	{
 		match:    isDNSFailure,
@@ -128,6 +141,16 @@ var technicalFaults = []technicalFault{
 // deadline is not this: a job that outran its own timeout is isTimeout's.
 func isInterrupted(err error) bool {
 	return errors.Is(err, context.Canceled)
+}
+
+// isStatementStopped answers a statement the server stopped.
+//
+// `storekit.IsQueryCanceled` documents which causes share that SQLSTATE and
+// why it cannot say which. This classifier cannot narrow it either: a caller
+// needs the request's context to, as modules/search has, and `ClassFor` is
+// exported without one.
+func isStatementStopped(err error) bool {
+	return storekit.IsQueryCanceled(err)
 }
 
 // isDNSFailure answers the one shape that never fixes itself on retry.

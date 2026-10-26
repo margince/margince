@@ -31,6 +31,7 @@ function email(
   direction: "inbound" | "outbound" = "inbound",
 ): Activity {
   return {
+    offers_email: false,
     id,
     kind: "email",
     subject,

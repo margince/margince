@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/api/crm.yaml backend/api/ai-tasks.yaml backend/tools/contract-overlay backend/tools/gen-stubs backend/tools/gen-agentpolicy backend/tools/gen-aitasks backend/tools/gen-queryenums backend/Makefile -->
 # Contract-first
 
 What the product exposes is set by `backend/api/crm.yaml` and the Go code

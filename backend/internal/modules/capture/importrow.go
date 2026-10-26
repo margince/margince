@@ -123,6 +123,20 @@ func (s *Sink) WithParticipantNamer(name ParticipantNamer) *Sink {
 	return &c
 }
 
+// LeadScorer scores a lead the sink is about to insert. It answers the opening
+// score for the row and a function that writes the first score-history point
+// once the row exists. The contacts module owns the scoring and the history
+// table, so compose injects it. Nil leaves the database default, which is what
+// fixtures get.
+type LeadScorer func(ctx context.Context, tx pgx.Tx, title, origin string) (int, func(context.Context, pgx.Tx, ids.LeadID) error, error)
+
+// WithLeadScorer returns a copy that scores every lead it creates.
+func (s *Sink) WithLeadScorer(score LeadScorer) *Sink {
+	c := *s
+	c.scoreLead = score
+	return &c
+}
+
 // recordThisImport writes the acting seat's import row, makes them a
 // participant, and re-derives the audience over the contributors that now
 // includes them.
@@ -167,7 +181,7 @@ func (s *Sink) recordThisImport(
 		fields.judged.bccOnly); err != nil {
 		return err
 	}
-	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec); err != nil {
 		return err
 	}
 	// The confidentiality question for THIS seat's view of the thread, opened

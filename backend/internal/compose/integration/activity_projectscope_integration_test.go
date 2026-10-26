@@ -47,9 +47,12 @@ type scopeFixture struct {
 	// through the activities it kept, so a contact reachable only through a
 	// dropped activity must not appear either.
 	bystander ids.UUID
-	onERP     string
-	onOther   string
-	unfiled   string
+	// attendee is employed at the account and is on the ERP engagement's
+	// booked meeting, which has not happened.
+	attendee ids.UUID
+	onERP    string
+	onOther  string
+	unfiled  string
 	// One open task and one future meeting per engagement, so the next-steps,
 	// next-meeting and since-last-visit sections each have a row the scope
 	// must drop and a row it must keep.
@@ -147,6 +150,7 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	return scopeFixture{
 		contact: contact, company: company, erp: erp, other: migration, bystander: bystander, otherAt: otherAt,
 		erpKey: erpKey, otherKey: migrationKey,
+		attendee:  attendee,
 		onERP:     mail("ERP cutover plan", &erp, roomFixedNow.AddDate(0, 0, -3)),
 		onOther:   mail("Rack decommissioning", &migration, otherAt, bystander),
 		unfiled:   mail("Invoice question", nil, roomFixedNow.AddDate(0, 0, -2)),
@@ -314,11 +318,15 @@ func TestAScopedAccountPageDerivesItsHealthFromOneEngagement(t *testing.T) {
 	// engagement's the more recent. The fixture's own meetings are both booked
 	// for the future, which is the question "when do we next see them" rather
 	// than "when did we last".
-	held := func(subject string, within ids.ProjectID, daysAgo int) time.Time {
+	held := func(subject string, within ids.ProjectID, daysAgo int, with ...ids.UUID) time.Time {
 		at := roomFixedNow.AddDate(0, 0, -daysAgo)
+		links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: f.contact}}
+		for _, other := range with {
+			links = append(links, activities.ActivityLinkInput{EntityType: "contact", EntityID: other})
+		}
 		logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 			Kind: "meeting", MeetingStatus: new("booked"), Subject: &subject, OccurredAt: &at,
-			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: f.contact}},
+			Links: links,
 		})
 		if err != nil {
 			t.Fatalf("log %q: %v", subject, err)
@@ -331,7 +339,7 @@ func TestAScopedAccountPageDerivesItsHealthFromOneEngagement(t *testing.T) {
 		}
 		return at
 	}
-	erpMet := held("ERP discovery workshop", f.erp, 6)
+	erpMet := held("ERP discovery workshop", f.erp, 6, f.attendee)
 	held("Rack survey", f.other, 2)
 
 	svc := companySurfaceService(e)
@@ -353,7 +361,7 @@ func TestAScopedAccountPageDerivesItsHealthFromOneEngagement(t *testing.T) {
 	// rollout. "How many ways in do we have here" has to answer for the page
 	// the reader is on, or the count contradicts the timeline under it.
 	if got := deref(t, scoped.Health.ActiveContacts, "scoped active contacts"); got != 2 {
-		t.Errorf("the ERP page reports %d active contacts, want 2 (the contact and the meeting attendee) "+
+		t.Errorf("the ERP page reports %d active contacts, want 2 (the contact and the attendee of the held workshop) "+
 			"— the bystander has only ever spoken on the datacentre migration", got)
 	}
 	if got := deref(t, wide.Health.ActiveContacts, "unscoped active contacts"); got != 3 {

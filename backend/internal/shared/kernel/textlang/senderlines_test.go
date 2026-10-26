@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const quotedSellerSignature = "Hi Alex, see below.\n\nSam Seller\nHead of Sales\n+49 30 1111111"
@@ -51,5 +52,52 @@ func TestSenderLinesCannotReadAnAnswerBelowAnUnmarkedQuote(t *testing.T) {
 	body := "Hello\n\nFrom: Sam Seller <sam@example.org>\nSent: Monday\n\nCan you confirm?\n\nConfirmed.\n\nBob Contact\nCTO"
 	if got := textlang.SenderLines(body); !slices.Equal(got, []string{"Hello"}) {
 		t.Fatalf("sender lines = %q, want only the line above the quote", got)
+	}
+}
+
+func TestSenderLinesEndAtAnOutlookBlockThatFollowsTheEnvelope(t *testing.T) {
+	body := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n" +
+		"From: Sam Seller <sam@example.org>\nSent: Monday, June 2, 2026 10:00 AM\n" +
+		"To: Alex Buyer <contact@example.com>\nSubject: Next steps\n\n" + quotedSellerSignature
+	if got := textlang.SenderLines(body); len(got) != 0 {
+		t.Fatalf("sender lines = %q, want none: everything below the second From: is quoted", got)
+	}
+	if got := textlang.NewTextOnly(body); strings.Contains(got, "Head of Sales") {
+		t.Fatalf("NewTextOnly kept the quoted signature: %q", got)
+	}
+}
+
+func TestCurrentMessageKeepsItsCutSoStoredQuoteProofsStillVerify(t *testing.T) {
+	body := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n" +
+		"From: Sam Seller <sam@example.org>\nSent: Monday\nTo: Alex Buyer <contact@example.com>\n\n" + quotedSellerSignature
+	got := textlang.CurrentMessage(body)
+	proof, ok := values.ProveQuote(got, "Head of Sales")
+	if !ok {
+		t.Fatalf("CurrentMessage no longer holds the text a stored proof covers: %q", got)
+	}
+	if _, ok := values.VerifyQuote(textlang.CurrentMessage(body), proof); !ok {
+		t.Fatal("a proof made from CurrentMessage stopped verifying")
+	}
+}
+
+func TestAFromSentenceAfterTheEnvelopeIsNotAQuote(t *testing.T) {
+	body := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n" +
+		"From: our finance team's perspective this is the right call\n\nPlease approve the budget."
+	if got := textlang.NewTextOnly(body); !strings.Contains(got, "Please approve the budget.") {
+		t.Fatalf("a prose line opening with From: cut the message: %q", got)
+	}
+}
+
+func TestMessageOpeningStopsAtAnOutlookBlockThatFollowsTheEnvelope(t *testing.T) {
+	body := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n\nThanks, works for me.\n\n" +
+		"From: Sam Seller <sam@example.org>\nSent: Monday, June 2, 2026 10:00 AM\n" +
+		"To: Alex Buyer <contact@example.com>\nSubject: Next steps\n\n" + quotedSellerSignature
+	if got := textlang.MessageOpening(body, 800); got != "Thanks, works for me." {
+		t.Fatalf("opening = %q, want only the reply above the Outlook block", got)
+	}
+	direct := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n" +
+		"From: Sam Seller <sam@example.org>\nSent: Monday\nTo: Alex Buyer <contact@example.com>\n\n" + quotedSellerSignature
+	if got := textlang.MessageOpening(direct, 800); got != "" {
+		t.Fatalf("opening = %q, want nothing from an envelope followed directly by a quote", got)
 	}
 }

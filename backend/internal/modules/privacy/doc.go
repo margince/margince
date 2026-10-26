@@ -8,18 +8,15 @@
 // fulfilled request executes — the composition root injects the Eraser
 // into consent's DSR handlers, so the two never become an import edge.
 //
-// Tables owned: erasure_suppression. Everything else this module
-// touches it deliberately does NOT own: erasure and retention write
-// contact, lead, activity, deal, embedding, raw_capture, approval,
-// workflow_run and the Deal Room's participant, session and engagement
-// rows because
-// a data-subject obligation must reach every store that holds the
-// subject, in ONE transaction per record (the sanctioned
-// single-transaction exception to the module-boundary rule) — routing
-// each purge through its owning
-// module's API would trade the atomicity that IS the guarantee for
-// boundary hygiene. Those writes are ratified per table in the
-// table-ownership fitness test (backend/gates/tableownership_test.go).
+// Tables owned: docs/reference/entity-model/privacy.md.
+//
+// Erasure and retention also write rows this module does not own. They reach
+// contact, lead, activity, deal, embedding, raw_capture, approval and
+// workflow_run, and the Deal Room's participant, session and engagement rows. A data-subject
+// obligation must reach every store that holds the subject, in one transaction
+// per record. Routing each purge through its owning module's API would trade
+// that atomicity, which is the guarantee, for boundary hygiene. Each such write
+// is ratified per table in backend/gates/tableownership_test.go.
 //
 // Imports shared + platform only; never a sibling module. Retention
 // floors come from the compiled-in jurisdiction packs via

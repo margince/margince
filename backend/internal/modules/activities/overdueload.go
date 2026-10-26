@@ -75,7 +75,7 @@ func (s *Store) taskLoadByAssignee(ctx context.Context, asOf time.Time, commitme
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		instant := arg(asOf)
-		scope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
+		scope, err := auth.ActivityContentClause(ctx, "a", arg)
 		if err != nil {
 			return err
 		}

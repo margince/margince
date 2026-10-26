@@ -99,7 +99,10 @@ func TestACappedColleagueListSaysSo(t *testing.T) {
 func TestAnUncapturedColleagueIsNoticedAndNotListedAsKnowingThem(t *testing.T) {
 	invited := ids.NewV7()
 	tool := whoKnowsTool{list: func(context.Context, ids.UUID) (WhoKnowsReading, error) {
-		return WhoKnowsReading{CaptureGaps: []CaptureGap{{UserID: invited, DisplayName: "Ben Invited", Invited: true}}}, nil
+		return WhoKnowsReading{
+			CaptureGaps:      []CaptureGap{{UserID: invited, DisplayName: "Ben Invited", Invited: true}},
+			CaptureGapsTotal: 3,
+		}, nil
 	}}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	r.Register(tool)
@@ -111,8 +114,14 @@ func TestAnUncapturedColleagueIsNoticedAndNotListedAsKnowingThem(t *testing.T) {
 	}
 
 	env := sealedEnvelope(t, out)
-	if _, warned := warningNamed(env, warningCaptureGap); !warned {
+	gapWarning, warned := warningNamed(env, warningCaptureGap)
+	if !warned {
 		t.Errorf("an unattended seat on the threads raised no capture_gap warning: %v", env.Warnings)
+	}
+	// The list is capped, so the model must be told to report the rest.
+	if !strings.Contains(gapWarning.Message, "capture_gaps_total") ||
+		!strings.Contains(gapWarning.Message, "how many more") {
+		t.Errorf("the capture_gap warning names neither the total nor the remainder: %q", gapWarning.Message)
 	}
 	var payload WhoKnowsAnswer
 	if err := json.Unmarshal(payloadOf(t, out), &payload); err != nil {
@@ -120,6 +129,9 @@ func TestAnUncapturedColleagueIsNoticedAndNotListedAsKnowingThem(t *testing.T) {
 	}
 	if len(payload.Colleagues) != 0 || len(payload.CaptureGaps) != 1 || payload.CaptureGaps[0].UserID != invited {
 		t.Errorf("seat listed wrongly: colleagues=%v gaps=%v", payload.Colleagues, payload.CaptureGaps)
+	}
+	if payload.CaptureGapsTotal != 3 {
+		t.Errorf("capture_gaps_total = %d, want the 3 the reading counted", payload.CaptureGapsTotal)
 	}
 }
 

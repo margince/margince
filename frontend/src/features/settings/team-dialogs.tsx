@@ -17,6 +17,7 @@ import { useToast } from "../../design-system/toast";
 import { forReader } from "../../format/collate";
 import { useLocale, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import "./users-access.css";
 
@@ -80,6 +81,7 @@ export function TeamMembersModal({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["users"] });
       qc.invalidateQueries({ queryKey: ["teams"] });
+      qc.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY });
     },
     onError: () => {
       refocusAt.current = null;
@@ -242,6 +244,7 @@ export function RenameTeamAction({ team }: Readonly<{ team: Team }>) {
     onSuccess: (_renamed, { name }) => {
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["teams"] });
+      qc.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY });
       toast.show(t("users.teamRenamed", { name }));
     },
   });
@@ -285,6 +288,7 @@ export function NewTeamAction() {
     onSuccess: () => {
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["teams"] });
+      qc.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY });
     },
   });
   const createRefused = nameRefusal(create.error, t, "users.teamDuplicate");
