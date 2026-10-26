@@ -45,15 +45,9 @@ func UnclaimedMeetingSQL(meeting string) string {
 }
 
 // MeetingCreditSQL renders "this seat is credited with this meeting" for the
-// figures that count meetings per person: meetings held in analytics, the
-// meeting-conversion report and the weekly scorecard. It is the attendance
-// rule above, narrowed to evidence that the seat actually took part. A calendar
-// guest counts only once they accepted; an invitation left unanswered,
-// declined or tentative is not attendance. The organizer, a host a human
-// logged, a guest a human logged and the seat that booked it all count.
-//
-// Every credited seat counts the meeting in their own figures. A team or a
-// workspace counts it once, because the meeting is one row in those figures.
+// figures that count meetings per person. It is the attendance rule above,
+// narrowed to evidence the seat took part (creditedAttendanceSQL). Each
+// credited seat counts the meeting; a team counts it once, as one row.
 func MeetingCreditSQL(meeting, seat string) string {
 	return meetingCreditSQL(meeting, meeting+".host_user_id", seat)
 }
@@ -65,8 +59,8 @@ func MeetingCreditedSeatsSQL(meeting string) string {
 }
 
 // MeetingCreditedSeatsAtChangeSQL is MeetingCreditedSeatsSQL for a status
-// change: it reads the host the change recorded, so a later edit of the host
-// does not move credit for a meeting already held. Where legacy holds, the
+// change. It reads the host the change recorded. A later edit of the host
+// then does not move credit for a meeting already held. Where legacy holds, the
 // change recorded nothing and the meeting's own host is read. Only a host a
 // human logged counts either way.
 func MeetingCreditedSeatsAtChangeSQL(meeting, legacy, recorded string) string {
@@ -92,8 +86,8 @@ func meetingCreditedSeatsSQL(meeting, host string) string {
 }
 
 // MeetingCreditedSeatSQL renders the one seat a meeting is listed under where
-// a figure groups by person: the human-logged host, then the organizer, then
-// the seat that booked it, then the first guest who accepted. Each of them is
+// a figure groups by person. In order: the human-logged host, the organizer,
+// the seat that booked it, and the first guest who accepted. Each of them is
 // credited by MeetingCreditSQL; this only picks the label for a one-row grain.
 // NULL when nobody is credited.
 func MeetingCreditedSeatSQL(meeting string) string {
@@ -127,7 +121,7 @@ func meetingCreditSQL(meeting, host, seat string) string {
 // creditedAttendanceSQL is one participant row that proves its seat took part.
 // On a meeting a human logged, any organizer or attendee row counts: it is the
 // logger's own statement. On a calendar's meeting, an attendee counts once they
-// accepted, and the organizer unless they answered otherwise; a calendar that
+// accepted, and the organizer unless they answered otherwise. A calendar that
 // lists the organizer apart from the guests states no answer for them.
 func creditedAttendanceSQL(participant, meeting string) string {
 	return fmt.Sprintf(`%[1]s.role IN ('organizer', 'attendee')

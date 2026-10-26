@@ -213,9 +213,8 @@ func countWeekLeads(
 //
 // meetingIsTheirsSQL is "this meeting is that rep's" for the weekly figures:
 // the meeting credit rule analytics counts by, over alias `m`. Filing a
-// meeting, importing a copy, or an invitation nobody accepted credits nobody;
-// a meeting two reps attended is in both their weeks, because both spent the
-// time.
+// meeting, importing a copy, or an invitation nobody accepted credits nobody.
+// A meeting two reps attended is in both their weeks: both spent the time.
 //
 // Three readers ask it: the headline count here, the funnel in
 // weeklyscorecard.go and the coverage in weeklycoverage.go. Plan capacity asks

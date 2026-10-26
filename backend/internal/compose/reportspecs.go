@@ -306,9 +306,8 @@ var prebuiltReports = map[string]reportSpec{
 			// The seat a meeting is listed under by the meeting credit rule:
 			// the colleague the attendance evidence credits, not whoever
 			// imported the calendar. Not owner-gated: it narrows WITHIN rows
-			// the caller's activity clause already admits, and the ordinary
-			// activities list serves host and standing on each of those rows
-			// one by one.
+			// the caller's activity clause already admits. The ordinary
+			// activities list serves host and standing on each of those rows.
 			fieldHostUserID: colMeetingCreditedSeat,
 			fieldProjectID:  activityProjectIDExpr,
 		},

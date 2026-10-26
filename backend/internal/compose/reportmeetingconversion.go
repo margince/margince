@@ -33,11 +33,10 @@ import (
 )
 
 const (
-	// fieldMeetingHost names the seat the meeting is credited to — the SDR
-	// whose rate this is. It reads the meeting credit rule rather than the
-	// handoff's submitter or the host column: the question is whose MEETINGS
-	// converted, and on a captured meeting the host column only says whose
-	// calendar it came from.
+	// fieldMeetingHost names the seat the meeting is credited to: the SDR
+	// whose rate this is. It reads the meeting credit rule, not the handoff's
+	// submitter or the host column. The question is whose MEETINGS converted.
+	// On a captured meeting the host column only says whose calendar it was.
 	fieldMeetingHost = "host_user_id"
 
 	// fieldBecameOpportunity is the conversion itself, as a dimension rather
