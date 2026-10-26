@@ -288,3 +288,57 @@ func TestOnlyAFulfilledRequestStopsBeingOwed(t *testing.T) {
 		})
 	}
 }
+
+// dueGroup names a row's due group for a failure message. The field is a
+// pointer, so a bare print gives an address where a reader wants a word.
+func dueGroup(row crmcontracts.WorklistItem) string {
+	if row.DueGroup == nil {
+		return "none"
+	}
+	return string(*row.DueGroup)
+}
+
+// The week closing moves the same work, it does not replace it.
+//
+// A Friday task read on the Wednesday is that week's. Read on the Monday
+// after, it is overdue, and still the same row, still the rep's, and still on
+// their manager's team day.
+func TestTheWeekClosingKeepsTheWorkAndItsReaders(t *testing.T) {
+	o := setupOwed(t)
+	readers := o.day(t)
+	// dayNow is a Wednesday, so Friday afternoon is this week and not tomorrow.
+	friday := dayNow.AddDate(0, 0, 2).Add(5 * time.Hour)
+	task := o.taskFor(readers.rep1, t, "Send the pricing sheet", friday)
+
+	open, ok := rowOf(o.page(readers.rep1, t, "mine", dayNow), task)
+	if !ok || open.DueGroup == nil ||
+		*open.DueGroup != crmcontracts.WorklistItemDueGroupWorklistDueGroupThisWeek {
+		t.Fatalf("while the week is open the task reads %s, want this week", dueGroup(open))
+	}
+	if open.Owner == nil {
+		t.Fatal("the task names no owner while the week is open")
+	}
+
+	// The Monday after: the week has closed on the clock alone.
+	monday := dayNow.AddDate(0, 0, 5)
+	page := o.page(readers.rep1, t, "mine", monday)
+	closed, ok := rowOf(page, task)
+	if !ok || closed.DueGroup == nil ||
+		*closed.DueGroup != crmcontracts.WorklistItemDueGroupWorklistDueGroupOverdue {
+		t.Fatalf("once the week closed the task reads %s, want overdue", dueGroup(closed))
+	}
+	if got := rowIDs(page); !slices.Equal(got, []string{task}) {
+		t.Errorf("the new week holds %v, want the same single task", got)
+	}
+	// The owner is compared by who it names. Its id and label are pointers, so
+	// the structs differ by address on every read even when nothing moved.
+	if closed.Owner == nil || closed.Owner.Id == nil || open.Owner.Id == nil ||
+		*closed.Owner.Id != *open.Owner.Id || closed.Owner.Kind != open.Owner.Kind {
+		t.Errorf("the week closed and the task answers to %+v, want %+v", closed.Owner, open.Owner)
+	}
+
+	team := o.page(readers.manager, t, "team", monday)
+	if _, ok := rowOf(team, task); !ok {
+		t.Errorf("the manager's team day holds %v, want the carried task %s", rowIDs(team), task)
+	}
+}
