@@ -106,6 +106,12 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		}
 		fmt.Fprintf(&prompt, "Report only events stated in these messages: %s. The other messages are context, for example to see that a promise was kept or renewed.\n",
 			strings.Join(focus, ", "))
+		recorded := make([]string, len(thread.Recorded))
+		for i, event := range thread.Recorded {
+			recorded[i] = event.Kind + " in " + event.MessageID
+		}
+		fmt.Fprintf(&prompt, "Already recorded, so report none of it again: %s. An event recorded there never replaces an unrelated event in the messages to report.\n",
+			strings.Join(recorded, ", "))
 	}
 	fmt.Fprintf(&prompt,
 		`Return JSON: { "events": [ { "kind", "message_id", "summary", "quote", "restated_message_id", "restated_quote", "due_date", "promiser_ref", "recipient_refs", "buyer_ref", "commercial_role", "lifecycle_scope", "workstream", "commitment", "confidence" } ] } — `+
@@ -123,6 +129,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			`that name alone cannot select a reference: leave it empty even if one is a colleague and another is external. `+
 			`Only that participant's exact address in the quoted clause may resolve that tie. Never choose the first match. `+
 			`When the words name a colleague other than the writer as the one who will act and that colleague is not on the message, use "". Never put the writer in their place. `+
+			`Still report that commitment_made, with promiser_ref "": our side telling a contact that a named colleague will do a specific thing, such as running a demo on a set day, is a promise our side owes. `+
 			`Never invent a reference. `+
 			`"quote" is the words of that message the event is stated in, copied exactly; `+
 			`for "commitment_made" it is the clause the promise is made in, one promise per event. `+
