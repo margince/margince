@@ -32,11 +32,14 @@ fi
 # A layer left out is passed as an empty flag: an absent one would let
 # MARGINCE_CONFIG_FILE or MARGINCE_ENV_FILE choose a file instead.
 args=(--config "$config" "--config-file=$config_file" "--env-file=$env_file")
-# Any MARGINCE_DSN assignment, even an empty one, keeps the placeholder out, so
-# the DSN a start would read is the one checked. A loose match can only make
-# the check stricter, never let a broken DSN pass.
+# A DSN any layer sets, even an empty one, keeps the placeholder out, so the
+# DSN a start would read is the one checked. A loose match can only make the
+# check stricter, never let a broken DSN pass.
+yaml_files=("$config")
+[[ -n "$config_file" && -f "$config_file" ]] && yaml_files+=("$config_file")
 if [[ -z "${MARGINCE_DSN+set}" ]] &&
-  ! { [[ -n "$env_file" ]] && grep -Eq '^[[:space:]]*(export[[:space:]]+)?MARGINCE_DSN[[:space:]]*=' "$env_file"; }; then
+  ! { [[ -n "$env_file" ]] && grep -Eq '^[[:space:]]*(export[[:space:]]+)?MARGINCE_DSN[[:space:]]*=' "$env_file"; } &&
+  ! grep -Eq '^dsn[[:space:]]*:' "${yaml_files[@]}"; then
   args+=(--dsn postgres://localhost/check)
 fi
 
