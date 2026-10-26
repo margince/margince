@@ -36,7 +36,6 @@ func ownerOf(t *testing.T, e *integration.Env, table string, id ids.UUID) ids.UU
 	return owner
 }
 
-// assignedTask writes a task assigned to a rep through the activity writer.
 func assignedTask(t *testing.T, e *integration.Env, subject string, assignee ids.UUID, done bool) ids.UUID {
 	t.Helper()
 	to := ids.From[ids.UserKind](assignee)

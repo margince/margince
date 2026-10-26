@@ -27,12 +27,16 @@ func (s *Store) OpenTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.Use
 // HandOverOpenTasksTx gives every open task from holds, that the caller may
 // change, to the receiver, and answers how many moved. Each task moves through
 // the ordinary update write and gets its audit row and event. A task the caller
-// may not write stays where it is.
+// may not write stays where it is, and so do all of them for a caller without
+// the update grant, so the records of the same handover still move.
 //
 // The receiver must hold work as for a single reassignment: a live human seat,
 // not an agent.
 func (s *Store) HandOverOpenTasksTx(ctx context.Context, tx pgx.Tx, from, to ids.UserID) (int, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return 0, nil
+		}
 		return 0, err
 	}
 	candidates, err := openTasksAssignedTo(ctx, tx, from)

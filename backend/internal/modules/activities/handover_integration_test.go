@@ -7,30 +7,30 @@ package activities
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A handover is an update, so a seat that may only read moves nothing and is
-// told so. A dead connection fails the move and the count.
+// A caller without the update grant moves no task and does not abort the
+// handover. A dead connection fails the move and the count.
 func TestHandingOverTasksNeedsTheUpdateGrantAndASoundConnection(t *testing.T) {
 	e := setupPromises(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	from, to := ids.From[ids.UserKind](e.rep), ids.From[ids.UserKind](e.other)
 
+	var moved int
 	err := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)).Tx(e.asReadSeat(), func(tx pgx.Tx) error {
-		_, err := store.HandOverOpenTasksTx(noUpdateGrant(e), tx, from, to)
+		var err error
+		moved, err = store.HandOverOpenTasksTx(noUpdateGrant(e), tx, from, to)
 		return err
 	})
-	if err == nil || !isDenied(err) {
-		t.Fatalf("a caller without the update grant gave %v, want a permission refusal", err)
+	if err != nil || moved != 0 {
+		t.Fatalf("a caller without the update grant moved %d tasks, err %v; want none moved and no refusal", moved, err)
 	}
 
 	cancelled, cancel := context.WithCancel(e.asEditor())
@@ -55,8 +55,6 @@ func noUpdateGrant(e *promiseEnv) context.Context {
 	actor.Permissions.Objects["activity"] = principal.ObjectGrant{Read: true}
 	return principal.WithActor(ctx, actor)
 }
-
-func isDenied(err error) bool { return errors.Is(err, apperrors.ErrPermissionDenied) }
 
 // A caller with workspace-wide read counts every open task the member holds.
 func TestAWorkspaceWideReaderCountsAMembersOpenTasks(t *testing.T) {
