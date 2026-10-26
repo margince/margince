@@ -37,7 +37,7 @@ func syncedMeeting(t *testing.T, e *integration.Env, address string) ids.UUID {
 		VALUES ($1, 'meeting', 'Quarterly review', $2, 'gcal:seed', 'connector:gcal', 'gcal', $3, 'participants', $4)`,
 		id, cohortMeetingAt, "cohort-"+id.String(), activities.ReasonNoCounterparty)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'attendee')`, id, address)
-	e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id, posture_at_import) VALUES ($1, $2, 'shared')`, id, e.Rep1)
+	e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id, posture_at_import) VALUES ($1, $2, NULL)`, id, e.Rep1)
 	return id
 }
 
