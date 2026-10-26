@@ -132,14 +132,13 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `pipeline_id` | `pipeline` | the parent cannot be deleted while this row points at it |
 | `project_id` | `project` | deleting the parent keeps this row and clears the link |
 | `source_author_id` | `app_user` | deleting the parent keeps this row and clears the link |
-| `stage_id` | `stage` | the parent cannot be deleted while this row points at it |
 | `stage_id, pipeline_id` | `stage` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
 - `deal_amount_minor_js_safe`: `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `deal_closed_at`: `CHECK (((status = 'open') OR (closed_at IS NOT NULL)))`
-- `deal_closed_fx`: `CHECK (((status = 'open') OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))`
+- `deal_closed_fx`: `CHECK (((status = 'open') OR (amount_minor IS NULL) OR ((fx_rate_to_base IS NOT NULL) AND (amount_minor_base IS NOT NULL))))`
 - `deal_commercial_motion_check`: `CHECK (((commercial_motion IS NULL) OR (commercial_motion = ANY (ARRAY['new_business', 'renewal', 'upsell', 'cross_sell', 'expansion', 'existing_business']))))`
 - `deal_currency_check`: `CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$')))`
 - `deal_description_bounded`: `CHECK (((description IS NULL) OR (length(description) <= 20000)))`
@@ -840,7 +839,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## stage
 
-10 columns · primary key `(id)` · referenced by 10 foreign keys
+10 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
