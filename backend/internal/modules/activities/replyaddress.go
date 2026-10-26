@@ -128,7 +128,7 @@ func (s *Store) ReplyAddresseeFor(ctx context.Context, id ids.ActivityID, collea
 		}
 		readable := scope
 		if readable == "" {
-			readable = "true"
+			readable = sqlTrue
 		}
 
 		// Two sources, ranked together rather than tried in sequence. The

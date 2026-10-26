@@ -69,9 +69,12 @@ func (d replyDrafter) threadRows(ctx context.Context, threadKey, addressee strin
 	if err != nil {
 		return nil, err
 	}
-	sender, parseErr := ids.Parse(addressee)
-	if !page.HasMore || parseErr != nil {
+	if !page.HasMore || addressee == "" {
 		return rows, nil
+	}
+	sender, err := ids.Parse(addressee)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading the reply's addressee id: %w", err)
 	}
 	own := draftcore.LanguageEvidenceTurns
 	in.Limit, in.SentBy = &own, &sender
