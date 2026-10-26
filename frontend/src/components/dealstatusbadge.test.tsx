@@ -38,6 +38,8 @@ describe("the deal status badge", () => {
 
 // A stored status drawn as JSX text, `{row.status}`, reaches every reader as
 // the English wire code. Any receiver counts, since a deal is often `row`.
+// Blind spot: a status first held in a local (`const s = row.status`) and drawn
+// as `{s}` is not followed.
 function rawStatusRenders(path: string, text: string): string[] {
   const found: string[] = [];
   const visit = (node: ts.Node): void => {
@@ -55,22 +57,50 @@ function rawStatusRenders(path: string, text: string): string[] {
   return found;
 }
 
-function translates(expression: ts.Expression): boolean {
+// `key ? t(key) : …`: the branch translates the very key the condition tested.
+function translatesItsCondition(expression: ts.ConditionalExpression): boolean {
+  const branch = expression.whenTrue;
   return (
+    ts.isCallExpression(branch) &&
+    ts.isIdentifier(branch.expression) &&
+    branch.expression.text === "t" &&
+    branch.arguments[0]?.getText() === expression.condition.getText()
+  );
+}
+
+// What a wrapper still draws: a cast, a `!`, `String(x)` or a template slot.
+function inner(expression: ts.Expression): readonly ts.Expression[] {
+  if (
+    ts.isParenthesizedExpression(expression) ||
+    ts.isAsExpression(expression) ||
+    ts.isSatisfiesExpression(expression) ||
+    ts.isNonNullExpression(expression) ||
+    ts.isTypeAssertionExpression(expression)
+  ) {
+    return [expression.expression];
+  }
+  if (
     ts.isCallExpression(expression) &&
     ts.isIdentifier(expression.expression) &&
-    expression.expression.text === "t"
-  );
+    expression.expression.text === "String"
+  ) {
+    return expression.arguments.slice(0, 1);
+  }
+  if (ts.isTemplateExpression(expression)) {
+    return expression.templateSpans.map((span) => span.expression);
+  }
+  return [];
 }
 
 // The value a child expression draws: a fallback or a branch draws it too.
 function drawsStatus(expression: ts.Expression): boolean {
-  if (ts.isParenthesizedExpression(expression)) {
-    return drawsStatus(expression.expression);
+  const wrapped = inner(expression);
+  if (wrapped.length > 0) {
+    return wrapped.some(drawsStatus);
   }
   if (ts.isConditionalExpression(expression)) {
     // `key ? t(key) : row.status` shows a code this build has no word for.
-    if (translates(expression.whenTrue)) {
+    if (translatesItsCondition(expression)) {
       return false;
     }
     return (
@@ -108,6 +138,12 @@ describe("screens the shipped bundle loads", () => {
           `const e = <DealStatusBadge status={deal.status} />;`,
           `const f = <span>{row.statusLabel}</span>;`,
           `const g = <span>{key ? t(key) : row.status}</span>;`,
+          `const h = <span>{row.status as string}</span>;`,
+          `const i = <span>{row.status!}</span>;`,
+          `const j = <span>{\`\${row.status}\`}</span>;`,
+          `const k = <span>{String(row.status)}</span>;`,
+          `const l = <span>{ok ? t("deal.status.open") : row.status}</span>;`,
+          `const m = <span>{(row.status satisfies string)}</span>;`,
         ].join("\n"),
       ),
     ).toEqual([
@@ -115,6 +151,12 @@ describe("screens the shipped bundle loads", () => {
       "{row.status}",
       '{offer?.status ?? "-"}',
       "{ok ? label : (item.status)}",
+      "{row.status as string}",
+      "{row.status!}",
+      `{\`\${row.status}\`}`,
+      "{String(row.status)}",
+      '{ok ? t("deal.status.open") : row.status}',
+      "{(row.status satisfies string)}",
     ]);
   });
 
