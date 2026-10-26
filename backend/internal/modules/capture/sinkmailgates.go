@@ -86,26 +86,16 @@ func internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedReco
 }
 
 // calendarOwnerDomainProvesInternalTx answers whether a meeting whose parties
-// are all on the owner's domain is internal. A consumer domain never proves it.
-// Without trusted own domains, any other owner domain does. With them, the
-// owner's domain must be one the workspace might own: claimed, confirmed, or a
-// candidate a connected mailbox contributed (ownDomainsTx).
+// are all on the owner's domain is internal, by owndomain.Parties.SeatDomainIsOurs.
 func calendarOwnerDomainProvesInternalTx(ctx context.Context, tx pgx.Tx, own InternalDomains, ownerDomain string) (bool, error) {
 	if ownerDomain == "" {
 		return false, nil
 	}
-	consumer, err := consumerMailSender(ctx, tx, ownerDomain)
-	if err != nil || consumer {
-		return false, err
-	}
-	if own.Empty() {
-		return true, nil
-	}
-	possiblyOwn, err := ownDomainsTx(ctx, tx)
+	parties, err := meetingPartiesTx(ctx, tx, own)
 	if err != nil {
 		return false, err
 	}
-	return possiblyOwn.CoversDomain(ownerDomain), nil
+	return parties.SeatDomainIsOurs(ownerDomain), nil
 }
 
 // internalDomainTx reports whether domain is one of the workspace's own mail

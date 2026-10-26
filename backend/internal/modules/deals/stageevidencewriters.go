@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -303,8 +304,13 @@ func ReadActivityAuthorship(
 		return out, err
 	}
 	out.AuthorSide = AuthorSideOf(out.Direction, out.Participants, domains)
+	parties, err := own.MeetingParties(ctx, tx)
+	if err != nil {
+		return out, err
+	}
+	seats := SeatDomains(out.Participants)
 	for _, p := range out.Participants {
-		if CountsAsBuyerParticipant(p, domains) {
+		if CountsAsBuyerParticipant(p, parties, seats) {
 			out.BuyerParticipants++
 		}
 	}
@@ -321,6 +327,8 @@ func ReadActivityAuthorship(
 // the evidence write see one snapshot.
 type OwnDomainReader interface {
 	Domains(ctx context.Context, tx pgx.Tx) ([]string, error)
+	// MeetingParties answers what a meeting's attendees are judged against.
+	MeetingParties(ctx context.Context, tx pgx.Tx) (owndomain.Parties, error)
 }
 
 // readActivityParticipants reads the parties of one activity in the shape the

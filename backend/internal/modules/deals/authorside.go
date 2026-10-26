@@ -179,31 +179,29 @@ const (
 )
 
 // CountsAsBuyerParticipant reports whether one participant is evidence that
-// somebody from the OTHER side was on the activity.
+// somebody from the OTHER side was on the activity. seatDomains are the folded
+// domains of our seats on it (SeatDomains).
 //
-// The test is a real outside address, not the absence of a seat. Three rows
-// carry no user_id and none of them shows an outside attendee:
-//
-//   - a colleague logged through the manual path, written as a contact link
-//     with no address at all;
-//   - one of our own contacts writing from an address on a domain we own;
-//   - a row naming nobody, which identifies no side.
-//
-// Counting the absence of a seat as "the buyer was there" is what would let an
-// internal meeting settle a criterion about the buyer turning up. The
-// conservative direction is the safe one here: an outside attendee we cannot
-// place leaves the criterion unmet, which a human can fix, while a phantom one
-// advances a deal on a meeting nobody outside attended.
-func CountsAsBuyerParticipant(p Participant, ownDomains []string) bool {
+// The test is a real outside address by owndomain.Parties.IsOutsideAttendee,
+// the rule capture used to keep the meeting. The absence of a seat proves
+// nothing: a colleague logged by hand is a contact link with no user_id.
+func CountsAsBuyerParticipant(p Participant, parties owndomain.Parties, seatDomains []string) bool {
 	if p.UserID != "" {
 		return false
 	}
-	if p.Address == "" {
-		// A contact-linked row with no address may be a colleague; a row naming
-		// nobody at all is not an attendee either way.
-		return false
+	return parties.IsOutsideAttendee(p.Address, seatDomains)
+}
+
+// SeatDomains are the folded domains of the seats on an activity, which
+// CountsAsBuyerParticipant reads.
+func SeatDomains(participants []Participant) []string {
+	var out []string
+	for _, p := range participants {
+		if d := owndomain.OfAddress(p.Address); p.UserID != "" && d != "" && !slices.Contains(out, d) {
+			out = append(out, d)
+		}
 	}
-	return domainSideOf(p.Address, ownDomains) == outsideDomain
+	return out
 }
 
 // MeetingProof is what a meeting offers as evidence that it happened.

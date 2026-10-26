@@ -371,3 +371,17 @@ func (s *OwnDomainStore) ColleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]s
 	}
 	return own.Domains(), nil
 }
+
+// MeetingPartiesTx answers what a meeting's sides are judged against, on the
+// caller's transaction. Deal evidence counts a meeting's buyers by it, the rule
+// capture used to keep the meeting. Gated as an activity read.
+func (s *OwnDomainStore) MeetingPartiesTx(ctx context.Context, tx pgx.Tx) (owndomain.Parties, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return owndomain.Parties{}, err
+	}
+	trusted, err := TrustedOwnDomainsTx(ctx, tx)
+	if err != nil {
+		return owndomain.Parties{}, err
+	}
+	return meetingPartiesTx(ctx, tx, trusted)
+}
