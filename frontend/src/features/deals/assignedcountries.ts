@@ -260,15 +260,24 @@ export const ASSIGNED_COUNTRIES: readonly string[] = [
   "ZW",
 ];
 
+type CountryOption = Readonly<{ value: string; label: string }>;
+
+// Built once per language: every deal list render asks for all of them.
+const optionsByLocale = new Map<Locale, readonly CountryOption[]>();
+
 /**
  * The options of a country filter: every assigned code, named in the reader's
  * language from the platform's region table and ordered by that name.
  */
-export function countryOptions(
-  locale: Locale,
-): { value: string; label: string }[] {
-  return ASSIGNED_COUNTRIES.map((code) => ({
+export function countryOptions(locale: Locale): readonly CountryOption[] {
+  const held = optionsByLocale.get(locale);
+  if (held) {
+    return held;
+  }
+  const made = ASSIGNED_COUNTRIES.map((code) => ({
     value: code,
     label: jurisdictionName(code, locale),
   })).sort((a, b) => forReader(a.label, b.label, locale));
+  optionsByLocale.set(locale, made);
+  return made;
 }
