@@ -18,6 +18,7 @@ type yamlLayer struct {
 	path     string
 	values   map[string]*yaml.Node
 	repeated []error
+	envRefs  []string
 }
 
 // unknownKey is a key no program reads, and the line that writes it.
@@ -50,6 +51,7 @@ func readYAML(path string, names known) (yamlLayer, []unknownKey, error) {
 		return layer, nil, fmt.Errorf("%s: the top level must be a mapping", path)
 	}
 	layer.repeated = repeatedKeys(path, "", root)
+	layer.envRefs = envRefsIn(root)
 	var unknown []unknownKey
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		name := root.Content[i].Value
@@ -89,6 +91,23 @@ func repeatedKeys(path, prefix string, n *yaml.Node) []error {
 		}
 	}
 	return faults
+}
+
+// envRefsIn names every variable a ${env:NAME} value in the document reads, in
+// any section. A reference under a bootstrap root or another program's setting
+// still consumes its variable.
+func envRefsIn(n *yaml.Node) []string {
+	if n.Kind == yaml.ScalarNode {
+		if name, ok := envRefName(n.Value); ok {
+			return []string{name}
+		}
+		return nil
+	}
+	var names []string
+	for _, child := range n.Content {
+		names = append(names, envRefsIn(child)...)
+	}
+	return names
 }
 
 // walk skips a null: `key:` with nothing after it, or `key: null`, is how an
