@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { isRealCalendarDay } from "../format/calendarday";
+import { isoDay, isRealCalendarDay } from "../format/calendarday";
 
 // The deals list's range dials, as the address and a saved view hold them.
 //
@@ -73,15 +73,10 @@ export function fiscalQuarter(
 ): Required<DayRange> {
   const [year = 0, month = 1] = today.split("-").map(Number);
   const offset = (month - fiscalStartMonth + 12) % 12;
-  const start = new Date(Date.UTC(year, month - 1 - (offset % 3), 1));
-  const end = new Date(
-    Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 3, 0),
-  );
-  return { from: dayOf(start), to: dayOf(end) };
-}
-
-function dayOf(at: Date): string {
-  return at.toISOString().slice(0, 10);
+  // Built from parts and read back by the same clock, so no zone moves a day.
+  const start = new Date(year, month - 1 - (offset % 3), 1);
+  const end = new Date(start.getFullYear(), start.getMonth() + 3, 0);
+  return { from: isoDay(start), to: isoDay(end) };
 }
 
 /** The dial's value as a day range, with THIS_QUARTER counted from `today`. */
