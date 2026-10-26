@@ -842,13 +842,20 @@ func (e *resolveEnv) plantStagingDecision(t *testing.T, delivery ids.UUID, addre
 // consumed_at NULL or set, expires_at ahead or behind. A shape the writer cannot
 // produce would be caught by the column list disagreeing with the schema.
 //
+// issueLinkRow plants one confirm link.
+//
+// issued_at is derived from the expiry the caller asks for rather than
+// defaulted. A caller wanting an expired link would otherwise write a token
+// that expired before it was issued.
+//
 //nolint:unparam // kind is the axis TestAConfirmationLinkDoesNotSupportTheOtherKind varies; a helper fixed to one kind could not express that case
 func (e *resolveEnv) issueLinkRow(t *testing.T, kind string, expires time.Time, consumed *time.Time) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO confirm_token (id, contact_id, token_hash, delivered_to, expires_at, consumed_at, kind)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		INSERT INTO confirm_token (id, contact_id, token_hash, delivered_to, expires_at, consumed_at, kind,
+		                           issued_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $5::timestamptz - interval '1 hour')`,
 		id, e.contact, "hash-"+id.String(), e.address, expires, consumed, kind); err != nil {
 		t.Fatal(err)
 	}

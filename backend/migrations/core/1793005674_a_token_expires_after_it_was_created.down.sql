@@ -1,0 +1,20 @@
+-- Drops the lifetime bounds this pair added.
+SET LOCAL lock_timeout = '3s';
+
+ALTER TABLE agent_task DROP CONSTRAINT agent_task_expires_after_creation;
+ALTER TABLE auth_token DROP CONSTRAINT auth_token_expires_after_creation;
+ALTER TABLE deal_room DROP CONSTRAINT deal_room_expires_after_creation;
+ALTER TABLE deal_room_invitation DROP CONSTRAINT deal_room_invitation_expires_after_creation;
+ALTER TABLE deal_room_session DROP CONSTRAINT deal_room_session_expires_after_creation;
+ALTER TABLE oauth_authorization_code DROP CONSTRAINT oauth_authorization_code_expires_after_creation;
+ALTER TABLE oauth_refresh_token DROP CONSTRAINT oauth_refresh_token_expires_after_creation;
+ALTER TABLE passport DROP CONSTRAINT passport_expires_after_creation;
+ALTER TABLE preference_token DROP CONSTRAINT preference_token_expires_after_creation;
+ALTER TABLE record_grant DROP CONSTRAINT record_grant_expires_after_creation;
+ALTER TABLE session DROP CONSTRAINT session_expires_after_creation;
+ALTER TABLE consent_doi_token DROP CONSTRAINT consent_doi_token_expires_after_issue;
+ALTER TABLE confirm_token DROP CONSTRAINT confirm_token_expires_after_creation;
+ALTER TABLE data_task_review DROP CONSTRAINT data_task_review_expires_after_creation;
+ALTER TABLE meeting_proposal DROP CONSTRAINT meeting_proposal_expires_after_creation;
+ALTER TABLE technical_lookup_cache DROP CONSTRAINT technical_lookup_cache_expires_after_creation;
+ALTER TABLE withdrawal_credential DROP CONSTRAINT withdrawal_credential_expires_after_creation;

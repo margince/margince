@@ -315,6 +315,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `confirm_token_expires_after_creation`: `CHECK ((expires_at > issued_at))`
 - `confirm_token_hash_key`: `UNIQUE (token_hash)`
 - `confirm_token_kind`: `CHECK ((kind = ANY (ARRAY['record_confirmation', 'consent_confirmation', 'privacy_notice'])))`
 - `confirm_token_lead_is_only_told`: `CHECK (((lead_id IS NULL) OR (kind = 'privacy_notice')))`
@@ -352,6 +353,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `consent_doi_token_expires_after_issue`: `CHECK ((expires_at > issued_at))`
 - `consent_doi_token_hash_unique`: `UNIQUE (token_hash)`
 
 **Indexes**
@@ -696,6 +698,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `preference_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `preference_token_revocation_is_reasoned`: `CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL)))`
 - `preference_token_revoked_reason_check`: `CHECK ((revoked_reason = ANY (ARRAY['rotated', 'expired', 'erasure', 'compromise', 'merged_predecessor', 'merged_into_survivor'])))`
 - `preference_token_token_key`: `UNIQUE (token)`
@@ -845,6 +848,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `withdrawal_credential_expires_after_creation`: `CHECK ((expires_at > issued_at))`
 - `withdrawal_credential_names_at_most_one_subject`: `CHECK ((NOT ((contact_id IS NOT NULL) AND (lead_id IS NOT NULL))))`
 - `withdrawal_credential_revocation_is_reasoned`: `CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL)))`
 - `withdrawal_credential_revoked_reason_check`: `CHECK ((revoked_reason = ANY (ARRAY['erasure', 'compromise', 'merged_predecessor', 'superseded'])))`

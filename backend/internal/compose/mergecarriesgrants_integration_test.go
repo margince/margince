@@ -166,7 +166,8 @@ func TestAnExpiredShareDoesNotLiftTheSurvivorsShare(t *testing.T) {
 	c.share(t, "company", retired.UUID, c.e.Rep1, "write", &soon)
 	c.share(t, "company", survivor.UUID, c.e.Rep1, "read", nil)
 	// The writer refuses a past expiry, so the lapse is set after the fact.
-	if _, err := c.e.Pool.Exec(context.Background(), `UPDATE record_grant SET expires_at = now() - interval '1 day'
+	if _, err := c.e.Pool.Exec(context.Background(), `UPDATE record_grant SET created_at = now() - interval '2 days',
+		                        expires_at = now() - interval '1 day'
 		WHERE record_type = 'company' AND record_id = $1`, retired.UUID); err != nil {
 		t.Fatalf("letting the retired share lapse: %v", err)
 	}

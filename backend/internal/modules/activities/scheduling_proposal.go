@@ -67,8 +67,11 @@ func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingPropo
 		}
 		id = ids.UUID(row.Id)
 		args := schedulingArgs{}
-		values := []string{args.add(id), args.add(host), args.add(in), args.add(hash), args.add(expires), args.add(ref)}
-		if _, err := tx.Exec(ctx, `INSERT INTO meeting_proposal(activity_id,host_user_id,request,token_hash,expires_at,link_ref) VALUES(`+strings.Join(values, ",")+`)`, args...); err != nil {
+		// created_at is written from the clock that computed the expiry, not
+		// defaulted by the database. A row whose two timestamps come from two
+		// clocks can read as expiring before it was created.
+		values := []string{args.add(id), args.add(host), args.add(in), args.add(hash), args.add(expires), args.add(ref), args.add(s.now())}
+		if _, err := tx.Exec(ctx, `INSERT INTO meeting_proposal(activity_id,host_user_id,request,token_hash,expires_at,link_ref,created_at) VALUES(`+strings.Join(values, ",")+`)`, args...); err != nil {
 			return err
 		}
 		return auditProposal(ctx, tx, id, "created")

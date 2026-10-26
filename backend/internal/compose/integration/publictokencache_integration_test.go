@@ -344,7 +344,8 @@ func freshExpiredConfirmToken(t *testing.T, c *consentEnv) string {
 	}
 	token := confirmLinkToken(t, c.AppEnv)
 	if _, err := c.Owner.Exec(context.Background(),
-		`UPDATE confirm_token SET expires_at = now() - interval '1 day' WHERE consumed_at IS NULL`); err != nil {
+		`UPDATE confirm_token SET issued_at = now() - interval '2 days',
+		                         expires_at = now() - interval '1 day' WHERE consumed_at IS NULL`); err != nil {
 		t.Fatalf("ageing the confirm link past its TTL: %v", err)
 	}
 	return token

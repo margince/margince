@@ -35,6 +35,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 **Rules**
 
 - `deal_room_archived_agrees`: `CHECK (((state = 'archived') = (archived_at IS NOT NULL)))`
+- `deal_room_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `deal_room_state_check`: `CHECK ((state = ANY (ARRAY['draft', 'building', 'ready', 'publishing', 'live', 'paused', 'closed', 'expired', 'archived'])))`
 - `deal_room_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
@@ -195,6 +196,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `deal_room_invitation_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `uq_deal_room_invitation_attempt`: `UNIQUE (participant_id, attempt_no)`
 - `uq_deal_room_invitation_token`: `UNIQUE (token_hash)`
 
@@ -278,6 +280,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `deal_room_session_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `uq_deal_room_session_token`: `UNIQUE (token_hash)`
 
 **Indexes**

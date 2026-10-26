@@ -114,6 +114,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `auth_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `auth_token_purpose_check`: `CHECK ((purpose = ANY (ARRAY['password_reset', 'email_verify', 'invite'])))`
 
 **Indexes**
@@ -269,6 +270,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `oauth_authorization_code_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `oauth_code_unique`: `UNIQUE (code_hash)`
 
 **Indexes**
@@ -360,6 +362,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `oauth_refresh_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `oauth_refresh_unique`: `UNIQUE (token_hash)`
 
 **Indexes**
@@ -440,6 +443,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `passport_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `passport_token_hash_key`: `UNIQUE (token_hash)`
 - `uq_passport_id_owner`: `UNIQUE (id, on_behalf_of)`
 
@@ -488,6 +492,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Rules**
 
 - `record_grant_access_check`: `CHECK ((access = ANY (ARRAY['read', 'write'])))`
+- `record_grant_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `record_grant_record_shape`: `CHECK ((num_nonnulls(contact_id, company_id, deal_id, lead_id, project_id) = 1))`
 - `record_grant_record_type_check`: `CHECK ((record_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
 - `record_grant_subject_type_check`: `CHECK ((subject_type = ANY (ARRAY['user', 'team'])))`
@@ -594,6 +599,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `session_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `session_token_hash_key`: `UNIQUE (token_hash)`
 
 **Indexes**
