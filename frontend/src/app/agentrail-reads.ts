@@ -74,8 +74,16 @@ export type Signals = Readonly<{
   capture: Readonly<{ progress: CaptureProgress; line: string }> | null;
 }>;
 
+type Connection = components["schemas"]["CaptureConnection"];
+
 /** One unreachable connection, as the panel names it. */
-export type OfflineSource = Readonly<{ id: string; label: string }>;
+export type OfflineSource = Readonly<{
+  id: string;
+  provider: Connection["provider"];
+  status: Connection["status"];
+  /** The account and provider in the reader's words; display only. */
+  label: string;
+}>;
 
 /** What the agent has cost this month, and whether this seat may know. */
 export type Spend = Readonly<{
@@ -118,8 +126,6 @@ function useAgentProfile(): Readonly<{ state: AiPosture; name: string }> {
   };
 }
 
-type Connection = components["schemas"]["CaptureConnection"];
-
 /** The account address and its provider, or the provider alone when the
  *  connection carries no address. The label is display only; the id is the
  *  identity, so a missing address never merges two connections. */
@@ -134,7 +140,12 @@ export function offlineSource(
         provider,
       })
     : provider;
-  return { id: connection.id, label };
+  return {
+    id: connection.id,
+    provider: connection.provider,
+    status: connection.status,
+    label,
+  };
 }
 
 export function useSignals(): Signals {

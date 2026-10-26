@@ -7107,7 +7107,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.line.waiting_one": "{count} Freigabe steht aus",
   "agent.line.waiting_other": "{count} Freigaben stehen aus",
   "agent.line.allClear": "Nichts verlangt nach Aufmerksamkeit",
-  "agent.line.sourcesUnknown": "Verbundene Quellen konnten nicht geprüft werden",
+  "agent.line.sourcesUnknown":
+    "Verbundene Quellen konnten nicht geprüft werden",
   "agent.line.cannotReach": "{sources} nicht erreichbar",
   "agent.line.runFailed": "Ein Lauf ist fehlgeschlagen",
   "agent.line.runStopped": "Ein Lauf wurde vorzeitig beendet",

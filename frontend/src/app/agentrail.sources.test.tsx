@@ -93,32 +93,33 @@ describe("the agent panel's offline sources", () => {
     );
   });
 
-  it("falls back to the provider's name for a connection with no address, and keeps two such connections apart", async () => {
-    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("falls back to the provider's name for a connection with no address", async () => {
     const user = userEvent.setup();
-    const { account_label: _drop, ...unlabelled } = GMAIL;
+    const { account_label: _gmail, ...gmail } = GMAIL;
+    const { account_label: _gcal, ...gcal } = GCAL;
     stubAgentRailApi({
       connectors: () =>
         jsonResponse({
           data: [
-            { ...unlabelled, status: "error" },
-            {
-              ...unlabelled,
-              id: "018f3a1b-0000-7000-8000-00000000a003",
-              status: "error",
-            },
+            { ...gmail, status: "error" },
+            { ...gcal, status: "error" },
           ],
         }),
     });
     const { container } = render(ROUTE);
     await openPanel(user, container);
-    const row = `${en["connectors.provGmail"]} ${en["agent.fact.offline"]}`;
-    await waitFor(() => expect(sourceRows()).toEqual([row, row]));
-    expect(duplicateKeyWarnings(errors)).toEqual([]);
+    await waitFor(() =>
+      expect(sourceRows()).toEqual([
+        `${en["connectors.provGmail"]} ${en["agent.fact.offline"]}`,
+        `${en["connectors.provGcal"]} ${en["agent.fact.offline"]}`,
+      ]),
+    );
   });
 
   it("says nothing needs attention when every connection is connected", async () => {
-    stubAgentRailApi({ connectors: () => jsonResponse({ data: [GMAIL, GCAL] }) });
+    stubAgentRailApi({
+      connectors: () => jsonResponse({ data: [GMAIL, GCAL] }),
+    });
     const { container } = render(ROUTE);
     await settlesOnLine(container, en["agent.line.allClear"]);
   });

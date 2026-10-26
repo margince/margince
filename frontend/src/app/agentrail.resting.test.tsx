@@ -143,14 +143,18 @@ describe("restingReadings", () => {
     expect(answered.map(said)).toEqual(["Nothing needs attention"]);
   });
 
-  it("claims no all-clear when the connections read failed, and still says what is waiting", () => {
+  it("claims no all-clear when the connections read failed, and keeps saying so beside other news", () => {
     const unknown = { ...QUIET, sourcesUnknown: true };
     expect(restingReadings(unknown, WORDS).map(said)).toEqual([
       "Could not check your connected sources",
     ]);
+    // Other news does not push the failed check out of the rotation.
     expect(
       restingReadings({ ...unknown, waiting: 2 }, WORDS).map(said),
-    ).toEqual(["2 approvals waiting"]);
+    ).toEqual([
+      "Could not check your connected sources",
+      "2 approvals waiting",
+    ]);
   });
 
   // The fix for the pinned line: a day that settled three runs says three

@@ -181,6 +181,9 @@ export function restingReadings(
     // because a day settles several runs and the newest being the only one
     // ever said is both less than the agent did and, by the afternoon, older
     // than the reader.
+    sources: facts.sourcesUnknown
+      ? [plain(words.t("agent.line.sourcesUnknown"))]
+      : undefined,
     finished: facts.settled,
     waiting:
       facts.waiting !== undefined && facts.waiting > 0
@@ -194,17 +197,9 @@ export function restingReadings(
         : [plain(facts.developmentLine)],
   };
   const lines = IDLE_ORDER.flatMap((kind) => said[kind] ?? []);
-  if (lines.length > 0) return lines;
-  // An all-clear is a claim about every source; a failed connections read
-  // cannot make it. The orb stays idle (a dropped read is not a fault), but
-  // the line says what is true: nobody checked.
-  return [
-    plain(
-      words.t(
-        facts.sourcesUnknown ? "agent.line.sourcesUnknown" : "agent.line.allClear",
-      ),
-    ),
-  ];
+  // Never an all-clear while the source check failed: that reading is in
+  // `lines` above, so the fallback is reached only when every read answered.
+  return lines.length === 0 ? [plain(words.t("agent.line.allClear"))] : lines;
 }
 
 /**
