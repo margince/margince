@@ -6,13 +6,10 @@ package compose
 // The domain-triage lane of the deep-read worker: decide whether a mail domain
 // deserves a company, and create one only if it does.
 //
-// It is the same worker, the same crawler and the same extraction spine as an
-// company read — what differs is that it starts with no company and
-// may finish without creating one. Two things happen here that happen nowhere
-// else: the seed page is classified BEFORE the crawl, so a personal or parked
-// domain costs one page instead of twelve; and when no site can be read at all,
-// the sender-name heuristic gets the last word before a company is created by
-// default.
+// It shares the worker, crawler and extraction of a company read, but starts
+// with no company and may finish without one. The seed page is classified
+// before the crawl, so a personal or parked domain costs one page. When no site
+// can be read, the sender-name heuristic decides between personal and pending.
 
 import (
 	"context"

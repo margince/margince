@@ -340,3 +340,107 @@ func TestATestRunResolvesAnActivityLinkByTheNaturalKeyOfARowInTheSameUpload(t *t
 		t.Fatalf("test run %+v and commit %+v disagree", preview.Disposition, landed.Disposition)
 	}
 }
+
+// issuesWith counts a report's issues that carry one reason code.
+func issuesWith(r importReportDTO, code string) int {
+	n := 0
+	for _, issue := range r.Issues {
+		if issue.ReasonCode == code {
+			n++
+		}
+	}
+	return n
+}
+
+func TestOneImportFilesOneCopyOfANoteItsExportRepeats(t *testing.T) {
+	e := setupImportApp(t)
+	var rows strings.Builder
+	for i := 1; i <= 4; i++ {
+		fmt.Fprintf(&rows, "A-%d,note,Fair recap,Met at the fair,2025-03-02,contact:P-1,,,\n", i)
+	}
+	files := map[string]string{
+		"contacts.csv":   "ref,email,name\nP-1,jo@act-twin.example,Jo\n",
+		"activities.csv": activityHeader + "\n" + rows.String(),
+	}
+	parts := contactAndActivityParts()
+	run := stageBundle(t, e, uploadZip(t, e, "crm.zip", zipBytes(t, files)).SourceRef, "crm", parts)
+	preview := readImportReport(t, e, run.ID)
+	approveAndRead(t, e, run.ID)
+	report := readImportReport(t, e, run.ID)
+	if n := liveActivities(t, e, "Fair recap"); n != 1 {
+		t.Fatalf("%d live copies of the repeated note, want 1", n)
+	}
+	if report.Disposition.Created != 2 || report.Disposition.Skipped != 3 || issuesWith(report, "note_repeated") != 3 {
+		t.Fatalf("commit = %+v, issues %+v, want the contact and one note, three rows named as repeats", report.Disposition, report.Issues)
+	}
+	if preview.Disposition.Created != 2 || issuesWith(preview, "note_repeated") != 3 {
+		t.Fatalf("dry run = %+v, issues %+v, want the same three repeats the commit names", preview.Disposition, preview.Issues)
+	}
+	_, again := importActivities(t, e, files, parts)
+	if again.Disposition.Created != 0 || liveActivities(t, e, "Fair recap") != 1 {
+		t.Fatalf("same file again = %+v, want nothing filed a second time", again.Disposition)
+	}
+	files["activities.csv"] = activityHeader + "\nA-9,note,Fair recap,Met at the fair,2025-03-02,contact:P-1,,,\n"
+	if _, later := importActivities(t, e, files, parts); liveActivities(t, e, "Fair recap") != 2 {
+		t.Fatalf("a later run = %+v, want its own row filed: runs do not collapse into each other", later.Disposition)
+	}
+}
+
+func TestARepeatedTextStaysApartAtAnotherTimeOnAnotherRecordOrOfAnotherKind(t *testing.T) {
+	e := setupImportApp(t)
+	_, report := importActivities(t, e, map[string]string{
+		"contacts.csv": "ref,email,name\nP-1,jo@act-apart.example,Jo\nP-2,li@act-apart.example,Li\n",
+		"activities.csv": activityHeader + "\n" +
+			"A-1,note,Weekly sync,Went through the plan,2025-03-02,contact:P-1,,,\n" +
+			"A-2,note,Weekly sync,Went through the plan,2025-03-09,contact:P-1,,,\n" +
+			"A-3,note,Weekly sync,Went through the plan,2025-03-02,contact:P-2,,,\n" +
+			"A-4,call,Weekly sync,Went through the plan,2025-03-02,contact:P-1,,,\n" +
+			"A-5,call,Weekly sync,Went through the plan,2025-03-02,contact:P-1,,,\n",
+	}, contactAndActivityParts())
+	if report.Disposition.Skipped != 0 || liveActivities(t, e, "Weekly sync") != 5 {
+		t.Fatalf("report = %+v, issues %+v, want all five activities filed", report.Disposition, report.Issues)
+	}
+}
+
+func TestARepeatedNoteStaysApartUnderAnotherAuthorOrOwner(t *testing.T) {
+	e := setupImportApp(t)
+	e.DescribeCompany(t)
+	createdID(t, e, "/v1/users", AnyMap{"email": "owner@act-attrib.test", "display_name": "Owner", "role": "rep"})
+	parts := contactAndActivityParts()
+	for _, part := range parts {
+		if mapping, isActivities := part["mapping"].(AnyMap); isActivities && part["object"] == "activity" {
+			mapping["author"], mapping["owner_email"] = "author", "owner_email"
+		}
+	}
+	_, report := importActivities(t, e, map[string]string{
+		"contacts.csv": "ref,email,name\nP-1,jo@act-attrib.example,Jo\n",
+		"activities.csv": activityHeader + ",author,owner_email\n" +
+			"A-1,note,Board recap,Agreed the budget,2025-03-02,contact:P-1,,,,Ana Ruiz,\n" +
+			"A-2,note,Board recap,Agreed the budget,2025-03-02,contact:P-1,,,,Ben Ode,\n" +
+			"A-3,note,Board recap,Agreed the budget,2025-03-02,contact:P-1,,,,Ana Ruiz,owner@act-attrib.test\n",
+	}, parts)
+	if report.Disposition.Skipped != 0 || liveActivities(t, e, "Board recap") != 3 {
+		t.Fatalf("report = %+v, issues %+v, want three notes: another author or owner is another note", report.Disposition, report.Issues)
+	}
+}
+
+func TestARowIdShapedLikeANoteKeyIsAnOrdinaryRow(t *testing.T) {
+	e := setupImportApp(t)
+	keyShaped := "activity_note_twin:" + strings.Repeat("0", 64)
+	_, report := importActivities(t, e, map[string]string{
+		"contacts.csv": "ref,email,name\nP-1,jo@act-keyshape.example,Jo\n",
+		"activities.csv": activityHeader + "\n" +
+			keyShaped + ",note,Shaped row,Its own note,2025-03-02,contact:P-1,,,\n" +
+			strings.Repeat("0", 64) + ",note,Bare hash row,Its own note,2025-03-02,contact:P-1,,,\n" +
+			"A-1,note,Real note,Met at the fair,2025-03-02,contact:P-1,,,\n" +
+			"A-2,note,Real note,Met at the fair,2025-03-02,contact:P-1,,,\n",
+	}, contactAndActivityParts())
+	if report.Disposition.Created != 4 || issuesWith(report, "note_repeated") != 1 {
+		t.Fatalf("report = %+v, issues %+v, want the contact, both key-shaped rows and one real note, and the real repeat collapsed", report.Disposition, report.Issues)
+	}
+	for _, subject := range []string{"Shaped row", "Bare hash row", "Real note"} {
+		if n := liveActivities(t, e, subject); n != 1 {
+			t.Fatalf("%d live %q notes, want 1", n, subject)
+		}
+	}
+}

@@ -4,9 +4,9 @@
 package contacts
 
 // The sender-name heuristic: does this domain's own label say it belongs to a
-// contact rather than a company? It answers only when the triage crawl could not
-// — an unreachable site, a domain that resolves to nothing — because a read
-// site is always better evidence than a name coincidence.
+// contact rather than a company? It answers when the triage crawl could not.
+// A site that named a company not spelling a name-shaped domain is held for a
+// human instead. A read site that names its own domain always wins.
 //
 // It is the last line before falling back to creating a company. Getting it
 // wrong in one direction costs a real one-contact consultancy its company
@@ -14,7 +14,15 @@ package contacts
 // is deliberately narrow: the domain's registrable label must BE somebody's
 // name, spelled the way contacts spell their own domains.
 
-import "strings"
+import (
+	"context"
+	"strings"
+	"unicode"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/freemail"
+)
 
 // DomainContact is one human the workspace already records on a domain: their
 // name as captured, and the local parts of EVERY address they hold on it. Both
@@ -128,3 +136,37 @@ func nameWithoutAffiliation(name string) string {
 // isNameSeparator splits the punctuation a domain label or a mail local part
 // uses where a name has a space: "acme-corp", "first.last", "first_last".
 func isNameSeparator(r rune) bool { return r == '-' || r == '_' || r == '.' || r == '+' }
+
+// siteNameIsOffTheSendersDomain reports whether a machine's company verdict
+// named a company that does not spell a domain which is the sender's own name.
+// That is an employer on a personal page, or a founder's brand, and a machine
+// cannot tell which.
+func siteNameIsOffTheSendersDomain(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput) (bool, error) {
+	label := freemail.RegistrableLabel(in.Domain)
+	if in.Source == DomainSourceHuman || in.DossierName == "" || statedNameSpellsLabel(in.DossierName, label) {
+		return false, nil
+	}
+	contacts, err := OnDomain(ctx, tx, in.Domain)
+	if err != nil {
+		return false, err
+	}
+	return DomainLooksPersonal(label, contacts), nil
+}
+
+// statedNameSpellsLabel reports whether a company name accounts for a domain
+// label: "Kestner Consulting" spells kestnerconsulting, and "Marsh Advisory"
+// spells rowanmarsh through its word "marsh".
+func statedNameSpellsLabel(stated, label string) bool {
+	label = normalizeName(strings.Join(strings.FieldsFunc(label, isNameSeparator), ""))
+	words := strings.FieldsFunc(normalizeName(stated), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
+	if label == "" || strings.Contains(strings.Join(words, ""), label) {
+		return true
+	}
+	for _, word := range words {
+		// Four runes keeps a legal suffix ("AG", "Ltd") from matching by itself.
+		if (len([]rune(word)) >= 4 && strings.Contains(label, word)) || jaroWinkler(word, label) >= domainPersonalSimilarity {
+			return true
+		}
+	}
+	return false
+}

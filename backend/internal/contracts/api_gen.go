@@ -11651,6 +11651,7 @@ const (
 	ImportReasonCodeNotAnAmount                  ImportReasonCode = "not_an_amount"
 	ImportReasonCodeNotAnEmail                   ImportReasonCode = "not_an_email"
 	ImportReasonCodeNotYesNo                     ImportReasonCode = "not_yes_no"
+	ImportReasonCodeNoteRepeated                 ImportReasonCode = "note_repeated"
 	ImportReasonCodeOccurredAtFuture             ImportReasonCode = "occurred_at_future"
 	ImportReasonCodeOccurredAtUnnamed            ImportReasonCode = "occurred_at_unnamed"
 	ImportReasonCodeOptionNotAllowed             ImportReasonCode = "option_not_allowed"
@@ -11854,6 +11855,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeNotAnEmail:
 		return true
 	case ImportReasonCodeNotYesNo:
+		return true
+	case ImportReasonCodeNoteRepeated:
 		return true
 	case ImportReasonCodeOccurredAtFuture:
 		return true

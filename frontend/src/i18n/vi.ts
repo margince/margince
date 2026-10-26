@@ -7614,6 +7614,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không thể thêm hoạt động vào một trong các hồ sơ mà hàng này liên kết nên hàng bị bỏ qua.",
   "import.reason.activity_held":
     "Hoạt động này đang bị giữ theo nghĩa vụ lưu trữ nên hàng không thể thay đổi nó.",
+  "import.reason.note_repeated":
+    "Ghi chú này lặp lại một hàng trước đó của lần nhập này: cùng bản ghi, cùng nội dung, cùng thời điểm. Nó chỉ được lưu một lần.",
   "import.reason.lead_not_found":
     "Không có lead nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
   "import.reason.lead_not_found_dropped":

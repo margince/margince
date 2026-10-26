@@ -7847,6 +7847,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst bei einem der Datensätze, mit denen diese Zeile verknüpft ist, keine Aktivitäten hinzufügen, daher wird die Zeile übersprungen.",
   "import.reason.activity_held":
     "Diese Aktivität unterliegt einer Aufbewahrungspflicht, daher kann die Zeile sie nicht ändern.",
+  "import.reason.note_repeated":
+    "Diese Notiz wiederholt eine frühere Zeile dieses Imports: dieselben Datensätze, derselbe Text, dieselbe Zeit. Abgelegt wird sie nur einmal.",
   "import.reason.lead_not_found":
     "Kein Lead mit „{ref}“ in diesem Upload, in einem früheren Import oder in Margince.",
   "import.reason.lead_not_found_dropped":

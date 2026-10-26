@@ -7917,6 +7917,8 @@ export const en = {
     "You cannot add activities to one of the records this row links to, so the row is skipped.",
   "import.reason.activity_held":
     "This activity is held under a retention obligation, so the row cannot change it.",
+  "import.reason.note_repeated":
+    "This note repeats an earlier row of this import: same records, same text, same time. It is filed once.",
   "import.reason.lead_not_found":
     "No lead with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.lead_not_found_dropped":
