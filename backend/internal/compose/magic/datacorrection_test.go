@@ -12,9 +12,8 @@ import (
 
 // A release correction re-files old mail by writing one activity_relink audit
 // row per message, under the actor system:datatask:<task id> and with the
-// step's run id as batch_id. On a copy of a live installation one run wrote
-// 366 of them in a day, and the page read as hundreds of things done for the
-// reader, "by Margince", with no reason.
+// step's run id as batch_id. Read as ordinary lines, a large run looks like
+// hundreds of things done for the reader, "by Margince", with no reason.
 
 const relinkTask = "system:datatask:core/1792680000_captured_mail_filed_on_its_deal"
 
