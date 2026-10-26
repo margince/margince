@@ -76,16 +76,12 @@ var carriesASecondEdgeKind = gatekit.Waive(map[string]string{
 const (
 	employmentHelper = "IsCurrentSQL"
 	primaryHelper    = "CurrentPrimarySQL"
-	// slotHelper answers a different question from employmentHelper, and a
-	// writer that reaches for the wrong one is wrong either way.
+	// slotHelper answers the other question. IsCurrentSQL asks whether the job
+	// is still theirs today, as a date comparison, because somebody serving
+	// notice still works there.
 	//
-	// IsCurrentSQL asks whether the job is still theirs today, which is a date
-	// comparison: somebody serving notice still works there. LiveSlotSQL asks
-	// whether the uniqueness slot uq_rel_employment already holds a row, which
-	// is `ended_at IS NULL` and nothing about dates.
-	//
-	// A writer checking before it writes needs the slot, so sending it to
-	// IsCurrentSQL would have it ask the wrong question in the right place.
+	// LiveSlotSQL asks whether uq_rel_employment already holds a row, which is
+	// `ended_at IS NULL`. A writer checking before it writes needs that one.
 	slotHelper      = "LiveSlotSQL"
 	employmentIssue = "eight statements in five sibling modules are ratified separately: a module may not import contacts (ADR-0054 §3), so the predicate has to move tier before they can adopt it; see issue 2360"
 )
