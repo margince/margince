@@ -1058,13 +1058,27 @@ sweep_stacks() { # kill every margince dev stack: recorded, orphaned, or foreign
 # infrastructure failure here is the reason every statement after it fails, and
 # swallowing it leaves a caller reading a psql error about a database that was
 # never reachable.
+#
+# A Postgres still recovering after a restart fails compose's --wait as
+# "unhealthy" and is healthy again within a minute, so only that answer is
+# tried again, for that minute, before it is reported.
+infra_retry_count=6 infra_retry_pause=10
 ensure_infra() {
-  local out
-  if ! out="$(make db-up 2>&1)"; then
-    printf '%s\n' "$out" >&2
+  local out tries=0
+  until out="$(make db-up 2>&1)"; do
+    if grep -q 'is unhealthy' <<<"$out" && ((tries < infra_retry_count)); then
+      ((tries > 0)) || echo "dev: a container is not healthy yet; trying again for up to $((infra_retry_count * infra_retry_pause))s" >&2
+      tries=$((tries + 1))
+      sleep "$infra_retry_pause"
+      continue
+    fi
+    printf '%s\n' "$out" | tail -n 15 >&2
     echo "FAIL: the dev infrastructure could not be brought up" >&2
+    if grep -q 'is unhealthy' <<<"$out"; then
+      echo "  A container stayed unhealthy. Its own log says why: docker ps -a, then docker logs <container>" >&2
+    fi
     exit 1
-  fi
+  done
 }
 
 drop_stray_dev_dbs() { # every margince_dev_<slug> database an isolated env left behind
@@ -1116,9 +1130,10 @@ up)
   mkdir -p "$rundir"
   : > "$log"
   echo "$label → db=$db api=:$api_port fe=:$fe_port (logs: $log)"
+  # On the console, not in the log: a failure here leaves nothing to tail.
+  ensure_infra
   {
-    echo "=== infra + db ==="
-    make db-up
+    echo "=== db ==="
     # --fresh means "the install a first customer gets": drop the database
     # and let the migrations and the bootstrap rebuild it. Deliberately not
     # the default — a restart to pick up a backend change must not cost the
@@ -1564,7 +1579,7 @@ sweep)
     # db-up first: drop_stray_dev_dbs issues every statement through the compose
     # Postgres, so on a stopped stack it would connect to nothing, fail
     # silently, and leave the databases to reappear the moment infra started.
-    make db-up >/dev/null
+    ensure_infra
     drop_stray_dev_dbs
     echo "note: the shared 'margince' database is kept — DROP=1 removes only the per-slug ones" >&2
   fi
