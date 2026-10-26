@@ -22,10 +22,6 @@ import (
 // dialog moved to noon. Each restore is audited per record, and a restored
 // meeting leaves the selection. Version 2 also restores a meeting archived
 // after the damage.
-//
-// Two cases stay unrepaired, as #8671 accepted. A save after the cutoff has no
-// evidence that the old dialog wrote it. A start read in a zone changed since
-// may no longer read as noon. Neither start is guessed.
 func meetingNoonStartsDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792912000_meeting_noon_starts", Version: 2,

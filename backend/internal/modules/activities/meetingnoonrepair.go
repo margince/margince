@@ -148,14 +148,18 @@ func restoreArchivedMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting
 	if tag.RowsAffected() == 0 {
 		return false, nil
 	}
+	// The selection keeps instants only, and a time is named with its
+	// precision, as the live update names it.
+	instant := string(PrecisionInstant)
 	auditID, err := storekit.Audit(ctx, tx, "update", "activity", m.ID,
-		map[string]any{auditFieldOccurredAt: m.Noon}, map[string]any{auditFieldOccurredAt: m.Original})
+		map[string]any{auditFieldOccurredAt: m.Noon, fieldOccurredPrecision: instant},
+		map[string]any{auditFieldOccurredAt: m.Original, fieldOccurredPrecision: instant})
 	if err != nil {
 		return false, err
 	}
-	original := m.Original
+	original, precision := m.Original, crmcontracts.ActivityTimeIsAnInstant
 	if err := storekit.EmitEvent(ctx, tx, auditID, m.ID, crmcontracts.PublicEventActivityUpdated{
-		ChangedFields: crmcontracts.PublicEventActivityChangedFields{OccurredAt: &original},
+		ChangedFields: crmcontracts.PublicEventActivityChangedFields{OccurredAt: &original, OccurredPrecision: &precision},
 	}); err != nil {
 		return false, err
 	}

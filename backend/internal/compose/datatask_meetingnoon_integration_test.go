@@ -10,6 +10,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -254,9 +255,13 @@ func TestTheNoonTaskRestoresAMeetingArchivedAfterTheDamage(t *testing.T) {
 		t.Fatalf("archiving the meeting: %v", err)
 	}
 	f.cutoffNow()
+	version := f.version(archived)
 
 	runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
 
+	if got := f.version(archived); got != version+1 {
+		t.Errorf("the restore left version %d, want %d", got, version+1)
+	}
 	if got, want := f.start(archived), "2026-07-15T07:00:00.123Z"; got != want {
 		t.Errorf("the archived meeting starts at %s, want %s", got, want)
 	}
@@ -270,8 +275,10 @@ func TestTheNoonTaskRestoresAMeetingArchivedAfterTheDamage(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM event_outbox o
 		JOIN audit_log a ON a.id = (o.envelope->'trace'->>'audit_log_id')::uuid
 		WHERE o.envelope->>'type' = 'activity.updated' AND o.envelope->'entity'->>'id' = $1
-		  AND a.actor_type = 'system'`, archived.String()); got != 1 {
-		t.Errorf("activity.updated events riding the restore's audit row = %d, want 1", got)
+		  AND a.actor_type = 'system'
+		  AND o.envelope->'payload'->'changed_fields'->>'occurred_precision' = 'instant'
+		  AND a.before->>'occurred_precision' = 'instant' AND a.after->>'occurred_precision' = 'instant'`, archived.String()); got != 1 {
+		t.Errorf("activity.updated events riding the restore's audit row, with the precision named = %d, want 1", got)
 	}
 	if got := f.historyStart(archived); got != "2026-07-15T07:00:00.123Z" {
 		t.Errorf("the history start after the repair = %s, want the restored start", got)
@@ -322,5 +329,36 @@ func TestTheNoonBatchPagesReplaysAndRefusesAMalformedCursor(t *testing.T) {
 		return err
 	}); err == nil {
 		t.Error("a malformed cursor was accepted")
+	}
+}
+
+// A batch that fails after its writes takes the archived restore back with it.
+func TestTheNoonRepairOfAnArchivedMeetingRollsBackWithItsBatch(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
+	f := noonFixture{t: t, e: e}
+	archived := f.book(bookedAtMorning, f.contact("Rollback Contact"))
+	f.save(archived, berlinNoon)
+	if _, err := e.Activities.ArchiveActivity(e.Admin(), archived, nil); err != nil {
+		t.Fatal(err)
+	}
+	f.cutoffNow()
+	task := meetingNoonStartsDataTask()
+	original := task.Steps[0].Batch
+	task.Steps[0].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+		out, err := original(ctx, tx, in)
+		if err != nil {
+			return out, err
+		}
+		return out, errors.New("transaction interrupted after domain writes")
+	}
+	runMachineAddressTask(ctx, t, e, task)
+
+	if got := f.start(archived); got != "2026-07-15T10:00:00.000Z" {
+		t.Errorf("the restore survived a rolled-back batch: %s", got)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1 AND actor_type = 'system'`, archived.UUID); got != 0 {
+		t.Errorf("restore audit rows escaped the rollback: %d", got)
 	}
 }
