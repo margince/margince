@@ -88,11 +88,12 @@ func buildLinkIDCoalesce(alias string) string {
 // reads one row from one table however wide the vocabulary grows. A join per
 // arm would read five.
 //
-// IT PROJECTS A NAME THE CALLER IS ALREADY ENTITLED TO. Every caller pairs
-// this with auth.LinkTargetVisibleClause, which drops a link row whose target
-// is out of the caller's row scope — so a name reached from a surviving row
-// belongs to a record that caller may read. Used without that clause it would
-// be a disclosure, which is why no caller here spells one without the other.
+// It projects a name the caller is already entitled to. Every caller pairs it
+// with auth.LinkTargetReadableClause. That clause drops a link row whose target
+// is out of the caller's row scope or of a type the caller may not read. A
+// name reached from a surviving row therefore belongs to a readable record.
+// Used without that clause it would be a disclosure, which is why no caller
+// here spells one without the other.
 //
 // alias names the activity_link table in the caller's query.
 func linkNameCoalesce(alias string) string {

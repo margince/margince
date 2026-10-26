@@ -75,7 +75,8 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"PassingSubset":      {argument: 2},
 	// The link target's table is the caller's to name in its own allowlist;
 	// this clause renders over the alias it is given.
-	"LinkTargetVisibleClause": {table: anyTable},
+	"LinkTargetVisibleClause":  {table: anyTable},
+	"LinkTargetReadableClause": {table: anyTable},
 
 	"ActivityDiscoverClause":           {table: "activity"},
 	"ActivityContentClause":            {table: "activity"},

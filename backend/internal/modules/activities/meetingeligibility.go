@@ -41,7 +41,7 @@ func appendCustomerMeetingClause(ctx context.Context, in ListActivitiesInput, ar
 }
 
 func customerMeetingClause(ctx context.Context, arg func(any) int) (string, error) {
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
 		return "", err
 	}

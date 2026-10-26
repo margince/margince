@@ -165,7 +165,7 @@ func followUpGatesFor(ctx context.Context, arg func(any) int, need string) (foll
 	// derived from the thread, so it takes the content gate. A later message
 	// the reader may not see must not decide anything.
 	g.content, g.later, g.back = followUpReadableSQL("a"), followUpReadableSQL("later"), followUpReadableSQL("back")
-	if g.links, err = auth.LinkTargetVisibleClause(ctx, "wl", arg); err != nil {
+	if g.links, err = auth.LinkTargetReadableClause(ctx, "wl", arg); err != nil {
 		return g, err
 	}
 	if g.links == "" {
