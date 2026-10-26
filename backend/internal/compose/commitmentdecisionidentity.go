@@ -106,3 +106,42 @@ func (d *CommitmentDispatcher) resolvedWorkBefore(ctx context.Context, tx pgx.Tx
 	}
 	return false, nil
 }
+
+// takenUnderEarlierAttribution says whether this promise already has a task
+// written under the unnamed form an earlier reading gave it. Only a colleague
+// taking the promise over writes such a task. A later reading that names the
+// promiser keys the promise apart, and must not write a second task beside the
+// one the taker holds. The same message and the same sentence identify the
+// promise, and a different sentence is different work.
+func (d *CommitmentDispatcher) takenUnderEarlierAttribution(ctx context.Context, tx pgx.Tx, c Commitment) (bool, error) {
+	if c.Span == "" || c.Seat == nil || c.Theirs != nil {
+		return false, nil
+	}
+	return d.tasks.CommitmentTaskWritten(ctx, tx, earlierUnnamedLocators(c)...)
+}
+
+// earlierUnnamedLocators are the locators the promise had while no seat was
+// named. A reading then gave no name, the reported name, or the seat's name
+// without placing it.
+func earlierUnnamedLocators(c Commitment) []string {
+	keys := []string{"us", "name:", unnamedPromiserKey("")}
+	names := []string{c.Party}
+	for _, party := range c.parties {
+		if party.Seat != nil && *party.Seat == *c.Seat {
+			names = append(names, party.Name)
+			if first, _, found := strings.Cut(strings.TrimSpace(party.Name), " "); found {
+				names = append(names, first)
+			}
+		}
+	}
+	for _, name := range names {
+		if strings.TrimSpace(name) != "" {
+			keys = append(keys, unnamedPromiserKey(name))
+		}
+	}
+	locators := make([]string, 0, len(keys))
+	for _, key := range keys {
+		locators = append(locators, commitmentLocator(c.SourceActivityID, claimKindOurs, key, c.Span))
+	}
+	return locators
+}
