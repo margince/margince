@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -21,6 +22,21 @@ import (
 // text a user typed about a conversation. audit_log is append-only, so a
 // credential written into it in clear could never be taken out again.
 var textMaskedAuditTypes = map[string]bool{"activity": true, "scheduled_send": true, "mail_draft": true}
+
+// MaskedAuditEntityTypes are the record types whose audit images the masking
+// rules reach, sorted so a caller's query plan does not change between runs.
+//
+// A repair of images written before those rules derives its own corpus from
+// here. A second list would read a smaller tree than the rules do, and the rows
+// it missed would keep their credentials with nothing failing.
+func MaskedAuditEntityTypes() []string {
+	types := make([]string, 0, len(textMaskedAuditTypes))
+	for entityType := range textMaskedAuditTypes {
+		types = append(types, entityType)
+	}
+	slices.Sort(types)
+	return types
+}
 
 // AuditedText is text in the form the audit trail of entityType stores it. A
 // reader that compares a live column with an image compares this form.

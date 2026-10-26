@@ -583,3 +583,69 @@ func TestTheAuditExceptionRefusesAnImageThatIsNotMasked(t *testing.T) {
 		})
 	}
 }
+
+// An audit row outlives the record it describes, and its images keep their
+// credential.
+//
+// The untold-lead erasure deletes notice mail and leaves the trail standing.
+// A reader that joined the record would read those images as absent.
+func TestTheRepairMasksTheTrailOfAMailThatIsGone(t *testing.T) {
+	e := integration.Setup(t)
+	system := principal.WithActor(e.Admin(),
+		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
+
+	// No activity row for this id: the mail it described was deleted.
+	orphan := seedAnAuditImageOfAnEditTo(t, e, ids.NewV7())
+
+	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		_, err := maskStoredCredentialsDataTask(e.Pool).Steps[1].Batch(
+			system, tx, datatask.BatchIn{Limit: 50})
+		return err
+	}); err != nil {
+		t.Fatalf("the audit step: %v", err)
+	}
+	got := e.WsScalar(t, `SELECT before::text FROM audit_log WHERE id = $1`, orphan)
+	if strings.Contains(got, seededCredential) {
+		t.Errorf("a deleted mail's trail kept its password: %s", got)
+	}
+	if !strings.Contains(got, credentialmask.Marker) {
+		t.Errorf("the image was not masked: %s", got)
+	}
+}
+
+// Every record type the masking rules reach is a type this repair reaches.
+//
+// A scheduled send's audit images store the subject, so a credential typed into
+// one is stored the same way a mail's is. The step takes its record types from
+// the rules rather than naming them again.
+func TestTheRepairMasksEveryRecordTypeTheRulesReach(t *testing.T) {
+	e := integration.Setup(t)
+	system := principal.WithActor(e.Admin(),
+		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
+
+	rows := map[string]ids.UUID{}
+	for _, entityType := range storekit.MaskedAuditEntityTypes() {
+		row := ids.NewV7()
+		rows[entityType] = row
+		e.WsExec(t, `
+			INSERT INTO audit_log
+				(id, actor_type, actor_id, action, entity_type, entity_id, before)
+			VALUES ($1, 'human', 'rep', 'update', $2, $3, $4)`,
+			row, entityType, ids.NewV7(),
+			[]byte(`{"subject":"Passwort: `+seededCredential+`"}`))
+	}
+
+	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		_, err := maskStoredCredentialsDataTask(e.Pool).Steps[1].Batch(
+			system, tx, datatask.BatchIn{Limit: 100})
+		return err
+	}); err != nil {
+		t.Fatalf("the audit step: %v", err)
+	}
+	for entityType, row := range rows {
+		got := e.WsScalar(t, `SELECT before::text FROM audit_log WHERE id = $1`, row)
+		if strings.Contains(got, seededCredential) {
+			t.Errorf("a %s image kept its password: %s", entityType, got)
+		}
+	}
+}

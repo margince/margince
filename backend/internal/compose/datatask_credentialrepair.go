@@ -15,6 +15,7 @@ import (
 	"context"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -71,12 +72,9 @@ const (
 	argEstimateCap   = "estimate_cap"
 	argAfterActivity = "after_activity"
 	argAfterRow      = "after_row"
+	argMaskedTypes   = "masked_types"
 	argPageSize      = "page_size"
 )
-
-// activityEntityType names the audited record, which is the table's name and
-// not the agent record type that recordTypeActivity spells the same way.
-const activityEntityType = "activity"
 
 // maskableMailText is the mail whose text the rules may still reach. Only the
 // kinds that mask on a live write are candidates, so the repair cannot put a
@@ -102,7 +100,9 @@ func estimateMaskableMailText(
 	var count int64
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT a.id `+maskableMailText+`
 		 LIMIT @estimate_cap) candidates`,
-		pgx.NamedArgs{argEstimateCap: maximum + 1}).Scan(&count)
+		pgx.NamedArgs{
+			argMaskedTypes: storekit.MaskedAuditEntityTypes(), argEstimateCap: maximum + 1,
+		}).Scan(&count)
 	return min(count, maximum), count > maximum, err
 }
 
@@ -143,9 +143,17 @@ func maskMailTextBatch(
 // list: a type added there must not need remembering here.
 // The hold reaches the trail as well as the row. A held mail keeps its text,
 // and an image of an edit to it is the same text under another name.
+//
+// A LEFT JOIN, because an audit row outlives the record it describes: the
+// untold-lead erasure deletes notice mail and leaves its trail standing. An
+// inner join would read those images as absent and leave their credentials.
+//
+// The record types come from the masking rules rather than this file, so a type
+// those rules reach is a type this repair reaches.
 const auditImagesWithStoredText = `FROM audit_log l
-  JOIN activity a ON a.id = l.entity_id
- WHERE l.entity_type = 'activity' AND a.restricted_at IS NULL
+  LEFT JOIN activity a ON l.entity_type = 'activity' AND a.id = l.entity_id
+ WHERE l.entity_type = ANY(@masked_types)
+   AND (a.id IS NULL OR a.restricted_at IS NULL)
    AND (l.before IS NOT NULL OR l.after IS NOT NULL)`
 
 func estimateMaskableAuditImages(
@@ -157,7 +165,9 @@ func estimateMaskableAuditImages(
 	var count int64
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT l.id `+auditImagesWithStoredText+`
 		 LIMIT @estimate_cap) rows_with_images`,
-		pgx.NamedArgs{argEstimateCap: maximum + 1}).Scan(&count)
+		pgx.NamedArgs{
+			argMaskedTypes: storekit.MaskedAuditEntityTypes(), argEstimateCap: maximum + 1,
+		}).Scan(&count)
 	return min(count, maximum), count > maximum, err
 }
 
@@ -178,10 +188,13 @@ func maskAuditImagesBatch(
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT l.id, l.entity_id, l.before, l.after `+auditImagesWithStoredText+`
+	rows, err := tx.Query(ctx, `SELECT l.id, l.entity_type, l.entity_id, l.before, l.after `+auditImagesWithStoredText+`
 		   AND l.id > @after_row
 		 ORDER BY l.id LIMIT @page_size`,
-		pgx.NamedArgs{argAfterRow: after, argPageSize: in.Limit})
+		pgx.NamedArgs{
+			argMaskedTypes: storekit.MaskedAuditEntityTypes(),
+			argAfterRow:    after, argPageSize: in.Limit,
+		})
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -194,7 +207,7 @@ func maskAuditImagesBatch(
 		return datatask.BatchOut{}, err
 	}
 	scanned := make([]ids.UUID, 0, len(images))
-	masked := map[ids.UUID]bool{}
+	masked := map[auditedRecord]bool{}
 	for _, image := range images {
 		scanned = append(scanned, image.ID)
 		if !admits {
@@ -203,13 +216,14 @@ func maskAuditImagesBatch(
 			continue
 		}
 		wrote, err := storekit.MaskAuditImagesTx(ctx, tx, storekit.AuditImageRow{
-			ID: image.ID, EntityType: activityEntityType, Before: image.Before, After: image.After,
+			ID: image.ID, EntityType: image.EntityType,
+			Before: image.Before, After: image.After,
 		})
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
 		if wrote {
-			masked[image.EntityID] = true
+			masked[auditedRecord{entityType: image.EntityType, id: image.EntityID}] = true
 		}
 	}
 	// One row per entity rather than per image. The trail records that the
@@ -221,11 +235,14 @@ func maskAuditImagesBatch(
 	// The verb is `update` and not a scrub verb. `erase`, `anonymize` and
 	// `restrict` each set the record's scrub boundary, and the history
 	// projections then hide everything at or before it.
-	reached := slices.SortedFunc(maps.Keys(masked), func(a, b ids.UUID) int {
-		return bytes.Compare(a[:], b[:])
+	reached := slices.SortedFunc(maps.Keys(masked), func(a, b auditedRecord) int {
+		if byType := strings.Compare(a.entityType, b.entityType); byType != 0 {
+			return byType
+		}
+		return bytes.Compare(a.id[:], b.id[:])
 	})
 	for _, entity := range reached {
-		if _, err := storekit.AuditEventWithEvidence(ctx, tx, "update", activityEntityType, entity,
+		if _, err := storekit.AuditEventWithEvidence(ctx, tx, "update", entity.entityType, entity.id,
 			nil, map[string]any{storekit.EvidenceKeyMaskedAuditImages: true}); err != nil {
 			return datatask.BatchOut{}, err
 		}
@@ -233,8 +250,16 @@ func maskAuditImagesBatch(
 	return datatask.AdvanceUUID(in, scanned, len(masked))
 }
 
+// auditedRecord is one record the audit step reached, keyed by type as well as
+// id: two record types number their rows independently.
+type auditedRecord struct {
+	entityType string
+	id         ids.UUID
+}
+
 type auditImageRow struct {
 	ID            ids.UUID
+	EntityType    string
 	EntityID      ids.UUID
 	Before, After []byte
 }
