@@ -123,7 +123,8 @@ function savedDraftSettled(
   }>,
 ): boolean {
   const { read } = state;
-  if (!state.anchored || read.isError) return true;
+  // A failed read leaves open whether a draft is held, so it never settles.
+  if (!state.anchored) return true;
   if (!read.isSuccess || read.isFetching) return false;
   return !state.held || state.restored || state.typed;
 }

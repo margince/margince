@@ -40,6 +40,15 @@ const SUGGESTION_ACTION_LABELS: Record<SuggestionAction["kind"], MessageKey> = {
   add_task: "co.suggest.act.addTask",
 };
 
+const SUGGESTION_ACTION_VARIANT: Record<
+  SuggestionAction["kind"],
+  "ai" | "primary" | "ghost"
+> = {
+  draft_reply: "ai",
+  add_task: "primary",
+  open_deal: "ghost",
+};
+
 /**
  * The names this page already holds, for citations the server could not name.
  *
@@ -86,7 +95,7 @@ function SuggestionActionButton({
   const byMargince = action.kind === "draft_reply";
   return (
     <Button
-      variant={byMargince ? "ai" : "primary"}
+      variant={SUGGESTION_ACTION_VARIANT[action.kind]}
       pending={pending}
       onClick={() => onPerform(action)}
     >

@@ -80,6 +80,23 @@ describe("ComposeModal draftOnOpen", () => {
     expect(messageText("Body")).toBe("");
   });
 
+  it("waits for a press when it cannot tell whether a draft is saved", async () => {
+    const sent = stubRoutes({
+      "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
+      "GET /mail-drafts": () => jsonResponse({ code: "internal" }, 500),
+      [DRAFT]: () => jsonResponse(drafted),
+    });
+    renderReply(true);
+
+    await waitFor(() =>
+      expect(sent.some((r) => r.key === "GET /mail-drafts")).toBe(true),
+    );
+    await waitFor(() =>
+      expect(draftButton().hasAttribute("disabled")).toBe(false),
+    );
+    expect(sent.filter((r) => r.key === DRAFT)).toHaveLength(0);
+  });
+
   it("leaves a saved draft on screen instead of drafting over it", async () => {
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
