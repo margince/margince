@@ -101,7 +101,7 @@ func seedAMailWithACredentialInItsAuditImage(
 	t *testing.T, e *integration.Env,
 ) (mail, auditRow ids.UUID) {
 	t.Helper()
-	mail, auditRow = ids.NewV7(), ids.NewV7()
+	mail = ids.NewV7()
 	e.WsExec(t, `INSERT INTO activity (id, kind, body, occurred_at, source, captured_by)
 		VALUES ($1, 'email', $2, now(), 'gmail:cred-2', 'connector:gmail')`,
 		mail, "Passwort: "+seededCredential)
