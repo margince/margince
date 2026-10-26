@@ -106,7 +106,7 @@ hand. You write all the rest.
 | `internal/compose/stubs_gen.go` | one **501** stub per operation, stated in full (the fallback that a real handler can take the place of) | `ServerInterface` |
 | `internal/compose/agentpolicy_gen.go` | the agent admission table (verb and tier per route) | `crm.yaml` `x-mcp-tool` / `x-agent-access` |
 | `internal/modules/ai/tasks_gen.go` | the AI task registry (task → tier ladder / `execution_mode`) | `api/ai-tasks.yaml` (through `tools/gen-aitasks`) |
-| `config/margince.schema.json`, `config/margince.example.yaml`, `.env.example` and the settings tables of `docs/reference/configuration.md` | the schema that checks `margince.yaml` (the routing shape under `$defs`), the templates an operator copies, and the reference | the setting registries and `deployconfig.Bootstrap` (through `tools/gen-config`, which also writes the routing `$defs` as Go); `gates/configgenerated_test.go` fails a stale one |
+| `config/margince.schema.json`, `config/margince.example.yaml`, `config/margince.defaults.yaml`, `.env.example` and the settings tables of `docs/reference/configuration.md` | the schema that checks `margince.yaml` (the routing shape under `$defs`), the templates an operator copies, every setting at its default, and the reference | the setting registries and `deployconfig.Bootstrap` (through `tools/gen-config`, which also writes the routing `$defs` as Go); `gates/configgenerated_test.go` fails a stale one |
 | `.build/openapi30.yaml` | the contract moved down to 3.0 (a build output, ignored by git) | `crm.yaml` |
 | `frontend/src/api/schema.d.ts` | the TS types of the SPA | `crm.yaml` (through `pnpm gen:api`) |
 

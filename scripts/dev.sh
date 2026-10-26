@@ -1327,8 +1327,8 @@ up)
 
   # The deployment configuration (A107/ADR-0061): the api bootstraps the demo
   # company itself at boot — no public provisioning endpoint exists. Seeded
-  # ONCE into a gitignored config/margince.yaml from config/margince.example.yaml
-  # and then LEFT ALONE (create-if-missing / leave-if-exists) — so an engineer
+  # ONCE into a gitignored config/margince.yaml from config/margince.example.yaml,
+  # which holds only the workspace and the first admin, and then LEFT ALONE (create-if-missing / leave-if-exists) — so an engineer
   # can edit company details or runtime
   # posture (e.g. ai.capture_payloads for Layer-3 capture) and it persists across
   # restarts (it lives in config/, not the scratch rundir dev-stop clears).
@@ -1350,7 +1350,7 @@ up)
   fi
   if [[ ! -f "$deploy_cfg" ]]; then
     cp config/margince.example.yaml "$deploy_cfg"
-    echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change company/admin or AI posture (e.g. ai.capture_payloads)"
+    echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change company/admin; copy a setting from config/margince.defaults.yaml to change it"
   fi
   # The dev posture's own differences — the Reset data button among them — live
   # in the TRACKED config/margince.dev.yaml, which the api and the worker read

@@ -15,7 +15,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -92,37 +91,6 @@ func TestTheSchemaAcceptsAnExplicitNullWhereTheLoaderDoes(t *testing.T) {
 	}
 	if err := compiledConfigSchema(t).Validate(asJSONValue(t, "probe", []byte(withNulls))); err != nil {
 		t.Errorf("the schema rejects a null the loader accepts:\n%v", err)
-	}
-}
-
-// Uncommented, every setting line of the generated example validates against
-// the generated schema, the bootstrap part included. So the schema takes each
-// default it shows. Secrets stay commented: their reference names a file.
-func TestTheUncommentedExampleValidatesAgainstTheSchema(t *testing.T) {
-	t.Parallel()
-	raw, err := os.ReadFile("../config/margince.example.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	head, body, found := strings.Cut(string(raw), "\n# ---- ")
-	if !found {
-		t.Fatal("the example has no setting group; the generator's layout moved and this test checks nothing")
-	}
-	lines, uncommented := []string{head}, 0
-	for line := range strings.SplitSeq(body, "\n") {
-		text, commented := strings.CutPrefix(line, "# ")
-		if !commented || strings.HasPrefix(text, "---- ") || strings.Contains(text, "${file:/run/secrets/") {
-			continue
-		}
-		lines = append(lines, text)
-		uncommented++
-	}
-	if uncommented == 0 {
-		t.Fatal("no setting line was uncommented; this test checks nothing")
-	}
-	doc := []byte(strings.Join(lines, "\n") + "\n")
-	if err := compiledConfigSchema(t).Validate(asJSONValue(t, "the uncommented example", doc)); err != nil {
-		t.Errorf("the schema refuses the example's own defaults:\n%v", err)
 	}
 }
 
