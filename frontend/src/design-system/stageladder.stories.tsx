@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { StageLadder } from "./stageladder";
 
@@ -175,6 +176,123 @@ export const LongPipeline: Story = {
       ]}
     />
   ),
+};
+
+// Nine open stages of two long words each, the deal standing on the fourth.
+const NINE_STAGES = [
+  "Potential Deal",
+  "Deal Qualification",
+  "Solution Discovery",
+  "Conversion Strategy",
+  "Proposal Sent",
+  "Contract Negotiation",
+  "Contract Review",
+  "Legal Approval",
+  "Final Signature",
+];
+
+function nineStages(labels: readonly string[]) {
+  const here = 3;
+  return [
+    ...labels.map((label, index) => ({
+      key: label,
+      label,
+      done: index < here,
+      current: index === here,
+      onPick: noop,
+    })),
+    { key: "won", label: "Closed Won", terminal: true, onPick: noop },
+    { key: "lost", label: "Closed Lost", terminal: true, onPick: noop },
+  ];
+}
+
+// A button stands at a clipped end and at no other. Measured, not assumed:
+// whether nine names fit depends on the font the frame renders.
+async function pagersMatchOverflow(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  const run = canvasElement.querySelector<HTMLElement>(".stage-ladder-run");
+  if (!run) {
+    throw new Error("The ladder drew no run of open stages.");
+  }
+  const later = () =>
+    canvas.queryByRole("button", { name: "Show later stages" });
+  const earlier = () =>
+    canvas.queryByRole("button", { name: "Show earlier stages" });
+  await waitFor(() => {
+    const hidden = run.scrollWidth - run.clientWidth;
+    expect(Boolean(earlier())).toBe(hidden > 1 && run.scrollLeft > 1);
+    expect(Boolean(later())).toBe(hidden > 1 && run.scrollLeft < hidden - 1);
+  });
+  return { run, later, earlier };
+}
+
+async function pageToTheEnd(canvasElement: HTMLElement) {
+  const { run, later, earlier } = await pagersMatchOverflow(canvasElement);
+  if (run.scrollWidth - run.clientWidth <= 1) {
+    return;
+  }
+  const user = userEvent.setup();
+  for (let press = 0; press < 12 && later(); press += 1) {
+    const button = later();
+    if (button) {
+      await user.click(button);
+    }
+    await pagersMatchOverflow(canvasElement);
+  }
+  await waitFor(() => expect(later()).toBeNull());
+  expect(earlier()).not.toBeNull();
+}
+
+/**
+ * Nine long stage names in a 1280px frame. The run cannot hold them, so it
+ * rests on the current stage with a fade and a button at each clipped end.
+ * Paging to the end takes the later button away and keeps the earlier one.
+ */
+export const NineStagesAt1280: Story = {
+  render: () => (
+    <div style={{ inlineSize: 1280 }}>
+      <StageLadder label="Stage" steps={nineStages(NINE_STAGES)} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => pageToTheEnd(canvasElement),
+};
+
+/** The same pipeline in a 1500px frame, the width the clipping was seen at. */
+export const NineStagesAt1500: Story = {
+  render: () => (
+    <div style={{ inlineSize: 1500 }}>
+      <StageLadder label="Stage" steps={nineStages(NINE_STAGES)} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => pageToTheEnd(canvasElement),
+};
+
+/** Nine short names that fit a 1500px frame: no fade and no button. */
+export const NineStagesThatFit: Story = {
+  render: () => (
+    <div style={{ inlineSize: 1500 }}>
+      <StageLadder
+        label="Stage"
+        steps={nineStages([
+          "One",
+          "Two",
+          "Three",
+          "Four",
+          "Five",
+          "Six",
+          "Seven",
+          "Eight",
+          "Nine",
+        ])}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const { run, later, earlier } = await pagersMatchOverflow(canvasElement);
+    expect(run.scrollWidth - run.clientWidth).toBeLessThanOrEqual(1);
+    expect(later()).toBeNull();
+    expect(earlier()).toBeNull();
+  },
 };
 
 /**

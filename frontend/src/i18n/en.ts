@@ -3063,6 +3063,8 @@ export const en = {
   "standing.ring.score": "Score {score} of 100",
   "standing.ladder.position": "Stage {n} of {total}",
   "standing.ladder.moveTo": "Move to {stage}",
+  "stageLadder.earlier": "Show earlier stages",
+  "stageLadder.later": "Show later stages",
   "standing.timeline.empty": "Nothing dated here yet.",
   "standing.next.label": "Next",
   "standing.next.none": "Nothing is due next.",

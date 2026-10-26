@@ -3067,6 +3067,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.ring.score": "Score {score} von 100",
   "standing.ladder.position": "Phase {n} von {total}",
   "standing.ladder.moveTo": "Weiter zu {stage}",
+  "stageLadder.earlier": "Frühere Phasen zeigen",
+  "stageLadder.later": "Spätere Phasen zeigen",
   "standing.timeline.empty": "Hier ist noch nichts datiert.",
   "standing.next.label": "Nächstes",
   "standing.next.none": "Als Nächstes ist nichts fällig.",

@@ -2981,6 +2981,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.ring.score": "Điểm {score}/100",
   "standing.ladder.position": "Giai đoạn {n}/{total}",
   "standing.ladder.moveTo": "Chuyển sang {stage}",
+  "stageLadder.earlier": "Xem các giai đoạn trước",
+  "stageLadder.later": "Xem các giai đoạn sau",
   "standing.timeline.empty": "Chưa có mốc thời gian nào.",
   "standing.next.label": "Tiếp theo",
   "standing.next.none": "Chưa có việc nào đến hạn.",

@@ -4,8 +4,16 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clippedEdges } from "./scrollregion";
 import { StageLadder, type StageStep } from "./stageladder";
 
 // A pipeline is the workspace's to lengthen, so the ladder has to stay one
@@ -157,6 +165,138 @@ describe("a long pipeline", () => {
     show("Negotiation", true);
 
     expect(screen.queryByRole("region")).toBeNull();
+  });
+});
+
+describe("which ends of a sideways run are clipped", () => {
+  const box = (scrollLeft: number, scrollWidth = 1200, clientWidth = 300) => ({
+    scrollLeft,
+    scrollWidth,
+    clientWidth,
+  });
+
+  it("finds none while the content fits, a rounding pixel included", () => {
+    expect(clippedEdges(box(0, 300))).toEqual({ start: false, end: false });
+    expect(clippedEdges(box(0, 301))).toEqual({ start: false, end: false });
+  });
+
+  it("finds the end at the start, both in the middle, the start at the end", () => {
+    expect(clippedEdges(box(0))).toEqual({ start: false, end: true });
+    expect(clippedEdges(box(450))).toEqual({ start: true, end: true });
+    expect(clippedEdges(box(900))).toEqual({ start: true, end: false });
+  });
+
+  it("reads a right-to-left scroll by its size", () => {
+    expect(clippedEdges(box(-900))).toEqual({ start: true, end: false });
+  });
+});
+
+describe("the buttons at a clipped end", () => {
+  const LATER = { name: "Show later stages" };
+  const EARLIER = { name: "Show earlier stages" };
+  const scrollBy = vi.fn();
+  const browserScrollBy = HTMLElement.prototype.scrollBy;
+
+  beforeEach(() => {
+    scrollBy.mockReset();
+    HTMLElement.prototype.scrollBy = scrollBy;
+  });
+
+  afterEach(() => {
+    HTMLElement.prototype.scrollBy = browserScrollBy;
+    vi.unstubAllGlobals();
+  });
+
+  it("draws none while the run fits", () => {
+    show("Negotiation");
+
+    expect(screen.queryByRole("button", LATER)).toBeNull();
+    expect(screen.queryByRole("button", EARLIER)).toBeNull();
+  });
+
+  it("draws only the later one for a run resting at its start", () => {
+    overflowing();
+    show(null);
+
+    expect(screen.getByRole("button", LATER)).toBeInTheDocument();
+    expect(screen.queryByRole("button", EARLIER)).toBeNull();
+  });
+
+  it("draws both around a current stage in the middle of a long run", () => {
+    overflowing();
+    show("Negotiation");
+
+    expect(screen.getByRole("button", LATER)).toBeInTheDocument();
+    expect(screen.getByRole("button", EARLIER)).toBeInTheDocument();
+  });
+
+  it("pages most of a row each way, smoothly", () => {
+    overflowing();
+    show("Negotiation");
+
+    fireEvent.click(screen.getByRole("button", LATER));
+    fireEvent.click(screen.getByRole("button", EARLIER));
+
+    expect(scrollBy.mock.calls).toEqual([
+      [{ left: RUN_WIDTH * 0.75, behavior: "smooth" }],
+      [{ left: -RUN_WIDTH * 0.75, behavior: "smooth" }],
+    ]);
+  });
+
+  it("jumps instead of gliding for a reader who asked for less motion", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("prefers-reduced-motion"),
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }));
+    overflowing();
+    show("Negotiation");
+
+    fireEvent.click(screen.getByRole("button", LATER));
+
+    expect(scrollBy).toHaveBeenCalledWith({
+      left: RUN_WIDTH * 0.75,
+      behavior: "auto",
+    });
+  });
+
+  it("takes the later button away once the run is scrolled to its end", () => {
+    overflowing();
+    const { scroller } = show("Negotiation");
+    if (!scroller) {
+      throw new Error("no scroller");
+    }
+
+    act(() => {
+      scroller.scrollLeft = RUN_WIDTH * 3;
+      fireEvent.scroll(scroller);
+    });
+
+    expect(screen.queryByRole("button", LATER)).toBeNull();
+    expect(screen.getByRole("button", EARLIER)).toBeInTheDocument();
+  });
+
+  it("hands focus to the last stage when the pressed button goes", () => {
+    overflowing();
+    const { scroller } = show("Negotiation");
+    if (!scroller) {
+      throw new Error("no scroller");
+    }
+    const later = screen.getByRole("button", LATER);
+    later.focus();
+    fireEvent.click(later);
+
+    act(() => {
+      scroller.scrollLeft = RUN_WIDTH * 3;
+      fireEvent.scroll(scroller);
+    });
+
+    expect(document.activeElement).toHaveTextContent("Signature");
   });
 });
 

@@ -47,7 +47,7 @@
   overflow-x: auto;
   overscroll-behavior-x: contain;
   /* A rung reached by Tab stops clear of the faded edge, not under it. */
-  scroll-padding-inline: var(--space-6);
+  scroll-padding-inline: calc(var(--controlHeight) + var(--space-5));
 }
 
 .stage-ladder-steps {
@@ -185,56 +185,63 @@
   }
 }
 
-/* The run fades at an edge only while more of it lies past that edge: its
-   scroll position drives the two fade widths. Without scroll timelines there
-   is no fade, since the unguarded animation would settle on its last frame
-   and fade the first stage for good. Declared only where motion is welcome:
-   the fade is an animation that runs for as long as the run can scroll, and
-   under reduced motion nothing may be left running for the axe sweep. */
-@property --stage-ladder-fade-start {
-  syntax: "<length>";
-  inherits: false;
-  initial-value: 0px;
+/* The run fades at an end only while that end hides a rung, and a button to
+   page that way sits in the cleared room, which counts the run's inset. The
+   script that knows which ends are clipped sets the classes, so the fade is
+   still and needs no motion. */
+.stage-ladder-run {
+  --stage-ladder-clear-start: 0px;
+  --stage-ladder-solid-start: 0px;
+  --stage-ladder-clear-end: 0px;
+  --stage-ladder-solid-end: 0px;
+  mask-image: linear-gradient(
+    to right,
+    transparent var(--stage-ladder-clear-start),
+    black var(--stage-ladder-solid-start),
+    black calc(100% - var(--stage-ladder-solid-end)),
+    transparent calc(100% - var(--stage-ladder-clear-end))
+  );
 }
-@property --stage-ladder-fade-end {
-  syntax: "<length>";
-  inherits: false;
-  initial-value: 0px;
+.stage-ladder-run:not(.is-clipped-start, .is-clipped-end) {
+  mask-image: none;
 }
-@keyframes stage-ladder-fade {
-  from {
-    --stage-ladder-fade-start: 0px;
-    --stage-ladder-fade-end: var(--space-6);
-  }
-  10% {
-    --stage-ladder-fade-start: var(--space-6);
-  }
-  90% {
-    --stage-ladder-fade-end: var(--space-6);
-  }
-  to {
-    --stage-ladder-fade-start: var(--space-6);
-    --stage-ladder-fade-end: 0px;
-  }
+.stage-ladder-run.is-clipped-start {
+  --stage-ladder-clear-start: calc(var(--controlHeight) + var(--space-1));
+  --stage-ladder-solid-start: calc(
+    var(--controlHeight) +
+    var(--space-1) +
+    var(--space-5)
+  );
 }
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: scroll()) {
-    .stage-ladder-run {
-      mask-image: linear-gradient(
-        to right,
-        transparent,
-        black var(--stage-ladder-fade-start),
-        black calc(100% - var(--stage-ladder-fade-end)),
-        transparent
-      );
-      animation: stage-ladder-fade linear both;
-      animation-timeline: scroll(self inline);
-    }
-    /* A mask clips the ring a focused region draws outside its box. */
-    .stage-ladder-run:focus-visible {
-      mask-image: none;
-    }
-  }
+.stage-ladder-run.is-clipped-end {
+  --stage-ladder-clear-end: calc(var(--controlHeight) + var(--space-1));
+  --stage-ladder-solid-end: calc(
+    var(--controlHeight) +
+    var(--space-1) +
+    var(--space-5)
+  );
+}
+/* A mask clips the ring a focused region draws outside its box. */
+.stage-ladder-run:focus-visible {
+  mask-image: none;
+}
+
+/* The run and the buttons over its ends. It takes the run's place in the
+   track, so it gives up width the way the run did. */
+.stage-ladder-pager {
+  position: relative;
+  min-inline-size: 0;
+}
+.stage-ladder-page {
+  position: absolute;
+  inset-block-start: 0;
+  z-index: 1;
+}
+.stage-ladder-page.is-start {
+  inset-inline-start: 0;
+}
+.stage-ladder-page.is-end {
+  inset-inline-end: 0;
 }
 
 /* A fixed list the reader must see whole: the run wraps instead of scrolling,
