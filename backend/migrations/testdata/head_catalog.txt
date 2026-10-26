@@ -804,6 +804,7 @@ public.agent_standing_grant.user_id uuid NOT NULL gen=- def=-
 public.agent_standing_grant_pkey CREATE UNIQUE INDEX agent_standing_grant_pkey ON public.agent_standing_grant USING btree (id)
 public.agent_task acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.agent_task.agent_task_approval_fk FOREIGN KEY (approval_id) REFERENCES approval(id) ON DELETE RESTRICT
+public.agent_task.agent_task_expires_after_creation CHECK ((expires_at > created_at))
 public.agent_task.agent_task_passport_fk FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE RESTRICT
 public.agent_task.agent_task_pkey PRIMARY KEY (id)
 public.agent_task.agent_task_served_records CHECK (((served_records IS NULL) OR (result IS NOT NULL)))
@@ -1520,6 +1521,7 @@ BEGIN
 END; 
 public.audit_log_pkey CREATE UNIQUE INDEX audit_log_pkey ON public.audit_log USING btree (id)
 public.auth_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.auth_token.auth_token_expires_after_creation CHECK ((expires_at > created_at))
 public.auth_token.auth_token_pkey PRIMARY KEY (id)
 public.auth_token.auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text])))
 public.auth_token.auth_token_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
@@ -2976,6 +2978,7 @@ public.company_vat_check_one_per_company CREATE UNIQUE INDEX company_vat_check_o
 public.company_vat_check_pkey CREATE UNIQUE INDEX company_vat_check_pkey ON public.company_vat_check USING btree (id)
 public.confirm_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.confirm_token.confirm_token_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.confirm_token.confirm_token_expires_after_creation CHECK ((expires_at > issued_at))
 public.confirm_token.confirm_token_hash_key UNIQUE (token_hash)
 public.confirm_token.confirm_token_kind CHECK ((kind = ANY (ARRAY['record_confirmation'::text, 'consent_confirmation'::text, 'privacy_notice'::text])))
 public.confirm_token.confirm_token_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
@@ -3006,6 +3009,7 @@ public.confirm_token_pkey CREATE UNIQUE INDEX confirm_token_pkey ON public.confi
 public.connector_connection_pkey CREATE UNIQUE INDEX connector_connection_pkey ON public.capture_connection USING btree (id)
 public.consent_doi_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_doi_token.consent_doi_token_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.consent_doi_token.consent_doi_token_expires_after_issue CHECK ((expires_at > issued_at))
 public.consent_doi_token.consent_doi_token_hash_unique UNIQUE (token_hash)
 public.consent_doi_token.consent_doi_token_pkey PRIMARY KEY (id)
 public.consent_doi_token.consent_doi_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
@@ -3577,6 +3581,7 @@ public.data_subject_request_pkey CREATE UNIQUE INDEX data_subject_request_pkey O
 public.data_subject_request_receipt_reference CREATE UNIQUE INDEX data_subject_request_receipt_reference ON public.data_subject_request USING btree (receipt_reference) WHERE (receipt_reference IS NOT NULL)
 public.data_task_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.data_task_review.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.data_task_review.data_task_review_expires_after_creation CHECK ((expires_at > created_at))
 public.data_task_review.data_task_review_pkey PRIMARY KEY (token_hash)
 public.data_task_review.data_task_review_token_hash_check CHECK ((octet_length(token_hash) = 32))
 public.data_task_review.expires_at timestamp with time zone NOT NULL gen=- def=-
@@ -3837,6 +3842,7 @@ public.deal_room.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_room.deal_id uuid NOT NULL gen=- def=-
 public.deal_room.deal_room_archived_agrees CHECK (((state = 'archived'::text) = (archived_at IS NOT NULL)))
 public.deal_room.deal_room_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.deal_room.deal_room_expires_after_creation CHECK ((expires_at > created_at))
 public.deal_room.deal_room_pkey PRIMARY KEY (id)
 public.deal_room.deal_room_state_check CHECK ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text, 'closed'::text, 'expired'::text, 'archived'::text])))
 public.deal_room.deal_room_steward_fkey FOREIGN KEY (steward_user_id) REFERENCES app_user(id) ON DELETE SET NULL
@@ -3913,6 +3919,7 @@ public.deal_room_invitation.attempt_no integer NOT NULL gen=- def=1
 public.deal_room_invitation.captured_by text NOT NULL gen=- def=-
 public.deal_room_invitation.consumed_at timestamp with time zone gen=- def=-
 public.deal_room_invitation.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_room_invitation.deal_room_invitation_expires_after_creation CHECK ((expires_at > created_at))
 public.deal_room_invitation.deal_room_invitation_participant_fkey FOREIGN KEY (participant_id) REFERENCES deal_room_participant(id) ON DELETE CASCADE
 public.deal_room_invitation.deal_room_invitation_pkey PRIMARY KEY (id)
 public.deal_room_invitation.delivered_at timestamp with time zone gen=- def=-
@@ -3956,6 +3963,7 @@ public.deal_room_pkey CREATE UNIQUE INDEX deal_room_pkey ON public.deal_room USI
 public.deal_room_session acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_room_session.captured_by text NOT NULL gen=- def=-
 public.deal_room_session.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_room_session.deal_room_session_expires_after_creation CHECK ((expires_at > created_at))
 public.deal_room_session.deal_room_session_participant_in_room FOREIGN KEY (participant_id, room_id) REFERENCES deal_room_participant(id, room_id) ON DELETE CASCADE
 public.deal_room_session.deal_room_session_pkey PRIMARY KEY (id)
 public.deal_room_session.deal_room_session_room_fkey FOREIGN KEY (room_id) REFERENCES deal_room(id) ON DELETE CASCADE
@@ -5851,6 +5859,7 @@ public.meeting_proposal.host_user_id uuid NOT NULL gen=- def=-
 public.meeting_proposal.invitation_id uuid gen=- def=-
 public.meeting_proposal.link_ref text NOT NULL gen=- def=-
 public.meeting_proposal.meeting_proposal_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.meeting_proposal.meeting_proposal_expires_after_creation CHECK ((expires_at > created_at))
 public.meeting_proposal.meeting_proposal_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id)
 public.meeting_proposal.meeting_proposal_host_user_id_retirement_guard CREATE TRIGGER meeting_proposal_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_proposal FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')
 public.meeting_proposal.meeting_proposal_invitation_id_fkey FOREIGN KEY (invitation_id) REFERENCES meeting_invitation(activity_id) ON DELETE SET NULL
@@ -5994,6 +6003,7 @@ public.oauth_authorization_code.created_at timestamp with time zone NOT NULL gen
 public.oauth_authorization_code.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.oauth_authorization_code.id uuid NOT NULL gen=- def=uuidv7()
 public.oauth_authorization_code.lent_passport_id uuid gen=- def=-
+public.oauth_authorization_code.oauth_authorization_code_expires_after_creation CHECK ((expires_at > created_at))
 public.oauth_authorization_code.oauth_authorization_code_pkey PRIMARY KEY (id)
 public.oauth_authorization_code.oauth_code_lent_passport_fkey FOREIGN KEY (lent_passport_id) REFERENCES passport(id) ON DELETE SET NULL (lent_passport_id)
 public.oauth_authorization_code.oauth_code_unique UNIQUE (code_hash)
@@ -6047,6 +6057,7 @@ public.oauth_refresh_token.expires_at timestamp with time zone NOT NULL gen=- de
 public.oauth_refresh_token.grant_id uuid NOT NULL gen=- def=-
 public.oauth_refresh_token.id uuid NOT NULL gen=- def=uuidv7()
 public.oauth_refresh_token.oauth_refresh_grant_fkey FOREIGN KEY (grant_id) REFERENCES oauth_grant(id) ON DELETE CASCADE
+public.oauth_refresh_token.oauth_refresh_token_expires_after_creation CHECK ((expires_at > created_at))
 public.oauth_refresh_token.oauth_refresh_token_pkey PRIMARY KEY (id)
 public.oauth_refresh_token.oauth_refresh_unique UNIQUE (token_hash)
 public.oauth_refresh_token.replaced_by uuid gen=- def=-
@@ -6235,6 +6246,7 @@ public.passport.label text gen=- def=-
 public.passport.last_used_at timestamp with time zone gen=- def=-
 public.passport.oauth_grant_id uuid gen=- def=-
 public.passport.on_behalf_of uuid NOT NULL gen=- def=-
+public.passport.passport_expires_after_creation CHECK ((expires_at > created_at))
 public.passport.passport_grant_fkey FOREIGN KEY (oauth_grant_id) REFERENCES oauth_grant(id) ON DELETE RESTRICT
 public.passport.passport_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.passport.passport_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE CASCADE
@@ -6269,6 +6281,7 @@ public.preference_token.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.preference_token.id uuid NOT NULL gen=- def=uuidv7()
 public.preference_token.preference_token_contact_email_id_fkey FOREIGN KEY (contact_email_id) REFERENCES contact_email(id) ON DELETE SET NULL
 public.preference_token.preference_token_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.preference_token.preference_token_expires_after_creation CHECK ((expires_at > created_at))
 public.preference_token.preference_token_pkey PRIMARY KEY (id)
 public.preference_token.preference_token_revocation_is_reasoned CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL)))
 public.preference_token.preference_token_revoked_reason_check CHECK ((revoked_reason = ANY (ARRAY['rotated'::text, 'expired'::text, 'erasure'::text, 'compromise'::text, 'merged_predecessor'::text, 'merged_into_survivor'::text])))
@@ -6709,6 +6722,7 @@ public.record_grant.record_grant_access_check CHECK ((access = ANY (ARRAY['read'
 public.record_grant.record_grant_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE NOT VALID
 public.record_grant.record_grant_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE NOT VALID
 public.record_grant.record_grant_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE NOT VALID
+public.record_grant.record_grant_expires_after_creation CHECK ((expires_at > created_at))
 public.record_grant.record_grant_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.record_grant.record_grant_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE NOT VALID
 public.record_grant.record_grant_pkey PRIMARY KEY (id)
@@ -7293,6 +7307,7 @@ public.session.idle_expires_at timestamp with time zone NOT NULL gen=- def=-
 public.session.ip inet gen=- def=-
 public.session.last_seen_at timestamp with time zone NOT NULL gen=- def=now()
 public.session.revoked_at timestamp with time zone gen=- def=-
+public.session.session_expires_after_creation CHECK ((expires_at > created_at))
 public.session.session_pkey PRIMARY KEY (id)
 public.session.session_token_hash_key UNIQUE (token_hash)
 public.session.session_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
@@ -7996,6 +8011,7 @@ public.technical_lookup_cache.fetched_at timestamp with time zone NOT NULL gen=-
 public.technical_lookup_cache.found boolean NOT NULL gen=- def=-
 public.technical_lookup_cache.query text NOT NULL gen=- def=-
 public.technical_lookup_cache.record_kind text NOT NULL gen=- def=-
+public.technical_lookup_cache.technical_lookup_cache_expires_after_creation CHECK ((expires_at > fetched_at))
 public.technical_lookup_cache.technical_lookup_cache_kind_check CHECK ((record_kind = ANY (ARRAY['mx'::text, 'txt'::text, 'dmarc'::text, 'dkim'::text, 'address'::text, 'cname'::text, 'reverse'::text, 'certlog'::text])))
 public.technical_lookup_cache.technical_lookup_cache_pkey PRIMARY KEY (query, record_kind)
 public.technical_lookup_cache_pkey CREATE UNIQUE INDEX technical_lookup_cache_pkey ON public.technical_lookup_cache USING btree (query, record_kind)
@@ -8934,6 +8950,7 @@ public.withdrawal_credential.revoked_reason text gen=- def=-
 public.withdrawal_credential.scope text NOT NULL gen=- def=-
 public.withdrawal_credential.token_hash text NOT NULL gen=- def=-
 public.withdrawal_credential.withdrawal_credential_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE SET NULL
+public.withdrawal_credential.withdrawal_credential_expires_after_creation CHECK ((expires_at > issued_at))
 public.withdrawal_credential.withdrawal_credential_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE SET NULL
 public.withdrawal_credential.withdrawal_credential_names_at_most_one_subject CHECK ((NOT ((contact_id IS NOT NULL) AND (lead_id IS NOT NULL))))
 public.withdrawal_credential.withdrawal_credential_pkey PRIMARY KEY (id)

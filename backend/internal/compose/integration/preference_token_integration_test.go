@@ -140,7 +140,8 @@ func TestPreferenceTokenExpiresAndTheNextSendRotatesIt(t *testing.T) {
 		t.Fatalf("a send inside the window minted %q, want the live token %q (err %v)", again, first, err)
 	}
 
-	movePreferenceTokenClock(t, e, first, `expires_at = now() - interval '1 second'`)
+	movePreferenceTokenClock(t, e, first,
+		`created_at = now() - interval '2 seconds', expires_at = now() - interval '1 second'`)
 	if _, err := store.ResolvePreferenceToken(context.Background(), first); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an expired token still resolves → %v, want ErrNotFound", err)
 	}

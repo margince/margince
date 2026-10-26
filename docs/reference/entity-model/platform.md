@@ -83,6 +83,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `data_task_review_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `data_task_review_token_hash_check`: `CHECK ((octet_length(token_hash) = 32))`
 
 **Indexes**
