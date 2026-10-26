@@ -57,7 +57,7 @@ func TestSingleThreadedIsTheReportingRuleVerbatim(t *testing.T) {
 		seat(true, roleChampion), seat(true, "user"),
 	}}
 	if kinds(foldRisks(two, testEnglish))[RiskSingleThreadedTheirs] {
-		t.Errorf("two engaged contacts flagged single-threaded — the floor is %d, and a flag that fires at the boundary contradicts every other surface", reportThreadingFloor)
+		t.Errorf("two engaged contacts flagged single-threaded — the floor is %d, and a flag that fires at the boundary contradicts every other surface", ReportThreadingFloor)
 	}
 }
 

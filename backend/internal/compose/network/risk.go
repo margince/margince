@@ -308,7 +308,7 @@ func foldRisks(c DealCoverage, say langcopy.Spoken) []Risk {
 			engaged = append(engaged, s.ContactID)
 		}
 	}
-	if c.EverTouched && len(engaged) < reportThreadingFloor {
+	if c.EverTouched && len(engaged) < ReportThreadingFloor {
 		risks = append(risks, Risk{
 			Kind: RiskSingleThreadedTheirs, DealID: c.DealID, ContactIDs: engaged,
 			Summary: say.Say(riskWords.SingleThreaded),
@@ -414,9 +414,9 @@ func goingCold(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
 	}, true
 }
 
-// reportThreadingFloor is REPORT-PARAM-1's value, named rather than inline so
+// ReportThreadingFloor is REPORT-PARAM-1's value, named rather than inline so
 // the constant a support conversation quotes is the constant compared against.
-const reportThreadingFloor = 2
+const ReportThreadingFloor = 2
 
 // ourSideConcentration is GRAPH-RISK-1: one colleague holding at least
 // ourSideDominanceShare of at least ourSideMinInteractions interactions.

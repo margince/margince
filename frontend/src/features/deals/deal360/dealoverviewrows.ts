@@ -134,7 +134,8 @@ export function committeeRows(
   return { seats, gaps };
 }
 
-// The floor `single_threaded_theirs` holds engaged contacts to.
+// The floor `single_threaded_theirs` holds engaged contacts to. It mirrors
+// network.ReportThreadingFloor, and frontendthreadingfloor_test.go holds both equal.
 const THREADING_FLOOR = 2;
 
 // The seat a gap rule finds missing. Fewer than two engaged is a missing
