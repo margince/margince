@@ -22,10 +22,10 @@ import (
 // mailbox owner, for an account whose contacts are recipients.
 func (o *owedEnv) settled(t *testing.T, message ids.UUID, recipients ...ids.UUID) bool {
 	t.Helper()
-	return o.settledAs(t, o.reader(), message, recipients...)
+	return o.settledAs(o.reader(), t, message, recipients...)
 }
 
-func (o *owedEnv) settledAs(t *testing.T, reader context.Context, message ids.UUID, recipients ...ids.UUID) bool {
+func (o *owedEnv) settledAs(reader context.Context, t *testing.T, message ids.UUID, recipients ...ids.UUID) bool {
 	t.Helper()
 	roster := make([]ids.ContactID, 0, len(recipients))
 	for _, recipient := range recipients {
@@ -132,11 +132,11 @@ func TestOnlyAReplyTheReaderMayReadSettlesTheirCitation(t *testing.T) {
 	reply := o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Listing details",
 		inReplyTo: o.messageIDOf(t, ask), at: o.now.Add(-5 * time.Hour)})
 	colleague := o.e.As(o.e.Rep2, nil, integration.AdminPerms)
-	if !o.settledAs(t, colleague, ask) {
+	if !o.settledAs(colleague, t, ask) {
 		t.Fatal("a reply the colleague may read did not settle the ask; the case below proves nothing")
 	}
 	holdActivity(t, o.e, reply)
-	if o.settledAs(t, colleague, ask) {
+	if o.settledAs(colleague, t, ask) {
 		t.Error("a reply held away from the reader settled their citation")
 	}
 	if !o.settled(t, ask) {
