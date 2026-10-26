@@ -23,12 +23,13 @@ import (
 //
 // It has no scope clause of its own. Each caller runs it after deciding the
 // reader may see this activity's content. A seat row the legacy backfill
-// guessed for bare mail does not stand, so its seat is not named.
+// guessed for bare mail does not stand, so its seat is not named. A held
+// activity names no colleagues: a write's read-back can reach one.
 func ColleagueSeats(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT ap.user_id
 		  FROM activity_participant ap
-		  JOIN activity act ON act.id = ap.activity_id
+		  JOIN activity act ON act.id = ap.activity_id AND act.restricted_at IS NULL
 		 WHERE ap.activity_id = $1 AND ap.user_id IS NOT NULL AND ap.role <> $2
 		   AND `+auth.ParticipantStandsSQL("ap", "act")+`
 		 ORDER BY ap.user_id`, activityID, connector.ParticipantRoleBCC)

@@ -275,7 +275,6 @@ const senderStampReader = "the sender_is_machine repair reads only the id and se
 // ClassifyBacklogPredicate, which filters archived rows. A reason a gate can
 // work out is better computed than written down.
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
-	"internal/modules/activities/colleagueseats.go:ColleagueSeats":                               "joins the one activity its caller already admitted, only to read the provenance auth.ParticipantStandsSQL needs (captured_by, id) so a guessed seat row is not named. Every caller runs it after deciding the reader may see that activity's content, held or not, and no activity column reaches the caller. Cost: none beyond the caller's own decision",
 	"internal/platform/database/storekit/requestintent.go:HumanReviewedOwedClause":               "returns only whether a human reviewed the owed verdict; it checks an audit key and exposes no image value or activity content. Current source readers separately enforce activity visibility and availability. A held record retains its review evidence without becoming readable",
 	"internal/modules/capture/heldmailtask.go:StampHeldMailTx":                                   heldMailMaintenanceReader,
 	"internal/modules/contacts/signatureretraction.go:Store.RetractMisattributedSignatureFields": "reads the activity only to find signature fields whose message the contact did not send, and returns field IDs with no content. A held or archived message misattributes a field as much as a live one, so excluding them would leave the field standing",

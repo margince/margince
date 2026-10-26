@@ -9,7 +9,7 @@ package activities
 // names no real participant. It has a user_id and nothing else, on mail a
 // connector captured, with no create audit made on that seat's behalf.
 // auth.ParticipantStandsSQL refuses such a row. These readers used to take it
-// as captured. The guessed seat owed a follow-up on mail it never sent. It was
+// as real. The guessed seat owed a follow-up on mail it never sent. It was
 // shown as the mail's sender, or as a colleague on it. Each case sits beside the
 // same row made real by the connector's own create audit.
 
@@ -84,6 +84,36 @@ func TestAGuessedSeatIsNoColleagueAndNoParty(t *testing.T) {
 			if len(parties.from) != tc.want {
 				t.Errorf("%s: senders shown = %d, want %d", tc.name, len(parties.from), tc.want)
 			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A held activity names no colleagues, even through a write's read-back, which
+// reaches held rows. Who sat on it is part of what the hold withholds.
+func TestAHeldActivityNamesNoColleagues(t *testing.T) {
+	e := setupLoad(t)
+	held, _ := e.sentTo(t, e.customerAt(t, "customer"), "", time.Hour)
+	e.asCapturedForRep(t, held)
+	// No writer holds an activity under retention yet, so the fixture records
+	// the controller's pin the hold rests on, as the settlement repair test does.
+	e.exec(t, `INSERT INTO activity_retention_evidence (activity_id, basis, qualified_at, decided_by_name, reason)
+		VALUES ($1, 'controller_pin', now(), 'Controller', 'Statutory hold')`, held)
+	e.exec(t, `UPDATE activity SET retention_class = 'commercial_correspondence', retention_class_at = now(), archived_at = now(),
+		restricted_at = now(), restricted_reason = 'statutory retention', restricted_until = now() + interval '6 years'
+		WHERE id = $1`, held)
+
+	ctx := e.followUpReader()
+	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		seats, err := ColleagueSeats(ctx, tx, held)
+		if err != nil {
+			return err
+		}
+		if len(seats) != 0 {
+			t.Errorf("a held activity named colleagues %v", seats)
 		}
 		return nil
 	})
