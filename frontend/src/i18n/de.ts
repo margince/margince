@@ -2062,6 +2062,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.filled": "Ergänzte Felder",
   "history.field.guests_added": "Gäste aus dem Kalender ergänzt",
   "history.field.guest_links_added": "Gäste aus dem Kalender verknüpft",
+  "history.field.guests_retired": "Gäste vom Kalender entfernt",
   "history.field.relinked_emails": "E-Mail-Adressen übernommen",
   "history.field.relinked_phones": "Telefonnummern übernommen",
   "history.field.relinked_relationships": "Beziehungen übernommen",

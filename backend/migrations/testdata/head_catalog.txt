@@ -352,6 +352,7 @@ public.activity_participant.activity_participant_contact_fkey FOREIGN KEY (conta
 public.activity_participant.activity_participant_identity CHECK (((user_id IS NOT NULL) OR (contact_id IS NOT NULL) OR (address IS NOT NULL) OR (channel_user_id IS NOT NULL)))
 public.activity_participant.activity_participant_pkey PRIMARY KEY (id)
 public.activity_participant.activity_participant_role_check CHECK ((role = ANY (ARRAY['from'::text, 'to'::text, 'cc'::text, 'bcc'::text, 'attendee'::text, 'organizer'::text])))
+public.activity_participant.activity_participant_roster_seat_fkey FOREIGN KEY (roster_seat) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity_participant.activity_participant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.activity_participant.address text gen=- def=-
 public.activity_participant.address_domain_folded text gen=- def=-
@@ -361,6 +362,7 @@ public.activity_participant.created_at timestamp with time zone NOT NULL gen=- d
 public.activity_participant.display_name text gen=- def=-
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_participant.role text NOT NULL gen=- def=-
+public.activity_participant.roster_seat uuid gen=- def=-
 public.activity_participant.settlement_evidence_share CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_participant()
 public.activity_participant.user_id uuid gen=- def=-
 public.activity_participant_pkey CREATE UNIQUE INDEX activity_participant_pkey ON public.activity_participant USING btree (id)

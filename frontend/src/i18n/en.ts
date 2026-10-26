@@ -1990,6 +1990,7 @@ export const en = {
   "history.field.filled": "Fields filled in",
   "history.field.guests_added": "Guests added from the calendar",
   "history.field.guest_links_added": "Guests linked from the calendar",
+  "history.field.guests_retired": "Guests removed by the calendar",
   "history.field.relinked_emails": "Email addresses moved over",
   "history.field.relinked_phones": "Phone numbers moved over",
   "history.field.relinked_relationships": "Relationships moved over",

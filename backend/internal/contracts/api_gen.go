@@ -25058,7 +25058,7 @@ type Activity struct {
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
-	// Guests Meeting only: the guests on the invitation who are neither a contact nor a colleague seat yet, by the address the invitation named. A guest who is a contact is in `links`, and a colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
+	// Guests Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
 	Guests *[]MeetingGuest `json:"guests,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
@@ -44336,12 +44336,15 @@ type MeetingBriefSection struct {
 // `company_context` — background, collapsed and last.
 type MeetingBriefSectionKind string
 
-// MeetingGuest One guest on a meeting's invitation who is not a contact or a colleague seat yet.
+// MeetingGuest One guest on a meeting who is not a colleague seat.
 type MeetingGuest struct {
-	// Address The address the invitation named them by.
-	Address string `json:"address"`
+	// Address The address the invitation named them by. Absent when no row holds one.
+	Address *string `json:"address,omitempty"`
 
-	// DisplayName The name the invitation gave them, or empty when it gave none.
+	// ContactId The contact this guest is. Present only when you may read that contact.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+
+	// DisplayName The contact's name when you may read the contact, else the name the invitation gave, else empty.
 	DisplayName string `json:"display_name"`
 }
 

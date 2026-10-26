@@ -34546,12 +34546,17 @@ export interface components {
              */
             renewed_at?: string;
         };
-        /** @description One guest on a meeting's invitation who is not a contact or a colleague seat yet. */
+        /** @description One guest on a meeting who is not a colleague seat. */
         MeetingGuest: {
-            /** @description The address the invitation named them by. */
-            address: string;
-            /** @description The name the invitation gave them, or empty when it gave none. */
+            /** @description The address the invitation named them by. Absent when no row holds one. */
+            address?: string;
+            /** @description The contact's name when you may read the contact, else the name the invitation gave, else empty. */
             display_name: string;
+            /**
+             * Format: uuid
+             * @description The contact this guest is. Present only when you may read that contact.
+             */
+            contact_id?: string;
         };
         /**
          * @description A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
@@ -34626,7 +34631,7 @@ export interface components {
             readonly host_user_id?: string | null;
             /** @description The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`. */
             readonly colleague_ids?: string[];
-            /** @description Meeting only: the guests on the invitation who are neither a contact nor a colleague seat yet, by the address the invitation named. A guest who is a contact is in `links`, and a colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`. */
+            /** @description Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`. */
             readonly guests?: components["schemas"]["MeetingGuest"][];
             /**
              * @description inbound/outbound for email/call; null for note/task.

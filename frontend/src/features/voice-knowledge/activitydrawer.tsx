@@ -159,8 +159,8 @@ function ActivityBody({
   const filed = attended
     ? links.filter((link) => link.entity_type !== "contact")
     : links;
-  // An outside guest who is not a contact yet has no record to link to, so the
-  // invitation's own name for them stands in.
+  // Guests no visible link shows: not a contact yet, past the link ceiling, or
+  // a contact this reader may not open. The invitation's name stands in.
   const guests = attended ? (activity.guests ?? []) : [];
   const colleagues = colleaguesOf(activity);
   return (
@@ -190,11 +190,15 @@ function ActivityBody({
           <PartyLine label={t("activity.detail.attendees")}>
             <RecordLinks links={attendees} newTab />
             {guests.map((guest, index) => (
-              <Fragment key={guest.address}>
+              <Fragment key={guest.contact_id ?? guest.address}>
                 {attendees.length + index > 0 && ", "}
-                <span title={guest.address}>
-                  {guest.display_name || guest.address}
-                </span>
+                {guest.contact_id ? (
+                  <EntityRef kind="contact" id={guest.contact_id} newTab />
+                ) : (
+                  <span title={guest.address}>
+                    {guest.display_name || guest.address}
+                  </span>
+                )}
               </Fragment>
             ))}
           </PartyLine>

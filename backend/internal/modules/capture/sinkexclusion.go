@@ -36,7 +36,7 @@ const (
 func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (string, error) {
 	// Colleague correspondence is not evidence of a customer relationship — it
 	// is two employees talking, and the CRM was never asked to hold it.
-	internal, err := s.internalOnlyTx(ctx, tx, rec)
+	internal, err := internalOnlyTx(ctx, tx, rec)
 	if err != nil {
 		return "", err
 	}

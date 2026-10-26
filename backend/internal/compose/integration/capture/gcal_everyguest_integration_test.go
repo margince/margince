@@ -7,6 +7,8 @@ package capture
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -25,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -228,7 +231,7 @@ func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
 	}
 	var shown []string
 	for _, guest := range deref(read.Guests) {
-		shown = append(shown, guest.Address)
+		shown = append(shown, deref1(guest.Address))
 	}
 	if want := []string{guestLater, guestOptional, guestUnread}; !slices.Equal(shown, want) {
 		t.Errorf("the meeting shows the guests %v, want the outside guests who are not contacts %v", shown, want)
@@ -246,7 +249,7 @@ func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
 
 // A guest the organizer adds after the first sync joins the meeting once, and
 // a sync that finds no change adds nothing. A guest already on the meeting keeps
-// one row, and a link a person moved away stays moved.
+// one row, and a link a member moved away stays moved.
 func TestAGuestAddedToAnEventJoinsTheMeetingOnce(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -283,7 +286,7 @@ func TestAGuestAddedToAnEventJoinsTheMeetingOnce(t *testing.T) {
 		t.Error("the meeting is not filed under the guest added later")
 	}
 	if meetingLinkedTo(t, e, meeting, known) {
-		t.Error("the update filed the meeting again under a guest a person had moved it off")
+		t.Error("the update filed the meeting again under a guest a member had moved it off")
 	}
 	if got := countRows(t, e, `SELECT count(*) FROM audit_log WHERE entity_id = '`+meeting.String()+
 		`' AND action = 'update' AND after ? 'guests_added'`); got != 1 {
@@ -381,4 +384,165 @@ func deref[T any](list *[]T) []T {
 		return nil
 	}
 	return *list
+}
+
+func deref1(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// guestReaderCtx is a seat reading activities, and contacts unless told not to.
+func guestReaderCtx(e *integration.SearchEnv, seat ids.UUID, readsContacts bool) context.Context {
+	objects := map[string]principal.ObjectGrant{"activity": {Read: true}}
+	if readsContacts {
+		objects["contact"] = principal.ObjectGrant{Read: true}
+	}
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, OnBehalfOf: seat,
+		Permissions: principal.Permissions{
+			Objects:  objects,
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+func seatReads(t *testing.T, e *integration.SearchEnv, seat, meeting ids.UUID) bool {
+	t.Helper()
+	_, err := activities.NewStore(e.DB()).GetActivityContent(guestReaderCtx(e, seat, true),
+		ids.From[ids.ActivityKind](meeting), storekit.LiveOnly)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return false
+	}
+	if err != nil {
+		t.Fatalf("reading the meeting as %s: %v", seat, err)
+	}
+	return true
+}
+
+// A colleague who declined is on the meeting by address, and reads nothing.
+func TestADeclinedColleagueIsShownAndGrantedNothing(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	declined := seatFor(t, e, guestColleagueA)
+	feed := &calendarFeed{}
+	feed.set(lateGuestEvent("review", "confirmed", captureNow.AddDate(0, 0, -3), guestUnread,
+		ownerEntry("accepted"), guestEntry(guestColleagueA, "declined"), guestEntry(guestUnread, "accepted")))
+	connectFeed(t, env, feed)()
+	meeting := gcalMeeting(t, e, "review")
+
+	rows := guestRows(t, e, meeting)
+	if len(rows[guestColleagueA]) != 1 || rows[guestColleagueA][0].userID != nil {
+		t.Errorf("the declined colleague: rows %+v, want one by address alone", rows[guestColleagueA])
+	}
+	if seatReads(t, e, declined, meeting) {
+		t.Error("a colleague who declined reads the meeting")
+	}
+}
+
+// A colleague the organizer takes off the event loses what the roster gave them.
+func TestAColleagueRemovedFromTheEventLosesTheMeeting(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	colleague := seatFor(t, e, guestColleagueA)
+	feed := &calendarFeed{}
+	start := captureNow.AddDate(0, 0, -3)
+	feed.set(lateGuestEvent("review", "confirmed", start, guestUnread,
+		ownerEntry("accepted"), guestEntry(guestColleagueA, "accepted"), guestEntry(guestUnread, "accepted")))
+	sync := connectFeed(t, env, feed)
+	sync()
+	meeting := gcalMeeting(t, e, "review")
+	if !seatReads(t, e, colleague, meeting) {
+		t.Fatal("the invited colleague cannot read the meeting")
+	}
+
+	feed.set(lateGuestEvent("review", "confirmed", start, guestUnread, ownerEntry("accepted"), guestEntry(guestUnread, "accepted")))
+	sync()
+
+	if rows := guestRows(t, e, meeting); len(rows[guestColleagueA]) != 0 {
+		t.Errorf("the removed colleague still holds %+v", rows[guestColleagueA])
+	}
+	if seatReads(t, e, colleague, meeting) {
+		t.Error("a colleague taken off the event still reads the meeting")
+	}
+	if rows := guestRows(t, e, meeting); len(rows[guestUnread]) != 1 || len(rows[captureOwner]) != 1 {
+		t.Errorf("the update took off guests it still lists: %+v", rows)
+	}
+}
+
+// A member's narrowing of the audience wins over a colleague the calendar adds.
+func TestAMembersNarrowingWinsOverALaterColleague(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	colleague := seatFor(t, e, guestColleagueA)
+	known := ensureGuestContact(t, e, guestKnown)
+	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
+	imported := importMeetingFor(t, e, known, "review@google.com", start)
+	if _, err := activities.NewStore(e.DB()).SetAudience(importerCtx(e), ids.From[ids.ActivityKind](imported),
+		activities.SetAudienceInput{Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: e.Rep1}}}); err != nil {
+		t.Fatalf("narrowing the meeting: %v", err)
+	}
+	feed := &calendarFeed{}
+	feed.set(lateGuestEvent("review", "confirmed", start, guestKnown, guestList()...))
+	connectFeed(t, env, feed)()
+
+	rows := guestRows(t, e, imported)
+	if len(rows[guestColleagueA]) != 1 || rows[guestColleagueA][0].userID != nil {
+		t.Errorf("the colleague added after the narrowing: rows %+v, want one by address alone", rows[guestColleagueA])
+	}
+	if seatReads(t, e, colleague, imported) {
+		t.Error("the calendar opened a meeting a member had narrowed")
+	}
+}
+
+// A guest's contact the reader cannot see, or one past the link ceiling, is
+// still on the meeting's guest list.
+func TestAGuestNoVisibleLinkShowsIsStillListed(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	var guests []map[string]any
+	guests = append(guests, ownerEntry("accepted"))
+	for i := range 26 {
+		address := fmt.Sprintf("guest%02d@client-co.example", i)
+		ensureGuestContact(t, e, address)
+		guests = append(guests, guestEntry(address, "accepted"))
+	}
+	feed := &calendarFeed{}
+	feed.set(lateGuestEvent("review", "confirmed", captureNow.AddDate(0, 0, -3), "guest00@client-co.example", guests...))
+	connectFeed(t, env, feed)()
+	meeting := gcalMeeting(t, e, "review")
+	store := activities.NewStore(e.DB())
+	// The contacts a mailbox sync invents stay their capturing seat's alone.
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE contact SET visibility = 'owner', owner_id = $1 WHERE id IN (SELECT contact_id FROM contact_email WHERE email LIKE 'guest%' AND email <> 'guest00@client-co.example')`,
+		e.Rep1); err != nil {
+		t.Fatal(err)
+	}
+
+	all, err := store.GetActivity(guestReaderCtx(e, e.Rep1, true), ids.From[ids.ActivityKind](meeting), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if links, listed := len(deref(all.Links)), deref(all.Guests); links+len(listed) != 26 {
+		t.Errorf("%d links and %d listed guests, want all 26 contacts shown once", links, len(listed))
+	} else {
+		for _, guest := range listed {
+			if guest.ContactId == nil {
+				t.Errorf("a contact past the link ceiling is listed without its contact: %+v", guest)
+			}
+		}
+	}
+
+	own, err := store.GetActivity(guestReaderCtx(e, e.Rep3, true), ids.From[ids.ActivityKind](meeting), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if listed := deref(own.Guests); len(listed) != 25 {
+		t.Errorf("a reader who may see one of the contacts is shown %d guests, want the other 25", len(listed))
+	} else if listed[0].ContactId != nil || deref1(listed[0].Address) == "" {
+		t.Errorf("a contact the reader may not see is shown as %+v, want the invitation's address alone", listed[0])
+	}
 }
