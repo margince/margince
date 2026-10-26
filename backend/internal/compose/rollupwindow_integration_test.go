@@ -23,12 +23,30 @@ import (
 // dated today, the window's last date, counts though its stored noon is still
 // ahead east of UTC+12. The date before the window does not, nor tomorrow's,
 // nor a call at the instant read.
+// middayAfterInstallationMidnight is the database's today, read at a fixed
+// local hour rather than whenever the suite runs.
+//
+// The window's edges are local dates, and the test writes calls at `now` and
+// an hour before it. Read in the hour after local midnight, those two instants
+// fall on different local dates and the fixture stops describing what it means
+// to describe.
+//
+// Afternoon rather than noon. A call dated today is stored at local noon, and
+// the window is half open.
+//
+// So a `now` of noon itself would leave today's own call outside it.
+func middayAfterInstallationMidnight(t *testing.T, e *integration.Env, loc *time.Location) time.Time {
+	t.Helper()
+	local := databaseNow(t, e).In(loc)
+	return time.Date(local.Year(), local.Month(), local.Day(), 15, 0, 0, 0, loc)
+}
+
 func TestADayCallCountsInTheThirtyDaysItsDateFallsIn(t *testing.T) {
 	for _, zone := range []string{"Pacific/Auckland", "Pacific/Kiritimati"} {
 		t.Run(zone, func(t *testing.T) {
 			e := integration.Setup(t)
 			loc := setInstallationZone(t, e, zone)
-			now := databaseNow(t, e)
+			now := middayAfterInstallationMidnight(t, e, loc)
 			today := occurredday.AnchorIn(now, loc)
 			inside, buyer := logCallsOn(t, e, "Inside Freight", today, today.AddDate(0, 0, -29))
 			outside, _ := logCallsOn(t, e, "Outside Freight", today.AddDate(0, 0, -30), today.AddDate(0, 0, 1))
