@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Check, Copy } from "lucide-react";
+import { useState } from "react";
 import { Badge, EmptyState, SearchField } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
+import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { type FilterPill, FilterPills } from "../../design-system/filterpills";
+import { IconAction } from "../../design-system/iconaction";
 import { KeyedName } from "../../design-system/keyedname";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
@@ -28,6 +33,50 @@ const SOURCE_LABEL: Record<Source, MessageKey> = {
   default: "configuration.source.default",
   unset: "configuration.source.unset",
 };
+
+const CONFIGURATION_SCOPE_PARAM = "source";
+
+const SCOPES = ["all", "changed", "outside", "app", "default"] as const;
+
+type Scope = (typeof SCOPES)[number];
+
+// A setting the api does not read has a source the api cannot see, so only
+// "all" holds it.
+const SCOPE_SOURCES: Record<Scope, readonly Source[] | null> = {
+  all: null,
+  changed: ["flag", "env", "env_file", "config_file", "database"],
+  outside: ["flag", "env", "env_file", "config_file"],
+  app: ["database"],
+  default: ["default"],
+};
+
+const SCOPE_LABEL: Record<Scope, MessageKey> = {
+  all: "configuration.scope.all",
+  changed: "configuration.scope.changed",
+  outside: "configuration.scope.outside",
+  app: "configuration.source.database",
+  default: "configuration.source.default",
+};
+
+function scopeOf(dial: string | null): Scope {
+  return SCOPES.find((scope) => scope === dial) ?? "all";
+}
+
+function inScope(entry: Entry, scope: Scope): boolean {
+  const sources = SCOPE_SOURCES[scope];
+  return sources === null || sources.includes(entry.origin.source);
+}
+
+function scopePills(
+  t: Translator,
+  entries: readonly Entry[],
+): FilterPill<Scope>[] {
+  return SCOPES.map((scope) => ({
+    value: scope,
+    label: t(SCOPE_LABEL[scope]),
+    count: entries.filter((entry) => inScope(entry, scope)).length,
+  }));
+}
 
 function SourceCell({ entry }: Readonly<{ entry: Entry }>) {
   const t = useT();
@@ -71,16 +120,63 @@ function ValueCell({ entry }: Readonly<{ entry: Entry }>) {
   return <KeyedName name={shown} code={shown} />;
 }
 
+type Copied = "value" | "default";
+
+// The clipboard holds one text, so the detail names which of its two copy
+// controls wrote it last.
+function FullText({
+  label,
+  copyLabel,
+  text,
+  current,
+  onCopied,
+}: Readonly<{
+  label: string;
+  copyLabel: string;
+  text: string;
+  current: boolean;
+  onCopied: () => void;
+}>) {
+  const t = useT();
+  const clip = useClipboardCopy(
+    text,
+    {
+      copy: copyLabel,
+      copied: t("configuration.copied"),
+      remedy: t("configuration.copyRemedy"),
+    },
+    onCopied,
+  );
+  const shown = current && clip.copied;
+  return (
+    <CellStack>
+      <span>
+        {label}{" "}
+        <IconAction
+          inline
+          label={shown ? t("configuration.copied") : copyLabel}
+          icon={shown ? <Check aria-hidden /> : <Copy aria-hidden />}
+          onClick={clip.copy}
+        />
+      </span>
+      <KeyedName name={text} code={text} />
+      {clip.notice}
+    </CellStack>
+  );
+}
+
 function EntryDetail({ entry }: Readonly<{ entry: Entry }>) {
   const t = useT();
+  const [copied, setCopied] = useState<Copied | null>(null);
+  const value = entry.secret ? null : entry.value;
+  const fallback = entry.secret ? null : entry.default;
+  const longValue = value !== null && preview(value) !== value;
+  const longDefault = fallback !== null && preview(fallback) !== fallback;
   const facts = [
-    entry.secret
+    entry.secret || longDefault
       ? null
       : t("configuration.detail.default", {
-          value:
-            entry.default === null
-              ? t("configuration.detail.none")
-              : preview(entry.default),
+          value: fallback ?? t("configuration.detail.none"),
         }),
     t("configuration.detail.type", { type: entry.type }),
     entry.flag
@@ -90,14 +186,24 @@ function EntryDetail({ entry }: Readonly<{ entry: Entry }>) {
   ].filter((fact) => fact !== null);
   return (
     <CellStack>
-      {!entry.secret &&
-        entry.value !== null &&
-        preview(entry.value) !== entry.value && (
-          <KeyedName
-            name={t("configuration.detail.value")}
-            code={entry.value}
-          />
-        )}
+      {longValue && (
+        <FullText
+          label={t("configuration.detail.value")}
+          copyLabel={t("configuration.copyValue")}
+          text={value}
+          current={copied === "value"}
+          onCopied={() => setCopied("value")}
+        />
+      )}
+      {longDefault && (
+        <FullText
+          label={t("configuration.detail.fullDefault")}
+          copyLabel={t("configuration.copyDefault")}
+          text={fallback}
+          current={copied === "default"}
+          onCopied={() => setCopied("default")}
+        />
+      )}
       <span>{entry.doc}</span>
       <span className="t-caption">{facts.join(" · ")}</span>
     </CellStack>
@@ -132,6 +238,7 @@ export function InstallationConfigurationPage() {
   // In the address, so settings search can open the page on the setting it found.
   const [params] = useUrlParams();
   const filter = params.get(CONFIGURATION_FILTER_PARAM) ?? "";
+  const scope = scopeOf(params.get(CONFIGURATION_SCOPE_PARAM));
   const query = useConfiguration();
 
   return (
@@ -141,12 +248,26 @@ export function InstallationConfigurationPage() {
       </PanelBody>
       <QueryGate query={query} pendingLabel={t("configuration.title")}>
         {(entries) => {
-          const shown = entries.filter((entry) =>
+          const matched = entries.filter((entry) =>
             matchesConfigurationFilter(entry, filter),
           );
+          const shown = matched.filter((entry) => inScope(entry, scope));
           return (
             <>
               <PanelBody>
+                <div className="filter-tabs">
+                  <FilterPills
+                    pills={scopePills(t, matched)}
+                    value={scope}
+                    onChange={(next) =>
+                      replaceDial(
+                        CONFIGURATION_SCOPE_PARAM,
+                        next === "all" ? undefined : next,
+                      )
+                    }
+                    label={t("configuration.scope.label")}
+                  />
+                </div>
                 <SearchField
                   value={filter}
                   onChange={(event) =>

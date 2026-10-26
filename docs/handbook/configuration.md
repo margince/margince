@@ -7,7 +7,14 @@ The **Configuration** page lists every setting the installation reads, what its 
 ### What does the Configuration page show?
 Each row shows the **Key** of the setting with the name that sets it under it, its **Value** and its **Source**. Open a row to read what the setting does, its default, its type and the command-line flag that sets it.
 
-Type in the filter box to narrow the list by key or by the name under it. If nothing matches, the page says so.
+A long value is cut short in its row. Open the row to read the whole value and the whole default, each with a button that copies it.
+
+### How do I see only the values somebody set?
+Press **Not default** above the list. It shows every setting whose value was set outside the app or saved in the app. The other buttons show one source each: **Set outside the app**, **Saved in the app** and **Default value**. **All** shows every row again. Each button shows how many rows it holds.
+
+**All** alone shows a setting that only the background worker or the setup program reads. The app cannot see where its value comes from.
+
+Type in the filter box to narrow the list by key or by the name under it. The buttons then count only the rows that match. If nothing matches, the page says so.
 
 You can also search for a setting by its name, such as `capture.auto_enrich_daily_cap` or `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP`. Use the settings search or the command palette (⌘K or Ctrl+K). The search offers the **Configuration** page, and the page opens with the filter set to what you typed.
 
