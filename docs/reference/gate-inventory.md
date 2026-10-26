@@ -566,6 +566,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `moduletablespelling_test.go` | H2 | A package that names its table does not pass that name as a bare string. |
 | `onebindingpublisher_test.go` | H2 | One function publishes an AI Router binding, and it is install. |
 | `onecurrencyconversion_test.go` | H2 | Converting money to the base currency has one implementation. |
+| `onedomainfold_test.go` | H2 | One domain fold. |
 | `owndomainpredicate_test.go` | H2 | Every own-domain decision compares one folded form of a domain. |
 | `phasehistoryattribution_test.go` | H2 | A history table that links its audit row names who acted through that row. |
 | `pipefailgrepq_test.go` | H2 | A shell gate does not decide its verdict through a pipe that can break. |

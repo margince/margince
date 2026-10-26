@@ -215,9 +215,8 @@ func FoldAddress(address string) string {
 	return folded[:at+1] + domain
 }
 
-// AddressSpellings is every form a header may carry for one folded address:
-// the local part with each of owndomain.Spellings for its domain. An address
-// with no domain is itself.
+// AddressSpellings returns the folded address with each of
+// owndomain.Spellings for its domain. An address with no domain is itself.
 func AddressSpellings(address string) []string {
 	folded := FoldAddress(address)
 	at := strings.LastIndex(folded, "@")

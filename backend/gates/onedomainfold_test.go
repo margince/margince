@@ -30,6 +30,7 @@ var idnaReadersAdmitted = gatekit.Waive(map[string]string{
 })
 
 func TestOnlyTheSharedFoldReadsIDNA(t *testing.T) {
+	t.Parallel()
 	defer idnaReadersAdmitted.AssertAllMatched(t)
 	for file, imports := range goImports(t, "internal") {
 		if strings.HasSuffix(file, "_test.go") {

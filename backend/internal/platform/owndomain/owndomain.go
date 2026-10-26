@@ -33,8 +33,8 @@ func Fold(domain string) string {
 	return ascii
 }
 
-// Spellings is every form a mail header may carry for one domain. That is the
-// ASCII form Fold gives, and its Unicode form when that differs.
+// Spellings returns the ASCII form Fold gives for a domain, and its Unicode
+// form when that differs. A header may carry either.
 // Postgres cannot fold IDNA, so a SQL comparison against stored header
 // addresses needs both.
 func Spellings(domain string) []string {
