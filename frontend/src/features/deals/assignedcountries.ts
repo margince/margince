@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { Locale } from "../i18n";
-import { jurisdictionName } from "./jurisdiction";
+import { forReader } from "../../format/collate";
+import { jurisdictionName } from "../../format/jurisdiction";
+import type { Locale } from "../../i18n";
 
 // The ISO 3166-1 alpha-2 codes the server accepts as an address country. A
 // mirror of the contacts module's countrycodes.go;
@@ -266,9 +267,8 @@ export const ASSIGNED_COUNTRIES: readonly string[] = [
 export function countryOptions(
   locale: Locale,
 ): { value: string; label: string }[] {
-  const collator = new Intl.Collator(locale);
   return ASSIGNED_COUNTRIES.map((code) => ({
     value: code,
     label: jurisdictionName(code, locale),
-  })).sort((a, b) => collator.compare(a.label, b.label));
+  })).sort((a, b) => forReader(a.label, b.label, locale));
 }

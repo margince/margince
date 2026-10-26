@@ -6,7 +6,7 @@
 package gates
 
 // The deal list's country filter offers the codes the server stores, and no other.
-// frontend/src/format/assignedcountries.ts mirrors contacts.AssignedCountryCodes,
+// frontend/src/features/deals/assignedcountries.ts mirrors contacts.AssignedCountryCodes,
 // and this gate fails when either side has a code the other lacks.
 
 import (
@@ -18,7 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
-const frontendAssignedCountries = "../frontend/src/format/assignedcountries.ts"
+const frontendAssignedCountries = "../frontend/src/features/deals/assignedcountries.ts"
 
 var tsCountryCode = regexp.MustCompile(`"([A-Z]{2})"`)
 
