@@ -52,7 +52,16 @@ type LeadBlock struct {
 	Promoted     int
 
 	// The SLA slice, carried here as well as on Counts so a reader of the
-	// scorecard has the whole funnel in one record.
+	// scorecard has the whole funnel in one record. Arrived is the cohort both
+	// are read from (leadArrivedInWeekSQL). AnsweredInTarget is every lead in
+	// it with a first response recorded before the week closed, late ones
+	// included; Breached is every one with a breach recorded by then. A late
+	// answer is in both, so Arrived - AnsweredInTarget is the leads with no
+	// recorded first response, and nothing here proves a target was met.
+	//
+	// Arrived is nil on a scorecard frozen before it was recorded: such a week
+	// cannot say how many leads went unanswered, and must not read as none.
+	Arrived          *int
 	AnsweredInTarget int
 	Breached         int
 
@@ -202,8 +211,9 @@ func scoreLeads(
 		 WHERE l.owner_id = $%[1]d AND (%[2]s)`, userPos, scope)
 
 	block := &LeadBlock{}
-	// One statement for the whole block: eight counts read at eight moments
-	// would describe eight slightly different weeks.
+	var arrived int
+	// One statement for the whole block: ten counts read at ten moments
+	// would describe ten slightly different weeks.
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		WITH mine AS (%[5]s),
 		moved AS (`+LeadMovesSQL("mine", "$%[1]d", "$%[2]d")+`),
@@ -224,12 +234,12 @@ func scoreLeads(
 		  (SELECT count(*) FROM moved WHERE move = '`+LeadMoveDisqualified+`'),
 		  (SELECT count(*) FROM moved WHERE move = '`+LeadMovePromoted+`'),
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
-		    WHERE COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
+		    WHERE `+leadArrivedInWeekSQL+`),
+		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
+		    WHERE `+leadArrivedInWeekSQL+`
 		      AND `+responseRecordedInWeekSQL+`),
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
-		    WHERE COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
+		    WHERE `+leadArrivedInWeekSQL+`
 		      AND `+breachRecordedInWeekSQL+`),
 		  (SELECT count(*) FROM met WHERE status = 'booked' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE status = 'held' AND NOT partial_pre_history),
@@ -237,11 +247,12 @@ func scoreLeads(
 		  (SELECT count(*) FROM met WHERE partial_pre_history)`,
 		startPos, endPos, userPos, scope, mine, meetingScope), args...).
 		Scan(&block.Advanced, &block.Disqualified, &block.Promoted,
-			&block.AnsweredInTarget, &block.Breached,
+			&arrived, &block.AnsweredInTarget, &block.Breached,
 			&block.Booked, &block.Held, &block.NoShow, &block.PartialHistory)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: scoring the week's funnel: %w", err)
 	}
+	block.Arrived = &arrived
 	return block, nil
 }
 

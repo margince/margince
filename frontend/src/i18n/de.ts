@@ -5256,9 +5256,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.scorecard.advancedBasis":
     "Jeder Wechsel zählt: ein Lead mit zwei Phasenwechseln zählt doppelt",
   "brief.weekly.scorecard.answeredInTarget": "Antworten nach der Zielzeit",
-  "brief.weekly.scorecard.answeredDetail":
-    "In der Zielzeit beantwortet: {count}",
-  "brief.weekly.scorecard.allInTarget": "Alle in der Zielzeit beantwortet",
+  "brief.weekly.scorecard.noArrivals": "Diese Woche kam kein Lead an",
+  "brief.weekly.scorecard.unanswered":
+    "Ohne erfasste erste Antwort bis Wochenende: {count} von {total}",
+  "brief.weekly.scorecard.allResponded":
+    "Erste Antwort bis Wochenende erfasst: alle {total}",
+  "brief.weekly.scorecard.respondedNoCohort":
+    "Erste Antwort bis Wochenende erfasst: {count}. Eingänge wurden für diese Woche nicht erfasst",
   "brief.weekly.scorecard.meetingsHeld": "Als stattgefunden markiert",
   "brief.weekly.scorecard.meetingsBasis":
     "Gebucht: {booked} · Nicht erschienen: {noShow}",

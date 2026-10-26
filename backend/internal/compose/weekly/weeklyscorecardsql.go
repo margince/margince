@@ -42,6 +42,7 @@ func insertScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, card Sco
 		add("lead_advanced", l.Advanced)
 		add("lead_disqualified", l.Disqualified)
 		add("lead_promoted", l.Promoted)
+		add("lead_arrived", l.Arrived)
 		add("lead_answered_in_target", l.AnsweredInTarget)
 		add("lead_breached", l.Breached)
 		add("meetings_booked", l.Booked)
@@ -91,6 +92,7 @@ func readScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (*Scorecar
 	// Every nullable column scans through a pointer, because a block's absence
 	// is exactly what NULL means here.
 	var la, ld, lp, lat, lb, mb, mh, mn, mp *int
+	var arrived *int
 	var da, dr, dns, do, dmt, dcd, dfu, dfd, dun, dcp *int
 	err := tx.QueryRow(ctx, `
 		SELECT has_lead_block, lead_advanced, lead_disqualified, lead_promoted,
@@ -100,11 +102,11 @@ func readScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (*Scorecar
 		       deal_median_days_in_stage, deal_with_next_step, deal_open,
 		       deal_multi_threaded, deal_close_date_sound,
 		       deal_forecast_up, deal_forecast_down, deal_unreconstructible,
-		       deal_close_date_provisional
+		       deal_close_date_provisional, lead_arrived
 		  FROM weekly_review_scorecard WHERE weekly_review_id = $1`, reviewID).
 		Scan(&hasLead, &la, &ld, &lp, &lat, &lb, &mb, &mh, &mn, &mp,
 			&hasDeal, &da, &dr, &d.MedianDaysInStage, &dns, &do, &dmt, &dcd, &dfu, &dfd,
-			&dun, &dcp)
+			&dun, &dcp, &arrived)
 	if errors.Is(err, pgx.ErrNoRows) {
 		//nolint:nilnil // a review written before scorecards existed HAS none; the panel draws nothing rather than the read failing.
 		return nil, nil
@@ -117,6 +119,9 @@ func readScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (*Scorecar
 	if hasLead {
 		l.Advanced, l.Disqualified, l.Promoted = deref(la), deref(ld), deref(lp)
 		l.AnsweredInTarget, l.Breached = deref(lat), deref(lb)
+		// NOT deref'd: NULL is a week frozen before the cohort was recorded,
+		// and zero would claim no lead went unanswered that week.
+		l.Arrived = arrived
 		l.Booked, l.Held, l.NoShow, l.PartialHistory = deref(mb), deref(mh), deref(mn), deref(mp)
 		card.Lead = &l
 	}

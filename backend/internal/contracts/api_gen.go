@@ -54981,8 +54981,19 @@ type WeeklyScorecardLeadBlock struct {
 
 	// AnsweredInTarget Leads arriving this week with a first response recorded before the week closed, including late responses. Breaches are counted separately. This is not an SLA success rate.
 	AnsweredInTarget int `json:"answered_in_target"`
-	Breached         int `json:"breached"`
-	Disqualified     int `json:"disqualified"`
+
+	// Arrived The week's lead cohort: leads that arrived in the window (dated by when they were
+	// routed, or created when nobody routed them), are not archived, and no import wrote.
+	// `answered_in_target` and `breached` are both counted from exactly these leads, so
+	// `arrived - answered_in_target` is the leads with no first response recorded by the
+	// close. Do not subtract `breached` too: a late answer is in both.
+	//
+	// Null, or absent from an older server, on a week frozen before the cohort was
+	// recorded. Such a week cannot say how many leads went unanswered, and a reader shows
+	// that as unknown, never as zero and never as every lead answered.
+	Arrived      *int `json:"arrived,omitempty"`
+	Breached     int  `json:"breached"`
+	Disqualified int  `json:"disqualified"`
 
 	// MeetingsBooked Meetings that BECAME booked this week, read from the meeting's transition history and
 	// never from its current status. A meeting booked Monday and held Friday counts in both

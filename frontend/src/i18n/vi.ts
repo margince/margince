@@ -5116,8 +5116,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.scorecard.advancedBasis":
     "Đếm số lần chuyển; một lead chuyển 2 giai đoạn tính 2 lần",
   "brief.weekly.scorecard.answeredInTarget": "Trả lời quá hạn",
-  "brief.weekly.scorecard.answeredDetail": "{count} đã trả lời trong hạn",
-  "brief.weekly.scorecard.allInTarget": "Tất cả đều được trả lời đúng hạn",
+  "brief.weekly.scorecard.noArrivals": "Không có khách hàng tiềm năng nào đến trong tuần này",
+  "brief.weekly.scorecard.unanswered": "Chưa ghi nhận phản hồi đầu tiên trước khi kết thúc tuần: {count} trên {total}",
+  "brief.weekly.scorecard.allResponded": "Đã ghi nhận phản hồi đầu tiên trước khi kết thúc tuần: tất cả {total}",
+  "brief.weekly.scorecard.respondedNoCohort": "Đã ghi nhận phản hồi đầu tiên trước khi kết thúc tuần: {count}. Số khách hàng tiềm năng đến trong tuần này không được ghi nhận",
   "brief.weekly.scorecard.meetingsHeld": "Cuộc họp đã diễn ra",
   "brief.weekly.scorecard.meetingsBasis":
     "{booked} đã đặt lịch · {noShow} khách không đến",

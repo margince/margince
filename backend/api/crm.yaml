@@ -62728,6 +62728,19 @@ components:
             only where it ended and could report at most one of them.
         disqualified: { type: integer, minimum: 0 }
         promoted: { type: integer, minimum: 0 }
+        arrived:
+          type: [integer, 'null']
+          minimum: 0
+          description: |
+            The week's lead cohort: leads that arrived in the window (dated by when they were
+            routed, or created when nobody routed them), are not archived, and no import wrote.
+            `answered_in_target` and `breached` are both counted from exactly these leads, so
+            `arrived - answered_in_target` is the leads with no first response recorded by the
+            close. Do not subtract `breached` too: a late answer is in both.
+
+            Null, or absent from an older server, on a week frozen before the cohort was
+            recorded. Such a week cannot say how many leads went unanswered, and a reader shows
+            that as unknown, never as zero and never as every lead answered.
         answered_in_target:
           type: integer
           minimum: 0

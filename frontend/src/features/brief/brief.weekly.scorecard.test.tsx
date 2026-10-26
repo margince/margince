@@ -174,33 +174,128 @@ describe("the weekly scorecard", () => {
   // the reassurance in the figure and the actionable number in a footnote.
   it("leads the target row with the breaches, not with the answers", () => {
     render(
-      <ScorecardPanel scorecard={{ lead: leadBlock }} weekStart="2026-06-01" />,
-    );
-
-    expect(rowOf(en["brief.weekly.scorecard.answeredInTarget"])).toEqual([
-      en["brief.weekly.scorecard.answeredInTarget"],
-      "3",
-      en["brief.weekly.scorecard.answeredDetail"].replace("{count}", "9"),
-    ]);
-  });
-
-  // Zero breaches is a finding, and "0 answered in target" would be its
-  // opposite: the line under the figure has to say the week was clean rather
-  // than count the exceptions that were not there.
-  it("says every lead was answered in target when none breached", () => {
-    render(
       <ScorecardPanel
-        scorecard={{ lead: { ...leadBlock, breached: 0 } }}
+        scorecard={{ lead: { ...leadBlock, arrived: 12 } }}
         weekStart="2026-06-01"
       />,
     );
 
     expect(rowOf(en["brief.weekly.scorecard.answeredInTarget"])).toEqual([
       en["brief.weekly.scorecard.answeredInTarget"],
-      "0",
-      en["brief.weekly.scorecard.allInTarget"],
+      "3",
+      en["brief.weekly.scorecard.unanswered"]
+        .replace("{count}", "3")
+        .replace("{total}", "12"),
     ]);
   });
+
+  // Zero breaches is not every lead answered. Three leads arrived, one got a
+  // first response, none was stamped as breached: two are still unanswered.
+  // The panel used to say "All answered in target" here.
+  it("names the unanswered leads when none breached but not all were answered", () => {
+    render(
+      <ScorecardPanel
+        scorecard={{
+          lead: {
+            ...leadBlock,
+            arrived: 3,
+            answered_in_target: 1,
+            breached: 0,
+          },
+        }}
+        weekStart="2026-06-01"
+      />,
+    );
+    expect(rowOf(en["brief.weekly.scorecard.answeredInTarget"])).toEqual([
+      en["brief.weekly.scorecard.answeredInTarget"],
+      "0",
+      en["brief.weekly.scorecard.unanswered"]
+        .replace("{count}", "2")
+        .replace("{total}", "3"),
+    ]);
+  });
+
+  // The plan's case: one lead answered late (so also breached), one never
+  // answered. One has no recorded response, not zero. Breaches are not
+  // subtracted, because the late answer is in both counts.
+  it("counts one unanswered lead of two when the other was answered late", () => {
+    render(
+      <ScorecardPanel
+        scorecard={{
+          lead: {
+            ...leadBlock,
+            arrived: 2,
+            answered_in_target: 1,
+            breached: 2,
+          },
+        }}
+        weekStart="2026-06-01"
+      />,
+    );
+    expect(rowOf(en["brief.weekly.scorecard.answeredInTarget"])[2]).toBe(
+      en["brief.weekly.scorecard.unanswered"]
+        .replace("{count}", "1")
+        .replace("{total}", "2"),
+    );
+  });
+
+  it("says every lead got a recorded first response, without claiming a target was met", () => {
+    render(
+      <ScorecardPanel
+        scorecard={{
+          lead: {
+            ...leadBlock,
+            arrived: 2,
+            answered_in_target: 2,
+            breached: 0,
+          },
+        }}
+        weekStart="2026-06-01"
+      />,
+    );
+    const basis = rowOf(en["brief.weekly.scorecard.answeredInTarget"])[2];
+    expect(basis).toBe(
+      en["brief.weekly.scorecard.allResponded"].replace("{total}", "2"),
+    );
+    expect(basis).not.toMatch(/in target/i);
+  });
+
+  it("says no lead arrived when the cohort is empty", () => {
+    render(
+      <ScorecardPanel
+        scorecard={{
+          lead: {
+            ...leadBlock,
+            arrived: 0,
+            answered_in_target: 0,
+            breached: 0,
+          },
+        }}
+        weekStart="2026-06-01"
+      />,
+    );
+    expect(rowOf(en["brief.weekly.scorecard.answeredInTarget"])[2]).toBe(
+      en["brief.weekly.scorecard.noArrivals"],
+    );
+  });
+
+  // A week frozen before the cohort was recorded, or served by an older
+  // server, cannot say how many went unanswered, and must not read as none.
+  it.each([undefined, null])(
+    "says the arrivals were not recorded when the cohort is %s, even with no breach",
+    (arrived) => {
+      render(
+        <ScorecardPanel
+          scorecard={{ lead: { ...leadBlock, arrived, breached: 0 } }}
+          weekStart="2026-06-01"
+        />,
+      );
+      const basis = rowOf(en["brief.weekly.scorecard.answeredInTarget"])[2];
+      expect(basis).toBe(
+        en["brief.weekly.scorecard.respondedNoCohort"].replace("{count}", "9"),
+      );
+    },
+  );
 
   it("says the meeting counts are a floor only when history is actually missing", () => {
     render(

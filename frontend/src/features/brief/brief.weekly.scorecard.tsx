@@ -98,12 +98,7 @@ function leadRows(
       key: "breached",
       label: t("brief.weekly.scorecard.answeredInTarget"),
       value: n(block.breached),
-      basis:
-        block.breached === 0
-          ? t("brief.weekly.scorecard.allInTarget")
-          : t("brief.weekly.scorecard.answeredDetail", {
-              count: n(block.answered_in_target),
-            }),
+      basis: responseBasis(block, t, n),
     },
     {
       key: "meetings",
@@ -126,6 +121,38 @@ function leadRows(
         ]
       : []),
   ];
+}
+
+/**
+ * What the week's response figures rest on. Zero breaches never means every
+ * lead was answered: a lead nobody answered and nobody stamped also breaches
+ * nothing. `answered_in_target` counts responses recorded by the close, late
+ * ones included, so this line names recorded responses and never a target met.
+ *
+ * `arrived` is the cohort both figures are read from. Missing, it is a week
+ * frozen before the cohort was recorded, and the line says so rather than
+ * guessing how many went unanswered.
+ */
+function responseBasis(
+  block: LeadBlock,
+  t: Translator,
+  n: (value: number) => string,
+): string {
+  const arrived = block.arrived;
+  if (arrived === undefined || arrived === null) {
+    return t("brief.weekly.scorecard.respondedNoCohort", {
+      count: n(block.answered_in_target),
+    });
+  }
+  if (arrived === 0) return t("brief.weekly.scorecard.noArrivals");
+  // A late answer is in both counts, so only responses are subtracted.
+  const unanswered = Math.max(arrived - block.answered_in_target, 0);
+  return unanswered === 0
+    ? t("brief.weekly.scorecard.allResponded", { total: n(arrived) })
+    : t("brief.weekly.scorecard.unanswered", {
+        count: n(unanswered),
+        total: n(arrived),
+      });
 }
 
 function dealRows(

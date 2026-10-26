@@ -5285,8 +5285,13 @@ export const en = {
   "brief.weekly.scorecard.advancedBasis":
     "Each move counts: a lead that moves two stages counts twice",
   "brief.weekly.scorecard.answeredInTarget": "Replies past target time",
-  "brief.weekly.scorecard.answeredDetail": "{count} answered in target",
-  "brief.weekly.scorecard.allInTarget": "All answered in target",
+  "brief.weekly.scorecard.noArrivals": "No lead arrived this week",
+  "brief.weekly.scorecard.unanswered":
+    "No first response recorded by week close: {count} of {total}",
+  "brief.weekly.scorecard.allResponded":
+    "First response recorded by week close: all {total}",
+  "brief.weekly.scorecard.respondedNoCohort":
+    "First response recorded by week close: {count}. Arrivals were not recorded for this week",
   "brief.weekly.scorecard.meetingsHeld": "Meetings marked held",
   "brief.weekly.scorecard.meetingsBasis": "{booked} booked · {noShow} no-show",
   "brief.weekly.scorecard.partialHistory": "Meetings without history",
