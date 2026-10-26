@@ -13,9 +13,9 @@ import { en } from "../../i18n/en";
 import { WorklistScreen } from "./worklist";
 
 // A relationship gone quiet is outreach to someone the reader has worked with.
-// The server files it under its own `relationships` category, but the pill row
-// offered no way to ask for that cut: the rows were reachable only under All,
-// and a reader looking for work with contacts had nothing to press.
+// The server files it under its own `relationships` category. The pill row
+// offered no way to ask for that cut. The rows were reachable only under All.
+// A reader looking for work with contacts had nothing to press.
 
 type Worklist = components["schemas"]["Worklist"];
 

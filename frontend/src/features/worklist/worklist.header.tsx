@@ -41,9 +41,9 @@ const FILTERS = [
   "meetings",
   "tasks",
   "decisions",
-  // A relationship gone quiet is outreach to someone the reader has worked
-  // with, not upkeep: it has its own category on the server, and without its
-  // own pill it was reachable only through All.
+  // A relationship gone quiet is outreach to someone the reader worked with,
+  // not upkeep. It has its own category on the server. Without its own pill it
+  // was reachable only through All.
   "relationships",
   "system",
 ] as const satisfies readonly WorklistFilter[];
@@ -139,8 +139,8 @@ export function worklistLaneHref(
  * computed display, so the cuts and the columns cannot disagree — a
  * breakpoint spelled again here in pixels could, and the head's own width
  * cannot tell a lanes column from a narrow page. The cuts are a list in the
- * column and a strip across the page: nine rows of lanes over a phone's
- * queue would push the first row past the fold the phone rules keep it above.
+ * column and a strip across the page. Nine rows of lanes over a phone's queue
+ * would push the first row past the fold the phone rules keep it above.
  *
  * The head's own box is what the observer watches: it changes width when the
  * layout flips and stands still otherwise, and a wrapper that has dissolved
