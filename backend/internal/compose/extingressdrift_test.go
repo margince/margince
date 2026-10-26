@@ -193,7 +193,7 @@ func TestThePublishedParticipantMirrorsTheCoreOne(t *testing.T) {
 	// `ChannelUserID` is `Account`. Renaming either side for a word would be a
 	// change at a published surface, so the map is where the pairing lives.
 	//
-	// Every core field pairs but Declined, a calendar guest's own answer that only
+	// Every core field pairs but Response, a calendar guest's own answer that only
 	// the core's calendar mappers read. A unit's roster is never an attested guest
 	// list, so it binds no seat whatever it says.
 	//
@@ -209,7 +209,7 @@ func TestThePublishedParticipantMirrorsTheCoreOne(t *testing.T) {
 		"Role":          "Role",
 	}
 	for field := range core.Fields() {
-		if field.Name == "Declined" {
+		if field.Name == "Response" {
 			continue
 		}
 		want, paired := publishedName[field.Name]

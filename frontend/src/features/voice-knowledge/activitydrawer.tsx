@@ -22,7 +22,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { formatDate } from "../../format/format";
+import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
@@ -293,6 +293,7 @@ function AttendeesLine({
 }>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   if (attendees.length + guests.length === 0) {
     return null;
   }
@@ -322,7 +323,7 @@ function AttendeesLine({
         <>
           {" "}
           {plural("activity.detail.guestsLeftOut", leftOut, {
-            count: String(leftOut),
+            count: formatNumber(leftOut, locale),
           })}
         </>
       )}
