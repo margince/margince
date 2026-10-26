@@ -201,7 +201,7 @@ func focusedReading(thread settledThread, events []extractedEvent) (settledThrea
 }
 
 // inFocus keeps a focused reading's promises on its focus messages. The second
-// reading looks for a promise the first missed; asked to look again, a model
+// reading looks for a promise the first missed. Asked to look again, a model
 // also finds needs and endings that the words do not state.
 func (payload extractPayload) inFocus(thread settledThread) extractPayload {
 	if len(thread.Focus) == 0 || payload.Events == nil {
