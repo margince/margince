@@ -6,6 +6,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ListSurface } from "../../design-system/listsurface";
 import { type Locale, LocaleProvider, useLocale, useT } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 import { dealRangeChips } from "./deals.rangefilters";
 
 // The deal list's commercial dials as a reader meets them in the filter bar.
@@ -25,11 +26,12 @@ function Bar({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const zone = useRecordZone();
   const [chosen, setChosen] = useState(initial);
   return (
     <ListSurface
       chips={dealRangeChips({
-        words: { t, locale, zone: "Europe/Berlin" },
+        words: { t, locale, zone },
         filters: chosen,
         baseCurrency,
         leading: ["EUR", "USD"],

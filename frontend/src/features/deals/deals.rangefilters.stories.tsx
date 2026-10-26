@@ -6,6 +6,7 @@ import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { ListSurface } from "../../design-system/listsurface";
 import { LocaleProvider, useLocale, useT } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 import { dealRangeChips } from "./deals.rangefilters";
 
 const meta: Meta = {
@@ -21,13 +22,14 @@ type Story = StoryObj;
 function Bar({ initial = {} }: Readonly<{ initial?: Record<string, string> }>) {
   const t = useT();
   const { locale } = useLocale();
+  const zone = useRecordZone();
   const [chosen, setChosen] = useState(initial);
   return (
     <div style={{ blockSize: "34rem" }}>
       <ListSurface
         count="12 deals"
         chips={dealRangeChips({
-          words: { t, locale, zone: "Europe/Berlin" },
+          words: { t, locale, zone },
           filters: chosen,
           baseCurrency: "EUR",
           leading: ["EUR", "USD", "VND"],
