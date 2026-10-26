@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -83,5 +84,59 @@ func TestEveryPendingDomainReasonAsksOnlyItsDecider(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A decider set aside its question, and newer mail brings it back. The sole
+// direct recipient may hold no reader row: here only a colleague's mailbox
+// captured the mail. Freshness comes from the newest mail the decider reads,
+// so a missing reader row cannot hold the question aside for good.
+func TestNewerMailReturnsADeferredQuestionToADeciderWithNoReaderRow(t *testing.T) {
+	e := integration.Setup(t)
+	now := pinClock(t, e)
+	rep1 := e.As(e.Rep1, nil, integration.AdminPerms)
+	const domain = "deferred.example"
+	mail := func(id string, at time.Time) {
+		t.Helper()
+		captureStaffMail(t, e, staffMail{sourceID: id, from: "contact@" + domain, mailbox: e.Rep2,
+			to: []string{seatEmail(t, e.Rep1)}, occurred: at})
+	}
+	mail("deferred-1", now.Add(-2*time.Hour))
+	runVendorTriage(t, e, domain)
+	e.WsExec(t, `UPDATE company_domain_disposition SET pending_reason = $2 WHERE domain = $1`, domain, contacts.PendingUnevidenced)
+	if n := e.WsCount(t, `SELECT count(*) FROM company_domain_question_reader WHERE domain = $1 AND reader_id = $2`, domain, e.Rep1); n != 0 {
+		t.Fatalf("fixture: the decider holds %d reader rows, want none", n)
+	}
+	if !asksAbout(rep1, t, e, domain) {
+		t.Fatal("the sole direct recipient was not asked")
+	}
+	open := func() bool {
+		t.Helper()
+		questions, err := e.Contacts.OpenDomainQuestionsForOwner(rep1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, q := range questions {
+			if q.Domain == domain {
+				return true
+			}
+		}
+		return false
+	}
+
+	setAside := activities.NewStore(e.DB()).WithClock(func() time.Time { return now.Add(-90 * time.Minute) })
+	if err := setAside.MarkWorklistRowsDone(rep1, []activities.WorklistRowRef{{Source: "domain_question", RowID: domain}}); err != nil {
+		t.Fatal(err)
+	}
+	if open() {
+		t.Fatal("a question set aside after its newest mail is still on the Worklist")
+	}
+	// New mail sends the domain back to triage, which raises the question
+	// again on the newer evidence.
+	mail("deferred-2", now.Add(-time.Hour))
+	runVendorTriage(t, e, domain)
+	e.WsExec(t, `UPDATE company_domain_disposition SET pending_reason = $2 WHERE domain = $1`, domain, contacts.PendingUnevidenced)
+	if !open() {
+		t.Error("newer mail did not bring the set-aside question back")
 	}
 }

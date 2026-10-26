@@ -112,9 +112,9 @@ func TestADeactivatedOwnersQuestionReachesTheOperatorsList(t *testing.T) {
 	// records the mailbox owner the message reached, and the fixture's ensure
 	// input names that seat.
 	e.withholdUnreadable(ctx, t, "hello@departing.example", "departing.example")
-	if listed := e.listedDomains(ctx, t); contains(listed, "departing.example") {
-		t.Fatalf("the operator's list = %v, want departing.example absent while its owner "+
-			"can still answer it on their own queue", listed)
+	if listed := e.listedDomains(ctx, t); !contains(listed, "departing.example") {
+		t.Fatalf("the operator's list = %v, want departing.example listed while its owner "+
+			"can still answer it, as every open question is", listed)
 	}
 
 	// They leave. Deactivation is identity's act; what it writes to app_user is
@@ -137,31 +137,22 @@ func TestADeactivatedOwnersQuestionReachesTheOperatorsList(t *testing.T) {
 	}
 }
 
-// An open question owned by a LIVE seat stays off this list, whoever is reading.
+// An open question stays on this list even while a live seat owns it.
 //
-// It has an addressee who can still answer it, on their own queue, with the two
-// verbs that settle it. Carrying it here as well would put one question on two
-// surfaces — and offer an operator a re-ask on mail they cannot read, whose
-// answer belongs to somebody else.
-//
-// Both readers are asserted because the clause is about the ROW, not about who
-// is looking: it asks whether anybody can still answer the question, so a
-// colleague sees exactly what the owner does. The fixture's capture path stamps
-// e.rep as the owner of every disposition it opens, so what the second read
-// varies is the reader alone, which is the whole point of it.
-func TestAnOwnedQuestionStaysOffTheOperatorsList(t *testing.T) {
+// Every pending reason has one decider, the sole direct recipient of current
+// mail (openQuestionForReaderSQL). When there is none, nobody is asked, and
+// this list is where the fact stays. A vendor question was always listed for
+// that reason. Every reason now is, so an operator sees one list of what is
+// held out of the CRM. A colleague reads the same list as the owner.
+func TestAnOwnedQuestionIsAlsoOnTheOperatorsList(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.withholdUnreadable(ctx, t, "hello@mine.example", "mine.example")
 
-	if listed := e.listedDomains(ctx, t); len(listed) != 0 {
-		t.Errorf("the owner's list = %v, want the owned question absent: it is on their "+
-			"queue, and one question on two surfaces is one two colleagues answer "+
-			"differently", listed)
+	if listed := e.listedDomains(ctx, t); !contains(listed, "mine.example") {
+		t.Errorf("the owner's list = %v, want the open question listed", listed)
 	}
-	// A colleague reading the same list sees no more than the owner does.
-	if listed := e.listedDomains(e.asOther(), t); len(listed) != 0 {
-		t.Errorf("the colleague's list = %v, want it empty too: a live seat owns the "+
-			"question, so it is not this list's to carry for anyone", listed)
+	if listed := e.listedDomains(e.asOther(), t); !contains(listed, "mine.example") {
+		t.Errorf("the colleague's list = %v, want the same open question", listed)
 	}
 }
