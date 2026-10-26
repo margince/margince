@@ -70,6 +70,10 @@ type activityScan struct {
 	raw              map[string]any
 	bulkMailAttested bool
 	bodyCompleteness string
+	// The seat the row's own columns name as its writer (writerSeatSQL), and
+	// its name. Read here, so the author projection costs no query of its own.
+	writerSeat                      *ids.UUID
+	writerSeatName, writerSeatEmail *string
 	// Who sent the row, as relstrength.Evidence reads it into automatic_kind.
 	origin          string
 	calendarMethod  *string
@@ -132,6 +136,9 @@ var activityProjection = []activityColumn{
 	// about August: a colleague who has since left was still its author, and
 	// readEmailParties already refuses the same filter for the same reason.
 	{sourceAuthorSeatNameSQL, func(s *activityScan) any { return &s.sourceAuthorSeatName }},
+	{writerSeatSQL, func(s *activityScan) any { return &s.writerSeat }},
+	{writerSeatNameSQL, func(s *activityScan) any { return &s.writerSeatName }},
+	{writerSeatEmailSQL, func(s *activityScan) any { return &s.writerSeatEmail }},
 	{"a.version", func(s *activityScan) any { return &s.version }},
 	{"a.created_at", func(s *activityScan) any { return &s.a.CreatedAt }},
 	{"a.updated_at", func(s *activityScan) any { return &s.a.UpdatedAt }},
@@ -276,6 +283,7 @@ func (s *activityScan) record() crmcontracts.Activity {
 	if s.contentAvailable {
 		a.ImportedFrom = provenance.ImportedFrom(s.a.SourceSystem)
 		a.Author = SourceAuthorOf(s.sourceAuthorID, s.sourceAuthorSeatName, s.sourceAuthorName, s.a.SourceSystem)
+		a.Voice = writerSeatVoice(s.writerSeat, s.writerSeatName, s.writerSeatEmail)
 	}
 	// Said of a mail's body, so it goes where the body goes. A withheld reader
 	// does not get it, nor does a row whose body an erasure removed, nor any

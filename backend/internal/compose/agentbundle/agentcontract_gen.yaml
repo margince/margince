@@ -8322,6 +8322,41 @@ components:
           type: [string, 'null']
           description: >-
             Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
+    ActivityVoice:
+      type: object
+      description: |-
+        Who wrote an activity, read from what is recorded on it, and the part the
+        page's contact had in it. Every surface that names a speaker reads this
+        rather than guessing from `direction`: a mail that came in was not
+        necessarily written by the contact whose page shows it.
+      properties:
+        author:
+          allOf: [{$ref: '#/components/schemas/ActivityAuthor'}]
+          nullable: true
+          description: >-
+            Who wrote it: the `from` party of a message, the organizer of a meeting, the seat or imported author of a note, call or task. Null when nothing recorded names an author, which a reader shows as no author rather than a guess.
+        contact_role:
+          type: string
+          enum: [author, addressee, cc, organizer, attendee, other]
+          description: >-
+            Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+    ActivityAuthor:
+      type: object
+      required: [kind, is_reader]
+      description: One author, named by the record that identifies them.
+      properties:
+        kind:
+          type: string
+          enum: [contact_record, colleague, machine, unresolved]
+          description: >-
+            `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+        display_name: {type: [string, 'null']}
+        address: {type: [string, 'null']}
+        contact_id: {type: [string, 'null'], format: uuid}
+        user_id: {type: [string, 'null'], format: uuid}
+        is_reader:
+          type: boolean
+          description: The author is the signed-in caller.
     EmailSummary:
       type: object
       description: |-
@@ -9271,6 +9306,11 @@ components:
           type: string
           format: date-time
           description: When the current state took hold — the block timestamp while unreachable, otherwise when the identity was first established.
+    RelationshipDirection:
+      type: string
+      enum: [two_way, inbound_only, outbound_only, none]
+      description: >-
+        Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a human wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
     RelationshipStrength:
       type: object
       description: |-
@@ -10877,12 +10917,16 @@ components:
           type: [string, 'null']
           format: date-time
           description: >-
-            When they last wrote to us, over the same three-link walk the timeline uses (the activity's own link, its deal's company, the employer of the contact it is filed against). Null means nothing inbound was ever captured — which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+            When one of the account's current contacts last wrote to us: the newest of their own last_inbound_at, over the activities the timeline walks. Mail a colleague sent, and activity filed on the account alone, does not move it. Null means none of them ever wrote, which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
         last_outbound_at:
           type: [string, 'null']
           format: date-time
           description: >-
-            When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
+            When we last wrote to one of the account's current contacts. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
+        relationship_direction:
+          $ref: '#/components/schemas/RelationshipDirection'
+          description: >-
+            Which sides have written, rolled up from the account's current contacts. Absent together with last_inbound_at, named in `sections_omitted` as `last_touch`.
         last_contact:
           description: >-
             The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws.
@@ -11195,6 +11239,10 @@ components:
           format: date-time
           description: >-
             When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
+        relationship_direction:
+          $ref: '#/components/schemas/RelationshipDirection'
+          description: >-
+            Which sides have written, read off last_inbound_at and last_outbound_at. Absent together with them, named in `sections_omitted` as `last_touch`.
         last_live_inbound_at:
           type: [string, 'null']
           format: date-time
@@ -14948,6 +14996,12 @@ components:
           enum: [product, calendar, sending_system]
           description: >-
             What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+        voice:
+          allOf: [{$ref: '#/components/schemas/ActivityVoice'}]
+          readOnly: true
+          nullable: true
+          description: >-
+            Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
         audience:
           allOf: [{$ref: '#/components/schemas/ActivityAudience'}]
           readOnly: true

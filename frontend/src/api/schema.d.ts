@@ -23966,6 +23966,37 @@ export interface components {
             via?: string | null;
         };
         /**
+         * @description Who wrote an activity, read from what is recorded on it, and the part the
+         *     page's contact had in it. Every surface that names a speaker reads this
+         *     rather than guessing from `direction`: a mail that came in was not
+         *     necessarily written by the contact whose page shows it.
+         */
+        ActivityVoice: {
+            /** @description Who wrote it: the `from` party of a message, the organizer of a meeting, the seat or imported author of a note, call or task. Null when nothing recorded names an author, which a reader shows as no author rather than a guess. */
+            author?: components["schemas"]["ActivityAuthor"] | null;
+            /**
+             * @description Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+             * @enum {string}
+             */
+            contact_role?: "author" | "addressee" | "cc" | "organizer" | "attendee" | "other";
+        };
+        /** @description One author, named by the record that identifies them. */
+        ActivityAuthor: {
+            /**
+             * @description `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+             * @enum {string}
+             */
+            kind: "contact_record" | "colleague" | "machine" | "unresolved";
+            display_name?: string | null;
+            address?: string | null;
+            /** Format: uuid */
+            contact_id?: string | null;
+            /** Format: uuid */
+            user_id?: string | null;
+            /** @description The author is the signed-in caller. */
+            is_reader: boolean;
+        };
+        /**
          * @description One retained email, reduced to what a row shows without opening it. Present on an
          *     activity only when `kind=email`; every other kind carries none, and a reader that
          *     branches on this field is asking the one question that decides the canonical row.
@@ -26763,6 +26794,11 @@ export interface components {
             since: string;
         };
         /**
+         * @description Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a human wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+         * @enum {string}
+         */
+        RelationshipDirection: "two_way" | "inbound_only" | "outbound_only" | "none";
+        /**
          * @description Deterministic relationship-strength (features/07 §4) — a transparent function over captured
          *     interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
          *     interaction set + fixed clock yields a stable value (P6/P12). The `factors` decompose the score and
@@ -29094,14 +29130,16 @@ export interface components {
             scope?: components["schemas"]["ProjectScope"];
             /**
              * Format: date-time
-             * @description When they last wrote to us, over the same three-link walk the timeline uses (the activity's own link, its deal's company, the employer of the contact it is filed against). Null means nothing inbound was ever captured — which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+             * @description When one of the account's current contacts last wrote to us: the newest of their own last_inbound_at, over the activities the timeline walks. Mail a colleague sent, and activity filed on the account alone, does not move it. Null means none of them ever wrote, which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
              */
             last_inbound_at?: string | null;
             /**
              * Format: date-time
-             * @description When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
+             * @description When we last wrote to one of the account's current contacts. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
              */
             last_outbound_at?: string | null;
+            /** @description Which sides have written, rolled up from the account's current contacts. Absent together with last_inbound_at, named in `sections_omitted` as `last_touch`. */
+            relationship_direction?: components["schemas"]["RelationshipDirection"];
             /** @description The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws. */
             last_contact?: components["schemas"]["Company360LastContact"];
             state_strip?: components["schemas"]["Company360StateStrip"];
@@ -29436,6 +29474,8 @@ export interface components {
              * @description When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
              */
             last_outbound_at?: string | null;
+            /** @description Which sides have written, read off last_inbound_at and last_outbound_at. Absent together with them, named in `sections_omitted` as `last_touch`. */
+            relationship_direction?: components["schemas"]["RelationshipDirection"];
             /**
              * Format: date-time
              * @description When they last wrote to us, leaving out email an import brought in as history. Equal to `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this, because history that arrived by import is not a reply. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
@@ -34486,6 +34526,8 @@ export interface components {
              * @enum {string|null}
              */
             readonly automatic_kind?: "product" | "calendar" | "sending_system" | null;
+            /** @description Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`. */
+            readonly voice?: components["schemas"]["ActivityVoice"] | null;
             /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains. */
             readonly audience?: components["schemas"]["ActivityAudience"];
             /** @description Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`. */

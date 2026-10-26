@@ -48,6 +48,10 @@ type rawEvent struct {
 	Start       graphTime    `json:"start"`
 	Organizer   graphActor   `json:"organizer"`
 	Attendees   []graphActor `json:"attendees"`
+	// With hideAttendees set, each attendee's copy lists only themselves; the
+	// organizer's copy lists everyone.
+	HideAttendees bool `json:"hideAttendees"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	IsOrganizer   bool `json:"isOrganizer"`   //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 	// Removed is Graph's tombstone on a delta round: an event deleted since the
 	// last pull arrives carrying this and little else. It is read as a
 	// cancellation because that is what it is to a calendar.
@@ -122,6 +126,7 @@ func decode(ev rawEvent) meetingmap.Event {
 		AllDay:        ev.IsAllDay,
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address, Name: ev.Organizer.EmailAddress.Name},
 		Attendees:     attendees,
+		PartiesHidden: ev.HideAttendees && !ev.IsOrganizer,
 	}
 }
 

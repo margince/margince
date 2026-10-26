@@ -11,6 +11,7 @@ import { VisibilityBadge } from "./visibility";
 import "./composed.css";
 
 import {
+  AutomaticFlag,
   CommitmentReviewFlag,
   directionClass,
   dotClass,
@@ -267,6 +268,7 @@ export function TimelineRow({
             // As above: absent on the reply composer and nowhere else.
             whyNotOpenable="noReader"
           />
+          <AutomaticFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
           />
@@ -331,6 +333,7 @@ export function TimelineRow({
               <VisibilityBadge state={entry.audience} />
             )
           )}
+          <AutomaticFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
           />

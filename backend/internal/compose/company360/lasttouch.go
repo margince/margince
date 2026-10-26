@@ -10,13 +10,16 @@ package company360
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -95,19 +98,24 @@ func LastTouchFor(
 	}
 	touched += opts.projectScope(arg)
 	touched += fmt.Sprintf(" AND a.occurred_at <= $%d", arg(now))
-	// Both direction clocks skip a called-off meeting and automatic mail, as
-	// the last contact does through InteractionCountsSQL. DirectionClockSQL
-	// rather than InteractionCountsSQL: a direction clock answers when a
-	// human's message last went each way, so any directed kind counts.
+	roster, err := employeeRoster(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	// The direction clocks are the roll-up of the employees' own clocks: an
+	// employee wrote it, or it reached one. Activity filed on the account alone
+	// moves only the last contact. Both skip automatic mail (DirectionClockSQL)
+	// and, like the contact page, read only what the whole workspace may see.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH touched AS (
-		  SELECT reach.company_id, a.id, a.occurred_at, a.kind, a.direction,
-		         %[5]s AS held, %[6]s AS is_interaction
+		  SELECT reach.company_id, a.id, a.occurred_at, a.kind,
+		         %[5]s AND %[7]s AS they_wrote, %[5]s AND %[8]s AS we_wrote,
+		         %[6]s AS is_interaction
 		  %[2]s
 		), clocks AS (
 		  SELECT company_id,
-		         max(occurred_at) FILTER (WHERE direction = 'inbound' AND held) AS inbound_at,
-		         max(occurred_at) FILTER (WHERE direction = 'outbound' AND held) AS outbound_at
+		         max(occurred_at) FILTER (WHERE they_wrote) AS inbound_at,
+		         max(occurred_at) FILTER (WHERE we_wrote) AS outbound_at
 		  FROM touched GROUP BY company_id
 		), last_contact AS (
 		  SELECT DISTINCT ON (company_id) company_id, id, occurred_at, kind
@@ -120,7 +128,9 @@ func LastTouchFor(
 		LEFT JOIN last_contact lc ON lc.company_id = %[1]s.id
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
 		lastTouchCompanyAlias, touched, wantedPos, visible,
-		relstrength.DirectionClockSQL("a"), relstrength.InteractionCountsSQL("a")), args...)
+		relstrength.DirectionClockSQL("a")+" AND "+relstrength.WorkspaceAudienceSQL("a"), relstrength.InteractionCountsSQL("a"),
+		employeeSQL(roster, relstrength.TheyWroteSQL("emp.contact_id", "a")),
+		employeeSQL(roster, relstrength.WeWroteSQL("a")+" AND "+employeeReachedSQL)), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,3 +155,24 @@ func LastTouchFor(
 	}
 	return out, nil
 }
+
+// employeeRoster is the account's employees this caller may read, the roster
+// the contacts section is built from. A caller refused it reads no employee,
+// so a hidden one moves no clock.
+func employeeRoster(ctx context.Context, arg func(any) int) (string, error) {
+	roster, err := contacts.CompanyRosterSQL(ctx, "reach.company_id", arg)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return `SELECT NULL::uuid AS contact_id WHERE false`, nil
+	}
+	return roster, err
+}
+
+// employeeSQL admits a row when the predicate holds for one roster employee.
+func employeeSQL(roster, predicate string) string {
+	return `EXISTS (SELECT 1 FROM (` + roster + `) emp WHERE ` + predicate + `)`
+}
+
+// employeeReachedSQL is the contact page's reach for emp.contact_id: the
+// activity is linked to them, or they are on it.
+const employeeReachedSQL = `(EXISTS (SELECT 1 FROM activity_link el WHERE el.activity_id = a.id AND el.contact_id = emp.contact_id)
+		    OR EXISTS (SELECT 1 FROM activity_participant ep WHERE ep.activity_id = a.id AND ep.contact_id = emp.contact_id))`

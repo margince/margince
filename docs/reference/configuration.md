@@ -941,6 +941,36 @@ preview guess. Every family below is sent for a Gmail import. A Microsoft 365 im
 | `margince_capture_backfill_snooze_seconds_total` | `provider`, `reason` | seconds the import picked to wait: `pacing` between good pages; after a failed page `rate_limited`, `unreachable`, `token_rejected` or `internal`; `rate_limited_in_page` for a short limit a page waited out inside itself; `resumed` when a run was opened again while its job was ending |
 | `margince_capture_backfill_retry_after_seconds_total` | `provider` | the Retry-After the provider asked for on the fault and in-page waits; the gap to their snooze total is the wait our own ladder added |
 
+A calendar pull, for Google and Microsoft 365, counts two things. The pull runs in the worker, which
+serves both families on its `--observe-addr`:
+
+- `margince_capture_calendar_events_listed_total` (`provider`): the events each provider list handed
+  to a pull, counted before any is written.
+- `margince_capture_calendar_events_total` (`provider`, `outcome`): the one outcome each listed
+  event ended on.
+
+`outcome` is one of these:
+
+- `captured`: the writer stored the meeting, or found it already stored.
+- `dropped_no_event_id` or `dropped_no_party_besides_the_owner`: the calendar rules kept it out.
+- `cancelled` or `declined_by_the_calendar_owner`: the writer was told the meeting is off. A meeting
+  never captured has nothing to close, so this does not say that a row changed.
+- `sink_skipped`: the writer refused it, for example because every party is on the workspace's own
+  domains. The writer leaves its own trace row that says why.
+- `failed`: the write failed. The pull stops there and saves no progress, so the next pull lists
+  the same events again.
+- `not_attempted`: the event came after a failed write in the same list, so the pull never reached
+  it.
+- `unreadable`: the event could not be read.
+- `beyond_horizon` (Google only): the event starts more than a year from now, and its new start was
+  handed to the writer.
+- `cancel_unsupported` or `move_unsupported`: the writer offers no way to cancel or move.
+
+Once a pull ends, it has counted one outcome for each listed event; a gap is a pull still running.
+With debug logging on, the `calendar event settled` line names the event id of each attempted event. An
+event that could not be read has no id. The families add up all connections of one process. They do not say which connection listed an
+event, and a missing line does not prove that a provider never listed it.
+
 Compare `sum by (stage) (rate(margince_capture_backfill_stage_seconds_sum[5m]))` across stages to
 see whether the Google download or our transaction takes most of the time of a message. Use
 `sum(rate(margince_connector_requests_total{op="get_metadata"}[5m])) - sum(rate(margince_connector_requests_total{op="get_raw"}[5m]))`

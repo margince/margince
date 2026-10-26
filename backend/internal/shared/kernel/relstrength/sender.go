@@ -24,20 +24,27 @@ import "fmt"
 //
 // contact and activity are SQL expressions the caller supplies, such as a bind
 // parameter ("$3") or a correlated column ("p.id"), and the activity's alias.
-// It is a format string, not a builder function, because the census of
-// unbounded record references reads one function at a time.
 func SenderSQL(contact, activity string) string {
-	return fmt.Sprintf(senderSQL, contact, activity)
+	return fmt.Sprintf(senderSQL, contact, activity, ParticipantNamesSQL(contact, "ap"))
 }
 
 const senderSQL = `EXISTS (
 		SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = %[2]s.id AND ap.role = 'from'
-		   AND CASE WHEN ap.address IS NOT NULL
+		   AND %[3]s)`
+
+// ParticipantNamesSQL renders "participant row `participant` names contact
+// `contact`", by the rule SenderSQL states. Every reader that asks which part a
+// contact had on a message asks it through this one rule.
+func ParticipantNamesSQL(contact, participant string) string {
+	return fmt.Sprintf(participantNamesSQL, contact, participant)
+}
+
+const participantNamesSQL = `CASE WHEN %[2]s.address IS NOT NULL
 		            THEN EXISTS (SELECT 1 FROM contact_email pe
 		                          WHERE pe.contact_id = %[1]s AND pe.archived_at IS NULL
-		                            AND pe.email = ap.address)
-		            ELSE ap.contact_id = %[1]s END)`
+		                            AND pe.email = %[2]s.address)
+		            ELSE %[2]s.contact_id = %[1]s END`
 
 // ContactExchangeSQL admits an activity to the contact's last-touch clock: an
 // exchange that has happened, and, when inbound, one the contact wrote. A
@@ -45,5 +52,5 @@ const senderSQL = `EXISTS (
 // from them. The reconnect lane and the colleague edge's last_at both read it.
 func ContactExchangeSQL(activity, contact, now string) string {
 	return InteractionCountsSQL(activity) + " AND " + LastActivityCountsSQL(activity, now) +
-		" AND (" + activity + ".direction IS DISTINCT FROM 'inbound' OR " + SenderSQL(contact, activity) + ")"
+		" AND (" + activity + ".direction IS DISTINCT FROM 'inbound' OR " + TheyWroteSQL(contact, activity) + ")"
 }

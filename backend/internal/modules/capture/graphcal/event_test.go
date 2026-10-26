@@ -156,9 +156,8 @@ func TestABookedRoomIsNotAGuest(t *testing.T) {
 		},
 	})
 	m := mustParse(t, raw)
-	reason, skip := m.SkipReason()
-	if !skip || reason != "no party outside the owner's domain" {
-		t.Fatalf("got (%q, skip=%v), want the room ignored and the meeting dropped as internal", reason, skip)
+	if got := m.ToRecord(connectorName, raw).OwnerDomainOnly; got != "myco.com" {
+		t.Fatalf("OwnerDomainOnly = %q, want myco.com: the room is no outside guest", got)
 	}
 	for _, p := range m.Participants().Participants {
 		if p.Email == "boardroom@myco.com" {

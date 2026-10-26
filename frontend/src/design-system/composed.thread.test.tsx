@@ -34,6 +34,30 @@ function thread(entries: TimelineEntry[]): TimelineGroup {
 }
 
 describe("a thread's card", () => {
+  it("counts each side's messages and leaves out the ones no human wrote", () => {
+    const theirs = [1, 2, 3, 4].map((n) =>
+      entry({ id: `in${n}`, direction: "inbound", counterparts: "Ida Keller" }),
+    );
+    const ours = [1, 2, 3, 4, 5].map((n) =>
+      entry({ id: `out${n}`, direction: "outbound" }),
+    );
+    const invitation = entry({
+      id: "invite",
+      direction: "outbound",
+      automaticKind: "calendar",
+    });
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[thread([invitation, ...theirs, ...ours])]}
+      />,
+    );
+    expect(
+      screen.getByText("10 messages · 4 from them, 5 from your team"),
+    ).toBeTruthy();
+    expect(screen.getByText("Calendar invitation")).toBeTruthy();
+  });
+
   it("names the kind, the count and who it was with, and seats the verbs in its head", () => {
     render(
       <GroupedTimelineList
@@ -63,7 +87,9 @@ describe("a thread's card", () => {
       />,
     );
     expect(screen.getByText("Thread")).toBeTruthy();
-    expect(screen.getByText("3 messages")).toBeTruthy();
+    expect(
+      screen.getByText("3 messages · 2 from them, 1 from your team"),
+    ).toBeTruthy();
     // Each name once, however many messages it was on.
     expect(screen.getByText("Ida Keller, Marc Dubois")).toBeTruthy();
     // Inside the card, on its head line, rather than in the row's own

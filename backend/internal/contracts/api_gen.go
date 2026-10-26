@@ -427,6 +427,30 @@ func (e ActivityAudience) Valid() bool {
 	}
 }
 
+// Defines values for ActivityAuthorKind.
+const (
+	ActivityAuthorKindColleague     ActivityAuthorKind = "colleague"
+	ActivityAuthorKindContactRecord ActivityAuthorKind = "contact_record"
+	ActivityAuthorKindMachine       ActivityAuthorKind = "machine"
+	ActivityAuthorKindUnresolved    ActivityAuthorKind = "unresolved"
+)
+
+// Valid indicates whether the value is a known member of the ActivityAuthorKind enum.
+func (e ActivityAuthorKind) Valid() bool {
+	switch e {
+	case ActivityAuthorKindColleague:
+		return true
+	case ActivityAuthorKindContactRecord:
+		return true
+	case ActivityAuthorKindMachine:
+		return true
+	case ActivityAuthorKindUnresolved:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -541,6 +565,36 @@ func (e ActivityReviewTemplateOutcome) Valid() bool {
 	case ActivityReviewTemplateOutcomeLost:
 		return true
 	case ActivityReviewTemplateOutcomeWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityVoiceContactRole.
+const (
+	ActivityVoiceContactRoleAddressee ActivityVoiceContactRole = "addressee"
+	ActivityVoiceContactRoleAttendee  ActivityVoiceContactRole = "attendee"
+	ActivityVoiceContactRoleAuthor    ActivityVoiceContactRole = "author"
+	ActivityVoiceContactRoleCc        ActivityVoiceContactRole = "cc"
+	ActivityVoiceContactRoleOrganizer ActivityVoiceContactRole = "organizer"
+	ActivityVoiceContactRoleOther     ActivityVoiceContactRole = "other"
+)
+
+// Valid indicates whether the value is a known member of the ActivityVoiceContactRole enum.
+func (e ActivityVoiceContactRole) Valid() bool {
+	switch e {
+	case ActivityVoiceContactRoleAddressee:
+		return true
+	case ActivityVoiceContactRoleAttendee:
+		return true
+	case ActivityVoiceContactRoleAuthor:
+		return true
+	case ActivityVoiceContactRoleCc:
+		return true
+	case ActivityVoiceContactRoleOrganizer:
+		return true
+	case ActivityVoiceContactRoleOther:
 		return true
 	default:
 		return false
@@ -15670,6 +15724,30 @@ func (e RelationshipStartedPrecision) Valid() bool {
 	}
 }
 
+// Defines values for RelationshipDirection.
+const (
+	RelationshipDirectionInboundOnly  RelationshipDirection = "inbound_only"
+	RelationshipDirectionNone         RelationshipDirection = "none"
+	RelationshipDirectionOutboundOnly RelationshipDirection = "outbound_only"
+	RelationshipDirectionTwoWay       RelationshipDirection = "two_way"
+)
+
+// Valid indicates whether the value is a known member of the RelationshipDirection enum.
+func (e RelationshipDirection) Valid() bool {
+	switch e {
+	case RelationshipDirectionInboundOnly:
+		return true
+	case RelationshipDirectionNone:
+		return true
+	case RelationshipDirectionOutboundOnly:
+		return true
+	case RelationshipDirectionTwoWay:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RelationshipNudgeStateState.
 const (
 	RelationshipNudgeStateStateFollowing RelationshipNudgeStateState = "following"
@@ -24998,6 +25076,9 @@ type Activity struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
+	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
+	Voice *ActivityVoice `json:"voice,omitempty"`
+
 	// Writable Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -25031,6 +25112,23 @@ type ActivityMeetingStatus string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
+
+// ActivityAuthor One author, named by the record that identifies them.
+type ActivityAuthor struct {
+	Address     *string             `json:"address,omitempty"`
+	ContactId   *openapi_types.UUID `json:"contact_id,omitempty"`
+	DisplayName *string             `json:"display_name,omitempty"`
+
+	// IsReader The author is the signed-in caller.
+	IsReader bool `json:"is_reader"`
+
+	// Kind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+	Kind   ActivityAuthorKind  `json:"kind"`
+	UserId *openapi_types.UUID `json:"user_id,omitempty"`
+}
+
+// ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+type ActivityAuthorKind string
 
 // ActivityFollowUpTask defines model for ActivityFollowUpTask.
 type ActivityFollowUpTask struct {
@@ -25140,6 +25238,21 @@ type ActivityReviewTemplateOutcome string
 type ActivityReviewTemplateListResponse struct {
 	Data []ActivityReviewTemplate `json:"data"`
 }
+
+// ActivityVoice Who wrote an activity, read from what is recorded on it, and the part the
+// page's contact had in it. Every surface that names a speaker reads this
+// rather than guessing from `direction`: a mail that came in was not
+// necessarily written by the contact whose page shows it.
+type ActivityVoice struct {
+	// Author Who wrote it: the `from` party of a message, the organizer of a meeting, the seat or imported author of a note, call or task. Null when nothing recorded names an author, which a reader shows as no author rather than a guess.
+	Author *ActivityAuthor `json:"author,omitempty"`
+
+	// ContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+	ContactRole *ActivityVoiceContactRole `json:"contact_role,omitempty"`
+}
+
+// ActivityVoiceContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+type ActivityVoiceContactRole string
 
 // AddConsumerMailDomainRequest defines model for AddConsumerMailDomainRequest.
 type AddConsumerMailDomainRequest struct {
@@ -31666,10 +31779,10 @@ type Company360 struct {
 	// LastContact The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws.
 	LastContact *Company360LastContact `json:"last_contact,omitempty"`
 
-	// LastInboundAt When they last wrote to us, over the same three-link walk the timeline uses (the activity's own link, its deal's company, the employer of the contact it is filed against). Null means nothing inbound was ever captured — which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+	// LastInboundAt When one of the account's current contacts last wrote to us: the newest of their own last_inbound_at, over the activities the timeline walks. Mail a colleague sent, and activity filed on the account alone, does not move it. Null means none of them ever wrote, which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
-	// LastOutboundAt When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
+	// LastOutboundAt When we last wrote to one of the account's current contacts. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
 
 	// ListMemberships The Shortlists this company is on that the caller may find. Absent while the installation has not switched lists on.
@@ -31722,6 +31835,9 @@ type Company360 struct {
 
 	// ProjectsPage Whether `projects` was cut short. The list is capped, and a card that counted the rows and said "3 in flight" would state a number the account does not have. Absent exactly when `projects` is.
 	ProjectsPage *PageInfo `json:"projects_page,omitempty"`
+
+	// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a human wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+	RelationshipDirection *RelationshipDirection `json:"relationship_direction,omitempty"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
 	// say "Scoped to KEY · N of M activities" from the server's own count rather than
@@ -34711,6 +34827,9 @@ type Contact360 struct {
 
 	// RelationshipChanges What CHANGED about this relationship, most consequential first — derived at read from the contact's own interactions, never stored. `strength` says what the relationship IS; this says what happened to it, which is what a reader acts on. Empty when nothing crossed a threshold.
 	RelationshipChanges *[]ContactRelationshipChange `json:"relationship_changes,omitempty"`
+
+	// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a human wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+	RelationshipDirection *RelationshipDirection `json:"relationship_direction,omitempty"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
 	// say "Scoped to KEY · N of M activities" from the server's own count rather than
@@ -47789,6 +47908,9 @@ type RelationshipKind string
 
 // RelationshipStartedPrecision defines model for Relationship.StartedPrecision.
 type RelationshipStartedPrecision string
+
+// RelationshipDirection Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a human wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+type RelationshipDirection string
 
 // RelationshipListResponse defines model for RelationshipListResponse.
 type RelationshipListResponse struct {
@@ -64665,6 +64787,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["voice"]; found {
+		err = json.Unmarshal(raw, &a.Voice)
+		if err != nil {
+			return fmt.Errorf("error reading 'voice': %w", err)
+		}
+		delete(object, "voice")
+	}
+
 	if raw, found := object["writable"]; found {
 		err = json.Unmarshal(raw, &a.Writable)
 		if err != nil {
@@ -64967,6 +65097,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Voice != nil {
+		object["voice"], err = json.Marshal(a.Voice)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'voice': %w", err)
 		}
 	}
 

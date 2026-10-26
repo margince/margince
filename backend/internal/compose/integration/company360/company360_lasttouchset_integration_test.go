@@ -37,8 +37,9 @@ func TestTheSetLastTouchAgreesWithTheCompanyPage(t *testing.T) {
 	employAt(t, e, employee, company, nil)
 	inbound := integration.AccountMailDirectedAt(t, owner, e.WS, "their reply", "inbound", company360Clock.Add(-30*time.Hour))
 	integration.LinkActivity(t, owner, inbound, "contact", employee)
+	integration.LinkActivitySender(t, owner, inbound, employee)
 	outbound := integration.AccountMailDirectedAt(t, owner, e.WS, "our nudge", "outbound", company360Clock.Add(-2*time.Hour))
-	integration.LinkToCompany(t, e, outbound, company)
+	integration.LinkActivity(t, owner, outbound, "contact", employee)
 
 	// Accounts are readable by every seat; capture privacy is what hides one.
 	private := e.SeedCompany(t, "Elsewhere AG", &e.Rep3)
@@ -139,10 +140,11 @@ func TestACalledOffMeetingMovesNeitherDirectionClock(t *testing.T) {
 	// The real touch, a day back in each direction.
 	inbound := integration.AccountMailDirectedAt(t, owner, e.WS, "their reply", "inbound",
 		company360Clock.Add(-26*time.Hour))
-	integration.LinkToCompany(t, e, inbound, company)
+	integration.LinkActivity(t, owner, inbound, "contact", employee)
+	integration.LinkActivitySender(t, owner, inbound, employee)
 	outbound := integration.AccountMailDirectedAt(t, owner, e.WS, "our nudge", "outbound",
 		company360Clock.Add(-25*time.Hour))
-	integration.LinkToCompany(t, e, outbound, company)
+	integration.LinkActivity(t, owner, outbound, "contact", employee)
 
 	// Newer than both, and called off in each direction.
 	for _, dir := range []string{"inbound", "outbound"} {
@@ -162,10 +164,10 @@ func TestACalledOffMeetingMovesNeitherDirectionClock(t *testing.T) {
 	}
 }
 
-// A meeting that happened is a touch, so the clock does move for it. Without
-// this the fix could read as "meetings never count", which would be a second
-// defect wearing the first one's test.
-func TestAMeetingThatHappenedMovesTheDirectionClock(t *testing.T) {
+// A meeting that happened is a touch: it is the account's last contact. It is
+// nobody writing, so the "they wrote" clock stays on their reply, as the
+// contact page's does.
+func TestAMeetingThatHappenedIsTheLastContactButNoLetter(t *testing.T) {
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	company := e.SeedCompany(t, "Scale Commerce", &e.Rep1)
@@ -174,7 +176,8 @@ func TestAMeetingThatHappenedMovesTheDirectionClock(t *testing.T) {
 
 	older := integration.AccountMailDirectedAt(t, owner, e.WS, "their reply", "inbound",
 		company360Clock.Add(-26*time.Hour))
-	integration.LinkToCompany(t, e, older, company)
+	integration.LinkActivity(t, owner, older, "contact", employee)
+	integration.LinkActivitySender(t, owner, older, employee)
 	met := integration.AccountMailDirectedAt(t, owner, e.WS, "the meeting we had", "inbound",
 		company360Clock.Add(-2*time.Hour))
 	held(t, owner, met)
@@ -182,9 +185,11 @@ func TestAMeetingThatHappenedMovesTheDirectionClock(t *testing.T) {
 
 	touched := lastTouchFor(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), t, e, []ids.UUID{company})
 	got := touched[ids.From[ids.CompanyKind](company)]
-	if got.InboundAt == nil || !got.InboundAt.Equal(company360Clock.Add(-2*time.Hour)) {
-		t.Errorf("last inbound = %v, want the meeting at -2h: a meeting that happened is a touch",
-			got.InboundAt)
+	if got.Contact == nil || !got.Contact.At.Equal(company360Clock.Add(-2*time.Hour)) {
+		t.Errorf("last contact = %+v, want the meeting at -2h: a meeting that happened is a touch", got.Contact)
+	}
+	if got.InboundAt == nil || !got.InboundAt.Equal(company360Clock.Add(-26*time.Hour)) {
+		t.Errorf("last inbound = %v, want their reply at -26h: a meeting is nobody writing", got.InboundAt)
 	}
 }
 

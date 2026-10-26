@@ -60,13 +60,16 @@ type contactBriefChange struct {
 // row's date is the reader's and its words are not, so the fold carries the row
 // with no subject and no preview — exactly as the 360 hands it over.
 type contactBriefMessage struct {
-	Label     string `json:"label"`
-	DaysAgo   int    `json:"days_ago"`
-	Direction string `json:"direction"`
-	Subject   string `json:"subject"`
-	Preview   string `json:"preview"`
-	Move      string `json:"move"`
-	Withheld  bool   `json:"withheld"`
+	Label   string `json:"label"`
+	DaysAgo int    `json:"days_ago"`
+	// Direction decides only which last-touch stamp the message moves; who
+	// wrote it is Author, folded through the site's own SpeakerFor.
+	Direction string              `json:"direction"`
+	Author    *briefFixtureAuthor `json:"author"`
+	Subject   string              `json:"subject"`
+	Preview   string              `json:"preview"`
+	Move      string              `json:"move"`
+	Withheld  bool                `json:"withheld"`
 }
 
 // contactBriefClaimRow is one thing this contact said, as the extractor read it.
@@ -104,7 +107,7 @@ const (
 )
 
 // contactBriefInput assembles what the service assembles, with minted ids.
-func contactBriefInput(f contactBriefFixture) (contactbrief.Input, map[string]string) {
+func contactBriefInput(f contactBriefFixture) (contactbrief.Input, map[string]string, error) {
 	now := time.Date(2026, time.September, 4, 12, 0, 0, 0, time.UTC)
 	in := contactbrief.Input{
 		ID:   ids.NewV7().String(),
@@ -124,7 +127,10 @@ func contactBriefInput(f contactBriefFixture) (contactbrief.Input, map[string]st
 			Days: change.Days,
 		})
 	}
-	byLabel := foldFixtureMessages(&in, f, now)
+	byLabel, err := foldFixtureMessages(&in, f, now)
+	if err != nil {
+		return in, nil, err
+	}
 	for _, claim := range f.Claims {
 		in.Claims = append(in.Claims, contactbrief.ClaimIn{
 			Kind: claim.Kind, Body: claim.Body,
@@ -132,7 +138,7 @@ func contactBriefInput(f contactBriefFixture) (contactbrief.Input, map[string]st
 			SourceID: byLabel[claim.FromLabel],
 		})
 	}
-	return in, byLabel
+	return in, byLabel, nil
 }
 
 // foldFixtureMessages mints one id per labelled message and folds the timeline
@@ -148,7 +154,7 @@ func contactBriefInput(f contactBriefFixture) (contactbrief.Input, map[string]st
 // fixture would look wrong, which is the kind of trap a corpus must not carry.
 func foldFixtureMessages(
 	in *contactbrief.Input, f contactBriefFixture, now time.Time,
-) map[string]string {
+) (map[string]string, error) {
 	byLabel := map[string]string{}
 	// A copy, stable: the fixture's own order is the author's and is left
 	// alone, and two messages the same age keep the order they were written in
@@ -177,13 +183,13 @@ func foldFixtureMessages(
 		at := now.AddDate(0, 0, -message.DaysAgo)
 		folded := contactbrief.ActIn{
 			ID: id, Kind: fixtureKindEmail,
-			// The fixture speaks in directions because that is what a corpus
-			// author knows about a message; the fold turns it into the speaker
-			// the prompt reads, through the site's own function rather than a
-			// second mapping that could disagree with it.
-			Speaker: contactbrief.SpeakerFor(crmcontracts.ActivityDirection(message.Direction)),
-			At:      at.UTC().Format(time.RFC3339), Withheld: message.Withheld,
+			At: at.UTC().Format(time.RFC3339), Withheld: message.Withheld,
 		}
+		speaker, err := fixtureSpeaker(message.Author)
+		if err != nil {
+			return nil, fmt.Errorf("message %q: %w", message.Label, err)
+		}
+		folded.Speaker = speaker
 		if !message.Withheld {
 			folded.Subject, folded.Preview, folded.Move = message.Subject, message.Preview, message.Move
 		}
@@ -194,7 +200,7 @@ func foldFixtureMessages(
 		}
 		in.LastOutbound = maxStamp(in.LastOutbound, folded.At)
 	}
-	return byLabel
+	return byLabel, nil
 }
 
 // maxStamp keeps the later of two RFC3339 instants. They compare as strings the
@@ -237,7 +243,10 @@ func refuseUnpreparableBrief(f contactBriefFixture, want contactBriefExpectation
 	// Folded, like the check Evaluate runs: a token the floor prints in another
 	// case is one the floor prints, and a refusal that missed it would let a
 	// capitalisation difference hide exactly the silent pass it exists to catch.
-	in, _ := contactBriefInput(f)
+	in, _, err := contactBriefInput(f)
+	if err != nil {
+		return fmt.Errorf("summarize/contact_brief: %w", err)
+	}
 	floor := claims.Prose(contactbrief.Deterministic(ids.NewV7().String(), in, "en"))
 	if strings.Contains(strings.ToLower(floor), token) {
 		return fmt.Errorf(

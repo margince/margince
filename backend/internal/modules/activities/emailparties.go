@@ -11,7 +11,6 @@ package activities
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -102,9 +101,11 @@ func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (ma
 	// wrote from a secondary address. It rides the SCOPED contact join, so an
 	// address surfaces only where the contact itself may be named.
 	rows, err := tx.Query(ctx, `
-		SELECT ap.activity_id, ap.role, coalesce(ap.address, ''), p.id,
-		       coalesce(p.full_name, u.display_name, ap.display_name), ap.user_id,
-		       coalesce(u.email, ''), coalesce(stated_pe.email, own_pe.email, '')
+		SELECT activity_id, role, address, contact_id, name, user_id, seat_email, contact_email FROM (
+		SELECT ap.activity_id, ap.role, coalesce(ap.address, '') AS address, p.id AS contact_id,
+		       coalesce(p.full_name, u.display_name, ap.display_name) AS name, ap.user_id,
+		       coalesce(u.email, '') AS seat_email, coalesce(stated_pe.email, own_pe.email, '') AS contact_email,
+		       ap.created_at, ap.id
 		  FROM activity_participant ap
 		  `+contactJoin+`
 		  LEFT JOIN app_user u ON u.id = ap.user_id
@@ -123,9 +124,11 @@ func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (ma
 		 WHERE ap.activity_id = ANY($1)
 		   AND ap.role IN ('from', 'to', 'cc', 'bcc', 'organizer', 'attendee')
 		   AND NOT `+unstatedContactSQL("ap")+`
-		 ORDER BY CASE ap.role
+		UNION ALL
+		`+receivedFromSQL()+`) parties
+		 ORDER BY CASE role
 		            WHEN 'from' THEN 1 WHEN 'to' THEN 2 WHEN 'cc' THEN 3 ELSE 4
-		          END, ap.created_at, ap.id`, args...)
+		          END, created_at, id`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +136,6 @@ func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (ma
 	if err != nil {
 		return nil, err
 	}
-	var unsent []ids.UUID
 	for id, parties := range out {
 		// The logged path keeps a stated header address beside the contact or
 		// seat it resolved to. Unfolded, one sender reads as two parties.
@@ -142,50 +144,23 @@ func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (ma
 		parties.cc = foldStatedDuplicates(parties.cc)
 		parties.bcc = foldStatedDuplicates(parties.bcc)
 		out[id] = parties
-		if len(parties.from) == 0 {
-			unsent = append(unsent, id)
-		}
-	}
-	senders, err := receivedFromTx(ctx, tx, unsent)
-	if err != nil {
-		return nil, err
-	}
-	for id, sender := range senders {
-		parties := out[id]
-		parties.from = append(parties.from, crmcontracts.EmailParty{Address: sender})
-		out[id] = parties
 	}
 	return out, nil
 }
 
-// receivedFromTx is the sender of each received message whose capture
+// receivedFromSQL is the sender of each received message whose capture
 // recorded no sender participant, as older captures did. On a received
-// message the counterparty is the sender.
-func receivedFromTx(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (map[ids.UUID]string, error) {
-	out := make(map[ids.UUID]string, len(messages))
-	if len(messages) == 0 {
-		return out, nil
-	}
-	rows, err := tx.Query(ctx, `
-		SELECT id, counterparty_email FROM activity
-		 WHERE id = ANY($1) AND archived_at IS NULL AND direction = 'inbound'
-		   AND coalesce(counterparty_email, '') <> ''`, messages)
-	if err != nil {
-		return nil, fmt.Errorf("activities: reading who sent a message: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id ids.UUID
-		var sender string
-		if err := rows.Scan(&id, &sender); err != nil {
-			return nil, fmt.Errorf("activities: reading who sent a message: %w", err)
-		}
-		out[id] = sender
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("activities: reading who sent a message: %w", err)
-	}
-	return out, nil
+// message the counterparty is the sender. It rides the party read as one more
+// arm, so a page pays no statement of its own for it.
+func receivedFromSQL() string {
+	return `
+		SELECT a.id, 'from', a.counterparty_email, NULL::uuid, NULL::text, NULL::uuid, '', '',
+		       a.created_at, a.id
+		  FROM activity a
+		 WHERE a.id = ANY($1) AND a.archived_at IS NULL AND a.direction = 'inbound'
+		   AND coalesce(a.counterparty_email, '') <> ''
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant ap
+		         WHERE ap.activity_id = a.id AND ap.role = 'from' AND NOT ` + unstatedContactSQL("ap") + `)`
 }
 
 // counterpartyOf names the other side for a row: the first party the caller

@@ -38,13 +38,19 @@ func (s *Sink) asSentByColleagueTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (connector.NormalizedRecord, ActivityFields, error) {
 	cp := rec.Counterparty
-	if fields.Kind != kindEmail || fields.HasCalendarPart || cp.Direction != connector.DirectionInbound ||
-		!fromAuthenticated(rec, cp.Email) {
+	if fields.Kind != kindEmail {
 		return rec, fields, nil
 	}
-	colleague, err := colleagueTx(ctx, tx, cp.Email)
+	colleague, err := colleagueSenderTx(ctx, tx, rec)
 	if err != nil || colleague.IsZero() {
 		return rec, fields, err
+	}
+	// An invitation a colleague organised stays received mail: whom they
+	// invited is not whom they wrote to, so no stand-in counterparty is picked.
+	if fields.HasCalendarPart {
+		fields.InvitationFromSeat = colleague
+		rec.Fields = fields
+		return rec, fields, nil
 	}
 	from := foldAddress(cp.Email)
 	recipients := rec
@@ -72,6 +78,17 @@ func (s *Sink) asSentByColleagueTx(
 	fields.SentByColleague = colleague
 	rec.Fields = fields
 	return rec, fields, nil
+}
+
+// colleagueSenderTx is the seat that sent a received message, or zero. Its
+// From must be that seat's exact login at an own trusted domain (colleagueTx),
+// and the receiving server must have authenticated it (fromAuthenticated).
+func colleagueSenderTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (ids.UUID, error) {
+	cp := rec.Counterparty
+	if cp.Direction != connector.DirectionInbound || !fromAuthenticated(rec, cp.Email) {
+		return ids.Nil, nil
+	}
+	return colleagueTx(ctx, tx, cp.Email)
 }
 
 // colleagueTx is the seat, other than the acting one, whose login address is
