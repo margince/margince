@@ -276,8 +276,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   ],
   vi: [
     "linkedinReach.sub",
-    // The colleague who recorded a deal.
-    "deal.recordedBy",
     // Reviewed work names its human author, never a contact record.
     "homeRepair.reason.classificationAdopted",
     "homeRepair.reason.adopted",

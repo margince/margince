@@ -338,7 +338,7 @@ describe("the details rows say where a deal stands and how it closed", () => {
       </FieldGrid>,
       "vi",
     );
-    expect(screen.getByText("Người ghi nhận")).toBeInTheDocument();
+    expect(screen.getByText("Nguồn ghi nhận")).toBeInTheDocument();
     expect(screen.queryByText("Nguồn")).not.toBeInTheDocument();
     expect(
       screen.getByText("Mutaz Suleiman đã ghi nhận trong HubSpot"),
