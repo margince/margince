@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   closeDayRange,
   encodeRange,
-  fiscalQuarter,
   parseDayRange,
   parseMinorRange,
   rangeQueryParams,
@@ -49,31 +48,6 @@ describe("a range held as one dial value", () => {
 });
 
 describe("this quarter", () => {
-  it("is the calendar quarter when the fiscal year starts in January", () => {
-    expect(fiscalQuarter("2026-10-26", 1)).toEqual({
-      from: "2026-10-01",
-      to: "2026-12-31",
-    });
-  });
-
-  it("follows a fiscal year that starts in April", () => {
-    expect(fiscalQuarter("2026-10-26", 4)).toEqual({
-      from: "2026-10-01",
-      to: "2026-12-31",
-    });
-    expect(fiscalQuarter("2026-06-15", 4)).toEqual({
-      from: "2026-04-01",
-      to: "2026-06-30",
-    });
-  });
-
-  it("crosses the calendar year when the fiscal quarter does", () => {
-    expect(fiscalQuarter("2027-01-10", 11)).toEqual({
-      from: "2026-11-01",
-      to: "2027-01-31",
-    });
-  });
-
   it("stays a word in the dial and becomes days only for the request", () => {
     expect(closeDayRange(THIS_QUARTER, "2026-02-14", 1)).toEqual({
       from: "2026-01-01",

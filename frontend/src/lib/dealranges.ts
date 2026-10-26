@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { isoDay, isRealCalendarDay } from "../format/calendarday";
+import { isRealCalendarDay } from "../format/calendarday";
+import { fiscalQuarter } from "./fiscalquarter";
 
 // The deals list's range dials, as the address and a saved view hold them.
 //
@@ -61,22 +62,6 @@ export function parseMinorRange(
   const max = high ? Number(high) : undefined;
   if (min !== undefined && max !== undefined && min > max) return undefined;
   return { min, max };
-}
-
-/**
- * The fiscal quarter holding `today`, as its first and last calendar day.
- * `fiscalStartMonth` is 1 for a year that starts in January.
- */
-export function fiscalQuarter(
-  today: string,
-  fiscalStartMonth: number,
-): Required<DayRange> {
-  const [year = 0, month = 1] = today.split("-").map(Number);
-  const offset = (month - fiscalStartMonth + 12) % 12;
-  // Built from parts and read back by the same clock, so no zone moves a day.
-  const start = new Date(year, month - 1 - (offset % 3), 1);
-  const end = new Date(start.getFullYear(), start.getMonth() + 3, 0);
-  return { from: isoDay(start), to: isoDay(end) };
 }
 
 /** The dial's value as a day range, with THIS_QUARTER counted from `today`. */
