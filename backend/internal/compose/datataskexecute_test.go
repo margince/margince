@@ -16,14 +16,14 @@ import (
 )
 
 func TestTheVerdictNamesEveryStepThatDidNotFinish(t *testing.T) {
-	verdict := DataTaskVerdictOf([]datatask.Progress{
-		{TaskID: "core/1_done", Step: "a", Status: datatask.Done, Scanned: 3},
-		{TaskID: "core/2_empty", Step: "a", Status: datatask.Done},
-		{TaskID: "core/3_review", Step: "a", Status: datatask.Pending, BlockedReason: datatask.ReviewRequired},
-		{TaskID: "core/4_failed", Step: "a", Status: datatask.Failed, BlockedReason: "earlier_step"},
-		{TaskID: "core/5_held", Step: "a", Status: datatask.Pending, BlockedReason: "missing_prerequisite"},
-		{TaskID: "core/6_pending", Step: "a", Status: datatask.Pending},
-	})
+	verdict := DataTaskVerdictOf(DataTaskRun{Progress: []datatask.Progress{
+		{TaskID: "core/1_done", Step: "a", Status: datatask.Done, Scanned: 3, TaskVersion: 1},
+		{TaskID: "core/2_empty", Step: "a", Status: datatask.Done, TaskVersion: 1},
+		{TaskID: "core/3_review", Step: "a", Status: datatask.Pending, BlockedReason: datatask.ReviewRequired, TaskVersion: 1},
+		{TaskID: "core/4_failed", Step: "a", Status: datatask.Failed, BlockedReason: "earlier_step", TaskVersion: 1},
+		{TaskID: "core/5_held", Step: "a", Status: datatask.Pending, BlockedReason: "missing_prerequisite", TaskVersion: 1},
+		{TaskID: "core/6_pending", Step: "a", Status: datatask.Pending, TaskVersion: 1},
+	}, Required: map[string]int{"core/6_pending": 2}, LeftInScope: map[string]int64{"core/1_done/a": 4}})
 	if verdict.Finished || verdict.Done != 2 {
 		t.Errorf("verdict = %+v, want two done and not finished", verdict)
 	}
@@ -32,13 +32,16 @@ func TestTheVerdictNamesEveryStepThatDidNotFinish(t *testing.T) {
 		"awaiting review":   {verdict.AwaitingReview, []string{"core/3_review/a"}},
 		"failed":            {verdict.Failed, []string{"core/4_failed/a (failed)"}},
 		"blocked":           {verdict.Blocked, []string{"core/5_held/a (missing_prerequisite)"}},
-		"unfinished":        {verdict.Unfinished, []string{"core/6_pending/a"}},
+		"unfinished":        {verdict.Unfinished, []string{"core/6_pending/a (stored v1, needs v2)"}},
 	} {
 		if !slices.Equal(c.got, c.want) {
 			t.Errorf("%s = %v, want %v", name, c.got, c.want)
 		}
 	}
-	if all := DataTaskVerdictOf([]datatask.Progress{{TaskID: "core/1", Step: "a", Status: datatask.Done, Scanned: 1}}); !all.Finished {
+	if verdict.LeftInScope["core/1_done/a"] != 4 {
+		t.Errorf("left in scope = %v, want the finished step's four rows", verdict.LeftInScope)
+	}
+	if all := DataTaskVerdictOf(DataTaskRun{Progress: []datatask.Progress{{TaskID: "core/1", Step: "a", Status: datatask.Done, Scanned: 1}}}); !all.Finished {
 		t.Errorf("a run with every step done is not finished: %+v", all)
 	}
 }

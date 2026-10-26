@@ -58,7 +58,7 @@ func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) 
 	if action == dataTasksExecute {
 		return executeDataTasks(ctx, pool, *maxBatches, stdout)
 	}
-	progress, err := compose.DataTaskOperation(ctx, pool, action)
+	progress, err := dataTaskOperation(ctx, pool, action)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func waitForDataTasks(ctx context.Context, pool *pgxpool.Pool, progress []datata
 			return nil, ctx.Err()
 		case <-ticker.C:
 		}
-		progress, err = compose.DataTaskOperation(ctx, pool, "status")
+		progress, err = dataTaskOperation(ctx, pool, "status")
 		if err != nil {
 			return nil, err
 		}
@@ -118,25 +118,35 @@ func waitForDataTasks(ctx context.Context, pool *pgxpool.Pool, progress []datata
 // them for the worker, for a copy whose worker must not start.
 const dataTasksExecute = "execute"
 
+// The two ways in to the corrections, held as values. A test proves execute
+// never reaches the one that queues work for the worker.
+var (
+	dataTaskOperation = compose.DataTaskOperation
+	dataTaskExecutor  = compose.DataTaskExecute
+)
+
 // dataTasksReport is what execute prints: the verdict, then every step.
 type dataTasksReport struct {
 	Verdict compose.DataTaskVerdict         `json:"verdict"`
 	Steps   []crmcontracts.DataTaskProgress `json:"steps"`
 }
 
-// executeDataTasks prints the report, and fails unless every step finished,
-// so a script cannot read a step awaiting review as done.
+// executeDataTasks prints the report. It fails unless every step finished and
+// none left rows in its scope, so a script cannot read either as done.
 func executeDataTasks(ctx context.Context, pool *pgxpool.Pool, maxBatches int, stdout io.Writer) error {
-	progress, err := compose.DataTaskExecute(ctx, pool, maxBatches)
+	run, err := dataTaskExecutor(ctx, pool, maxBatches)
 	if err != nil {
 		return err
 	}
-	verdict := compose.DataTaskVerdictOf(progress)
-	if err := json.NewEncoder(stdout).Encode(dataTasksReport{Verdict: verdict, Steps: compose.DataTaskProgressReport(progress)}); err != nil {
+	verdict := compose.DataTaskVerdictOf(run)
+	if err := json.NewEncoder(stdout).Encode(dataTasksReport{Verdict: verdict, Steps: compose.DataTaskProgressReport(run.Progress)}); err != nil {
 		return err
 	}
-	if !verdict.Finished {
+	switch {
+	case !verdict.Finished:
 		return errors.New("data-tasks execute: not every correction finished; read the verdict")
+	case len(verdict.LeftInScope) > 0:
+		return errors.New("data-tasks execute: corrections left rows in their scope; read left_in_scope")
 	}
 	return nil
 }

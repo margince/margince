@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -77,7 +78,7 @@ func TestExecuteFinishesAutomaticWorkAndNamesWhatItCouldNotFinish(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	verdict := DataTaskVerdictOf(progress)
+	verdict := DataTaskVerdictOf(DataTaskRun{Progress: progress})
 	if verdict.Finished || verdict.Done != 2 || !slices.Equal(verdict.AwaitingReview, []string{"core/300_manual/apply"}) {
 		t.Errorf("verdict = %+v, want two steps done and the manual one awaiting review", verdict)
 	}
@@ -116,7 +117,7 @@ func TestExecuteStopsAtAFailedStepAndNamesIt(t *testing.T) {
 	}
 	// The first failure waits longer than execute outwaits, so it stops and
 	// names the step waiting to retry, and the step held behind it.
-	verdict := DataTaskVerdictOf(progress)
+	verdict := DataTaskVerdictOf(DataTaskRun{Progress: progress})
 	want := []string{"core/100_failing/write (retry_wait)", "core/200_later/write (earlier_step)"}
 	if verdict.Finished || !slices.Equal(verdict.Blocked, want) {
 		t.Errorf("verdict = %+v, want blocked %v", verdict, want)
@@ -145,12 +146,13 @@ func TestExecuteRunsTheReleaseCatalogWithoutReachingOutside(t *testing.T) {
 	jobs := e.WsCount(t, `SELECT count(*) FROM river_job`)
 	models := e.WsCount(t, `SELECT count(*) FROM ai_call`)
 
-	progress, err := DataTaskExecute(e.Admin(), e.Pool, 10000)
+	run, err := DataTaskExecute(e.Admin(), e.Pool, 10000)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(progress) < len(dataTaskCatalog(e.Pool, time.Now)) {
-		t.Errorf("the run reports %d steps, fewer than the catalog's tasks", len(progress))
+	catalog := dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })
+	if len(run.Progress) < len(catalog) || len(run.Required) != len(catalog) {
+		t.Errorf("the run reports %d steps and %d required versions for %d tasks", len(run.Progress), len(run.Required), len(catalog))
 	}
 	if n := calls.Load(); n != 0 {
 		t.Errorf("the run made %d outbound requests", n)
@@ -161,7 +163,7 @@ func TestExecuteRunsTheReleaseCatalogWithoutReachingOutside(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM ai_call`); n != models {
 		t.Errorf("the run recorded %d model calls", n-models)
 	}
-	verdict := DataTaskVerdictOf(progress)
+	verdict := DataTaskVerdictOf(run)
 	if verdict.Done == 0 || len(verdict.Failed) != 0 {
 		t.Errorf("verdict = %+v, want automatic steps done and none failed", verdict)
 	}

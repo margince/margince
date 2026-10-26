@@ -64,11 +64,20 @@ margince-migrate data-tasks execute --dsn "$DSN"
 `execute` uses the same engine and catalog as the worker. It starts no job queue and no event lane,
 so no correction reaches a mailbox, a model or an enrichment vendor. The events the corrections
 write wait in the outbox for the next worker. It stops at a step waiting longer than 30 seconds to
-retry, and after `--max-batches` batches (100000 by default).
+retry, after 60 attempts in a row that commit nothing, and after `--max-batches` committed batches
+(100000 by default).
 
-It prints a verdict before the steps. The command fails unless every step finished. The verdict
-names each step awaiting review, blocked, failed or unfinished. It also names each finished step
-that inspected no rows: such a step proves nothing about rows it never saw.
+It prints a verdict before the steps:
+
+- `required_versions`: the version of each task this binary runs. A step stored at an older
+  version is named with both numbers.
+- `awaiting_review`, `blocked`, `failed` and `unfinished`: each step that did not finish.
+- `left_in_scope`: each finished step whose own estimate still counts rows, with the count. These
+  are rows the step saw and left as they were, such as mail with no stored original.
+- `nothing_inspected`: each finished step that inspected no rows. Such a step proves nothing about
+  rows it never saw.
+
+The command fails unless every step finished and none left rows in its scope.
 
 ## Require a reviewed scope
 
