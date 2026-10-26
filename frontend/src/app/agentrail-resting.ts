@@ -147,6 +147,8 @@ export function railWords(
 export type RestingFacts = Readonly<{
   /** Decisions staged for this human; undefined until the read answers. */
   waiting: number | undefined;
+  /** The connections read failed, so the all-clear would be a guess. */
+  sourcesUnknown: boolean;
   /**
    * The line saying this deployment invents every answer it gives, or null when
    * it does not. The SENTENCE rather than a flag beside it: two fields would be
@@ -192,7 +194,17 @@ export function restingReadings(
         : [plain(facts.developmentLine)],
   };
   const lines = IDLE_ORDER.flatMap((kind) => said[kind] ?? []);
-  return lines.length === 0 ? [plain(words.t("agent.line.allClear"))] : lines;
+  if (lines.length > 0) return lines;
+  // An all-clear is a claim about every source; a failed connections read
+  // cannot make it. The orb stays idle (a dropped read is not a fault), but
+  // the line says what is true: nobody checked.
+  return [
+    plain(
+      words.t(
+        facts.sourcesUnknown ? "agent.line.sourcesUnknown" : "agent.line.allClear",
+      ),
+    ),
+  ];
 }
 
 /**

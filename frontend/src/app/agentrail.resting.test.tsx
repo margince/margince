@@ -114,6 +114,7 @@ describe("stillNews", () => {
 describe("restingReadings", () => {
   const QUIET = {
     waiting: undefined,
+    sourcesUnknown: false,
     developmentLine: null,
     settled: [] as readonly SpokenLine[],
   };
@@ -140,6 +141,16 @@ describe("restingReadings", () => {
   it("does not count an unanswered approvals read as a clean queue", () => {
     const answered = restingReadings({ ...QUIET, waiting: 0 }, WORDS);
     expect(answered.map(said)).toEqual(["Nothing needs attention"]);
+  });
+
+  it("claims no all-clear when the connections read failed, and still says what is waiting", () => {
+    const unknown = { ...QUIET, sourcesUnknown: true };
+    expect(restingReadings(unknown, WORDS).map(said)).toEqual([
+      "Could not check your connected sources",
+    ]);
+    expect(
+      restingReadings({ ...unknown, waiting: 2 }, WORDS).map(said),
+    ).toEqual(["2 approvals waiting"]);
   });
 
   // The fix for the pinned line: a day that settled three runs says three

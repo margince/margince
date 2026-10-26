@@ -7180,6 +7180,7 @@ export const en = {
   "agent.fact.tools": "Tools",
   "agent.fact.sources": "Sources",
   "agent.fact.offline": "offline",
+  "agent.fact.sourceOnProvider": "{account} ({provider})",
   // The two reasons there is no model to name, in the value's own slot.
   "agent.fact.searchIndex": "Search index: {model}",
   "agent.fact.noCalls": "No model calls yet",
@@ -7193,6 +7194,7 @@ export const en = {
   "agent.line.waiting_one": "{count} approval waiting",
   "agent.line.waiting_other": "{count} approvals waiting",
   "agent.line.allClear": "Nothing needs attention",
+  "agent.line.sourcesUnknown": "Could not check your connected sources",
   "agent.line.cannotReach": "Cannot reach {sources}",
   "agent.line.runFailed": "A run failed",
   "agent.line.runStopped": "A run stopped early",

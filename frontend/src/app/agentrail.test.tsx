@@ -232,8 +232,9 @@ describe("AgentRail", () => {
 
   // A dropped request is the tool's own problem for that one call, and does
   // not colour the orb: a corner that flashed red on a flaky connection is
-  // exactly the failure mode this derivation was rebuilt to avoid.
-  it("does not colour the orb for a transient tool failure", async () => {
+  // exactly the failure mode this derivation was rebuilt to avoid. Nor does it
+  // say that nothing needs attention: nobody read which sources are reachable.
+  it("does not colour the orb for a transient tool failure, and claims no all-clear", async () => {
     stubAgentRailApi({
       connectors: () =>
         jsonResponse(
@@ -250,7 +251,7 @@ describe("AgentRail", () => {
     await waitFor(() =>
       expect(client.getQueryState(["connectors"])?.status).toBe("error"),
     );
-    await settlesOnLine(container, en["agent.line.allClear"]);
+    await settlesOnLine(container, en["agent.line.sourcesUnknown"]);
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
   });
 

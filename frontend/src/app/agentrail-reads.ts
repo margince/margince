@@ -49,8 +49,13 @@ export type Signals = Readonly<{
   /** Approvals staged for this human; undefined until the read answers.
    *  A true total — usePendingApprovals walks every page. */
   waiting: number | undefined;
-  /** Sources the agent cannot reach, named as the reader knows them. */
-  offline: readonly string[];
+  /** Sources the agent cannot reach, one per connection. A Gmail and a
+   *  Calendar grant of one account share its address, so each carries its
+   *  connection id as identity and names its provider beside the address. */
+  offline: readonly OfflineSource[];
+  /** True when the connections read failed: nobody knows which sources are
+   *  reachable, so no line may say that nothing needs attention. */
+  sourcesUnknown: boolean;
   /** Whether this deployment has a model bound at all. */
   ai: AiPosture;
   /** Who the panel is a report BY, in the deployment's own words. */
@@ -68,6 +73,9 @@ export type Signals = Readonly<{
    */
   capture: Readonly<{ progress: CaptureProgress; line: string }> | null;
 }>;
+
+/** One unreachable connection, as the panel names it. */
+export type OfflineSource = Readonly<{ id: string; label: string }>;
 
 /** What the agent has cost this month, and whether this seat may know. */
 export type Spend = Readonly<{
@@ -110,6 +118,25 @@ function useAgentProfile(): Readonly<{ state: AiPosture; name: string }> {
   };
 }
 
+type Connection = components["schemas"]["CaptureConnection"];
+
+/** The account address and its provider, or the provider alone when the
+ *  connection carries no address. The label is display only; the id is the
+ *  identity, so a missing address never merges two connections. */
+export function offlineSource(
+  connection: Connection,
+  t: (key: MessageKey, vars?: Record<string, string>) => string,
+): OfflineSource {
+  const provider = providerName(connection.provider, t);
+  const label = connection.account_label
+    ? t("agent.fact.sourceOnProvider", {
+        account: connection.account_label,
+        provider,
+      })
+    : provider;
+  return { id: connection.id, label };
+}
+
 export function useSignals(): Signals {
   const t = useT();
   const { locale } = useLocale();
@@ -121,10 +148,7 @@ export function useSignals(): Signals {
   const connections = connectors.data?.data ?? [];
   const offline = connections
     .filter((connection) => connection.status !== "connected")
-    .map(
-      (connection) =>
-        connection.account_label ?? providerName(connection.provider, t),
-    );
+    .map((connection) => offlineSource(connection, t));
   const capture = liveCapture(connections);
 
   return {
@@ -132,6 +156,7 @@ export function useSignals(): Signals {
     // would be this surface inventing an all-clear.
     waiting: approvals.data ? approvals.data.data.length : undefined,
     offline,
+    sourcesUnknown: connectors.isError,
     ai: agent.state,
     name: agent.name,
     license,
