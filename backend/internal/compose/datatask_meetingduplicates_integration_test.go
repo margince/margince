@@ -24,6 +24,8 @@ func seedCalendarCopy(t *testing.T, e *integration.Env, seat ids.UUID, calendar 
 		VALUES ($1, 'meeting', 'Consulting Monthly', $2, 'gcal', 'evt-matched', 'gcal:evt-matched', $3)`,
 		copyID, meetingStart, "connector:gcal:"+seat.String())
 	e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id, posture_at_import) VALUES ($1, $2, 'held')`, copyID, seat)
+	// A colleague also recorded on the copy, whom the binding rule did not prove.
+	e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, copyID, e.Rep1)
 	e.WsExec(t, `INSERT INTO raw_capture (source_system, source_id, payload) VALUES ('gcal', 'evt-matched', $1)`,
 		matchedEventPayload(t, calendar, "client@acme.test", matchedGuests...))
 	e.WsExec(t, `INSERT INTO capture_connection (provider, user_id, status, account_label) VALUES ('gcal', $1, 'connected', $2)`,
@@ -66,6 +68,9 @@ func TestTheMeetingDuplicatesTaskRetiresOnlyAProvenCalendarCopy(t *testing.T) {
 			}
 			if carried != 1 {
 				t.Errorf("the surviving meeting records the copy's seat %d times with its posture, want once", carried)
+			}
+			if got := e.WsCount(t, `SELECT count(*) FROM capture_import WHERE activity_id = $1`, held); got != 1 {
+				t.Errorf("the surviving meeting gained %d importers, want only the proven seat", got)
 			}
 			if got := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NULL`, held); got != 1 {
 				t.Error("the meeting holding the identity was retired")

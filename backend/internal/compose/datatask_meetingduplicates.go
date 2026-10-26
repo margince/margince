@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -93,7 +94,14 @@ func retireMeetingDuplicatesBatch(ctx context.Context, tx pgx.Tx, meetings *acti
 		if !found || survivor == duplicate {
 			continue
 		}
-		if err := capture.CarryMeetingImportsTx(ctx, tx, duplicate, survivor); err != nil {
+		live, err := lockLiveSurvivor(ctx, tx, survivor)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
+		if !live {
+			continue
+		}
+		if err := capture.CarryMeetingImportTx(ctx, tx, duplicate, survivor, *c.seat); err != nil {
 			return datatask.BatchOut{}, err
 		}
 		if err := meetings.ArchiveActivityTx(ctx, tx, duplicate, nil); err != nil {
@@ -106,6 +114,21 @@ func retireMeetingDuplicatesBatch(ctx context.Context, tx pgx.Tx, meetings *acti
 		return datatask.BatchOut{}, err
 	}
 	return datatask.AdvanceUUID(in, scanned, len(survivors))
+}
+
+// lockLiveSurvivor locks the meeting a copy binds to and answers whether it is
+// still live and unrestricted, so nothing is carried onto a row erased or held
+// since the binding rule answered.
+func lockLiveSurvivor(ctx context.Context, tx pgx.Tx, survivor ids.ActivityID) (bool, error) {
+	var open bool
+	err := tx.QueryRow(ctx, `SELECT restricted_at IS NULL FROM activity WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, survivor).Scan(&open)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("compose: locking the meeting a calendar copy binds to: %w", err)
+	}
+	return open, nil
 }
 
 // meetingTheCopyBindsTo answers the meeting a calendar sync for seat would
