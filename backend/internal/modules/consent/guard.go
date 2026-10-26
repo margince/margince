@@ -108,6 +108,8 @@ func wireGuardEntry(purpose PurposeRow, verdict Verdict) (crmcontracts.ContactCo
 		Channel:      channelFor(purpose.Class),
 		Verdict:      crmcontracts.ContactConsentGuardEntryVerdict(verdict.State),
 		Reason:       verdict.Reason,
+		ReasonCode:   crmcontracts.ContactConsentGuardEntryReasonCode(verdict.ReasonCode),
+		ReasonAt:     verdict.ReasonAt,
 	}
 	if verdict.Qualifying != nil {
 		qualifying, err := wireQualifying(*verdict.Qualifying)

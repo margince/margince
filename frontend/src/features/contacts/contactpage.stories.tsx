@@ -288,6 +288,7 @@ const guardAllowsMail: components["schemas"]["ContactConsentGuardEntry"][] = [
     channel: "email",
     verdict: "allowed",
     reason: "She wrote to you on 1 Aug 2026.",
+    reason_code: "qualifying_event",
     qualifying_event: {
       kind: "inbound_message",
       occurred_at: "2026-08-01T10:15:00Z",
@@ -302,6 +303,7 @@ const guardAllowsMail: components["schemas"]["ContactConsentGuardEntry"][] = [
     channel: "phone",
     verdict: "unknown",
     reason: "No consent recorded.",
+    reason_code: "no_consent",
   },
 ];
 
@@ -315,6 +317,8 @@ const guardRefusesMail: components["schemas"]["ContactConsentGuardEntry"][] = [
     channel: "email",
     verdict: "blocked",
     reason: "She opted out on 12 Jul 2026.",
+    reason_code: "objection",
+    reason_at: "2026-07-12T00:00:00Z",
   },
 ];
 

@@ -28,7 +28,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
@@ -63,6 +62,10 @@ type Verdict struct {
 	// "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain
 	// to the contact in front of them is not usable.
 	Reason string
+	// ReasonCode is Reason as a code, so a screen says it in its reader's
+	// language. ReasonAt is the date an objection was recorded, when known.
+	ReasonCode string
+	ReasonAt   *time.Time
 	// Qualifying names the event that flipped correspondence to allowed, when
 	// one did. Recording WHICH event is what makes the Art 6(1)(f) balancing
 	// accountable rather than merely asserted.
@@ -153,7 +156,7 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 		return Verdict{}, err
 	}
 	if suppressed {
-		return Verdict{State: VerdictBlocked, Reason: objectionReason(at), Code: BlockObjection}, nil
+		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonObjection, ReasonAt: knownDate(at), Code: BlockObjection}), nil
 	}
 
 	// The same communication_suppression table the transmit gate reads
@@ -183,14 +186,14 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 	}
 	for _, s := range stops {
 		if suppressionBinds(s.Kind, category, s.PurposeID, &askedPurpose) {
-			return Verdict{State: VerdictBlocked, Reason: suppressionReason(s.Kind), Code: BlockSuppressed, Suppression: s.Kind}, nil
+			return said(Verdict{State: VerdictBlocked, ReasonCode: suppressionReasonCode(s.Kind), Code: BlockSuppressed, Suppression: s.Kind}), nil
 		}
 	}
 
 	switch purpose.Class {
 	case ClassTransactional:
 		// Art 6(1)(b): the contract itself is the basis. Nothing to consult.
-		return Verdict{State: VerdictAllowed, Reason: "account and contract notices need no consent"}, nil
+		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonContractNotice}), nil
 
 	case ClassBusinessCorrespondence:
 		return correspondenceVerdict(ctx, tx, contactID, purpose, since)
@@ -198,7 +201,7 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 	case ClassPhoneOutreach:
 		// Dormant by decision: the purpose exists so the model is complete. A
 		// surface that offered it would offer a path nothing implements.
-		return Verdict{State: VerdictBlocked, Reason: "no call path is configured", Code: BlockNoChannel}, nil
+		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonNoCallPath, Code: BlockNoChannel}), nil
 
 	default:
 		return marketingVerdict(ctx, tx, contactID, purpose, marketing)
@@ -232,43 +235,30 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, pur
 		return Verdict{}, err
 	}
 	if granted {
-		return Verdict{State: VerdictAllowed, Reason: "they said we may write to them"}, nil
+		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonSaidWeMayWrite}), nil
 	}
 	if state == string(StateGranted) && purpose.RequiresDOI {
 		// Granted but never confirmed, on an installation that demands the
 		// round trip for this purpose. Falling through to the implied arm
 		// would let the timeline supply what the confirmation did not.
-		return Verdict{
-			State:  VerdictBlocked,
-			Reason: "consent was recorded but never confirmed by the double opt-in",
-			Code:   BlockUnconfirmedDOI,
-		}, nil
+		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonUnconfirmedDOI, Code: BlockUnconfirmedDOI}), nil
 	}
 	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since)
 	if err != nil {
 		return Verdict{}, err
 	}
 	if source == sourceNone {
-		// No answer on file, no inbound, no inquiry, no deal, no recorded
-		// exchange. There is nothing here to balance, so this is not the easy
-		// Art 6(1)(f) case and the honest answer is that nobody has decided.
-		return Verdict{
-			State: VerdictUnknown,
-			// The reason does not distinguish "never" from "not lately", and
-			// deliberately: both mean the same thing to the rep reading it —
-			// nothing on file supports writing to this contact out of the blue
-			// right now — and a message that said "their last contact has
-			// lapsed" would invite hunting for an expiry to override rather
-			// than recording why this send is lawful.
-			Reason: "they have never written to you and no deal or inquiry connects you",
-		}, nil
+		// Nothing on file to balance, so this is not the easy Art 6(1)(f) case:
+		// nobody has decided. "Never" and "not lately" read alike, because a
+		// lapse message invites hunting for an expiry instead of a lawful basis.
+		return said(Verdict{State: VerdictUnknown, ReasonCode: ReasonNoConnection}), nil
 	}
-	return Verdict{
+	return said(Verdict{
 		State:             VerdictAllowed,
-		Reason:            qualifyingReason(event),
+		ReasonCode:        ReasonQualifyingEvent,
 		Qualifying:        &event,
 		QualifyingDerived: source == sourceDerived,
-	}, nil
+	}), nil
 }
 
 // marketingVerdict is the strict arm, unchanged in strictness by ADR-0098:
@@ -282,83 +272,25 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose 
 		return Verdict{}, err
 	}
 	if granted {
-		return Verdict{State: VerdictAllowed, Reason: "they gave consent, with the confirmation on file"}, nil
+		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonConsentConfirmed}), nil
 	}
 	if state == string(StateWithdrawn) {
-		return Verdict{State: VerdictBlocked, Reason: "they withdrew consent for this purpose", Code: BlockWithdrawn}, nil
+		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonConsentWithdrawn, Code: BlockWithdrawn}), nil
 	}
 	if state == string(StateGranted) && purpose.RequiresDOI {
 		// Granted but never confirmed. The BGH evidence standard is the whole
 		// point of double opt-in, so an unconfirmed grant is not proof and does
 		// not send.
-		return Verdict{
-			State:  VerdictBlocked,
-			Reason: "consent was recorded but never confirmed by the double opt-in",
-			Code:   BlockUnconfirmedDOI,
-		}, nil
+		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonUnconfirmedDOI, Code: BlockUnconfirmedDOI}), nil
 	}
 	// The existing-customer exception a jurisdiction may grant (UWG §7(3)) is
 	// not offered: nothing here can answer its similarity condition, since no
 	// send names the goods it advertises. It refuses whatever the pack declares,
 	// and says so rather than reading as a plain absence of consent.
 	if marketing.Exception != nil {
-		return Verdict{State: VerdictUnknown, Reason: "no consent recorded, and the existing-customer exception is not offered"}, nil
+		return said(Verdict{State: VerdictUnknown, ReasonCode: ReasonNoConsentExceptionNotOffered}), nil
 	}
-	return Verdict{State: VerdictUnknown, Reason: "no consent recorded"}, nil
-}
-
-// objectionReason states the refusal, with the date when the proof ledger
-// carries one. A zero time means the state row stands without a proof row
-// behind it, and inventing "1 Jan 0001" for a rep to read out is worse than
-// saying plainly that the objection is recorded.
-func objectionReason(at time.Time) string {
-	if at.IsZero() {
-		return "they objected, and an objection overrides every other basis"
-	}
-	return fmt.Sprintf("they objected on %s, and an objection overrides every other basis",
-		at.Format("2 Jan 2006"))
-}
-
-// suppressionReason states a live communication_suppression the way a rep can
-// repeat it, alongside objectionReason and qualifyingReason.
-func suppressionReason(kind string) string {
-	switch kind {
-	case commsauthz.ReasonObjection:
-		return "they objected to marketing, and an objection overrides every other basis"
-	case commsauthz.ReasonRestricted:
-		return "a statutory restriction is recorded against writing to them"
-	case commsauthz.ReasonSubjectRequest:
-		return "they asked us to stop, and a rep recorded it"
-	case commsauthz.ReasonHardBounce:
-		return "their address does not accept mail"
-	default:
-		return "a suppression is recorded against writing to them"
-	}
-}
-
-func qualifyingReason(event QualifyingEvent) string {
-	when := event.OccurredAt.Format("2 Jan")
-	switch event.Kind {
-	case "inbound_message":
-		return fmt.Sprintf("they wrote to you on %s", when)
-	case "inquiry":
-		return fmt.Sprintf("they made an inquiry on %s", when)
-	case "active_deal":
-		return "an open deal connects you"
-	case KindMeeting:
-		// Tenseless on purpose: this arm admits a meeting in the diary as
-		// readily as one that has happened, and a reason claiming the wrong
-		// side of today reads as a bug to the rep who is looking at the
-		// calendar entry.
-		return fmt.Sprintf("a meeting on %s connects you", when)
-	case KindRequestedBySubject:
-		// Named rather than left to the default arm below, because what this
-		// says is stronger than "an exchange happened": the contact ASKED. A rep
-		// reading why a send is lawful should see whose move it was.
-		return fmt.Sprintf("they asked you to write to them on %s: %s", when, event.Note)
-	default:
-		return fmt.Sprintf("a recorded exchange on %s: %s", when, event.Note)
-	}
+	return said(Verdict{State: VerdictUnknown, ReasonCode: ReasonNoConsent}), nil
 }
 
 // objectionStands asks whether an opt-out, unsubscribe or Art 21 objection is

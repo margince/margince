@@ -11119,7 +11119,7 @@ components:
         most one row.
       required: [field, value, evidence_snippet, source, captured_by, captured_at]
       properties:
-        field: {type: string, enum: [title, phone, role, linkedin, company_name, address, website]}
+        field: {type: string, enum: [first_name, last_name, title, phone, role, linkedin, company_name, address, website]}
         value: {type: string}
         value_key:
           type: string

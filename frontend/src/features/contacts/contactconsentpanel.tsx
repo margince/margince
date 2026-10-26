@@ -7,11 +7,13 @@ import { Button, Modal, Skeleton } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import type { DetailRow } from "../../design-system/recorddetails";
-import { type Translator, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useProviderLabel } from "../../lib/channelproviders";
 import { unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
+import { consentPurposeName, consentReason } from "./consentreason";
 import { consentWord } from "./contactreadings";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -168,6 +170,8 @@ function verdictClass(verdict: GuardEntry["verdict"] | undefined): string {
  */
 export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
   const guard = useConsentGuard(view.contact.id, !view.contact.archived_at);
   const [manage, setManage] = useState(false);
   // Opened once, mounted from then on. The section reads consent and the
@@ -197,14 +201,16 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
                 <div className="pe-rail-row">
                   <span className="pe-rail-label">
                     <Mail size={15} aria-hidden="true" />
-                    {entry.purpose_label ?? entry.purpose_key}
+                    {consentPurposeName(entry, t)}
                   </span>
                   <span className={verdictClass(entry.verdict)}>
                     {consentWord(entry.verdict, t)}
                   </span>
                 </div>
                 {entry.reason && (
-                  <p className="pe-colleague-proof t-caption">{entry.reason}</p>
+                  <p className="pe-colleague-proof t-caption">
+                    {consentReason(entry, t, locale, zone)}
+                  </p>
                 )}
               </div>
             ))}

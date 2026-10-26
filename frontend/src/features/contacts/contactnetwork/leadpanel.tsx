@@ -220,7 +220,7 @@ function EvidencePlate({
       <div className="pn-readings">
         <div className="pn-reading">
           <b>
-            {formatNumber(ev.interactions_90d, locale)}
+            {formatNumber(ev.interactions_90d, locale)}{" "}
             <small>{t("contact.intro.evidenceWindow")}</small>
           </b>
           <span>{t("contact.intro.evidenceExchanges")}</span>

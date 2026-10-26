@@ -6985,6 +6985,66 @@ func (e ContactConsentGuardEntryPurposeClass) Valid() bool {
 	}
 }
 
+// Defines values for ContactConsentGuardEntryReasonCode.
+const (
+	ContactConsentGuardEntryReasonCodeConsentConfirmed             ContactConsentGuardEntryReasonCode = "consent_confirmed"
+	ContactConsentGuardEntryReasonCodeConsentWithdrawn             ContactConsentGuardEntryReasonCode = "consent_withdrawn"
+	ContactConsentGuardEntryReasonCodeContractNotice               ContactConsentGuardEntryReasonCode = "contract_notice"
+	ContactConsentGuardEntryReasonCodeNoCallPath                   ContactConsentGuardEntryReasonCode = "no_call_path"
+	ContactConsentGuardEntryReasonCodeNoConnection                 ContactConsentGuardEntryReasonCode = "no_connection"
+	ContactConsentGuardEntryReasonCodeNoConsent                    ContactConsentGuardEntryReasonCode = "no_consent"
+	ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered ContactConsentGuardEntryReasonCode = "no_consent_exception_not_offered"
+	ContactConsentGuardEntryReasonCodeObjection                    ContactConsentGuardEntryReasonCode = "objection"
+	ContactConsentGuardEntryReasonCodeQualifyingEvent              ContactConsentGuardEntryReasonCode = "qualifying_event"
+	ContactConsentGuardEntryReasonCodeSaidWeMayWrite               ContactConsentGuardEntryReasonCode = "said_we_may_write"
+	ContactConsentGuardEntryReasonCodeSuppressed                   ContactConsentGuardEntryReasonCode = "suppressed"
+	ContactConsentGuardEntryReasonCodeSuppressedHardBounce         ContactConsentGuardEntryReasonCode = "suppressed_hard_bounce"
+	ContactConsentGuardEntryReasonCodeSuppressedObjection          ContactConsentGuardEntryReasonCode = "suppressed_objection"
+	ContactConsentGuardEntryReasonCodeSuppressedRestricted         ContactConsentGuardEntryReasonCode = "suppressed_restricted"
+	ContactConsentGuardEntryReasonCodeSuppressedSubjectRequest     ContactConsentGuardEntryReasonCode = "suppressed_subject_request"
+	ContactConsentGuardEntryReasonCodeUnconfirmedDoubleOptIn       ContactConsentGuardEntryReasonCode = "unconfirmed_double_opt_in"
+)
+
+// Valid indicates whether the value is a known member of the ContactConsentGuardEntryReasonCode enum.
+func (e ContactConsentGuardEntryReasonCode) Valid() bool {
+	switch e {
+	case ContactConsentGuardEntryReasonCodeConsentConfirmed:
+		return true
+	case ContactConsentGuardEntryReasonCodeConsentWithdrawn:
+		return true
+	case ContactConsentGuardEntryReasonCodeContractNotice:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoCallPath:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoConnection:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoConsent:
+		return true
+	case ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered:
+		return true
+	case ContactConsentGuardEntryReasonCodeObjection:
+		return true
+	case ContactConsentGuardEntryReasonCodeQualifyingEvent:
+		return true
+	case ContactConsentGuardEntryReasonCodeSaidWeMayWrite:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressed:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedHardBounce:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedObjection:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedRestricted:
+		return true
+	case ContactConsentGuardEntryReasonCodeSuppressedSubjectRequest:
+		return true
+	case ContactConsentGuardEntryReasonCodeUnconfirmedDoubleOptIn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactConsentGuardEntryVerdict.
 const (
 	ContactConsentGuardEntryVerdictAllowed ContactConsentGuardEntryVerdict = "allowed"
@@ -7568,6 +7628,8 @@ func (e ContactPhoneInputPhoneType) Valid() bool {
 const (
 	ContactProfileFieldFieldAddress     ContactProfileFieldField = "address"
 	ContactProfileFieldFieldCompanyName ContactProfileFieldField = "company_name"
+	ContactProfileFieldFieldFirstName   ContactProfileFieldField = "first_name"
+	ContactProfileFieldFieldLastName    ContactProfileFieldField = "last_name"
 	ContactProfileFieldFieldLinkedin    ContactProfileFieldField = "linkedin"
 	ContactProfileFieldFieldPhone       ContactProfileFieldField = "phone"
 	ContactProfileFieldFieldRole        ContactProfileFieldField = "role"
@@ -7581,6 +7643,10 @@ func (e ContactProfileFieldField) Valid() bool {
 	case ContactProfileFieldFieldAddress:
 		return true
 	case ContactProfileFieldFieldCompanyName:
+		return true
+	case ContactProfileFieldFieldFirstName:
+		return true
+	case ContactProfileFieldFieldLastName:
 		return true
 	case ContactProfileFieldFieldLinkedin:
 		return true
@@ -21938,6 +22004,8 @@ func (e CapturedByKind) Valid() bool {
 const (
 	ContactProfileFieldKeyAddress     ContactProfileFieldKey = "address"
 	ContactProfileFieldKeyCompanyName ContactProfileFieldKey = "company_name"
+	ContactProfileFieldKeyFirstName   ContactProfileFieldKey = "first_name"
+	ContactProfileFieldKeyLastName    ContactProfileFieldKey = "last_name"
 	ContactProfileFieldKeyLinkedin    ContactProfileFieldKey = "linkedin"
 	ContactProfileFieldKeyPhone       ContactProfileFieldKey = "phone"
 	ContactProfileFieldKeyRole        ContactProfileFieldKey = "role"
@@ -21951,6 +22019,10 @@ func (e ContactProfileFieldKey) Valid() bool {
 	case ContactProfileFieldKeyAddress:
 		return true
 	case ContactProfileFieldKeyCompanyName:
+		return true
+	case ContactProfileFieldKeyFirstName:
+		return true
+	case ContactProfileFieldKeyLastName:
 		return true
 	case ContactProfileFieldKeyLinkedin:
 		return true
@@ -33803,11 +33875,15 @@ type CompanyScan struct {
 	// GeneratedBy Which writer produced the stored findings. Absent until a read has settled.
 	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
 
-	// Read What the last settled read took in, so the page can say "read 14 exchanges and
-	// 3 deals" rather than "done". Null until a read has settled.
+	// Read What the last settled read took in, so the page can say "read 14 exchanges in the
+	// last 180 days and 3 open deals" rather than "done". Null until a read has settled.
 	Read *struct {
+		// Deals The account's open deals the read took in.
 		Deals     int `json:"deals"`
 		Exchanges int `json:"exchanges"`
+
+		// WindowDays How many days back an exchange was read; older ones were not.
+		WindowDays int `json:"window_days"`
 	} `json:"read,omitempty"`
 
 	// ResumesAt When a read the AI budget deferred will try again. Null unless the scan is in
@@ -35141,8 +35217,16 @@ type ContactConsentGuardEntry struct {
 	// QualifyingEvent The recorded event that flipped business correspondence to allowed, when one did.
 	QualifyingEvent *ConsentQualifyingEvent `json:"qualifying_event,omitempty"`
 
-	// Reason The answer in the reader's words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable.
+	// Reason The answer in English words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable.
 	Reason string `json:"reason"`
+
+	// ReasonAt When the objection behind an `objection` reason was recorded, when the record carries it.
+	ReasonAt *time.Time `json:"reason_at,omitempty"`
+
+	// ReasonCode `reason` as a code, so a screen says it in its reader's language. A
+	// `qualifying_event` reason is told from `qualifying_event`, and an `objection` from
+	// `reason_at` when the date is known.
+	ReasonCode ContactConsentGuardEntryReasonCode `json:"reason_code"`
 
 	// Verdict `allowed` proceeds. `blocked` refuses and `reason` says why. `unknown` means no decision is recorded — the offered action is to request consent, never a silent grant.
 	Verdict ContactConsentGuardEntryVerdict `json:"verdict"`
@@ -35157,6 +35241,11 @@ type ContactConsentGuardEntryChannel string
 // legally wrong. `marketing` needs express consent with double-opt-in proof; the §7(3)
 // existing-customer exception is not offered. `phone_outreach` is specced and dormant.
 type ContactConsentGuardEntryPurposeClass string
+
+// ContactConsentGuardEntryReasonCode `reason` as a code, so a screen says it in its reader's language. A
+// `qualifying_event` reason is told from `qualifying_event`, and an `objection` from
+// `reason_at` when the date is known.
+type ContactConsentGuardEntryReasonCode string
 
 // ContactConsentGuardEntryVerdict `allowed` proceeds. `blocked` refuses and `reason` says why. `unknown` means no decision is recorded — the offered action is to request consent, never a silent grant.
 type ContactConsentGuardEntryVerdict string

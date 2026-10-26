@@ -100,6 +100,7 @@ const guard: components["schemas"]["ContactConsentGuard"] = {
       channel: "email",
       verdict: "allowed",
       reason: "She wrote to you three days ago.",
+      reason_code: "qualifying_event",
     },
     {
       purpose_key: "phone_outreach",
@@ -107,6 +108,7 @@ const guard: components["schemas"]["ContactConsentGuard"] = {
       channel: "phone",
       verdict: "unknown",
       reason: "No consent recorded.",
+      reason_code: "no_consent",
     },
   ],
 };
@@ -317,6 +319,7 @@ export const NoCorrespondencePurpose: Story = {
         channel: "email",
         verdict: "allowed",
         reason: "They opted in on 3 March.",
+        reason_code: "consent_confirmed",
       },
     ]),
 };

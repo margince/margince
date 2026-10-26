@@ -327,8 +327,8 @@ written to yet. That is every account on the day it is added.
 above them (the moving indigo tile, and lines of the answer still being drawn). It polls every three
 seconds until the row settles.
 
-Then the merged list replaces the own rows of the 360. The foot says who wrote them, and how many
-exchanges and deals were read. It says that the account has moved since (where it has), or why the model
+Then the merged list replaces the own rows of the 360. The foot says who wrote them, how many
+exchanges were read over how many days (`read.window_days`), and how many open deals. It says that the account has moved since (where it has), or why the model
 did not write them.
 
 ## The state strip and health

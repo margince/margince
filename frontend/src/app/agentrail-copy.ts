@@ -11,11 +11,8 @@ import type { Screen } from "../lib/router";
  * Everything the section reports about the installation is read from the API
  * (`agentrail.tsx`): approvals waiting, which sources are unreachable, the model
  * the last call actually ran on, the account's own suggestions. What the
- * readings are SAID in lives in the message catalogs under `agent.*` — it used
- * to be an English-only table here, which is how a German reader met "Across
- * the workspace" over a translated sentence. What is left here is the tables
- * that are not copy: the state vocabulary, the rotation's order, and the two
- * maps from a cache key to the words for the work behind it.
+ * readings are SAID in lives in the message catalogs under `agent.*`. Here are
+ * the state vocabulary, the rotation's order, and the cache-key maps.
  */
 
 /**
@@ -145,103 +142,106 @@ export const TIPS: readonly Tip[] = [
 /**
  * What a WRITE is called, keyed by the first segment of its `mutationKey`.
  *
- * Present tense and the reader's own verb, with `%s` where the record's name
- * goes: what a salesperson wants to see is "Enriching zenloop", because that is
- * the sentence that says the tool did the thing they did not want to do. A write
- * whose key carries no id, or whose record nothing can name yet, falls back to
- * the same phrase with the record kind in place of the name.
- *
- * A mutation with no `mutationKey` says nothing at all. That is deliberate: the
- * settings screens, the admin surfaces and the consent flows all write too, and a
- * status line that narrated those would bury the handful of events that are
- * actually the agent doing sales work.
+ * Present tense and the reader's own verb, with `{name}` for the record:
+ * "Enriching zenloop". A write nothing can name yet says the plain phrase.
+ * A mutation with no `mutationKey` says nothing, so settings and admin writes
+ * stay out of a line about sales work.
  */
-export const WROTE: Readonly<Record<string, [named: string, plain: string]>> = {
-  "activity-log": ["Logging activity on %s", "Logging activity"],
-  "company-edit": ["Editing %s", "Editing company"],
-  "company-new": ["Creating %s", "Creating company"],
-  "contact-edit": ["Editing %s", "Editing contact"],
-  "contact-new": ["Creating %s", "Creating contact"],
-  "deal-edit": ["Editing %s deal", "Editing deal"],
-  "deal-new": ["Creating deal for %s", "Creating deal"],
-  dedupe: ["Resolving duplicate of %s", "Resolving duplicate"],
-  // SENDING, not drafting. The two are told apart by their mutation key rather
-  // than by this table: `email` is the send, and the AI draft carries
-  // `email-draft` so the rail can own it alone. They used to share one key,
-  // which put one action into two vocabularies at once — the bar saying
-  // "Writing to Anna" from here while the panel said "I'm drafting your reply."
-  // from the server's feed. Deleting this entry fixed that and broke something
-  // else: a send is a real write a rep waits on and the rail knows nothing
-  // about it, so it went silent. Splitting the key is what serves both.
-  email: ["Sending email to %s", "Sending email"],
-  enrich: ["Enriching %s", "Enriching contact"],
-  ingest: ["Importing %s", "Importing data"],
-  "lead-edit": ["Editing %s", "Editing lead"],
-  "site-read": ["Reading %s website", "Reading website"],
-  "task-new": ["Adding task for %s", "Adding task"],
+export const WROTE: Readonly<
+  Record<string, [named: MessageKey, plain: MessageKey]>
+> = {
+  "activity-log": [
+    "agent.ticker.writeNamed.activityLog",
+    "agent.ticker.write.activityLog",
+  ],
+  "company-edit": [
+    "agent.ticker.writeNamed.companyEdit",
+    "agent.ticker.write.companyEdit",
+  ],
+  "company-new": [
+    "agent.ticker.writeNamed.companyNew",
+    "agent.ticker.write.companyNew",
+  ],
+  "contact-edit": [
+    "agent.ticker.writeNamed.contactEdit",
+    "agent.ticker.write.contactEdit",
+  ],
+  "contact-new": [
+    "agent.ticker.writeNamed.contactNew",
+    "agent.ticker.write.contactNew",
+  ],
+  "deal-edit": [
+    "agent.ticker.writeNamed.dealEdit",
+    "agent.ticker.write.dealEdit",
+  ],
+  "deal-new": ["agent.ticker.writeNamed.dealNew", "agent.ticker.write.dealNew"],
+  dedupe: ["agent.ticker.writeNamed.dedupe", "agent.ticker.write.dedupe"],
+  // SENDING, not drafting. `email` is the send, and the AI draft carries
+  // `email-draft` so the rail narrates it alone and one action never has two
+  // vocabularies.
+  email: ["agent.ticker.writeNamed.email", "agent.ticker.write.email"],
+  enrich: ["agent.ticker.writeNamed.enrich", "agent.ticker.write.enrich"],
+  ingest: ["agent.ticker.writeNamed.ingest", "agent.ticker.write.ingest"],
+  "lead-edit": [
+    "agent.ticker.writeNamed.leadEdit",
+    "agent.ticker.write.leadEdit",
+  ],
+  "site-read": [
+    "agent.ticker.writeNamed.siteRead",
+    "agent.ticker.write.siteRead",
+  ],
+  "task-new": ["agent.ticker.writeNamed.taskNew", "agent.ticker.write.taskNew"],
 };
 
 /**
- * The named line, per cache key, with `%s` where the record's name goes.
+ * The named line, per cache key, with `{name}` where the record's name goes.
  *
- * This is the version of the line that does the work Lars asked the surface to
- * do: "Loading zenloop" is a status about the reader's own afternoon, and
- * "Loading company" is a status about software. Only the keys that carry a
- * single record's id are here, because those are the only ones there is a name
- * to put in.
- *
- * The name is never fetched for this (`agentrail-ticker.ts`): it is used when the
- * tab already knows it, and `SAID` below is what shows when it does not.
+ * "Loading zenloop" is a status about the reader's own afternoon, and "Loading
+ * company" is a status about software. Only the keys that carry a single
+ * record's id are here, because those are the only ones there is a name to put
+ * in. The name is never fetched for this (`agentrail-ticker.ts`).
  */
-export const NAMED: Readonly<Record<string, string>> = {
-  deal: "Loading %s deal",
-  lead: "Loading %s",
-  company: "Loading %s",
-  company360: "Loading overview of %s",
-  contact: "Loading %s",
-  contact360: "Loading overview of %s",
-  contactBrief: "Summarizing %s",
+export const NAMED: Readonly<Record<string, MessageKey>> = {
+  deal: "agent.ticker.readNamed.deal",
+  lead: "agent.ticker.readNamed.lead",
+  company: "agent.ticker.readNamed.company",
+  company360: "agent.ticker.readNamed.company360",
+  contact: "agent.ticker.readNamed.contact",
+  contact360: "agent.ticker.readNamed.contact360",
+  contactBrief: "agent.ticker.readNamed.contactBrief",
 };
 
 /**
  * What a read in flight is CALLED, keyed by the first segment of its cache key.
  *
- * The line under the orb names one thing at a time (`agentrail-ticker.ts`), and
- * this is the vocabulary it names them in: the words a salesperson uses about
- * their own day, not the words the cache uses about itself. "Loading company
- * overview" is a status; "fetching company360" is a key.
- *
- * A key with no entry here produces NO LINE. That is the point of a table rather
- * than a fallback that opens up the key: half of what a session fetches is
- * plumbing (the session, the feature flags, the custom-field catalog), and a
- * status line that narrated those would bury the two or three events a reader
- * actually cares about.
+ * The words a salesperson uses about their own day, not the words the cache
+ * uses about itself. A key with no entry here produces no line. Half of what a
+ * session fetches is plumbing, and narrating it would bury the real events.
  */
-export const SAID: Readonly<Record<string, string>> = {
-  activities: "Loading activities",
-  approvals: "Loading approvals",
-  "ai-calls": "Loading AI call log",
-  "ai-usage": "Loading AI usage",
-  companies: "Loading companies",
-  company: "Loading company",
-  company360: "Loading company overview",
-  connectors: "Loading connectors",
-  deal: "Loading deal",
-  "deal-offers": "Loading deal offers",
-  deals: "Loading pipeline",
-  dsrs: "Loading privacy requests",
-  lead: "Loading lead",
-  leads: "Loading leads",
-  contacts: "Loading contacts",
-  contact: "Loading contact",
-  contact360: "Loading contact overview",
-  contactBrief: "Summarizing contact",
-  pipelines: "Loading pipelines",
-  // The brief is written on every open, from the reader's own records, and the
-  // rail's own line follows on its next poll: this is the sentence for the
-  // second before the feed can name the meeting.
-  meetingBrief: "Preparing meeting brief",
-  "record-history": "Loading record history",
-  tasks: "Loading tasks",
-  teams: "Loading teams",
+export const SAID: Readonly<Record<string, MessageKey>> = {
+  activities: "agent.ticker.read.activities",
+  approvals: "agent.ticker.read.approvals",
+  "ai-calls": "agent.ticker.read.aiCalls",
+  "ai-usage": "agent.ticker.read.aiUsage",
+  companies: "agent.ticker.read.companies",
+  company: "agent.ticker.read.company",
+  company360: "agent.ticker.read.company360",
+  connectors: "agent.ticker.read.connectors",
+  deal: "agent.ticker.read.deal",
+  "deal-offers": "agent.ticker.read.dealOffers",
+  deals: "agent.ticker.read.deals",
+  dsrs: "agent.ticker.read.dsrs",
+  lead: "agent.ticker.read.lead",
+  leads: "agent.ticker.read.leads",
+  contacts: "agent.ticker.read.contacts",
+  contact: "agent.ticker.read.contact",
+  contact360: "agent.ticker.read.contact360",
+  contactBrief: "agent.ticker.read.contactBrief",
+  pipelines: "agent.ticker.read.pipelines",
+  // The brief is written on every open. This line covers the second before the
+  // rail's next poll names the meeting.
+  meetingBrief: "agent.ticker.read.meetingBrief",
+  "record-history": "agent.ticker.read.recordHistory",
+  tasks: "agent.ticker.read.tasks",
+  teams: "agent.ticker.read.teams",
 };

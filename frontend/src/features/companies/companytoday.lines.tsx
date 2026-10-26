@@ -90,6 +90,7 @@ export function scanFoot({
             deals: plural("today.scan.readDeals", scan.read.deals, {
               count: formatNumber(scan.read.deals, locale),
             }),
+            days: formatNumber(scan.read.window_days, locale),
           })}
         </span>
       )}

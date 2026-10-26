@@ -27983,12 +27983,15 @@ export interface components {
             /** @description Why the read finished below the model: server-authored, in the reader's terms, never a provider's message. Null when the model wrote the findings. */
             degrade_reason?: string | null;
             /**
-             * @description What the last settled read took in, so the page can say "read 14 exchanges and
-             *     3 deals" rather than "done". Null until a read has settled.
+             * @description What the last settled read took in, so the page can say "read 14 exchanges in the
+             *     last 180 days and 3 open deals" rather than "done". Null until a read has settled.
              */
             read?: {
                 exchanges: number;
+                /** @description The account's open deals the read took in. */
                 deals: number;
+                /** @description How many days back an exchange was read; older ones were not. */
+                window_days: number;
             } | null;
             /**
              * @description The merged advice, in priority order: the rules' own rows first in their own
@@ -29343,7 +29346,7 @@ export interface components {
          */
         ContactProfileField: {
             /** @enum {string} */
-            field: "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
+            field: "first_name" | "last_name" | "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
             value: string;
             /**
              * @description What tells two rows of one field apart: the E.164 number for a `phone` row, empty
@@ -30171,8 +30174,20 @@ export interface components {
              * @enum {string}
              */
             verdict: "allowed" | "blocked" | "unknown";
-            /** @description The answer in the reader's words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable. */
+            /** @description The answer in English words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable. */
             reason: string;
+            /**
+             * @description `reason` as a code, so a screen says it in its reader's language. A
+             *     `qualifying_event` reason is told from `qualifying_event`, and an `objection` from
+             *     `reason_at` when the date is known.
+             * @enum {string}
+             */
+            reason_code: "objection" | "suppressed_objection" | "suppressed_restricted" | "suppressed_subject_request" | "suppressed_hard_bounce" | "suppressed" | "contract_notice" | "no_call_path" | "said_we_may_write" | "unconfirmed_double_opt_in" | "no_connection" | "qualifying_event" | "consent_confirmed" | "consent_withdrawn" | "no_consent_exception_not_offered" | "no_consent";
+            /**
+             * Format: date-time
+             * @description When the objection behind an `objection` reason was recorded, when the record carries it.
+             */
+            reason_at?: string | null;
             /** @description The recorded event that flipped business correspondence to allowed, when one did. */
             qualifying_event?: components["schemas"]["ConsentQualifyingEvent"];
         };
@@ -50133,7 +50148,7 @@ export interface components {
         /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
         BriefProjectId: string;
         /** @description The profile field's key — the same closed vocabulary `ContactProfileField.field` carries. */
-        ContactProfileFieldKey: "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
+        ContactProfileFieldKey: "first_name" | "last_name" | "title" | "phone" | "role" | "linkedin" | "company_name" | "address" | "website";
         /** @description The profile field's key — the same closed vocabulary `CompanyProfileField.field` carries. */
         ProfileFieldKey: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
         /**
