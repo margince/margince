@@ -329,8 +329,8 @@ func TestReplayedAndRacingRecordsLeaveOneRowAndOneAuditEntryPerChange(t *testing
 	}
 }
 
-// A win a unit reports is a stage move like any other: the deal's audit trail
-// must name it, so a deal that went to won on a paid invoice shows who moved it.
+// A win a unit reports is a stage move like any other. The deal's audit trail
+// must name it, so the deal shows who moved it to won.
 func TestAStageMoveALandedRecordMakesIsInTheDealsAuditTrail(t *testing.T) {
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, e.dealRecord("opp-audit", nil))

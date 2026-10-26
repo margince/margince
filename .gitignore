@@ -33,7 +33,6 @@ coverage-extensions.out
 /extensions/*
 !/extensions/.gitkeep
 !/extensions/approvals.lock
-!/extensions/billing-demo
 !/extensions/de
 !/extensions/finance-demo
 !/extensions/openchannel

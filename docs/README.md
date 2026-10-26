@@ -140,8 +140,6 @@ ready before we need it, because the first date comes 24 hours after we learn of
   of an extension runs as.
 - [land-companies-and-deals-from-an-extension.md](how-to/land-companies-and-deals-from-an-extension.md): hand the
   core a company or a deal with the id it has in its own system.
-- [try-the-billing-demo.md](how-to/try-the-billing-demo.md): run the demo extension that hands the
-  core deals from its own system.
 - [read-core-records-from-an-extension.md](how-to/read-core-records-from-an-extension.md): read deals, companies
   and other core records from an extension, under the rights of the user.
 - [react-to-record-lifecycle-events.md](how-to/react-to-record-lifecycle-events.md): learn when a company or
