@@ -33,5 +33,14 @@
         "deal"
       ]
     }
+  ],
+  "entries": [
+    {
+      "slot": "record_header.deal",
+      "label": "extBillingDemo.title",
+      "icon": "plug",
+      "target": "",
+      "object": "ext_billing_demo_feed"
+    }
   ]
 }

@@ -18,6 +18,8 @@ import {
 // feed offers a value for a field a user last edited, it leaves the field
 // (off, the default) or overwrites it (on). The server lets only an admin
 // change it, so the switch is offered to admins and read-only to the rest.
+// Only a unit that lands companies or deals has such a field, so the switch is
+// left out for any other unit.
 // Below it come the settings the unit declares as data. The server sends those
 // to an admin only, so a reader who is not one sees none.
 export function UnitGovernance({
@@ -33,32 +35,39 @@ export function UnitGovernance({
       overwrites_edited_fields: query.data?.overwrites_edited_fields ?? false,
       declared: [{ key, value }],
     });
+  const landsRecords = query.data?.lands_records === true;
+  const declared = query.data?.declared ?? [];
+  if (!landsRecords && declared.length === 0) {
+    return null;
+  }
   return (
     <>
       <PanelBody>
         <SettingList>
-          <SettingRow
-            label={t("extGovernance.overwrite")}
-            description={t("extGovernance.overwriteHint")}
-            control={(control) => (
-              <Switch
-                describedBy={describedByIds(
-                  control["aria-describedby"],
-                  update.isError && refusalId,
-                )}
-                label={t("extGovernance.overwrite")}
-                labelHidden
-                checked={query.data?.overwrites_edited_fields}
-                pending={update.isPending || query.isPending}
-                reason={canManage ? undefined : t("extGovernance.readOnly")}
-                testId={`ext-overwrite-${unit}`}
-                onChange={(next) =>
-                  update.mutate({ overwrites_edited_fields: next })
-                }
-              />
-            )}
-          />
-          {query.data?.declared?.map((setting) => (
+          {landsRecords ? (
+            <SettingRow
+              label={t("extGovernance.overwrite")}
+              description={t("extGovernance.overwriteHint")}
+              control={(control) => (
+                <Switch
+                  describedBy={describedByIds(
+                    control["aria-describedby"],
+                    update.isError && refusalId,
+                  )}
+                  label={t("extGovernance.overwrite")}
+                  labelHidden
+                  checked={query.data?.overwrites_edited_fields}
+                  pending={update.isPending || query.isPending}
+                  reason={canManage ? undefined : t("extGovernance.readOnly")}
+                  testId={`ext-overwrite-${unit}`}
+                  onChange={(next) =>
+                    update.mutate({ overwrites_edited_fields: next })
+                  }
+                />
+              )}
+            />
+          ) : null}
+          {declared.map((setting) => (
             <SettingRow
               key={setting.key}
               label={setting.label}

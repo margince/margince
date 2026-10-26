@@ -39269,6 +39269,9 @@ type ExtensionSettings struct {
 	// Declared The settings the unit declares as data, with their saved values. Only an admin gets them back, so the list is absent for anyone else. On a write, send the `key` and `value` of each setting to change; a setting left out keeps its value.
 	Declared *[]DeclaredExtensionSetting `json:"declared,omitempty"`
 
+	// LandsRecords True when the unit lands companies or deals. Only such a unit has a field a user can have edited, so the screen offers the overwrite switch for it and for no other unit. Ignored on a write.
+	LandsRecords *bool `json:"lands_records,omitempty"`
+
 	// OverwritesEditedFields True when the unit's feed may overwrite a company or deal field that a user last edited. False, the default, makes the feed leave such a field as it is and name it in `Result.Withheld`.
 	OverwritesEditedFields bool `json:"overwrites_edited_fields"`
 }

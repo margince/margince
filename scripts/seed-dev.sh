@@ -660,5 +660,32 @@ ensure_conversation "conversation:renewal-terms-outbound" "Renewal terms for Dem
 ensure_conversation "conversation:renewal-terms-inbound" "Re: Renewal terms for Demo GmbH" email inbound 9 "$alice_id"
 ensure_conversation "conversation:quarterly-review" "Quarterly review with Demo GmbH" meeting - 40 "$bob_id" "$carol_id"
 
+# The billing demo (extensions/billing-demo): connecting seeds three invoices,
+# and its first sync lands one deal each. Skipped when this build does not carry
+# the unit, or its service member does not exist yet (it is created at boot).
+echo "== seed-dev: billing demo =="
+status="$(api GET /ext/billing-demo/status)"
+if [[ "$status" == "200" ]] && [[ "$(jq '.invoices | length' "$workdir/body")" -gt 0 ]]; then
+  echo "  OK: the billing demo is already connected"
+elif [[ "$status" == "200" ]]; then
+  api GET /users >/dev/null
+  billing_member="$(jq -r 'first(.data[] | select(.service_extension == "billing-demo") | .id) // empty' "$workdir/body")"
+  api GET /pipelines >/dev/null
+  billing_open="$(jq -r 'first(.data[] | select(.is_default) | .stages[] | select(.semantic == "open") | .id) // empty' "$workdir/body")"
+  billing_won="$(jq -r 'first(.data[] | select(.is_default) | .stages[] | select(.semantic == "won") | .id) // empty' "$workdir/body")"
+  billing_pipeline="$(jq -r 'first(.data[] | select(.is_default) | .id) // empty' "$workdir/body")"
+  if [[ -z "$billing_member" || -z "$billing_open" || -z "$billing_won" ]]; then
+    echo "  SKIP: no billing-demo service member or no open and won stage yet"
+  else
+    status="$(api PUT /ext/billing-demo/connection "$(jq -n \
+      --arg m "$billing_member" --arg p "$billing_pipeline" --arg o "$billing_open" --arg w "$billing_won" \
+      '{member_id:$m,pipeline_id:$p,open_stage_id:$o,won_stage_id:$w}')")"
+    [[ "$status" == "200" ]] || fail "PUT /v1/ext/billing-demo/connection returned HTTP $status"
+    echo "  OK: connected the billing demo; its deals arrive on the next sync"
+  fi
+else
+  echo "  SKIP: this build does not carry the billing demo"
+fi
+
 echo ""
 echo "seed-dev: DONE — log in at $API_BASE with $ADMIN_EMAIL / $ADMIN_PASSWORD"

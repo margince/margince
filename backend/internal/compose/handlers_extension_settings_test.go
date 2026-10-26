@@ -88,3 +88,22 @@ func TestExtensionSettingsRefuseWhatTheCallerMayNotDoAndAnUnknownUnit(t *testing
 		t.Errorf("write by an agent → %d, want 403", got)
 	}
 }
+
+func TestOnlyAUnitThatLandsCompaniesOrDealsOffersTheOverwriteSwitch(t *testing.T) {
+	landing := func(kinds ...extension.RecordKind) extension.Extension {
+		return extension.Extension{Name: "feed", Ingress: []extension.IngressSource{{System: "feed", Lands: kinds}}}
+	}
+	for name, tc := range map[string]struct {
+		unit extension.Extension
+		want bool
+	}{
+		"no ingress":      {extension.Extension{Name: "quiet"}, false},
+		"activities only": {landing(extension.KindActivity), false},
+		"a company":       {landing(extension.KindActivity, extension.KindCompany), true},
+		"a deal":          {landing(extension.KindDeal), true},
+	} {
+		if got := landsCompaniesOrDeals(tc.unit); got != tc.want {
+			t.Errorf("%s: landsCompaniesOrDeals = %v, want %v", name, got, tc.want)
+		}
+	}
+}

@@ -55150,6 +55150,12 @@ components:
             True when the unit's feed may overwrite a company or deal field that a user last
             edited. False, the default, makes the feed leave such a field as it is and name it
             in `Result.Withheld`.
+        lands_records:
+          type: boolean
+          readOnly: true
+          description: >-
+            True when the unit lands companies or deals. Only such a unit has a field a user can have
+            edited, so the screen offers the overwrite switch for it and for no other unit. Ignored on a write.
         declared:
           type: array
           description: >-

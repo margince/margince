@@ -11,16 +11,17 @@ import { UnitGovernance } from "./extension-governance";
 
 type Call = { method: string; url: string; body: unknown };
 
-function backend(calls: Call[]) {
+function backend(calls: Call[], landsRecords = true) {
   return async (input: RequestInfo | URL, init?: RequestInit) => {
     const req = new Request(input, init);
     const body = req.method === "GET" ? undefined : await req.clone().json();
     if (req.method !== "GET") {
       calls.push({ method: req.method, url: req.url, body });
-      return Response.json(body);
+      return Response.json({ ...body, lands_records: landsRecords });
     }
     return Response.json({
       overwrites_edited_fields: false,
+      lands_records: landsRecords,
       declared: [
         {
           key: "region",
@@ -35,9 +36,9 @@ function backend(calls: Call[]) {
   };
 }
 
-function renderGovernance() {
+function renderGovernance(landsRecords = true) {
   const calls: Call[] = [];
-  vi.stubGlobal("fetch", backend(calls));
+  vi.stubGlobal("fetch", backend(calls, landsRecords));
   render(
     <QueryClientProvider
       client={
@@ -116,5 +117,14 @@ describe("UnitGovernance", () => {
         declared: [{ key: "live", value: "true" }],
       }),
     );
+  });
+
+  // A unit that lands no company or deal has no field a user could have
+  // edited, so the switch would decide nothing.
+  it("leaves the overwrite switch out for a unit that lands no records", async () => {
+    renderGovernance(false);
+
+    await screen.findByTestId("ext-setting-notes-region");
+    expect(screen.queryByTestId("ext-overwrite-notes")).toBeNull();
   });
 });

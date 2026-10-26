@@ -82,7 +82,8 @@ func (h extensionSettingsHandlers) writeSettings(w http.ResponseWriter, r *http.
 		httperr.Write(w, r, err)
 		return
 	}
-	out := crmcontracts.ExtensionSettings{OverwritesEditedFields: on}
+	landsRecords := landsCompaniesOrDeals(unit)
+	out := crmcontracts.ExtensionSettings{OverwritesEditedFields: on, LandsRecords: &landsRecords}
 	if auth.RequireAdmin(r.Context()) == nil {
 		stored, err := identity.ExtensionSettingValuesOf(r.Context(), h.store)
 		if err != nil {
@@ -93,6 +94,18 @@ func (h extensionSettingsHandlers) writeSettings(w http.ResponseWriter, r *http.
 		out.Declared = &declared
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// landsCompaniesOrDeals reports whether the unit's ingress lands a kind that has
+// fields a user can edit. An activity has none, so a unit that lands only
+// activities has nothing for the overwrite switch to decide.
+func landsCompaniesOrDeals(unit extension.Extension) bool {
+	for _, source := range unit.Ingress {
+		if slices.Contains(source.Lands, extension.KindCompany) || slices.Contains(source.Lands, extension.KindDeal) {
+			return true
+		}
+	}
+	return false
 }
 
 // declaredChanges turns the values a caller sent into the changes to save. A

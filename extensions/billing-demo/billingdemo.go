@@ -44,6 +44,13 @@ func New() extension.Extension {
 			System: "billing-demo",
 			Lands:  []extension.RecordKind{extension.KindDeal},
 		}},
+		// The deal header leads a member to the screen that drives the demo.
+		Entries: []extension.Entry{{
+			Slot:   extension.SlotDealHeader,
+			Label:  "extBillingDemo.title",
+			Icon:   extension.IconPlug,
+			Object: "ext_billing_demo_feed",
+		}},
 		Jobs:           []extension.Job{{Name: "sync", Handle: syncTick}},
 		FailureClasses: failureClasses,
 	}

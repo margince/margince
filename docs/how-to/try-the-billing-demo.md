@@ -12,9 +12,17 @@ The `billing-demo` extension shows an extension writing back to the core. A pret
 
 The feed runs as the unit's [service member](declare-a-service-member.md). The core's human-precedence rule applies to it like any other source. See [land-companies-and-deals-from-an-extension.md](land-companies-and-deals-from-an-extension.md).
 
-## Run it
+## Use the screen
 
-Start the dev stack with `make dev` and `make seed-dev`, then sign in as an admin. The three calls need the admin role.
+Run `make dev` and `make seed-dev`, then sign in as an admin. The seed connects the demo and adds three invoices. Open the screen from the Billing demo button on any deal, or at `#/ext/billing-demo`.
+
+Each invoice row has Mark paid, and a field with Change amount. A row reads "Waiting for the next sync" until the core has the change, which takes about a minute. The row then says when the amount on the deal was kept for a member's edit.
+
+If the seed did not connect it, the screen offers Connect and add sample invoices. It finds the service member and the default pipeline itself.
+
+## Run it from the command line
+
+The screen calls three admin-only routes. You can call them directly.
 
 ```bash
 B=http://localhost:8081
@@ -42,7 +50,6 @@ The service member is created when the stack boots, and the Users screen lists i
 
 ## What it does not do
 
-- It has no screen. The calls above drive it.
 - It cannot notify the deal owner. A job tick has no caller, and the notice door refuses unattended calls.
 - It exposes no MCP tool yet. See [declare-a-service-member.md](declare-a-service-member.md#no-mcp-tools-yet).
 - A deal it creates is owned by the service member, because the core falls back to the acting member.
