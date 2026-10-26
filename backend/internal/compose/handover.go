@@ -201,11 +201,11 @@ func (s handoverSeam) handOverInTx(
 	if _, err := approvals.WithdrawSharesDecidedByInTx(ctx, tx, member); err != nil {
 		return crmcontracts.UserHandoverResult{}, err
 	}
-	if moved.Task, err = s.tasks.HandOverOpenTasksTx(ctx, tx, ids.From[ids.UserKind](member), receiver); err != nil {
-		return crmcontracts.UserHandoverResult{}, err
-	}
-	left, err := s.countOwned(ctx, tx, member)
-	return crmcontracts.UserHandoverResult{Moved: moved, Left: left}, err
+	// Either failure aborts the transaction, so both are reported together.
+	var taskErr error
+	moved.Task, taskErr = s.tasks.HandOverOpenTasksTx(ctx, tx, ids.From[ids.UserKind](member), receiver)
+	left, countErr := s.countOwned(ctx, tx, member)
+	return crmcontracts.UserHandoverResult{Moved: moved, Left: left}, errors.Join(taskErr, countErr)
 }
 
 // handOverKind moves one record type, each row in its own savepoint. A row its
