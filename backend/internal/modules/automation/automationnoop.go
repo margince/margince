@@ -18,6 +18,9 @@ func updateChangesNothing(before Automation, in UpdateAutomationInput) bool {
 	if in.Enabled != nil && *in.Enabled != before.Enabled {
 		return false
 	}
+	if in.OwnerID != nil && (before.OwnerID == nil || *in.OwnerID != *before.OwnerID) {
+		return false
+	}
 	return in.Params == nil || sameParams(before.Params, in.Params)
 }
 

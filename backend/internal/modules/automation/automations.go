@@ -80,6 +80,7 @@ func (s *AutomationStore) WithLists(lists Lists) *AutomationStore {
 // Automation is one configured instance.
 type Automation struct {
 	ID        ids.AutomationID
+	OwnerID   *ids.UserID
 	Key       string
 	Name      string
 	Enabled   bool
@@ -107,6 +108,7 @@ type UpdateAutomationInput struct {
 	Name      *string
 	Params    map[string]any
 	Enabled   *bool
+	OwnerID   *ids.UserID
 	IfVersion *int64
 }
 
@@ -117,13 +119,13 @@ type AutomationPage struct {
 	HasMore    bool
 }
 
-const automationColumns = `id, key, name, enabled, params, version, created_at, updated_at, paused_reason`
+const automationColumns = `id, key, name, enabled, params, version, created_at, updated_at, paused_reason, owner_id`
 
 // scanAutomation reads automationColumns, then any extra columns the
 // statement selects after them.
 func scanAutomation(row pgx.Row, extra ...any) (Automation, error) {
 	var a Automation
-	dest := append([]any{&a.ID, &a.Key, &a.Name, &a.Enabled, &a.Params, &a.Version, &a.CreatedAt, &a.UpdatedAt, &a.PausedReason}, extra...)
+	dest := append([]any{&a.ID, &a.Key, &a.Name, &a.Enabled, &a.Params, &a.Version, &a.CreatedAt, &a.UpdatedAt, &a.PausedReason, &a.OwnerID}, extra...)
 	err := row.Scan(dest...)
 	return a, err
 }
@@ -292,6 +294,15 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 			a = before
 			return nil
 		}
+		if in.OwnerID != nil {
+			var current *ids.UUID
+			if before.OwnerID != nil {
+				current = &before.OwnerID.UUID
+			}
+			if err := auth.EnsureOwnerHandOn(ctx, tx, current, in.OwnerID); err != nil {
+				return err
+			}
+		}
 		if in.Enabled != nil && *in.Enabled {
 			owner, err := claimDraftStarter(ctx, tx, before)
 			if err != nil {
@@ -318,18 +329,22 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 			  name = coalesce($2, name),
 			  params = coalesce($3, params),
 			  enabled = coalesce($4, enabled),
+			  owner_id = coalesce($6, owner_id),
 			  paused_reason = CASE WHEN $4::boolean IS NULL THEN paused_reason END,
 			  version = version + 1,
 			  updated_at = $5
 			WHERE id = $1
 			RETURNING %s`, automationColumns),
-			id, in.Name, paramsJSON, in.Enabled, s.now().UTC()))
+			id, in.Name, paramsJSON, in.Enabled, s.now().UTC(), in.OwnerID))
 		if err != nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "update", "automation", id.UUID,
-			map[string]any{"name": before.Name, "enabled": before.Enabled, "params": json.RawMessage(before.Params)},
-			map[string]any{"name": a.Name, "enabled": a.Enabled, "params": json.RawMessage(a.Params)})
+		beforeAudit := map[string]any{"name": before.Name, "enabled": before.Enabled, "params": json.RawMessage(before.Params)}
+		afterAudit := map[string]any{"name": a.Name, "enabled": a.Enabled, "params": json.RawMessage(a.Params)}
+		if in.OwnerID != nil {
+			beforeAudit[keyOwnerID], afterAudit[keyOwnerID] = before.OwnerID, a.OwnerID
+		}
+		_, err = storekit.Audit(ctx, tx, "update", "automation", id.UUID, beforeAudit, afterAudit)
 		return err
 	})
 	if err != nil {

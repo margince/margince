@@ -60633,6 +60633,13 @@ components:
         key: { type: string, description: The catalog type this instance is built from. }
         name: { type: string }
         status: { type: string, enum: [enabled, paused] }
+        owner_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The member the rule runs as. Null until the rule is first enabled, and after its
+            owner's seat is removed. Firings of a rule whose owner is no longer active are blocked
+            until the owner is changed.
         paused_reason:
           type: [string, 'null']
           enum: [list_archived, list_invalid, list_unavailable, burst, null]
@@ -60681,6 +60688,13 @@ components:
         name: { type: [string, 'null'] }
         params: { type: [object, 'null'], additionalProperties: true }
         status: { type: [string, 'null'], enum: [enabled, paused, null] }
+        owner_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            Hand the rule to another member, who must be a seat the caller may make an owner (an
+            active human seat that can write, inside the caller's write scope), else `422` with
+            `code: owner_not_assignable`. Cannot be cleared.
 
     AutomationPreviewRequest:
       type: object

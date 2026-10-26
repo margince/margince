@@ -20132,6 +20132,11 @@ components:
         key: {type: string, description: The catalog type this instance is built from.}
         name: {type: string}
         status: {type: string, enum: [enabled, paused]}
+        owner_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The member the rule runs as. Null until the rule is first enabled, and after its owner's seat is removed. Firings of a rule whose owner is no longer active are blocked until the owner is changed.
         paused_reason:
           type: [string, 'null']
           enum: [list_archived, list_invalid, list_unavailable, burst, null]

@@ -29613,7 +29613,10 @@ type Automation struct {
 	// LastRunOutcome How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
 	LastRunOutcome *AutomationLastRunOutcome `json:"last_run_outcome,omitempty"`
 	Name           string                    `json:"name"`
-	Params         map[string]interface{}    `json:"params"`
+
+	// OwnerId The member the rule runs as. Null until the rule is first enabled, and after its owner's seat is removed. Firings of a rule whose owner is no longer active are blocked until the owner is changed.
+	OwnerId *openapi_types.UUID    `json:"owner_id,omitempty"`
+	Params  map[string]interface{} `json:"params"`
 
 	// PausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
 	PausedReason *AutomationPausedReason `json:"paused_reason,omitempty"`
@@ -52700,9 +52703,12 @@ type UpdateAttachmentMetadataRequestDocState string
 
 // UpdateAutomationRequest Any subset; omit a field to leave it unchanged. `status` flips enable/pause.
 type UpdateAutomationRequest struct {
-	Name   *string                        `json:"name,omitempty"`
-	Params *map[string]interface{}        `json:"params,omitempty"`
-	Status *UpdateAutomationRequestStatus `json:"status,omitempty"`
+	Name *string `json:"name,omitempty"`
+
+	// OwnerId Hand the rule to another member, who must be a seat the caller may make an owner (an active human seat that can write, inside the caller's write scope), else `422` with `code: owner_not_assignable`. Cannot be cleared.
+	OwnerId *openapi_types.UUID            `json:"owner_id,omitempty"`
+	Params  *map[string]interface{}        `json:"params,omitempty"`
+	Status  *UpdateAutomationRequestStatus `json:"status,omitempty"`
 }
 
 // UpdateAutomationRequestStatus defines model for UpdateAutomationRequest.Status.
