@@ -210,7 +210,9 @@ function faultLine(
   }
   if (signals.offline.length > 0) {
     return plain(
-      t("agent.line.cannotReach", { sources: signals.offline.join(", ") }),
+      t("agent.line.cannotReach", {
+        sources: signals.offline.map((source) => source.label).join(", "),
+      }),
     );
   }
   return agentLine ?? plain(t("agent.line.runFailed"));

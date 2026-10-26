@@ -110,10 +110,11 @@ type csvWriters struct {
 	// zone is the installation zone, read once per run: it says which date is
 	// today and which date a stored instant falls on.
 	zone *time.Location
-	// updated counts the rows this run rewrote. The engine's EnsureResult has
-	// no "updated" member — the frozen-source model it was built for had no
-	// such outcome — so the count rides here and the report reads it.
+	// updated counts the rows this run rewrote; EnsureResult has no "updated"
+	// member, so the count rides here and the report reads it.
 	updated int
+	// predictedNotes is the notes the dry run predicted filed (noteTwinKey).
+	predictedNotes map[string]bool
 }
 
 var _ migration.Writers = (*csvWriters)(nil)
