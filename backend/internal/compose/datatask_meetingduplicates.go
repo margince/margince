@@ -86,7 +86,7 @@ func retireMeetingDuplicatesBatch(ctx context.Context, tx pgx.Tx, meetings *acti
 		if c.seat == nil {
 			continue
 		}
-		survivor, found, err := meetingTheCopyBindsTo(ctx, tx, *c.seat, c.payload)
+		survivor, calendar, found, err := meetingTheCopyBindsTo(ctx, tx, *c.seat, c.payload)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
@@ -99,6 +99,13 @@ func retireMeetingDuplicatesBatch(ctx context.Context, tx pgx.Tx, meetings *acti
 			return datatask.BatchOut{}, err
 		}
 		if !live {
+			continue
+		}
+		retirable, err := copyRetiresCleanly(ctx, tx, duplicate, survivor, *c.seat, calendar)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
+		if !retirable {
 			continue
 		}
 		if err := capture.CarryMeetingImportTx(ctx, tx, duplicate, survivor, *c.seat); err != nil {
@@ -117,7 +124,7 @@ func retireMeetingDuplicatesBatch(ctx context.Context, tx pgx.Tx, meetings *acti
 }
 
 // lockLiveSurvivor locks the meeting a copy binds to and answers whether it is
-// still live and unrestricted, so nothing is carried onto a row erased or held
+// still live and unrestricted. Nothing is carried onto a row erased or held
 // since the binding rule answered.
 func lockLiveSurvivor(ctx context.Context, tx pgx.Tx, survivor ids.ActivityID) (bool, error) {
 	var open bool
@@ -134,18 +141,18 @@ func lockLiveSurvivor(ctx context.Context, tx pgx.Tx, survivor ids.ActivityID) (
 // meetingTheCopyBindsTo answers the meeting a calendar sync for seat would
 // bind this stored event to today, asked of the rule live capture asks. An
 // original no parser reads, or one naming no calendar, binds to nothing.
-func meetingTheCopyBindsTo(ctx context.Context, tx pgx.Tx, seat ids.UUID, payload []byte) (ids.ActivityID, bool, error) {
+func meetingTheCopyBindsTo(ctx context.Context, tx pgx.Tx, seat ids.UUID, payload []byte) (ids.ActivityID, string, bool, error) {
 	raw, err := decodeStoredOriginal(payload)
 	if err != nil {
-		return ids.ActivityID{}, false, nil //nolint:nilerr // an original no parser reads is skipped, as live capture skips it
+		return ids.ActivityID{}, "", false, nil //nolint:nilerr // an original no parser reads is skipped, as live capture skips it
 	}
 	calendar, err := gcal.SelfAddress(raw)
 	if err != nil || calendar == "" {
-		return ids.ActivityID{}, false, nil //nolint:nilerr // an unreadable original, or one naming no calendar, proves no seat
+		return ids.ActivityID{}, "", false, nil //nolint:nilerr // an unreadable original, or one naming no calendar, proves no seat
 	}
 	rec, err := gcal.RecordOf(raw, calendar)
 	if err != nil || !rec.CrossDoorIdentity.Stated() {
-		return ids.ActivityID{}, false, nil //nolint:nilerr // a drop live capture would make is a drop here too
+		return ids.ActivityID{}, "", false, nil //nolint:nilerr // a drop live capture would make is a drop here too
 	}
 	key := activities.MeetingIdentityKey(rec.CrossDoorIdentity.Series, capture.OccurrenceText(rec.CrossDoorIdentity))
 	// The arriving seat is who the binding rule asks about, as a sync for that
@@ -154,7 +161,38 @@ func meetingTheCopyBindsTo(ctx context.Context, tx pgx.Tx, seat ids.UUID, payloa
 		Type: principal.PrincipalConnector, ID: "connector:" + sourceGCal + ":" + seat.String(), UserID: seat,
 	})
 	resolve := activities.ResolveBindableIdentityProving(capture.ProvedUnambiguouslyTx)
-	return resolve(arriving, tx, activities.IdentityKindMeeting, key)
+	survivor, found, err := resolve(arriving, tx, activities.IdentityKindMeeting, key)
+	return survivor, calendar, found, err
+}
+
+// copyRetiresCleanly answers whether archiving the copy loses nothing. The
+// stored event must still come from the seat's connected Google Calendar, not
+// an account the seat rebound to since. The copy's only importer is that seat.
+// The survivor holds no row for the seat with another posture, so no hold is
+// lost. No human changed the copy, an outcome included, and every record it
+// is filed under is the survivor's too. Anything else leaves the copy as it is.
+func copyRetiresCleanly(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID, seat ids.UUID, calendar string) (bool, error) {
+	var clean bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM capture_connection c
+		                WHERE c.provider = $4 AND c.user_id = $3 AND c.status = 'connected'
+		                  AND lower(btrim(c.account_label)) = lower(btrim($5)))
+		   AND NOT EXISTS (SELECT 1 FROM capture_import other WHERE other.activity_id = $1 AND other.user_id <> $3)
+		   AND NOT EXISTS (SELECT 1 FROM capture_import kept
+		                    JOIN capture_import copied ON copied.activity_id = $1 AND copied.user_id = kept.user_id
+		                   WHERE kept.activity_id = $2 AND kept.user_id = $3
+		                     AND kept.posture_at_import IS DISTINCT FROM copied.posture_at_import)
+		   AND NOT EXISTS (SELECT 1 FROM audit_log worked
+		                    WHERE worked.entity_type = 'activity' AND worked.entity_id = $1 AND worked.actor_type = 'human')
+		   AND NOT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = $1 AND NOT EXISTS (
+		         SELECT 1 FROM activity_link s WHERE s.activity_id = $2 AND s.entity_type = l.entity_type
+		            AND (s.contact_id, s.company_id, s.deal_id, s.lead_id, s.project_id)
+		                IS NOT DISTINCT FROM (l.contact_id, l.company_id, l.deal_id, l.lead_id, l.project_id)))`,
+		duplicate, survivor, seat, sourceGCal, calendar).Scan(&clean)
+	if err != nil {
+		return false, fmt.Errorf("compose: reading whether a calendar copy retires cleanly: %w", err)
+	}
+	return clean, nil
 }
 
 func estimateMeetingDuplicates(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
