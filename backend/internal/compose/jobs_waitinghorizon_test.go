@@ -29,3 +29,12 @@ func TestAKindWithoutADeclaredSpecHasNoStatementBudget(t *testing.T) {
 		t.Fatal("an undeclared kind was given a statement budget")
 	}
 }
+
+func TestAnUndeclaredKindPanicsRatherThanRunUnbounded(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("an undeclared kind was given a statement budget")
+		}
+	}()
+	mustStatementBudgetFor("no_such_kind")
+}

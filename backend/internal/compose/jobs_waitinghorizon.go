@@ -56,7 +56,14 @@ func newWaitingHorizonRefreshWorker(pool *pgxpool.Pool, log *slog.Logger) *waiti
 // the own-domain read and the store. Postgres then cuts the statement with a
 // clean error before River abandons the attempt.
 func waitingHorizonStatementBudget() time.Duration {
-	budget, err := statementBudgetFor(WaitingHorizonRefreshArgs{}.Kind())
+	return mustStatementBudgetFor(WaitingHorizonRefreshArgs{}.Kind())
+}
+
+// mustStatementBudgetFor panics for a kind the generated table does not carry.
+// The kind is a compile-time literal of the caller, so a miss is a programming
+// error that a test catches, not a runtime condition.
+func mustStatementBudgetFor(kind string) time.Duration {
+	budget, err := statementBudgetFor(kind)
 	if err != nil {
 		panic(err)
 	}
