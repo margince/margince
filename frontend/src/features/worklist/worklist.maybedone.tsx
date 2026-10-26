@@ -7,7 +7,7 @@ import { useTaskUpdate } from "../../components/taskactions";
 import { useCompleteTask } from "../../components/taskcomplete";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { formatDate } from "../../format/format";
+import { activityDay } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -57,7 +57,12 @@ export function WorklistMayBeDone({ item }: Readonly<{ item: WorklistItem }>) {
     <div className="worklist-may-be-done">
       <p className="t-caption">
         {t("worklist.mayBeDone.asked", {
-          date: formatDate(question.wrote_at, locale, zone),
+          date: activityDay(
+            question.wrote_at,
+            question.wrote_precision,
+            locale,
+            zone,
+          ),
         })}
       </p>
       <span className="today-verb">

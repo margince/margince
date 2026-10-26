@@ -31,7 +31,7 @@ const ASKED: NonNullable<WorklistItem["may_be_done"]> = {
   evidence_fingerprint: "fp-1",
 };
 
-const ROW = {
+const ROW: WorklistItem = {
   id: "a-9",
   source: "task",
   category: "follow_up",
@@ -42,7 +42,7 @@ const ROW = {
   occurred_precision: "instant",
   version: 4,
   may_be_done: ASKED,
-} as unknown as WorklistItem;
+};
 
 function show(item: WorklistItem) {
   const client = new QueryClient({

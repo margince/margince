@@ -230,26 +230,10 @@ func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Ta
 func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
 	// Only a human answers the question, so an agent reading the queue sees
 	// the plain row.
-	if t.db == nil || auth.RequireHuman(ctx) != nil {
+	if human := auth.Allows(ctx, "activity", principal.ActionRead) && auth.RequireHuman(ctx) == nil; t.db == nil || !human {
 		return tasks, nil
 	}
-	var bases []activities.PromiseBasis
-	byBasis := map[ids.UUID]struct{ task, contact ids.UUID }{}
-	var keys []string
-	for _, task := range tasks {
-		if !task.Commitment || task.SourceActivityID == nil {
-			continue
-		}
-		keys = append(keys, momentaction.DoneKey(openapi_types.UUID(task.ID)))
-		for _, recipient := range task.Recipients {
-			if recipient.Status != crmcontracts.WorklistPromiseRecipientStatusOpen {
-				continue
-			}
-			basis := ids.NewV7()
-			byBasis[basis] = struct{ task, contact ids.UUID }{task.ID, ids.UUID(recipient.ContactId)}
-			bases = append(bases, activities.PromiseBasis{PromiseID: basis, SourceActivityID: *task.SourceActivityID, RecipientContactID: ids.UUID(recipient.ContactId)})
-		}
-	}
+	bases, byBasis, keys := promiseBases(tasks)
 	if len(bases) == 0 {
 		return tasks, nil
 	}
@@ -269,26 +253,64 @@ func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Tas
 	if err != nil {
 		return nil, err
 	}
-	type asked struct {
-		contact     ids.UUID
-		sent        activities.PromiseFollowUp
-		fingerprint string
+	askMayBeDone(ctx, tasks, byBasis, followUps, setAside)
+	return tasks, nil
+}
+
+// promiseBasisOwner is the task and recipient one follow-up basis stands for.
+type promiseBasisOwner struct{ task, contact ids.UUID }
+
+// promiseBases builds one follow-up basis per open recipient of each promise
+// task, and the question keys the reader's Not yet answers are read under.
+func promiseBases(tasks []attention.Task) ([]activities.PromiseBasis, map[ids.UUID]promiseBasisOwner, []string) {
+	var bases []activities.PromiseBasis
+	byBasis := map[ids.UUID]promiseBasisOwner{}
+	var keys []string
+	for _, task := range tasks {
+		if !task.Commitment || task.SourceActivityID == nil {
+			continue
+		}
+		keys = append(keys, momentaction.DoneKey(openapi_types.UUID(task.ID)))
+		for _, recipient := range task.Recipients {
+			if recipient.Status != crmcontracts.WorklistPromiseRecipientStatusOpen {
+				continue
+			}
+			basis := ids.NewV7()
+			byBasis[basis] = promiseBasisOwner{task.ID, ids.UUID(recipient.ContactId)}
+			bases = append(bases, activities.PromiseBasis{PromiseID: basis, SourceActivityID: *task.SourceActivityID, RecipientContactID: ids.UUID(recipient.ContactId)})
+		}
 	}
-	byTask := map[ids.UUID][]asked{}
+	return bases, byBasis, keys
+}
+
+// doneAsked is one recipient's question about a promise task.
+type doneAsked struct {
+	contact     ids.UUID
+	sent        activities.PromiseFollowUp
+	fingerprint string
+}
+
+// askMayBeDone marks each task with the question its newest unanswered
+// follow-up asks.
+func askMayBeDone(
+	ctx context.Context, tasks []attention.Task, byBasis map[ids.UUID]promiseBasisOwner,
+	followUps map[ids.UUID]activities.PromiseFollowUp, setAside map[momentaction.DoneSetAside]bool,
+) {
 	holders := map[ids.UUID]string{}
 	for _, task := range tasks {
 		holders[task.ID] = momentaction.HeldMarker(ctx, task.AssigneeID)
 	}
+	byTask := map[ids.UUID][]doneAsked{}
 	for basis, sent := range followUps {
 		owner := byBasis[basis]
 		fingerprint := momentaction.DoneFingerprint(openapi_types.UUID(owner.task), sent, holders[owner.task])
-		byTask[owner.task] = append(byTask[owner.task], asked{contact: owner.contact, sent: sent, fingerprint: fingerprint})
+		byTask[owner.task] = append(byTask[owner.task], doneAsked{contact: owner.contact, sent: sent, fingerprint: fingerprint})
 	}
 	for i := range tasks {
 		key := momentaction.DoneKey(openapi_types.UUID(tasks[i].ID))
-		found, ok := newestUnanswered(byTask[tasks[i].ID], func(a asked) bool {
+		found, ok := newestUnanswered(byTask[tasks[i].ID], func(a doneAsked) bool {
 			return setAside[momentaction.DoneSetAside{Contact: a.contact, Key: key, Fingerprint: a.fingerprint}]
-		}, func(a asked) activities.PromiseFollowUp { return a.sent })
+		}, func(a doneAsked) activities.PromiseFollowUp { return a.sent })
 		if !ok {
 			continue
 		}
@@ -298,7 +320,6 @@ func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Tas
 			ClaimKey: key, EvidenceFingerprint: found.fingerprint,
 		}
 	}
-	return tasks, nil
 }
 
 // newestUnanswered picks the follow-up a promise task asks about. That is the

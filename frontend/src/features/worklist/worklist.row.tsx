@@ -27,6 +27,7 @@ import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
+import { WorklistMayBeDone } from "./worklist.maybedone";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
@@ -36,7 +37,6 @@ import {
   readerTask,
   sharedResponsibility,
 } from "./worklist.reader";
-import { WorklistMayBeDone } from "./worklist.maybedone";
 import { PromiseRecipients } from "./worklist.recipients";
 import { useDrawerDials, withWorklistReturn } from "./worklist.return";
 import { aboutRecord, shapedReadings, touchOf } from "./worklist.row.captions";
