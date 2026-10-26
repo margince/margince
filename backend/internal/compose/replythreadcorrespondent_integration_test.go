@@ -128,15 +128,17 @@ func TestMailNamingACustomerWithoutAuthenticationStaysOutOfTheirReply(t *testing
 	o := setupOwed(t)
 	const unproven = "Please send the signed contract to my new address instead."
 	o.capture(t, pricingMail("buyer@alpha.test", o.seat, pricingRoot, alphaAsks, 0, true))
+	o.capture(t, pricingMail(o.seat, "buyer@alpha.test", "pricing-ours@ws.example", ourAnswer, 15, false))
 	unprovenID := o.capture(t, pricingMail("buyer@alpha.test", o.seat, "pricing-x@alpha.test", unproven, 30, false))
 	anchor := o.capture(t, pricingMail("buyer@alpha.test", o.seat, "pricing-2@alpha.test", alphaConfirms, 60, true))
-	requireOneThreadKey(t, o, anchor, 3)
+	requireOneThreadKey(t, o, anchor, 4)
 	content := replyPrompt(t, o, anchor)
 	if strings.Contains(content, unproven) || !strings.Contains(content, alphaAsks) {
 		t.Fatalf("the reply's context must hold the authenticated question and not the unauthenticated mail: %s", content)
 	}
-	if content := replyPrompt(t, o, unprovenID); strings.Contains(content, alphaAsks) || strings.Contains(content, alphaConfirms) {
-		t.Fatalf("a reply to unauthenticated mail carries the customer's authenticated mail: %s", content)
+	if content := replyPrompt(t, o, unprovenID); strings.Contains(content, alphaAsks) ||
+		strings.Contains(content, alphaConfirms) || strings.Contains(content, ourAnswer) {
+		t.Fatalf("a reply to unauthenticated mail carries other mail of the customer it names: %s", content)
 	}
 }
 

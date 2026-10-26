@@ -19,12 +19,12 @@ import (
 )
 
 // SameCorrespondenceSQL is the test that row belongs to anchor's correspondence.
-// A thread key is read from headers a sender writes, so it is not enough. Row
-// must be on anchor's thread and be one of two kinds of mail:
-//   - our own mail to anchor's counterparty, or to anyone at its company domain
-//     when anchor is proven;
+// A thread key is read from headers a sender writes, so it is not enough. Anchor
+// must be proven (correspondence.ProvenSQL), or it binds no other row. Row must
+// be on anchor's thread and be one of two kinds of mail:
+//   - our own mail to anchor's counterparty or to anyone at its company domain;
 //   - mail from that counterparty or company domain whose sender was
-//     authenticated, when anchor is proven.
+//     authenticated.
 //
 // companyDomain is a placeholder holding CorrespondenceDomainTx's answer. An
 // empty answer turns the company arm off. Aliases are compile-time literals.
@@ -33,11 +33,10 @@ func SameCorrespondenceSQL(row, anchor, companyDomain string) string {
 	sameCompany := `(` + companyDomain + ` <> '' AND EXISTS (SELECT 1 FROM activity_participant counterparty
           WHERE counterparty.activity_id = ` + row + `.id AND lower(counterparty.address) = ` + row + `.counterparty_email
             AND ` + owndomain.CoversSQL("counterparty.address_domain_folded", companyDomain) + `))`
-	proven := correspondence.ProvenSQL(anchor)
 	return `(` + correspondence.ThreadSQL(row, anchor) + `
-     AND coalesce(` + anchor + `.counterparty_email, '') <> ''
-     AND ((` + correspondence.OurOutboundSQL(row) + ` AND (` + sameParty + ` OR (` + proven + ` AND ` + sameCompany + `)))
-       OR (` + correspondence.AuthenticatedInboundSQL(row) + ` AND ` + proven + ` AND (` + sameParty + ` OR ` + sameCompany + `))))`
+     AND coalesce(` + anchor + `.counterparty_email, '') <> '' AND ` + correspondence.ProvenSQL(anchor) + `
+     AND (` + correspondence.OurOutboundSQL(row) + ` OR ` + correspondence.AuthenticatedInboundSQL(row) + `)
+     AND (` + sameParty + ` OR ` + sameCompany + `))`
 }
 
 // CorrespondenceDomainTx is the company domain a counterparty's correspondence
