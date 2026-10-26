@@ -6,11 +6,12 @@
 package compose
 
 // The cohort repair files a synced meeting under an attendee who became a
-// contact later. These are its boundaries: a member's re-filing stands, the
-// meeting keeps its time, an archived meeting and one at the link ceiling are
-// left alone, and the meeting reads as its audience says afterwards.
+// contact later. These are its boundaries. A member's re-filing stands, and
+// the meeting keeps its time. An archived meeting and one at the link ceiling
+// are left alone. The meeting reads as its audience says afterwards.
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -24,8 +25,8 @@ import (
 var cohortMeetingAt = time.Date(2026, 9, 3, 14, 30, 0, 0, time.UTC)
 
 // syncedMeeting writes a meeting the way a calendar sync left it before the
-// attendee was filed: connector-captured, the attendee on a participant row,
-// no link to them.
+// attendee was filed. It is connector-captured, with the attendee on a
+// participant row and no link to them.
 func syncedMeeting(t *testing.T, e *integration.Env, attendee ids.UUID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
@@ -58,12 +59,7 @@ func owedRepair(t *testing.T, e *integration.Env, contact ids.ContactID) bool {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, id := range owed {
-		if id == contact {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(owed, contact)
 }
 
 func TestTheCohortRepairLeavesAMeetingAMemberRefiledElsewhere(t *testing.T) {
