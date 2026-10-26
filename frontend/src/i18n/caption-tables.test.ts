@@ -12,10 +12,16 @@ import { LOCALES } from "./index";
 // A table of English sentences outside the catalogs reaches every reader in
 // English, whatever language they chose. Its captions belong in en, de and vi.
 
-// A capital, then at least one lowercase word: "Loading pipeline" is a
-// sentence, a product name such as "Microsoft Teams" is not.
-const SENTENCE =
-  /^[A-Z][a-z]+(?: [A-Za-z%{][\w%'’{}-]*)*(?: [a-z]{3,}[\w'’-]*)(?: [A-Za-z%{][\w%'’{}-]*)*$/;
+// A capital or a placeholder, then at least one lowercase word: "Loading
+// pipeline…" and "{name} is typing" are sentences, "Microsoft Teams" is not.
+const WORD = String.raw`[A-Za-z%{][\w%'’{}-]*[,;:]?`;
+const LOWER = String.raw`[a-z]{3,}[\w'’-]*[,;:]?`;
+const SENTENCE = new RegExp(
+  String.raw`^(?:[A-Z][a-z]+[,;:]?|\{\w+\})(?: ${WORD})*(?: ${LOWER})(?: ${WORD})*[.…!?]?$`,
+);
+// One word is a caption when it says what is going on: "Thinking", "Failed".
+// A one-word noun is not caught, since a wire name or a product has its shape.
+const STATE_WORD = /^[A-Z][a-z]+(?:ing|ed)[.…]?$/;
 
 function unwrapped(node: ts.Expression): ts.Expression {
   return ts.isAsExpression(node) || ts.isSatisfiesExpression(node)
@@ -27,7 +33,10 @@ function unwrapped(node: ts.Expression): ts.Expression {
 function captionsIn(path: string, text: string): string[] {
   const found: string[] = [];
   const collect = (node: ts.Node): void => {
-    if (ts.isStringLiteralLike(node) && SENTENCE.test(node.text)) {
+    if (
+      ts.isStringLiteralLike(node) &&
+      (SENTENCE.test(node.text) || STATE_WORD.test(node.text))
+    ) {
       found.push(node.text);
     }
     ts.forEachChild(node, collect);
@@ -67,13 +76,23 @@ describe("the caption-table finder, over planted modules", () => {
     ).toEqual(["Editing deal"]);
   });
 
+  it("finds a caption led by a placeholder, a one-word state and a trailing ellipsis", () => {
+    expect(
+      captionsIn(
+        "/app/src/copy.ts",
+        `const SAID = { typing: "{name} is typing", busy: "Thinking", wait: "Loading deals…", end: "Failed." };`,
+      ),
+    ).toEqual(["{name} is typing", "Thinking", "Loading deals…", "Failed."]);
+  });
+
   it("passes catalog keys, product names and text inside a function", () => {
     expect(
       captionsIn(
         "/app/src/copy.ts",
         [
           `const SAID = { deals: "agent.ticker.said.deals" };`,
-          `const NAMES = { meet: "Google Meet", teams: "Microsoft Teams" };`,
+          `const NAMES = { meet: "Google Meet", teams: "Microsoft Teams", crm: "Salesforce" };`,
+          `const KEYS = { field: "Title", path: "{base}/deals", count: "{count}" };`,
           `function f() { return { x: "Loading pipeline" }; }`,
         ].join("\n"),
       ),
