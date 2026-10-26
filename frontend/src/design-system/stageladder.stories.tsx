@@ -228,9 +228,8 @@ async function pagersMatchOverflow(canvasElement: HTMLElement) {
 
 async function pageToTheEnd(canvasElement: HTMLElement) {
   const { run, later, earlier } = await pagersMatchOverflow(canvasElement);
-  if (run.scrollWidth - run.clientWidth <= 1) {
-    return;
-  }
+  // A run that fits has no end to page to, and would pass with no press.
+  expect(run.scrollWidth - run.clientWidth).toBeGreaterThan(1);
   const user = userEvent.setup();
   for (let press = 0; press < 12 && later(); press += 1) {
     const button = later();
