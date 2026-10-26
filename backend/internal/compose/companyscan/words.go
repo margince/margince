@@ -114,7 +114,7 @@ func readWords(
 	slices.Reverse(out)
 	slices.Reverse(threads)
 	labelThreads(out, threads)
-	if err := markSettled(ctx, tx, out, now); err != nil {
+	if err := markSettled(ctx, tx, companyID, out, now); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -135,12 +135,12 @@ func labelThreads(messages []MessageIn, threads []string) {
 }
 
 // markSettled asks the activities module which messages their thread settled.
-func markSettled(ctx context.Context, tx pgx.Tx, messages []MessageIn, now time.Time) error {
+func markSettled(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, messages []MessageIn, now time.Time) error {
 	cited := make([]ids.UUID, 0, len(messages))
 	for _, message := range messages {
 		cited = append(cited, message.ID)
 	}
-	settled, err := activities.SettledCitations(ctx, tx, cited, now)
+	settled, err := settledFor(ctx, tx, companyID, cited, now)
 	if err != nil {
 		return fmt.Errorf("companyscan: reading which exchanges their threads settled: %w", err)
 	}

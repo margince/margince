@@ -103,7 +103,7 @@ func (companyScanCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 func companyScanInput(f companyScanFixture) (companyscan.Input, map[string]string, error) {
 	in := companyscan.Input{Account: companybrief.Input{
 		Name: f.Name, Industry: f.Industry, SectionsOmitted: f.SectionsOmitted,
-	}, Partner: f.Partner}
+	}, Partner: f.Partner, NoDealAdvice: f.Partner}
 	label := map[string]string{}
 	for _, contact := range f.Contacts {
 		if err := refuseUnnameable(contact.Label, "contact", label); err != nil {

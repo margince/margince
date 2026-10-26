@@ -22,7 +22,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -218,43 +217,8 @@ func StrengthForCompanyContacts(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	now time.Time, within *ids.ProjectID,
 ) ([]ContactStrength, error) {
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	companyPos := arg(companyID)
-	// The roster is drawn from employment EDGES: "who works at this account" is
-	// the fact relationship.read governs, and this read is the one company360's
-	// contacts section is built from. A refusal reaches the assembler, which
-	// names `contacts` in sections_omitted — so the page says "you may not see
-	// this" rather than showing an account with nobody at it.
-	edgeBound, err := auth.EdgeReadScope(ctx, "r", arg)
-	if err != nil {
-		return nil, err
-	}
-	if edgeBound == "" {
-		edgeBound = "TRUE"
-	}
-	scope, err := contactScopePredicate(ctx, arg)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT p.id FROM contact p
-		JOIN relationship r ON r.contact_id = p.id
-		WHERE r.kind = 'employment' AND r.company_id = $%d
-		  AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
-		  AND p.archived_at IS NULL AND (%s) AND (%s)
-		ORDER BY p.id`, companyPos, edgeBound, scope), args...)
-	if err != nil {
-		return nil, err
-	}
-	contacts, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (ids.ContactID, error) {
-		var id ids.ContactID
-		err := row.Scan(&id)
-		return id, err
-	})
+	// A refusal reaches the assembler, which names `contacts` in sections_omitted.
+	contacts, err := CompanyRosterTx(ctx, tx, companyID)
 	if err != nil {
 		return nil, err
 	}

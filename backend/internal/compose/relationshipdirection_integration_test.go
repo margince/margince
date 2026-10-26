@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -79,5 +81,55 @@ func (f *relationshipFixture) logOnCompanyOnly(t *testing.T, daysAgo int) {
 		Links: []activities.ActivityLinkInput{{EntityType: "company", EntityID: f.company}},
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// An older inbound mail that lost its sender row is still the contact's when
+// its counterparty is their address.
+func TestAMailThatLostItsSenderRowStillCountsAsTheContacts(t *testing.T) {
+	f := newRelationshipFixture(t)
+	older := f.mail(t, "anna-older-capture", f.contactAddr, f.seatAddr, "", 3)
+	f.e.WsExec(t, `DELETE FROM activity_participant WHERE activity_id = $1 AND role = 'from'`, older)
+
+	contact, company, inbound := f.readings(t)
+	if contact.direction != crmcontracts.RelationshipDirectionInboundOnly || contact.inboundAt == nil || inbound != 1 {
+		t.Errorf("the mail without its sender row vanished: direction %q, last inbound %v, inbound_90d %d",
+			contact.direction, contact.inboundAt, inbound)
+	}
+	if company.direction != contact.direction || company.inboundAt == nil {
+		t.Errorf("the company reads %+v and its only contact %+v", company, contact)
+	}
+}
+
+// An employee the reader may not see moves none of the account's clocks for
+// that reader.
+func TestAHiddenEmployeeMovesNoCompanyClockForTheReader(t *testing.T) {
+	f := newRelationshipFixture(t)
+	made, err := f.e.Contacts.CreateContact(f.e.Admin(), contacts.CreateContactInput{
+		FullName: "Hans Hidden", Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: "hans@client.test", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hidden := ids.UUID(made.Id)
+	f.e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, role, source, captured_by)
+		VALUES ('employment', $1, $2, 'Buyer', 'manual', 'human:x')`, hidden, f.company)
+	f.mail(t, "hans-note", "hans@client.test", f.seatAddr, "", 2)
+	rep := f.e.As(f.seat, []ids.UUID{f.e.Team1}, integration.AccountRepPerms)
+	inboundAt := func() *time.Time {
+		t.Helper()
+		account, err := f.companyPages().Assemble(rep, ids.CompanyID{UUID: f.company})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return account.LastInboundAt
+	}
+	if inboundAt() == nil {
+		t.Fatal("the employee's mail does not move the clock while they are visible; the case proves nothing")
+	}
+	f.e.MakeCapturePrivate(t, "contact", hidden, f.e.Rep3)
+	if got := inboundAt(); got != nil {
+		t.Errorf("an employee the reader may not see moved the account's inbound clock to %v", got)
 	}
 }

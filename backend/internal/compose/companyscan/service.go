@@ -345,7 +345,7 @@ func (s *Service) assemble(ctx context.Context, companyID ids.CompanyID, languag
 		if err != nil {
 			return err
 		}
-		in.Partner, err = livePartner(ctx, tx, companyID)
+		in.Partner, in.NoDealAdvice, err = partnerStanding(ctx, tx, companyID)
 		return err
 	})
 	if err != nil {
@@ -433,15 +433,16 @@ func (s *Service) fail(ctx context.Context, h held, reason string) error {
 // healthy database, short enough that a dead one does not keep the slot.
 const failWriteTimeout = 5 * time.Second
 
-// livePartner reads whether the account runs a live partner programme. A
-// reader without the partner grant reads the account as no partner.
-func livePartner(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (bool, error) {
+// partnerStanding reads whether the account runs a live partner programme,
+// and whether deal advice is withheld. A reader without the partner grant
+// cannot rule a programme out, so deal advice is withheld without naming one.
+func partnerStanding(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (partner, noDealAdvice bool, err error) {
 	live, err := contacts.LivePartnerCompaniesBatch(ctx, tx, []ids.CompanyID{companyID})
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return false, nil
+		return false, true, nil
 	}
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
-	return live[companyID], nil
+	return live[companyID], live[companyID], nil
 }

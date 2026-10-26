@@ -38,17 +38,17 @@ func TestAnOpenMessageStillCarriesItsAsk(t *testing.T) {
 	}
 }
 
-func TestAPartnerAccountIsNeverAdvisedToOpenADeal(t *testing.T) {
+func TestAnAccountWithDealAdviceWithheldIsNeverAdvisedToOpenADeal(t *testing.T) {
 	in, nudge := scanInput()
-	in.Partner = true
+	in.NoDealAdvice = true
 	need := finding(nudge, nudgeQuote)
 	need["kind"] = "need_raised"
 	kept, refused, err := ParseFindings(reply(need), ids.New[ids.CompanyKind](), in, "en")
 	if err != nil || len(kept) != 0 || len(refused) != 1 {
-		t.Errorf("a need on a partner account: kept %d, refused %v, err %v; want it refused", len(kept), refused, err)
+		t.Errorf("a need with deal advice withheld: kept %d, refused %v, err %v; want it refused", len(kept), refused, err)
 	}
 	if kept, _, err := ParseFindings(reply(finding(nudge, nudgeQuote)), ids.New[ids.CompanyKind](), in, "en"); err != nil || len(kept) != 1 {
-		t.Errorf("a partner's open question was refused: kept %d, err %v", len(kept), err)
+		t.Errorf("an open question was refused with deal advice withheld: kept %d, err %v", len(kept), err)
 	}
 }
 

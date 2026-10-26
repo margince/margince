@@ -3,6 +3,8 @@
 
 package relstrength
 
+import "fmt"
+
 // Which way a relationship runs. The contact page, the company roll-up, the
 // strength fold and the colleague graph ask "did they write" here. One contact
 // then cannot read two-way on one card and outbound only on the next. Each
@@ -43,12 +45,18 @@ func (s Sides) Direction() Direction {
 	return DirectionNone
 }
 
-// TheyWroteSQL admits a message the contact wrote to us: inbound, with the
-// contact as its sender. A colleague's reply on a thread the contact is only
-// copied on is not the contact writing. contact is a SQL expression.
+// TheyWroteSQL admits a message the contact sent us; a colleague's reply on
+// their thread is not theirs. Older mail that lost its `from` row keeps the
+// sender as its counterparty. contact is a SQL expression.
 func TheyWroteSQL(contact, activity string) string {
-	return "(" + activity + ".direction = 'inbound' AND " + SenderSQL(contact, activity) + ")"
+	return "(" + activity + ".direction = 'inbound' AND (" + SenderSQL(contact, activity) + " OR " +
+		fmt.Sprintf(senderlessCounterpartySQL, contact, activity) + "))"
 }
+
+const senderlessCounterpartySQL = `(NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = %[2]s.id AND af.role = 'from')
+		AND EXISTS (SELECT 1 FROM contact_email ce
+		 WHERE ce.contact_id = %[1]s AND ce.archived_at IS NULL AND ce.email = %[2]s.counterparty_email))`
 
 // WeWroteSQL admits a message we sent. Which contacts it reached is the
 // caller's walk, because reaching someone is not authorship.

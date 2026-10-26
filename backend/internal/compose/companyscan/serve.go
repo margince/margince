@@ -51,7 +51,7 @@ func (s *Service) wire(
 	}
 	// Before the cap too: a finding whose ask its thread has since settled
 	// must not hold a slot.
-	current, err := s.dropSettled(ctx, keepCited(merged, standing))
+	current, err := s.dropSettled(ctx, companyID, keepCited(merged, standing))
 	if err != nil {
 		return crmcontracts.CompanyScan{}, err
 	}

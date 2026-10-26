@@ -9,12 +9,16 @@ package companyscan
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -26,12 +30,12 @@ func claimsOwed(kind crmcontracts.Company360SuggestionKind) bool {
 
 // standingRefusal says why a finding cannot rest on this message for this
 // account, or "" when it can.
-func standingRefusal(kind crmcontracts.Company360SuggestionKind, message MessageIn, partner bool) string {
+func standingRefusal(kind crmcontracts.Company360SuggestionKind, message MessageIn, noDealAdvice bool) string {
 	if message.Settled && claimsOwed(kind) {
 		return "the message was already answered or kept in its thread, so nothing is owed on it"
 	}
-	if partner && kind == crmcontracts.Company360SuggestionKindNeedRaised {
-		return "the account is a partner; its business is recorded in the partner programme, never as a deal to open"
+	if noDealAdvice && kind == crmcontracts.Company360SuggestionKindNeedRaised {
+		return "deal advice is not wanted for this account, so no need is raised as a deal to open"
 	}
 	return ""
 }
@@ -39,7 +43,7 @@ func standingRefusal(kind crmcontracts.Company360SuggestionKind, message Message
 // dropSettled removes the stored model findings whose cited message has since
 // been settled in its thread. A second pass over its answer drops nothing.
 func (s *Service) dropSettled(
-	ctx context.Context, findings []crmcontracts.Company360Suggestion,
+	ctx context.Context, companyID ids.CompanyID, findings []crmcontracts.Company360Suggestion,
 ) ([]crmcontracts.Company360Suggestion, error) {
 	var cited []ids.UUID
 	for _, finding := range findings {
@@ -53,7 +57,7 @@ func (s *Service) dropSettled(
 	var settled map[ids.UUID]bool
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var readErr error
-		settled, readErr = activities.SettledCitations(ctx, tx, cited, s.now().UTC())
+		settled, readErr = settledFor(ctx, tx, companyID, cited, s.now().UTC())
 		return readErr
 	})
 	if err != nil {
@@ -81,4 +85,15 @@ func owedCitation(finding crmcontracts.Company360Suggestion) (ids.UUID, bool) {
 		}
 	}
 	return ids.UUID{}, false
+}
+
+// settledFor reads the thread verdicts for one account. Only a follow-up to
+// one of its contacts the caller may read keeps a promise. A reader refused
+// the roster keeps every promise open.
+func settledFor(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, cited []ids.UUID, asOf time.Time) (map[ids.UUID]bool, error) {
+	roster, err := contacts.CompanyRosterTx(ctx, tx, companyID)
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return nil, err
+	}
+	return activities.SettledCitations(ctx, tx, cited, roster, asOf)
 }

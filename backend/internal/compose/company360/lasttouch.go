@@ -10,14 +10,16 @@ package company360
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -96,6 +98,10 @@ func LastTouchFor(
 	}
 	touched += opts.projectScope(arg)
 	touched += fmt.Sprintf(" AND a.occurred_at <= $%d", arg(now))
+	roster, err := employeeRoster(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
 	// The direction clocks are the roll-up of the employees' own clocks: an
 	// employee wrote it, or it reached one. Activity filed on the account alone
 	// moves only the last contact. Both skip automatic mail (DirectionClockSQL)
@@ -123,8 +129,8 @@ func LastTouchFor(
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
 		lastTouchCompanyAlias, touched, wantedPos, visible,
 		relstrength.DirectionClockSQL("a")+" AND "+relstrength.WorkspaceAudienceSQL("a"), relstrength.InteractionCountsSQL("a"),
-		employeeSQL(relstrength.TheyWroteSQL("emp.contact_id", "a")),
-		employeeSQL(relstrength.WeWroteSQL("a")+" AND "+employeeReachedSQL)), args...)
+		employeeSQL(roster, relstrength.TheyWroteSQL("emp.contact_id", "a")),
+		employeeSQL(roster, relstrength.WeWroteSQL("a")+" AND "+employeeReachedSQL)), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -150,13 +156,20 @@ func LastTouchFor(
 	return out, nil
 }
 
-// employeeSQL admits a row when the predicate holds for one current employee
-// of the account. The contacts section and its strengths read that roster.
-func employeeSQL(predicate string) string {
-	return `EXISTS (SELECT 1 FROM relationship emp
-		  WHERE emp.company_id = reach.company_id AND emp.kind = 'employment'
-		    AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
-		    AND ` + predicate + `)`
+// employeeRoster is the account's employees this caller may read, the roster
+// the contacts section is built from. A caller refused it reads no employee,
+// so a hidden one moves no clock.
+func employeeRoster(ctx context.Context, arg func(any) int) (string, error) {
+	roster, err := contacts.CompanyRosterSQL(ctx, "reach.company_id", arg)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return `SELECT NULL::uuid AS contact_id WHERE false`, nil
+	}
+	return roster, err
+}
+
+// employeeSQL admits a row when the predicate holds for one roster employee.
+func employeeSQL(roster, predicate string) string {
+	return `EXISTS (SELECT 1 FROM (` + roster + `) emp WHERE ` + predicate + `)`
 }
 
 // employeeReachedSQL is the contact page's reach for emp.contact_id: the

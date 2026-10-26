@@ -18,9 +18,12 @@ import (
 // SettledCitations answers whether each cited message's thread settled it by
 // asOf, by the Worklist's rules. Their ask: a settled verdict, a done request
 // task, or an answer when nobody confirmed the ask. Our promise: the follow-up
-// the Worklist offers as "Done?". Other kinds never settle. An id the caller
-// may not read is absent.
-func SettledCitations(ctx context.Context, tx pgx.Tx, cited []ids.UUID, asOf time.Time) (map[ids.UUID]bool, error) {
+// the Worklist offers as "Done?", to one of recipients. Only evidence the
+// caller may read settles. Other kinds never settle. An id the caller may not
+// read is absent.
+func SettledCitations(
+	ctx context.Context, tx pgx.Tx, cited []ids.UUID, recipients []ids.ContactID, asOf time.Time,
+) (map[ids.UUID]bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -31,12 +34,17 @@ func SettledCitations(ctx context.Context, tx pgx.Tx, cited []ids.UUID, asOf tim
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	citedPos := arg(cited)
+	recipientsPos := arg(recipients)
 	until := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	readable, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
 		return nil, err
 	}
 	keptReadable, err := auth.ActivityContentClause(ctx, "kept", arg)
+	if err != nil {
+		return nil, err
+	}
+	answerReadable, err := auth.ActivityContentClause(ctx, "readable_answer", arg)
 	if err != nil {
 		return nil, err
 	}
@@ -49,13 +57,13 @@ func SettledCitations(ctx context.Context, tx pgx.Tx, cited []ids.UUID, asOf tim
                 WHERE %[4]s AND (%[5]s)
                   AND EXISTS (SELECT 1 FROM activity_participant promised
                        WHERE promised.activity_id = a.id AND promised.role IN ('to', 'cc')
-                         AND promised.contact_id IS NOT NULL AND %[6]s))
+                         AND promised.contact_id = ANY($%[9]d) AND %[6]s))
        ELSE false END, false)
   FROM activity a
  WHERE a.id = ANY($%[7]d) AND a.archived_at IS NULL AND (%[8]s)`,
-		requestOpenSQL, confirmedRequestSQL, answeredSQL("a", until),
+		requestOpenSQL, confirmedRequestSQL, answeredReadableSQL("a", until, orUnbounded(answerReadable)),
 		promiseFollowUpSQL("kept", "a", until), orUnbounded(keptReadable),
-		promiseRecipientAddressedSQL("kept", "promised.contact_id"), citedPos, orUnbounded(readable)), args...)
+		promiseRecipientAddressedSQL("kept", "promised.contact_id"), citedPos, orUnbounded(readable), recipientsPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading whether cited threads settled: %w", err)
 	}

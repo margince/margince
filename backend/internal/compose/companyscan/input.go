@@ -51,6 +51,9 @@ type Input struct {
 	// Partner is a live partner programme with the account, which the reader
 	// may see. Its business is recorded there, never as a deal.
 	Partner bool `json:"partner,omitempty"`
+	// NoDealAdvice is set unless the account is known not to be a partner: a
+	// reader who may not see partner programmes cannot rule one out.
+	NoDealAdvice bool `json:"no_deal_advice,omitempty"`
 }
 
 // MessageIn is one exchange as the model reads it.
