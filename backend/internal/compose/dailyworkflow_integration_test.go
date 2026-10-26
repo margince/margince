@@ -197,3 +197,94 @@ func TestACapturedRequestIsTheOwnersAndSurvivesAReplay(t *testing.T) {
 		t.Errorf("after a replay %d request tasks exist for the mail, want 1", n)
 	}
 }
+
+// done completes a task the way a rep does, through the activity writer.
+func (o *owedEnv) done(t *testing.T, task string) {
+	t.Helper()
+	finished := true
+	if _, err := o.e.Activities.UpdateActivity(o.e.Admin(),
+		ids.From[ids.ActivityKind](ids.MustParse(task)),
+		activities.UpdateActivityInput{IsDone: &finished}); err != nil {
+		t.Fatalf("completing %s: %v", task, err)
+	}
+}
+
+// considered totals what the page says it read, across every category. A count
+// answered from anywhere but this page's own rows shows up here.
+func considered(page crmcontracts.Worklist) int {
+	total := 0
+	for _, count := range page.Counts {
+		total += count.Considered
+	}
+	return total
+}
+
+// A day with nothing owed holds nothing, and the days after a task is done
+// stay that way. A count that answered from a stale read would still show the
+// finished task while the queue no longer does.
+func TestQuietDaysHoldNothingAndInventNothing(t *testing.T) {
+	o := setupOwed(t)
+	readers := o.day(t)
+	task := o.taskFor(readers.rep1, t, "Send the pricing sheet", dayNow.Add(2*time.Hour))
+	if _, ok := rowOf(o.page(readers.rep1, t, "mine", dayNow), task); !ok {
+		t.Fatalf("the task is not on the day it is due, so the quiet days below prove nothing")
+	}
+	o.done(t, task)
+
+	for _, after := range []int{0, 1, 2, 7} {
+		when := dayNow.AddDate(0, 0, after)
+		page := o.page(readers.rep1, t, "mine", when)
+		if got := rowIDs(page); len(got) != 0 {
+			t.Errorf("day %d holds %v, want nothing once the task is done", after, got)
+		}
+		if n := considered(page); n != 0 {
+			t.Errorf("day %d counts %d item(s) read, want none", after, n)
+		}
+	}
+	// The manager's team day answers the same, from its own read.
+	team := o.page(readers.manager, t, "team", dayNow.AddDate(0, 0, 1))
+	if got := rowIDs(team); len(got) != 0 {
+		t.Errorf("the manager's quiet day holds %v, want nothing", got)
+	}
+}
+
+// A reply is not the same as a fulfillment. The settlement verdict tells them
+// apart, and only one of the three stops the work being owed.
+//
+// A reply that left something undone keeps it owed. So does a model that would
+// not commit.
+func TestOnlyAFulfilledRequestStopsBeingOwed(t *testing.T) {
+	for _, c := range []struct {
+		verdict   string
+		stillOwed bool
+	}{
+		{activities.RequestSettled, false},
+		{activities.RequestStillOwed, true},
+		{activities.RequestUnsure, true},
+	} {
+		t.Run(c.verdict, func(t *testing.T) {
+			o := setupOwed(t)
+			o.contact(t, "Pat Buyer", "pat@customer.example")
+			request := o.askOf(t, "Signed NDA", o.now.Add(-3*time.Hour))
+			o.weWrite(t, owedMail{
+				to: "pat@customer.example", subject: "Re: Signed NDA", at: o.now.Add(-2 * time.Hour),
+			})
+			candidate, ok := o.offered(t, request)
+			if !ok {
+				t.Fatal("the answered request was never offered for judgement")
+			}
+			if !o.owed(t, request) {
+				t.Fatal("the request stopped being owed before anything judged the reply")
+			}
+
+			if err := activities.NewStore(o.e.DB()).SettleRequest(o.judge(), activities.RequestSettlementInput{
+				Request: candidate, Verdict: c.verdict, Confidence: 0.95, DecidedBy: "test-model",
+			}); err != nil {
+				t.Fatalf("settling as %s: %v", c.verdict, err)
+			}
+			if got := o.owed(t, request); got != c.stillOwed {
+				t.Errorf("after %s the request reads owed=%v, want %v", c.verdict, got, c.stillOwed)
+			}
+		})
+	}
+}
