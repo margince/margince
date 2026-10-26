@@ -57,3 +57,26 @@ func noUpdateGrant(e *promiseEnv) context.Context {
 }
 
 func isDenied(err error) bool { return errors.Is(err, apperrors.ErrPermissionDenied) }
+
+// A caller with workspace-wide read counts every open task the member holds.
+func TestAWorkspaceWideReaderCountsAMembersOpenTasks(t *testing.T) {
+	e := setupPromises(t)
+	task := ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, assignee_id, is_done)
+		VALUES ($1, 'task', 'Call back', now(), 'seed', 'system', $2, false)`, task, e.other)
+	ctx := e.asEditor()
+	actor, _ := principal.Actor(ctx)
+	actor.Permissions.RowScope = principal.RowScopeAll
+	ctx = principal.WithActor(ctx, actor)
+
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	var counted int
+	err := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)).Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		counted, err = store.OpenTasksAssignedTo(ctx, tx, ids.From[ids.UserKind](e.other))
+		return err
+	})
+	if err != nil || counted != 1 {
+		t.Fatalf("open tasks counted = %d, err %v; want 1", counted, err)
+	}
+}
