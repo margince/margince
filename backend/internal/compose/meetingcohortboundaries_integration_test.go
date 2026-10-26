@@ -16,7 +16,9 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -24,26 +26,41 @@ import (
 
 var cohortMeetingAt = time.Date(2026, 9, 3, 14, 30, 0, 0, time.UTC)
 
-// syncedMeeting writes a meeting the way a calendar sync left it before the
-// attendee was filed. It is connector-captured, with the attendee on a
-// participant row and no link to them.
-func syncedMeeting(t *testing.T, e *integration.Env, attendee ids.UUID) ids.UUID {
+// syncedMeeting writes a meeting the way capture leaves it before the attendee
+// is a contact. It is connector-captured, the attendee is an address on a
+// participant row, and nothing links it. With no counterparty, capture holds
+// it for its participants until a link files it.
+func syncedMeeting(t *testing.T, e *integration.Env, address string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	e.WsExec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, source_system, source_id)
-		VALUES ($1, 'meeting', 'Quarterly review', $2, 'gcal:seed', 'connector:gcal', 'gcal', $3)`, id, cohortMeetingAt, "cohort-"+id.String())
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, address, role) VALUES ($1, $2, 'guest@cohort.test', 'attendee')`, id, attendee)
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, source_system, source_id, audience, audience_reason)
+		VALUES ($1, 'meeting', 'Quarterly review', $2, 'gcal:seed', 'connector:gcal', 'gcal', $3, 'participants', $4)`,
+		id, cohortMeetingAt, "cohort-"+id.String(), activities.ReasonNoCounterparty)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'attendee')`, id, address)
+	e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id, posture_at_import) VALUES ($1, $2, 'shared')`, id, e.Rep1)
 	return id
 }
 
-func cohortContact(t *testing.T, e *integration.Env, name string) ids.ContactID {
+// cohortContact is a contact created after the meeting synced, at the address
+// the meeting names.
+func cohortContact(t *testing.T, e *integration.Env, name, address string) ids.ContactID {
 	t.Helper()
-	return ids.From[ids.ContactKind](e.SeedContact(t, name, &e.Rep1))
+	row, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: name, Source: "manual", OwnerID: new(ids.From[ids.UserKind](e.Rep1)),
+		Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ids.From[ids.ContactKind](ids.UUID(row.Id))
 }
 
 func repairCohort(t *testing.T, e *integration.Env, contact ids.ContactID) {
 	t.Helper()
-	if _, err := e.Contacts.RepairContactCohort(e.Admin(), contact); err != nil {
+	// The store as the reconciliation worker builds it, re-deriving the
+	// audience of what it files (cohortpromotegen.go).
+	store := contacts.NewStore(e.DB()).WithAudienceRecompute(activities.RecomputeAudienceTx)
+	if _, err := store.RepairContactCohort(e.Admin(), contact); err != nil {
 		t.Fatalf("repairing the cohort: %v", err)
 	}
 }
@@ -64,8 +81,9 @@ func owedRepair(t *testing.T, e *integration.Env, contact ids.ContactID) bool {
 
 func TestTheCohortRepairLeavesAMeetingAMemberRefiledElsewhere(t *testing.T) {
 	e := integration.Setup(t)
-	guest, other := cohortContact(t, e, "Guest Attendee"), cohortContact(t, e, "Other Contact")
-	meeting := syncedMeeting(t, e, guest.UUID)
+	meeting := syncedMeeting(t, e, "guest@cohort.test")
+	guest := cohortContact(t, e, "Guest Attendee", "guest@cohort.test")
+	other := cohortContact(t, e, "Other Contact", "other@cohort.test")
 	repairCohort(t, e, guest)
 	if !meetingFiledUnder(t, e, meeting, guest) {
 		t.Fatal("the repair did not file the meeting under its attendee")
@@ -75,7 +93,9 @@ func TestTheCohortRepairLeavesAMeetingAMemberRefiledElsewhere(t *testing.T) {
 		t.Errorf("the repair moved the meeting to %s", got)
 	}
 
-	// A member files the meeting under another contact instead.
+	// A member files the meeting under another contact instead. The re-filing
+	// also repoints the attendee row to the contact they chose, so the sweep
+	// and the repair no longer name the attendee.
 	if _, err := e.Activities.RelinkActivity(e.Admin(), ids.From[ids.ActivityKind](meeting), activities.RelinkActivityInput{
 		EntityType: "contact", EntityID: other.UUID, ReplaceExistingOfType: true,
 	}); err != nil {
@@ -98,12 +118,12 @@ func TestTheCohortRepairLeavesAMeetingAMemberRefiledElsewhere(t *testing.T) {
 
 func TestTheCohortRepairLeavesArchivedAndFullMeetingsAlone(t *testing.T) {
 	e := integration.Setup(t)
-	guest := cohortContact(t, e, "Guest Attendee")
-	archived := syncedMeeting(t, e, guest.UUID)
+	archived := syncedMeeting(t, e, "guest@cohort.test")
 	e.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, archived)
-	full := syncedMeeting(t, e, guest.UUID)
+	full := syncedMeeting(t, e, "guest@cohort.test")
+	guest := cohortContact(t, e, "Guest Attendee", "guest@cohort.test")
 	for i := range 25 {
-		filler := cohortContact(t, e, "Filler "+string(rune('A'+i)))
+		filler := ids.From[ids.ContactKind](e.SeedContact(t, "Filler "+string(rune('A'+i)), &e.Rep1))
 		e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, full, filler.UUID)
 	}
 	repairCohort(t, e, guest)
@@ -120,23 +140,37 @@ func TestTheCohortRepairLeavesArchivedAndFullMeetingsAlone(t *testing.T) {
 
 func TestARepairedMeetingReadsAsItsAudienceSays(t *testing.T) {
 	e := integration.Setup(t)
-	guest := cohortContact(t, e, "Guest Attendee")
-	meeting := syncedMeeting(t, e, guest.UUID)
-	repairCohort(t, e, guest)
-	audience := e.WsScalar(t, `SELECT audience FROM activity WHERE id = $1`, meeting)
-	if _, err := e.Activities.GetActivity(e.Admin(), ids.From[ids.ActivityKind](meeting), storekit.LiveOnly); err != nil {
-		t.Fatalf("the workspace admin cannot read the repaired meeting: %v", err)
-	}
+	meeting := syncedMeeting(t, e, "guest@cohort.test")
 	colleague := e.As(e.Rep2, []ids.UUID{e.Team2}, principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}, "activity": {Read: true}},
 		RowScope: principal.RowScopeAll,
 	})
-	_, err := e.Activities.GetActivity(colleague, ids.From[ids.ActivityKind](meeting), storekit.LiveOnly)
-	if audience == "workspace" && err != nil {
-		t.Errorf("a workspace meeting is refused to a colleague: %v", err)
+	readsContent := func() bool {
+		t.Helper()
+		row, err := e.Activities.GetActivity(colleague, ids.From[ids.ActivityKind](meeting), storekit.LiveOnly)
+		if err != nil {
+			return false
+		}
+		return row.ContentState == nil || *row.ContentState == crmcontracts.ActivityContentStateAvailable
 	}
-	if audience != "workspace" && err == nil {
-		t.Errorf("a %s meeting reads for a colleague who is not in it", audience)
+	if readsContent() {
+		t.Fatal("a colleague reads a held meeting's content before the repair")
+	}
+	guest := cohortContact(t, e, "Guest Attendee", "guest@cohort.test")
+	repairCohort(t, e, guest)
+	if !meetingFiledUnder(t, e, meeting, guest) {
+		t.Fatal("the repair did not file the meeting under its attendee")
+	}
+	// Filed under a contact, the meeting is no longer the link-less record the
+	// capture hold was for, so the repair lifts it to the workspace.
+	if audience := e.WsScalar(t, `SELECT audience FROM activity WHERE id = $1`, meeting); audience != "workspace" {
+		t.Errorf("after the repair the audience is %s, want workspace", audience)
+	}
+	if !readsContent() {
+		t.Error("a colleague cannot read the repaired workspace meeting's content")
+	}
+	if _, err := e.Activities.GetActivity(e.Admin(), ids.From[ids.ActivityKind](meeting), storekit.LiveOnly); err != nil {
+		t.Fatalf("the workspace admin cannot read the repaired meeting: %v", err)
 	}
 }
