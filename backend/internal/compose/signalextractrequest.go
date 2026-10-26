@@ -118,6 +118,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			`at most %d, and an empty list when the conversation states none. `+
 			`"summary" is one plain sentence a colleague could act on. `+
 			`For new_opportunity and commitment_made, lifecycle_scope and workstream are both "". `+
+			`Every event carries "commitment". For contract_ended and new_opportunity it is state "unclear", condition "", deadline_precision "none" and deadline_quote "". `+
 			commitmentRecipientsPrompt+
 			`"message_id" and any "restated_message_id" must be copied exactly from the cited message above, character for character. `+
 			`Never reconstruct an id or use a participant reference as a message id. `+
@@ -143,7 +144,8 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			`with a thing and a day is 0.9 or more, while "I'll try" or "at some point" names no `+
 			`real commitment, so report no "commitment_made" for it at all. `+
 			`A plain "I will" with a thing but no day, or only loose timing such as "once it is ready", `+
-			`is still an open commitment_made with due_date "" and deadline_precision "none": timing says when, not whether.`, thread.eventCap())
+			`is still an open commitment_made with due_date "" and deadline_precision "none": timing says when, not whether. `+
+			`Its state is "open" with condition "": our own work becoming ready is not an unmet condition.`, thread.eventCap())
 
 	prompt.WriteString("\n" + commitmentMeaningInstruction + "\n" + commitmentOfferInstruction)
 	return model.Request{

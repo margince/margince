@@ -4980,7 +4980,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           "quote",
           "due_date",
           "promiser_ref",
-          "confidence"
+          "confidence",
+          "commitment"
         ],
         "type": "object"
       },

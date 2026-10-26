@@ -3416,7 +3416,8 @@
                 "quote",
                 "due_date",
                 "promiser_ref",
-                "confidence"
+                "confidence",
+                "commitment"
               ],
               "type": "object"
             },

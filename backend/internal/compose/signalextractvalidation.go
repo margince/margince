@@ -84,6 +84,7 @@ func extractSchema() json.RawMessage {
 					extractionConfidenceKey: schema.Number(),
 				},
 				paramKind, "message_id", "summary", claimQuoteKey, "due_date", "promiser_ref", extractionConfidenceKey,
+				commitmentMeaningField,
 			)),
 		},
 		"events",
