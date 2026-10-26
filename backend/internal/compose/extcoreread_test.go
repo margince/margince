@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -89,5 +91,77 @@ func TestAPageLimitIsCutToTheCeilingAndANegativeOneIsRefused(t *testing.T) {
 	}
 	if _, err := readLimit(-1); !errors.Is(err, extension.ErrInvalid) {
 		t.Errorf("readLimit(-1) = %v, want ErrInvalid", err)
+	}
+}
+
+func TestTheReadHelpersTreatEmptyAsNoFilterAndRefuseWhatIsMalformed(t *testing.T) {
+	if pageLimit(0) != nil || *pageLimit(7) != 7 {
+		t.Error("pageLimit: zero must be nil and a count must be kept")
+	}
+	if optional("") != nil || *optional("x") != "x" {
+		t.Error("optional: empty must be nil and a value must be kept")
+	}
+	if got, err := idFilter[ids.DealKind](""); got != nil || err != nil {
+		t.Errorf("idFilter(empty) = %v, %v; want no filter", got, err)
+	}
+	if got, err := idFilter[ids.DealKind]("00000000-0000-0000-0000-000000000001"); got == nil || err != nil {
+		t.Errorf("idFilter(uuid) = %v, %v; want a parsed id", got, err)
+	}
+	if _, err := idFilter[ids.DealKind]("nope"); !errors.Is(err, extension.ErrInvalid) {
+		t.Errorf("idFilter(nope) = %v, want ErrInvalid", err)
+	}
+	if err := bothOrNeither("", "", "a pair"); err != nil {
+		t.Errorf("bothOrNeither(neither) = %v", err)
+	}
+	if err := bothOrNeither("a", "b", "a pair"); err != nil {
+		t.Errorf("bothOrNeither(both) = %v", err)
+	}
+	if err := bothOrNeither("a", "", "a pair"); !errors.Is(err, extension.ErrInvalid) {
+		t.Errorf("bothOrNeither(half) = %v, want ErrInvalid", err)
+	}
+}
+
+func TestTheAuditNamesOnlyTheFiltersUsed(t *testing.T) {
+	got := filterNames(map[string]string{"cf_region": "x"}, usedFilter{"search", "q"}, usedFilter{"status", ""})
+	if len(got) != 2 || got[0] != "search" || got[1] != "custom_fields" {
+		t.Errorf("filterNames = %v, want [search custom_fields]", got)
+	}
+	if got := filterNames(nil, usedFilter{"search", ""}); len(got) != 0 {
+		t.Errorf("filterNames with nothing used = %v", got)
+	}
+}
+
+func TestADealQueryBecomesTheStoresInputAndABadOneIsRefused(t *testing.T) {
+	const id = "00000000-0000-0000-0000-000000000001"
+	in, err := dealInput(extension.DealQuery{Search: "fleet", StageID: id, OwnerID: id, CompanyID: id, SourceSystem: "erp", SourceID: "9"})
+	if err != nil || in.StageID == nil || in.OwnerID == nil || in.CompanyID == nil || *in.Query != "fleet" || *in.SourceID != "9" {
+		t.Fatalf("dealInput = %+v, %v", in, err)
+	}
+	for name, q := range map[string]extension.DealQuery{
+		"negative limit": {ReadPage: extension.ReadPage{Limit: -1}},
+		"half a pair":    {SourceSystem: "erp"},
+		"bad stage":      {StageID: "x"},
+		"bad owner":      {OwnerID: "x"},
+		"bad company":    {CompanyID: "x"},
+	} {
+		if _, err := dealInput(q); !errors.Is(err, extension.ErrInvalid) {
+			t.Errorf("%s: err = %v, want ErrInvalid", name, err)
+		}
+	}
+}
+
+func TestAPublishedPageIsNeverNilAndAShapeMismatchIsRefused(t *testing.T) {
+	page, err := publish[map[string]any]([]map[string]any(nil), storekit.Page{NextCursor: "c"})
+	if err != nil || page.Items == nil || page.NextCursor != "c" {
+		t.Errorf("publish(empty) = %+v, %v; want a non-nil empty page", page, err)
+	}
+	if _, err := publish[int]([]string{"not a number"}, storekit.Page{}); err == nil {
+		t.Error("publish into the wrong shape must fail")
+	}
+	if _, err := publishOne[int]("not a number"); err == nil {
+		t.Error("publishOne into the wrong shape must fail")
+	}
+	if got, err := publishOne[map[string]any](map[string]any{"a": 1}); err != nil || got["a"] != float64(1) {
+		t.Errorf("publishOne = %v, %v", got, err)
 	}
 }
