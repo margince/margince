@@ -107,8 +107,7 @@ type csvWriters struct {
 	// now is the clock an activity's timestamp is held against; nil is the
 	// system clock.
 	now func() time.Time
-	// zone is the installation zone, read once per run: it says which date is
-	// today and which date a stored instant falls on.
+	// zone, read once per run, says which date is today and which date an instant names.
 	zone *time.Location
 	// updated counts the rows this run rewrote; EnsureResult has no "updated"
 	// member, so the count rides here and the report reads it.
