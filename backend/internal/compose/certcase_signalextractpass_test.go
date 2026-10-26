@@ -111,8 +111,11 @@ func TestACertifiedReadingRunsTheWholePassTheProductRuns(t *testing.T) {
 				position[m.ID.String()] = i + 1
 			}
 			var got []int
-			for _, event := range served.events() {
+			for _, event := range served.asRead(c.thread).events() {
 				got = append(got, position[event.MessageID])
+			}
+			if tc.calls == 2 && strings.Contains(trace.Output, c.numbered[0].ID.String()) {
+				t.Error("the graded answer names a message by its id, which the judge's prompt never shows")
 			}
 			if !slices.Equal(got, tc.served) {
 				t.Errorf("the graded answer cites messages %v, want %v", got, tc.served)
