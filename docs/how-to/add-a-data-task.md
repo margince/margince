@@ -53,6 +53,23 @@ CLI process. The database credentials confer operator authority; the HTTP contro
 session and the `data_task` read or update grant. A wait stops with an error on a paused or failed
 step. Use System health to review the cause before resuming or retrying.
 
+## Run corrections without the worker
+
+On a restored copy whose worker must not start, run the corrections in the CLI process instead:
+
+```sh
+margince-migrate data-tasks execute --dsn "$DSN"
+```
+
+`execute` uses the same engine and catalog as the worker. It starts no job queue and no event lane,
+so no correction reaches a mailbox, a model or an enrichment vendor. The events the corrections
+write wait in the outbox for the next worker. It stops at a step waiting longer than 30 seconds to
+retry, and after `--max-batches` batches (100000 by default).
+
+It prints a verdict before the steps. The command fails unless every step finished. The verdict
+names each step awaiting review, blocked, failed or unfinished. It also names each finished step
+that inspected no rows: such a step proves nothing about rows it never saw.
+
 ## Require a reviewed scope
 
 Set `Manual`, `ReviewVersion` and `Review` on a task that needs an operator’s decision. The callback

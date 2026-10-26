@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -22,10 +23,10 @@ import (
 
 func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: migrate data-tasks <status|estimate|run> [--wait] --dsn <dsn>")
+		return errors.New("usage: migrate data-tasks <status|estimate|run|execute> [--wait] [--max-batches n] --dsn <dsn>")
 	}
 	action := args[0]
-	if action != "status" && action != "estimate" && action != "run" {
+	if action != "status" && action != "estimate" && action != "run" && action != dataTasksExecute {
 		return fmt.Errorf("unknown data-tasks operation %q", action)
 	}
 	fs := flag.NewFlagSet("data-tasks", flag.ContinueOnError)
@@ -35,8 +36,12 @@ func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) 
 		return err
 	}
 	wait := fs.Bool("wait", false, "wait for background corrections to finish (run only)")
+	maxBatches := fs.Int("max-batches", 100000, "the most batches execute commits before it reports (execute only)")
 	if err := fs.Parse(args[1:]); err != nil {
 		return config.FlagFault(fs, err)
+	}
+	if *maxBatches < 1 {
+		return errors.New("--max-batches must be at least 1")
 	}
 	if *wait && action != "run" {
 		return errors.New("--wait requires data-tasks run")
@@ -50,6 +55,9 @@ func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) 
 		return err
 	}
 	defer pool.Close()
+	if action == dataTasksExecute {
+		return executeDataTasks(ctx, pool, *maxBatches, stdout)
+	}
 	progress, err := compose.DataTaskOperation(ctx, pool, action)
 	if err != nil {
 		return err
@@ -104,4 +112,31 @@ func waitForDataTasks(ctx context.Context, pool *pgxpool.Pool, progress []datata
 		}
 	}
 	return progress, nil
+}
+
+// dataTasksExecute runs the corrections in this process instead of queueing
+// them for the worker, for a copy whose worker must not start.
+const dataTasksExecute = "execute"
+
+// dataTasksReport is what execute prints: the verdict, then every step.
+type dataTasksReport struct {
+	Verdict compose.DataTaskVerdict         `json:"verdict"`
+	Steps   []crmcontracts.DataTaskProgress `json:"steps"`
+}
+
+// executeDataTasks prints the report, and fails unless every step finished,
+// so a script cannot read a step awaiting review as done.
+func executeDataTasks(ctx context.Context, pool *pgxpool.Pool, maxBatches int, stdout io.Writer) error {
+	progress, err := compose.DataTaskExecute(ctx, pool, maxBatches)
+	if err != nil {
+		return err
+	}
+	verdict := compose.DataTaskVerdictOf(progress)
+	if err := json.NewEncoder(stdout).Encode(dataTasksReport{Verdict: verdict, Steps: compose.DataTaskProgressReport(progress)}); err != nil {
+		return err
+	}
+	if !verdict.Finished {
+		return errors.New("data-tasks execute: not every correction finished; read the verdict")
+	}
+	return nil
 }
