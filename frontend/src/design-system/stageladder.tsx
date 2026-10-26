@@ -84,7 +84,7 @@ export type StageStep = {
  * a wrapped ladder reads as two sentences and, on a phone, buries the record
  * under rows of pills. They hold one row that scrolls and comes to rest on
  * the current stage. A clipped end fades and carries a button that pages the
- * row that way. The ways out stand outside the scroll: closing a deal
+ * row that way. The ways out stand outside the scroll. Closing a deal
  * from its own page is what the rungs are for, and a scroll may not hide it.
  */
 export function StageLadder({
@@ -214,7 +214,7 @@ function runClass(edges: ClippedEdges) {
 }
 
 // Most of a row per press, so the last rung in view stays in view as the
-// first one after it: the reader keeps their place.
+// first one after it. The reader keeps their place.
 const PAGE_SHARE = 0.75;
 
 /**
