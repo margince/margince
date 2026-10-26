@@ -40,6 +40,7 @@ func TestAnIdIsCheckedBeforeTheDatabaseSeesIt(t *testing.T) {
 		"not-an-id":                            false,
 		"01a17608-0c4a-7086-b086-1caba78f663g": false,
 		"":                                     false,
+		"01a17608x0c4a-7086-b086-1caba78f6630": false,
 	} {
 		if got := isUUID(id); got != want {
 			t.Errorf("isUUID(%q) = %v, want %v", id, got, want)

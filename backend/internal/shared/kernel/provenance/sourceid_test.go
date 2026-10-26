@@ -44,3 +44,10 @@ func TestAdmitSourceID(t *testing.T) {
 		})
 	}
 }
+
+func TestASourceIDRefusalReadsAsItsMessage(t *testing.T) {
+	err := CheckSourceValues(nil, new(""))
+	if err == nil || err.Error() == "" {
+		t.Fatalf("an empty source_id = %v, want a refusal that states itself", err)
+	}
+}

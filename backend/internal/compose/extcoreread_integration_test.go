@@ -329,3 +329,43 @@ func TestABulkReadIsAuditedAsAnExportCarriedByTheUnit(t *testing.T) {
 		t.Errorf("the export row carries the search term: %s", raw)
 	}
 }
+
+// A transaction the database has aborted answers every later statement with an
+// error. A verb must turn that into a refusal class and not a panic or a
+// success, whichever statement it was on.
+func TestEveryReadVerbAndTheNoticeDoorRefuseOnAnAbortedTransaction(t *testing.T) {
+	w := setupReads(t)
+	company := w.mineCompany.String()
+	err := w.readAs(t, w.user, readerPerms(principal.RowScopeAll, allReadable...), func(ctx context.Context, core extension.Core) error {
+		c, ok := core.(extensionCore)
+		if !ok {
+			t.Fatalf("the port is a %T, want extensionCore", core)
+		}
+		if _, err := c.tx.Exec(ctx, `SELECT 1/0`); err == nil {
+			t.Fatal("the probe statement did not fail")
+		}
+		_, dealGet := core.Deals().Get(ctx, w.mineDeal.String())
+		_, dealList := core.Deals().List(ctx, extension.DealQuery{})
+		_, companyGet := core.Companies().Get(ctx, company)
+		_, companyList := core.Companies().List(ctx, extension.CompanyQuery{})
+		_, signalGet := core.Signals().Get(ctx, w.signal.String())
+		_, signalList := core.Signals().List(ctx, extension.SignalQuery{CompanyID: company})
+		_, activityGet := core.Activities().Get(ctx, w.activity.String())
+		_, activityList := core.Activities().List(ctx, extension.ActivityQuery{EntityType: "company", EntityID: company})
+		_, fields := core.CustomFields().List(ctx, "deal")
+		_, notice := core.Notices().Send(ctx, extension.NoticeRequest{
+			Member: w.user.String(), Record: extension.RecordRef{Type: "deal", ID: w.mineDeal.String()}, Subject: "s",
+		})
+		for name, err := range map[string]error{
+			"deal get": dealGet, "deal list": dealList, "company get": companyGet, "company list": companyList,
+			"signal get": signalGet, "signal list": signalList, "activity get": activityGet,
+			"activity list": activityList, "custom fields": fields, "notice": notice,
+		} {
+			if err == nil {
+				t.Errorf("%s succeeded on an aborted transaction", name)
+			}
+		}
+		return nil
+	})
+	_ = err // the transaction is aborted, so its own rollback is the unit's to report
+}

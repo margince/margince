@@ -66,3 +66,35 @@ func TestAFailedBatchKeepsThePreviousPosition(t *testing.T) {
 		t.Errorf("position = %q, %v; want page-1, so the half-done batch is offered again", saved, err)
 	}
 }
+
+func TestABatchOrPositionReadIsRefusedWhenMalformedUndeclaredAttendedOrExpired(t *testing.T) {
+	e := setupIngress(t)
+	ctx := context.Background()
+	member := extension.UserID(e.member.String())
+	recs := []extension.Record{aProviderRecord("ws-7:1", "a@outside.test")}
+
+	if _, err := e.ingestingRuntime().IngestBatch(ctx, member, probeSource, recs, ""); !errors.Is(err, extension.ErrInvalid) {
+		t.Errorf("a batch with no position answered %v, want ErrInvalid", err)
+	}
+	const other = extension.SourceName("not-declared")
+	if _, err := e.ingestingRuntime().IngestBatch(ctx, member, other, nil, "p"); !errors.Is(err, extension.ErrIngressNotDeclared) {
+		t.Errorf("an undeclared source answered %v, want ErrIngressNotDeclared", err)
+	}
+	if _, err := e.ingestingRuntime().IngestPosition(ctx, other); !errors.Is(err, extension.ErrIngressNotDeclared) {
+		t.Errorf("IngestPosition on an undeclared source answered %v, want ErrIngressNotDeclared", err)
+	}
+
+	attended := runtimeFor(e.callCtx(e.WS), ingressUnit, "1.0.0", "invocation/probe", boundExtensionRuntime())
+	if _, err := attended.IngestBatch(ctx, member, probeSource, recs, "p"); !errors.Is(err, extension.ErrAttendedIngest) {
+		t.Errorf("an attended batch answered %v, want ErrAttendedIngest", err)
+	}
+
+	expired := e.ingestingRuntime()
+	expired.release()
+	if _, err := expired.IngestPosition(ctx, probeSource); !errors.Is(err, extension.ErrRuntimeExpired) {
+		t.Errorf("IngestPosition on a released runtime answered %v, want ErrRuntimeExpired", err)
+	}
+	if _, err := expired.IngestBatch(ctx, member, probeSource, nil, "p"); !errors.Is(err, extension.ErrRuntimeExpired) {
+		t.Errorf("an empty batch on a released runtime answered %v, want ErrRuntimeExpired", err)
+	}
+}

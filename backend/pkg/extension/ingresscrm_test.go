@@ -101,3 +101,32 @@ func TestASourceMayDeclareCompanyAndDealKinds(t *testing.T) {
 		t.Fatal("a source declaring an unpublished kind was accepted")
 	}
 }
+
+func TestARecordOverASizeCapIsRefused(t *testing.T) {
+	longDesc := aCompanyRecord()
+	longDesc.Company.Description = strings.Repeat("d", extension.MaxSubjectRunes+1)
+	longDeal := aDealRecord()
+	longDeal.Deal.Name = strings.Repeat("n", extension.MaxDisplayNameRunes+1)
+	manyRelinks := aDealRecord()
+	manyRelinks.Deal.RelinkActivities = make([]string, extension.MaxRelinkActivities+1)
+	for i := range manyRelinks.Deal.RelinkActivities {
+		manyRelinks.Deal.RelinkActivities[i] = "k"
+	}
+	for name, rec := range map[string]extension.Record{
+		"a company description": longDesc, "a deal name": longDeal, "too many relinks": manyRelinks,
+	} {
+		if err := rec.Validate(); extension.RefusalOf(err) != extension.RefusalActivity {
+			t.Errorf("%s: err = %v, want a payload refusal", name, err)
+		}
+	}
+
+	bigCompany := aCompanyRecord()
+	bigCompany.Raw = make([]byte, extension.MaxRawBytes+1)
+	bigActivity := aValidRecord()
+	bigActivity.Raw = make([]byte, extension.MaxRawBytes+1)
+	for name, rec := range map[string]extension.Record{"a company's raw": bigCompany, "an activity's raw": bigActivity} {
+		if err := rec.Validate(); extension.RefusalOf(err) != extension.RefusalSize {
+			t.Errorf("%s: err = %v, want a size refusal", name, err)
+		}
+	}
+}

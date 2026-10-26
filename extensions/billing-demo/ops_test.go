@@ -28,12 +28,16 @@ const (
 type fakeRows struct {
 	rows [][]any
 	at   int
+	err  error
 }
 
 func (r *fakeRows) Next() bool { r.at++; return r.at <= len(r.rows) }
 func (r *fakeRows) Err() error { return nil }
 func (r *fakeRows) Close()     {}
 func (r *fakeRows) Scan(dest ...any) error {
+	if r.err != nil {
+		return r.err
+	}
 	for i, d := range dest {
 		reflect.ValueOf(d).Elem().Set(reflect.ValueOf(r.rows[r.at-1][i]))
 	}
@@ -61,16 +65,29 @@ type fakeTx struct {
 	pending  [][]any
 	status   [][]any
 	execErr  error
+	// execFailAt fails the Nth statement (1-based); queryErr and scanErr fail a read.
+	execFailAt int
+	queryErr   error
+	scanErr    error
 }
 
 func (t *fakeTx) Exec(_ context.Context, sql string, _ ...any) (int64, error) {
 	t.execs = append(t.execs, sql)
+	if t.execFailAt > 0 && len(t.execs) == t.execFailAt {
+		return 0, errors.New("boom")
+	}
 	return t.affected, t.execErr
 }
 
 func (t *fakeTx) QueryRow(context.Context, string, ...any) extension.Row { return t.conn }
 
 func (t *fakeTx) Query(_ context.Context, sql string, _ ...any) (extension.Rows, error) {
+	if t.queryErr != nil {
+		return nil, t.queryErr
+	}
+	if t.scanErr != nil {
+		return &fakeRows{rows: [][]any{{}}, err: t.scanErr}, nil
+	}
 	if strings.Contains(sql, "synced_paid IS NULL") {
 		return &fakeRows{rows: t.pending}, nil
 	}
@@ -80,11 +97,12 @@ func (t *fakeTx) Query(_ context.Context, sql string, _ ...any) (extension.Rows,
 type fakeSecrets struct {
 	extension.Secrets
 	filed []string
+	err   error
 }
 
 func (s *fakeSecrets) PutUser(_ context.Context, u extension.UserID, key string, _ []byte) error {
 	s.filed = append(s.filed, string(u)+"/"+key)
-	return nil
+	return s.err
 }
 
 type fakeRuntime struct {
@@ -97,6 +115,7 @@ type fakeRuntime struct {
 	result   extension.Result
 	ingErr   error
 	txErr    error
+	syncErr  error
 }
 
 func newRuntime() *fakeRuntime {
@@ -111,7 +130,7 @@ func (r *fakeRuntime) Caller() extension.Caller   { return r.caller }
 func (r *fakeRuntime) Secrets() extension.Secrets { return r.secrets }
 func (r *fakeRuntime) SyncNow(_ context.Context, j extension.JobName) error {
 	r.synced = append(r.synced, j)
-	return nil
+	return r.syncErr
 }
 
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, extension.Tx) error) error {
@@ -275,6 +294,44 @@ func TestTheSyncFailsWithItsClassOnEveryRefusal(t *testing.T) {
 		err := syncTick(context.Background(), r)
 		if err == nil {
 			t.Errorf("%s: the sync succeeded", name)
+		}
+	}
+}
+
+func TestEveryStepOfAConnectAndAnUpdateSurfacesItsFailure(t *testing.T) {
+	ctx := context.Background()
+	for name, mod := range map[string]func(*fakeRuntime){
+		"the connection row": func(r *fakeRuntime) { r.tx.execFailAt = 1 },
+		"a sample invoice":   func(r *fakeRuntime) { r.tx.execFailAt = 2 },
+		"the secret":         func(r *fakeRuntime) { r.secrets.err = errors.New("boom") },
+		"the first sync":     func(r *fakeRuntime) { r.syncErr = errors.New("boom") },
+	} {
+		r := newRuntime()
+		mod(r)
+		if _, err := connect(ctx, r, connectInput()); err == nil {
+			t.Errorf("connect swallowed a failure of %s", name)
+		}
+	}
+	r := newRuntime()
+	r.syncErr = errors.New("boom")
+	if _, err := updateInvoice(ctx, r, json.RawMessage(`{"erp_id":"INV-1","paid":true}`)); err == nil {
+		t.Error("an update swallowed a failing sync")
+	}
+}
+
+func TestAFailingReadOfTheInvoicesIsReportedNotSwallowed(t *testing.T) {
+	ctx := context.Background()
+	for name, mod := range map[string]func(*fakeTx){
+		"query": func(tx *fakeTx) { tx.queryErr = errors.New("boom") },
+		"scan":  func(tx *fakeTx) { tx.scanErr = errors.New("boom") },
+	} {
+		r := newRuntime()
+		mod(r.tx)
+		if _, err := status(ctx, r, nil); err == nil {
+			t.Errorf("status swallowed a failing %s", name)
+		}
+		if _, err := pendingInvoices(ctx, r.tx); err == nil {
+			t.Errorf("pendingInvoices swallowed a failing %s", name)
 		}
 	}
 }

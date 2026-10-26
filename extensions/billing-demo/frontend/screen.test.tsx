@@ -187,4 +187,69 @@ describe("the billing demo screen", () => {
     await screen.findByText(/INV-1001/);
     expect(screen.queryByRole("button", { name: "Mark paid" })).toBeNull();
   });
+
+  it("says so when the service member or the pipeline is missing", async () => {
+    const { fetchStub } = stubTransport(ADMIN, {
+      "GET /ext/billing-demo/status": () => ({ invoices: [] }),
+      "GET /users": () => ({ data: [{ id: "u-human" }] }),
+      "GET /pipelines": () => PIPELINES,
+    });
+    vi.stubGlobal("fetch", vi.fn(fetchStub));
+    renderScreen();
+    expect(await screen.findByText(/service member or the sales pipeline/)).toBeTruthy();
+  });
+
+  it("does not offer to connect when the core's records cannot be read", async () => {
+    for (const missing of ["GET /users", "GET /pipelines"]) {
+      const handlers: Record<string, Handler> = {
+        "GET /ext/billing-demo/status": () => ({ invoices: [] }),
+        "GET /users": () => USERS,
+        "GET /pipelines": () => PIPELINES,
+      };
+      delete handlers[missing];
+      const { calls, fetchStub } = stubTransport(ADMIN, handlers);
+      vi.stubGlobal("fetch", vi.fn(fetchStub));
+      renderScreen();
+      await waitFor(() => expect(calls.some((c) => c.path === "/pipelines")).toBe(true));
+      expect(screen.queryByRole("button", { name: "Connect and add sample invoices" })).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("warns when an invoice change may not have been saved", async () => {
+    const { fetchStub } = stubTransport(ADMIN, {
+      "GET /ext/billing-demo/status": () => ({ invoices: [INVOICE] }),
+      "GET /users": () => USERS,
+      "GET /pipelines": () => PIPELINES,
+    });
+    vi.stubGlobal("fetch", vi.fn(fetchStub));
+    renderScreen();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Mark paid" }));
+    expect(await screen.findByText(/change may not have been saved/)).toBeTruthy();
+  });
+
+  it("warns when a connect may not have been made", async () => {
+    const { fetchStub } = stubTransport(ADMIN, {
+      "GET /ext/billing-demo/status": () => ({ invoices: [] }),
+      "GET /users": () => USERS,
+      "GET /pipelines": () => PIPELINES,
+    });
+    vi.stubGlobal("fetch", vi.fn(fetchStub));
+    renderScreen();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Connect and add sample invoices" }));
+    expect(await screen.findByText(/connection may not have been made/)).toBeTruthy();
+  });
+
+  it("does not render a status read that is refused or has no invoices array", async () => {
+    for (const handlers of [{}, { "GET /ext/billing-demo/status": () => ({}) }]) {
+      const { calls, fetchStub } = stubTransport(ADMIN, handlers);
+      vi.stubGlobal("fetch", vi.fn(fetchStub));
+      renderScreen();
+      await waitFor(() => expect(calls.some((c) => c.path === "/ext/billing-demo/status")).toBe(true));
+      expect(screen.queryByText(/INV-1001/)).toBeNull();
+      cleanup();
+    }
+  });
 });
