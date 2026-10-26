@@ -26,6 +26,7 @@ const QUIET_ROW = {
   level: 3,
   consequence: "data_drifts" as const,
   title: "Mai Tran · quiet for 60 days",
+  occurred_precision: "instant" as const,
   because: [],
   actions: [],
 };
@@ -36,6 +37,7 @@ const DELIVERY_ROW = {
   level: 2,
   consequence: "customer_never_received" as const,
   title: "A message to Globex bounced",
+  occurred_precision: "instant" as const,
   because: [],
   actions: [],
 };
