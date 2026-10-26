@@ -64,13 +64,17 @@ func TestExecuteFinishesAutomaticWorkAndNamesWhatItCouldNotFinish(t *testing.T) 
 	e := integration.Setup(t)
 	now := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
 	probe := datatask.Task{ID: "core/100_probe", Version: 1, Title: "Probe", Steps: []datatask.Step{probeStep("write", probeBatch)}}
-	empty := datatask.Task{ID: "core/200_empty", Version: 1, Title: "Empty", Steps: []datatask.Step{probeStep("scan",
-		func(context.Context, pgx.Tx, datatask.BatchIn) (datatask.BatchOut, error) {
+	empty := datatask.Task{
+		ID: "core/200_empty", Version: 1, Title: "Empty",
+		Steps: []datatask.Step{probeStep("scan", func(context.Context, pgx.Tx, datatask.BatchIn) (datatask.BatchOut, error) {
 			return datatask.BatchOut{Done: true}, nil
-		})}}
-	manual := datatask.Task{ID: "core/300_manual", Version: 1, Title: "Manual", Manual: true, ReviewVersion: "rules-1",
+		})},
+	}
+	manual := datatask.Task{
+		ID: "core/300_manual", Version: 1, Title: "Manual", Manual: true, ReviewVersion: "rules-1",
 		Review: func(context.Context, pgx.Tx, datatask.ReviewRequest) (string, error) { return "", nil },
-		Steps:  []datatask.Step{probeStep("apply", probeBatch)}}
+		Steps:  []datatask.Step{probeStep("apply", probeBatch)},
+	}
 	ctx, engine := probeEngine(t, e, &now, probe, empty, manual)
 	before := e.WsCount(t, `SELECT count(*) FROM river_job`)
 
@@ -105,10 +109,12 @@ func TestExecuteFinishesAutomaticWorkAndNamesWhatItCouldNotFinish(t *testing.T) 
 func TestExecuteStopsAtAFailedStepAndNamesIt(t *testing.T) {
 	e := integration.Setup(t)
 	now := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
-	failing := datatask.Task{ID: "core/100_failing", Version: 1, Title: "Failing", Steps: []datatask.Step{probeStep("write",
-		func(context.Context, pgx.Tx, datatask.BatchIn) (datatask.BatchOut, error) {
+	failing := datatask.Task{
+		ID: "core/100_failing", Version: 1, Title: "Failing",
+		Steps: []datatask.Step{probeStep("write", func(context.Context, pgx.Tx, datatask.BatchIn) (datatask.BatchOut, error) {
 			return datatask.BatchOut{}, errors.New("synthetic failure")
-		})}}
+		})},
+	}
 	later := datatask.Task{ID: "core/200_later", Version: 1, Title: "Later", Steps: []datatask.Step{probeStep("write", probeBatch)}}
 	ctx, engine := probeEngine(t, e, &now, failing, later)
 	progress, err := executeDataTasks(ctx, engine, 50, func(context.Context, time.Duration) error { return nil })
