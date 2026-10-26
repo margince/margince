@@ -368,6 +368,7 @@ describe("the What was said card", () => {
       title: "Signed NDA please",
       summary: "",
       occurred_at: "2026-08-20T09:00:00Z",
+      occurred_precision: "instant",
       activity_count: 1,
       status: "unanswered",
     };
@@ -387,6 +388,7 @@ describe("the What was said card", () => {
         title: "Pricing discussion",
         summary: "",
         occurred_at: "2026-08-20T09:00:00Z",
+        occurred_precision: "instant",
         activity_count: 1,
         status: "awaiting_them",
       };
