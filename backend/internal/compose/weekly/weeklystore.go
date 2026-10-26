@@ -118,9 +118,10 @@ type Counts struct {
 	BriefItemsActed     int
 	BriefItemsDismissed int
 
-	// How the week's inbound leads were answered. A lead still inside its
-	// target when the row was written is in neither of the last two: it has
-	// not yet been either answered in time or missed.
+	// How the week's inbound leads were answered. LeadsAnsweredInTarget is
+	// every first response recorded by the close, late ones included. A late
+	// answer is also in LeadsBreached, so the two overlap. A lead with neither
+	// stamp had no recorded response and no recorded breach.
 	// What the week's PLAN came to. Read through a seam rather than queried
 	// here: weeklyplan owns those tables, and a review that counted them
 	// itself would be a second reader of somebody else's rows.

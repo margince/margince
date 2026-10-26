@@ -272,7 +272,7 @@ func TestASentenceAboutDealsIsJudgedByTheDeals(t *testing.T) {
 	leadsOnly := Input{Counts: Counts{LeadsRouted: 4, LeadsRespondedByClose: 4}}
 
 	// TRUE, and it must survive: no deal did anything.
-	if err := refuseContradiction("Four leads answered in time; nothing closed.", leadsOnly); err != nil {
+	if err := refuseContradiction("Four leads got a first response by week close; nothing closed.", leadsOnly); err != nil {
 		t.Errorf("a truthful sentence was refused: %v", err)
 	}
 	// FALSE, and it must still be caught: the week was not empty.
