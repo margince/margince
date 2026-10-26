@@ -23,3 +23,9 @@ func TestTheRefreshPassBudgetOutlastsTheStatementCeilingAndFitsTheJob(t *testing
 			budget, database.StatementCeiling, spec.Timeout.Duration())
 	}
 }
+
+func TestAKindWithoutADeclaredSpecHasNoStatementBudget(t *testing.T) {
+	if _, err := statementBudgetFor("no_such_kind"); err == nil {
+		t.Fatal("an undeclared kind was given a statement budget")
+	}
+}

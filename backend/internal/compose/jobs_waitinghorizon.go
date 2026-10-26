@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -55,11 +56,20 @@ func newWaitingHorizonRefreshWorker(pool *pgxpool.Pool, log *slog.Logger) *waiti
 // the own-domain read and the store. Postgres then cuts the statement with a
 // clean error before River abandons the attempt.
 func waitingHorizonStatementBudget() time.Duration {
-	spec, ok := jobs.SpecFor(WaitingHorizonRefreshArgs{}.Kind())
-	if !ok {
-		panic("compose: waiting_horizon_refresh has no declared job spec")
+	budget, err := statementBudgetFor(WaitingHorizonRefreshArgs{}.Kind())
+	if err != nil {
+		panic(err)
 	}
-	return spec.Timeout.Duration() - waitingHorizonBudgetMargin
+	return budget
+}
+
+// statementBudgetFor derives a kind's statement budget from its declared timeout.
+func statementBudgetFor(kind string) (time.Duration, error) {
+	spec, ok := jobs.SpecFor(kind)
+	if !ok {
+		return 0, fmt.Errorf("compose: job kind %q has no declared spec", kind)
+	}
+	return spec.Timeout.Duration() - waitingHorizonBudgetMargin, nil
 }
 
 const waitingHorizonBudgetMargin = 30 * time.Second
