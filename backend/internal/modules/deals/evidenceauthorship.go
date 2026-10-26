@@ -30,8 +30,8 @@ type EvidenceAuthorshipScope struct {
 // ReconcileEvidenceAuthorship judges again who wrote each activity behind
 // live stage evidence, against the current own domains. The side was judged
 // at the write, so an own domain added or removed since leaves it wrong.
-// A changed side is corrected through the audited writer, and the stage
-// policy, the approval check and assurance read it again.
+// A changed side is corrected through the audited writer. Machine claims that
+// a meeting was held are judged again too, whatever the scope.
 //
 // Refuted rows stay as a member left them. Pages are read unlocked, and only a
 // row being corrected is locked. It answers how many rows it corrected.
@@ -55,7 +55,8 @@ func (s *Store) ReconcileEvidenceAuthorship(ctx context.Context, own OwnDomainRe
 			return corrected, err
 		}
 		if scanned < evidenceAuthorshipBatch {
-			return corrected, nil
+			withdrawn, err := s.reconcileMeetingProof(ctx, own)
+			return corrected + withdrawn, err
 		}
 	}
 }

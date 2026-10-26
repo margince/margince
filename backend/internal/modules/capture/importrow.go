@@ -256,6 +256,18 @@ func seatDeliveredTx(
 	return mine, nil
 }
 
+// arrivalIsProvenTx is replayClaimIsProvenTx, except for a row the identity
+// resolve bound. That row is proven already: it is this seat's own, or names a
+// proven address of theirs. Two calendars' copies never match byte for byte.
+func arrivalIsProvenTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields ActivityFields, parts []connector.Part, resolved bool,
+) (bool, error) {
+	if resolved {
+		return true, nil
+	}
+	return replayClaimIsProvenTx(ctx, tx, id, fields, parts)
+}
+
 // replayClaimIsProvenTx answers whether this seat may record itself as an
 // importer of the message a replay just collided with.
 //

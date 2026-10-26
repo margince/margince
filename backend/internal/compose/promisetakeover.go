@@ -73,6 +73,16 @@ func (h promiseTakeOverHandlers) TakeOver(ctx context.Context, claimID ids.UUID)
 	}
 	var out crmcontracts.PromiseTakeOver
 	err = database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+		// The source lock comes before any row lock, the order a reading of
+		// the message takes them in (lockPromiseSources).
+		var source ids.UUID
+		if err := tx.QueryRow(ctx, `SELECT source_activity_id FROM conversation_claim WHERE id = $1`, claimID).Scan(&source); err == nil {
+			if err := lockPromiseSource(ctx, tx, source); err != nil {
+				return err
+			}
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("compose: reading the promise's source: %w", err)
+		}
 		promise, err := h.claims.PromiseToTakeTx(ctx, tx, claimID)
 		if err != nil {
 			return err

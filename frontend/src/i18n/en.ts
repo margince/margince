@@ -16383,7 +16383,8 @@ export const en = {
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
   "worklist.untitled.task": "Untitled task",
   "worklist.untitled.brief_item": "Deal to review",
-  "worklist.mayBeDone.asked": "You may have done this: you wrote to them on {date}.",
+  "worklist.mayBeDone.asked":
+    "You may have done this: you wrote to them on {date}.",
   "worklist.mayBeDone.done": "Done",
   "worklist.mayBeDone.notYet": "Not yet",
   "worklist.recipients.label": "Recipients",

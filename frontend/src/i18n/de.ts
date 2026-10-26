@@ -16465,7 +16465,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.dedupe_candidate": "Mögliche doppelte Datensätze",
   "worklist.untitled.task": "Aufgabe ohne Titel",
   "worklist.untitled.brief_item": "Zu prüfender Deal",
-  "worklist.mayBeDone.asked": "Vielleicht schon erledigt: Du hast am {date} geschrieben.",
+  "worklist.mayBeDone.asked":
+    "Vielleicht schon erledigt: Du hast am {date} geschrieben.",
   "worklist.mayBeDone.done": "Erledigt",
   "worklist.mayBeDone.notYet": "Noch nicht",
   "worklist.recipients.label": "Empfangende",

@@ -43,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -149,6 +150,10 @@ type ownDomainReader struct{ store *capture.OwnDomainStore }
 
 func (o ownDomainReader) Domains(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	return o.store.ColleagueDomainsTx(ctx, tx)
+}
+
+func (o ownDomainReader) MeetingParties(ctx context.Context, tx pgx.Tx) (owndomain.Parties, error) {
+	return o.store.MeetingPartiesTx(ctx, tx)
 }
 
 func (o ownDomainReader) ReaderAddresses(

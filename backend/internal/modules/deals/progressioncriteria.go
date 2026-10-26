@@ -65,16 +65,17 @@ func (s *Store) refuseUnsettledProgressionCriteria(ctx context.Context, tx pgx.T
 }
 
 type settlingCandidate struct {
-	Kind       string
-	SourceType string
-	SourceID   ids.UUID
-	Side       string
+	Kind        string
+	SourceType  string
+	SourceID    ids.UUID
+	Side        string
+	ExtractedBy string
 }
 
 func (s *Store) criterionSettledNow(
 	ctx context.Context, tx pgx.Tx, dealID ids.DealID, criterionID ids.ExitCriterionID, domains *lazyOwnDomains,
 ) (bool, error) {
-	rows, err := tx.Query(ctx, `SELECT c.kind, e.source_type, e.source_id, e.author_side
+	rows, err := tx.Query(ctx, `SELECT c.kind, e.source_type, e.source_id, e.author_side, e.extracted_by
 		  FROM deal_stage_evidence e JOIN stage_exit_criterion c ON c.id = e.criterion_id
 		 WHERE e.deal_id = $1 AND e.criterion_id = $2 AND e.met AND e.refuted_at IS NULL`,
 		dealID.UUID, criterionID.UUID)
@@ -86,6 +87,16 @@ func (s *Store) criterionSettledNow(
 		return false, fmt.Errorf("deals: rereading a met criterion's evidence: %w", err)
 	}
 	for _, c := range candidates {
+		if domains.own != nil && c.SourceType == SourceActivity && c.ExtractedBy == ExtractedByDeterministic &&
+			CriterionKind(c.Kind) == CriterionEventHeld {
+			held, found, err := meetingStillProvesHeld(principal.SystemActing(ctx, stageMoveCheckActor), tx, c.SourceID, domains.own)
+			if err != nil {
+				return false, err
+			}
+			if found && !held {
+				continue
+			}
+		}
 		side := AuthorSide(c.Side)
 		if domains.own != nil && c.SourceType == SourceActivity && CriterionKind(c.Kind).BuyerMilestone() {
 			own, err := domains.read(ctx, tx)

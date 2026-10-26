@@ -221,6 +221,12 @@ func TestStageEvidenceFollowsAnOwnDomainAddedAndRemoved(t *testing.T) {
 // proposer stages it.
 func (f *authorshipFixture) budgetCard() deals.StageProgressionChange {
 	f.t.Helper()
+	return f.cardFor("budget")
+}
+
+// cardFor is a stage-move card that marks only the criterion under key met.
+func (f *authorshipFixture) cardFor(key string) deals.StageProgressionChange {
+	f.t.Helper()
 	change := deals.StageProgressionChange{DealID: f.dealID, FromStageID: f.stageID, ToStageID: f.stageID}
 	rows, err := integration.OwnerConn(f.t).Query(context.Background(),
 		`SELECT id, key, label, required, version FROM stage_exit_criterion WHERE stage_id = $1 AND archived_at IS NULL`, f.stageID.UUID)
@@ -234,7 +240,7 @@ func (f *authorshipFixture) budgetCard() deals.StageProgressionChange {
 		if err := rows.Scan(&id, &c.Key, &c.Label, &c.Required, &c.Version); err != nil {
 			f.t.Fatal(err)
 		}
-		c.CriterionID, c.Met = ids.From[ids.ExitCriterionKind](id), c.Key == "budget"
+		c.CriterionID, c.Met = ids.From[ids.ExitCriterionKind](id), c.Key == key
 		change.Criteria = append(change.Criteria, c)
 	}
 	return change
