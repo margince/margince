@@ -76,6 +76,9 @@ type VCardResult struct {
 	ContactID *ids.ContactID
 	// Reason says why a card was skipped, in words a reader can act on.
 	Reason string
+	// Fields is what the import did with each field, for a card it created
+	// or updated; nil for every other outcome.
+	Fields []VCardField
 }
 
 // ImportVCards writes every card in one file and reports what became of each.
@@ -350,10 +353,32 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 // import it is the most honest thing available. That also makes a card the
 // newest statement on the record, which is the right answer — somebody is
 // holding it and typing it in.
-func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) error {
+func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) (cardStatement, error) {
+	card, err := readyObservedCard(ctx, tx, entry)
+	if err != nil {
+		return cardStatement{}, err
+	}
+	stated := cardFields(entry)
+	names := make([]string, 0, len(stated)+1)
+	for _, f := range stated {
+		names = append(names, f.name)
+	}
+	corrected, err := s.standingCorrections(ctx, tx, contactID, append(names, fieldPhone))
+	if err != nil {
+		return cardStatement{}, err
+	}
+	st, err := applyObservedCard(ctx, tx, contactID, card, corrected)
+	if err != nil {
+		return cardStatement{}, err
+	}
+	return st, auditCardFields(ctx, tx, contactID, st.moved())
+}
+
+// readyObservedCard is the card as a dated statement by the signed-in importer.
+func readyObservedCard(ctx context.Context, tx pgx.Tx, entry VCardEntry) (observedCard, error) {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return err
+		return observedCard{}, err
 	}
 	// The card itself is the evidence, and there is no page to quote: the
 	// snippet is what the card stated, which is what an Art. 15 answer has to
@@ -382,16 +407,18 @@ func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 	if entry.Revised != nil {
 		var now time.Time
 		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
-			return fmt.Errorf("contacts: dating the card against the clock: %w", err)
+			return observedCard{}, fmt.Errorf("contacts: dating the card against the clock: %w", err)
 		}
 		if !entry.Revised.After(now) {
 			card.ObservedAt = *entry.Revised
 		}
 	}
-	applied, err := applyObservedCard(ctx, tx, contactID, card)
-	if err != nil {
-		return err
-	}
+	return card, nil
+}
+
+// auditCardFields records the fields a card moved on a contact, with one
+// audit row and one event.
+func auditCardFields(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, applied []string) error {
 	if len(applied) == 0 {
 		// The card said nothing this record did not already hold. There is no
 		// change to audit, and an audit row with an empty after-image would
@@ -449,7 +476,7 @@ func (s *Store) CreateFromVCardReviewTx(ctx context.Context, tx pgx.Tx, entry VC
 		return ids.ContactID{}, fmt.Errorf("contacts: creating the reviewed card's contact: %w", err)
 	}
 	created := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	if err := s.attachVCardEmployer(ctx, tx, created, entry); err != nil {
+	if _, err := s.completeCardCreate(ctx, tx, contact, entry); err != nil {
 		return ids.ContactID{}, fmt.Errorf("contacts: attaching the reviewed card's employer: %w", err)
 	}
 	return created, nil

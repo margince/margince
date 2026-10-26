@@ -151,7 +151,7 @@ func yamlFileLayer(source Source, path string, names known) (layer, []error) {
 	if err != nil {
 		return empty, []error{err}
 	}
-	var faults []error
+	faults := parsed.repeated
 	reported := map[string]bool{}
 	for _, u := range unknown {
 		root, _, _ := strings.Cut(u.key, ".")

@@ -51,6 +51,8 @@ stops on any of these:
 - a value that fails the check of its setting or seed;
 - a required value that no source sets;
 - a `--config-file` that does not exist;
+- a key written twice in one mapping of a YAML file, named with both lines:
+  `config/margince.yaml: log_level appears on lines 5 and 40; keep one`;
 - an old posture file beside the base file, such as `margince.dev.yaml` beside `margince.yaml`,
   unless `--config-file` names that same file.
 

@@ -76,10 +76,20 @@ func (s *Store) updateMatchedByCard(
 	}
 	result.Outcome = VCardUpdated
 	result.ContactID = &contactID
-	if err := s.fillFromVCard(ctx, tx, contactID, entry); err != nil {
+	st, err := s.fillFromVCard(ctx, tx, contactID, entry)
+	if err != nil {
 		return err
 	}
-	return fillAddressFromCard(ctx, tx, contactID, entry)
+	address, err := fillAddressFromCard(ctx, tx, contactID, entry, st.corrected[fieldAddress])
+	if err != nil {
+		return err
+	}
+	held, err := liveEmails(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
+	result.Fields = updatedReport(entry, st, held, address)
+	return nil
 }
 
 // createFromCard turns a card nobody matched into a contact.
@@ -121,7 +131,45 @@ func (s *Store) createFromCard(
 	created := ids.From[ids.ContactKind](ids.UUID(contact.Id))
 	result.Outcome = VCardCreated
 	result.ContactID = &created
-	return s.attachVCardEmployer(ctx, tx, created, entry)
+	url, err := s.completeCardCreate(ctx, tx, contact, entry)
+	if err != nil {
+		return err
+	}
+	result.Fields = createdReport(contact, entry, url)
+	return nil
+}
+
+// completeCardCreate writes what the contact create does not carry: the
+// employer the card names, and a URL the social slot did not take.
+//
+// That URL is usually the company site, and it lands as evidence as it does on
+// a matched contact. It returns that URL's outcome, or nil when none was filed.
+func (s *Store) completeCardCreate(ctx context.Context, tx pgx.Tx, contact crmcontracts.Contact, entry VCardEntry) (*statedField, error) {
+	created := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+	if err := s.attachVCardEmployer(ctx, tx, created, entry); err != nil {
+		return nil, err
+	}
+	url, ok := cardURLField(entry)
+	if !ok || (contact.Social != nil && (*contact.Social)[profileURLField] != nil) {
+		return nil, nil //nolint:nilnil // a card whose URL the social slot took files nothing more
+	}
+	card, err := readyObservedCard(ctx, tx, entry)
+	if err != nil {
+		return nil, err
+	}
+	outcome, err := applyObservedField(ctx, tx, created, observedField{
+		Field: url.name, Value: url.value, Evidence: card.Evidence, SourceRef: card.SourceRef,
+		Source: card.Source, CapturedBy: card.CapturedBy, ObservedAt: card.ObservedAt,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if outcome.landed() {
+		if err := auditCardFields(ctx, tx, created, []string{url.name}); err != nil {
+			return nil, err
+		}
+	}
+	return &statedField{cardField: url, outcome: outcome}, nil
 }
 
 // errCardSourceNarrowed rolls back the contact a refused card had already minted.

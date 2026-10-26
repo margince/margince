@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { IMPORT_ID } from "../../app/nav";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { useArrivalFocus } from "../../design-system/arrivalfocus";
+import { Badge, Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FileDropzone } from "../../design-system/filedropzone";
 import { Heading } from "../../design-system/heading";
@@ -22,6 +23,31 @@ import "./vcard-import.css";
 
 type VCardReport = components["schemas"]["VCardImportReport"];
 type VCardResult = components["schemas"]["VCardImportResult"];
+type VCardField = components["schemas"]["VCardImportField"];
+
+/** Each field the report names, under the label the contact page gives it.
+ * The report and the record then call one field by one name. */
+const FIELD_LABELS: Readonly<Record<VCardField["field"], MessageKey>> = {
+  name: "contacts.name",
+  email: "contacts.email",
+  phone: "contact.enriched.field.phone",
+  mobile_phone: "field.phoneMobile",
+  title: "contact.enriched.field.title",
+  company_name: "contact.enriched.field.company_name",
+  address: "contact.enriched.field.address",
+  linkedin: "contact.enriched.field.linkedin",
+  website: "contact.enriched.field.website",
+};
+
+/** What the import did with a field the card stated. A field the card left
+ * out is listed apart, under one muted heading. */
+const ACTION_LABELS: Readonly<
+  Record<Exclude<VCardField["action"], "not_in_card">, MessageKey>
+> = {
+  imported: "vcardImport.field.imported",
+  replaced: "vcardImport.field.replaced",
+  kept: "vcardImport.field.kept",
+};
 
 /** What each outcome is called, and how loudly. `needs_review` is the one that
  * asks something of the reader, so it is the only one toned: a card that merely
@@ -143,6 +169,14 @@ export function VCardImportPage() {
   const importer = useImportVCards();
   const [picked, setPicked] = useState<File | undefined>(undefined);
   const title = useArrivalFocus<HTMLHeadingElement>();
+  const fileField = useRef<HTMLDivElement>(null);
+  // The next card starts from an empty page: the last file and its report go.
+  // Focus returns to the file field, so the reader can pick at once.
+  const startNext = () => {
+    setPicked(undefined);
+    importer.reset();
+    fileField.current?.querySelector("input")?.focus();
+  };
   // Leaving mid-flight does not stop the write, it only loses the report that
   // says what the write did.
   useUnsavedGuard(importer.isPending);
@@ -163,7 +197,7 @@ export function VCardImportPage() {
       </Heading>
       <Panel>
         <PanelBody className="form-stack">
-          <div data-testid="vcard-import-file">
+          <div data-testid="vcard-import-file" ref={fileField}>
             {/* Withdrawn while an import is running. A second file chosen mid-
                 flight would start a second write, and this page holds ONE
                 report — so one set of contact changes would land with nothing
@@ -196,6 +230,13 @@ export function VCardImportPage() {
             </div>
           )}
           {importer.isSuccess && <ImportReport report={importer.data} />}
+          {(importer.isSuccess || importer.isError) && (
+            <div>
+              <Button data-testid="vcard-import-next" onClick={startNext}>
+                {t("vcardImport.next")}
+              </Button>
+            </div>
+          )}
         </PanelBody>
       </Panel>
     </div>
@@ -229,9 +270,59 @@ function ImportReport({ report }: Readonly<{ report: VCardReport }>) {
               {outcome ? t(outcome.label) : card.outcome}
             </span>
             {card.reason && <span className="t-sub">{card.reason}</span>}
+            {card.fields && card.fields.length > 0 && (
+              <CardFields fields={card.fields} />
+            )}
           </li>
         );
       })}
     </ul>
+  );
+}
+
+/** CardFields shows what the import did with each field of one card. First
+ * what it took, replaced or kept, then what the card did not carry. A field or
+ * action this build has no name for shows the word sent. */
+function CardFields({ fields }: Readonly<{ fields: readonly VCardField[] }>) {
+  const t = useT();
+  const label = (field: VCardField["field"]) => {
+    const key = FIELD_LABELS[field];
+    return key ? t(key) : field;
+  };
+  const stated = fields.filter((f) => f.action !== "not_in_card");
+  const absent = fields.filter((f) => f.action === "not_in_card");
+  return (
+    <div className="vcard-import-fields" data-testid="vcard-import-fields">
+      {stated.length > 0 && (
+        <ul>
+          {stated.map((f) => {
+            const action =
+              f.action === "not_in_card" ? undefined : ACTION_LABELS[f.action];
+            return (
+              <li key={`${f.field}:${f.value ?? ""}`} data-action={f.action}>
+                <span className="vcard-import-field-label">
+                  {label(f.field)}
+                </span>
+                <span>{f.value}</span>
+                <Badge>{action ? t(action) : f.action}</Badge>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {absent.length > 0 && (
+        <div
+          className="vcard-import-absent t-sub"
+          data-testid="vcard-import-absent"
+        >
+          <span>{t("vcardImport.field.notInCard")}</span>
+          <ul>
+            {absent.map((f) => (
+              <li key={f.field}>{label(f.field)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }

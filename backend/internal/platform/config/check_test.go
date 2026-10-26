@@ -124,3 +124,38 @@ func TestAnUnknownYAMLKeyNamesTheKeyItLikelyMeant(t *testing.T) {
 		t.Errorf("a misspelt section was reported once per child:\n%s", msg)
 	}
 }
+
+// YAML forbids a key twice in one mapping, and the parser keeps the last. A
+// repeat is a fault naming both lines, in a setting section or a bootstrap one.
+func TestARepeatedYAMLKeyIsAFaultNamingBothLines(t *testing.T) {
+	reg, src := sources(t, fixture{
+		args: []string{"--check-config"},
+		env:  []string{ns + "DSN=postgres://db/crm"},
+		files: map[string]string{"margince.yaml": "log:\n  level: debug\n" +
+			"workspace:\n  name: Acme\n  name: Beta\n" +
+			"log:\n  level: info\n"},
+	}, level, dsn)
+	src.BootstrapRoots = map[string]bool{"workspace": true}
+	var out strings.Builder
+	err := config.Check(&out, reg, src)
+	if err == nil {
+		t.Fatalf("a file with repeated keys passed the check:\n%s", out.String())
+	}
+	for _, want := range []string{"log appears on lines 1 and 6; keep one", "workspace.name appears on lines 4 and 5; keep one"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the faults lack %q:\n%v", want, err)
+		}
+	}
+}
+
+func TestARefusalNamesItsProgramOnce(t *testing.T) {
+	for err, want := range map[error]string{
+		errors.New("api: log_level in margince.yaml: want one of debug, info"): "api: log_level in margince.yaml: want one of debug, info",
+		errors.New("log_level in margince.yaml: want one of debug, info"):      "api: log_level in margince.yaml: want one of debug, info",
+		errors.New("apiary: closed"):                                           "api: apiary: closed",
+	} {
+		if got := config.RoleAPI.Refusal(err); got != want {
+			t.Errorf("Refusal(%q) = %q, want %q", err, got, want)
+		}
+	}
+}

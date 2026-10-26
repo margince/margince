@@ -19897,6 +19897,69 @@ func (e UserStatus) Valid() bool {
 	}
 }
 
+// Defines values for VCardImportFieldAction.
+const (
+	VCardImportFieldActionVCardImportFieldActionImported  VCardImportFieldAction = "imported"
+	VCardImportFieldActionVCardImportFieldActionKept      VCardImportFieldAction = "kept"
+	VCardImportFieldActionVCardImportFieldActionNotInCard VCardImportFieldAction = "not_in_card"
+	VCardImportFieldActionVCardImportFieldActionReplaced  VCardImportFieldAction = "replaced"
+)
+
+// Valid indicates whether the value is a known member of the VCardImportFieldAction enum.
+func (e VCardImportFieldAction) Valid() bool {
+	switch e {
+	case VCardImportFieldActionVCardImportFieldActionImported:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionKept:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionNotInCard:
+		return true
+	case VCardImportFieldActionVCardImportFieldActionReplaced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VCardImportFieldField.
+const (
+	VCardImportFieldFieldVCardImportFieldFieldAddress     VCardImportFieldField = "address"
+	VCardImportFieldFieldVCardImportFieldFieldCompanyName VCardImportFieldField = "company_name"
+	VCardImportFieldFieldVCardImportFieldFieldEmail       VCardImportFieldField = "email"
+	VCardImportFieldFieldVCardImportFieldFieldLinkedin    VCardImportFieldField = "linkedin"
+	VCardImportFieldFieldVCardImportFieldFieldMobilePhone VCardImportFieldField = "mobile_phone"
+	VCardImportFieldFieldVCardImportFieldFieldName        VCardImportFieldField = "name"
+	VCardImportFieldFieldVCardImportFieldFieldPhone       VCardImportFieldField = "phone"
+	VCardImportFieldFieldVCardImportFieldFieldTitle       VCardImportFieldField = "title"
+	VCardImportFieldFieldVCardImportFieldFieldWebsite     VCardImportFieldField = "website"
+)
+
+// Valid indicates whether the value is a known member of the VCardImportFieldField enum.
+func (e VCardImportFieldField) Valid() bool {
+	switch e {
+	case VCardImportFieldFieldVCardImportFieldFieldAddress:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldCompanyName:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldEmail:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldLinkedin:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldMobilePhone:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldName:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldPhone:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldTitle:
+		return true
+	case VCardImportFieldFieldVCardImportFieldFieldWebsite:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for VCardImportResultOutcome.
 const (
 	VCardImportResultOutcomeVCardImportResultOutcomeCreated     VCardImportResultOutcome = "created"
@@ -53755,6 +53818,40 @@ type UserSessionList struct {
 	Sessions []UserSession `json:"sessions"`
 }
 
+// VCardImportField One field of a card, and what the import did with it.
+type VCardImportField struct {
+	// Action `imported` — the record now holds the card's value. `replaced` — the card's value
+	// took the place of a different one, which is kept in `superseded_value` for the
+	// restore. `kept` — the card stated a value and the record kept its own: a human
+	// corrected the field, a newer statement already stands, the number could not be read,
+	// or it is a matched contact's name or an email address, which the import does not add
+	// to a contact who already exists. `not_in_card` — the card states nothing here.
+	Action VCardImportFieldAction `json:"action"`
+
+	// Field The field, named as `POST /contacts/{id}/profile-fields/{field}/restore` names it
+	// where that endpoint has one. `name` and `email` have no profile field. A mobile number
+	// reports as `mobile_phone` and every other number as `phone`; both restore as `phone`.
+	// A field appears once per value, so a card with two addresses reports two `email` rows.
+	Field VCardImportFieldField `json:"field"`
+
+	// Value The value the card stated. Absent for `not_in_card`.
+	Value *string `json:"value,omitempty"`
+}
+
+// VCardImportFieldAction `imported` — the record now holds the card's value. `replaced` — the card's value
+// took the place of a different one, which is kept in `superseded_value` for the
+// restore. `kept` — the card stated a value and the record kept its own: a human
+// corrected the field, a newer statement already stands, the number could not be read,
+// or it is a matched contact's name or an email address, which the import does not add
+// to a contact who already exists. `not_in_card` — the card states nothing here.
+type VCardImportFieldAction string
+
+// VCardImportFieldField The field, named as `POST /contacts/{id}/profile-fields/{field}/restore` names it
+// where that endpoint has one. `name` and `email` have no profile field. A mobile number
+// reports as `mobile_phone` and every other number as `phone`; both restore as `phone`.
+// A field appears once per value, so a card with two addresses reports two `email` rows.
+type VCardImportFieldField string
+
 // VCardImportReport One entry per card in the file, in the order the file listed them.
 type VCardImportReport struct {
 	Results []VCardImportResult `json:"results"`
@@ -53765,6 +53862,12 @@ type VCardImportResult struct {
 	// ContactId The contact created or updated, or — for `needs_review` — the candidate the card resembles.
 	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
+	// Fields What the import did with each field of this card, read from the writer's own
+	// decisions. Present for `created` and `updated`, and absent for every other outcome,
+	// since those write nothing. `importCardPhoto` shares this schema and never sends it:
+	// a card read from a photo is a proposal, and nothing is written.
+	Fields *[]VCardImportField `json:"fields,omitempty"`
+
 	// FullName The name the card stated, so a reader can find the row it came from.
 	FullName string `json:"full_name"`
 
@@ -53772,7 +53875,8 @@ type VCardImportResult struct {
 	Index int `json:"index"`
 
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
-	// between them. `updated` — an exact match, filled only where the record was empty.
+	// between them. `updated` — an exact match: what the card states replaces an older value, which
+	// stays in `superseded_value`, and a field a human corrected stands.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 	// `skipped` — the card states no name, carries a sending system's address, or matches a
@@ -53784,7 +53888,8 @@ type VCardImportResult struct {
 }
 
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
-// between them. `updated` — an exact match, filled only where the record was empty.
+// between them. `updated` — an exact match: what the card states replaces an older value, which
+// stays in `superseded_value`, and a field a human corrected stands.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 // `skipped` — the card states no name, carries a sending system's address, or matches a
@@ -56744,7 +56849,7 @@ type ListActivitiesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -57170,7 +57275,7 @@ type ListAiCallsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Task Filter to one task (capture_classify, enrich, …).
@@ -57398,7 +57503,7 @@ type ListReportRunsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57436,7 +57541,7 @@ type ListApprovalsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// IncludeMuted Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review.
@@ -57539,7 +57644,7 @@ type ListAttachmentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit      *Limit                          `form:"limit,omitempty" json:"limit,omitempty"`
 	EntityType ListAttachmentsParamsEntityType `form:"entity_type" json:"entity_type"`
 	EntityId   openapi_types.UUID              `form:"entity_id" json:"entity_id"`
@@ -57572,7 +57677,7 @@ type ListAuditLogParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Actor Typed principal filter, e.g. human:<uuid> or agent:sdr.
@@ -57633,7 +57738,7 @@ type ListAutomationsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57659,7 +57764,7 @@ type ListAutomationRunsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Outcome Filter by run outcome (matches automation_run.status, data-model §12.5).
@@ -57807,7 +57912,7 @@ type ListMyCaptureActivityParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57823,7 +57928,7 @@ type ListWorkspaceCaptureActivityParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57845,7 +57950,7 @@ type ListDomainQuestionsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -57902,7 +58007,7 @@ type ListCommissionEntriesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// PartnerCompanyId The entries owed to one partner.
@@ -57947,7 +58052,7 @@ type ListCompaniesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -58193,7 +58298,7 @@ type GetCompanyAccessParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -58260,7 +58365,7 @@ type ListCompanyContactsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -58279,7 +58384,7 @@ type ListCompanyContractsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit  *Limit                            `form:"limit,omitempty" json:"limit,omitempty"`
 	Status *ListCompanyContractsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
@@ -58302,7 +58407,7 @@ type ListCompanyDocumentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit      *Limit                              `form:"limit,omitempty" json:"limit,omitempty"`
 	Category   *ListCompanyDocumentsParamsCategory `form:"category,omitempty" json:"category,omitempty"`
 	DocState   *ListCompanyDocumentsParamsDocState `form:"doc_state,omitempty" json:"doc_state,omitempty"`
@@ -58793,7 +58898,7 @@ type ListConfirmSubmissionsParams struct {
 	// Resolved false for the queue, true for what has been decided. Omit for both.
 	Resolved *bool `form:"resolved,omitempty" json:"resolved,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes all three parts of this queue's order — whether the row is resolved, its `submitted_at`, and its id — because two subjects can send in the same second and an id alone cannot continue an order it is only the tie-break of. Changing `contact_id` or `resolved` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when a filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
@@ -58836,7 +58941,7 @@ type ListContactsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -59086,7 +59191,7 @@ type GetContactAccessParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -59369,7 +59474,7 @@ type ListCustomFieldsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -59516,7 +59621,7 @@ type ListDataSubjectRequestsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -59570,7 +59675,7 @@ type ListDealRoomsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -59764,7 +59869,7 @@ type ListDealsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -60041,7 +60146,7 @@ type ListDealDocumentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit         *Limit                           `form:"limit,omitempty" json:"limit,omitempty"`
 	Category      *ListDealDocumentsParamsCategory `form:"category,omitempty" json:"category,omitempty"`
 	IncludeHidden *bool                            `form:"include_hidden,omitempty" json:"include_hidden,omitempty"`
@@ -60068,7 +60173,7 @@ type ListDealOffersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit  *Limit                      `form:"limit,omitempty" json:"limit,omitempty"`
 	Status *ListDealOffersParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 }
@@ -60234,7 +60339,7 @@ type GetFieldHistoryParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit      *Limit                          `form:"limit,omitempty" json:"limit,omitempty"`
 	EntityType GetFieldHistoryParamsEntityType `form:"entity_type" json:"entity_type"`
 	EntityId   openapi_types.UUID              `form:"entity_id" json:"entity_id"`
@@ -60273,7 +60378,7 @@ type ListFinanceSourceCustomersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -60438,7 +60543,7 @@ type ListAgentClientsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -60626,7 +60731,7 @@ type ListLeadsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
@@ -60930,7 +61035,7 @@ type ExplainLeadScoreParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -61033,7 +61138,7 @@ type ListListHistoryParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -61049,7 +61154,7 @@ type ListListMembersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// EntityId Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor.
@@ -61110,7 +61215,7 @@ type ImportLinkedInConnectionsMultipartBody struct {
 
 // GetMyLinkedInReachParams defines parameters for GetMyLinkedInReach.
 type GetMyLinkedInReachParams struct {
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -61202,7 +61307,7 @@ type ListOfferTemplatesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61455,7 +61560,7 @@ type ListPartnersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61605,7 +61710,7 @@ type ListNoticeCasesParams struct {
 	// State Repeat to ask for several. Omitted means every unresolved state.
 	State *[]NoticeCaseState `form:"state,omitempty" json:"state,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
@@ -61624,7 +61729,7 @@ type ListProductsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61705,7 +61810,7 @@ type ListProjectsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -61940,7 +62045,7 @@ type ListProjectHealthAssessmentsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62240,7 +62345,7 @@ type ListRecordGrantsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62350,7 +62455,7 @@ type GetRecordHistoryParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Action Return only the rows recording this verb. A caller that wants ONE event —
@@ -62417,7 +62522,7 @@ type ListRelationshipsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -62487,7 +62592,7 @@ type ListLegalHoldsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62551,7 +62656,7 @@ type ListRestrictedActivitiesParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62747,7 +62852,7 @@ type SearchParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -62766,7 +62871,7 @@ type ListSignalsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -63083,7 +63188,7 @@ type ListTeamsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Q Case-insensitive match over team name.
@@ -63102,7 +63207,7 @@ type ListUsersParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Q Case-insensitive match over display_name/email.
@@ -63284,7 +63389,7 @@ type ListVoiceProfileDeltasParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -63368,7 +63473,7 @@ type ListVoiceProfileVersionsParams struct {
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -63476,7 +63581,7 @@ type UpdateWebhookSubscriptionParams struct {
 
 // ListWebhookDeliveriesParams defines parameters for ListWebhookDeliveries.
 type ListWebhookDeliveriesParams struct {
-	// Limit Max items in the page.
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
