@@ -279,6 +279,6 @@ func TestAServiceMemberTakesNoLicensedSeat(t *testing.T) {
 		t.Errorf("seats in use after declaring a service member = %d, want %d", got, used)
 	}
 	if err := inviteOneMore(t, e, "still-full"); !errors.Is(err, apperrors.ErrSeatLimitReached) {
-		t.Errorf("a person invited at the ceiling: err = %v, want %v", err, apperrors.ErrSeatLimitReached)
+		t.Errorf("an invitation at the ceiling: err = %v, want %v", err, apperrors.ErrSeatLimitReached)
 	}
 }
