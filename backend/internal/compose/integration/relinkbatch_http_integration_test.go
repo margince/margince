@@ -45,10 +45,12 @@ func TestRelinkingAThreadOverHTTP(t *testing.T) {
 		}
 		members = append(members, activity.ID)
 	}
-	// The thread key is capture's to stamp; no write endpoint sets it, so the
-	// seed reaches the column directly.
+	// The thread key and our sent attestation are capture's to stamp. No write
+	// endpoint sets them, so the seed makes the rows our mail to one correspondent.
 	if _, err := e.Owner.Exec(context.Background(),
-		`UPDATE activity SET thread_key = $1 WHERE id = ANY($2::uuid[])`, key, members); err != nil {
+		`UPDATE activity SET thread_key = $1, kind = 'email', direction = 'outbound',
+		        counterparty_email = 'buyer@stark.test', counterparty_outbound_attested = true
+		  WHERE id = ANY($2::uuid[])`, key, members); err != nil {
 		t.Fatalf("stamping the thread key: %v", err)
 	}
 	if status := e.Call(t, "DELETE", "/v1/activities/"+members[2], nil, nil, nil); status != http.StatusOK {
@@ -57,7 +59,7 @@ func TestRelinkingAThreadOverHTTP(t *testing.T) {
 
 	var out relinkBatchDTO
 	if status := e.Call(t, "POST", "/v1/activities/relink-thread", AnyMap{
-		"thread_key": key, "entity_type": "project", "entity_id": project.ID,
+		"activity_id": members[0], "entity_type": "project", "entity_id": project.ID,
 	}, nil, &out); status != http.StatusOK {
 		t.Fatalf("POST /activities/relink-thread → %d, want 200", status)
 	}
@@ -67,7 +69,7 @@ func TestRelinkingAThreadOverHTTP(t *testing.T) {
 
 	var problem projectProblem
 	if status := e.Call(t, "POST", "/v1/activities/relink-thread", AnyMap{
-		"thread_key": key, "entity_type": "invoice", "entity_id": project.ID,
+		"activity_id": members[0], "entity_type": "invoice", "entity_id": project.ID,
 	}, nil, &problem); status != http.StatusUnprocessableEntity {
 		t.Errorf("a destination outside the link vocabulary → %d, want 422", status)
 	}

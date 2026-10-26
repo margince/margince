@@ -423,6 +423,10 @@ func captureCommitmentMessage(t *testing.T, e *Env, contact ids.UUID, key, subje
 		from, to = owner, buyer
 	}
 	var headers, toAddresses strings.Builder
+	// The receiving server's word on the buyer's mail, as Gmail writes it.
+	if direction != "outbound" {
+		headers.WriteString("Authentication-Results: mx.google.com; dmarc=pass header.from=buyer.example\r\n")
+	}
 	toAddresses.WriteString(to)
 	for _, recipient := range recipients {
 		address := commitmentMailAddress(t, e, recipient.contact)
@@ -437,6 +441,7 @@ func captureCommitmentMessage(t *testing.T, e *Env, contact ids.UUID, key, subje
 	if err != nil {
 		t.Fatal(err)
 	}
+	message = message.AttestSentByOwner(direction == "outbound")
 	record := message.ToRecord("gmail", raw)
 	ctx := principal.WithActor(connectorCtx(e, e.Rep1), principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: e.Rep1, OnBehalfOf: e.Rep1,

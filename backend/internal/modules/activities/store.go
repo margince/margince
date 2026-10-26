@@ -34,6 +34,9 @@ type Store struct {
 	// queue. Nil in a deployment that has not wired it, and then no sender is
 	// excluded for being one of ours (WithOwnDomains).
 	ownDomains OwnDomains
+	// consumerMail names the consumer mail domains, which never widen a
+	// correspondence to a company domain (WithConsumerMail).
+	consumerMail ConsumerMailReader
 	// recordZone says which date is today and which day an instant falls on (WithRecordZone).
 	recordZone RecordZone
 	// transcriptEnqueue starts the reading of a transcript the moment it

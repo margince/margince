@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -22,6 +23,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -85,6 +88,10 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 func threadWindow(
 	ctx context.Context, tx pgx.Tx, key string, olderThan *time.Time, olderThanID, through *ids.UUID,
 ) ([]threadMessage, error) {
+	anchor, domain, err := windowAnchor(ctx, tx, key, through)
+	if err != nil || anchor == nil {
+		return nil, err
+	}
 	// The remainder is measured in the same statement that cuts the body:
 	// asked for afterwards it would be a second read of a row that may have
 	// changed, and the number would then describe a different message from the
@@ -110,6 +117,8 @@ func threadWindow(
 		           -- this arm only ever fires on a narrowing that landed inside
 		           -- the pass, and a short window is the right answer to it.
 		           AND `+activities.AutomaticMailContent+`
+		           AND (id = $7 OR EXISTS (SELECT 1 FROM activity window_anchor
+		                 WHERE window_anchor.id = $7 AND `+activities.SameCorrespondenceSQL("activity", "window_anchor", "$8::text")+`))
 		           -- Null means no bound: the newest window, which is the
 		           -- ordinary case and the one a thread starts from.
 		           --
@@ -122,7 +131,7 @@ func threadWindow(
 		         ORDER BY occurred_at DESC, id DESC
 		         LIMIT $3) tail
 		 ORDER BY occurred_at, id`, extractBodyLimit, key, extractThreadMessages,
-		olderThan, olderThanID, through)
+		olderThan, olderThanID, through, *anchor, domain)
 	if err != nil {
 		return nil, fmt.Errorf("read the conversation: %w", err)
 	}
@@ -143,6 +152,36 @@ func threadWindow(
 		return nil, err
 	}
 	return out, nil
+}
+
+// windowAnchor is the message a window's correspondence is bound to, and that
+// correspondence's company domain. It is through when set, else the
+// thread's newest proven message, else its newest. Nil when none is readable.
+func windowAnchor(ctx context.Context, tx pgx.Tx, key string, through *ids.UUID) (*ids.UUID, string, error) {
+	var anchor ids.UUID
+	var counterparty string
+	err := tx.QueryRow(ctx, `
+		SELECT id, coalesce(counterparty_email, '') FROM activity
+		 WHERE thread_key = $1 AND kind = 'email' AND archived_at IS NULL
+		   AND `+activities.AutomaticMailContent+` AND ($2::uuid IS NULL OR id = $2)
+		 ORDER BY `+correspondence.ProvenSQL("activity")+` DESC, occurred_at DESC, id DESC
+		 LIMIT 1`, key, through).Scan(&anchor, &counterparty)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, "", nil
+	}
+	if err != nil {
+		return nil, "", fmt.Errorf("read the conversation's anchor: %w", err)
+	}
+	own, err := capture.TrustedOwnDomainsTx(ctx, tx)
+	if err != nil {
+		return nil, "", err
+	}
+	consumer, err := capture.MatcherTx(ctx, tx)
+	if err != nil {
+		return nil, "", err
+	}
+	domain, err := activities.CorrespondenceDomainTx(ctx, tx, counterparty, consumer, own.Domains())
+	return &anchor, domain, err
 }
 
 func quotedRemainder(head, tail string) bool {

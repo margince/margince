@@ -13,8 +13,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -28,35 +26,25 @@ const (
 
 var replyLangStart = time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 
-// replyLangMail logs one email on the "angebot" thread, linked to a contact.
-// The log path then stamps that contact as its sender or recipient.
-func replyLangMail(t *testing.T, e *integration.Env, direction string, with ids.UUID, body string, offset time.Duration) crmcontracts.Activity {
+// replyLangMail captures one email of the "angebot" thread into Rep1's mailbox:
+// authenticated mail from address, or our attested mail to it.
+func replyLangMail(t *testing.T, o *owedEnv, direction, address, body string, offset time.Duration) ids.UUID {
 	t.Helper()
-	at, subject := replyLangStart.Add(offset), "Angebot"
-	row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, ThreadKey: "angebot",
-		Direction: &direction, OccurredAt: &at, Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: with}},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return row
+	return replyLangMailFor(t, o, o.owner, o.seat, direction, address, body, offset)
 }
 
-// replyLangCopiedMail logs one inbound email on the "angebot" thread, linked to
-// both contacts. It is from "anne@kunde.test" with "dietmar@kunde.test" on Cc.
-func replyLangCopiedMail(t *testing.T, e *integration.Env, from, copied ids.UUID, body string, offset time.Duration) {
+// replyLangMailFor is replyLangMail into the mailbox of owner at seat.
+func replyLangMailFor(t *testing.T, o *owedEnv, owner ids.UUID, seat, direction, address, body string, offset time.Duration) ids.UUID {
 	t.Helper()
-	at, subject, direction := replyLangStart.Add(offset), "Angebot", "inbound"
-	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, ThreadKey: "angebot",
-		Direction: &direction, OccurredAt: &at, Source: "manual",
-		EmailFrom: "anne@kunde.test", EmailCc: []string{"dietmar@kunde.test"},
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: from}, {EntityType: "contact", EntityID: copied}},
-	}); err != nil {
-		t.Fatal(err)
+	m := owedMail{
+		from: address, to: seat, subject: "Angebot", body: body, at: replyLangStart.Add(offset),
+		messageID: "angebot-" + ids.NewV7().String() + "@kunde.test", inReplyTo: "angebot-root@kunde.test",
+		authenticated: true,
 	}
+	if direction == "outbound" {
+		m.from, m.to, m.authenticated = seat, address, false
+	}
+	return o.captureFor(t, owner, seat, m)
 }
 
 // replyLangContact is a contact Rep1 owns, reachable at one address.
@@ -74,14 +62,14 @@ func replyLangContact(t *testing.T, e *integration.Env, name, email string) ids.
 
 // replyLangDraft drafts a reply to the anchor as Rep1 and returns the language
 // the model was told to write in.
-func replyLangDraft(t *testing.T, e *integration.Env, anchor crmcontracts.Activity) string {
+func replyLangDraft(t *testing.T, e *integration.Env, anchor ids.UUID) string {
 	t.Helper()
 	lang, _ := replyLangPrompt(t, e, anchor)
 	return lang
 }
 
 // replyLangPrompt is replyLangDraft with the whole prompt the model was sent.
-func replyLangPrompt(t *testing.T, e *integration.Env, anchor crmcontracts.Activity) (string, string) {
+func replyLangPrompt(t *testing.T, e *integration.Env, anchor ids.UUID) (string, string) {
 	t.Helper()
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
 	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
@@ -89,7 +77,7 @@ func replyLangPrompt(t *testing.T, e *integration.Env, anchor crmcontracts.Activ
 		WithClock(func() time.Time { return replyLangStart.Add(30 * 24 * time.Hour) }).
 		WithUserLanguage(func(context.Context) string { return "vi" })
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-	if _, err := drafter.DraftEmailWithProvenance(reader, ids.UUID(anchor.Id), draftfloor.Steering{}); err != nil {
+	if _, err := drafter.DraftEmailWithProvenance(reader, anchor, draftfloor.Steering{}); err != nil {
 		t.Fatal(err)
 	}
 	content := brain.request.Messages[0].Content
@@ -104,16 +92,17 @@ func replyLangPrompt(t *testing.T, e *integration.Env, anchor crmcontracts.Activ
 
 // storeOldRuleLanguage records the label an older quote rule wrote at capture.
 // No writer today stores English for German sender text, so the row is set by hand.
-func storeOldRuleLanguage(t *testing.T, e *integration.Env, activity crmcontracts.Activity, lang string) {
+func storeOldRuleLanguage(t *testing.T, e *integration.Env, activity ids.UUID, lang string) {
 	t.Helper()
-	e.WsExec(t, `UPDATE activity SET language = $2 WHERE id = $1`, ids.UUID(activity.Id), lang)
+	e.WsExec(t, `UPDATE activity SET language = $2 WHERE id = $1`, activity, lang)
 }
 
 func TestTheAddresseesGermanReplyStoredAsEnglishIsDraftedInGerman(t *testing.T) {
-	e := integration.Setup(t)
-	addressee := replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
-	replyLangMail(t, e, "outbound", addressee, replyLangEnglish, 0)
-	anchor := replyLangMail(t, e, "inbound", addressee, replyLangGerman, time.Hour)
+	o := setupOwed(t)
+	e := o.e
+	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
+	replyLangMail(t, o, "outbound", "dietmar@kunde.test", replyLangEnglish, 0)
+	anchor := replyLangMail(t, o, "inbound", "dietmar@kunde.test", replyLangGerman, time.Hour)
 	storeOldRuleLanguage(t, e, anchor, "en")
 	if got := replyLangDraft(t, e, anchor); got != "de" {
 		t.Fatalf("output language = %q, want the addressee's German over the stored English", got)
@@ -121,58 +110,65 @@ func TestTheAddresseesGermanReplyStoredAsEnglishIsDraftedInGerman(t *testing.T) 
 }
 
 func TestTheStoredLanguageHoldsWhenTheAddresseeWroteNothing(t *testing.T) {
-	e := integration.Setup(t)
-	addressee := replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
-	anchor := replyLangMail(t, e, "outbound", addressee, replyLangGerman, 0)
+	o := setupOwed(t)
+	e := o.e
+	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
+	anchor := replyLangMail(t, o, "outbound", "dietmar@kunde.test", replyLangGerman, 0)
 	storeOldRuleLanguage(t, e, anchor, "en")
 	if got := replyLangDraft(t, e, anchor); got != "en" {
 		t.Fatalf("output language = %q, want the stored label while the addressee has written nothing", got)
 	}
 }
 
-// longReplyThread is a thread whose only German is the addressee's first mail.
-// A full page of English mail that copies them comes after it, from a colleague.
-func longReplyThread(t *testing.T, e *integration.Env) (oldest, anchor crmcontracts.Activity) {
+// longReplyThread is a thread whose only German is the addressee's first mail,
+// older than a full page of English mail from a copied colleague.
+// The oldest mail is filed in the mailbox of oldestOwner at oldestSeat.
+func longReplyThread(t *testing.T, o *owedEnv, oldestOwner ids.UUID, oldestSeat string) (oldest, anchor ids.UUID) {
 	t.Helper()
-	addressee := replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
-	colleague := replyLangContact(t, e, "Anne Kollegin", "anne@kunde.test")
-	oldest = replyLangMail(t, e, "inbound", addressee, replyLangGerman, 0)
+	e := o.e
+	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
+	replyLangContact(t, e, "Anne Kollegin", "anne@kunde.test")
+	oldest = replyLangMailFor(t, o, oldestOwner, oldestSeat, "inbound", "dietmar@kunde.test", replyLangGerman, 0)
 	for i := range replyEvidenceRows + 1 {
-		replyLangCopiedMail(t, e, colleague, addressee, replyLangEnglish, time.Duration(i+1)*time.Minute)
+		replyLangMail(t, o, "inbound", "anne@kunde.test", replyLangEnglish, time.Duration(i+1)*time.Minute)
 	}
-	anchor = replyLangMail(t, e, "inbound", addressee, "ok", 2*time.Hour)
+	anchor = replyLangMail(t, o, "inbound", "dietmar@kunde.test", "ok", 2*time.Hour)
 	return oldest, anchor
 }
 
 func TestTheAddresseesMailOlderThanTheThreadPageStillDecidesTheLanguage(t *testing.T) {
-	e := integration.Setup(t)
-	_, anchor := longReplyThread(t, e)
+	o := setupOwed(t)
+	e := o.e
+	_, anchor := longReplyThread(t, o, o.owner, o.seat)
 	if got := replyLangDraft(t, e, anchor); got != "de" {
 		t.Fatalf("output language = %q, want the addressee's German from before the newest %d messages", got, replyEvidenceRows)
 	}
 }
 
 func TestTheAddresseesMailTheDrafterMayNotReadDoesNotDecideTheLanguage(t *testing.T) {
-	e := integration.Setup(t)
-	oldest, anchor := longReplyThread(t, e)
-	e.WsExec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, ids.UUID(oldest.Id))
+	o := setupOwed(t)
+	e := o.e
+	o.e.WsExec(t, `INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
+		VALUES ($1, 'gmail', 'connected', 'vault:test', 'rep2@ws.example')`, o.e.Rep2)
+	_, anchor := longReplyThread(t, o, o.e.Rep2, "rep2@ws.example")
 	if got := replyLangDraft(t, e, anchor); got != "en" {
 		t.Fatalf("output language = %q, want English: the German mail is limited to participants the drafter is not among", got)
 	}
 }
 
 func TestAnOutboundReplyFollowsTheContactItIsDeliveredToNotTheGreetedSender(t *testing.T) {
-	e := integration.Setup(t)
-	buyer := replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
+	o := setupOwed(t)
+	e := o.e
+	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
 	seat := replyLangContact(t, e, "Sofia Meier", "sofia.private@mail.test")
-	replyLangMail(t, e, "inbound", buyer, replyLangGerman, 0)
-	replyLangMail(t, e, "inbound", seat, replyLangEnglish, time.Hour)
-	anchor := replyLangMail(t, e, "outbound", buyer, "ok", 2*time.Hour)
+	replyLangMail(t, o, "inbound", "dietmar@kunde.test", replyLangGerman, 0)
+	replyLangMail(t, o, "inbound", "sofia.private@mail.test", replyLangEnglish, time.Hour)
+	anchor := replyLangMail(t, o, "outbound", "dietmar@kunde.test", "ok", 2*time.Hour)
 	// Our rep sent the anchor and is on file as a contact too. Capture writes
 	// such a seat's participant row with both the user and the contact.
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, user_id, contact_id) VALUES ($1, 'from', $2, $3)`,
-		ids.UUID(anchor.Id), e.Rep1, seat)
-	recipient, err := e.Activities.ReplyRecipientFor(e.Admin(), ids.From[ids.ActivityKind](ids.UUID(anchor.Id)))
+		anchor, e.Rep1, seat)
+	recipient, err := e.Activities.ReplyRecipientFor(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), ids.From[ids.ActivityKind](anchor))
 	if err != nil || recipient.FullName != "Sofia Meier" {
 		t.Fatalf("precondition: the greeting names %+v (err %v), want the seat's contact", recipient, err)
 	}
@@ -182,9 +178,10 @@ func TestAnOutboundReplyFollowsTheContactItIsDeliveredToNotTheGreetedSender(t *t
 }
 
 func TestASharedMailboxsOwnTextOutranksAStoredLabelWhileTheGreetingStaysNameless(t *testing.T) {
-	e := integration.Setup(t)
-	mailbox := replyLangContact(t, e, "Steireif Anna", "anna@steireif.test")
-	anchor := replyLangMail(t, e, "inbound", mailbox, replyLangGerman, 0)
+	o := setupOwed(t)
+	e := o.e
+	replyLangContact(t, e, "Steireif Anna", "anna@steireif.test")
+	anchor := replyLangMail(t, o, "inbound", "anna@steireif.test", replyLangGerman, 0)
 	storeOldRuleLanguage(t, e, anchor, "en")
 	lang, prompt := replyLangPrompt(t, e, anchor)
 	if lang != "de" {
@@ -196,12 +193,13 @@ func TestASharedMailboxsOwnTextOutranksAStoredLabelWhileTheGreetingStaysNameless
 }
 
 func TestAnAddresseeMessageDatedAfterTheDraftingInstantDoesNotDecideTheLanguage(t *testing.T) {
-	e := integration.Setup(t)
-	addressee := replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
-	colleague := replyLangContact(t, e, "Anne Kollegin", "anne@kunde.test")
-	replyLangMail(t, e, "inbound", colleague, replyLangEnglish, 0)
-	anchor := replyLangMail(t, e, "inbound", addressee, "ok", time.Hour)
-	replyLangMail(t, e, "inbound", addressee, replyLangGerman, 60*24*time.Hour)
+	o := setupOwed(t)
+	e := o.e
+	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
+	replyLangContact(t, e, "Anne Kollegin", "anne@kunde.test")
+	replyLangMail(t, o, "inbound", "anne@kunde.test", replyLangEnglish, 0)
+	anchor := replyLangMail(t, o, "inbound", "dietmar@kunde.test", "ok", time.Hour)
+	replyLangMail(t, o, "inbound", "dietmar@kunde.test", replyLangGerman, 60*24*time.Hour)
 	if got := replyLangDraft(t, e, anchor); got != "en" {
 		t.Fatalf("output language = %q, want English: the German mail is dated after the draft is written", got)
 	}

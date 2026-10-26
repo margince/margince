@@ -5723,7 +5723,9 @@ export interface paths {
         /**
          * Re-associate every activity of one conversation thread to a chosen record, in one transaction.
          * @description The thread twin of `relinkActivity`: the same association applied to every non-archived
-         *     activity carrying `thread_key` that the caller may write. A mis-filed conversation is
+         *     activity of the conversation `activity_id` belongs to that the caller may write. A thread
+         *     key alone does not name a conversation, so a member is a message on the activity's thread
+         *     that is our own mail to its correspondent, or authenticated mail from them. A mis-filed conversation is
          *     usually mis-filed whole, and one call here is the remedy rather than one call per message.
          *     Each moved activity gets its own `audit_log` row (`activity_relink`) and its own
          *     `activity.updated` event, exactly as the single relink writes them; filing under a project
@@ -34428,8 +34430,11 @@ export interface components {
          *     `relinkActivity`.
          */
         RelinkThreadRequest: {
-            /** @description The conversation key the activities carry (`Activity.thread_key`, also the `thread_key` list filter). */
-            thread_key: string;
+            /**
+             * Format: uuid
+             * @description A message of the conversation to move; it always moves with it.
+             */
+            activity_id: string;
             entity_type: components["schemas"]["RelinkDestinationType"];
             /** Format: uuid */
             entity_id: string;

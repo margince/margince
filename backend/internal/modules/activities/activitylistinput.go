@@ -50,10 +50,13 @@ type ListActivitiesInput struct {
 	// SentBy narrows to messages this contact is the From participant of, so a
 	// reply can read the addressee's mail a long thread's page cut off.
 	SentBy *ids.UUID
-	// ConversationOf keeps only the rows of this message's thread that share a
-	// correspondent with it (correspondence.SharedCorrespondentSQL), before the limit.
-	ConversationOf  *ids.UUID
-	IncludeArchived bool
+	// ConversationOf keeps only the rows of this message's correspondence
+	// (SameCorrespondenceSQL), before the limit.
+	ConversationOf *ids.UUID
+	// conversationDomain is ConversationOf's company domain, set by the
+	// store in the read's own transaction (correspondenceDomainTx).
+	conversationDomain string
+	IncludeArchived    bool
 	// AssigneeID is the work queue's narrowing: the OPEN tasks one contact
 	// holds, which is what the contract declares the parameter to mean and
 	// what the partial index behind it is built on. Done-ness is part of

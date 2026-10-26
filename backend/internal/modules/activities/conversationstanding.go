@@ -68,8 +68,12 @@ func (s *Store) ConversationStandingFor(ctx context.Context, id ids.ActivityID) 
 }
 
 // onThread asks whether viewer's seat or one of their own addresses is a
-// From, To or Cc of a readable message in the anchor's thread.
+// From, To or Cc of a readable message of the anchor's correspondence.
 func (s *Store) onThread(ctx context.Context, tx pgx.Tx, anchor ids.ActivityID, viewer ids.UUID) (bool, error) {
+	domain, err := s.correspondenceDomainTx(ctx, tx, anchor.UUID)
+	if err != nil {
+		return false, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	content, err := auth.ActivityContentClause(ctx, "a", arg)
@@ -90,13 +94,11 @@ func (s *Store) onThread(ctx context.Context, tx pgx.Tx, anchor ids.ActivityID, 
 	q := fmt.Sprintf(`
 		SELECT EXISTS (
 		  SELECT 1 FROM activity anchor
-		    JOIN activity a ON a.id = anchor.id
-		      OR (coalesce(anchor.thread_key, '') <> '' AND a.thread_key = anchor.thread_key
-		          AND a.kind = anchor.kind
-		          AND coalesce(a.channel_provider, '') = coalesce(anchor.channel_provider, ''))
+		    JOIN activity a ON a.id = anchor.id OR %s
 		    JOIN activity_participant ap ON ap.activity_id = a.id AND ap.role IN ('from', 'to', 'cc')
 		   WHERE anchor.id = $%d AND a.archived_at IS NULL AND %s
 		     AND ((ap.user_id = %s AND %s) OR lower(ap.address) = ANY(%s)))`,
+		SameCorrespondenceSQL("a", "anchor", fmt.Sprintf("$%d::text", arg(domain))),
 		arg(anchor), content, me, auth.ParticipantStandsSQL("ap", "a"),
 		mailSeatAddressesSQL(identities, me))
 	var on bool

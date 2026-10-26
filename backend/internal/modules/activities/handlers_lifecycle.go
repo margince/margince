@@ -89,7 +89,7 @@ func (h Handlers) RelinkThread(w http.ResponseWriter, r *http.Request, _ crmcont
 	if !ok {
 		return
 	}
-	out, err := h.store.RelinkThread(r.Context(), req.ThreadKey, RelinkActivityInput{
+	out, err := h.store.RelinkThread(r.Context(), ids.From[ids.ActivityKind](ids.UUID(req.ActivityId)), RelinkActivityInput{
 		EntityType:            string(req.EntityType),
 		EntityID:              ids.UUID(req.EntityId),
 		ReplaceExistingOfType: req.ReplaceExistingOfType != nil && *req.ReplaceExistingOfType,

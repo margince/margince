@@ -350,14 +350,14 @@ func (e *BatchPinError) MessageFault() (code, message string) {
 		" — drop the If-Match and relink them one at a time to pin a version"
 }
 
-// RelinkThread applies one relink to every non-archived activity carrying
-// threadKey that the caller may write. A row the caller cannot see or cannot
-// write is LEFT, not refused: the caller never named it, so there is nothing
-// to hide and nothing to answer 403 about — the count says how many moved.
-func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkActivityInput) (RelinkBatchResult, error) {
-	if threadKey == "" {
-		return RelinkBatchResult{}, httperr.Validation("thread_key", codeRequired,
-			"thread_key names the conversation to move; it cannot be blank")
+// RelinkThread applies one relink to every non-archived activity of anchor's
+// correspondence (SameCorrespondenceSQL) that the caller may write. A row the
+// caller cannot see or cannot write is LEFT, not refused. The caller never named
+// it, so there is nothing to hide and no 403 to answer. The count says how many moved.
+func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in RelinkActivityInput) (RelinkBatchResult, error) {
+	if anchor.IsZero() {
+		return RelinkBatchResult{}, httperr.Validation("activity_id", codeRequired,
+			"activity_id names a message of the conversation to move; it cannot be blank")
 	}
 	if err := refuseBatchPin(in); err != nil {
 		return RelinkBatchResult{}, err
@@ -373,7 +373,14 @@ func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkAct
 		if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
 			return err
 		}
-		members, err := liveThreadMembers(ctx, tx, threadKey)
+		if _, err := readActivity(ctx, tx, anchor, storekit.LiveOnly); err != nil {
+			return err
+		}
+		domain, err := s.correspondenceDomainTx(ctx, tx, anchor.UUID)
+		if err != nil {
+			return err
+		}
+		members, err := liveConversationMembers(ctx, tx, anchor, domain)
 		if err != nil {
 			return err
 		}
@@ -396,16 +403,16 @@ func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkAct
 	return out, err
 }
 
-// liveThreadMembers enumerates the thread's live rows in id order, so two
-// concurrent moves of one conversation lock rows in the same sequence. The
-// per-row write check is what decides which of them move; the enumeration
-// itself answers nothing to the caller.
-func liveThreadMembers(ctx context.Context, tx pgx.Tx, threadKey string) ([]ids.ActivityID, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT id FROM activity WHERE thread_key = $1 AND archived_at IS NULL AND restricted_at IS NULL ORDER BY id`,
-		threadKey)
+// liveConversationMembers enumerates the anchor and the live rows of its
+// correspondence in id order. Two concurrent moves of one conversation then lock
+// rows in the same sequence. The per-row write check decides which of them move.
+func liveConversationMembers(ctx context.Context, tx pgx.Tx, anchor ids.ActivityID, domain string) ([]ids.ActivityID, error) {
+	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a, activity anchor
+		 WHERE anchor.id = $1 AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		   AND (a.id = anchor.id OR `+SameCorrespondenceSQL("a", "anchor", "$2::text")+`)
+		 ORDER BY a.id`, anchor, domain)
 	if err != nil {
-		return nil, fmt.Errorf("enumerate thread: %w", err)
+		return nil, fmt.Errorf("enumerate conversation: %w", err)
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (ids.ActivityID, error) {
 		var id ids.ActivityID

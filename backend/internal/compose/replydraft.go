@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -108,9 +109,10 @@ func newReplyDrafter(pool *pgxpool.Pool, brain completer, log *slog.Logger) repl
 		log = slog.Default()
 	}
 	return replyDrafter{
-		brain:      brain,
-		envelope:   draftEnvelope(pool, log),
-		store:      activities.NewStore(InstallationDB(pool)),
+		brain:    brain,
+		envelope: draftEnvelope(pool, log),
+		store: activities.NewStore(InstallationDB(pool)).WithConsumerMail(capture.MatcherTx).
+			WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}),
 		colleagues: ColleagueDomainsFor(pool),
 		voice:      ai.NewVoiceStore(InstallationDB(pool)),
 		log:        log,

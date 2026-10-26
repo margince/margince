@@ -39,7 +39,7 @@ func TestAnOmittedRelinkTargetIsNamed(t *testing.T) {
 // shared helper is a claim and a probe is the proof.
 func TestAnOmittedBatchRelinkTargetIsNamed(t *testing.T) {
 	in := RelinkActivityInput{EntityType: "contact"}
-	_, err := NewStore(nil).RelinkThread(context.Background(), "thread:x", in)
+	_, err := NewStore(nil).RelinkThread(context.Background(), ids.New[ids.ActivityKind](), in)
 	faulttest.AssertNamesOmittedID(t, err, "entity_id")
 	_, err = NewStore(nil).RelinkActivities(context.Background(), []ids.UUID{ids.NewV7()}, in)
 	faulttest.AssertNamesOmittedID(t, err, "entity_id")

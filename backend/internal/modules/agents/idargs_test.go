@@ -196,10 +196,6 @@ func (seamProbeLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.
 	return nil, errSeamReached
 }
 
-func (seamProbeLifecycle) RelinkThread(context.Context, string, string, ids.UUID, bool) (json.RawMessage, error) {
-	return nil, errSeamReached
-}
-
 func (seamProbeLifecycle) RelinkActivities(context.Context, []ids.UUID, string, ids.UUID, bool) (json.RawMessage, error) {
 	return nil, errSeamReached
 }

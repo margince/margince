@@ -263,8 +263,10 @@ func TestTheEventWindowMarksAMessageReadOnlyInPart(t *testing.T) {
 	} {
 		if _, err := owner.Exec(ctx, `
 			INSERT INTO activity (kind, direction, subject, body, thread_key, occurred_at, created_at,
-			                      source, captured_by, audience, body_completeness)
-			VALUES ('email', 'inbound', 'Contract', $1, $2, $3, $3, 'gmail', 'connector:gmail', 'workspace', $4)`,
+			                      source, captured_by, audience, body_completeness,
+			                      counterparty_email, inbound_sender_authenticated)
+			VALUES ('email', 'inbound', 'Contract', $1, $2, $3, $3, 'gmail', 'connector:gmail', 'workspace', $4,
+			        'buyer@contract.test', true)`,
 			row.body, key, at.Add(time.Duration(i)*time.Minute), row.completeness); err != nil {
 			t.Fatal(err)
 		}

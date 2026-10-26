@@ -246,7 +246,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	if in.ConversationOf != nil {
 		where = append(where, sprintf(`EXISTS (SELECT 1 FROM activity conversation_anchor
 		          WHERE conversation_anchor.id = $%d AND %s)`,
-			arg(*in.ConversationOf), sharedCorrespondentSQL("a", "conversation_anchor")))
+			arg(*in.ConversationOf), SameCorrespondenceSQL("a", "conversation_anchor", sprintf("$%d::text", arg(in.conversationDomain)))))
 	}
 	if in.Query != nil && *in.Query != "" {
 		// subject + body are the two human-readable columns a human would
