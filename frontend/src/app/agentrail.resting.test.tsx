@@ -163,6 +163,7 @@ describe("restingReadings", () => {
     const lines = restingReadings(
       {
         waiting: 2,
+        sourcesUnknown: false,
         developmentLine: "offline model",
         settled: [plain("brief ready"), plain("summary ready")],
       },

@@ -21,8 +21,8 @@ import {
 
 // One Google account is two connections: a Gmail grant and a Calendar grant,
 // both labelled with the account's address. The panel used to reduce each to
-// that address and key the row by it, so the two offline sources rendered as
-// one ambiguous line twice and React warned about a duplicate key.
+// that address and key the row by it. The two offline sources then rendered
+// as the same line twice, and React warned about a duplicate key.
 const ACCOUNT = "rep@seller.example";
 const GMAIL = {
   ...CONNECTED,

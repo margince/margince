@@ -231,9 +231,9 @@ describe("AgentRail", () => {
   });
 
   // A dropped request is the tool's own problem for that one call, and does
-  // not colour the orb: a corner that flashed red on a flaky connection is
-  // exactly the failure mode this derivation was rebuilt to avoid. Nor does it
-  // say that nothing needs attention: nobody read which sources are reachable.
+  // not colour the orb. A corner that flashed red on a flaky connection is the
+  // failure this derivation was rebuilt to avoid. Nor does the line say that
+  // nothing needs attention: nobody read which sources are reachable.
   it("does not colour the orb for a transient tool failure, and claims no all-clear", async () => {
     stubAgentRailApi({
       connectors: () =>

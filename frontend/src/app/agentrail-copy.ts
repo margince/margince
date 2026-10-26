@@ -63,9 +63,9 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
  */
 export const IDLE_ORDER = [
   // First: the connections read failed, so nobody knows which sources the
-  // agent can reach, and every other reading is about a world it may not see.
-  // Not a fault (the orb stays idle for a dropped read), but not something the
-  // rotation may leave out because there is other news.
+  // agent can reach. Every other reading is about a world it may not see.
+  // A dropped read is not a fault, so the orb stays idle. But the rotation
+  // may not leave this line out because there is other news.
   "sources",
   "waiting",
   // Second: what the scheduled runner finished while nobody was looking is news
