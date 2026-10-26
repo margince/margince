@@ -34,12 +34,13 @@ const MAKEFILE = /(^|\/)(Makefile|[^/]+\.mk)$/;
 const FRONTEND_PATH = /^(frontend|extensions\/(.+\/)?frontend)\//;
 
 // Tracked files and new ones git would stage, so a file is caught before its
-// first commit; .gitignore keeps build output out.
+// first commit; .gitignore keeps build output out. The listing passes the 1 MB
+// default buffer as the tree grows, so the cap is raised.
 function repoFiles(): string[] {
   const listed = execFileSync(
     "git",
     ["ls-files", "-z", "--cached", "--others", "--exclude-standard"],
-    { cwd: repo, encoding: "utf8" },
+    { cwd: repo, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
   return [...new Set(listed.split("\0"))]
     .filter((path) => path !== "" && existsSync(join(repo, path)))

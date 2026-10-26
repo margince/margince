@@ -22,7 +22,7 @@
   "extBillingDemo.invoices.synced": "Im CRM",
   "extBillingDemo.invoices.title": "Rechnungen",
   "extBillingDemo.invoices.waiting": "Wartet auf den nächsten Abgleich",
-  "extBillingDemo.noGrant": "Deine Rolle hat keinen Zugriff auf die Billing-Demo. Ein Administrator kann ihn vergeben.",
+  "extBillingDemo.noGrant": "Deine Rolle hat keinen Zugriff auf die Billing-Demo. Admins können den Zugriff gewähren.",
   "extBillingDemo.sub": "Ein Schein-Abrechnungssystem. Wird eine Rechnung bezahlt, wechselt ihr Deal auf Gewonnen. Bearbeitest du einen Deal-Betrag, lässt das Abrechnungssystem ihn in Ruhe.",
   "extBillingDemo.title": "Billing-Demo"
 }
