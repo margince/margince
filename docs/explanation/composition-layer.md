@@ -63,11 +63,12 @@ func New(pool, log, opts...) http.Handler {
    below).
 2. **Options** apply the changes for each role (blob store, key vault, bus check, and more).
 3. **`applySendPath`** binds the outbound send lane once the options have set which providers exist.
-4. **`contractAPI`** puts the generated `chi` router at `BaseURL: "/v1"` with two middleware layers.
-   First comes `agentGate`, the gate layer. It does not depend on the transport, and it uses the
-   same tier table as the MCP surface. Then comes `idempotency`, which runs first, around the gate. So when a call
-   is staged for approval, that refused answer is never stored as the response for its key. This is
-   needed because the approved retry is the same request under the same key.
+4. **`contractAPI`** puts the generated `chi` router at `BaseURL: "/v1"` through `contractRouter`,
+   whose first layers answer 422 to a bad parameter. Around them comes `agentGate`, the gate layer.
+   It does not depend on the transport, and it uses the same tier table as the MCP surface. Then
+   comes `idempotency`, which runs first, around the gate. So when a call is staged for approval,
+   that refused answer is never stored as the response for its key. This is needed because the
+   approved retry is the same request under the same key.
 5. **`operationalMux`** puts the contract surface next to `/healthz`, `/readyz` and `/metrics`. Beside
    them are the public `/v1/public/*` edges that need no sign-in, and the `/oauth` OAuth server. `/readyz` runs dependency
    checks that change by role. The `mux` takes the same `identitySvc` as `contractAPI`. So there is

@@ -1128,6 +1128,7 @@ paths:
           description: Passport revoked (or already revoked).
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /agent-bundle:
     get:
@@ -1230,6 +1231,7 @@ paths:
               schema: { $ref: '#/components/schemas/EmploymentImportReport' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Contacts]
       operationId: applyContactEmploymentImport
@@ -1656,6 +1658,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Contacts]
       operationId: updateContact
@@ -1700,6 +1703,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/merge:
     parameters:
@@ -1868,6 +1872,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     put:
       tags: [Contacts]
       operationId: dismissRelationshipNudge
@@ -1922,6 +1927,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/brief:
     parameters:
@@ -2234,6 +2240,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/research:
     parameters:
@@ -2571,6 +2578,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Contacts]
       operationId: createIntroRequest
@@ -2783,6 +2791,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/profile-fields/{field}/restore:
     parameters:
@@ -2883,6 +2892,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------ /integrations/settings -------------------------
   /integrations/settings:
@@ -3108,6 +3118,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # --------------------------- /companies -------------------------------
   /companies:
@@ -3290,6 +3301,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Company' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Companies]
       operationId: updateCompany
@@ -3339,6 +3351,7 @@ paths:
               schema: { $ref: '#/components/schemas/Company' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/reject:
     parameters:
@@ -3520,6 +3533,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
           content:
@@ -3556,6 +3570,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
           content:
@@ -3630,6 +3645,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /companies/{id}/graph:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -4558,6 +4574,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Partner' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/partner/setup:
     parameters:
@@ -4768,6 +4785,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/vat-check:
     parameters:
@@ -4799,6 +4817,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Companies]
       operationId: requestCompanyVatCheck
@@ -4830,6 +4849,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Consulted too recently — the answer on the record still stands.
           content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
@@ -4857,6 +4877,7 @@ paths:
               schema: { $ref: '#/components/schemas/SiteReadReport' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/site-reads/{readId}:
     parameters:
@@ -4878,6 +4899,7 @@ paths:
               schema: { $ref: '#/components/schemas/SiteReadReport' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/access:
     parameters:
@@ -4930,6 +4952,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/finance-summary:
     parameters:
@@ -4961,6 +4984,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /finance/source:
     get:
@@ -5068,6 +5092,7 @@ paths:
               schema: { $ref: '#/components/schemas/FinanceSourceCustomerListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /finance/source/customers/{external_id}/link:
     parameters:
@@ -5152,6 +5177,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: >
             This deployment composed no domain triage, so there is no company check to read.
@@ -5178,6 +5204,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
     post:
       tags: [Companies]
@@ -5237,6 +5264,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /partners:
     get:
@@ -5265,6 +5293,7 @@ paths:
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/Partner' } }
                   page: { $ref: '#/components/schemas/PageInfo' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # --------------------------- /commissions ---------------------------------
   /commissions:
@@ -5300,6 +5329,7 @@ paths:
               schema: { $ref: '#/components/schemas/CommissionEntryListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /commissions/summary:
     get:
@@ -5332,6 +5362,7 @@ paths:
               schema: { $ref: '#/components/schemas/CommissionEntry' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /commissions/{id}/decide:
     parameters:
@@ -5392,6 +5423,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Deals]
       operationId: requestLegalReview
@@ -5529,6 +5561,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /legal-reviews/{id}/decide:
     parameters:
@@ -5586,6 +5619,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deal-suggestions:
     get:
@@ -5652,6 +5686,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deal-suggestions/{id}/accept:
     parameters:
@@ -5726,6 +5761,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------------ /deals ------------------------------------
   /deals:
@@ -6025,6 +6061,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Deal' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Deals]
       operationId: updateDeal
@@ -6067,6 +6104,7 @@ paths:
               schema: { $ref: '#/components/schemas/Deal' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deals/{id}/advance:
     parameters:
@@ -6232,6 +6270,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RelationshipListResponse' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ---------------------------- /projects -----------------------------------
   /projects:
@@ -6452,6 +6491,7 @@ paths:
               schema: { $ref: '#/components/schemas/BulkOperation' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /bulk/{id}/undo/preview:
     parameters:
@@ -6583,6 +6623,7 @@ paths:
               schema: { $ref: '#/components/schemas/Project' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Projects]
       operationId: updateProject
@@ -6628,6 +6669,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /projects/{id}/advance:
     parameters:
@@ -6690,6 +6732,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /projects/{id}/360:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -6755,6 +6798,7 @@ paths:
               schema: { $ref: '#/components/schemas/ProjectHealthAssessmentListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Projects]
       operationId: createProjectHealthAssessment
@@ -6837,6 +6881,7 @@ paths:
               schema: { $ref: '#/components/schemas/RelationshipListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     put:
       tags: [Projects]
       operationId: setProjectStakeholder
@@ -6876,6 +6921,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /projects/{id}/companies:
     parameters:
@@ -6946,6 +6992,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Pipelines]
       operationId: createPipeline
@@ -6989,6 +7036,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Pipeline' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Pipelines]
       operationId: updatePipeline
@@ -7075,6 +7123,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /pipelines/order:
     put:
@@ -7177,6 +7226,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/StageListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Pipelines]
       operationId: createStage
@@ -7222,6 +7272,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Stage' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Pipelines]
       operationId: updateStage
@@ -7420,6 +7471,7 @@ paths:
               schema: { $ref: '#/components/schemas/StageEvidenceListResponse' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deals/{id}/win-evidence:
     parameters:
@@ -7449,6 +7501,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------- /stage-automation/report -------------------------
   /stage-automation/report:
@@ -7536,6 +7589,7 @@ paths:
               schema: { $ref: '#/components/schemas/TransitionPolicyList' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     put:
       tags: [Pipelines]
       operationId: setTransitionPolicy
@@ -7644,6 +7698,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/StageExitCriterionListResponse' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Pipelines]
       operationId: createStageExitCriterion
@@ -7729,6 +7784,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------ /channel-providers -------------------------------
   /channel-providers:
@@ -7900,6 +7956,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Activities]
       operationId: logActivity
@@ -8001,6 +8058,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Activity' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Activities]
       operationId: updateActivity
@@ -8039,6 +8097,7 @@ paths:
               schema: { $ref: '#/components/schemas/Activity' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/email-presentation:
     parameters:
@@ -8070,6 +8129,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/EmailPresentation' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/audience:
     parameters:
@@ -8281,6 +8341,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/relink:
     parameters:
@@ -8358,6 +8419,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/project-filing/undo:
     parameters:
@@ -8552,6 +8614,7 @@ paths:
               schema: { $ref: '#/components/schemas/TranscriptReadReport' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/transcript-proposals/{readId}:
     parameters:
@@ -8573,6 +8636,7 @@ paths:
               schema: { $ref: '#/components/schemas/TranscriptReadReport' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/draft-email:
     parameters:
@@ -8608,6 +8672,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/EmailDraft' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/reply-recipient:
     parameters:
@@ -8661,6 +8726,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReplyRecipient' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/send-email:preview:
     parameters:
@@ -8926,6 +8992,7 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/ScheduledSend' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /scheduled-sends/{id}:
     parameters:
@@ -8949,6 +9016,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Activities]
       operationId: rescheduleScheduledSend
@@ -9013,6 +9081,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /mail-drafts:
     get:
@@ -9118,6 +9187,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/send-message:
     parameters:
@@ -9279,6 +9349,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
@@ -9301,6 +9372,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
@@ -9330,6 +9402,7 @@ paths:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/MeetingProposal' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         default:
           description: The operation could not be completed.
           content:
@@ -9437,6 +9510,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingAvailability' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '502': { $ref: '#/components/responses/CalendarUnavailable' }
         default:
           description: The operation could not be completed.
@@ -9468,6 +9542,7 @@ paths:
                     name: { type: string }
                     writable: { type: boolean }
                     primary: { type: boolean }
+        '422': { $ref: '#/components/responses/ValidationError' }
         default:
           description: The calendar connection is unavailable.
           content:
@@ -9555,6 +9630,7 @@ paths:
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: Read invitation delivery and calendar state.
       responses:
+        '422': { $ref: '#/components/responses/ValidationError' }
         default:
           description: The operation could not be completed.
           content:
@@ -9780,6 +9856,7 @@ paths:
                       does not help, since the walk starts at `from` either way. Declared because a
                       capped list read as complete is how a caller concludes there is no later opening.
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '502': { $ref: '#/components/responses/CalendarUnavailable' }
 
   /public/booking/{host_slug}:
@@ -10014,6 +10091,7 @@ paths:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Rate-limited.
           content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
@@ -10036,6 +10114,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DealRoomThreadListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Rate-limited.
           content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
@@ -10424,6 +10503,7 @@ paths:
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/Automation' } }
                   page: { $ref: '#/components/schemas/PageInfo' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Automations]
       operationId: createAutomation
@@ -10462,6 +10542,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Automation' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Automations]
       operationId: updateAutomation
@@ -10493,6 +10574,7 @@ paths:
       responses:
         '204': { description: Deleted. }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /automations/{id}/preview:
     parameters:
@@ -10560,6 +10642,7 @@ paths:
                   data: { type: array, items: { $ref: '#/components/schemas/AutomationRun' } }
                   page: { $ref: '#/components/schemas/PageInfo' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /automations/runs/{id}/retry:
     parameters:
@@ -10608,6 +10691,7 @@ paths:
               schema: { $ref: '#/components/schemas/AutomationRetryResult' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------------ /leads ------------------------------------
   /leads:
@@ -10943,6 +11027,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Lead' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Leads]
       operationId: updateLead
@@ -10985,6 +11070,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Lead' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /leads/{id}/promote:
     parameters:
@@ -11160,6 +11246,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /leads/{id}/demote:
     parameters:
@@ -11254,6 +11341,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /leads/{id}/score:
     parameters:
@@ -11300,6 +11388,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LeadScoreExplanation' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /leads/{id}/draft-email:
     parameters:
@@ -11376,6 +11465,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LeadManualSignalListResponse' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     put:
       tags: [Leads]
       operationId: setLeadManualSignal
@@ -11468,6 +11558,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # -------------------------- /relationships --------------------------------
   # ------------------------------ /lead-sources -----------------------------
@@ -11568,6 +11659,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /lead-origins:
     get:
@@ -11653,6 +11745,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /acquisition-sources:
     get:
@@ -11830,6 +11923,7 @@ paths:
               schema: { $ref: '#/components/schemas/RecordAssignmentListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Assignments]
       operationId: createRecordAssignment
@@ -11900,6 +11994,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /lead-disqualify-reasons:
     get:
@@ -11983,6 +12078,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /relationships:
     get:
@@ -12013,6 +12109,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RelationshipListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Relationships]
       operationId: createRelationship
@@ -12114,6 +12211,7 @@ paths:
               schema: { $ref: '#/components/schemas/Relationship' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------------ /lists ------------------------------------
   # A list is a named, shared set of one record type: a Live List (list_type
@@ -12161,6 +12259,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Lists]
       operationId: createList
@@ -12203,6 +12302,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Lists]
       operationId: updateList
@@ -12242,6 +12342,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /lists/{id}/restore:
     parameters:
@@ -12261,6 +12362,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /lists/{id}/members:
     parameters:
@@ -12424,6 +12526,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /records/{entity_type}/{entity_id}/lists:
     parameters:
@@ -12455,6 +12558,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /lists/{id}/history:
     parameters:
@@ -12509,6 +12613,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------- /filters/vocabulary -----------------------------
   /filters/vocabulary:
@@ -12828,6 +12933,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/evaluate:
     get:
       tags:
@@ -13912,6 +14018,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SavedViewListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Views]
       operationId: createSavedView
@@ -13947,6 +14054,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SavedView' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Views]
       operationId: updateSavedView
@@ -13982,6 +14090,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SavedView' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------------ /exports ----------------------------------
   /exports:
@@ -14194,6 +14303,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '503':
           description: 'This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal a bot token in (`code: channel_credentials_not_configured`).'
           content:
@@ -14225,6 +14335,7 @@ paths:
               schema: { $ref: '#/components/schemas/WebhookSubscriptionListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Webhooks]
       operationId: createWebhookSubscription
@@ -14296,6 +14407,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Webhooks]
       operationId: updateWebhookSubscription
@@ -14338,6 +14450,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /webhook-subscriptions/{id}/rotate-secret:
     parameters:
@@ -14357,6 +14470,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /webhook-subscriptions/{id}/deliveries:
     parameters:
@@ -14382,6 +14496,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /webhook-subscriptions/{id}/deliveries/{deliveryId}/replay:
     parameters:
@@ -14438,6 +14553,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /tag-suggestions/{id}/accept:
     parameters:
@@ -14463,6 +14579,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /tag-suggestions/{id}/dismiss:
     parameters:
@@ -14487,6 +14604,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /tags:
     get:
@@ -14515,6 +14633,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/TagListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Tags]
       operationId: createTag
@@ -14565,6 +14684,7 @@ paths:
               schema: { $ref: '#/components/schemas/TagDetail' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Tags]
       operationId: updateTag
@@ -14618,6 +14738,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Tag' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /tags/{id}/restore:
     parameters:
@@ -14650,6 +14771,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /tags/{id}/merge:
     parameters:
@@ -15299,6 +15421,11 @@ paths:
               schema: { $ref: '#/components/schemas/EmbedReindexStatus' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '501':
+          description: No embeddings model is bound to the installation, so there is no index to rebuild.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /embeddings/reindex/preview:
     get:
@@ -15325,6 +15452,11 @@ paths:
               schema: { $ref: '#/components/schemas/EmbedReindexPreview' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '501':
+          description: No embeddings model is bound to the installation, so there is no index to rebuild.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /embeddings/reindex:
     post:
@@ -15354,6 +15486,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '501':
+          description: No embeddings model is bound to the installation, so there is no index to rebuild.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /agent-tools:
     get:
@@ -15915,6 +16052,7 @@ paths:
               schema: { $ref: '#/components/schemas/LegalEntityListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Companies]
       operationId: createLegalEntity
@@ -15960,6 +16098,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Companies]
       operationId: updateLegalEntity
@@ -16021,6 +16160,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /legal-entities/{id}/logo:
     parameters:
@@ -16096,6 +16236,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /legal-entities/{id}/logo/image:
     parameters:
@@ -16120,6 +16261,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
           content:
@@ -16148,6 +16290,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     put:
       tags: [Companies]
       operationId: assignLegalEntityMember
@@ -16268,6 +16411,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /company/site-reads/{readId}/logo:
     parameters:
@@ -16299,6 +16443,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
           content:
@@ -16546,6 +16691,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/exclusions/{id}/purge:
     parameters:
@@ -16618,6 +16764,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/threads/{thread_key}/audience:
     parameters:
@@ -16912,6 +17059,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/owner-identities:
     get:
@@ -16984,6 +17132,7 @@ paths:
         '204': { description: Withdrawn. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/owner-identities/{id}/restore:
     parameters:
@@ -17022,6 +17171,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/email-domains/{domain}:
     parameters:
@@ -17180,6 +17330,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: This deployment composed no OAuth transport.
           content:
@@ -17624,6 +17775,7 @@ paths:
               schema: { $ref: '#/components/schemas/MagicReceipt' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /magic/lines/{id}/records:
     get:
@@ -17672,6 +17824,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
 
   /worklist:
@@ -18055,6 +18208,7 @@ paths:
               schema: { $ref: '#/components/schemas/TeamBoard' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /worklist/handled:
     get:
       tags: [Brief]
@@ -18285,6 +18439,7 @@ paths:
               schema: { $ref: '#/components/schemas/MorningDigest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /installation/authentication-policy:
     get:
@@ -18566,6 +18721,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /installation/agent-clients/{id}/secret:
     parameters:
       - name: id
@@ -18595,6 +18751,7 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /installation/oauth-apps:
     get:
       tags: [Identity]
@@ -19066,6 +19223,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CaptureActivityResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/activity/workspace:
     get:
@@ -19092,6 +19250,7 @@ paths:
               schema: { $ref: '#/components/schemas/CaptureActivityResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/traces/{id}:
     parameters:
@@ -19123,6 +19282,7 @@ paths:
               schema: { $ref: '#/components/schemas/PipelineTrace' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/consumer-mail-domains:
     get:
@@ -19203,6 +19363,7 @@ paths:
         '204': { description: Entry withdrawn (or already absent). }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------- /capture/blocked-domains (ADR-0072) -----------------------
   # The domains this installation refuses a company. A vendor the business
@@ -20059,6 +20220,7 @@ paths:
                   value: { provider: gemini_vertex, models: [], unavailable: no_endpoint }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /ai/provider-locations/{provider}:
     parameters:
@@ -20418,6 +20580,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
 
   # ------------------ /dedupe (DH-EXT-1/2, ADR-0062) ------------------------
@@ -20445,6 +20608,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DedupeCandidateListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /dedupe/candidates/{id}:
     parameters:
@@ -20463,6 +20627,7 @@ paths:
               schema: { $ref: '#/components/schemas/DedupeCandidate' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /dedupe/candidates/{id}/disposition:
     parameters:
@@ -20521,6 +20686,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # ---------------------------- /approvals ----------------------------------
   /autonomy:
@@ -20712,6 +20878,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Approval' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /approvals/{id}/approve:
     parameters:
@@ -20756,6 +20923,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /approvals/{id}/reject:
     parameters:
@@ -20789,6 +20957,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /approvals/{id}/failure-acknowledgement:
     parameters:
@@ -20926,6 +21095,9 @@ paths:
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/DataSubjectRequest' } }
                   page: { $ref: '#/components/schemas/PageInfo' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Compliance]
       operationId: createDataSubjectRequest
@@ -20951,6 +21123,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataSubjectRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /data-subject-requests/deadline:
     get:
@@ -21100,6 +21274,9 @@ paths:
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/NoticeCase' } }
                   page: { $ref: '#/components/schemas/PageInfo' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /privacy/notice-cases/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -21131,6 +21308,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /privacy/notice-cases/{id}/assign:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -21235,6 +21413,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CommunicationReview' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /communication-reviews/{id}/context:
     parameters:
@@ -21407,6 +21586,7 @@ paths:
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/ConfirmSubmission' } }
                   page: { $ref: '#/components/schemas/PageInfo' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /confirm-submissions/{id}/resolve:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -21555,6 +21735,7 @@ paths:
                   page: { $ref: '#/components/schemas/PageInfo' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /records/{entity_type}/{id}/history:
     parameters:
@@ -22031,6 +22212,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /custom-fields/{id}/retire:
     parameters:
@@ -22075,6 +22257,7 @@ paths:
                     code: approval_required
                     detail: Retiring a custom field is confirm-first; supply an approval token.
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /custom-fields/{id}/options:
     parameters:
@@ -22323,6 +22506,7 @@ paths:
                   page: { $ref: '#/components/schemas/PageInfo' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /retention/restrictions/{activityId}/release:
     parameters:
@@ -22416,6 +22600,7 @@ paths:
                   page: { $ref: '#/components/schemas/PageInfo' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /retention/legal-holds/{entityType}/{recordId}/place:
     parameters:
@@ -22591,6 +22776,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/consent:
     parameters:
@@ -22617,6 +22803,7 @@ paths:
                   state: { type: array, items: { $ref: '#/components/schemas/ContactConsentState' } }
                   events: { type: array, items: { $ref: '#/components/schemas/ConsentEvent' } }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Compliance]
       operationId: recordConsent
@@ -23010,6 +23197,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/consent/privacy-notice:
     parameters:
@@ -23049,6 +23237,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /contacts/{id}/consent/confirm-request:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -23185,6 +23374,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /record-grants:
     get:
@@ -23216,6 +23406,7 @@ paths:
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/RecordGrant' } }
                   page: { $ref: '#/components/schemas/PageInfo' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Access]
       operationId: createRecordGrant
@@ -23306,6 +23497,7 @@ paths:
                     detail: Revoking a share is confirm-first for an agent; supply an approval token.
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /users:
     get:
@@ -23347,6 +23539,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/UserListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Identity]
       operationId: inviteUser
@@ -23493,6 +23686,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /users/former:
     post:
@@ -23753,6 +23947,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /users/{id}/reactivate:
     parameters:
@@ -23799,6 +23994,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /users/{id}/handover:
     parameters:
@@ -23824,6 +24020,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Identity]
       operationId: handOverUserWork
@@ -23883,6 +24080,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /users/{id}/sessions/{sessionId}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -23908,6 +24106,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /users/{id}/mfa:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -23943,6 +24142,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /users/{id}/password-link:
     parameters:
@@ -24018,6 +24218,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Issuance rate limit reached for this actor or this target.
           content:
@@ -24059,6 +24260,7 @@ paths:
               schema: { $ref: '#/components/schemas/RoleDirectory' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Identity]
       operationId: createRole
@@ -24454,6 +24656,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/TeamListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Identity]
       operationId: createTeam
@@ -24534,6 +24737,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Identity]
       operationId: removeTeamMember
@@ -24549,6 +24753,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # =========================================================================
   # VOICE — owner-private Voice DNA management (ADR-0066).
@@ -24613,6 +24818,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/VoiceProfile' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Voice]
       operationId: updateVoiceProfile
@@ -24652,6 +24858,7 @@ paths:
               schema: { $ref: '#/components/schemas/VoiceProfile' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /voice-profiles/{id}/sources:
     parameters:
@@ -24682,6 +24889,7 @@ paths:
                   summary: { $ref: '#/components/schemas/VoiceCorpusSummary' }
                   page: { $ref: '#/components/schemas/PageInfo' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Voice]
       operationId: ingestVoiceCorpusSource
@@ -24805,6 +25013,7 @@ paths:
               schema: { $ref: '#/components/schemas/VoiceCorpusSource' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /voice-profiles/{id}/corpus/clear:
     parameters:
@@ -24827,6 +25036,7 @@ paths:
               schema: { $ref: '#/components/schemas/VoiceProfile' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /voice-profiles/{id}/builds:
     parameters:
@@ -24874,6 +25084,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/VoiceBuild' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /voice-profiles/{id}/versions:
     parameters:
@@ -24899,6 +25110,7 @@ paths:
                   data: { type: array, items: { $ref: '#/components/schemas/VoiceProfileVersion' } }
                   page: { $ref: '#/components/schemas/PageInfo' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /voice-profiles/{id}/versions/{profileVersion}/apply:
     parameters:
@@ -24921,6 +25133,7 @@ paths:
               schema: { $ref: '#/components/schemas/VoiceProfileVersion' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /voice-profiles/{id}/versions/{profileVersion}/reject:
     parameters:
@@ -24943,6 +25156,7 @@ paths:
               schema: { $ref: '#/components/schemas/VoiceProfileVersion' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /voice-profiles/{id}/versions/{profileVersion}/rollback:
     parameters:
@@ -24964,6 +25178,7 @@ paths:
               schema: { $ref: '#/components/schemas/VoiceProfileVersion' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /voice-profiles/{id}/deltas:
     parameters:
@@ -24989,6 +25204,7 @@ paths:
                   data: { type: array, items: { $ref: '#/components/schemas/VoiceProfileDelta' } }
                   page: { $ref: '#/components/schemas/PageInfo' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /voice-profiles/{id}/learning:
     parameters:
@@ -25006,6 +25222,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/VoiceLearningSummary' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /voice-profiles/{id}/draft-rejections:
     parameters:
@@ -25030,6 +25247,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/VoiceLearningSummary' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # =========================================================================
 
@@ -25064,6 +25282,7 @@ paths:
               schema: { $ref: '#/components/schemas/ProductListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Offers]
       operationId: createProduct
@@ -25107,6 +25326,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Product' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Offers]
       operationId: updateProduct
@@ -25252,6 +25472,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Deals]
       operationId: updateDealRoom
@@ -25305,6 +25526,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deal-rooms/{id}/pause:
     parameters:
@@ -25329,6 +25551,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deal-rooms/{id}/resume:
     parameters:
@@ -25353,6 +25576,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deal-rooms/{id}/close:
     parameters:
@@ -25381,6 +25605,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deal-rooms/{id}/expiry:
     parameters:
@@ -25513,6 +25738,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Deals]
       operationId: inviteDealRoomParticipant
@@ -25626,6 +25852,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deal-rooms/{id}/participants/{participantId}/revoke:
     parameters:
@@ -25658,6 +25885,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deal-rooms/{id}/documents:
     parameters:
@@ -25680,6 +25908,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Deals]
       operationId: addDealRoomDocument
@@ -25762,6 +25991,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /deal-rooms/{id}/threads:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -25786,6 +26016,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Deals]
       operationId: openDealRoomThread
@@ -25872,6 +26103,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # -------------------------- offer templates ---------------------------
   # Branded, workspace-governed DE/EN PDF layouts for offers (B-E03.22/WP7,
@@ -25909,6 +26141,7 @@ paths:
               schema: { $ref: '#/components/schemas/OfferTemplateListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Offers]
       operationId: createOfferTemplate
@@ -25977,6 +26210,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     put:
       tags: [Offers]
       operationId: updateOfferTemplate
@@ -26050,6 +26284,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/OutcomeReviewListResponse' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Deals]
       operationId: createDealOutcomeReview
@@ -26147,6 +26382,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/OfferListResponse' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Offers]
       operationId: createOffer
@@ -26191,6 +26427,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Offer' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Offers]
       operationId: updateOffer
@@ -26480,6 +26717,7 @@ paths:
             application/pdf:
               schema: { type: string, format: binary }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: >-
             The object store (blobstore) is not wired on this deployment — the same
@@ -26547,6 +26785,7 @@ paths:
               schema: { $ref: '#/components/schemas/SignalListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Signals]
       operationId: createSignal
@@ -26614,6 +26853,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Signal' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Signals]
       operationId: updateSignal
@@ -26653,6 +26893,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Signal' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /signals/{id}/resolve:
     parameters:
@@ -26889,6 +27130,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /weekly-reviews/latest:
     get:
       tags: [Brief]
@@ -26925,6 +27167,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /brief/annotations:
     put:
@@ -26997,6 +27240,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /forecast:
     get:
@@ -27249,6 +27493,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/assurance/exceptions/{id}/resolve:
     post:
       tags: [Reports]
@@ -28153,6 +28398,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /weekly-plans/commitments:
     post:
       tags: [Brief]
@@ -28470,6 +28716,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /notices/read-all:
     post:
@@ -28527,6 +28774,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /brief/items/{itemId}/snooze:
     parameters:
@@ -28615,6 +28863,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # =========================================================================
   # =========================================================================
@@ -28758,6 +29007,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deals/{id}/documents:
     parameters:
@@ -28826,6 +29076,7 @@ paths:
         '204': { description: Hidden. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Attachments]
       operationId: unhideDealDocument
@@ -28836,6 +29087,7 @@ paths:
         '204': { description: Listed again. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deals/{id}/status:
     parameters:
@@ -28895,6 +29147,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}/move/dismiss:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -28987,6 +29240,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deals/{id}/commitments:
     get:
@@ -29018,6 +29272,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /deals/{id}/role-proposals:
     parameters:
@@ -29067,6 +29322,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: |
             The process role wired no model path — declared absent, never a silent no-op.
@@ -29166,6 +29422,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /me/linkedin-reach:
     get:
       tags: [Contacts]
@@ -29195,6 +29452,7 @@ paths:
               schema: { $ref: '#/components/schemas/LinkedInReachResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /me/linkedin-account:
     get:
@@ -29472,6 +29730,7 @@ paths:
         '204': { description: 'The session is revoked, or was already.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /me/mfa:
     get:
@@ -29897,6 +30156,7 @@ paths:
               schema: { $ref: '#/components/schemas/Contract' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Contracts]
       operationId: updateContract
@@ -29943,6 +30203,7 @@ paths:
         '204': { description: Archived. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contracts/{id}/status:
     post:
@@ -30158,6 +30419,7 @@ paths:
             application/octet-stream:
               schema: { type: string, format: binary }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Attachments]
       operationId: deleteAttachment
@@ -30172,6 +30434,7 @@ paths:
       responses:
         '204': { description: Archived. }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /attachments/{id}/extraction:
     parameters:
@@ -30204,6 +30467,7 @@ paths:
               schema: { $ref: '#/components/schemas/AttachmentExtraction' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Attachments, AI]
       operationId: readAttachmentForFields
@@ -30238,6 +30502,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The process role wired no model path or no job runner — declared absent, never a silent no-op.
           content:
@@ -30325,6 +30590,7 @@ paths:
               schema: { $ref: '#/components/schemas/RequestAccessResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /imports/sources:
     post:
@@ -30572,6 +30838,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Import]
       operationId: updateImportRun
@@ -30679,6 +30946,7 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }   # not pending, validating or awaiting_approval
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /imports/{id}/report:
     parameters:
@@ -30714,6 +30982,7 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }   # the validation pass has not produced a report yet
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /imports/{id}/problems.csv:
     parameters:
@@ -30741,6 +31010,7 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }   # the validation pass has not produced a report yet
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /imports/{id}/approve:
     parameters:
@@ -30795,6 +31065,7 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }   # not awaiting_approval, another version, or failed and never approved
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /imports/{id}/undo:
     parameters:
@@ -30847,6 +31118,7 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }   # not complete/undoing, not csv, already undone, or undoing with no progress to resume
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   # DEFERRED — stubs only (data-model.md §12). Intentionally NOT specified:
   #   /sequences, /sequences/{id}/steps, /enrollments   (outbound cadences; sends gated)
@@ -31397,6 +31669,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     patch:
       tags: [Knowledge]
       operationId: updateCorpus
@@ -31455,6 +31728,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /knowledge/corpora/{id}/documents:
     parameters:
@@ -31521,6 +31795,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /knowledge/documents/{id}:
     parameters:
@@ -31548,6 +31823,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Knowledge]
       operationId: deleteCorpusDocument
@@ -31573,6 +31849,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /knowledge/corpora/{id}/ask:
     parameters:
