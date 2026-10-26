@@ -16693,6 +16693,13 @@ export const en = {
   "lead.figure.booked": "Booked",
   "lead.figure.respondedIn": "In {span}",
   "lead.figure.notLinked": "Not linked to a company",
+  "lead.figure.linked": "Linked company",
+  "lead.company.linkOffer": "Link to {name}",
+  "lead.company.linkTitle": "Link this lead to {name}?",
+  "lead.company.linkConfirm": "Link company",
+  "lead.company.linkOpens": "The company name on this lead then opens {name}.",
+  "lead.company.linkContact":
+    "This lead is added as a contact at {name}. Its status does not change.",
   "lead.timeline.received": "{at} · received",
   "lead.timeline.weReplied": "You replied",
   "lead.timeline.repliedIn": "{at} · in {span}",

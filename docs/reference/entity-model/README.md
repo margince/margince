@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 329 |
-| Columns | 3885 |
-| Foreign keys | 546 |
+| Columns | 3886 |
+| Foreign keys | 547 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -41,10 +41,10 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 31 | 142 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 34 | 49 |
-| [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 47 |
+| [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 48 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 67 | 38 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 27 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 40 | 18 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 41 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 12 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
@@ -72,6 +72,7 @@ erDiagram
     project ||--o{ deal : project_id
     app_user ||--o{ deal : source_author_id
     stage ||--o{ deal : stage_id
+    company ||--o{ lead : company_id
     contact ||--o{ lead : from_contact_id
     app_user ||--o{ lead : owner_id
     project ||--o{ lead : project_id
@@ -222,7 +223,7 @@ erDiagram
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
-| [`company`](contacts.md#company) | contacts | 44 | 47 |
+| [`company`](contacts.md#company) | contacts | 44 | 48 |
 | [`company_address_country`](contacts.md#company_address_country) | contacts | 3 | 0 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 11 | 0 |
@@ -319,7 +320,7 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
-| [`lead`](contacts.md#lead) | contacts | 40 | 18 |
+| [`lead`](contacts.md#lead) | contacts | 41 | 18 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 8 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
 | [`lead_origin`](contacts.md#lead_origin) | contacts | 10 | 1 |

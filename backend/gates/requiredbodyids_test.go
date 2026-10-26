@@ -47,6 +47,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"AssignLegalEntityMemberRequest":    true,
 	"MeetingProposalRequest":            true,
 	"AssignLeadsRequest":                true,
+	"LinkLeadCompanyRequest":            true,
 	"CreateOutcomeReviewRequest":        true,
 	"CreateDealRequest":                 true,
 	"AddDealRoomDocumentRequest":        true,

@@ -2307,6 +2307,10 @@ func (stubs) DraftLeadEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "DraftLeadEmail")
 }
 
+func (stubs) LinkLeadCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "LinkLeadCompany")
+}
+
 func (stubs) ListLeadManualSignals(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListLeadManualSignals")
 }

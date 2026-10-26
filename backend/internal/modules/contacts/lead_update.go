@@ -264,8 +264,8 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 		return crmcontracts.Lead{}, err
 	}
 	// A client-supplied reference to a row-scoped record is a read of it.
-	// Deliberately no same-company check: a lead has no company to compare
-	// (Note PROJ-DDL-N-4).
+	// No same-company check: a lead's company is an optional link a human
+	// confirms, not an anchor a project must share (Note PROJ-DDL-N-4).
 	if in.ProjectID != nil {
 		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
 			return crmcontracts.Lead{}, err
@@ -295,6 +295,9 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 		return crmcontracts.Lead{}, err
 	}
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if err := unlinkRenamedCompany(ctx, tx, id, p); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if p.Empty() {

@@ -4815,6 +4815,7 @@ public.idx_idempotency_key_created CREATE INDEX idx_idempotency_key_created ON p
 public.idx_import_record_map_run CREATE INDEX idx_import_record_map_run ON public.import_record_map USING btree (import_run_id)
 public.idx_import_run_status CREATE INDEX idx_import_run_status ON public.import_run USING btree (status)
 public.idx_lead_candidate_company CREATE INDEX idx_lead_candidate_company ON public.lead USING btree (candidate_company_key) WHERE ((candidate_company_key IS NOT NULL) AND (archived_at IS NULL))
+public.idx_lead_company CREATE INDEX idx_lead_company ON public.lead USING btree (company_id) WHERE (company_id IS NOT NULL)
 public.idx_lead_disqualify_reason CREATE INDEX idx_lead_disqualify_reason ON public.lead USING btree (disqualify_reason_id) WHERE (disqualify_reason_id IS NOT NULL)
 public.idx_lead_email_trgm CREATE INDEX idx_lead_email_trgm ON public.lead USING gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_lead_from_contact CREATE INDEX idx_lead_from_contact ON public.lead USING btree (from_contact_id) WHERE (from_contact_id IS NOT NULL)
@@ -5229,6 +5230,7 @@ public.lead acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince
 public.lead.archived_at timestamp with time zone gen=- def=-
 public.lead.candidate_company_key text gen=- def=-
 public.lead.captured_by text NOT NULL gen=- def=-
+public.lead.company_id uuid gen=- def=-
 public.lead.company_name text gen=- def=-
 public.lead.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.disqualify_note text gen=- def=-
@@ -5239,6 +5241,7 @@ public.lead.first_response_at timestamp with time zone gen=- def=-
 public.lead.from_contact_id uuid gen=- def=-
 public.lead.full_name text gen=- def=-
 public.lead.id uuid NOT NULL gen=- def=uuidv7()
+public.lead.lead_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
 public.lead.lead_disqualify_reason_id_fkey FOREIGN KEY (disqualify_reason_id) REFERENCES lead_disqualify_reason(id) ON DELETE RESTRICT
 public.lead.lead_email_norm CHECK (((email IS NULL) OR (email = lower(email))))
 public.lead.lead_first_response_follows_creation CHECK (((first_response_at IS NULL) OR (first_response_at >= created_at)))

@@ -26,7 +26,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -61,6 +63,9 @@ func relinkCompanySatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		return err
 	}
 	if err := moveCompanyDedupeCandidates(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	if err := repointLinkedLeads(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
 	return moveKindIDRows(ctx, tx, "company", sourceID.UUID, targetID.UUID)
@@ -283,6 +288,33 @@ func settleFactRevisions(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.
 		`DELETE FROM company_fact_revision WHERE company_id = @source`,
 		pgx.NamedArgs{mergeSourceKey: sourceID}); err != nil {
 		return fmt.Errorf("retire the merged-away company's fact revision: %w", err)
+	}
+	return nil
+}
+
+// repointLinkedLeads moves the leads linked to the retired company onto the
+// survivor, which is the same company. A lead is a record with a write shape,
+// so each one moved gets its own audit row and lead.updated event.
+func repointLinkedLeads(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
+	rows, err := tx.Query(ctx,
+		`UPDATE lead SET company_id = $2 WHERE company_id = $1 RETURNING id`, sourceID, targetID)
+	if err != nil {
+		return fmt.Errorf("repoint the leads linked to the merged-away company: %w", err)
+	}
+	moved, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("read the leads linked to the merged-away company: %w", err)
+	}
+	for _, leadID := range moved {
+		before := map[string]any{leadCompanyIDColumn: sourceID.UUID}
+		after := map[string]any{leadCompanyIDColumn: targetID.UUID}
+		auditID, err := storekit.Audit(ctx, tx, "update", "lead", leadID, before, after)
+		if err != nil {
+			return fmt.Errorf("audit a lead's company moving to the merge survivor: %w", err)
+		}
+		if err := storekit.EmitEvent(ctx, tx, auditID, leadID, crmcontracts.PublicEventLeadUpdated{ChangedFields: after}); err != nil {
+			return fmt.Errorf("emit lead.updated for a lead's company moving to the merge survivor: %w", err)
+		}
 	}
 	return nil
 }

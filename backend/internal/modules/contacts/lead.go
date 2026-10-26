@@ -386,7 +386,7 @@ func (s *Store) GetLead(ctx context.Context, id ids.LeadID, archived storekit.Ar
 		if err := auth.EnsureVisible(ctx, tx, "lead", id.UUID); err != nil {
 			return err
 		}
-		out, err = readLead(ctx, tx, id, archived, active)
+		out, err = readLeadOffered(ctx, tx, id, archived, active)
 		return err
 	})
 	return out, err

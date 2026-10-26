@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -212,18 +213,40 @@ func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, contactID id
 	if err != nil {
 		return err
 	}
-	role := strings.TrimSpace(entry.Title)
+	return s.ensureEmployment(ctx, tx, contactID, *companyID, entry.Title, vcardSource)
+}
+
+// ensureEmployment gives a contact a live employment at a company, unless it
+// already holds one there. The vCard import, the lead's company link and its
+// promotion write the edge through here.
+func (s *Store) ensureEmployment(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, companyID ids.CompanyID, role, source string) error {
+	held, err := holdsLiveEmployment(ctx, tx, contactID, companyID)
+	if err != nil || held {
+		return err
+	}
 	edge := CreateRelationshipInput{
 		Kind:      employmentKind,
 		ContactID: &contactID,
-		CompanyID: companyID,
-		Source:    vcardSource,
+		CompanyID: &companyID,
+		Source:    source,
 	}
-	if role != "" {
+	if role = strings.TrimSpace(role); role != "" {
 		edge.Role = &role
 	}
 	_, err = s.CreateRelationshipTx(ctx, tx, edge)
 	return err
+}
+
+// holdsLiveEmployment reports whether a contact holds a live employment at a company.
+func holdsLiveEmployment(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, companyID ids.CompanyID) (bool, error) {
+	var held bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM relationship r
+		                WHERE r.contact_id = $1 AND r.company_id = $2 AND `+employment.LiveSlotSQL("r")+`)`,
+		contactID, companyID).Scan(&held); err != nil {
+		return false, fmt.Errorf("looking for the contact's employment at the company: %w", err)
+	}
+	return held, nil
 }
 
 // employerByName finds the company the card names, or creates it.

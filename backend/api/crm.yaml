@@ -10700,7 +10700,8 @@ paths:
       summary: Create a lead.
       description: |
         With name + email returns 201 + stable UUID; round-trips on GET (features/01 §6.1).
-        `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
+        `company_name` is FREE TEXT; a company link (`company_id`) is set only by a human through
+        `POST /leads/{id}/link-company`, never on create. Lead-internal exact-email
         dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
         for idempotent re-import. A `project_id` that names no project the caller can read
         answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
@@ -11029,6 +11030,51 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /leads/{id}/link-company:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Leads]
+      operationId: linkLeadCompany
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Link a lead to a company, and add the lead as a contact there.
+      description: |
+        The confirm action behind `company_match`: a human says this lead belongs to this
+        company. One transaction sets `company_id`, makes sure the lead has a contact, and makes
+        sure that contact has a current employment at the company.
+
+        The contact is found the way promotion finds it: a live contact holding the lead's email
+        is used, otherwise one is created from the lead, and either way its
+        `converted_from_lead_id` names this lead when it named none. The lead is NOT promoted:
+        its status, owner and place on the lead list stay as they were, and a later promotion
+        lands on the same contact. An employment that already exists is kept, not duplicated.
+
+        The caller needs `lead:update`, `contact:create`, `contact:update`, `company:read` and
+        `relationship:create`; a missing grant answers `403` before anything is read. A company
+        the caller cannot open answers `404`, as a missing one does. A company that is not the
+        lead's current `company_match` answers `422` naming `company_id` with code
+        `not_the_lead_match`: the lead's company name changed, a second company of that name
+        appeared, or the id was never offered. Repeating a link that already holds changes
+        nothing and answers the lead as it is. A lead with neither name nor email answers
+        `422` with code `identity_required`; one that is promoted or disqualified answers `404`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LinkLeadCompanyRequest' }
+      responses:
+        '200':
+          description: The lead as linked.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Lead' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /leads/{id}/qualify:
     parameters:
@@ -49762,7 +49808,7 @@ components:
     # ---- Lead ----
     Lead:
       type: object
-      description: A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
+      description: A thin, segregated prospect. Mirrors the `lead` table.
       required: [id, status, score, source, captured_by, created_at, updated_at]
       properties:
         legal_hold:
@@ -49781,9 +49827,19 @@ components:
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         linkedin_url: { type: [string, 'null'], description: 'Normalized LinkedIn profile URL; the exact-match dedupe key.' }
         title: { type: [string, 'null'] }
-        company_name: { type: [string, 'null'], description: Free text; there is no foreign key to a company. }
+        company_name: { type: [string, 'null'], description: 'Free text, as captured or typed. It names the company until a human links one (`company_id`).' }
+        company_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The company a human confirmed this lead belongs to, through
+            `POST /leads/{id}/link-company`. Null until then, and null again when an edit of
+            `company_name` no longer names the linked company. Withheld when the reader cannot
+            open that company.
+        company_match: { $ref: '#/components/schemas/LeadCompanyMatch' }
         candidate_company_key: { type: [string, 'null'], description: Loose key for ABM routing without creating a company. }
-        project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm and none can: a lead has no company_id, only candidate_company_key, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.' }
+        project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm: a lead''s company_id is an optional link a human confirms, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.' }
         status: { type: string, enum: [new, contacted, engaged, promoted, disqualified], default: new, description: 'The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.' }
         score: { type: integer, default: 0, description: 'Lead-local scoring; never reads the contact graph. While an override is in force this is the human-set value (see score_override_reason).' }
         score_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ `score` is a human Commercial-Judgement override and recompute is suppressed; the machine value is retained in `score_computed`.' }
@@ -49955,7 +50011,7 @@ components:
         title: { type: [string, 'null'] }
         company_name: { type: [string, 'null'] }
         candidate_company_key: { type: [string, 'null'], description: 'Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK.' }
-        project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; carries no same-company guard (a lead has no company).' }
+        project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.' }
         status: { type: string, enum: [new, contacted, engaged], description: 'A human may place an open lead on any open step, forwards or back; the system only ever moves forwards.' }
         source: { type: string, minLength: 1, deprecated: true, description: 'Deprecated and read-only. How the row reached Margince, which Margince writes. Sending the stored value is accepted; any other value is 422 on `source`. Set `origin` to say where the lead came from.' }
         origin: { type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins`, or the key the lead already carries (a retired key is 422 only for a new value). Changing it recomputes the score. Null clears it, and the lead scores neutral.' }
@@ -49978,6 +50034,26 @@ components:
             `POST /records/lead/{id}/claim`, which is the same act with a version precondition.
       additionalProperties: true
       x-extension: true
+
+    LeadCompanyMatch:
+      type: object
+      readOnly: true
+      description: >-
+        A company the lead's `company_name` names exactly, offered for a human to confirm. Sent
+        only on `GET /leads/{id}`, only while `company_id` is null, and only when exactly one live
+        company the reader can open carries that name, compared without case and with runs of
+        spaces folded to one. Absent otherwise.
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, description: The company's display name. }
+
+    LinkLeadCompanyRequest:
+      type: object
+      required: [company_id]
+      additionalProperties: false
+      properties:
+        company_id: { type: string, format: uuid, description: The company to link. The caller must be able to open it. }
 
     PromoteLeadRequest:
       type: object
@@ -50004,7 +50080,7 @@ components:
         Open a deal in the same transaction as the promotion. Omit both ids to use the
         default pipeline's first open stage; a pipeline alone takes its first open stage; a
         stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-        and its company is left unset (a lead has no company). The deal's id lands
+        and its company is left unset, also for a lead linked to a company. The deal's id lands
         on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
       properties:
         pipeline_id: { type: [string, 'null'], format: uuid }
