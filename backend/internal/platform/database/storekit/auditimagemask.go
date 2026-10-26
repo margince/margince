@@ -5,16 +5,38 @@ package storekit
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"slices"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // textMaskedAuditTypes are the record types whose audit rows carry mail text or
 // text a user typed about a conversation. audit_log is append-only, so a
 // credential written into it in clear could never be taken out again.
 var textMaskedAuditTypes = map[string]bool{"activity": true, "scheduled_send": true, "mail_draft": true}
+
+// MaskedAuditEntityTypes are the record types whose audit images the masking
+// rules reach, sorted so a caller's query plan does not change between runs.
+//
+// A repair of images written before those rules derives its own corpus from
+// here. A second list would read a smaller tree than the rules do, and the rows
+// it missed would keep their credentials with nothing failing.
+func MaskedAuditEntityTypes() []string {
+	types := make([]string, 0, len(textMaskedAuditTypes))
+	for entityType := range textMaskedAuditTypes {
+		types = append(types, entityType)
+	}
+	slices.Sort(types)
+	return types
+}
 
 // AuditedText is text in the form the audit trail of entityType stores it. A
 // reader that compares a live column with an image compares this form.
@@ -88,4 +110,90 @@ func maskImageStrings(entityType string, node any) (any, bool) {
 	default:
 		return node, false
 	}
+}
+
+// AuditImageRow is one audit row's images, as a repair reads them before asking
+// for a rewrite.
+type AuditImageRow struct {
+	ID         ids.UUID
+	EntityType string
+	Before     []byte
+	After      []byte
+}
+
+// AuditRepairSetting is the GUC the append-only trigger reads to admit a
+// rewrite of the images, and the one this package sets.
+const AuditRepairSetting = "margince.audit_credential_mask"
+
+// EvidenceKeyMaskedAuditImages names the evidence flag on a row recording that
+// an entity's audit images were masked.
+//
+// Evidence and not an image, because an image is projected as a field change
+// and none of the entity's fields changed.
+const EvidenceKeyMaskedAuditImages = "audit_credentials_masked"
+
+// AuditTrailAdmitsMasking answers whether this installation's append-only
+// function knows about the masking exception.
+//
+// Asked rather than inferred from a refusal. A restored strict trigger and a
+// caller that forgot the setting raise the same check violation.
+//
+// One is a supported state and the other a defect. A caller that treated them
+// alike would go quiet when it had stopped working.
+func AuditTrailAdmitsMasking(ctx context.Context, tx pgx.Tx) (bool, error) {
+	var admits bool
+	err := tx.QueryRow(ctx, `
+		SELECT pg_get_functiondef(p.oid) LIKE '%' || @setting || '%'
+		  FROM pg_proc p
+		  JOIN pg_namespace n ON n.oid = p.pronamespace
+		 WHERE p.proname = 'audit_log_immutable' AND n.nspname = 'public'`,
+		pgx.NamedArgs{"setting": AuditRepairSetting}).Scan(&admits)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// No append-only trigger means no exception to make, which no supported
+		// installation has. Said as a refusal rather than a failure: the trail
+		// is not a caller's to install.
+		return false, nil
+	}
+	return admits, err
+}
+
+// MaskAuditImagesTx masks the credentials in one audit row's images and reports
+// whether it wrote.
+//
+// The one rewrite of an audit image in this tree, and it lives here because
+// this package owns audit_log.
+//
+// The trigger admits it only while the setting is on, and only when nothing but
+// the two image columns moves.
+//
+// Held by: TestEveryPackageOnlyWritesTablesItOwns (backend/gates/tableownership_test.go),
+// which fails any other package that writes audit_log.
+func MaskAuditImagesTx(ctx context.Context, tx pgx.Tx, row AuditImageRow) (bool, error) {
+	before, err := maskAuditImage(row.EntityType, row.Before)
+	if err != nil {
+		return false, fmt.Errorf("storekit: masking the before image of audit row %s: %w", row.ID, err)
+	}
+	after, err := maskAuditImage(row.EntityType, row.After)
+	if err != nil {
+		return false, fmt.Errorf("storekit: masking the after image of audit row %s: %w", row.ID, err)
+	}
+	if bytes.Equal(before, row.Before) && bytes.Equal(after, row.After) {
+		// Nothing to mask, so nothing is written: the trail's one permitted
+		// rewrite is not spent on a row that holds no credential.
+		return false, nil
+	}
+	if _, err := tx.Exec(ctx,
+		`SELECT set_config($1, 'on', true)`, AuditRepairSetting); err != nil {
+		return false, fmt.Errorf("storekit: admitting the audit image rewrite: %w", err)
+	}
+	// The images this read are the guard. audit_log carries no version, and a
+	// row whose images moved under the read is one this pass has not seen.
+	tag, err := tx.Exec(ctx, `
+		UPDATE audit_log SET before = $2, after = $3
+		 WHERE id = $1 AND before IS NOT DISTINCT FROM $4 AND after IS NOT DISTINCT FROM $5`,
+		row.ID, before, after, row.Before, row.After)
+	if err != nil {
+		return false, fmt.Errorf("storekit: rewriting the images of audit row %s: %w", row.ID, err)
+	}
+	return tag.RowsAffected() == 1, nil
 }

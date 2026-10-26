@@ -118,7 +118,7 @@ Set up in `backend/migrations/core/0001_baseline.up.sql`; later migrations only 
 | `occurred_at` | `timestamptz DEFAULT now()` |
 
 **Add-only, held in two ways.** A trigger returns an error on any change. The app role also holds
-only `SELECT` and `INSERT` on the table (in the first migration). So an attempt to change a row *fails*
+`SELECT` and `INSERT` on the table (in the first migration). So an attempt to change a row *fails*
 with an error, and never does nothing without a word:
 
 ```sql
@@ -126,6 +126,17 @@ CREATE TRIGGER trg_audit_no_mutate BEFORE UPDATE OR DELETE ON audit_log
   FOR EACH ROW EXECUTE FUNCTION audit_log_immutable();   -- RAISE EXCEPTION … ERRCODE 'check_violation'
 -- and the baseline grants margince_app only: GRANT SELECT,INSERT ON TABLE audit_log TO margince_app;
 ```
+
+**One exception.** It is for a credential stored before the masking rules. A password that reached
+a mail body before those rules ran sits in the audit images of every edit to that mail. No live
+writer reaches it. `storekit.MaskAuditImagesTx` masks it, and it is the only code that changes an
+audit row.
+
+Both holds stay narrow. The trigger admits a change only while
+`margince.audit_credential_repair` is set, and only when nothing outside `before` and `after`
+moves. The app role's grant covers those two columns and no other.
+
+So what an audit row says happened is still add-only. Only the text it quotes can be masked.
 
 The actor columns mirror the envelope's `Actor` (see *The envelope*): the same kinds of actor. A
 fitness test keeps the two in step, so a new kind cannot reach the bus and break the mirror.
