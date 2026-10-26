@@ -236,19 +236,18 @@ function ApplyRange({
   );
 }
 
-/**
- * The commercial dials as filter chips. Value is offered only once the base
- * currency is known, since its amounts are typed in that currency.
- */
+/** The commercial dials as filter chips, less those `withheldRangeDials` names. */
 export function dealRangeChips({
   words,
   filters,
   baseCurrency,
+  withheld,
   leading,
 }: Readonly<{
   words: RangeWords;
   filters: Readonly<Record<string, string>>;
   baseCurrency: string | undefined;
+  withheld: ReadonlySet<string>;
   leading: LeadingCurrencies;
 }>): ListChip[] {
   const { t, locale } = words;
@@ -270,7 +269,7 @@ export function dealRangeChips({
       appliedName: closeDayName(filters[CLOSE_DAY_DIAL], words),
     },
   ];
-  if (baseCurrency) {
+  if (baseCurrency && !withheld.has(VALUE_DIAL)) {
     const valueAny = t("deals.filterValueAll");
     chips.push({
       key: VALUE_DIAL,
@@ -289,21 +288,23 @@ export function dealRangeChips({
       appliedName: valueName(filters[VALUE_DIAL], baseCurrency, words),
     });
   }
-  chips.push(
-    {
+  if (!withheld.has("currency")) {
+    chips.push({
       key: "currency",
       label: t("create.currency"),
       allLabel: t("deals.filterCurrencyAll"),
       options: currencyOptions(leading),
       filterable: true,
-    },
-    {
+    });
+  }
+  if (!withheld.has("country")) {
+    chips.push({
       key: "country",
       label: t("deals.filterCountry"),
       allLabel: t("deals.filterCountryAll"),
       options: countryOptions(locale),
       filterable: true,
-    },
-  );
+    });
+  }
   return chips;
 }

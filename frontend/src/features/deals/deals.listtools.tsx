@@ -16,12 +16,19 @@ import type { ListChip } from "../../design-system/listsurface";
 import type { ListSelection } from "../../design-system/listtable";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { useCan } from "../../lib/capability";
+import {
+  type RangeReach,
+  withheldRangeDials,
+  withoutWithheldDials,
+} from "../../lib/dealranges";
 import {
   DEAL_SCREEN_DIALS,
   type DealFilters,
   PIPELINE_PARAM,
   VIEW_PARAM,
 } from "../../lib/deals.queries";
+import { useInstallationSettings } from "../../lib/uploadlimit";
 import { currentParams, replaceDial, useUrlParams } from "../../lib/urlstate";
 import { DealBulkBar } from "./dealbulk";
 import type { Deal, Pipeline, Stage } from "./deals";
@@ -189,15 +196,22 @@ export function useDealScreenDials({
     }),
     [],
   );
+  const baseCurrency = useInstallationSettings().data?.base_currency;
+  const readsCompanies = useCan("company", "read");
+  const reach: RangeReach = { baseCurrency, readsCompanies };
   const query = useMemo(() => {
     const read = listQueryFromParams(
       withoutScreenDials(params, DEAL_SCREEN_DIALS),
       opening,
       true,
     );
-    const filters = admittedDealFilters(read.filters);
+    // The address keeps a withheld dial, so it applies again once readable.
+    const filters = withoutWithheldDials(
+      admittedDealFilters(read.filters),
+      withheldRangeDials({ baseCurrency, readsCompanies }),
+    );
     return filters === read.filters ? read : { ...read, filters };
-  }, [params, opening]);
+  }, [params, opening, baseCurrency, readsCompanies]);
   const setQuery = (update: SetStateAction<ListQuery>) => {
     const live = currentParams();
     const next =
@@ -245,6 +259,7 @@ export function useDealScreenDials({
   return {
     query,
     setQuery,
+    reach,
     pipelineId,
     setPipelineId,
     effectivePipeline,

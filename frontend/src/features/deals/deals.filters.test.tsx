@@ -3,10 +3,12 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { meFixture } from "../../testing/mefixture";
 import { DealsScreen } from "./deals";
 import {
   deal,
   jsonResponse,
+  REP_GRANTS,
   render,
   stages,
   stubBackend,
@@ -259,5 +261,86 @@ describe("the partner filter", () => {
     // A picker with nothing in it asks a question that has no answers.
     const menu = screen.getByRole("group", { name: "Filter" });
     expect(within(menu).queryByRole("button", { name: "Partner" })).toBeNull();
+  });
+});
+
+// No dial narrows the list without a chip that names it. A dial the reader
+// cannot use stays in the address and is not sent.
+describe("DealsScreen range dials the reader cannot use", () => {
+  function backend({
+    baseCurrency,
+    readsCompanies,
+    urls,
+  }: Readonly<{
+    baseCurrency?: string;
+    readsCompanies: boolean;
+    urls: string[];
+  }>) {
+    const stub = stubBackend([deal({})], {
+      onDealsUrl: (url) => urls.push(url),
+    });
+    const allow = readsCompanies
+      ? { ...REP_GRANTS, company: ["read"] as const }
+      : REP_GRANTS;
+    return async (request: Request) => {
+      if (request.url.includes("/installation/settings")) {
+        return jsonResponse({ base_currency: baseCurrency });
+      }
+      if (new URL(request.url).pathname.endsWith("/me")) {
+        return jsonResponse({
+          user: { id: "u-me", display_name: "Me", status: "active" },
+          roles: ["rep"],
+          teams: [],
+          authorization: meFixture({ allow }).authorization,
+        });
+      }
+      return stub(request);
+    };
+  }
+
+  const ADDRESS = "#/deals?value=..5000000&country=DE";
+
+  it("sends the value and the country once both can be read", async () => {
+    const urls: string[] = [];
+    window.location.hash = ADDRESS;
+    vi.stubGlobal(
+      "fetch",
+      backend({ baseCurrency: "EUR", readsCompanies: true, urls }),
+    );
+    render(<DealsScreen />);
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            url.includes("value_max=5000000") && url.includes("country=DE"),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("holds back a value bound while the base currency is unknown", async () => {
+    const urls: string[] = [];
+    window.location.hash = ADDRESS;
+    vi.stubGlobal("fetch", backend({ readsCompanies: true, urls }));
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    await waitFor(() =>
+      expect(urls.some((url) => url.includes("country=DE"))).toBe(true),
+    );
+    expect(urls.some((url) => url.includes("value_max"))).toBe(false);
+  });
+
+  it("holds back a country from a reader who cannot read companies", async () => {
+    const urls: string[] = [];
+    window.location.hash = ADDRESS;
+    vi.stubGlobal(
+      "fetch",
+      backend({ baseCurrency: "EUR", readsCompanies: false, urls }),
+    );
+    render(<DealsScreen />);
+    await waitFor(() =>
+      expect(urls.some((url) => url.includes("value_max=5000000"))).toBe(true),
+    );
+    expect(urls.some((url) => url.includes("country="))).toBe(false);
   });
 });

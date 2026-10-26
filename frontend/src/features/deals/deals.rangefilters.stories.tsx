@@ -19,7 +19,13 @@ type Story = StoryObj;
 
 // The filter bar with the close-date, value, currency and country dials, the
 // way the deal list hands them to its surface.
-function Bar({ initial = {} }: Readonly<{ initial?: Record<string, string> }>) {
+function Bar({
+  initial = {},
+  withheld = new Set(),
+}: Readonly<{
+  initial?: Record<string, string>;
+  withheld?: ReadonlySet<string>;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
@@ -32,6 +38,7 @@ function Bar({ initial = {} }: Readonly<{ initial?: Record<string, string> }>) {
           words: { t, locale, zone },
           filters: chosen,
           baseCurrency: "EUR",
+          withheld,
           leading: ["EUR", "USD", "VND"],
         })}
         chosen={chosen}
@@ -86,5 +93,27 @@ export const Applied: Story = {
         name: "Quốc gia: Việt Nam",
       }),
     ).toBeTruthy();
+  },
+};
+
+// A role that withholds the amount and the company: only the close date is
+// offered, since the server refuses the other three dials.
+export const AmountAndCompanyWithheld: Story = {
+  render: () => (
+    <LocaleProvider initial="en">
+      <Bar withheld={new Set(["value", "currency", "country"])} />
+    </LocaleProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Filter" }),
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Close date" }),
+    ).toBeTruthy();
+    for (const name of ["Value", "Currency", "Country"]) {
+      await expect(canvas.queryByRole("button", { name })).toBeNull();
+    }
   },
 };

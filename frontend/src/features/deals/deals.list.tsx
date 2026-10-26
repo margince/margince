@@ -21,6 +21,7 @@ import { currencyOptions } from "../../format/currencychoices";
 import { formatNumber } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
+import { withheldRangeDials } from "../../lib/dealranges";
 import {
   totalsRefusedBecause,
   totalsWithheldBecause,
@@ -32,7 +33,6 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
-import { useInstallationSettings } from "../../lib/uploadlimit";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
 import { useOwnerPicker } from "../records/recordreferences";
@@ -216,6 +216,7 @@ export function DealsScreen({
   const {
     query,
     setQuery,
+    reach,
     setPipelineId,
     effectivePipeline,
     dealFilters,
@@ -333,12 +334,17 @@ export function DealsScreen({
   );
   const companyName = useAppliedCompanyName(query.filters.company_id);
   const dealChips = dealFilterChips(stages, t, companyName);
-  const baseCurrency = useInstallationSettings().data?.base_currency;
   const leading = useLeadingCurrencies();
+  // A loaded deal's mask only hides a chip. The list loaded, so the server
+  // refused no masked dial, and none is applied.
   const rangeChips = dealRangeChips({
     words: { t, locale, zone: recordZone },
     filters: query.filters,
-    baseCurrency,
+    baseCurrency: reach.baseCurrency,
+    withheld: withheldRangeDials({
+      ...reach,
+      masked: loadedDeals.flatMap((deal) => deal.masked_fields ?? []),
+    }),
     leading,
   });
   const tagChips = useTagChips();

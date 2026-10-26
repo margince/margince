@@ -111,6 +111,52 @@ export function rangeQueryParams(
   };
 }
 
+/** What the reader's grants let a range dial read, as the screen knows them. */
+export type RangeReach = Readonly<{
+  baseCurrency: string | undefined;
+  readsCompanies: boolean;
+  /** Every field a loaded deal names in `masked_fields`. */
+  masked?: readonly string[];
+}>;
+
+// The deal fields each dial reads, which a role's mask withholds; the server
+// refuses the dial with field_masked when one is masked on any deal.
+const DIAL_INPUTS: Readonly<Record<string, readonly string[]>> = {
+  [VALUE_DIAL]: ["amount_minor", "currency"],
+  currency: ["currency"],
+  country: ["company_id"],
+};
+
+/**
+ * The range dials this reader cannot narrow by. The value is typed in the base
+ * currency, and a country is read off a company, which needs company.read.
+ */
+export function withheldRangeDials(reach: RangeReach): ReadonlySet<string> {
+  const withheld = new Set<string>();
+  if (!reach.baseCurrency) withheld.add(VALUE_DIAL);
+  if (!reach.readsCompanies) withheld.add("country");
+  for (const [dial, inputs] of Object.entries(DIAL_INPUTS)) {
+    if (inputs.some((field) => reach.masked?.includes(field))) {
+      withheld.add(dial);
+    }
+  }
+  return withheld;
+}
+
+/**
+ * The filters minus every withheld dial, so no dial narrows the list without a
+ * chip to clear it. The same object comes back when nothing is dropped.
+ */
+export function withoutWithheldDials(
+  filters: Readonly<Record<string, string>>,
+  withheld: ReadonlySet<string>,
+): Readonly<Record<string, string>> {
+  if (!Object.keys(filters).some((key) => withheld.has(key))) return filters;
+  return Object.fromEntries(
+    Object.entries(filters).filter(([key]) => !withheld.has(key)),
+  );
+}
+
 /** Whether any range dial narrows the list. */
 export function narrowsByRange(filters: Readonly<Record<string, string>>) {
   return [CLOSE_DAY_DIAL, VALUE_DIAL, "currency", "country"].some((key) =>
