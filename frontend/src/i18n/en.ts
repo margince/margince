@@ -1630,8 +1630,10 @@ export const en = {
   "brief.week.workRecorded": "Work completed this week.",
   "brief.week.leads_one": "{count} lead assigned.",
   "brief.week.leads_other": "{count} leads assigned.",
-  "brief.week.responses_one": "{count} lead answered within target.",
-  "brief.week.responses_other": "{count} leads answered within target.",
+  "brief.week.responses_one":
+    "{count} lead got a first response by week close.",
+  "brief.week.responses_other":
+    "{count} leads got a first response by week close.",
   "brief.week.lost_one": "{count} deal lost.",
   "brief.week.lost_other": "{count} deals lost.",
   "brief.row.details": "Details",

@@ -125,11 +125,9 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 const NonImportedLeadSQL = "NOT starts_with(COALESCE(l.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
 
 // leadArrivedInWeekSQL is the week's lead cohort under alias l, with the
-// window bound at positions 1 and 2: dated by COALESCE(routed_at, created_at),
-// still live, and written by no import. countWeekLeads and scoreLeads both read
-// it, so the weekly counts and the frozen scorecard describe the same leads.
-// They had drifted: the scorecard kept archived and imported leads in the
-// cohort its response and breach counts were read from.
+// window bound at positions 1 and 2. A lead is in it when it arrived in the
+// window, is not archived and no import wrote it. Both the weekly counts and
+// the frozen scorecard read it, so they describe the same leads.
 const leadArrivedInWeekSQL = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
 		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
 		      AND l.archived_at IS NULL AND ` + NonImportedLeadSQL

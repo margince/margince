@@ -1644,9 +1644,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.week.leads_one": "Đã giao {count} lead.",
   "brief.week.leads_other": "Đã giao {count} lead.",
   "brief.week.responses_one":
-    "Đã trả lời {count} lead trong thời hạn mục tiêu.",
+    "Đã phản hồi lần đầu {count} lead trước khi kết thúc tuần.",
   "brief.week.responses_other":
-    "Đã trả lời {count} lead trong thời hạn mục tiêu.",
+    "Đã phản hồi lần đầu {count} lead trước khi kết thúc tuần.",
   "brief.week.lost_one": "Thua {count} deal.",
   "brief.week.lost_other": "Thua {count} deal.",
   "brief.row.details": "Chi tiết",

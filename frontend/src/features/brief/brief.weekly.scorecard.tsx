@@ -125,13 +125,8 @@ function leadRows(
 
 /**
  * What the week's response figures rest on. Zero breaches never means every
- * lead was answered: a lead nobody answered and nobody stamped also breaches
- * nothing. `answered_in_target` counts responses recorded by the close, late
- * ones included, so this line names recorded responses and never a target met.
- *
- * `arrived` is the cohort both figures are read from. Missing, it is a week
- * frozen before the cohort was recorded, and the line says so rather than
- * guessing how many went unanswered.
+ * lead was answered, and a recorded response is not a target met. A missing
+ * `arrived` is a week frozen before the cohort was recorded.
  */
 function responseBasis(
   block: LeadBlock,

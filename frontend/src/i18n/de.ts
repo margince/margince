@@ -1688,9 +1688,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.week.leads_one": "{count} Lead zugewiesen.",
   "brief.week.leads_other": "{count} Leads zugewiesen.",
   "brief.week.responses_one":
-    "{count} Lead innerhalb der Zielzeit beantwortet.",
+    "{count} Lead bis Wochenende erstmals beantwortet.",
   "brief.week.responses_other":
-    "{count} Leads innerhalb der Zielzeit beantwortet.",
+    "{count} Leads bis Wochenende erstmals beantwortet.",
   "brief.week.lost_one": "{count} Deal verloren.",
   "brief.week.lost_other": "{count} Deals verloren.",
   "brief.row.details": "Details",

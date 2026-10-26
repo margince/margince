@@ -279,8 +279,8 @@ describe("the weekly scorecard", () => {
     );
   });
 
-  // A week frozen before the cohort was recorded, or served by an older
-  // server, cannot say how many went unanswered, and must not read as none.
+  // A week frozen before the cohort was recorded cannot say how many went
+  // unanswered. Nor can an older server. Neither may read as none.
   it.each([undefined, null])(
     "says the arrivals were not recorded when the cohort is %s, even with no breach",
     (arrived) => {

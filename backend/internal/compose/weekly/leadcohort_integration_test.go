@@ -16,17 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// THE WEEK'S LEADS ARE ONE COHORT, AND ITS SIZE IS FROZEN.
-//
-// Two leads arrive. Nobody answers either in time, so both breach. One is then answered late, the other never. A third lead
-// arrived the same day and was archived. The expected figures follow from that
-// story, not from the queries: two arrived, one has a first response recorded
-// by the close (late, so it is also a breach), two breached, and one has no
-// recorded response. The archived lead is in none of them.
-//
-// Before this, the scorecard counted response and breach over every lead the
-// rep owned, archived or not, and froze no cohort at all, so no reader could
-// tell "one of two never answered" from "both answered".
+// The week's leads are one cohort, and its size is frozen. Two leads arrive
+// and both breach. One is answered late, the other never. A third arrived and
+// was archived. So two arrived, one has a recorded response, two breached, and
+// one has no response. The archived lead is in none of these figures.
 func TestTheWeeksLeadsAreOneCohortAndItsSizeIsFrozen(t *testing.T) {
 	e := setupWeekly(t)
 	owner := ids.From[ids.UserKind](e.Rep1)
@@ -50,10 +43,9 @@ func TestTheWeeksLeadsAreOneCohortAndItsSizeIsFrozen(t *testing.T) {
 
 	start, end := arrivedAt.Add(-time.Hour), arrivedAt.Add(72*time.Hour)
 
-	// The breach stamp is set directly, as the imported-history test beside
-	// this one does. The native sweep stamps only a lead that owes a reply to
-	// an inbound inquiry, and this test is about how the week counts stamps,
-	// not about when the sweep writes them.
+	// The breach stamp is set directly, as the imported-history test does. The
+	// native sweep stamps only a lead that owes a reply to an inbound inquiry.
+	// This test is about how the week counts stamps, not when they are written.
 	for _, id := range []ids.LeadID{lateAnswered, neverAnswered, archived} {
 		e.WsExec(t, `UPDATE lead SET sla_breached_at = $2 WHERE id = $1`, id.UUID, arrivedAt.Add(30*time.Minute))
 	}
@@ -95,10 +87,8 @@ func TestTheWeeksLeadsAreOneCohortAndItsSizeIsFrozen(t *testing.T) {
 	}
 }
 
-// A WEEK FROZEN BEFORE THE COHORT WAS RECORDED READS IT AS UNKNOWN.
-//
-// The column is NULL on every scorecard written before it existed. Reading that
-// as zero would tell a reader no lead went unanswered that week.
+// A week frozen before the cohort was recorded reads it as unknown. Zero would
+// tell a reader no lead went unanswered that week.
 func TestAScorecardFrozenWithoutItsCohortReadsItAsUnknown(t *testing.T) {
 	e := setupWeekly(t)
 	seedLeadFor(t, e, "Cohort freeze", e.Rep1)
@@ -132,5 +122,40 @@ func TestAScorecardFrozenWithoutItsCohortReadsItAsUnknown(t *testing.T) {
 	}
 	if wire := reviewToWire(legacy); wire.Scorecard.Lead.Arrived != nil {
 		t.Fatal("an unknown cohort must not travel as a number")
+	}
+}
+
+// A manager's team week freezes a lead answered late. The lead is in the
+// routed, answered and breached tallies. The team snapshot used to require
+// answered + breached <= routed, and refused to freeze such a week.
+func TestATeamWeekHoldingALateAnswerFreezes(t *testing.T) {
+	e := setupWeekly(t)
+	owner := ids.From[ids.UserKind](e.Rep1)
+	name := "Answered late, team week"
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
+		FullName: &name, Status: "new", OwnerID: &owner, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.WsExec(t, `UPDATE lead SET sla_breached_at = $2 WHERE id = $1`, lead.Id, lead.CreatedAt.Add(30*time.Minute))
+	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
+	if wrote, err := e.Contacts.RecordLeadFirstResponse(e.Admin(), leadID, lead.CreatedAt.Add(time.Hour)); err != nil || !wrote {
+		t.Fatalf("record late response: %v, wrote=%v", err, wrote)
+	}
+
+	at := nextWeek()
+	if _, _, err := e.engine.AssembleFor(e.repCtx, at); err != nil {
+		t.Fatal(err)
+	}
+	members := []TeamMember{{UserID: e.Rep1, DisplayName: "Rep One"}}
+	team, _, err := e.engine.AssembleTeamFor(e.repCtx, e.Team1, "Team One", members, at)
+	if err != nil {
+		t.Fatalf("a team week holding a late answer must freeze: %v", err)
+	}
+	c := team.Counts
+	if c.LeadsRouted != 1 || c.LeadsAnsweredInTarget != 1 || c.LeadsBreached != 1 {
+		t.Fatalf("team week = routed %d, responded %d, breached %d; want 1, 1, 1",
+			c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached)
 	}
 }

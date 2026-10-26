@@ -51,16 +51,10 @@ type LeadBlock struct {
 	Disqualified int
 	Promoted     int
 
-	// The SLA slice, carried here as well as on Counts so a reader of the
-	// scorecard has the whole funnel in one record. Arrived is the cohort both
-	// are read from (leadArrivedInWeekSQL). AnsweredInTarget is every lead in
-	// it with a first response recorded before the week closed, late ones
-	// included; Breached is every one with a breach recorded by then. A late
-	// answer is in both, so Arrived - AnsweredInTarget is the leads with no
-	// recorded first response, and nothing here proves a target was met.
-	//
-	// Arrived is nil on a scorecard frozen before it was recorded: such a week
-	// cannot say how many leads went unanswered, and must not read as none.
+	// The SLA slice, read from the cohort Arrived counts. AnsweredInTarget is
+	// every first response recorded by the close, late ones included. A late
+	// answer is also a breach, so only responses are subtracted from Arrived.
+	// Arrived is nil on a week frozen before it was recorded.
 	Arrived          *int
 	AnsweredInTarget int
 	Breached         int

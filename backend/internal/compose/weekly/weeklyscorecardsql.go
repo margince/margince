@@ -119,8 +119,8 @@ func readScorecard(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (*Scorecar
 	if hasLead {
 		l.Advanced, l.Disqualified, l.Promoted = deref(la), deref(ld), deref(lp)
 		l.AnsweredInTarget, l.Breached = deref(lat), deref(lb)
-		// NOT deref'd: NULL is a week frozen before the cohort was recorded,
-		// and zero would claim no lead went unanswered that week.
+		// Kept as a pointer: NULL is a week frozen before the cohort was
+		// recorded, and zero would claim no lead went unanswered that week.
 		l.Arrived = arrived
 		l.Booked, l.Held, l.NoShow, l.PartialHistory = deref(mb), deref(mh), deref(mn), deref(mp)
 		card.Lead = &l
