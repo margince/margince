@@ -119,14 +119,16 @@ func (s *Sink) moveOnReplay(
 }
 
 // settleMeetingReplay is what a proven replay of a meeting still owes the row:
-// its current identity (reclaimMeetingIdentity) and its current start
-// (moveOnReplay). The move is for a replay of THIS calendar's own key only; a
-// row reached through the cross-door identity is another door's filing, and a
-// second calendar still describing the old time would move it back.
+// its current identity, its guests and its current start. Only a replay of this
+// calendar's own key moves it. A row reached through the cross-door identity is
+// another door's filing, and a second calendar on the old time would move it back.
 func (s *Sink) settleMeetingReplay(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, viaIdentity bool,
 ) error {
 	if err := s.reclaimMeetingIdentity(ctx, tx, id, rec); err != nil {
+		return err
+	}
+	if err := s.stampLaterGuests(ctx, tx, id, rec); err != nil {
 		return err
 	}
 	return s.moveOnReplay(ctx, tx, id, rec, viaIdentity)

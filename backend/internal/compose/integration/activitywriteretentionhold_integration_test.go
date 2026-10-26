@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -124,6 +125,32 @@ func TestARelinkAlreadyPresentOnAHeldRowStillReadsBack(t *testing.T) {
 	}
 	if ids.UUID(out.Id) != f.email {
 		t.Errorf("relink no-op read back activity %v, want %v", out.Id, f.email)
+	}
+	// The row comes back, and its content does not. A write's read-back is
+	// still a read.
+	//
+	// This caller holds write authority over the audience, which is what made
+	// the content reachable.
+	state := "absent"
+	if out.ContentState != nil {
+		state = string(*out.ContentState)
+	}
+	if state != string(crmcontracts.ActivityContentStateWithheld) {
+		t.Errorf("the held row read back content state %q, want withheld", state)
+	}
+	for name, got := range map[string]*string{
+		"subject":   out.Subject,
+		"body":      out.Body,
+		"source id": out.SourceId,
+	} {
+		if got != nil {
+			t.Errorf("the held row read back its %s: %q", name, *got)
+		}
+	}
+	// The language was read off the body, so answering it tells a caller one
+	// fact about text they may not read.
+	if out.Language != nil {
+		t.Errorf("the held row read back its language: %v", *out.Language)
 	}
 }
 

@@ -86,18 +86,17 @@ type Event struct {
 	PartiesHidden bool
 }
 
-// Actor is one organizer or attendee. The address is all the rules need to
-// resolve the counterparty and the internal-vs-external classification; Room
-// says the provider marked this a booked room or device rather than a contact,
-// which each decoder answers in its own vendor's terms.
+// Actor is one organizer or attendee. The address resolves the counterparty
+// and the internal test. Room marks a booked room or device, in each vendor's
+// terms. Declined is this attendee's own no, which decides what their row grants.
 type Actor struct {
 	Email string
 	// Name is what the invitation called this party, or "" when the provider
 	// named nobody. It is the only full name an attendee-only contact ever
 	// gets: a contact minted from a bare invitation address is otherwise named
 	// by the local part of their own email.
-	Name string
-	Room bool
+	Name           string
+	Room, Declined bool
 }
 
 // Meeting is the classified result of reading one event against the connected
@@ -182,22 +181,22 @@ func meetingParties(ev Event) connector.Parties {
 	seen := map[string]bool{}
 
 	var out []connector.MessageParticipant
-	add := func(email, name, role string) {
-		address := strings.ToLower(strings.TrimSpace(email))
+	add := func(actor Actor, role string) {
+		address := strings.ToLower(strings.TrimSpace(actor.Email))
 		if address == "" || seen[address] {
 			return
 		}
 		seen[address] = true
 		out = append(out, connector.MessageParticipant{
-			Email: address, Role: role, DisplayName: strings.TrimSpace(name),
+			Email: address, Role: role, DisplayName: strings.TrimSpace(actor.Name), Declined: actor.Declined,
 		})
 	}
-	add(ev.Organizer.Email, ev.Organizer.Name, connector.ParticipantRoleOrganizer)
+	add(ev.Organizer, connector.ParticipantRoleOrganizer)
 	for _, a := range ev.Attendees {
 		if a.Room {
 			continue
 		}
-		add(a.Email, a.Name, connector.ParticipantRoleAttendee)
+		add(a, connector.ParticipantRoleAttendee)
 	}
 
 	return connector.CapParticipants(out)

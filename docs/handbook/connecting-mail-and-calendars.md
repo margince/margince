@@ -54,6 +54,16 @@ If the calendar is refused, mail still connects and the note says so, with **Con
 A calendar brings meetings from 90 days back to one year from now, and the window moves forward on its own. There is no history import for a calendar.
 Also called: calendar sync, sync meetings, link my agenda.
 
+### Who a meeting from your calendar shows
+
+A meeting from your calendar names every guest on the invitation under **Attendees**, whether they accepted, declined or did not answer yet. A guest who is a contact links to their record. A guest who is not a contact yet shows by the name or address on the invitation. Colleagues show under **Colleagues**. A booked room is not a guest.
+
+A colleague on the invitation can read the meeting. A colleague who declined is shown under **Attendees** and cannot read it.
+
+A guest added to the invitation later joins the meeting at the next calendar sync. A guest taken off the invitation leaves it, and a colleague taken off can no longer read it. If someone set who can see the meeting by hand, a colleague added later is shown but cannot read it unless they are picked. A meeting you imported from another CRM gets its guests from your calendar the same way.
+
+An invitation with more than 50 guests is a mailing list to Margince. It keeps your colleagues on it and names no outside guest.
+
 ## What you can connect
 
 You connect these yourself, at **Settings → Connections**, under **Mail and

@@ -25097,6 +25097,9 @@ type Activity struct {
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
+	// Guests Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
+	Guests *[]MeetingGuest `json:"guests,omitempty"`
+
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
 	Id         openapi_types.UUID  `json:"id"`
@@ -44429,6 +44432,18 @@ type MeetingBriefSection struct {
 // `talking_points` — each tied to a specific captured statement.
 // `company_context` — background, collapsed and last.
 type MeetingBriefSectionKind string
+
+// MeetingGuest One guest on a meeting who is not a colleague seat.
+type MeetingGuest struct {
+	// Address The address the invitation named them by. Absent when no row holds one.
+	Address *string `json:"address,omitempty"`
+
+	// ContactId The contact this guest is. Present only when you may read that contact.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+
+	// DisplayName The contact's name when you may read the contact, else the name the invitation gave, else empty.
+	DisplayName string `json:"display_name"`
+}
 
 // MeetingInvitation defines model for MeetingInvitation.
 type MeetingInvitation struct {
@@ -64971,6 +64986,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "email_summary")
 	}
 
+	if raw, found := object["guests"]; found {
+		err = json.Unmarshal(raw, &a.Guests)
+		if err != nil {
+			return fmt.Errorf("error reading 'guests': %w", err)
+		}
+		delete(object, "guests")
+	}
+
 	if raw, found := object["host_user_id"]; found {
 		err = json.Unmarshal(raw, &a.HostUserId)
 		if err != nil {
@@ -65322,6 +65345,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["email_summary"], err = json.Marshal(a.EmailSummary)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'email_summary': %w", err)
+		}
+	}
+
+	if a.Guests != nil {
+		object["guests"], err = json.Marshal(a.Guests)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'guests': %w", err)
 		}
 	}
 

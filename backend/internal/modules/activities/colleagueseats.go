@@ -38,8 +38,8 @@ func ColleagueSeats(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ids.
 	return seats, nil
 }
 
-// attachColleagues fills colleague_ids on one activity read whole. A withheld
-// row gets none: who sat in a meeting is part of what its audience limits.
+// attachColleagues fills colleague_ids and guests on one activity read whole. A
+// withheld row gets neither: who sat in a meeting is part of what its audience limits.
 func attachColleagues(ctx context.Context, tx pgx.Tx, a *crmcontracts.Activity) error {
 	if a.ContentState != nil && *a.ContentState == crmcontracts.ActivityContentStateWithheld {
 		return nil
@@ -53,5 +53,5 @@ func attachColleagues(ctx context.Context, tx pgx.Tx, a *crmcontracts.Activity) 
 		out[i] = openapi_types.UUID(seat)
 	}
 	a.ColleagueIds = &out
-	return nil
+	return attachGuests(ctx, tx, a)
 }
