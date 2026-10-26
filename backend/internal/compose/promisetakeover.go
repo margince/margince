@@ -96,6 +96,9 @@ func (h promiseTakeOverHandlers) write(ctx context.Context, tx pgx.Tx, promise c
 	if err := refuseHeldPromise(promise); err != nil {
 		return err
 	}
+	if err := lockPromiseSource(ctx, tx, promise.Source); err != nil {
+		return err
+	}
 	if err := h.refuseOfferedPromise(ctx, tx, promise); err != nil {
 		return err
 	}

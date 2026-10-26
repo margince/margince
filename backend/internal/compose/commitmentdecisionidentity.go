@@ -5,9 +5,13 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func samePromiseBeforeAttributionChanged(c Commitment, offer CommitmentTaskProposal) bool {
@@ -107,31 +111,54 @@ func (d *CommitmentDispatcher) resolvedWorkBefore(ctx context.Context, tx pgx.Tx
 	return false, nil
 }
 
-// takenUnderEarlierAttribution says whether this promise already has a task
-// written under the unnamed form an earlier reading gave it. Only a colleague
-// taking the promise over writes such a task. A later reading that names the
+// takenUnderEarlierAttribution says whether a colleague took this promise over
+// while no seat was named for it. The takeover's task is keyed on the unnamed
+// form an earlier reading gave the promise. A later reading that names the
 // promiser keys the promise apart, and must not write a second task beside the
-// one the taker holds. The same message and the same sentence identify the
-// promise, and a different sentence is different work.
+// one the taker holds. The taken claim must be on the same message, the same
+// recipient and the same quoted words. Two promises the earlier reading could
+// not tell apart already shared one claim.
 func (d *CommitmentDispatcher) takenUnderEarlierAttribution(ctx context.Context, tx pgx.Tx, c Commitment) (bool, error) {
 	if c.Span == "" || c.Seat == nil || c.Theirs != nil {
 		return false, nil
 	}
-	return d.tasks.CommitmentTaskWritten(ctx, tx, earlierUnnamedLocators(c)...)
+	// The takeover holds this lock while it writes, so a takeover in flight
+	// commits before this reads, or waits for this reading to commit.
+	if err := lockPromiseSource(ctx, tx, c.SourceActivityID); err != nil {
+		return false, err
+	}
+	var recipient *ids.UUID
+	if c.PromisedTo != nil {
+		recipient = &c.PromisedTo.UUID
+	}
+	var taken bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM conversation_claim c
+		 WHERE c.source_activity_id = $1 AND c.kind = 'commitment_ours'
+		   AND c.taken_by_user_id IS NOT NULL AND c.task_activity_id IS NOT NULL
+		   AND c.evidence_fingerprint = ANY($2) AND c.source_quote = $3
+		   AND ($4::uuid IS NULL OR c.contact_id = $4))`,
+		c.SourceActivityID, earlierUnnamedLocators(c), c.Quote, recipient).Scan(&taken)
+	if err != nil {
+		return false, fmt.Errorf("compose: reading whether the promise was taken over: %w", err)
+	}
+	return taken, nil
+}
+
+// lockPromiseSource serializes a takeover and a reading of one message's
+// promises, so neither writes a task the other cannot see.
+func lockPromiseSource(ctx context.Context, tx pgx.Tx, source ids.UUID) error {
+	return storekit.LockWriteIdentity(ctx, tx, "commitment_source", source.String())
 }
 
 // earlierUnnamedLocators are the locators the promise had while no seat was
-// named. A reading then gave no name, the reported name, or the seat's name
+// named. A reading then gave no name, or reported the seat's name or address
 // without placing it.
 func earlierUnnamedLocators(c Commitment) []string {
 	keys := []string{"us", "name:", unnamedPromiserKey("")}
 	names := []string{c.Party}
 	for _, party := range c.parties {
 		if party.Seat != nil && *party.Seat == *c.Seat {
-			names = append(names, party.Name)
-			if first, _, found := strings.Cut(strings.TrimSpace(party.Name), " "); found {
-				names = append(names, first)
-			}
+			names = append(names, party.Name, party.Address)
 		}
 	}
 	for _, name := range names {
