@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -19,7 +20,6 @@ import (
 
 func TestADealSeatCarriesWhenTheContactLastWroteAsADay(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	contactID := ids.From[ids.ContactKind](buyer)
 
@@ -40,11 +40,14 @@ func TestADealSeatCarriesWhenTheContactLastWroteAsADay(t *testing.T) {
 	}
 
 	// A message they sent, logged by its date alone: the server keeps it at noon UTC.
-	wrote := SeedIDRow(t, owner, `INSERT INTO activity
-		(id, kind, subject, occurred_at, occurred_precision, direction, source, captured_by)
-		VALUES ($1, 'email', 'Re: renewal terms', '2026-05-20T12:00:00Z', 'day', 'inbound', 'manual', 'human:x')`)
-	LinkActivity(t, owner, wrote, "contact", buyer)
-	LinkActivitySender(t, owner, wrote, buyer)
+	subject, sentOn := "Re: renewal terms", time.Date(2026, 5, 20, 16, 30, 0, 0, time.UTC)
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: new("inbound"), Source: "manual",
+		OccurredAt: &sentOn, OccurredPrecision: activities.PrecisionDay,
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: buyer}},
+	}); err != nil {
+		t.Fatalf("logging the message they sent: %v", err)
+	}
 
 	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 	granted := coverageFor(t, e, coverageReaderPerms(true), dealID, now)
