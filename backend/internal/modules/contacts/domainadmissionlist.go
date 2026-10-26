@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // BlockedDomain is one domain's standing admission decision, as the admin list
@@ -177,14 +176,10 @@ const domainPendingReason = `
 // an admitted domain leaves both columns set, and such a row belongs on a list of
 // decisions whoever owns it.
 //
-// A vendor question always lands here too. Its personal card goes only to the
-// decider vendorDeciderSQL names, so this list keeps the fact
-// reachable when no seat owes it.
-var domainStandingWhere = `d.admission IS NOT NULL OR d.pending_reason IN ('` + PendingReservedDomain + `', '` + PendingVendorVerdict + `')
-	OR (d.pending_reason IS NOT NULL AND NOT EXISTS (
-	      SELECT 1 FROM company_domain_question_reader r JOIN app_user u ON u.id = r.reader_id
-	       WHERE r.domain = d.domain
-	         AND ` + workforce.LiveMemberSQL("u") + `))`
+// Every open question lands here too. Its personal card goes only to the
+// decider vendorDeciderSQL names, so this list keeps the fact reachable when
+// no seat owes it.
+var domainStandingWhere = `d.admission IS NOT NULL OR d.pending_reason IS NOT NULL`
 
 // ListDomainAdmissions returns every domain that carries a decision, plus the
 // open questions nobody owns, most recently moved first.
