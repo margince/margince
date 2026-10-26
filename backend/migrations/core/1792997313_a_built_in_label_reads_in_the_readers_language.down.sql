@@ -5,7 +5,7 @@ DROP FUNCTION key_shipped_review_questions();
 
 UPDATE activity_review_template t
    SET questions = (
-         SELECT jsonb_agg(q - 'label_key' - 'shipped_label' - 'shipped_label_key' ORDER BY ord)
+         SELECT jsonb_agg(q - 'label_key' ORDER BY ord)
            FROM jsonb_array_elements(t.questions) WITH ORDINALITY AS a (q, ord))
  WHERE t.system;
 

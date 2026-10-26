@@ -194,6 +194,23 @@ func TestARewordedReviewQuestionReadsTranslatedOnceItsShippedWordsReturn(t *test
 	if got := keyAfter(shipped, "reviewTemplates.builtin.question.lost_to"); got == nil || *got != key {
 		t.Errorf("the shipped words came back and the question's key reads %v, want %q", got, key)
 	}
+
+	// A question taken out and put back is still the one that shipped.
+	if _, err := tx.Exec(ctx, `
+		UPDATE activity_review_template t
+		   SET questions = (SELECT jsonb_agg(q) FROM jsonb_array_elements(t.questions) AS q WHERE q ->> 'key' <> $1)
+		 WHERE t.system AND t.key = 'win_review'`, question); err != nil {
+		t.Fatalf("taking the question out: %v", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE activity_review_template
+		   SET questions = questions || '[{"key": "why_we_won", "label": "Why did we win?", "type": "text", "required": false}]'
+		 WHERE system AND key = 'win_review'`); err != nil {
+		t.Fatalf("putting the question back: %v", err)
+	}
+	if got := keyAfter(shipped, ""); got == nil || *got != key {
+		t.Errorf("the question put back reads key %v, want %q", got, key)
+	}
 	if err := tx.Rollback(ctx); err != nil {
 		t.Fatalf("rolling back the win review: %v", err)
 	}

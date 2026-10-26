@@ -689,7 +689,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `trg_activity_review_template_question_keys`: `BEFORE UPDATE OF questions FOR EACH ROW EXECUTE FUNCTION key_shipped_review_questions()`
+- `trg_activity_review_template_question_keys`: `BEFORE INSERT OR UPDATE OF questions FOR EACH ROW EXECUTE FUNCTION key_shipped_review_questions()`
 - `trg_activity_review_template_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## activity_sales_state

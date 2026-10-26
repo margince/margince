@@ -78,31 +78,8 @@ UPDATE record_role r
   ) AS shipped (key, label)
  WHERE r.system AND r.key = shipped.key;
 
--- A question is a JSON object, so its shipped wording and key go inside it. A
--- review copies the question's label_key, so a later review keeps the key.
 UPDATE activity_review_template t
-   SET shipped_label = shipped.label,
-       shipped_label_key = 'reviewTemplates.builtin.' || t.key,
-       questions = (
-         SELECT jsonb_agg(
-                  CASE WHEN asked.key IS NULL THEN q
-                       ELSE q || jsonb_strip_nulls(jsonb_build_object(
-                              'shipped_label', asked.label,
-                              'shipped_label_key', 'reviewTemplates.builtin.question.' || asked.key,
-                              'label_key', label_key_while_shipped(
-                                q ->> 'label', asked.label, 'reviewTemplates.builtin.question.' || asked.key)))
-                  END
-                  ORDER BY ord)
-           FROM jsonb_array_elements(t.questions) WITH ORDINALITY AS a (q, ord)
-           LEFT JOIN (VALUES
-             ('win_review', 'why_we_won', 'Why did we win?'),
-             ('win_review', 'competitors', 'Who else were they considering?'),
-             ('win_review', 'decisive_factor', 'What decided it?'),
-             ('loss_review', 'why_we_lost', 'Why did we lose?'),
-             ('loss_review', 'lost_to', 'Who did they choose instead?'),
-             ('loss_review', 'what_would_change_it', 'What would have changed the outcome?')
-           ) AS asked (template, key, label)
-             ON asked.template = t.key AND asked.key = q ->> 'key')
+   SET shipped_label = shipped.label, shipped_label_key = 'reviewTemplates.builtin.' || t.key
   FROM (VALUES
     ('win_review', 'Win review'),
     ('loss_review', 'Loss review')
@@ -120,32 +97,36 @@ ALTER TABLE record_role ADD COLUMN label_key text
 ALTER TABLE activity_review_template ADD COLUMN label_key text
     GENERATED ALWAYS AS (label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED;
 
--- A saved question keeps the shipped wording and key of the stored question
--- with its key, and names that key only while it reads as shipped. A writer
--- cannot supply either, so no write path can keep a stale key or forge one.
+-- A question is a JSON object, so its key goes inside it, set on every save
+-- of a built-in template from the wording each question shipped with. A writer
+-- cannot supply the key, and a question deleted and added back gets it again.
+-- A review copies the question whole, so a later review keeps the key.
 CREATE FUNCTION key_shipped_review_questions() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
   NEW.questions = (
     SELECT jsonb_agg(
-             (q - 'label_key' - 'shipped_label' - 'shipped_label_key')
-             || jsonb_strip_nulls(jsonb_build_object(
-                  'shipped_label', kept.was ->> 'shipped_label',
-                  'shipped_label_key', kept.was ->> 'shipped_label_key',
-                  'label_key', label_key_while_shipped(
-                    q ->> 'label', kept.was ->> 'shipped_label', kept.was ->> 'shipped_label_key')))
+             (q - 'label_key')
+             || jsonb_strip_nulls(jsonb_build_object('label_key', label_key_while_shipped(
+                  q ->> 'label', asked.label, 'reviewTemplates.builtin.question.' || asked.key)))
              ORDER BY ord)
       FROM jsonb_array_elements(NEW.questions) WITH ORDINALITY AS a (q, ord)
-      LEFT JOIN LATERAL (
-        SELECT o AS was
-          FROM jsonb_array_elements(OLD.questions) AS o
-         WHERE o ->> 'key' = q ->> 'key'
-         LIMIT 1) AS kept ON true);
+      LEFT JOIN (VALUES
+        ('win_review', 'why_we_won', 'Why did we win?'),
+        ('win_review', 'competitors', 'Who else were they considering?'),
+        ('win_review', 'decisive_factor', 'What decided it?'),
+        ('loss_review', 'why_we_lost', 'Why did we lose?'),
+        ('loss_review', 'lost_to', 'Who did they choose instead?'),
+        ('loss_review', 'what_would_change_it', 'What would have changed the outcome?')
+      ) AS asked (template, key, label)
+        ON NEW.system AND asked.template = NEW.key AND asked.key = q ->> 'key');
   RETURN NEW;
 END;
 $$;
 
 CREATE TRIGGER trg_activity_review_template_question_keys
-    BEFORE UPDATE OF questions ON activity_review_template
+    BEFORE INSERT OR UPDATE OF questions ON activity_review_template
     FOR EACH ROW EXECUTE FUNCTION key_shipped_review_questions();
+
+UPDATE activity_review_template SET questions = questions WHERE system;
