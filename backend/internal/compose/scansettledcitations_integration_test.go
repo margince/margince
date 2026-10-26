@@ -123,8 +123,8 @@ func TestAPromiseIsKeptOnlyForTheAccountItsFollowUpReached(t *testing.T) {
 	}
 }
 
-// Our reply restricted to someone else settles nothing for a reader outside
-// it: they may not know the reply exists. A reply they may read settles.
+// Our reply held to its participants settles nothing for a reader outside
+// them: they may not know the reply exists. A reply they may read settles.
 func TestOnlyAReplyTheReaderMayReadSettlesTheirCitation(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -135,15 +135,11 @@ func TestOnlyAReplyTheReaderMayReadSettlesTheirCitation(t *testing.T) {
 	if !o.settledAs(t, colleague, ask) {
 		t.Fatal("a reply the colleague may read did not settle the ask; the case below proves nothing")
 	}
-	if _, err := o.e.Activities.SetAudience(o.reader(), ids.From[ids.ActivityKind](reply), activities.SetAudienceInput{
-		Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: o.owner}},
-	}); err != nil {
-		t.Fatalf("restricting the reply: %v", err)
-	}
+	holdActivity(t, o.e, reply)
 	if o.settledAs(t, colleague, ask) {
-		t.Error("a reply restricted away from the reader settled their citation")
+		t.Error("a reply held away from the reader settled their citation")
 	}
 	if !o.settled(t, ask) {
-		t.Error("the reply's own author no longer reads the ask as settled")
+		t.Error("the reply's own sender no longer reads the ask as settled")
 	}
 }

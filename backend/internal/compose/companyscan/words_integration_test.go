@@ -149,7 +149,11 @@ func TestAReaderWhoCannotSeePartnersGetsNoDealAdvice(t *testing.T) {
 		}
 		return partner, noDealAdvice
 	}
-	if partner, withheld := standing(e.Admin()); partner || withheld {
+	sighted := e.As(e.Rep1, nil, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{"company": {Read: true}, "activity": {Read: true}, "partner": {Read: true}},
+	})
+	if partner, withheld := standing(sighted); partner || withheld {
 		t.Fatalf("a reader who sees no programme reads partner=%v, deal advice withheld=%v; want neither", partner, withheld)
 	}
 	blind := e.As(e.Rep1, nil, principal.Permissions{
