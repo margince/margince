@@ -4921,7 +4921,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "recordRoles.builtin.delivery_lead": "Umsetzungsleitung",
   "recordRoles.builtin.project_manager": "Projektleitung",
   "recordRoles.builtin.technical_contact": "Technische Ansprechperson",
-  "recordRoles.builtin.executive_sponsor": "Unterstützende Führungskraft",
+  "recordRoles.builtin.executive_sponsor": "Patenschaft der Geschäftsleitung",
   "recordRoles.builtin.support_team": "Support-Team",
   "recordRoles.loading": "Rollen werden geladen…",
   "recordRoles.addOpen": "Rolle hinzuf\u00fcgen",
@@ -15829,7 +15829,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es gibt mehr Deals als angezeigt. Öffne Deals, um alle zu sehen.",
   "project.stakeholders.title": "Stakeholder",
   "project.stakeholders.empty":
-    "Noch keine Stakeholder. Ein Stakeholder ist ein Kontakt mit einer Rolle in diesem Projekt, zum Beispiel unterstützende Führungskraft, Projektleitung oder Champion.",
+    "Noch keine Stakeholder. Ein Stakeholder ist ein Kontakt mit einer Rolle in diesem Projekt, zum Beispiel Projektpatenschaft, Projektleitung oder Champion.",
   "project.stakeholders.add": "Stakeholder hinzufügen",
   "project.stakeholders.addConfirm": "Hinzufügen",
   "project.stakeholders.addHint":
@@ -15839,7 +15839,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.stakeholders.removeConfirm":
     "{name} ist nicht mehr Stakeholder dieses Projekts. Die zugehörigen Aktivitäten bleiben, wo sie sind.",
   "project.stakeholders.removeOne": "{name} aus dem Projekt entfernen",
-  "project.role.sponsor": "Unterstützende Führungskraft",
+  "project.role.sponsor": "Projektpatenschaft",
   "project.role.project_lead": "Projektleitung",
   "project.role.delivery_lead": "Umsetzungsleitung",
   "project.role.subject_matter_expert": "Fachexpertise",
