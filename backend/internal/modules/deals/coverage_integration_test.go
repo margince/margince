@@ -24,9 +24,9 @@ func (failingCatalog) ActiveColumns(context.Context, string) ([]fieldcatalog.Col
 	return nil, errors.New("catalog down")
 }
 
-// A transaction-held read refuses a caller without deal:read and a deal that is
-// not there; an empty outside id is not a filter; the erased and merged events
-// stage in the writing transaction.
+// A transaction-held read refuses a caller without deal:read, and a deal that
+// is not there. An empty outside id is not a filter. The erased and merged
+// events stage in the writing transaction.
 func TestDealTxReadsRefuseWhatTheyMustAndTheEventsStage(t *testing.T) {
 	e := setupConfigEnv(t)
 	ctx := e.asDealWriter()

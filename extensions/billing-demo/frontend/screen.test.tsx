@@ -243,7 +243,7 @@ describe("the billing demo screen", () => {
   });
 
   it("does not render a status read that is refused or has no invoices array", async () => {
-    for (const handlers of [{}, { "GET /ext/billing-demo/status": () => ({}) }]) {
+    for (const handlers of [{}, { "GET /ext/billing-demo/status": () => ({}) }] as Record<string, Handler>[]) {
       const { calls, fetchStub } = stubTransport(ADMIN, handlers);
       vi.stubGlobal("fetch", vi.fn(fetchStub));
       renderScreen();

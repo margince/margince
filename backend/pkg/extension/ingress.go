@@ -494,8 +494,7 @@ var (
 	ErrAttendedIngest = errors.New("extension: a record is ingested by an unattended run, never on a caller's invocation")
 
 	// ErrNestedIngest is an ingest from inside the unit's own transaction. The
-	// core's capture pipeline opens its own, so this would take a second
-	// connection while holding one — which on a small pool does not fail, it
-	// hangs.
+	// capture pipeline opens its own, so it would take a second connection while
+	// holding one, which on a small pool hangs.
 	ErrNestedIngest = errors.New("extension: a record cannot be ingested from inside a transaction the unit is holding")
 )

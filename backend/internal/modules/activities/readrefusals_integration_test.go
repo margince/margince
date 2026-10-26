@@ -9,8 +9,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -31,8 +29,11 @@ func TestActivityReadsInATransactionRefuseWhatTheyMust(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = tx.Rollback(context.Background()) }()
-	var _ pgx.Tx = tx
+	defer func() {
+		if err := tx.Rollback(context.Background()); err != nil {
+			t.Log(err)
+		}
+	}()
 
 	if _, err := store.GetActivityTx(noRead, tx, ids.New[ids.ActivityKind](), storekit.LiveOnly, CustomColumns{}); err == nil {
 		t.Error("GetActivityTx admitted a caller without activity:read")
