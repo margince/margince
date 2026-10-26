@@ -60,6 +60,8 @@ type Sink struct {
 	// nameParticipants completes a resolved attendee's name from the name the
 	// invitation gave them. Nil names nobody.
 	nameParticipants ParticipantNamer
+	// scoreLead scores a lead the sink created. Nil keeps the column default.
+	scoreLead LeadScorer
 	// cancelMeeting closes a captured meeting the calendar says is off — called
 	// off by its organizer, or declined by the seat whose calendar it is. Nil
 	// captures meetings and cancels none.

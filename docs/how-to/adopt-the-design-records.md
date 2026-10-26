@@ -67,8 +67,10 @@ Profile, Finance, Documents, Partner, `⌘K`, and compose.
 ### 3.4 Tests
 
 Write the shape checks in `company-record.spec.ts` again, in the same commit. That is readings under the tabs, the
-`"one Company 360 pane"` first, and the details panel on the right, closed, as one pane of named sections. Update
-`company360.test.tsx`, `companyheader.test.tsx` and `companyrail.test.tsx` for markup, not for what they do.
+`"one Company 360 pane"` first, and the details in the left card. The details are always shown, as one pane of
+named sections, and the open tab sits on the right. Update `company360.test.tsx`, `companyheader.test.tsx` and
+`companyrail.test.tsx` for markup, not for what they do.
+
 `history.spec.ts` stays as it is. Storybook: the `Records/Company 360/` stories for every state row in section
 3.2. This is where "empty", "withheld", "never read" and "stale" each get a story.
 

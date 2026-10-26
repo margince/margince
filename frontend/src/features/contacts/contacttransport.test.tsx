@@ -46,6 +46,14 @@ function anActivity(over: Partial<Activity>): Activity {
     is_done: false,
     source: "gmail",
     version: 1,
+    voice: {
+      author: {
+        kind: "contact_record",
+        display_name: "Dana",
+        is_reader: false,
+      },
+      contact_role: "author",
+    },
     ...over,
   } as Activity;
 }
@@ -70,6 +78,7 @@ const aWithheldMail = anActivity({
   subject: "Angebot Q4",
   body: "Können wir Dienstag sprechen?",
   content_state: "withheld",
+  voice: undefined,
   email_summary: {
     activity_id: "a-withheld",
     occurred_at: AT,

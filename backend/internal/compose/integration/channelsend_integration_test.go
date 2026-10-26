@@ -316,10 +316,6 @@ func TestSendMessageRefusesAWriteOnlyPassport(t *testing.T) {
 	c.assertNoOutboundEffect(t, "a scope-refused send")
 }
 
-// A send-scoped agent caller meets the 🟡 gate: it may propose the send and may
-// not perform it. The refusal has to happen before the message is staged — an
-// agent that could stage one has already sent it as far as the customer is
-// concerned.
 // A send-scoped passport replies WITHOUT an approval token, and the reply goes.
 //
 // It used to be refused with approval_required. What changed is the tier, not

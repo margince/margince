@@ -222,6 +222,18 @@ func answeredSQL(inbound, until string) string {
 	return "(" + strings.Join(exists, "\n\t OR ") + ")"
 }
 
+// answeredReadableSQL is answeredSQL counting only an answer the caller may
+// read. readable is their content clause over the alias readable_answer.
+func answeredReadableSQL(inbound, until, readable string) string {
+	arms := answerArms(inbound, until)
+	exists := make([]string, 0, len(arms))
+	for _, arm := range arms {
+		exists = append(exists, "EXISTS (SELECT 1 FROM (SELECT "+arm.id+" AS id "+arm.from+") answer_found"+
+			" JOIN activity readable_answer ON readable_answer.id = answer_found.id WHERE "+readable+")")
+	}
+	return "(" + strings.Join(exists, " OR ") + ")"
+}
+
 // offThreadAnswersSQL selects, as (id, occurred_at), every answer to the
 // inbound row under alias that sits outside its thread: our attested mail to
 // the sender with the same subject, and a logged call or held meeting with

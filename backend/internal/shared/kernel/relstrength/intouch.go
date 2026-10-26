@@ -44,6 +44,15 @@ func InteractionCounts(kind, meetingStatus string, automatic AutomaticKind) bool
 	return IsInteractionKind(kind) && (kind != kindMeeting || MeetingStatusCounts(meetingStatus)) && automatic == ""
 }
 
+// HappenedByNowSQL admits a row dated no later than now, so a post-dated row
+// cannot take a place in a capped page of history. A note or meeting must also
+// not be canceled or a no-show. draftcore.IsLoggedTouch is the meeting rule for
+// a row held in Go.
+func HappenedByNowSQL(alias, now string) string {
+	return "(" + alias + ".occurred_at <= " + now + " AND (" + alias + ".kind NOT IN ('note', '" + kindMeeting + "') OR " +
+		MeetingCountsSQL(alias) + "))"
+}
+
 // MeetingTookPlaceSQL is a meeting that counts as contact we had: not called
 // off, and taken place (occurredday.MeetingTookPlaceSQL). A `booked` row stays
 // booked after it happens, because few users ever mark a meeting held.
@@ -95,6 +104,13 @@ func LastActivityCountsSQL(alias, now string) string {
 func InteractionCountsSQL(alias string) string {
 	return alias + ".kind IN " + InteractionKindSQLGroup() + " AND " + NotCalledOffSQL(alias) +
 		" AND " + WrittenByHumanSQL(alias)
+}
+
+// InteractionCountsAtSQL is InteractionCountsSQL for a reading made at now: a
+// row dated after now has not happened, so it is no one's latest touch. The
+// contact strength folds render it with their bound clock, never the database's.
+func InteractionCountsAtSQL(alias, now string) string {
+	return "(" + InteractionCountsSQL(alias) + " AND " + alias + ".occurred_at <= " + now + ")"
 }
 
 // InteractionRolesSQL lists the participant roles that make a party part of an

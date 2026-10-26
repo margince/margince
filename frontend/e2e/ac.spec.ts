@@ -2985,9 +2985,18 @@ test.describe("filters and views", () => {
     await expect(
       page.getByRole("cell", { name: "Kessler Fahrzeugbau", exact: true }),
     ).toBeVisible();
+    // The LABEL the screen renders, not the code the filter was authored with.
+    // The industry cell reads through `industryWords`. Naming the code here
+    // passes only while that column is untranslated.
     await expect(
-      page.getByRole("cell", { name: "automotive", exact: true }),
+      page.getByRole("cell", { name: "Automobilindustrie", exact: true }),
     ).toHaveCount(2);
+    // Counting the rows is what holds "every row satisfies the predicate".
+    // Naming an absent industry does not hold it on its own. `logistics` is not
+    // one of INDUSTRY_CODES, so it renders as the raw code and the name
+    // matches. A row carrying a real code renders as its wording, and the name
+    // would miss it.
+    await expect(page.getByRole("row")).toHaveCount(3);
     await expect(page.getByRole("cell", { name: "logistics" })).toHaveCount(0);
     // The caption that keeps the page honest: 812 match and two are shown, so
     // the reader is told this is a sample rather than the selection.

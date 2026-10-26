@@ -54,6 +54,26 @@ func LanguageEvidence(turns []Turn, addressee string) []string {
 	return out
 }
 
+// AddresseeEvidence is the text of the addressee's own inbound mail, newest
+// first and bounded like LanguageEvidence. It carries no subject: a reply often
+// keeps the subject line our side wrote, in our language. A logged call or
+// meeting is a rep's words, so only mail and messages count.
+func AddresseeEvidence(turns []Turn, addressee string) []string {
+	var own []Turn
+	for _, turn := range turns {
+		written := turn.Kind == crmcontracts.ActivityKindEmail || turn.Kind == crmcontracts.ActivityKindMessage
+		if written && addressee != "" && evidenceRank(turn, addressee) == 0 && strings.TrimSpace(turn.Text) != "" {
+			own = append(own, turn)
+		}
+	}
+	sort.SliceStable(own, func(i, j int) bool { return own[i].At.After(own[j].At) })
+	out := make([]string, 0, min(len(own), LanguageEvidenceTurns))
+	for _, turn := range own[:min(len(own), LanguageEvidenceTurns)] {
+		out = append(out, textcut.Runes(strings.TrimSpace(turn.Text), LanguageEvidenceRunes))
+	}
+	return out
+}
+
 // LanguageEvidenceOf reads a record's recent activities, newest first, through
 // the shared conversation reader and returns their language evidence. The
 // reader keeps every row so LanguageEvidence orders before it cuts: newer

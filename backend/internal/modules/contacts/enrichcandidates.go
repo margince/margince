@@ -168,11 +168,11 @@ func SignatureSourceEligible(contact, activity string) string {
 		        AND (EXISTS (SELECT 1 FROM capture_import ci
 		                      WHERE ci.activity_id = %[2]s.id AND ci.user_id = %[1]s.owner_id)
 		             OR EXISTS (SELECT 1 FROM activity_participant ap
-		                         WHERE ap.activity_id = %[2]s.id AND ap.user_id = %[1]s.owner_id))
+		                         WHERE ap.activity_id = %[2]s.id AND ap.user_id = %[1]s.owner_id AND %[3]s))
 		        AND NOT EXISTS (SELECT 1 FROM record_grant rg
 		                         WHERE rg.record_type = 'contact' AND rg.record_id = %[1]s.id
 		                           AND (rg.expires_at IS NULL OR rg.expires_at > now())))
-		  )`, contact, activity)
+		  )`, contact, activity, auth.ParticipantStandsSQL("ap", activity))
 }
 
 // SignatureCandidates lists the contacts whose newest readable mail this pass

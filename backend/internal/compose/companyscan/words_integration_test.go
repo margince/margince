@@ -6,6 +6,7 @@
 package companyscan
 
 import (
+	"context"
 	"slices"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -89,5 +91,76 @@ func TestTheScanReadsOnlyWhatTheSenderWrote(t *testing.T) {
 	}
 	if len(words) != 1 || words[0].Text != "Works for me." {
 		t.Fatalf("the scan read %+v, want the one reply holding only its sender's line", words)
+	}
+}
+
+// A message dated after the scan's clock has not happened, so it is neither
+// read nor allowed to take a slot from real correspondence.
+func TestTheScanDoesNotReadAMessageDatedAfterNow(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	company := e.SeedCompany(t, "Future Scan Co", nil)
+	now := clocktest.Now(t)
+	seed := func(subject string, at time.Time) ids.UUID {
+		id := ids.NewV7()
+		e.WsExec(t, `INSERT INTO activity (id, kind, subject, direction, occurred_at, source_system, source_id, source, captured_by)
+			VALUES ($1, 'email', $2, 'inbound', $3, 'gmail', $4, 'gmail:seed', 'connector:gmail')`, id, subject, at, id.String())
+		e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id) VALUES ($1, 'company', $2)`, id, company)
+		return id
+	}
+	past := seed("past", now.AddDate(0, 0, -3))
+	atNow := seed("exactly now", now)
+	future := seed("future", now.Add(time.Hour))
+
+	var words []MessageIn
+	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		words, err = readWords(ctx, tx, ids.From[ids.CompanyKind](company), now)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got := make([]ids.UUID, 0, len(words))
+	for _, w := range words {
+		got = append(got, w.ID)
+	}
+	if slices.Contains(got, future) {
+		t.Errorf("the scan read a message dated after now: %v", got)
+	}
+	if !slices.Contains(got, past) || !slices.Contains(got, atNow) {
+		t.Errorf("the scan lost the past message or the one dated exactly now: %v", got)
+	}
+}
+
+// A reader who may not see partner programmes cannot rule one out, so deal
+// advice is withheld, and nothing names the account a partner.
+func TestAReaderWhoCannotSeePartnersGetsNoDealAdvice(t *testing.T) {
+	e := integration.Setup(t)
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Unknown Standing Co", nil))
+	standing := func(ctx context.Context) (bool, bool) {
+		t.Helper()
+		var partner, noDealAdvice bool
+		if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
+			var err error
+			partner, noDealAdvice, err = partnerStanding(ctx, tx, company)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return partner, noDealAdvice
+	}
+	sighted := e.As(e.Rep1, nil, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{"company": {Read: true}, "activity": {Read: true}, "partner": {Read: true}},
+	})
+	if partner, withheld := standing(sighted); partner || withheld {
+		t.Fatalf("a reader who sees no programme reads partner=%v, deal advice withheld=%v; want neither", partner, withheld)
+	}
+	blind := e.As(e.Rep1, nil, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{"company": {Read: true}, "activity": {Read: true}},
+	})
+	if partner, withheld := standing(blind); partner || !withheld {
+		t.Errorf("a reader without the partner grant reads partner=%v, deal advice withheld=%v; want false, true", partner, withheld)
 	}
 }

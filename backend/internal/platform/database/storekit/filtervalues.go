@@ -30,6 +30,8 @@ type FieldValue struct {
 	Label *string
 	// Linked is what a link field holds on the record; Value is nil then.
 	Linked []LinkedValue
+	// LinkedTruncated says the record holds more linked values than Linked lists.
+	LinkedTruncated bool
 }
 
 // Leaves is the comparison leaves of a filter tree, in the order the tree
@@ -217,7 +219,8 @@ func resolveLinkedColumn(ctx context.Context, tx pgx.Tx, values map[ids.UUID]map
 		for i, v := range raw {
 			keys[i] = v.Value
 		}
-		record[column.name] = FieldValue{Linked: resolveLinked(found, keys)}
+		linked, truncated := capLinked(resolveLinked(found, keys))
+		record[column.name] = FieldValue{Linked: linked, LinkedTruncated: truncated}
 	}
 	return nil
 }

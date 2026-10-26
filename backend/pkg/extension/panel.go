@@ -17,7 +17,7 @@ import (
 // PanelSlot names a place on a core page that draws units' panels.
 type PanelSlot string
 
-// SlotDealPanel is the side column of a deal page, above its details.
+// SlotDealPanel is the end of a deal page's Edit details drawer, after its lists.
 const SlotDealPanel PanelSlot = "record_panel.deal"
 
 // PanelSlots is every slot a core page draws. The frontend's list mirrors it.

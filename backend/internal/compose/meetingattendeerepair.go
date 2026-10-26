@@ -106,16 +106,7 @@ func repairMeetingAttendeesBatch(ctx context.Context, pool *pgxpool.Pool, limit 
 func selectMeetingRepairCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.id,
-		       coalesce((
-		         SELECT c.account_label
-		           FROM capture_connection c
-		          WHERE c.provider = split_part(a.captured_by, ':', 2)
-		            AND (
-		              c.user_id::text = split_part(a.captured_by, ':', 3)
-		              OR (split_part(a.captured_by, ':', 3) = '' AND NOT EXISTS (
-		                  SELECT 1 FROM capture_connection other
-		                   WHERE other.provider = c.provider AND other.id <> c.id)))
-		          LIMIT 1), '')
+		       `+stampedMailboxLabelSQL+`
 		  FROM activity a
 		  JOIN raw_capture rc
 		    ON rc.source_system = a.source_system AND rc.source_id = a.source_id

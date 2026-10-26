@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: desktop/launcher desktop/build/build-dist.sh desktop/build/build-dist.ps1 desktop/build/build-postgres.sh desktop/build/macos-target.sh -->
 # Desktop build: one folder, no Docker
 
 Margince normally runs as a server: Docker images, a hosted Postgres, and an

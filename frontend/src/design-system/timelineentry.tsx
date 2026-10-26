@@ -17,6 +17,7 @@ import {
 import { formatNumber } from "../format/format";
 import {
   type Locale,
+  translate,
   translatePlural,
   useLocale,
   usePlural,
@@ -48,6 +49,10 @@ export type TimelineGroup = {
 type EmailSummary = components["schemas"]["EmailSummary"];
 
 type ActivityAudience = components["schemas"]["ActivityAudience"];
+
+type AutomaticKind = NonNullable<
+  components["schemas"]["Activity"]["automatic_kind"]
+>;
 
 export type TimelineEntry = {
   id: string;
@@ -132,6 +137,12 @@ export type TimelineEntry = {
    * message, never per sender: the same address sends a newsletter and a reply.
    */
   bulkAttested?: boolean;
+  /**
+   * What sent a message no human wrote, as the server judged it: a calendar
+   * invitation, a sending system or the product. Such a row counts on neither
+   * side of a conversation.
+   */
+  automaticKind?: AutomaticKind | null;
   /**
    * The message's own subject, when it had one. This is not the rendered
    * `title`, which falls back to the body (or to the kind) so a subjectless
@@ -324,13 +335,64 @@ export function entryTimeOfDay(
 // kinds can hold one member. A thread can have its other messages on another
 // page, and a sender can attest a single message as a bulk send. The plural
 // forms rendered "1 messages" and "sent to 1 contacts" for it.
+// A thread also says how many messages each side wrote. Four from them and
+// five from the team then never read as nine from one contact.
 export function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   const count = group.entries.length;
   const base =
     group.kind === "bulk" ? "timeline.group.bulk" : "timeline.group.thread";
-  return translatePlural(locale, base, count, {
+  const total = translatePlural(locale, base, count, {
     count: formatNumber(count, locale),
   });
+  if (group.kind !== "thread") {
+    return total;
+  }
+  const { theirs, ours } = threadSides(group.entries);
+  if (theirs + ours === 0) {
+    return total;
+  }
+  return `${total} · ${translate(locale, "timeline.group.sides", {
+    theirs: formatNumber(theirs, locale),
+    ours: formatNumber(ours, locale),
+  })}`;
+}
+
+// threadSides counts the messages a human wrote on each side.
+export function threadSides(entries: readonly TimelineEntry[]): {
+  theirs: number;
+  ours: number;
+} {
+  let theirs = 0;
+  let ours = 0;
+  for (const entry of entries) {
+    if (entry.automaticKind) {
+      continue;
+    }
+    if (entry.direction === "inbound") {
+      theirs++;
+    } else if (entry.direction === "outbound") {
+      ours++;
+    }
+  }
+  return { theirs, ours };
+}
+
+const AUTOMATIC_LABEL: Record<AutomaticKind, MessageKey> = {
+  calendar: "timeline.automatic.calendar",
+  sending_system: "timeline.automatic.sending_system",
+  product: "timeline.automatic.product",
+};
+
+export function automaticLabel(entry: TimelineEntry): MessageKey | undefined {
+  return entry.automaticKind ? AUTOMATIC_LABEL[entry.automaticKind] : undefined;
+}
+
+// AutomaticFlag says a row is not a human's message, so it is not read as
+// the contact writing.
+export function AutomaticFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  const t = useT();
+  const label = automaticLabel(entry);
+  return label ? <Badge>{t(label)}</Badge> : null;
 }
 
 export function CommitmentReviewFlag({

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package ai owns the model runtime behind the shared/ports/model seam:
-// the provider adapters (Anthropic cloud-frontier BYOK, Ollama local,
-// and the deterministic offline fake every test drives), the
+// Package ai owns the model runtime behind the shared/ports/model seam. It
+// holds the provider adapters, which providerRegistry lists. It holds the
 // SelectBrain factory that turns config into a Client, and the
 // credential SecretStripper that runs over every outbound payload.
 //
@@ -12,14 +11,13 @@
 // tiers. The stripper is hygiene, not privacy: privacy is the location
 // ladder (A8 revised), so nothing here pseudonymizes PII.
 //
-// Tables owned: ai_usage (per-workspace metering; feeds the budget
-// guardrail), voice_profile and voice_corpus_source (Voice DNA,
-// B-E07.4/.5a — the derived artifact + corpus manifest are
-// model-adjacent assets, so they live beside the runtime that consumes
-// them), ai_call (per-attempt trace metadata — one row per rung a
-// logical call walked, spec §4) and ai_call_payload (the opt-in
-// post-stripper captured content, Layer 3 — the payload row that
-// privacy's retention and Art. 17 erasure age out and purge).
+// Tables owned: docs/reference/entity-model/ai.md.
+//
+// ai_usage is per-workspace metering and feeds the budget guardrail.
+// voice_profile and voice_corpus_source (Voice DNA) are model-adjacent assets,
+// so they live beside the runtime that consumes them. ai_call is one row per
+// rung a logical call walked; ai_call_payload is the opt-in post-stripper
+// content that privacy's retention and Art. 17 erasure age out and purge.
 // ai_call_config is the hash-keyed, append-only config-snapshot
 // dimension every ai_call row points at; it carries no workspace_id —
 // a task contract, routing yaml, and prompt version are build facts,

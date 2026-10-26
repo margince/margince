@@ -24,6 +24,7 @@ import {
   type LeafValue,
 } from "../../lib/segmentpredicate";
 import { MoneyControl } from "./filtervalue.money";
+import { RadiusValue } from "./filtervalue.radius";
 import {
   ChosenRecords,
   chosenIDs,
@@ -75,6 +76,9 @@ export function ValueControl({
         label={t("filters.existsLabel")}
       />
     );
+  }
+  if (op === "within_radius") {
+    return <RadiusValue value={value} onChange={onChange} label={name} />;
   }
   // A REFERENCE IS ANSWERED BEFORE THE OPERATOR IS, and the order is the whole
   // point. `in` used to win, so every id field's list was a free-text token box

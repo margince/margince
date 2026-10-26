@@ -10,7 +10,7 @@
 // surfaces a company and a contact page read, and the quiet-project predicate
 // the signal scan and the reports share.
 //
-// Tables owned: project, project_phase_history.
+// Tables owned: docs/reference/entity-model/projects.md.
 // A project's stakeholders are `relationship` rows of kind project_stakeholder,
 // and that table is contacts's.
 //

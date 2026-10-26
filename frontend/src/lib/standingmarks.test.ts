@@ -57,6 +57,30 @@ describe("activityMarks", () => {
     });
   });
 
+  it("names the recorded author of a list row that carries no counterparty", () => {
+    const [mark] = activityMarks(
+      [
+        row({
+          id: "a",
+          kind: "email",
+          occurred_at: "2026-08-01T10:00:00Z",
+          direction: "inbound",
+          voice: {
+            author: {
+              kind: "contact_record",
+              display_name: "Pia Sender",
+              is_reader: false,
+            },
+            contact_role: "cc",
+          },
+        }),
+      ],
+      words,
+    );
+
+    expect(mark?.detail).toBe("From Pia Sender");
+  });
+
   it("says only the kind for a row whose text is withheld, and invents no name", () => {
     const [mark] = activityMarks(
       [

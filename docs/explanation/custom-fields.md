@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/customfields backend/internal/shared/ports/fieldcatalog backend/internal/platform/database/storekit/customcolumns.go backend/internal/platform/database/storekit/listquery.go frontend/src/features/records/customfields.tsx -->
 # Custom fields: the governed add-field engine
 
 How a workspace admin adds a field to `contact` at runtime without anyone shipping code. And why so many

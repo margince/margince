@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/webhooks backend/internal/compose/webhooks.go backend/internal/compose/jobs_webhookretry.go backend/api/public-events.yaml frontend/src/features/settings/webhooks.tsx -->
 # Outbound webhooks: the governed outbound surface and delivery engine
 
 `internal/modules/webhooks` is the outbound integration surface **built into** Margince. A workspace
@@ -471,10 +472,10 @@ Delivery is a background capability, gated on the installation signing key:
   again a delivery that is already checked, and never fans out.
 
 The time between runs of the retry dispatcher is the **Webhook retries (seconds)** setting on
-Settings → `System health` (default 30 seconds). Each run adds one `webhook_retry_workspace` job per
-live workspace. It times the fan-out across all workspaces, not the wait of one delivery. The
+Settings → `System health` (default 30 seconds). Each run adds one `webhook_retry` job, a single pass
+over every due retry of the installation (`backend/internal/compose/jobs_webhookretry.go`). The
 schedule per delivery is the doubling wait above; this setting only decides how soon a wait that has
-run out is noticed. Archived workspaces are skipped, since nobody waits for a delivery parked there.
+run out is noticed.
 See [reference/configuration.md](../reference/configuration.md) for the full table of flags and
 settings.
 

@@ -52,7 +52,7 @@ func TestTheFloorAccountsForAHeldMessageWithoutQuotingIt(t *testing.T) {
 	in := inputFixture()
 	// As the 360 hands it over: the row keeps its date and loses its words.
 	in.Recent[0] = ActIn{
-		ID: schedulingID, Kind: "email", Speaker: "them",
+		ID: schedulingID, Kind: "email", Speaker: &Speaker{Kind: "them"},
 		At: "2026-08-29T08:10:00Z", Withheld: true,
 	}
 	prose := claims.Prose(Deterministic(briefContactID, in, "en"))
@@ -64,10 +64,8 @@ func TestTheFloorAccountsForAHeldMessageWithoutQuotingIt(t *testing.T) {
 	}
 }
 
-// Which direction went last is the whole question: a contact we wrote to a
-// fortnight ago with no reply and one who wrote this morning have the same
-// last-touch date and opposite meanings.
-func TestTheFloorReportsWhichDirectionWentLast(t *testing.T) {
+// Who wrote last is read from the newest message's own speaker.
+func TestTheFloorReportsWhoWroteLast(t *testing.T) {
 	t.Parallel()
 	inbound := claims.Prose(Deterministic(briefContactID, inputFixture(), "en"))
 	if !strings.Contains(inbound, "They wrote last") {
@@ -75,9 +73,22 @@ func TestTheFloorReportsWhichDirectionWentLast(t *testing.T) {
 	}
 
 	outbound := inputFixture()
-	outbound.LastOutbound = "2026-08-30T09:00:00Z"
+	outbound.Recent[0].Speaker = &Speaker{Kind: SpeakerYou}
 	if got := claims.Prose(Deterministic(briefContactID, outbound, "en")); !strings.Contains(got, "You wrote last") {
 		t.Errorf("the floor wrote %q, want it to say we wrote last", got)
+	}
+}
+
+// The newest message was written by somebody else, with this contact in Cc,
+// while this contact's own last mail is older. The floor must not tell the
+// newer message's words as this contact's.
+func TestTheFloorNeverCreditsACopiedMessageToTheContact(t *testing.T) {
+	t.Parallel()
+	copied := inputFixture()
+	copied.Recent[0].Speaker = &Speaker{Kind: speakerContact, Name: "Pia Sender"}
+	got := claims.Prose(Deterministic(briefContactID, copied, "en"))
+	if strings.Contains(got, "They wrote last") || strings.Contains(got, "You wrote last") {
+		t.Errorf("the floor wrote %q; a mail another contact wrote was told as this contact's or the reader's", got)
 	}
 }
 

@@ -46,6 +46,11 @@ type LastTouch struct {
 	LiveInboundPrecision, PrecedingPrecision              string
 }
 
+// Direction is which sides have written, by relstrength's one rule.
+func (t LastTouch) Direction() relstrength.Direction {
+	return relstrength.Sides{TheyWrote: t.InboundAt != nil, WeWrote: t.OutboundAt != nil}.Direction()
+}
+
 // Touches is what the relationship-change derivation needs from this answer.
 func (t LastTouch) Touches() relstrength.Touches {
 	return relstrength.Touches{
@@ -120,8 +125,8 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		fmt.Sprintf(contactReachesActivity, "c.id"), scope, projectScope(opts, arg),
 		auth.AudienceWorkspaceOnly("a"))
 	humanClock := relstrength.LastActivityCountsSQL("a", "now()") + " AND " + relstrength.WrittenByHumanSQL("a")
-	sender := relstrength.SenderSQL("c.id", "a")
-	inbound := fmt.Sprintf(`a.direction = 'inbound' AND %s AND %s`, sender, humanClock)
+	inbound := relstrength.TheyWroteSQL("c.id", "a") + " AND " + humanClock
+	outbound := relstrength.WeWroteSQL("a") + " AND " + humanClock
 	exchange := relstrength.ContactExchangeSQL("a", "c.id", "now()")
 	// One newest row per direction carries its time and its precision together.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
@@ -132,7 +137,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[2]s %[8]s) inbound ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
-		                     %[1]s AND a.direction = 'outbound' AND %[5]s %[8]s) outbound ON true
+		                     %[1]s AND %[5]s %[8]s) outbound ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[2]s AND NOT %[6]s %[8]s) live ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
@@ -140,7 +145,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[7]s AND a.occurred_at < inbound.touched_at %[8]s) preceding ON true -- occurred_at raw: the touch before the newest inbound, an ordering of rows
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
-		reached, inbound, wantedPos, visible, humanClock, activities.ImportedHistorySQL, exchange, newestRow), args...)
+		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange, newestRow), args...)
 	if err != nil {
 		return nil, err
 	}

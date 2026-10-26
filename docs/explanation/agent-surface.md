@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/agents/registry.go backend/internal/compose/agentgate.go backend/internal/modules/agents/runner backend/internal/modules/ai/selectbrain.go backend/internal/modules/ai/router.go backend/internal/modules/ai/budget.go backend/tools/gen-agentcontract backend/internal/compose/agentbundle -->
 # The agent surface & the model runtime
 
 How AI agents *act* inside Margince, and what *runs the model* behind them. The write path covers how

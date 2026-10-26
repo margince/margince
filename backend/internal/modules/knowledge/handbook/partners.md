@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/projects/partners.tsx frontend/src/features/projects/partners.form.tsx frontend/src/features/projects/partnercommissions.tsx frontend/src/features/projects/partnerdeals.tsx frontend/src/features/projects/commissiondecide.tsx backend/internal/modules/contacts/partner.go backend/internal/modules/contacts/partnerwrite.go backend/internal/modules/commissions -->
 # Partners and commission
 
 A **partner** in Margince is a company that brings you business or helps you win it. It may be a hosting company, a consulting company or a large business partner. A partner is a company that is already in Margince, with partner terms added. So the same company page shows both its own business and its partner work. The terms are a role, a certification status, a margin tier and a relationship stage.

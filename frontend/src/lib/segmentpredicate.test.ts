@@ -400,10 +400,21 @@ describe("a within_radius operand", () => {
     expect(encode(restored as Node)).toEqual({ and: [stored] });
   });
 
+  it("is not complete when the point is off the globe", () => {
+    expect(
+      isComplete(
+        newLeaf("location", "within_radius", { lat: 91, lon: 9, radius_km: 5 }),
+      ),
+    ).toBe(false);
+  });
+
   it("is refused when the point or the distance is not usable", () => {
     for (const value of [
       { lat: 48, lon: 9 },
       { lat: 48, lon: 9, radius_km: 0 },
+      { lat: 91, lon: 9, radius_km: 5 },
+      { lat: 48, lon: -181, radius_km: 5 },
+      { lat: Number.NaN, lon: 9, radius_km: 5 },
       { lat: "48", lon: 9, radius_km: 5 },
       { lat: 48, lon: 9, radius_km: 5, unit: "miles" },
     ]) {

@@ -2939,6 +2939,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Ein Verlauf als ein Ereignis sagt zuerst, WAS er ist.
   "timeline.group.thread_other": "{count} Nachrichten",
   "timeline.group.thread_one": "{count} Nachricht",
+  "timeline.group.sides": "{theirs} von der Gegenseite, {ours} von deinem Team",
+  "timeline.automatic.calendar": "Kalendereinladung",
+  "timeline.automatic.sending_system": "Von einem System gesendet",
+  "timeline.automatic.product": "Von Margince gesendet",
   "timeline.group.bulk_other": "an {count} Personen gesendet",
   "timeline.group.bulk_one": "an {count} Person gesendet",
   "timeline.group.expand": "Öffnen",
@@ -3786,7 +3790,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.reason.posture": "Durch deine Einstellung zurückgehalten",
   "compose.reason.workspaceFloor": "Durch das Unternehmen zurückgehalten",
   "compose.reason.noRecord": "Zurückgehalten: kein Datensatz",
-  "compose.reason.pendingVerdict": "Bis zur Einstufung zurückgehalten",
+  "compose.reason.pendingVerdict": "Bis zur Prüfung zurückgehalten",
   "compose.reason.manual": "Privat gehalten",
   "compose.reason.verdict": "Durch Einstufung zurückgehalten",
   "compose.reason.counterparty": "Zurückgehalten: E-Mail mit der Gegenseite",
@@ -5701,6 +5705,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "evidence.mark": "gelesen",
 
   "evidence.bought": "gekauft",
+  "evidence.fromProvider": "vom Anbieter",
   "evidence.confirm": "Bestätigen",
   "evidence.correct": "Korrigieren",
   "evidence.save": "Speichern",
@@ -5984,6 +5989,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.filesTotal_other": "{count} Dateien · {size}",
   "compose.filesLimit": "Bis zu {most} Dateien pro Nachricht.",
   "compose.newEmailTo": "Neue E-Mail an {name}",
+  "compose.filedUnder": "Abgelegt unter",
   "compose.discardMessage": "Entwurf löschen",
   "compose.draftSaving": "Wird gespeichert…",
   "compose.earlierThreads_one": "{count} früherer Thread",
@@ -6546,7 +6552,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.quietSince": "Ruhig seit",
   "analytics.nothingQuiet": "Kein Projekt in Umsetzung ist verstummt.",
   "analytics.noProjectsYet":
-    "Noch keine Projekte. Ein gewonnener Deal erstellt ein Projekt.",
+    "Noch keine Projekte. Lege unter Projekte mit „Neues Projekt“ eines an. Ein gewonnener Deal setzt sein Projekt auf „In Umsetzung“.",
   "analytics.coverageSub": "Verbindungsstatus bei der letzten Prüfung.",
   "analytics.covSource": "Quelle",
   "analytics.covState": "Status",
@@ -9449,7 +9455,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Die Consumer-Mail-Liste des Workspace (CAP-PARAM-5).
   "consumerMail.title": "Freemail-Domains",
   "consumerMail.sub":
-    "E-Mails von diesen Domains erstellen den Kontakt, aber nie ein Unternehmen. Margince liefert eine Liste mit. Ergänze eine fehlende Domain oder übersteuere einen falschen Eintrag.",
+    "Domains privater Postfächer. E-Mails von diesen Domains erstellen nie ein Unternehmen. Eine Adresse von dort wird sofort zum Kontakt, wenn jemand aus deinem Unternehmen mit ihr E-Mails ausgetauscht oder einen Termin hatte oder eine frühere Entscheidung sie zugelassen hat. Sonst geschieht das erst, wenn Margince die Adresse eingeordnet hat. Margince liefert eine Liste mit. Ergänze eine fehlende Domain oder übersteuere einen falschen Eintrag.",
   "consumerMail.addedTitle": "Hier hinzugefügt",
   "consumerMail.addTitle": "Domain hinzufügen",
   "consumerMail.domainLabel": "Domain",
@@ -14571,6 +14577,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.bandBadge.moderate": "Mittel",
   "contact.bandBadge.strong": "Stark",
   "contact.bought.from": "Bei {provider} gekauft",
+  "contact.provider.from": "Von {provider}",
+  "contact.provider.trigger.automatic_create":
+    "Für einen neuen Kontakt ergänzt",
+  "contact.provider.trigger.automatic_import":
+    "Für einen neuen Kontakt ergänzt",
+  "contact.provider.trigger.automatic_backfill": "Vom Nachholabgleich ergänzt",
+  "contact.provider.trigger.scheduled_refresh": "Planmäßig aktualisiert",
+  "contact.provider.trigger.manual": "Angefragt von",
   "contact.network.title": "Teammitglieder, die diesen Kontakt kennen",
 
   "contact.page.loading": "Wird geladen…",
@@ -14885,7 +14899,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "provider.disconnectConfirm.title": "Diesen Anbieter trennen?",
   "provider.disconnectConfirm.body":
     "Neue Abfragen stoppen sofort, und der Schlüssel wird vernichtet. Gekaufte Daten bleiben an deinen Datensätzen. Das Trennen löscht sie nicht.",
-  "provider.deleteData": "Gekaufte Daten löschen",
+  "provider.deleteData": "Anbieterdaten löschen",
   "provider.deleteDataConfirm.title": "Alle Daten dieses Anbieters löschen?",
   "provider.deleteDataConfirm.impactTitle":
     "Das lässt sich nicht rückgängig machen",
@@ -15115,6 +15129,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.op.atMost": "ist h\u00f6chstens",
   "filters.op.withinRadius": "liegt im Umkreis von",
   "filters.sentence.radiusOf": "{km} km um {place}",
+  "filters.radius.km": "Entfernung (km)",
+  "filters.radius.place": "Ortsname (optional)",
+  "filters.radius.lat": "Breitengrad",
+  "filters.radius.lon": "L\u00e4ngengrad",
   "filters.join.and": "und",
   "filters.join.or": "oder",
   "filters.sentence.clause": "{field} {op} {value}",
@@ -15305,6 +15323,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.why.value": "Aktuell: {value}",
   "lists.why.empty": "leer",
   "lists.why.hidden": "Wert f\u00fcr dich verborgen",
+  "lists.why.moreLinked": "und weitere, nicht angezeigt",
   "lists.why.daysAgo_one": "vor {count} Tag",
   "lists.why.daysAgo_other": "vor {count} Tagen",
   "lists.why.today": "heute",
@@ -16620,9 +16639,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.card.saidEmpty": "Noch kein Gespräch erfasst.",
   "contact.card.theyWrote": "eingehend",
   "contact.card.youWrote": "ausgehend",
-  "contact.card.theyCalled": "eingehend",
-  "contact.card.youCalled": "ausgehend",
   "contact.card.bothSides": "beide Seiten",
+  "contact.card.wroteBy": "{who} schrieb",
+  "contact.card.inCc": "in Kopie",
   "contact.card.awaitingThem": "Wartet auf Antwort",
   "contact.card.noEconomicBuyer":
     "Noch kein wirtschaftlicher Entscheider benannt",

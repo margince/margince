@@ -136,6 +136,11 @@ func TestEveryOpensMarkerSitsDirectlyUnderAHeading(t *testing.T) {
 // mentions opening one: a misspelt marker is still read, and then refused.
 func mentionsMarker(line string) bool {
 	folded := strings.ToLower(strings.TrimSpace(line))
+	// A describes header names code paths, some under a settings/ folder; it
+	// opens no settings page.
+	if strings.HasPrefix(folded, "<!-- describes:") {
+		return false
+	}
 	comment := strings.HasPrefix(folded, "<!--") && strings.Contains(folded, "open")
 	return comment || strings.Contains(folded, "settings/")
 }

@@ -42,6 +42,7 @@ func TestContactPageWalksTheWholeAccountInRankedOrder(t *testing.T) {
 	mail := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: your proposal",
 		"inbound", company360Clock.AddDate(0, 0, -3))
 	integration.LinkActivity(t, owner, mail, "contact", waiting)
+	integration.LinkActivitySender(t, owner, mail, waiting)
 
 	limit := 10
 	seen := map[ids.UUID]bool{}
@@ -100,9 +101,11 @@ func TestContactPageNarrowsByEngagement(t *testing.T) {
 	unanswered := integration.AccountMailDirectedAt(t, owner, e.WS, "Question", "inbound",
 		company360Clock.AddDate(0, 0, -4))
 	integration.LinkActivity(t, owner, unanswered, "contact", waiting)
+	integration.LinkActivitySender(t, owner, unanswered, waiting)
 	in := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: proposal", "inbound",
 		company360Clock.AddDate(0, 0, -3))
 	integration.LinkActivity(t, owner, in, "contact", answered)
+	integration.LinkActivitySender(t, owner, in, answered)
 	reply := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: Re: proposal", "outbound",
 		company360Clock.AddDate(0, 0, -2))
 	integration.LinkActivity(t, owner, reply, "contact", answered)

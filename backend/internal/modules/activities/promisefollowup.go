@@ -72,17 +72,12 @@ func PromiseFollowUpsTx(ctx context.Context, tx pgx.Tx, promises []PromiseBasis,
   JOIN activity src ON src.id = basis.source_id AND src.thread_key IS NOT NULL
   CROSS JOIN LATERAL (
     SELECT a.id, a.occurred_at, a.occurred_precision, coalesce(a.subject, '') AS subject FROM activity a
-     WHERE a.thread_key = src.thread_key
-       AND a.kind = src.kind AND a.kind = 'email'
-       AND a.channel_provider IS NOT DISTINCT FROM src.channel_provider
-       AND a.direction = 'outbound' AND a.counterparty_outbound_attested AND NOT a.bulk_mail_attested
-       AND a.archived_at IS NULL
-       AND a.occurred_at > src.occurred_at -- occurred_at raw: a later mail in the thread, both instants
-       AND %[2]s
+     WHERE %[2]s
        AND %[3]s
        AND %[4]s
      ORDER BY a.occurred_at DESC, a.id DESC
-     LIMIT 1) later`, basis, occurredday.BegunSQL("a", fmt.Sprintf("$%d", until)), promiseRecipientAddressedSQL("a", "basis.recipient_id"), readable), args...)
+     LIMIT 1) later`, basis, promiseFollowUpSQL("a", "src", fmt.Sprintf("$%d", until)),
+		promiseRecipientAddressedSQL("a", "basis.recipient_id"), readable), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading mail that may have kept a promise: %w", err)
 	}
@@ -95,6 +90,19 @@ func PromiseFollowUpsTx(ctx context.Context, tx pgx.Tx, promises []PromiseBasis,
 		return nil, fmt.Errorf("activities: reading mail that may have kept a promise: %w", err)
 	}
 	return found, nil
+}
+
+// promiseFollowUpSQL admits the mail under later as our follow-up on the
+// promise made in src. It is our attested, non-bulk mail later on src's thread,
+// sent by until. The scan's settled citations read the same rule.
+func promiseFollowUpSQL(later, src, until string) string {
+	return fmt.Sprintf(`%[1]s.thread_key = %[2]s.thread_key
+       AND %[1]s.kind = %[2]s.kind AND %[1]s.kind = 'email'
+       AND %[1]s.channel_provider IS NOT DISTINCT FROM %[2]s.channel_provider
+       AND %[1]s.direction = 'outbound' AND %[1]s.counterparty_outbound_attested AND NOT %[1]s.bulk_mail_attested
+       AND %[1]s.archived_at IS NULL
+       AND %[1]s.occurred_at > %[2]s.occurred_at -- occurred_at raw: a later mail in the thread, both instants
+       AND %[3]s`, later, src, occurredday.BegunSQL(later, until))
 }
 
 // promiseRecipientAddressedSQL is whether the mail under row names the

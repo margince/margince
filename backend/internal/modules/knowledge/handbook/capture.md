@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part
@@ -24,9 +25,8 @@ Also called: sent items, outgoing mail, outbox, log sent emails.
 
 A captured message passes four stages, in order.
 
-**1. The connector picks it up.** Some things never leave the connector, such as
-a chat reaction or a message your own mail rules filtered. Those never reach
-Margince at all.
+**1. The connector picks it up.** Some things never leave the connector, such as a chat reaction
+or a message your own mail rules filtered. Those never reach Margince at all.
 
 **2. The first check.** Margince confirms the message follows the expected format,
 is within size limits, and comes from a source that stands behind the addresses on it.
@@ -75,9 +75,11 @@ Create no contact and no company.
 
 **Have we already decided about this address?** Use that decision again.
 
-**Is it a consumer mail domain?** Margince ships with a long list of
-consumer mail domains, and the Capture rules screen shows the current count.
-If it is one of those, create the contact, but no company.
+**Is it a consumer mail domain?** These are personal mailboxes, and Margince ships with a long
+list of them; the Capture rules screen shows the count. A sender on one never makes a company.
+They become a contact at once after a meeting, or after mail both ways, with someone at your company.
+An older decision that let them in also counts. If not, they become a contact only once Margince has
+sorted them.
 
 **Nobody knows who this is.** Create nothing yet, and note the open question.
 
@@ -333,11 +335,11 @@ It applies from the next message; captured mail stays. **Whole company** rules b
 Also called: block a sender, ignore a domain, blacklist, do not log.
 
 ### How do I tell Margince a sender is business, or exclude one?
-To correct what Margince decided about a sender, open **Settings → Capture activity** and find the address in **Senders**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to keep it out.
+To correct what Margince decided about a sender, open **Settings → Capture activity** and find the address in **Senders**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to hide its mail for good.
 1. Open **Settings**, then **Capture activity**, and go down to **Senders**.
 2. Find the address; the **Decision** column shows what was decided. **Contact** opens the contact that holds the address. **Messages** counts your stored mail with it. **Last seen** is when the newest of those arrived or went out.
 3. Open its **…** (**Actions**) menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
-**Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. **Withdraw my answer** takes back your answer. A later verdict never writes over a decision you make.
+**Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. Margince still receives their later mail, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored. What Margince sorts by itself never writes over a decision you make.
 Also called: mark as not spam, whitelist a sender.
 
 ## Things you control yourself
@@ -358,7 +360,7 @@ everyone, and only an administrator may change one of those. A rule a member add
 member. "Applies from the next message. Messages already captured stay."
 
 **Consumer mail domains** (Settings → Capture rules): which domains count as personal mailboxes.
-"Mail from a consumer mailbox creates the contact but never a company."
+[Who the message belongs to](#who-the-message-belongs-to) says what happens to their senders.
 
 **Refused domains** (Settings → Capture rules): the domains this installation will not create a
 company for. Each shows what decided it: an AI model, a fixed rule, or a human. Letting a domain
@@ -380,13 +382,11 @@ the contacts who write from it. **Keep as vendor** creates nothing, and later ma
 
 **Senders** (Settings → Capture activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an
-automated tool, a newsletter, an advisor, or personal. You can change any of
-them.
+automated tool, a newsletter, an advisor, or personal. You can change any of them.
 
-**Mark as business** lets a sender back in; **Exclude** destroys what they sent
-into your mailbox and stops the next message. A later verdict never writes over
-a decision you make. **Waiting on a decision**, under the list, names the
-contacts only you see until their sender is decided. An administrator sees only
+**Mark as business** lets a sender back in; **Exclude** destroys their mail, also what they send
+later ([how](#how-do-i-tell-margince-a-sender-is-business-or-exclude-one)). **Waiting on a decision**, under the
+list, names the contacts only you see until their sender is decided. An administrator sees only
 how many there are.
 
 **Held threads** (Settings → Capture activity): the threads your mailbox is holding

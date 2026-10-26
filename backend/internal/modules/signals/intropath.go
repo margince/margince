@@ -5,8 +5,8 @@
 // signal, name the route-in contact, the relationship we have, and a
 // concrete suggested next move — an actionable path, not a notification.
 // PROPOSAL ONLY: this file drafts and returns; it sends nothing and
-// mutates nothing. The outbound ride is the 🟡 confirm-first send tool
-// (features/02 §4) — the warm room proposes, the rep sends. The draft
+// mutates nothing. The outbound goes through a send tool, which needs the
+// passport's send scope. The warm room proposes and the rep sends. The draft
 // renders the AI provenance notice and carries evidence/provenance back
 // to the warm signal.
 

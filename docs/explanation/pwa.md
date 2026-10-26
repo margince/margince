@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/lib/pwa.ts frontend/src/offline/serviceworker.js frontend/src/offline/page.ts frontend/scripts/vite-pwa.ts frontend/public/manifest.webmanifest frontend/src/lib/connectivity.ts -->
 # The app you can install: manifest, service worker, offline page
 
 Margince can be installed from the browser as an app. It gets its own window, its own icon and its

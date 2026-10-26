@@ -1,3 +1,4 @@
+<!-- describes: backend/internal/modules/knowledge/ask.go backend/internal/modules/knowledge/groundingfloor.go backend/internal/modules/knowledge/handbook/section.go backend/internal/compose/corpusaskhandbook.go frontend/src/app/paletteanswer.tsx frontend/src/lib/question.ts -->
 # The search box asks the handbook
 
 What a user sees is in the handbook page [What Margince is](../handbook/what-margince-is.md), under

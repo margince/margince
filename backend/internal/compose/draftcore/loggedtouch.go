@@ -10,6 +10,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // ClassifyWithLogged is convstate.Classify with a logged note or meeting
@@ -54,6 +55,5 @@ func IsLoggedTouch(activity crmcontracts.Activity, now time.Time, zone *time.Loc
 		return false
 	}
 	status := activity.MeetingStatus
-	return status == nil || (*status != crmcontracts.ActivityMeetingStatusCanceled &&
-		*status != crmcontracts.ActivityMeetingStatusNoShow)
+	return status == nil || relstrength.MeetingStatusCounts(string(*status))
 }

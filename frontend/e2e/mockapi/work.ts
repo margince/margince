@@ -152,6 +152,8 @@ export const logActivity: Handler = ({ route, json }, { loggedActivities }) => {
     version: 1,
     created_at: "2026-07-06T09:00:00Z",
     updated_at: "2026-07-06T09:00:00Z",
+    // The signed-in seat wrote it, so the server answers that it may change it.
+    writable: true,
   };
   if (links.some((link) => ["deal", "project"].includes(link.entity_type))) {
     created.id = `act-new-${loggedActivities.length + 1}`;

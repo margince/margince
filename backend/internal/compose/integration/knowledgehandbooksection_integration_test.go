@@ -62,12 +62,24 @@ func TestTheShippedHandbookAnswersATimeZoneQuestionWithItsSettingsPage(t *testin
 	if !state.Corpus.Shipped {
 		t.Fatal("the handbook set's answer does not say it is the shipped set")
 	}
-	if len(passages) != 1 {
-		t.Fatalf("retrieved %d passages, want the one holding the time zone section", len(passages))
+	// Chunks overlap, so the section can sit in two neighbouring passages; how
+	// many depends on where the chunker cut, which any edit above it moves.
+	const quote = "choose a place in the **Timezone** list"
+	quoted := -1
+	for i, passage := range passages {
+		if !strings.Contains(passage.Text, embedder.near) {
+			t.Fatalf("retrieved a passage without the time zone section: %q", passage.Text)
+		}
+		if quoted < 0 && strings.Contains(passage.Text, quote) {
+			quoted = i
+		}
+	}
+	if quoted < 0 {
+		t.Fatalf("none of the %d passages holds the time zone section's text", len(passages))
 	}
 	lane := writtenLane{reply: `{"coverage":"answers","summary":"Pick it on the Meetings page. [1]","claims":[` +
-		`{"text":"Pick your time zone on the Meetings page.","id":"` + passages[0].ChunkID.String() +
-		`","quote":"choose a place in the **Timezone** list"}]}`}
+		`{"text":"Pick your time zone on the Meetings page.","id":"` + passages[quoted].ChunkID.String() +
+		`","quote":"` + quote + `"}]}`}
 	answer := compose.AnswerCorpus(ie.ctx, lane, state, question, passages,
 		string(textlang.English), quietAskLog())
 	if answer.Claims == nil || len(*answer.Claims) != 1 {

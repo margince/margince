@@ -133,6 +133,8 @@ export const BoughtEmployer: Story = {
               target: "employment:held",
               provider: "surfe",
               applied_at: "2026-06-02T12:00:00Z",
+              paid: true,
+              trigger: "manual",
             },
           ],
         },

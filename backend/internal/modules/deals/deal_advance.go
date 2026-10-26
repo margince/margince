@@ -157,7 +157,7 @@ func (s *Store) advanceOnTx(
 	// `return err`, and unwrapping them into `return crmcontracts.Deal{}, err`
 	// would be fourteen chances to return a half-built deal beside an error.
 	err = func() error {
-		if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
+		if err := lockThenEnsureWritable(ctx, tx, id); err != nil {
 			return err
 		}
 		// A decision read (stage/amount snapshot for the transition patch

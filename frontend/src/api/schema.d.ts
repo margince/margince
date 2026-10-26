@@ -23970,6 +23970,37 @@ export interface components {
             via?: string | null;
         };
         /**
+         * @description Who wrote an activity, read from what is recorded on it, and the part the
+         *     page's contact had in it. Every surface that names a speaker reads this
+         *     rather than guessing from `direction`: a mail that came in was not
+         *     necessarily written by the contact whose page shows it.
+         */
+        ActivityVoice: {
+            /** @description Who wrote it: the `from` party of a message, the organizer of a meeting, the seat or imported author of a note, call or task. Null when nothing recorded names an author, which a reader shows as no author rather than a guess. */
+            author?: components["schemas"]["ActivityAuthor"] | null;
+            /**
+             * @description Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+             * @enum {string}
+             */
+            contact_role?: "author" | "addressee" | "cc" | "organizer" | "attendee" | "other";
+        };
+        /** @description One author, named by the record that identifies them. */
+        ActivityAuthor: {
+            /**
+             * @description `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+             * @enum {string}
+             */
+            kind: "contact_record" | "colleague" | "machine" | "unresolved";
+            display_name?: string | null;
+            address?: string | null;
+            /** Format: uuid */
+            contact_id?: string | null;
+            /** Format: uuid */
+            user_id?: string | null;
+            /** @description The author is the signed-in caller. */
+            is_reader: boolean;
+        };
+        /**
          * @description One retained email, reduced to what a row shows without opening it. Present on an
          *     activity only when `kind=email`; every other kind carries none, and a reader that
          *     branches on this field is asking the one question that decides the canonical row.
@@ -26773,6 +26804,11 @@ export interface components {
             since: string;
         };
         /**
+         * @description Which sides of the relationship have written: `two_way` when both have, `inbound_only` when only they have, `outbound_only` when only we have, `none` when neither has. Only a message a human wrote counts, and an inbound one only when the contact sent it. A company's reading is the roll-up of its current contacts' readings.
+         * @enum {string}
+         */
+        RelationshipDirection: "two_way" | "inbound_only" | "outbound_only" | "none";
+        /**
          * @description Deterministic relationship-strength (features/07 §4) — a transparent function over captured
          *     interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
          *     interaction set + fixed clock yields a stable value (P6/P12). The `factors` decompose the score and
@@ -27038,6 +27074,14 @@ export interface components {
             reserved_credits: number;
             actual_credits?: number | null;
         };
+        /**
+         * @description What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+         *     contact that existed before the provider was connected, or that no run has covered
+         *     yet; like the other automatic triggers it buys only the categories that cost
+         *     nothing.
+         * @enum {string}
+         */
+        ProviderRunTrigger: "automatic_create" | "automatic_import" | "automatic_backfill" | "scheduled_refresh" | "manual";
         ProviderRun: {
             /** Format: uuid */
             id: string;
@@ -27055,14 +27099,7 @@ export interface components {
              */
             contact_id?: string | null;
             provider: components["schemas"]["Provider"];
-            /**
-             * @description What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
-             *     contact that existed before the provider was connected, or that no run has covered
-             *     yet; like the other automatic triggers it buys only the categories that cost
-             *     nothing.
-             * @enum {string}
-             */
-            trigger: "automatic_create" | "automatic_import" | "automatic_backfill" | "scheduled_refresh" | "manual";
+            trigger: components["schemas"]["ProviderRunTrigger"];
             /** @enum {string} */
             state: "queued" | "submitting" | "in_progress" | "completed" | "no_match" | "skipped" | "submission_unknown" | "failed" | "cancelled";
             /**
@@ -27262,7 +27299,7 @@ export interface components {
              */
             readonly primary_email?: string | null;
             phones?: components["schemas"]["ContactPhone"][];
-            /** @description Which of this contact's values a data provider's purchase put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete bought data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company. */
+            /** @description Which of this contact's values a data provider's run put there and which still hold what it wrote. A value a colleague has since edited, replaced or archived is not listed, and neither is one "Delete provider data" took back. Sent on the single-contact read (and so on the 360), never on a list. An employment is listed only when the caller may see that employment edge and its company. */
             readonly bought_fields?: components["schemas"]["BoughtField"][];
             /**
              * @description Per-channel reachability (design §6.6), derived from `contact_channel_identity`.
@@ -27319,16 +27356,24 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
-        /** @description One value on a contact that a data provider's purchase wrote and still owns. */
+        /** @description One value on a contact that a data provider's run wrote and still owns. */
         BoughtField: {
-            /** @description Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the purchase wrote is bought. */
+            /** @description Which value: `title`, `linkedin`, `email:<contact email id>`, `phone:<contact phone id>` or `employment:<relationship id>`. Keyed by row id for the repeatable values, because a contact may hold several and only the row the run wrote is the provider's. */
             target: string;
             provider: components["schemas"]["Provider"];
             /**
              * Format: date-time
-             * @description When the purchase wrote it.
+             * @description When the run wrote it.
              */
             applied_at: string;
+            /** @description True when a seat started the run and it spent credits. A value from an automatic run is never paid, because automatic runs take only free categories. */
+            paid: boolean;
+            trigger: components["schemas"]["ProviderRunTrigger"];
+            /**
+             * Format: uuid
+             * @description The seat that started the run. Set only when `trigger` is `manual`.
+             */
+            requested_by?: string | null;
         };
         /** @description The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per contact, so a contact has at most one. */
         ContactEmployer: {
@@ -29109,18 +29154,20 @@ export interface components {
             scope?: components["schemas"]["ProjectScope"];
             /**
              * Format: date-time
-             * @description When they last wrote to us, over the same three-link walk the timeline uses (the activity's own link, its deal's company, the employer of the contact it is filed against). Null means nothing inbound was ever captured — which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+             * @description When one of the account's current contacts last wrote to us: the newest of their own last_inbound_at, over the activities the timeline walks. Mail a colleague sent, and activity filed on the account alone, does not move it. Null means none of them ever wrote, which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
              */
             last_inbound_at?: string | null;
             /**
              * Format: date-time
-             * @description When we last wrote to them, same walk. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
+             * @description When we last wrote to one of the account's current contacts. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question — an account we mailed a fortnight ago with no reply is not the same as one that just wrote to us.
              */
             last_outbound_at?: string | null;
             /** @description How to read `last_inbound_at`, from the row it names. Absent when that is null or absent. */
             last_inbound_precision?: components["schemas"]["OccurredPrecision"];
             /** @description How to read `last_outbound_at`, from the row it names. Absent when that is null or absent. */
             last_outbound_precision?: components["schemas"]["OccurredPrecision"];
+            /** @description Which sides have written, rolled up from the account's current contacts. Absent together with last_inbound_at, named in `sections_omitted` as `last_touch`. */
+            relationship_direction?: components["schemas"]["RelationshipDirection"];
             /** @description The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws. */
             last_contact?: components["schemas"]["Company360LastContact"];
             state_strip?: components["schemas"]["Company360StateStrip"];
@@ -29457,6 +29504,8 @@ export interface components {
              * @description When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
              */
             last_outbound_at?: string | null;
+            /** @description Which sides have written, read off last_inbound_at and last_outbound_at. Absent together with them, named in `sections_omitted` as `last_touch`. */
+            relationship_direction?: components["schemas"]["RelationshipDirection"];
             /**
              * Format: date-time
              * @description When they last wrote to us, leaving out email an import brought in as history. Equal to `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this, because history that arrived by import is not a reply. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
@@ -34552,6 +34601,8 @@ export interface components {
              * @enum {string|null}
              */
             readonly automatic_kind?: "product" | "calendar" | "sending_system" | null;
+            /** @description Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`. */
+            readonly voice?: components["schemas"]["ActivityVoice"] | null;
             /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains. */
             readonly audience?: components["schemas"]["ActivityAudience"];
             /** @description Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`. */
@@ -37575,6 +37626,8 @@ export interface components {
             label?: string | null;
             /** @description For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then. */
             linked?: components["schemas"]["ListLinkedValue"][];
+            /** @description The record holds more linked values than `linked` lists; absent when the list is complete. */
+            linked_truncated?: boolean;
         };
         ListLinkedValue: {
             /** @description The linked row's id, or the value itself where the field has no row. Empty when hidden. */
@@ -37664,6 +37717,8 @@ export interface components {
             value_label?: string | null;
             /** @description For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. */
             linked?: components["schemas"]["ListLinkedValue"][];
+            /** @description The record holds more linked values than `linked` lists; absent when the list is complete. */
+            linked_truncated?: boolean;
         };
         ListMemberExplanation: {
             /** Format: uuid */

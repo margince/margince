@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/knowledge -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:

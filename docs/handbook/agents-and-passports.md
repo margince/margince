@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/features/automations/connect-ai-tool.tsx frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant -->
 # Agents, passports and what they may do
 
 Margince is made to be worked in by AI agents as much as by humans. Here you

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -221,11 +222,11 @@ progress bar fills, the import is finished but the AI work is not. Sorting runs
 every hour and enrichment every day after that.
 
 **Imported mail starts out held.** A new mailbox is *Held until
-classified*, so importing five years of mail does not show it to your
+checked*, so importing five years of mail does not show it to your
 colleagues. Each thread stays with whoever was on it until a sorting model
 judges it ordinary business. The same holds for contacts the import creates. A
-contact from a thread that nothing has judged yet is yours alone until the
-verdict clears it.
+contact from a thread that nothing has judged yet is yours alone until
+Margince has sorted the thread.
 
 Once an import finishes, check two places:
 **Senders**, for what was decided about each address it found, and **Held

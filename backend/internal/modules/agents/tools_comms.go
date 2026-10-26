@@ -5,8 +5,8 @@ package agents
 
 // The communication verbs on the MCP surface (crm.yaml x-mcp-tool):
 // draft_email / check_availability are 🟢 (propose, never commit);
-// send_email / send_message / book_meeting are 🟡 — the registry's admission gate
-// stages them for approval exactly like every other confirmation_required tool. The
+// send_email / send_message / book_meeting are 🟢 with scope send. A passport
+// without send is refused, and a tier floor stages them for approval instead. The
 // module never touches activities' internals: compose injects the
 // Comms seam, which delegates to the SAME store methods the HTTP
 // transport uses.
@@ -133,24 +133,22 @@ type BookMeetingArgs struct {
 }
 
 // RegisterCommsTools wires the six verbs over the injected seam. The provider
-// is the record reader the four 🟡 verbs stage against; draft_email and
+// is the record reader the four send verbs stage against; draft_email and
 // check_availability propose nothing durable and never read it.
 //
 // A nil comms seam is a legal composition and registers nothing — the verbs
-// simply are not offered. A nil provider is NOT: the four 🟡 verbs would
-// register, advertise themselves on tools/list, and then dereference it the
-// first time a human-approvable call was staged. Failing at wiring time is the
-// difference between a boot that does not start and a surface that offers
-// four sends it panics on, so this asserts rather than silently dropping them
-// — a comms surface missing exactly its outbound verbs is the confusing
-// middle, not a safe default.
+// simply are not offered. A nil provider is not. The four send verbs would
+// register and show on tools/list, then dereference it on the first staged call.
+// So this asserts at wiring time instead of offering four sends that panic.
+// Dropping them would leave a comms surface without its outbound verbs, which
+// confuses more than a boot that does not start.
 func RegisterCommsTools(r *Registry, comms Comms, p datasource.SystemOfRecordProvider) {
 	if comms == nil {
 		return
 	}
 	if p == nil {
 		//craft:ignore panic-in-domain composition-time wiring assertion — fires only while cmd wiring runs, never on a request path
-		panic("crmagents: RegisterCommsTools needs a record provider — the confirm-first sends, the account-started send and book_meeting all read the records they stage against")
+		panic("crmagents: RegisterCommsTools needs a record provider — send_email, send_message, the account-started send and book_meeting all read the records they stage against")
 	}
 	r.Register(draftEmailTool{comms: comms, p: p})
 	r.Register(sendEmailTool{comms: comms, p: p, language: r.language})

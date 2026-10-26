@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
 )
 
 const envelopeOwner = "reader@ourco.example"
@@ -228,7 +229,7 @@ func TestTheEnvelopeCarriesALinkListCutShort(t *testing.T) {
 // The walk reads a body as a mail client renders it. Each case is markup a
 // token walk reads otherwise than the reader sees it, so a link would hide.
 func TestTheLinkWalkReadsTheLinksTheReaderSees(t *testing.T) {
-	filler := strings.Repeat("x", maxTokenLen+1000)
+	filler := strings.Repeat("x", htmltext.MaxTokenLen+1000)
 	landing := `<a href="https://landing.example.org/">x</a>`
 	cases := map[string]string{
 		"a long stylesheet before a link":    `<STYLE>` + filler + `</Style >` + landing,

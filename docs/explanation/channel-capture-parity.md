@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/capture/birthdecision.go backend/internal/modules/capture/importrow.go backend/internal/modules/capture/widenhistory.go backend/internal/modules/capture/credentialmodel.go backend/internal/modules/capture/sinkchannel.go backend/internal/compose/channelprovider.go backend/internal/modules/activities/audience.go -->
 # Whose mail a chat is, and what follows from the answer
 
 A Telegram message and a Gmail message travel the same pipeline: one `connector.Sink`, one activity row,

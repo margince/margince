@@ -13,6 +13,7 @@ workflow is outside the gate:
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
 | `closing-declaration.yml` | pull request events | No |
+| `docs-describing.yml` | pull request events | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
 | `main-health.yml` | `main` every two hours, manual dispatch | No |
 | `scheduled.yml` | daily and weekly on `main` | No |
@@ -125,6 +126,24 @@ that users do not read the warning.
 [`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh) makes the
 report. It reads its evidence from the environment, so a fixture can drive every case
 (`make test-closing-declaration`).
+
+## `docs-describing.yml`
+
+What starts it: `opened`, `reopened`, `edited`, `synchronize` and `ready_for_review`. The rule it asks
+about, and the form of each answer, are in
+[docs-prose-style.md](docs-prose-style.md#a-list-the-code-owns-is-linked-and-a-page-names-the-code-it-describes).
+This workflow lists the explanation and handbook pages whose `describes:` paths the pull request changes.
+Then it looks for an answer to each one in the body.
+
+A check cannot tell that a sentence stopped being true. The answer is a human's, and the workflow asks
+for it where the reviewer reads. It warns and never fails, for the same reason as
+`closing-declaration.yml`, and deletes its comment once every page is answered. A failed query for the
+changed files stops without a comment. On a pull request from a fork, the token cannot write a comment,
+so the report is only in the job summary.
+
+The report comes from [`scripts/check-docs-describing.sh`](../../scripts/check-docs-describing.sh). It reads
+its evidence from the environment, so a fixture can drive every case (`make test-docs-describing`).
+`make docs-describing` prints the same list for a local branch.
 
 ## `issue-closed.yml`
 

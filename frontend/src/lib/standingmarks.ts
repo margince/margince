@@ -7,6 +7,7 @@ import { activityDay, activityHasHappened } from "../format/activitywhen";
 import { formatDayMonth } from "../format/format.dates";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { authorName } from "./messagevoice";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -96,7 +97,11 @@ export function messageDetail(
     return who ? t("timeline.sentTo", { who }) : t("timeline.sent");
   }
   if (direction === "inbound") {
-    return who ? t("timeline.receivedFrom", { who }) : t("timeline.received");
+    // The sender is the recorded author when the row names no counterparty.
+    const from = who ?? authorName(row);
+    return from
+      ? t("timeline.receivedFrom", { who: from })
+      : t("timeline.received");
   }
   return who ?? undefined;
 }

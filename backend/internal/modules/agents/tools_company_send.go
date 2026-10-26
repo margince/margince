@@ -8,8 +8,8 @@ package agents
 // door: this one starts a conversation and names the records it belongs to,
 // where they answer one that already exists.
 //
-// 🟡, scope `send`, governed identically to the reply and with no new
-// authority: an agent stages, a human's own action IS the approval (ADR-0055).
+// Tier auto_execute, scope `send`, governed as the reply is, with no new
+// authority. A passport with send runs it, and a tier floor stages it instead.
 // Everything after the origin — the consent gate, deliverability, identity
 // minting, the single-transaction staging of activity + delivery + job — is the
 // reply path's, reached through the same store method the HTTP transport calls.

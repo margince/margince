@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go -->
 # Approvals
 
 An approval in Margince is a change an agent proposed but was not allowed to

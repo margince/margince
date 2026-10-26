@@ -11,6 +11,13 @@ import { primaryPhone } from "../../format/contacturi";
 import { formatDayMonth } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  authorName,
+  contactRole,
+  owesOrIsOwed,
+  writtenByPageContact,
+  writtenByReader,
+} from "../../lib/messagevoice";
 import type { Activity, Contact360 } from "./contactmemory";
 import type { OverviewRow } from "./contactoverview.rows";
 
@@ -26,7 +33,8 @@ type Said = Readonly<{
   key: string;
   kind: Activity["kind"];
   provider: string | null;
-  direction: Entry["direction"] | null | undefined;
+  // The timeline row the conversation came from; a thread entry has none.
+  row: Activity | null;
   occurredAt: string;
   occurredPrecision: OccurredPrecision;
   title: string;
@@ -54,7 +62,7 @@ export function memoryRows(
     title: row.title || interactionLabel(row.kind, row.provider),
     sub: [
       interactionLabel(row.kind, row.provider),
-      directionWord(row.kind, row.direction, t),
+      directionWord(row, t),
       activityDay(
         row.occurredAt,
         row.occurredPrecision,
@@ -86,10 +94,12 @@ function fromEntry(entry: Entry): Said {
     key: entry.key,
     kind: entry.channel,
     provider: entry.channel_provider ?? null,
-    direction: entry.direction,
+    row: null,
     occurredAt: entry.occurred_at,
     occurredPrecision: entry.occurred_precision,
     title: entry.title,
+    // An entry carries no author or page role, so nothing here overrides the
+    // duty the server stated for it.
     status: entry.status ?? null,
     emailId:
       entry.channel === "email" ? (entry.first_activity_id ?? null) : null,
@@ -111,7 +121,7 @@ function folded(view: Contact360, t: Translator, recordZone: string): Said[] {
       key: row.id,
       kind: row.kind,
       provider: row.channel_provider ?? null,
-      direction: row.direction,
+      row,
       occurredAt: row.occurred_at,
       occurredPrecision: row.occurred_precision,
       // Withheld is read from the row's own state rather than trusted to have
@@ -127,9 +137,14 @@ function folded(view: Contact360, t: Translator, recordZone: string): Said[] {
 }
 
 // Only an answer on this conversation settles it; a contact can owe several.
+// A contact who was only copied owes and is owed nothing, as the server's
+// email move already says.
 function statusOf(row: Activity, rows: readonly Activity[]): Status {
   if (row.email_summary)
     return row.email_summary.move === "needs_reply" ? "unanswered" : null;
+  if (!owesOrIsOwed(row)) {
+    return null;
+  }
   if (row.direction === "inbound") {
     const answered =
       row.thread_key != null &&
@@ -146,35 +161,33 @@ function statusOf(row: Activity, rows: readonly Activity[]): Status {
   return null;
 }
 
-const DIRECTION: Readonly<
-  Record<"inbound" | "outbound", Partial<Record<Activity["kind"], MessageKey>>>
-> = {
-  inbound: {
-    email: "contact.card.theyWrote",
-    message: "contact.card.theyWrote",
-    call: "contact.card.theyCalled",
-  },
-  outbound: {
-    email: "contact.card.youWrote",
-    message: "contact.card.youWrote",
-    call: "contact.card.youCalled",
-  },
-};
-
-// Who spoke. A meeting is both sides by its nature; a note has no side.
-function directionWord(
-  kind: Activity["kind"],
-  direction: Said["direction"],
-  t: Translator,
-): string {
-  if (kind === "meeting") {
-    return t("contact.card.bothSides");
-  }
-  if (direction !== "inbound" && direction !== "outbound") {
+// Who spoke. A meeting is both sides by its nature; a note has no side. A
+// message names its recorded author. A call records who logged it, not who
+// dialled, and a thread entry carries no author, so neither names anybody.
+function directionWord(said: Said, t: Translator): string {
+  if (!said.row) {
     return "";
   }
-  const key = DIRECTION[direction][kind];
-  return key ? t(key) : "";
+  if (said.kind === "meeting") {
+    return t("contact.card.bothSides");
+  }
+  if (said.kind !== "email" && said.kind !== "message") {
+    return "";
+  }
+  return authorWord(said.row, t);
+}
+
+function authorWord(row: Activity, t: Translator): string {
+  const copied =
+    contactRole(row) === "cc" ? ` · ${t("contact.card.inCc")}` : "";
+  if (writtenByPageContact(row)) {
+    return t("contact.card.theyWrote");
+  }
+  if (writtenByReader(row)) {
+    return t("contact.card.youWrote") + copied;
+  }
+  const who = authorName(row);
+  return who ? t("contact.card.wroteBy", { who }) + copied : "";
 }
 
 const STATUS: Readonly<

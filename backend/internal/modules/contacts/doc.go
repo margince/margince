@@ -7,16 +7,10 @@
 // store + contract mapping + transport handlers + the contacts slice of
 // the datasource provider, flat per ADR-0054 §3.
 //
-// Tables owned: contact, contact_email, contact_phone, contact_consent,
-// contact_profile_field, company, company_domain, relationship, provider_employment_resolution,
-// partner, lead, lead_score_history, lead_manual_signal, lead_source,
-// lead_disqualify_reason, contact_signature_enrich_state,
-// contact_provider_claim, provider_applied_field, company_vat_check,
-// relationship_nudge_dismissal, sdr_handoff, sdr_handoff_event,
-// sdr_handoff_reason.
-// Also owned: company_domain_disposition, company_domain_question_reader, lead_origin.
+// Tables owned: docs/reference/entity-model/contacts.md.
+//
 // dedupe_scan_state is where the nightly duplicate scan stopped (dedupescan.go).
-// It also owns legal_entity and legal_entity_member. A legal entity is a company
+// legal_entity is a company
 // the installation trades as. It lives beside the anchor company, because the
 // default entity reads its identity from it. legal_entity_member is which entity
 // a user works for.
@@ -66,6 +60,9 @@
 // The provider_run relink is the merge's alone: it decides which of two
 // colliding LIVE runs keeps the one-live-run index, which is knowable
 // only where both records' run states are visible at once.
+// The contact read also READS integrations' provider_run and
+// provider_run_reservation (providerboughtfields.go). They say which run wrote a
+// provider value, what started it, and whether it spent credits.
 // The contact list READS two of collections' — tag and taggable — for the
 // contract's `tag` filter: a tagged contact is a link row whichever module
 // writes it, and the alternative is a declared filter answered by nobody.

@@ -95,7 +95,7 @@ func activityHasReaderExceptTx(ctx context.Context, tx pgx.Tx, id ids.UUID, exce
 		    OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id
                     AND ci.user_id <> ALL($%[2]d::uuid[]))
 		    OR EXISTS (SELECT 1 FROM activity_participant ap
-		                WHERE ap.activity_id = a.id AND ap.user_id IS NOT NULL
+		                WHERE ap.activity_id = a.id AND ap.user_id IS NOT NULL AND %[3]s
                     AND ap.user_id <> ALL($%[2]d::uuid[]))
 		    OR (a.audience = 'selected' AND EXISTS (
 		          SELECT 1 FROM activity_audience_member am
@@ -106,7 +106,7 @@ func activityHasReaderExceptTx(ctx context.Context, tx pgx.Tx, id ids.UUID, exce
 		                       JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
 		                      WHERE tm.team_id = am.subject_id
                             AND tm.user_id <> ALL($%[2]d::uuid[]))))))
-		  FROM activity a WHERE a.id = $%[1]d`, row, excluded)
+		  FROM activity a WHERE a.id = $%[1]d`, row, excluded, ParticipantStandsSQL("ap", "a"))
 	var reachable bool
 	if err := tx.QueryRow(ctx, query, args...).Scan(&reachable); err != nil {
 		return false, fmt.Errorf("auth: reading whether an activity still has a reader: %w", err)

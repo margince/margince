@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 329 |
-| Columns | 3884 |
-| Foreign keys | 545 |
+| Columns | 3885 |
+| Foreign keys | 546 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -39,10 +39,10 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 31 | 141 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 31 | 142 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 34 | 49 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 47 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 66 | 38 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 67 | 38 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 27 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 40 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 12 |
@@ -62,6 +62,7 @@ erDiagram
     app_user ||--o{ company : source_author_id
     app_user ||--o{ activity : assignee_id
     app_user ||--o{ activity : host_user_id
+    app_user ||--o{ activity : invitation_sender
     app_user ||--o{ activity : sent_by_colleague
     app_user ||--o{ activity : source_author_id
     company ||--o{ deal : company_id
@@ -130,7 +131,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 66 | 38 |
+| [`activity`](activities.md#activity) | activities | 67 | 38 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -165,7 +166,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 31 | 141 |
+| [`app_user`](identity.md#app_user) | identity | 31 | 142 |
 | [`approval`](approvals.md#approval) | approvals | 35 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |

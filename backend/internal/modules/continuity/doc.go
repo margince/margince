@@ -20,4 +20,6 @@
 // A FAILED drill is evidence too. A ledger that only recorded its successes
 // would be a record of nothing, and the failure is the reading somebody most
 // needs before they rely on the procedure.
+//
+// Tables owned: docs/reference/entity-model/continuity.md.
 package continuity

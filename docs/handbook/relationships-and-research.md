@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
 # Relationships, introductions and research
 
 Four questions go together here. Who here already knows a contact, from mail or from your LinkedIn network? How do you get a warm introduction to someone you do not know? What can Margince read about a company from its own website? And what does the company publicly run?

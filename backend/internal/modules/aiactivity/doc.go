@@ -27,5 +27,6 @@
 // (attempt, state_rank) and never state alone. Ordering across rows is this
 // package's own seq, never an emitter's clock.
 //
-// Tables owned: ai_task_run. Imports shared + platform only; never a sibling.
+// Tables owned: docs/reference/entity-model/aiactivity.md.
+// Imports shared + platform only; never a sibling.
 package aiactivity

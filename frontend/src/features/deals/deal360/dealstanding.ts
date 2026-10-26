@@ -12,6 +12,7 @@ import {
   type OccurredPrecision,
 } from "../../../format/activitywhen";
 import { calendarDaysBetween } from "../../../format/format";
+import { messageFromOutside } from "../../../lib/messagevoice";
 import { ghostCount } from "./dealcommittee";
 
 type Deal = components["schemas"]["Deal"];
@@ -340,15 +341,16 @@ function soonest(
 }
 
 /**
- * The newest message the buyer sent, from the loaded page of the timeline. A
- * row the server says no human wrote (automatic_kind) is not their word.
+ * The newest message the other side wrote, from the loaded page of the
+ * timeline. Read from the recorded author, not the direction: a colleague's
+ * mail arrives inbound too. A row no human wrote (automatic_kind) is no word.
  */
 export function lastInbound(
   activities: readonly Activity[],
 ): Activity | undefined {
   let latest: Activity | undefined;
   for (const row of activities) {
-    if (row.direction !== "inbound" || row.automatic_kind) {
+    if (row.automatic_kind || !messageFromOutside(row)) {
       continue;
     }
     if (

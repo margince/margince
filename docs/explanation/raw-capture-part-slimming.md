@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/capture/partslim backend/internal/modules/capture/partslimstore.go backend/internal/compose/jobs_partslim.go backend/internal/compose/jobs_storedobject.go backend/internal/modules/capture/sinkraw.go backend/internal/compose/sarrestore.go backend/internal/modules/privacy/erasure_attachments.go -->
 # raw_capture part slimming: what the stored original promises
 
 `raw_capture` holds the provider's original for every captured message. Without slimming it would
@@ -38,22 +39,10 @@ writes `rec.Raw` (the whole `RFC822` message) inside the capture transaction. `c
 then gets the same attachment bytes ready for the object store. `activities/capturedfiles.go` puts
 them there before the row that records them (*"ORDER IS THE DESIGN"*).
 
-Measured on one staging installation, 2026-09-09:
-
-| Measure | Value |
-|---|---|
-| `raw_capture`, whole table | 6737 MB, of which 6732 MB is `TOAST` |
-| Share of the whole database | 92% |
-| Rows | 12,638 |
-| `attachment.byte_size`, added up | 4343 MB across 17,705 rows |
-| Same bytes, as `base64` | ~5.8 GB, about 86% of the table |
-| `TOAST` bytes against data bytes | **1.0** |
-| `subject` + `body` alone, against the whole original | 0.30% to 2.78% per mailbox |
-
-That 1.0 tells the story. The `base64` of a file that is already compressed (PDF, ZIP, JPEG) does
+Without slimming, every attachment sits in `raw_capture` a second time as `base64`, which takes 4
+bytes for every 3 of the file. The `base64` of a file that is already compressed (PDF, ZIP, JPEG) does
 not compress again. So the copy costs full price in the database files, in every full database copy,
-in every `pg_dump` and in every `VACUUM`. Across four mailboxes, 42 MB of text kept 6.5 GB of MIME
-in the database.
+in every `pg_dump` and in every `VACUUM`.
 
 ## Why a sweep, and not a cut at parse time
 
@@ -72,14 +61,12 @@ the only copy is removed.
 
 ## Why match bytes, and not parse the MIME
 
-Reading the message with `go-message` and writing it out again is not safe for this table, and we
-can measure why:
+Reading the message with `go-message` and writing it out again is not safe for this table:
 
 - `go-message` **decodes on read and encodes again on write**. `base64` comes back with lines of its
   own length (76). Header fields inside a part written again change order. The `charset` of the text
   changes to `UTF-8`.
-- The tree does not import `go-message/charset`, so a `windows-1252` message fails the read: 257
-  rows / 143 MB of the staging data.
+- The tree does not import `go-message/charset`, so a `windows-1252` message fails the read.
 - And for the rows it *could* read, the body of every part is encoded again on the way out.
   `sinkraw.go` records that this kind of bug already cost us once:
   `"a body in a non-UTF-8 charset, or a malformed header, was stored ALTERED.`
@@ -90,11 +77,10 @@ against the attachment row. `partslim` encodes those bytes and looks for the enc
 payload. If they show up **once**, those bytes are cut out and the rest of the payload is copied as
 it is. If they do not show up, or show up more than once, nothing is removed.
 
-We checked this way of working against 40 real attachments from staging. Of those, 30 matched at
-line length 76 with `CRLF` and restored byte for byte. The sweep refused the other 10, because the
-same signature image showed up two to four times in the replies below the message. Bytes cannot tell
-one copy from another. Those 10 run from 760 B to 30 kB, too small to count next to the attachments
-of many MB that the sweep is for. Refusing them means the sweep never cuts bytes it cannot prove.
+The sweep refuses a part whose encoding shows up more than once. A signature image is one example: it
+shows up again in the replies below the message. Bytes cannot tell one copy from another. Such images are
+small next to the attachments of many MB that the sweep is for. Refusing them means the sweep never
+cuts bytes it cannot prove.
 
 ## Proof before the sweep removes a part
 
@@ -135,6 +121,10 @@ use up rows that a store connected later must still work on. `parts_slimmed_at` 
   holds back that one payload and keeps the row listed.
 - **The retention sweep.** It erases the whole payload when the activity's window ends, block and
   all.
+- **Objects no row points at.** Both writers of the `attachment` table mark a key as provisional
+  before they put the bytes. The hourly `stored_object_reap` job (`compose/jobs_storedobject.go`)
+  deletes a provisional object whose row never came, once it is 24 hours old. This sweep removes a
+  copy from the database and never touches an object.
 
 ## What does not hold any more
 
@@ -152,15 +142,12 @@ checks. So this costs nothing now, and it is written down for the next one who b
 
 ## What is still to do
 
-- **Taking back objects no row points at.** `activities/capturedfiles.go` names this as a job both
-  writers of the `attachment` table still leave open. This sweep does not change that: it removes a
-  copy from the database and never touches an object.
 - **A retention policy limits the table.** Slimming does not. Slimming makes `raw_capture` take on
-  new bytes about 20 times more slowly, and does not put a limit on it. The `raw_capture` retention
+  new bytes more slowly, and does not put a limit on it. The `raw_capture` retention
   scope does, on a clock of its own rather than on the activity's. It does not reach an original
   with no activity row (an internal-only drop). There, the `raw_capture` row is the only mark that
   stops a replay from taking in a message again that the pipeline already handled.
-- **The 10 in 40 it misses.** An image that shows up more than once in a message is never slimmed.
+- **A part that shows up more than once.** An image that shows up more than once in a message is never slimmed.
   Fixing it needs a way to name a part that stays the same across copies. That name would be a
   number read from the MIME tree rather than from the bytes, which means parsing, and this design
   does not parse. Look at it again only if small images that show up more than once come to make up

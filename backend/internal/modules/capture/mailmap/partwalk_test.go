@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
 )
 
 const walkOwner = "m@example.com"
@@ -372,7 +373,7 @@ func TestTheStoredBodySaysWhetherItIsWhole(t *testing.T) {
 		"a long mail stored whole": {mailOf("text/plain; charset=utf-8", "", strings.Repeat("a long line of text ", 600), ""), capture.BodyComplete},
 		"past the storage cap":     {mailOf("text/plain; charset=utf-8", "", strings.Repeat("x", maxBodyLen+10), ""), capture.BodyPartial},
 		"an HTML render past its cap": {mailOf("text/html; charset=utf-8", "",
-			strings.Repeat("<p>word word word</p>", maxRenderedLen/10), ""), capture.BodyPartial},
+			strings.Repeat("<p>word word word</p>", htmltext.MaxRenderedLen/10), ""), capture.BodyPartial},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

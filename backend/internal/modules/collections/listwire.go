@@ -297,7 +297,7 @@ func wireMember(m memberRow) crmcontracts.ListMember {
 	if m.Values != nil {
 		values := make(map[string]crmcontracts.ListFieldValue, len(m.Values))
 		for field, v := range m.Values {
-			values[field] = crmcontracts.ListFieldValue{Value: v.Value, Hidden: v.Hidden, Label: v.Label, Linked: wireLinked(v.Linked)}
+			values[field] = crmcontracts.ListFieldValue{Value: v.Value, Hidden: v.Hidden, Label: v.Label, Linked: wireLinked(v.Linked), LinkedTruncated: wireTruncated(v.LinkedTruncated)}
 		}
 		out.Values = &values
 	}
@@ -322,6 +322,7 @@ func wireVerdict(n storekit.ExplainNode) crmcontracts.ListClauseVerdict {
 		out.Hidden = &hidden
 	}
 	out.Linked = wireLinked(n.Linked)
+	out.LinkedTruncated = wireTruncated(n.LinkedTruncated)
 	return out
 }
 
@@ -368,4 +369,12 @@ func wireLinked(linked []storekit.LinkedValue) *[]crmcontracts.ListLinkedValue {
 		out = append(out, crmcontracts.ListLinkedValue{Value: v.Value, Label: v.Label, Hidden: v.Hidden})
 	}
 	return &out
+}
+
+// wireTruncated leaves the key absent unless the reading was cut.
+func wireTruncated(cut bool) *bool {
+	if !cut {
+		return nil
+	}
+	return &cut
 }

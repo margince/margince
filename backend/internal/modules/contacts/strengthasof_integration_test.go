@@ -34,18 +34,30 @@ import (
 // chosen moment.
 func (e *dedupeEnv) seedInteraction(t *testing.T, contactID ids.ContactID, at time.Time, direction string) {
 	t.Helper()
+	e.seedInteractionOfKind(t, contactID, "email", at, direction)
+}
+
+// seedInteractionOfKind is seedInteraction for a chosen activity kind.
+func (e *dedupeEnv) seedInteractionOfKind(t *testing.T, contactID ids.ContactID, kind string, at time.Time, direction string) {
+	t.Helper()
 	id := ids.New[ids.ActivityKind]()
 	ctx := e.as()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity (id, kind, subject, direction, occurred_at, source_system, source_id, source, captured_by)
-			VALUES ($1, 'email', 'Hallo', $2, $3, 'gmail', $4, 'gmail:seed', 'connector:gmail')`,
-			id, direction, at, id.String()); err != nil {
+			VALUES ($1, $5, 'Hallo', $2, $3, 'gmail', $4, 'gmail:seed', 'connector:gmail')`,
+			id, direction, at, id.String(), kind); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
 			INSERT INTO activity_link (activity_id, entity_type, contact_id)
 			VALUES ($1, 'contact', $2)`, id, contactID)
+		if err != nil || direction != "inbound" {
+			return err
+		}
+		// Capture names the contact as the sender of what they wrote.
+		_, err = tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'from', $2)`, id, contactID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding an interaction: %v", err)
@@ -93,6 +105,8 @@ func (e *dedupeEnv) strengthAt(t *testing.T, contactID ids.ContactID, at time.Ti
 			strength: got[0].Strength.Strength,
 			bucket:   got[0].Strength.Bucket,
 			count90d: got[0].Strength.InteractionCount90d,
+
+			lastInteraction: got[0].Strength.LastInteraction,
 		}
 		return nil
 	}); err != nil {
@@ -105,6 +119,8 @@ type relstrengthResult struct {
 	strength int
 	bucket   string
 	count90d int
+
+	lastInteraction *time.Time
 }
 
 func TestStrengthAsOfExcludesWhatHadNotHappenedYet(t *testing.T) {
@@ -162,26 +178,67 @@ func TestStrengthAsOfIgnoresInteractionsAfterTheInstantAsked(t *testing.T) {
 	}
 }
 
-func TestTheLiveScoreStillCountsAnInteractionTimestampedAhead(t *testing.T) {
+func TestAnInteractionDatedAfterNowIsNotTheLatestTouch(t *testing.T) {
 	e := setupDedupe(t)
-	now := time.Now().UTC()
-	contact := e.seedVisibleContact(t, "Skewed Contact")
+	now := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)
+	contact := e.seedVisibleContact(t, "Scheduled Contact")
 
-	// Clock skew between the app and the database is ordinary, and the live
-	// score has always counted such a row. Bounding the live read at `now`
-	// would silently drop it — which is why the upper bound is optional
-	// rather than defaulted to the read instant.
-	e.seedInteraction(t, contact, now.Add(2*time.Minute), "inbound")
-	e.seedInteraction(t, contact, now.AddDate(0, 0, -1), "outbound")
+	pastEmail := now.AddDate(0, 0, -20)
+	e.seedInteraction(t, contact, pastEmail, "inbound")
+	e.seedInteractionOfKind(t, contact, "meeting", now.AddDate(0, 0, 30), "outbound")
 
 	live := e.strengthAt(t, contact, now, false)
-	if live.count90d != 2 {
-		t.Errorf("the live score counted %d interactions, want 2 — an interaction timestamped slightly ahead is still an interaction", live.count90d)
+	if live.count90d != 1 {
+		t.Errorf("the live score counted %d interactions, want 1: the meeting next month has not happened", live.count90d)
+	}
+	if live.lastInteraction == nil || !live.lastInteraction.Equal(pastEmail) {
+		t.Errorf("recency came from %v, want the past email at %v", live.lastInteraction, pastEmail)
 	}
 
-	// The as-of read is the one that excludes it, on purpose.
 	asOf := e.strengthAt(t, contact, now, true)
-	if asOf.count90d != 1 {
-		t.Errorf("the as-of read counted %d, want 1 — it must exclude what had not happened at the instant asked", asOf.count90d)
+	if asOf.lastInteraction == nil || !asOf.lastInteraction.Equal(pastEmail) {
+		t.Errorf("as-of recency came from %v, want the past email at %v", asOf.lastInteraction, pastEmail)
+	}
+}
+
+// The single-contact fold and the change fold bound at the same clock as the
+// batch fold. An interaction dated at now has happened and counts.
+func TestSingleContactAndChangeFoldsBoundAtNow(t *testing.T) {
+	e := setupDedupe(t)
+	now := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)
+	contact := e.seedVisibleContact(t, "Single Fold Contact")
+	pastEmail := now.AddDate(0, 0, -20)
+	e.seedInteraction(t, contact, pastEmail, "inbound")
+	e.seedInteraction(t, contact, now, "outbound")
+	e.seedInteractionOfKind(t, contact, "meeting", now.Add(time.Hour), "outbound")
+
+	ctx := e.as()
+	single, err := e.store.ContactStrength(ctx, contact, now)
+	if err != nil {
+		t.Fatalf("reading one contact's strength: %v", err)
+	}
+	if single.InteractionCount90d != 2 {
+		t.Errorf("the single-contact fold counted %d, want 2: the email and the interaction dated exactly now", single.InteractionCount90d)
+	}
+	if single.LastInteraction == nil || !single.LastInteraction.Equal(now) {
+		t.Errorf("single-contact recency came from %v, want %v", single.LastInteraction, now)
+	}
+	if len(single.ContributingIDs) != 2 {
+		t.Errorf("the single-contact fold cites %d interactions, want 2", len(single.ContributingIDs))
+	}
+
+	var in relstrength.ChangeInputs
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		in, err = changeInputs(ctx, tx, contact, now, nil)
+		return err
+	}); err != nil {
+		t.Fatalf("reading the change inputs: %v", err)
+	}
+	if in.Current.Count90d != 2 {
+		t.Errorf("the change fold counted %d, want 2", in.Current.Count90d)
+	}
+	if in.Current.LastInteraction == nil || !in.Current.LastInteraction.Equal(now) {
+		t.Errorf("change-fold recency came from %v, want %v", in.Current.LastInteraction, now)
 	}
 }

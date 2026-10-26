@@ -124,16 +124,7 @@ func selectMeetingRSVPCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]r
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, split_part(a.captured_by, ':', 2), rc.id,
 		       coalesce(a.source_system, ''), coalesce(a.source_id, ''), a.occurred_at,
-		       coalesce((
-		         SELECT c.account_label
-		           FROM capture_connection c
-		          WHERE c.provider = split_part(a.captured_by, ':', 2)
-		            AND (
-		              c.user_id::text = split_part(a.captured_by, ':', 3)
-		              OR (split_part(a.captured_by, ':', 3) = '' AND NOT EXISTS (
-		                  SELECT 1 FROM capture_connection other
-		                   WHERE other.provider = c.provider AND other.id <> c.id)))
-		          LIMIT 1), '')
+		       `+stampedMailboxLabelSQL+`
 		  FROM activity a
 		  JOIN raw_capture rc
 		    ON rc.source_system = a.source_system AND rc.source_id = a.source_id
@@ -172,7 +163,7 @@ func selectMeetingRSVPCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]r
 // one such meeting must not stop the pass reaching the rest.
 //
 // SettleDrop is `still_on` here, and the distinction matters. Drop means "this
-// event was never worth capturing" — an internal meeting, a solo block — which
+// event was never worth capturing" (a solo block, or one with no id), which
 // says nothing about whether it is off. The row exists, so it WAS captured under
 // whatever rule applied then, and this pass has no cancellation to write.
 func backfillOneMeetingRSVP(ctx context.Context, tx pgx.Tx, c rsvpCandidate, payload []byte) (string, error) {

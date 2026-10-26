@@ -229,6 +229,7 @@ func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool
 // a row off /activities answers, because it is read by the same list and
 // folded by the same scan.
 func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
+	forDraft := opts.WrittenByHumanOnly && order == byRecency
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)
@@ -243,7 +244,14 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	// this contact is still a row on the timeline — date, direction, kind —
 	// with its content withheld (content_state), not a gap the reader
 	// cannot tell from silence.
-	scope, err := activityDiscoverScope(ctx, arg)
+	gate := activityDiscoverScope
+	if forDraft {
+		// A draft reads content, so a row withheld from this reader must leave
+		// before the cap rather than occupy a slot the draft then discards.
+		gate = activityScope
+		extra += " AND " + relstrength.HappenedByNowSQL("a", bind(arg(s.now().UTC())))
+	}
+	scope, err := gate(ctx, arg)
 	if err != nil {
 		return nil, false, err
 	}
@@ -288,6 +296,11 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
+	// A row reaches this page through a Cc or an attendance too, so each row
+	// says which part this contact had in it.
+	if err := activities.WithContactRole(ctx, tx, out, contactID.UUID); err != nil {
+		return nil, false, err
+	}
 	// Every link the caller may see, read the way /activities reads them, so
 	// a row means the same on either page.
 	if err := activities.AttachLinks(ctx, tx, out); err != nil {
@@ -328,6 +341,8 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids
 	out.LastOutboundPrecision = activitywhen.Stated(touch.OutboundPrecision)
 	out.LastContactPrecision = activitywhen.Stated(touch.ContactPrecision)
 	out.LastLiveInboundPrecision = activitywhen.Stated(touch.LiveInboundPrecision)
+	direction := crmcontracts.RelationshipDirection(touch.Direction())
+	out.RelationshipDirection = &direction
 	return nil
 }
 

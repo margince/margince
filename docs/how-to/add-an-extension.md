@@ -40,7 +40,14 @@ review on its own.
    module github.com/margince/margince/extensions/<name>
 
    go 1.27.3
+
+   replace github.com/margince/margince/backend => ../../backend
+
+   require github.com/margince/margince/backend v0.0.0-00010101000000-000000000000
    ```
+
+   Every unit under `extensions/` carries the `replace` and `require` lines. They build the unit against the
+   backend in this tree. Without them, `go mod tidy` pins a copy of the backend from the network.
 
 3. **Write the declaration** `extensions/<name>/<name>.go`.
    Start it with the BUSL SPDX header; every hand-written `*.go` file carries it.
@@ -115,9 +122,9 @@ review on its own.
    nothing else to go on. An empty one, or one worked out in code, fails `make gen` and the start, so a unit without it never
    reaches an install.
 
-   **Import only `backend/pkg/**` packages that carry `//margince:extension-surface`**. Today those are
-   `pkg/extension`, `pkg/extension/jurisdiction`, `pkg/extension/crm`, `pkg/extension/messaging`,
-   `pkg/extension/subjectrights` and `pkg/extension/compliancedocs`. Any import of `internal/**`,
+   **Import only `backend/pkg/**` packages that carry `//margince:extension-surface`**.
+   [extensibility.md](../explanation/extensibility.md#2-the-public-surface-and-the-mark-that-gates-it) lists them,
+   and `grep -rl margince:extension-surface backend/pkg` finds them in the tree. Any import of `internal/**`,
    `cmd/**`, a `pkg` package with no mark, the `composition` module or another extension fails the `arch` test.
    The compiler already keeps `internal/**` out of reach, and the test holds the rest.
 
@@ -642,7 +649,7 @@ Panels: []extension.Panel{{
 
 | Slot | Where the panel shows |
 |---|---|
-| `extension.SlotDealPanel` (`record_panel.deal`) | The end of a deal page's side column, after Email |
+| `extension.SlotDealPanel` (`record_panel.deal`) | The end of a deal page's **Edit details** drawer, after its lists |
 
 - **`Export`** is a named export of your frontend package's `main` module: the function the page mounts.
   A declared export the package does not have fails the composed typecheck.

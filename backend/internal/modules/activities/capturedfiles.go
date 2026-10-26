@@ -7,17 +7,13 @@ package activities
 //
 // This lives in the module that OWNS the attachment table rather than in the
 // one that reads the mailbox. Capture drives the transaction and supplies the
-// files; the row shape, the account roll-up and the idempotency key are this
-// module's, exactly as they are for a human upload. Two writers of one table
-// with two spellings of its invariants is how the two come to disagree.
-//
-// ORDER IS THE DESIGN. The bytes go to object storage BEFORE the transaction
-// that records them, the same order UploadAttachment uses and for the same
-// reason: the worst outcome of a failure between the two is an object nobody
-// references, and the alternative is a row promising bytes that are not there.
-// One is invisible and reclaimable; the other is a broken download on a surface
-// whose whole promise is that a cited file opens. Reclaiming the unreferenced
-// object is not done here and is owed by both writers of this table (#663).
+// files. The row shape, the account roll-up and the idempotency key stay here,
+// as for a human upload. So two writers of one table share one spelling.
+
+// The bytes go to object storage before the transaction that records them, as
+// in UploadAttachment. A failure between the two leaves an object nobody
+// references, which the hourly stored_object_reap deletes. The other order
+// would leave a row promising bytes that are not there, with no repair.
 
 import (
 	"bytes"

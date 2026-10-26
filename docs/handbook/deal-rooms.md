@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/deals/dealroompage.tsx frontend/src/features/deals/dealroomaccess.tsx frontend/src/features/deals/dealroomdocuments.tsx frontend/src/features/deals/buyerroom.tsx frontend/src/components/dealroom.tsx backend/internal/modules/dealrooms -->
 # Deal Rooms
 
 A **Deal Room** in Margince is a page you share with a buyer: the documents for

@@ -49,7 +49,13 @@ func (s *Service) wire(
 	if err != nil {
 		return crmcontracts.CompanyScan{}, err
 	}
-	findings, dropped := applyCap(keepCited(merged, standing))
+	// Before the cap too: a finding whose ask its thread has since settled
+	// must not hold a slot.
+	current, err := s.dropSettled(ctx, companyID, keepCited(merged, standing))
+	if err != nil {
+		return crmcontracts.CompanyScan{}, err
+	}
+	findings, dropped := applyCap(current)
 	// And the CONTENT question, which retraction deliberately does not answer.
 	// A stored finding carries the cited message's subject and a verbatim
 	// extract of its body, so an audience narrowed after the write leaves those

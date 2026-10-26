@@ -10,7 +10,6 @@ import { en, type MessageKey } from "../i18n/en";
 import {
   fieldLabel,
   groupFields,
-  offerableFields,
   useFilterPreview,
   useFilterVocabulary,
   type VocabularyField,
@@ -245,20 +244,5 @@ describe("presenting a vocabulary", () => {
         t,
       ),
     ).toBe("owner id");
-  });
-});
-
-describe("the fields the builder offers", () => {
-  it("leaves out a distance field, which the builder has no editor for", () => {
-    const offered = offerableFields([
-      { name: "industry", type: "picklist", operators: ["eq"], custom: false },
-      {
-        name: "location",
-        type: "distance",
-        operators: ["within_radius"],
-        custom: false,
-      },
-    ]);
-    expect(offered.map((f) => f.name)).toEqual(["industry"]);
   });
 });

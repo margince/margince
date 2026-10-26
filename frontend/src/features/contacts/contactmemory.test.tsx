@@ -80,9 +80,33 @@ function emailRow(over: Partial<Activity> = {}): Activity {
     version: 4,
     is_done: false,
     email_summary: emailSummary(),
+    voice: {
+      author: {
+        kind: "contact_record",
+        display_name: "Dana Buyer",
+        contact_id: "p-1",
+        is_reader: false,
+      },
+      contact_role: "author",
+    },
     ...over,
   };
 }
+
+// P wrote to the reader with this page's contact in Cc. The server names P as
+// the author, marks this contact as copied, and owes them no reply.
+const copiedOnly: Partial<Activity> = {
+  voice: {
+    author: {
+      kind: "contact_record",
+      display_name: "Pia Sender",
+      contact_id: "p-2",
+      is_reader: false,
+    },
+    contact_role: "cc",
+  },
+  email_summary: emailSummary({ move: "none", counterparty: "Pia Sender" }),
+};
 
 const noteRow: Activity = {
   occurred_precision: "instant",
@@ -161,6 +185,73 @@ describe("the What was said card", () => {
     ).toBeNull();
   });
 
+  it("names the real author of a mail this contact was only copied on", () => {
+    renderCard(viewWith([emailRow(copiedOnly)]));
+
+    expect(
+      screen.getByText("Email · Pia Sender wrote · in Cc · 29 Aug"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/they wrote/)).toBeNull();
+    expect(screen.queryByText("Unanswered")).toBeNull();
+  });
+
+  it("names a colleague who wrote, never the reader", () => {
+    renderCard(
+      viewWith([
+        emailRow({
+          direction: "outbound",
+          voice: {
+            author: {
+              kind: "colleague",
+              display_name: "Carla",
+              is_reader: false,
+            },
+            contact_role: "addressee",
+          },
+          email_summary: emailSummary({ move: "waiting_for_them" }),
+        }),
+      ]),
+    );
+
+    expect(screen.getByText("Email · Carla wrote · 29 Aug")).toBeTruthy();
+  });
+
+  it("names no author on a mail whose author nothing recorded", () => {
+    renderCard(viewWith([emailRow({ voice: undefined })]));
+
+    expect(screen.getByText("Email · 29 Aug")).toBeTruthy();
+  });
+
+  it("owes no reply on a chat message this contact was only copied on", () => {
+    renderCard(
+      viewWith([
+        emailRow({
+          kind: "message",
+          channel_provider: "zalo_oa",
+          email_summary: null,
+          voice: copiedOnly.voice,
+        }),
+      ]),
+    );
+
+    expect(screen.queryByText("Unanswered")).toBeNull();
+  });
+
+  it("keeps the owed reply on a chat message whose part nothing states", () => {
+    renderCard(
+      viewWith([
+        emailRow({
+          kind: "message",
+          channel_provider: "zalo_oa",
+          email_summary: null,
+          voice: { author: copiedOnly.voice?.author ?? null },
+        }),
+      ]),
+    );
+
+    expect(screen.getByText("Unanswered")).toBeTruthy();
+  });
+
   it("opens the page's drawer on the email the row is about", async () => {
     const user = userEvent.setup();
     const onOpenEmail = vi.fn();
@@ -233,7 +324,9 @@ describe("the What was said card", () => {
     renderCard(viewWith([emailRow()], { conversation_memory: [entry] }));
 
     expect(screen.getByText("Site visit")).toBeTruthy();
-    expect(screen.getByText("Meeting · both sides · 20 Aug")).toBeTruthy();
+    expect(screen.getByText("Meeting · 20 Aug")).toBeTruthy();
+    expect(screen.queryByText(/both sides/)).toBeNull();
+    // An entry states no author or page role, so the duty it carries stands.
     expect(screen.getByText("Waiting on them")).toBeTruthy();
     expect(screen.queryByText("Re: the renewal quote")).toBeNull();
   });
@@ -264,7 +357,63 @@ describe("the What was said card", () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByText("Email · they wrote · 20 Aug")).toBeTruthy();
+    expect(screen.getByText("Email · 20 Aug")).toBeTruthy();
+  });
+
+  it("names nobody but keeps the owed reply of a thread entry with no author", () => {
+    const entry: Entry = {
+      key: "thread-2",
+      channel: "email",
+      direction: "inbound",
+      title: "Signed NDA please",
+      summary: "",
+      occurred_at: "2026-08-20T09:00:00Z",
+      activity_count: 1,
+      status: "unanswered",
+    };
+    renderCard(viewWith([emailRow()], { conversation_memory: [entry] }));
+
+    expect(screen.getByText("Email · 20 Aug")).toBeTruthy();
+    expect(screen.getByText("Unanswered")).toBeTruthy();
+  });
+
+  it.each(["call", "meeting", "message"] as const)(
+    "names nobody on an unvoiced %s entry and keeps its stated duty",
+    (channel) => {
+      const entry: Entry = {
+        key: "legacy-conversation",
+        channel,
+        direction: "outbound",
+        title: "Pricing discussion",
+        summary: "",
+        occurred_at: "2026-08-20T09:00:00Z",
+        activity_count: 1,
+        status: "awaiting_them",
+      };
+      renderCard(viewWith([], { conversation_memory: [entry] }));
+
+      expect(screen.getByText("Pricing discussion")).toBeTruthy();
+      expect(
+        screen.queryByText(
+          /they wrote|you wrote|they called|you called|both sides/,
+        ),
+      ).toBeNull();
+      expect(screen.getByText("Waiting on them")).toBeTruthy();
+    },
+  );
+
+  it("does not say who dialled a logged call", () => {
+    renderCard(
+      viewWith([
+        emailRow({
+          kind: "call",
+          email_summary: null,
+          subject: "Pricing call",
+        }),
+      ]),
+    );
+
+    expect(screen.queryByText(/they called|you called/)).toBeNull();
   });
 
   it("says nothing was said rather than drawing an empty card", () => {

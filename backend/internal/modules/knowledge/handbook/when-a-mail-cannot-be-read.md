@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/design-system/emailthread.tsx backend/internal/shared/kernel/provenance/mailbody.go backend/internal/modules/capture/mailmap/body.go backend/internal/modules/capture/mailmap/partwalk.go backend/internal/modules/activities/mailbodycompleteness.go backend/internal/modules/activities/mailbodyrestore.go backend/internal/modules/activities/commitmentadmission.go -->
 # When a mail cannot be read
 
 Margince stores every captured mail with the text it could read. That is not

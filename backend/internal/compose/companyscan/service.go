@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -341,6 +342,10 @@ func (s *Service) assemble(ctx context.Context, companyID ids.CompanyID, languag
 			return nil
 		}
 		in.Messages = words
+		if err != nil {
+			return err
+		}
+		in.Partner, in.NoDealAdvice, err = partnerStanding(ctx, tx, companyID)
 		return err
 	})
 	if err != nil {
@@ -427,3 +432,17 @@ func (s *Service) fail(ctx context.Context, h held, reason string) error {
 // so it is the worker's slot that the ceiling protects: long enough for a
 // healthy database, short enough that a dead one does not keep the slot.
 const failWriteTimeout = 5 * time.Second
+
+// partnerStanding reads whether the account runs a live partner programme,
+// and whether deal advice is withheld. A reader without the partner grant
+// cannot rule a programme out, so deal advice is withheld without naming one.
+func partnerStanding(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (partner, noDealAdvice bool, err error) {
+	live, err := contacts.LivePartnerCompaniesBatch(ctx, tx, []ids.CompanyID{companyID})
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return false, true, nil
+	}
+	if err != nil {
+		return false, false, err
+	}
+	return live[companyID], live[companyID], nil
+}

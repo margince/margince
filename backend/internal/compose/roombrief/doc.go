@@ -4,7 +4,7 @@
 // Package roombrief writes the short brief on a deal's Deal Room tab: what the
 // room's buyers did and what is waiting on the seller.
 //
-// Tables owned: none. A room moves with each buyer's click, so the brief is
+// Nothing here is written. A room moves with each buyer's click, so the brief is
 // written on every request and stored nowhere.
 //
 // The input is read through the room's own gated reads, as the caller. So the

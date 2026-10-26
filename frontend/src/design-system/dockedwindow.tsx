@@ -44,6 +44,7 @@ function clamp(value: number, low: number, high: number) {
  */
 export function DockedWindow({
   title,
+  aside,
   state,
   onStateChange,
   onClose,
@@ -54,6 +55,16 @@ export function DockedWindow({
 }: Readonly<{
   /** Names the window and its folded bar; a heading, not a dialog title row. */
   title: string;
+  /**
+   * What the title names, beside it: the record this window's work belongs to.
+   *
+   * In the bar rather than in the content. The content is a writing surface
+   * with a floor under it, and a row above the fields comes out of that floor.
+   *
+   * The folded bar does not carry it: that bar is one button, and a link inside
+   * a button is markup no reader can use.
+   */
+  aside?: ReactNode;
   state: DockState;
   onStateChange: (next: DockState) => void;
   onClose: () => void;
@@ -167,11 +178,14 @@ export function DockedWindow({
   });
   const lift = (event: PointerEvent<HTMLDivElement>) => {
     const node = box.current;
-    // The bar's own buttons keep their press; only its open field slides.
+    // The bar's own controls keep their press; only its open field slides.
+    // Links as well as buttons: capturing the pointer retargets the click at
+    // the bar, and a reference beside the title could not be followed.
     if (
       !node ||
       sheet ||
-      (event.target instanceof Element && event.target.closest("button"))
+      (event.target instanceof Element &&
+        event.target.closest("button, a[href]"))
     ) {
       return;
     }
@@ -243,6 +257,7 @@ export function DockedWindow({
           <Heading as="h2" size="xsmall" id={titleId} className="docked-title">
             {title}
           </Heading>
+          {aside}
           <IconAction
             label={t("common.minimize")}
             icon={<Minus aria-hidden="true" />}

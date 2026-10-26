@@ -11,6 +11,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -90,8 +91,11 @@ type replyDrafter struct {
 	// cannot disagree about any of the three.
 	envelope *draftfloor.Resolver
 	store    *activities.Store
-	voice    *ai.VoiceStore
-	log      *slog.Logger
+	// colleagues tells a co-worker's address from a counterparty's, as the
+	// send path does, so the language follows whoever the reply goes to.
+	colleagues activities.ColleagueDomains
+	voice      *ai.VoiceStore
+	log        *slog.Logger
 }
 
 var (
@@ -104,11 +108,12 @@ func newReplyDrafter(pool *pgxpool.Pool, brain completer, log *slog.Logger) repl
 		log = slog.Default()
 	}
 	return replyDrafter{
-		brain:    brain,
-		envelope: draftEnvelope(pool, log),
-		store:    activities.NewStore(InstallationDB(pool)),
-		voice:    ai.NewVoiceStore(InstallationDB(pool)),
-		log:      log,
+		brain:      brain,
+		envelope:   draftEnvelope(pool, log),
+		store:      activities.NewStore(InstallationDB(pool)),
+		colleagues: ColleagueDomainsFor(pool),
+		voice:      ai.NewVoiceStore(InstallationDB(pool)),
+		log:        log,
 	}
 }
 
@@ -140,12 +145,13 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
-	thread, err := d.replyConversation(ctx, activity)
+	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
+	deliveredTo := d.deliveredTo(ctx, ids.From[ids.ActivityKind](anchor))
+	thread, err := d.replyConversation(ctx, activity, deliveredTo)
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
 	turns := thread.prompt
-	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
 	topic := stringValue(activity.Subject)
 	body := stringValue(activity.Body)
 	threaded := activities.IsMailThread(activity.Kind, activity.Direction)
@@ -155,17 +161,16 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	// something from eight months ago are different messages, and only the
 	// timestamp tells them apart.
 	state := d.conversationState(activity)
-	// The thread's own language decides the reply's. The stored label is
-	// preferred where capture recorded one: it was read from the message when
-	// it arrived, where detection now reads a body that has grown a quoted
-	// chain in whatever languages the exchange has since used.
+	// The addressee's own text decides first; the stored label comes next,
+	// above a body that may carry a quoted chain in other languages.
 	envelope := d.envelope.Resolve(ctx, draftfloor.Written{
-		Stored:  activityLanguage(activity),
-		Body:    body,
-		Subject: topic,
-		Thread:  draftcore.LanguageEvidence(thread.evidence, addressee.ContactID),
-		Rewrite: steering.RewriteOf,
-		Purpose: steering.Intent,
+		Addressee: thread.addresseeEvidence(deliveredTo),
+		Stored:    activityLanguage(activity),
+		Body:      body,
+		Subject:   topic,
+		Thread:    draftcore.LanguageEvidence(thread.evidence, deliveredTo),
+		Rewrite:   steering.RewriteOf,
+		Purpose:   steering.Intent,
 	}, state)
 	recipient, surname := addressee.GreetingNames()
 
@@ -247,9 +252,8 @@ func (d replyDrafter) recipientName(ctx context.Context, anchor ids.ActivityID) 
 	return d.recipientFor(ctx, anchor).GreetingNames()
 }
 
-// recipientFor is the resolved recipient, empty when it cannot be resolved.
-// The reply route asks it before deciding the language, because the
-// addressee's own mail is the best evidence of it.
+// recipientFor is the recipient the greeting names, empty when it cannot be
+// resolved. The language follows deliveredTo instead.
 //
 // A failure degrades to no name rather than failing the draft: the contact may
 // be outside this caller's scope or the activity linked to nobody. The reason
@@ -308,4 +312,27 @@ func activityLanguage(activity crmcontracts.Activity) string {
 		return ""
 	}
 	return string(*activity.Language)
+}
+
+// deliveredTo is the contact a reply to this activity is delivered to, by the
+// send path's own rule, or "" when none can be named. Their mail decides the
+// language; the greeting's recipient answers a different question.
+func (d replyDrafter) deliveredTo(ctx context.Context, anchor ids.ActivityID) string {
+	if d.store == nil {
+		return ""
+	}
+	var covers func(address string) bool
+	if d.colleagues != nil {
+		own, err := d.colleagues.Covers(ctx)
+		if err != nil {
+			d.logger().WarnContext(ctx, "colleague domains unavailable; reading the reply language without an addressee", "err", err)
+			return ""
+		}
+		covers = own
+	}
+	to, err := d.store.ReplyAddresseeFor(ctx, anchor, covers)
+	if _, none := errors.AsType[*activities.NoReplyAddressError](err); err != nil && !none {
+		d.logger().WarnContext(ctx, "reply addressee unavailable; ranking inbound mail alike", "err", err)
+	}
+	return to.ContactID
 }

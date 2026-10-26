@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:

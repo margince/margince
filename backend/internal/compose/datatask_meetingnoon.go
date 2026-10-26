@@ -25,8 +25,8 @@ func meetingNoonStartsDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792912000_meeting_noon_starts", Version: 1,
 		Title: "Restore meeting times an old outcome save moved to noon",
-		// The selection also reads occurred_precision, which core/1792913668 adds.
-		Requires: []string{"core/" + activities.MeetingNoonCutoffMigration, "core/1792913668"},
+		// The selection also reads occurred_precision, which core/1792983858 adds.
+		Requires: []string{"core/" + activities.MeetingNoonCutoffMigration, "core/1792983858"},
 		Steps: []datatask.Step{{
 			Name: "restore_noon_starts", Limit: 100, MinLimit: 10,
 			Audit: datatask.AuditPolicy{PerRecord: true},

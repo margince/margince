@@ -61,7 +61,7 @@ func Deterministic(contactID string, in Input, lang string) []Sentence {
 	if len(in.Recent) > 0 {
 		last := in.Recent[0]
 		sentences = append(sentences, Sentence{
-			Text:     lastTouchLine(in, last, say),
+			Text:     lastTouchLine(last, say),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: last.ID}},
 		})
 	}
@@ -211,23 +211,21 @@ func claimsOfKind(in Input, kind string) []ClaimIn {
 	return out
 }
 
-// lastTouchLine says which direction went last and what was actually said,
-// because those are the whole question: a contact we wrote to a fortnight ago
-// with no reply and one who wrote to us this morning have the same last-touch
-// date and opposite meanings, and neither is worth a sentence if the sentence
-// cannot say what the message was about.
-func lastTouchLine(in Input, last ActIn, say spoken) string {
+// lastTouchLine says who wrote the newest message and what it said. Who wrote
+// it is that message's own speaker, so a mail this contact was only copied on
+// is never told as theirs.
+func lastTouchLine(last ActIn, say spoken) string {
 	switch {
 	case last.Withheld:
 		// The date is the reader's even though the words are not, and saying so
 		// is the honest sentence: silence here reads as nobody having written.
 		return say.Say(floor.WithheldMessage)
-	case in.LastInbound != "" && in.LastInbound > in.LastOutbound:
+	case speakerKind(last) == SpeakerThem:
 		if outstanding(last) {
 			return fmt.Sprintf(say.Say(floor.TheyWroteLastOpen), aboutClause(last, say))
 		}
 		return fmt.Sprintf(say.Say(floor.TheyWroteLastClosed), aboutClause(last, say))
-	case in.LastOutbound != "":
+	case speakerKind(last) == SpeakerYou:
 		if outstanding(last) {
 			return fmt.Sprintf(say.Say(floor.YouWroteLastOpen), aboutClause(last, say))
 		}
@@ -237,10 +235,17 @@ func lastTouchLine(in Input, last ActIn, say spoken) string {
 	}
 }
 
+// speakerKind is the kind of a row's speaker, empty when it names none.
+func speakerKind(act ActIn) string {
+	if act.Speaker == nil {
+		return ""
+	}
+	return act.Speaker.Kind
+}
+
 // The two moves that mean somebody still owes something. DERIVED from the
-// contract's own enum rather than re-spelled, the way SpeakerFor derives the
-// speakers beside it: a rename upstream fails to compile here instead of
-// silently making every message read as settled.
+// contract's own enum rather than re-spelled. A rename upstream fails to
+// compile here instead of silently making every message read as settled.
 const (
 	moveNeedsReply     = string(crmcontracts.EmailSummaryMoveNeedsReply)
 	moveWaitingForThem = string(crmcontracts.EmailSummaryMoveWaitingForThem)

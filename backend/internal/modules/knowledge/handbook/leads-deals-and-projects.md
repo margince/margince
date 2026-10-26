@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
 # Leads, deals and projects
 
 A lead is someone you may sell to. A deal is one opportunity with one company, and a project is work a deal may belong to. See [Records](records.md) for contacts, companies, archiving, undo, custom fields and tags.
@@ -57,9 +58,8 @@ Also called: convert a lead, promote a lead, turn a lead into a contact or oppor
 Qualifying a lead records what started it: a reply that came in, a meeting
 booked, a meeting held, or your own call. The **Why** line in the dialog is
 filled from the captured activity when there is one. If not, it reads "Reason:
-qualified by you." Mail you sent that had no reply **does not count**. A lead
-qualifies when they engage with you; importing it or writing to it is not
-enough.
+qualified by you." Mail you sent that had no reply **does not count**. A lead qualifies when
+they engage with you; importing it or writing to it is not enough.
 
 Then one of two things happens, in a single step:
 

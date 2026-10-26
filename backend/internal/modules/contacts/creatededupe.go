@@ -108,7 +108,16 @@ func manualDedupeContact(ctx context.Context, tx pgx.Tx, in CreateContactInput) 
 // "bjoern" through it, the plain key a "Bjoern" create takes, so the two
 // serialize.
 func lockNameLane(ctx context.Context, tx pgx.Tx, fullName string) error {
-	keys := []string{NormalizeContactName(fullName), digraphNameKey(fullName)}
+	return lockNameLanes(ctx, tx, fullName)
+}
+
+// lockNameLanes locks the name keys of every name in one sorted, deduplicated
+// order, so a writer holding several contacts' names cannot cross another.
+func lockNameLanes(ctx context.Context, tx pgx.Tx, fullNames ...string) error {
+	keys := make([]string, 0, 2*len(fullNames))
+	for _, fullName := range fullNames {
+		keys = append(keys, NormalizeContactName(fullName), digraphNameKey(fullName))
+	}
 	slices.Sort(keys)
 	for _, key := range slices.Compact(keys) {
 		if key == "" {
