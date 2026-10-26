@@ -10844,6 +10844,11 @@ export const en = {
   "auto.enabledFor": "{name} is enabled",
   "auto.colLastRun": "Last run",
   "auto.colRuns30": "Runs (30 days)",
+  "auto.colOwner": "Runs as",
+  "auto.ownerFor": "Runs as {name}",
+  "auto.ownerNone": "No owner",
+  "auto.ownerHint":
+    "A rule is blocked while its owner has no access. Pick a member to run it again.",
   "auto.colStatus": "Status",
   "auto.colActions": "Actions",
   "auto.lastRunNever": "Never",

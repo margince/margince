@@ -44581,6 +44581,11 @@ export interface components {
             /** @enum {string} */
             status: "enabled" | "paused";
             /**
+             * Format: uuid
+             * @description The member the rule runs as. Null until the rule is first enabled, and after its owner's seat is removed. Firings of a rule whose owner is no longer active are blocked until the owner is changed.
+             */
+            owner_id?: string | null;
+            /**
              * @description Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. Null for a rule running or paused by hand. Resuming clears it.
              * @enum {string|null}
              */
@@ -44621,6 +44626,11 @@ export interface components {
             } | null;
             /** @enum {string|null} */
             status?: "enabled" | "paused" | null;
+            /**
+             * Format: uuid
+             * @description Hand the rule to another member, who must be a seat the caller may make an owner (an active human seat that can write, inside the caller's write scope), else `422` with `code: owner_not_assignable`. Cannot be cleared.
+             */
+            owner_id?: string | null;
         };
         /**
          * @description Optional body for POST /automations/{id}/preview. Omit to preview the stored automation as-is; supply

@@ -207,6 +207,41 @@ describe("a rule's switch", () => {
   });
 });
 
+describe("a rule's owner", () => {
+  it("hands the rule to the member chosen, pinned to the version the row was read at", async () => {
+    const user = userEvent.setup();
+    const bodies: unknown[] = [];
+    mount(OPERATOR, {
+      "GET /users": () =>
+        jsonResponse({
+          data: [
+            { id: "u-1", display_name: "Dana Rep", is_agent: false },
+            { id: "u-2", display_name: "Lee Closer", is_agent: false },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "PATCH /automations/au-5": () =>
+        jsonResponse(configuredAutomations(RECORDED_AT)[4]),
+    });
+    const sent = recordIfMatch();
+    const stubbed = globalThis.fetch;
+    globalThis.fetch = async (input, init) => {
+      const request = new Request(input, init);
+      if (request.method === "PATCH") {
+        bodies.push(await request.clone().json());
+      }
+      return stubbed(input, init);
+    };
+    const picker = await within(await row("au-5")).findByRole("combobox", {
+      name: "Runs as Post-meeting recap draft",
+    });
+    await user.click(picker);
+    await user.click(await screen.findByRole("option", { name: "Lee Closer" }));
+    await waitFor(() => expect(bodies).toEqual([{ owner_id: "u-2" }]));
+    expect(sent).toEqual(["2"]);
+  });
+});
+
 describe("a rule's run history", () => {
   it("opens as a detail row under its rule, from the keyboard, and closes again", async () => {
     const user = userEvent.setup();
