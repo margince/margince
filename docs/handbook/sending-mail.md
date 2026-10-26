@@ -113,7 +113,7 @@ Also called: add an attachment, send a document, attach a PDF.
 
 ### How do I use AI to draft an email?
 To have AI draft an email in Margince, open the composer. Say what the email is for in **Purpose of the email** above the message, and press **Draft email**.
-1. Open the composer from a contact, company or deal.
+1. Open the composer from a contact, company or deal. **Draft reply**, **Draft follow-up** or **Create draft** on a suggestion opens it already drafting, unless it holds your words.
 2. On a company, choose the contact under **Draft to**, and if you like, the deal under **Related to**.
 3. Type the purpose, such as "follow up on last week's quote".
 4. Press **Draft email** (**Draft reply** for a reply). It shows **Drafting…** while it writes.
