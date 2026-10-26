@@ -21,8 +21,14 @@ import (
 func TestAnotherReaderSeesCoverageWithoutReadingAPrivateReminder(t *testing.T) {
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please send slots", "meeting", OwedVerdictAsksUs)
+	// Mail the other reader may read but the workspace may not. Its reminder
+	// stays the assignee's, which the automatic pass never files, so the rep
+	// takes it by hand.
+	e.exec(t, `UPDATE activity SET audience = 'selected' WHERE id = $1`, id)
+	e.exec(t, `INSERT INTO activity_audience_member (activity_id, subject_type, subject_id, created_by)
+		VALUES ($1, 'user', $2, 'seed')`, id, e.other)
 	store := storeKnowing(e)
-	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err != nil {
+	if _, _, err := store.LogActivity(e.asSeat(e.rep), LogActivityInput{Kind: "task", Source: "manual", RequestActivityID: &id}); err != nil {
 		t.Fatal(err)
 	}
 	other, ok := principal.Actor(e.as())
