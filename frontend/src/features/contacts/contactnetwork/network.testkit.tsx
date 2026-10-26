@@ -105,6 +105,8 @@ export function renderTab(
     captureGaps?: readonly unknown[];
     // The ask list never answers, for a case about the page before it does.
     asksPending?: boolean;
+    // The page's composer, for a case about the reader's own way in.
+    onWrite?: () => void;
   }> = {},
 ) {
   const { seatAnswered } = stub(
@@ -120,7 +122,11 @@ export function renderTab(
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
-        <ContactNetworkTab contactId={CONTACT} view={beside.view} />
+        <ContactNetworkTab
+          contactId={CONTACT}
+          view={beside.view}
+          onWrite={beside.onWrite}
+        />
       </LocaleProvider>
     </QueryClientProvider>,
   );

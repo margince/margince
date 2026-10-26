@@ -11,6 +11,7 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerId } from "../../lib/session";
 
 // Who on the team can get us in at this account.
 //
@@ -38,11 +39,25 @@ function useCompanyReach(companyId: string) {
   });
 }
 
+// The reader's own row stays, because it shows at a glance they have a way in
+// of their own. It reads "You" and leads, so nobody looks to ask themselves.
+function readerFirst(
+  colleagues: readonly Colleague[],
+  viewerId: string | undefined,
+): Colleague[] {
+  const mine = colleagues.filter((colleague) => colleague.user_id === viewerId);
+  const others = colleagues.filter(
+    (colleague) => colleague.user_id !== viewerId,
+  );
+  return [...mine, ...others];
+}
+
 export function CompanyReachCard({ companyId }: { companyId: string }) {
   const t = useT();
   const { locale } = useLocale();
   const query = useCompanyReach(companyId);
-  const colleagues = query.data?.colleagues ?? [];
+  const viewerId = useViewerId();
+  const colleagues = readerFirst(query.data?.colleagues ?? [], viewerId);
   return (
     <Panel title={t("companyReach.title")}>
       <PanelBody>
@@ -68,14 +83,17 @@ export function CompanyReachCard({ companyId }: { companyId: string }) {
             bleed
             fold
             label={t("companyReach.colleaguesLabel")}
-            rows={[...colleagues]}
+            rows={colleagues}
             rowKey={(colleague) => colleague.user_id}
             columns={[
               {
                 key: "colleague",
                 header: t("companyReach.colleague"),
                 grow: true,
-                render: (colleague: Colleague) => colleague.display_name,
+                render: (colleague: Colleague) =>
+                  colleague.user_id === viewerId
+                    ? t("companyReach.you")
+                    : colleague.display_name,
               },
               {
                 key: "connections",

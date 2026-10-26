@@ -86,6 +86,7 @@ export function ContactTabPanel({
   view,
   onBriefMeeting,
   onAction,
+  onWrite,
   refusedReasonId,
 }: Readonly<{
   tab: ContactTab;
@@ -97,6 +98,8 @@ export function ContactTabPanel({
   // The page's one action loop, which every moment action opens through. It
   // serves the tab whose moment carries a verb: the Meetings tab's agenda button.
   onAction?: (action: ContactMomentAction) => void;
+  // Opens the page's composer, absent while the page refuses this reader mail.
+  onWrite?: () => void;
   // The page's one sentence about why this contact takes no changes, for
   // the tab whose verb writes the record: the upload on Documents.
   refusedReasonId?: string;
@@ -121,6 +124,7 @@ export function ContactTabPanel({
             contactId={contactId}
             view={view}
             onOpenEmail={onOpenEmail}
+            onWrite={onWrite}
           />
         </div>
       );

@@ -3675,6 +3675,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "companyReach.colleaguesLabel":
     "\u0110\u1ed3ng nghi\u1ec7p c\u00f3 k\u1ebft n\u1ed1i \u1edf \u0111\u00e2y",
   "companyReach.colleague": "\u0110\u1ed3ng nghi\u1ec7p",
+  "companyReach.you": "Bạn",
   "companyReach.connections": "K\u1ebft n\u1ed1i \u1edf \u0111\u00e2y",
   "companyReach.none":
     "Không có phạm vi nào của đồng nghiệp được hiển thị cho công ty này.",
@@ -14104,7 +14105,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.graph.withheldDirect": "Đã ẩn một số đồng nghiệp.",
   "contact.graph.withheldAccount": "Đã ẩn một số liên hệ tại công ty này.",
   "contact.intro.askFirstName": "Nhờ {name} giới thiệu bạn",
-  "contact.intro.leadRouteBadge": "Hướng tiếp cận mạnh",
   "contact.intro.heroDirect": "quen trực tiếp với họ",
   "contact.intro.heroIndirect": "tiếp cận họ qua {through}",
   "contact.intro.heroYou": "Bạn",
@@ -14184,6 +14184,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.useThisRoute": "Dùng hướng này",
   "contact.intro.mapRegion": "Hướng tiếp cận liên hệ này",
   "contact.intro.edgeDirect": "{name} trao đổi trực tiếp với họ",
+  "contact.intro.edgeDirectYou": "Bạn trao đổi trực tiếp với họ",
   "contact.intro.edgeAccount": "làm việc với {name}",
   "contact.intro.routesSub":
     "Hướng tốt nhất xếp đầu. Các hướng khác dùng khi hướng đầu không khả dụng.",
