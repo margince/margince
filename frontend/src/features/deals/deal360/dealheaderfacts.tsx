@@ -28,6 +28,7 @@ import {
 } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
+import { writtenByLabel } from "../../../lib/leadorigins";
 import { useRecordZone } from "../../../lib/recordzone";
 import { useViewerId } from "../../../lib/session";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
@@ -158,7 +159,11 @@ export function DealRecordRows({
             />
           }
         >
-          <p className="t-body">{deal.source || t("trust.sourceUnknown")}</p>
+          <p className="t-body">
+            {deal.source
+              ? writtenByLabel(deal.source, t)
+              : t("trust.sourceUnknown")}
+          </p>
         </Popover>
       </FieldRow>
       {deal.created_at && (

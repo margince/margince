@@ -104,4 +104,9 @@ describe("the added-via reader", () => {
     );
     expect(writtenByLabel(null, t)).toBe("lead.shortfall.noSource");
   });
+
+  it("names a system a record came from as its maker spells it", () => {
+    expect(writtenByLabel("hubspot", t)).toBe("HubSpot");
+    expect(writtenByLabel("connector:salesforce:s-1", t)).toBe("Salesforce");
+  });
 });

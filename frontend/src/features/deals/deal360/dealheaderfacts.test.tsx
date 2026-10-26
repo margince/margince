@@ -274,7 +274,8 @@ describe("the details rows say where a deal stands and how it closed", () => {
     expect(screen.queryByText(foreign)).not.toBeInTheDocument();
   });
 
-  it("names how the record reached Margince, behind the provenance tag", async () => {
+  // The stored source is a key, so the popover says it in the reader's words.
+  it("names how the record reached Margince in words, behind the provenance tag", async () => {
     show(
       <FieldGrid>
         <DealRecordRows
@@ -282,15 +283,17 @@ describe("the details rows say where a deal stands and how it closed", () => {
             amount_minor: 1000,
             currency: "EUR",
             stage_id: "st-1",
-            source: "csv import",
+            source: "manual",
           }}
           stages={stages}
-          locale="en"
+          locale="de"
         />
       </FieldGrid>,
+      "de",
     );
     await userEvent.setup().click(screen.getByRole("button"));
-    expect(await screen.findByText("csv import")).toBeInTheDocument();
+    expect(await screen.findByText("Manuell erstellt")).toBeInTheDocument();
+    expect(screen.queryByText("manual")).not.toBeInTheDocument();
   });
 
   // A deal somebody wrote in the system it was imported from. An import runs as

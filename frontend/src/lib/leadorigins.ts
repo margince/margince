@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { importLabel } from "../design-system/provenance";
 import { importProvenance } from "../design-system/provenanceof";
+import { sourceSystemName } from "../format/sourcesystem";
 import { useT } from "../i18n";
 import { LEAD_LIST_KEY } from "./leadkeys";
 import { throwProblem, unwrap } from "./problem";
@@ -148,6 +149,8 @@ export function writtenByLabel(
   if (shipped) return t(shipped);
   const parts = source.split(":").filter(Boolean);
   const meaningful = parts[0] === "connector" ? parts[1] : parts[0];
+  const named = meaningful && sourceSystemName(meaningful);
+  if (named && named !== meaningful) return named;
   const spoken = meaningful?.replace(/[_-]+/g, " ");
   return spoken
     ? spoken.charAt(0).toUpperCase() + spoken.slice(1)
