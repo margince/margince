@@ -55,8 +55,7 @@ func ProvedMailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) 
 	holders := map[string]map[ids.UUID]bool{}
 	for seat, values := range labels {
 		for _, label := range values {
-			// The folded key decides who holds it; every spelling is bound.
-			address := mailidentity.SeatAddressKey(label, "")
+			address := mailidentity.ReaderAddress(label, "")
 			if address == "" {
 				continue
 			}
@@ -72,7 +71,7 @@ func ProvedMailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) 
 			continue
 		}
 		for seat := range seats {
-			out[seat.String()] = append(out[seat.String()], mailidentity.AddressSpellings(address)...)
+			out[seat.String()] = append(out[seat.String()], address)
 		}
 	}
 	encoded, err := json.Marshal(out)

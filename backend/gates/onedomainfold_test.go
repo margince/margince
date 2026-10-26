@@ -25,6 +25,7 @@ const idnaImportPath = "golang.org/x/net/idna"
 var idnaReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/platform/owndomain/owndomain.go":   "is the fold itself, and the Spellings that a SQL comparison against stored header addresses needs because Postgres cannot fold IDNA. Cost: none, every other domain fold delegates here",
 	"internal/modules/capture/owndomainstore.go": "validates an own domain before it is stored and refuses one IDNA cannot read, where Fold keeps it. It stores the same ASCII form Fold gives a readable domain. Cost: a second IDNA call, kept so a typo is refused rather than stored as protection that never fires",
+	"internal/modules/capture/strangermail.go":   "adds the IDNA spelling of a sender for the stranger lookup and the Unicode spelling for the stored-counterparty repair. It is a comparison, not display. Routing it through mailidentity.AddressSpellings waits on one IDNA-folded correspondence lock (#9083), because widening the lookup first lets a punycode inbound and a Unicode outbound miss each other's lock. Cost: a second spelling helper until then",
 	"internal/platform/freemail/displayname.go":  "renders a domain for display with idna.ToUnicode; it never compares. Cost: none for matching, a display-only conversion",
 })
 

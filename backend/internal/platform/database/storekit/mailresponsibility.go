@@ -112,8 +112,8 @@ func MailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][]string, er
 	}
 	out := map[string][]string{}
 	for _, record := range records {
-		if address := mailidentity.SeatAddressKey(record.label, record.source); address != "" {
-			out[record.seat] = append(out[record.seat], mailidentity.AddressSpellings(address)...)
+		if address := mailidentity.ReaderAddress(record.label, record.source); address != "" {
+			out[record.seat] = append(out[record.seat], address)
 		}
 	}
 	return out, nil
