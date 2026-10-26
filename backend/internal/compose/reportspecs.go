@@ -16,7 +16,7 @@ const fieldForecastCategory = "forecast_category"
 // dimension must never rename a capture target type.
 
 // colMeetingCreditedSeat is the one seat a meeting is listed under where a
-// report filters by person (storekit.MeetingCreditedSeatSQL); NULL for every
+// report filters by colleague (storekit.MeetingCreditedSeatSQL); NULL for every
 // other kind of activity.
 var colMeetingCreditedSeat = "(CASE WHEN t.kind = 'meeting' THEN " + storekit.MeetingCreditedSeatSQL("t") + " END)"
 
