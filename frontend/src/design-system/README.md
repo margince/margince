@@ -276,10 +276,12 @@ They are two facts, so they combine, and a panel that is both uses both.
 
 **An indigo button starts the model.** Pressing `Button variant="ai"` or `aiQuiet` makes a model
 write now: a draft, a brief, an answer, a rewrite. Accepting what an agent proposed is the reader's
-own decision, so Keep, Accept and Mark done are `primary`; the staged card around them already says
-who proposed it. A verb that only opens a message, a task or a record is `ghost`. A verb that opens
-the composer to draft passes `draftOnOpen`, so the draft starts on the first press and the
-composer's own Draft button is not a second one.
+own decision, so Keep, Accept and Mark done are `primary`. The staged card around them already says
+who proposed it.
+
+A verb that only opens a message, a task or a record is `ghost`. A verb that opens
+the composer to draft passes `draftOnOpen`. Then the draft starts on the first press, and no second
+press of Draft is needed.
 
 **`ProvenanceTag` is the rule at its smallest**: one `Badge` per provenance, and only its `agent`
 arm takes `tone="ai"`, with the Sparkles that tone draws. Every other kind is the default soft badge, told
